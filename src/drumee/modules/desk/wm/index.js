@@ -8,6 +8,7 @@ const hubDeepLink = require("libs/hub-deep-link");
 // Shares one in-flight media.get_path with the breadcrumb / folder window when
 // they ask for the same node in the same instant (a folder open does).
 const { getPath } = require("libs/path-request");
+const readCache = require("libs/read-cache");
 // Reader for the compact "#/desk/wm/o/<nid>/<hub_id>/<filetype>" deep link. The
 // long "open" form is unchanged and still resolved by the same openers.
 const {
@@ -222,6 +223,19 @@ class __window_manager extends push {
       p.feed(require("./skeleton/file-created")(this, data));
       p.el.dataset.state = "open";
     });
+  }
+
+  /**
+   * `acknowledge` toasts ("link copied" — Designation link, Share link) get a
+   * layer of their own. Appended to the Wm itself, the toast joins the Wm's
+   * root collection, which re-renders on every add/remove: `wm-container` —
+   * every window, the open workspace included — was detached and re-attached
+   * twice per toast, snapping the workspace's file list back to the top.
+   */
+  _acknowledgeHost() {
+    const layer = this.getPart("ack-layer");
+    if (layer && !layer.isDestroyed()) return layer;
+    return super._acknowledgeHost();
   }
 
   dismissFileCreated() {
@@ -854,6 +868,22 @@ class __window_manager extends push {
   }
 
   /**
+   * Resolves true once the workspace pane's split body is on screen, false at
+   * the timeout. See libs/split-body-signal; the desk's reload restore waits
+   * on it before putting the last screen back.
+   *
+   * @param {Number} [timeout=8000]
+   * @returns {Promise<Boolean>}
+   */
+  whenSplitBodyShown(timeout = 8000) {
+    return require("libs/split-body-signal").whenSplitBodyShown({
+      getPane: () => this.headlessPane(),
+      bus: RADIO_BROADCAST,
+      timeout,
+    });
+  }
+
+  /**
    * THE TAB A WORKSPACE SWITCH MUST HAND OVER — Chat, Task, Meet or Access, or
    * null.
    *
@@ -944,7 +974,15 @@ class __window_manager extends push {
     //
     // Past the same-workspace early return on purpose: that branch mounts
     // nothing, so the pane keeps its own tab and there is nothing to carry.
-    const carryTab = this.paneTabToCarry();
+    //
+    // `land_on_files` OPTS OUT, and one caller asks for it: a workspace that
+    // has just been CREATED (desk _openCreatedWorkspace). Carrying makes sense
+    // for a switch between two workspaces the user already has — it keeps them
+    // where they were working — but a workspace created seconds ago has no
+    // chat, no tasks and no meeting to land on, so inheriting Chat or Task
+    // opens it on a view that is empty by construction. Files is where a new
+    // workspace starts.
+    const carryTab = data.land_on_files ? null : this.paneTabToCarry();
 
     // WAIT FOR THE ACCESS PANEL. Nothing below this line runs while
     // `.permission-restricted__main` for THIS workspace is up.
@@ -1145,31 +1183,86 @@ class __window_manager extends push {
       home_id: nid,
     });
 
+    // The chat's media.home, started NOW rather than after the pane mounts —
+    // it was the second serial round trip before the chat could ask for its
+    // messages. widget_chat joins this request via libs/hub-home.
+    try {
+      require("libs/hub-home").warm(this, hub_id);
+    } catch (e) { }
+
+    // PAINT FROM THE LAST ANSWER, THEN REVALIDATE (libs/read-cache). The pane
+    // used to mount only after media.attributes returned, so every switch held
+    // the old workspace on screen for one full round trip before the new one
+    // even started its own loads (show_node_by, chat, tasks). A workspace
+    // switched back to now mounts at once from this session's last answer;
+    // the fresh one reconciles below.
+    const rootOf = (a) => a && (a.actual_home_id || a.home_id || a.nid);
+    const attrsKey = `wm:attrs:${hub_id}:${this._rootNid(nid)}`;
+    const cachedAttrs = readCache.peek(attrsKey);
+    const mountedFrom = rootOf(cachedAttrs) ? { ...cachedAttrs } : null;
+    if (mountedFrom) {
+      try {
+        workspace.model && workspace.model.set(mountedFrom);
+      } catch (e) { }
+      apply({ ...mountedFrom });
+    }
+
     // Data provided by the trigger may not be reliable enough. Get fresh one.
     // _rootNid, not the raw nid: a caller that knows only the hub leaves nid unset,
     // and fetchService would put the literal string "undefined" on the query.
     this.fetchService(SERVICE.media.attributes, { hub_id, nid: this._rootNid(nid) })
       .then((attrs) => {
-        const resolved =
-          attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
+        const resolved = rootOf(attrs);
         if (!resolved) {
+          readCache.invalidate(attrsKey);
           this.warn("loadWorkspace: cannot resolve workspace root", {
             hub_id,
             attrs,
           });
+          if (mountedFrom) {
+            // Mounted from a remembered answer the server now refuses (the
+            // workspace was deleted, or access revoked, since). Take the pane
+            // down exactly as if it had never mounted.
+            if (gen === this._wsGeneration && this.headlessLayer) {
+              const pane = this.headlessPane();
+              if (pane && !pane.isDestroyed()) pane.goodbye ? pane.goodbye() : pane.destroy();
+            }
+          }
           // The pane never mounted but _curWorkspace was already set above —
           // release it so re-clicking the sidebar item can retry the mount
           // instead of hitting the same-workspace early-return.
           this._releaseWorkspaceContext(hub_id, nid);
           return;
         }
+        readCache.set(attrsKey, { ...attrs });
         try {
           workspace.model && workspace.model.set(attrs);
         } catch (e) { }
-        apply(attrs);
+        if (!mountedFrom) return apply(attrs);
+        if (gen !== this._wsGeneration) return;
+        // The root moved (rare): the pane is showing the wrong node — remount.
+        if (`${rootOf(mountedFrom)}` !== `${resolved}`) return apply(attrs);
+        // Same root: reconcile in place. Privilege is the one field whose
+        // change rebuilds chrome, and the pane already has the live-update
+        // path for it (an admin changing our role elsewhere).
+        this.mset(attrs);
+        const pane = this.headlessPane();
+        if (!pane || pane.isDestroyed()) return;
+        if (
+          attrs.privilege != null &&
+          _.isFunction(pane._applyLivePrivilege)
+        ) {
+          pane._applyLivePrivilege({
+            privilege: attrs.privilege,
+            hub_id: pane.mget(_a.hub_id),
+          });
+        }
       })
       .catch((e) => {
         this.warn("loadWorkspace: get_attributes failed", e);
+        // Already on screen from the remembered answer: a network blip is no
+        // reason to take it down.
+        if (mountedFrom) return;
         this._releaseWorkspaceContext(hub_id, nid);
       });
   }
@@ -1702,6 +1795,27 @@ class __window_manager extends push {
   }
 
   openContent(media, args) {
+    // AN IMAGE / VIDEO OPENED FROM THE INBOX is shown by the Inbox itself.
+    //
+    // The Inbox (chat_p2p) is a full-canvas screen in the desk's
+    // settings-main-slot, stacked ABOVE every window-manager layer — which is
+    // where the viewer below launches. So a click on a picture in an Inbox
+    // conversation opened its viewer invisibly behind the Inbox, and each
+    // further click stacked another one there; leaving the Inbox then revealed
+    // the pile ("duplicated images" in the workspace chat). chat_p2p draws its
+    // own viewer instead (previewMedia).
+    const fType = media && media.mget ? media.mget(_a.filetype) : null;
+    if (fType === _a.image || fType === _a.video) {
+      const inbox = _.isFunction(media.getParentByKind)
+        ? media.getParentByKind("chat_p2p")
+        : null;
+      if (inbox && _.isFunction(inbox.previewMedia)) {
+        if (_.isFunction(media.wait)) media.wait(0);
+        inbox.previewMedia(media);
+        return false;
+      }
+    }
+    // Sheets open IN-APP (the editor_sheet desk window) — no tab redirect.
     if (
       media &&
       media.mget &&
@@ -2357,6 +2471,17 @@ class __window_manager extends push {
   }
 
   /**
+   * insert()'s refusal when the drop target's privilege lacks the write bit.
+   */
+  _movePrivilegeMessage() {
+    return require("libs/permission-denied").weakPrivilegeMessage(
+      LOCALE.PERMISSION_ACTION_MOVE,
+      this._target && this._target.mget(_a.privilege),
+      _K.permission.write,
+    );
+  }
+
+  /**
    *
    * @param {*} moving
    * @returns
@@ -2423,7 +2548,7 @@ class __window_manager extends push {
         }
         if (rearranging) this._target._manualArrange = 1;
       } else {
-        this._target.warning(LOCALE.WEAK_PRIVILEGE);
+        this._target.warning(this._movePrivilegeMessage());
         return false;
       }
     } else if (c.right) {
@@ -2444,7 +2569,7 @@ class __window_manager extends push {
         ) {
           this._target.insertMedia(files, 0);
         } else {
-          this._target.warning(LOCALE.WEAK_PRIVILEGE);
+          this._target.warning(this._movePrivilegeMessage());
           return false;
         }
         return true;
@@ -2938,7 +3063,11 @@ class __window_manager extends push {
               .catch(async (e) => {
                 await animation;
                 this.warn(`delete_hub failed for ${hub_id}`, e);
-                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                // A 403 was already explained by onServerComplain (libs/permission-denied);
+                // "failed" would replace it with a vaguer sentence.
+                if (!require("libs/permission-denied").saidRecently()) {
+                  Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                }
                 this.reload();
                 resolve({ error: e });
               });
@@ -3077,7 +3206,11 @@ class __window_manager extends push {
               .catch(async (e) => {
                 await animation;
                 this.warn(`media.trash failed for personal workspace ${nid}`, e);
-                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                // A 403 was already explained by onServerComplain (libs/permission-denied);
+                // "failed" would replace it with a vaguer sentence.
+                if (!require("libs/permission-denied").saidRecently()) {
+                  Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                }
                 this.reload();
                 resolve({ error: e });
               });
@@ -3178,7 +3311,11 @@ class __window_manager extends push {
                 // and say why instead of leaving a silently missing tile.
                 await animation;
                 this.warn("delete_hub failed — restoring listing", e);
-                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                // A 403 was already explained by onServerComplain (libs/permission-denied);
+                // "failed" would replace it with a vaguer sentence.
+                if (!require("libs/permission-denied").saidRecently()) {
+                  Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                }
                 this.reload();
                 resolve({ error: e });
               });
@@ -3192,8 +3329,20 @@ class __window_manager extends push {
   }
 
   /**
+   * Drop the caller's own membership of a workspace — the other half of the
+   * exit row, for a member without the admin bit (libs/media-selection
+   * bucketFor sends them here, and media/core.js _workspaceExitKey labels the
+   * row "Leave workspace" to match).
    *
-   * @param {*} cmd
+   * The COPY names a workspace and says what is lost. It used to be
+   * LOCALE.LEAVE + MSG_LEAVE_HUB — "Leave" over "You want to leave the shared
+   * folder …", which is this dialog's oldest wording and predates workspaces
+   * having a name of their own in the UI. Everything that reaches this method
+   * is a hub (bucketFor keys on isHub), so there is no caller left that a
+   * "shared folder" reads better for. MSG_LEAVE_HUB itself is untouched — the
+   * legacy hub settings window still uses it.
+   *
+   * @param {*} media the workspace's media view
    */
   confirmLeaveHub(media) {
     // Returns a Promise that settles once the request settles (or the user
@@ -3204,8 +3353,8 @@ class __window_manager extends push {
         p.feed({
           kind: "window_confirm",
           maxsize: 2,
-          title: LOCALE.LEAVE,
-          message: LOCALE.MSG_LEAVE_HUB.format(media.mget(_a.filename)),
+          title: LOCALE.LEAVE_WORKSPACE,
+          message: LOCALE.MSG_LEAVE_WORKSPACE.format(media.mget(_a.filename)),
           confirm: LOCALE.LEAVE,
         })
           .ask()
@@ -3357,6 +3506,48 @@ class __window_manager extends push {
   }
 
   /**
+   * Ask before trashing ONE file or folder — the contextmenu "Move to trash"
+   * row. Same `window_confirm` shape as confirmBulkTrash, but it names the
+   * item instead of counting, since there is exactly one.
+   *
+   * Resolves false on every way out that is not an explicit confirm, for the
+   * same reason confirmBulkTrash does.
+   *
+   * @param {*} media the tile about to be trashed
+   * @returns {Promise<Boolean>}
+   */
+  confirmTrash(media) {
+    let name = media.mget(_a.filename) || "";
+    const ext = media.mget(_a.ext);
+    if (ext && !media.isFolder && !name.endsWith(`.${ext}`)) {
+      name = `${name}.${ext}`;
+    }
+    return new Promise((resolve) => {
+      this.ensurePart("wrapper-modal")
+        .then(async (p) => {
+          await Kind.waitFor("window_confirm");
+          p.feed({
+            kind: "window_confirm",
+            maxsize: 2,
+            title: LOCALE.MOVE_TO_TRASH,
+            message: (LOCALE.MSG_TRASH_ITEM
+              || "Move <b>{0}</b> to trash?").format(name),
+            confirm: LOCALE.MOVE_TO_TRASH,
+          })
+            .ask()
+            .then(() => {
+              p.clear();
+              resolve(true);
+            })
+            .catch(() => {
+              resolve(false);
+            });
+        })
+        .catch(() => resolve(false));
+    });
+  }
+
+  /**
    * Read one live media item into the plain row libs/media-selection classifies.
    *
    * Every impure part of the old inline split is concentrated here: the model
@@ -3365,6 +3556,12 @@ class __window_manager extends push {
    * never consulted — one shape, evaluated the same way each time, is worth more
    * than skipping a cheap call.
    *
+   * `isAdmin` is what decides delete-vs-leave for a hub (see bucketFor). It is
+   * read as a BIT rather than through canAdmin() so this stays a plain model
+   * read like every other field here; the admin bit is set for an owner too
+   * (owner 0b0111111 contains admin 0b0010000), and `isOwner` is kept beside it
+   * because bucketFor still honours it.
+   *
    * @param {Object} m a media view
    * @returns {Object} the row shape bucketFor expects
    */
@@ -3372,6 +3569,7 @@ class __window_manager extends push {
     return {
       locked: m.mget(_a.status) === _a.locked,
       isHub: !!m.isHub,
+      isAdmin: !!m.isGranted(_K.permission.admin),
       isOwner: !!m.isGranted(_K.permission.owner),
       isFolder: !!m.isFolder,
       containsHub: !!m.containsHub,
@@ -3418,9 +3616,136 @@ class __window_manager extends push {
   }
 
   /**
+   * Trash one tile the moment the user asks, not 1.4s later.
+   *
+   * The tile used to stay on screen, fully clickable, while a CLONE flew to
+   * the bin (animateMediaToTrash, a 1.4s tween), and only then was media.trash
+   * sent — the tile left when that answered (media/core suppress). On a folder
+   * with content that is ~2.5s during which a click still opened the folder
+   * being deleted, and the Trash heard nothing until the end of it.
+   *
+   * Now the tile is taken out of the grid and the request goes out at once.
+   * There is no flight any more (see animateMediaToTrash). The success path is
+   * unchanged: the reply suppresses the tile. A refused trash (403 popup,
+   * network) resolves undefined, so the tile is put back where it was. A tile
+   * already on its way out is skipped, so pressing Delete twice sends one
+   * request. That holds after the single-item confirm too (confirmTrash):
+   * no fade, the tile simply goes (Duy, 2026-09-25 — "xóa là xóa mất").
+   *
+   * @param {*} r media tile
+   */
+  _trashNow(r) {
+    if (!r || r._trashPending) return;
+    r._trashPending = 1;
+    const el = r.el;
+    const display = el ? el.style.display : "";
+    if (el) el.style.display = "none";
+    const request = r.putIntoTrash(1);
+    const parent = r.logicalParent;
+    if (parent && _.isFunction(parent.syncGeometry)) parent.syncGeometry();
+    // Seeding tiles are suppressed inside putIntoTrash and return nothing.
+    if (!request || !_.isFunction(request.then)) return;
+    const restore = () => {
+      r._trashPending = 0;
+      if (r.isDestroyed && r.isDestroyed()) return;
+      if (el) el.style.display = display;
+    };
+    request
+      .then((data) => {
+        if (!data || data.error) restore();
+      })
+      .catch(restore);
+  }
+
+  /**
+   * Trash a whole selection in ONE media.trash request per hub.
+   *
+   * It used to be one request per tile, all fired at once (_trashNow in a
+   * loop). Every request is its own transaction on the same hub DB, running
+   * mfs_pre_trash_next with temp tables, REPLACE INTO trash_media and DELETE
+   * FROM media; thirty of them racing lock each other, the procedure's exit
+   * handler swallows the lock error with a silent ROLLBACK, the request comes
+   * back empty and the tile is put back — so "select all, delete" removed
+   * five or six files and had to be repeated (Liam, 2026-09-26). The service
+   * has always accepted an array of nodes; one request is one transaction
+   * and either the whole batch is in the bin or none of it is.
+   *
+   * Same optimistic feel as _trashNow: tiles leave the grid at once and come
+   * back only when the request is refused. Split per hub because the request
+   * is hub-scoped, and capped at TRASH_BATCH_MAX nodes so a huge selection
+   * does not turn into one multi-minute transaction.
+   *
+   * @param {Array} tiles media tiles from the `allowed` bucket
+   */
+  _trashBatch(tiles) {
+    const TRASH_BATCH_MAX = 100;
+    const groups = new Map();
+    for (const r of tiles || []) {
+      if (!r || r._trashPending) continue;
+      if (r.mget(_a.status) === "seeding") {
+        // Never reached the server: nothing to trash, same as putIntoTrash.
+        r.suppress();
+        continue;
+      }
+      // makeTrashOptions is what a single tile posts (node + the hub it is
+      // charged to, the isHub holder rule included) and it raises the tile's
+      // own _e.trash, which is what closes a window open on that node.
+      const opt = r.makeTrashOptions();
+      const node = opt && opt.nid && opt.nid[0];
+      if (!node || !node.nid) continue;
+      r._trashPending = 1;
+      const el = r.el;
+      const display = el ? el.style.display : "";
+      if (el) el.style.display = "none";
+      const parent = r.logicalParent;
+      if (parent && _.isFunction(parent.syncGeometry)) parent.syncGeometry();
+      const key = String(opt.hub_id || node.hub_id || "");
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push({ tile: r, node, display, hub_id: opt.hub_id || node.hub_id });
+    }
+    for (const group of groups.values()) {
+      for (let i = 0; i < group.length; i += TRASH_BATCH_MAX) {
+        this._sendTrashBatch(group.slice(i, i + TRASH_BATCH_MAX));
+      }
+    }
+  }
+
+  /** One media.trash request for `batch` (same hub); restores every tile on refusal. */
+  _sendTrashBatch(batch) {
+    if (!batch.length) return;
+    const restore = () => {
+      for (const b of batch) {
+        b.tile._trashPending = 0;
+        if (b.tile.isDestroyed && b.tile.isDestroyed()) continue;
+        if (b.tile.el) b.tile.el.style.display = b.display;
+      }
+    };
+    const request = this.postService({
+      service: SERVICE.media.trash,
+      nid: batch.map((b) => b.node),
+      hub_id: batch[0].hub_id,
+    });
+    if (!request || !_.isFunction(request.then)) return restore();
+    request
+      .then((data) => {
+        // doRequest resolves undefined on a failed request; an {error} is a
+        // refusal too (403 already explained by onServerComplain).
+        if (!data || data.error) return restore();
+        // What the tile's own response handler does for a single trash: the
+        // server's media.remove broadcast will find them gone already.
+        for (const b of batch) {
+          if (b.tile.isDestroyed && b.tile.isDestroyed()) continue;
+          b.tile.trigger(_e.deleted);
+          b.tile.suppress();
+        }
+      })
+      .catch(restore);
+  }
+
+  /**
    *
    */
-  async removeMediaSelection(media) {
+  async removeMediaSelection(media, opts = {}) {
     const buckets = this.getMediaSelection(media);
     let { own_hubs, other_hubs, hubs_inside, allowed, rejected, locked } =
       buckets;
@@ -3442,26 +3767,20 @@ class __window_manager extends push {
     if (needsBulkConfirm(buckets)) {
       const ok = await this.confirmBulkTrash(actionableCount(buckets));
       if (!ok) return;
+    } else if (opts.confirm && allowed.length) {
+      // A deliberate single trash from the contextmenu row. No bulk dialog,
+      // so `allowed` holds exactly this one item and nothing else would ask —
+      // hubs and hub-bearing folders are in their own buckets with their own
+      // dialogs, and asking twice there would be noise.
+      const ok = await this.confirmTrash(allowed[0]);
+      if (!ok) return;
     }
 
     for (let r of rejected) {
       r.actionDenied();
     }
 
-    for (let r of allowed) {
-      this.animateMediaToTrash(r)
-        .then(() => {
-          r.logicalParent.syncGeometry();
-          if (r.mget(_a.status) === "seeding") {
-            r.suppress();
-            return;
-          }
-          r.putIntoTrash(1);
-        })
-        .catch(() => {
-          r.putIntoTrash(1);
-        });
-    }
+    this._trashBatch(allowed);
 
     for (let r of own_hubs) {
       await this.confirmRemoveHub(r);
@@ -3481,48 +3800,17 @@ class __window_manager extends push {
   }
 
   /**
+   * NO ANIMATION ANY MORE — deleting just deletes (Lexis/Duy, 2026-09-25).
    *
+   * This used to fly a clone of the tile to the sidebar bin (a 1.4s tween)
+   * and pulse the bin icon, and every trash / delete-workspace / leave path
+   * waited for that flight before the tile left. It now settles at once, so
+   * each caller runs its "after the flight" step (suppress, local echo,
+   * syncGeometry) straight away. Kept as a resolved promise rather than
+   * removed so the six callers keep their exact then/catch order.
    */
-  animateMediaToTrash(media) {
-    return new Promise((resolve, reject) => {
-      const helper = media.$el.clone();
-      helper.removeAttr("class");
-      helper.addClass(`deleting ${media.fig.family}__helper-wrapper`);
-      const pos = media.$el.offset();
-      helper.css({
-        position: _a.absolute,
-        left: pos.left,
-        top: pos.top - media.$el.height(),
-        zIndex: 200002, // Must be hight than modal popup
-      });
-      let trash = this.getTrashBin();
-      if (!trash) {
-        return reject();
-      }
-      let trashbin = trash.$el;
-      this.$el.append(helper);
-      const f = () => {
-        // GSAP3: vendor exports gsap (default+named) but not the TimelineMax shim,
-        // so build the timeline directly. Unwrap the jQuery target to a DOM node
-        // (mirrors the shim's getTarget) and use the v3 .to(target, {duration,...}) signature.
-        const node = trashbin.get ? trashbin.get(0) : trashbin;
-        const tl = gsap.timeline();
-        tl.to(node, { duration: 0.3, scale: 1.2 }).to(node, { duration: 0.3, scale: 1 });
-        trashbin.parent().children(".temp-anim").remove();
-        helper.remove();
-        resolve();
-      };
-
-      const dest_x = trashbin.offset().left;
-      const dest_y = trashbin.offset().top;
-      TweenLite.to(helper, 1.4, {
-        left: dest_x,
-        top: dest_y,
-        scale: 0,
-        alpha: 0,
-        onComplete: f,
-      });
-    });
+  animateMediaToTrash() {
+    return Promise.resolve();
   }
 
   /**

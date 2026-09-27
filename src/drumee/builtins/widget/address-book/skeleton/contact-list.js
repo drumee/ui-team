@@ -169,7 +169,8 @@ module.exports = function (ui, contacts) {
       ];
     } else if (isSent) {
       actionKids = [
-        iconBtn(fig, "danger", "cross", LOCALE.CANCEL_INVITE || LOCALE.CANCEL, "delete-contact", { contactId: key }, ui),
+        // See contact-detail.js: `confirmKind` picks the cancel-invite copy.
+        iconBtn(fig, "danger", "cross", LOCALE.CANCEL_INVITE || LOCALE.CANCEL, "delete-contact", { contactId: key, confirmKind: "cancel-invite" }, ui),
       ];
     } else {
       actionKids = [

@@ -13,17 +13,22 @@ const __skl_stream_local = function (_ui_) {
   // only from Visitor.profile() (participants/index.js), whose lastname can be
   // empty while Visitor.lastname() falls back to a secondary field — without
   // the fallback the owner read "T"/"Test" here vs "TO"/"Test Owner1" remotely.
-  const firstname = _ui_.mget(_a.firstname) || Visitor.firstname() || "";
-  const lastname = _ui_.mget(_a.lastname) || Visitor.lastname() || "";
+  // undefined, never "": a pair of empty strings is what the profile widget
+  // turns into the literal "??" (see its initiales()).
+  const firstname = _ui_.mget(_a.firstname) || Visitor.firstname() || undefined;
+  const lastname = _ui_.mget(_a.lastname) || Visitor.lastname() || undefined;
   // Footer badge: match the remote footer, which shows the broadcast display
   // name (Visitor.fullname() for a member). Fall back to the split name, then
   // the old username chain, then LOCALE.ME for a nameless guest.
-  const uname =
+  // `realName` is kept separate because LOCALE.ME is a UI word, not a name —
+  // feeding it to the avatar below would stamp "M" on a nameless guest's tile
+  // instead of letting the generic avatar render.
+  const realName =
     Visitor.fullname() ||
-    `${firstname} ${lastname}`.trim() ||
+    `${firstname || ""} ${lastname || ""}`.trim() ||
     _ui_.mget("username") ||
-    _ui_.mget("uname") ||
-    LOCALE.ME;
+    _ui_.mget("uname");
+  const uname = realName || LOCALE.ME;
 
   // Feed the profile widget the SAME split firstname/lastname the remote tile
   // uses (endpoint/remote/user/skeleton) so initiales() and colorFromName()
@@ -40,7 +45,10 @@ const __skl_stream_local = function (_ui_) {
     type: 'thumb',
     active: 0,
     firstname,
-    lastname
+    lastname,
+    // Last resort for a local user with no name parts (a guest who joined with
+    // just a display name): the real name the footer shows — never LOCALE.ME.
+    surname: realName || undefined
   };
 
   const topActions = Skeletons.Box.X({

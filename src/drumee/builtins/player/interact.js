@@ -4,6 +4,7 @@ const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const Rectangle = require('rectangle-node');
 const CHANGE_RADIO = "change:radio";
 const __utils = require("window/utils");
+const snap = require("builtins/window/snap");
 
 class __window_interact_player extends __utils {
   constructor(...args) {
@@ -482,6 +483,10 @@ class __window_interact_player extends __utils {
    */
   onBeforeDestroy() {
     this._removeResizeShield();
+    if (this._onViewportFill) {
+      window.removeEventListener("resize", this._onViewportFill);
+      clearTimeout(this._viewportFillTimer);
+    }
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -806,7 +811,107 @@ class __window_interact_player extends __utils {
       if (to.top + to.height > window.innerHeight)
         to.top = window.innerHeight - to.height;
     }
-    TweenMax.fromTo(this.$el, 1.5, from, to);
+    // Files open instantly (Lexis, 2026-09-23) — no grow-from-the-tile tween.
+    // `from` is still accepted so callers need no change; only the final
+    // state is applied.
+    const { onComplete, ease, ...end } = to;
+    if (this._fullFrame()) {
+      // Full-frame: the computed box becomes the "center" restore target.
+      TweenMax.set(this.$el, { scale: 1, opacity: 1 });
+      snap.fillWorkspace(
+        this,
+        {
+          left: Math.round(end.left),
+          top: Math.round(end.top),
+          width: Math.round(end.width),
+          height: Math.round(end.height),
+        },
+        this._fullFrameOpt(),
+      );
+      this._markFullFrame();
+      this._followViewport();
+      if (_.isFunction(cb)) _.defer(() => cb(this));
+      return;
+    }
+    TweenMax.set(this.$el, end);
+    _.defer(onComplete);
+  }
+
+  /**
+   * Whether this viewer opens full-frame — filling the desk work area (the
+   * whole viewport on a share page), like the office editor always has. Audio
+   * keeps its compact player; mobile is full-bleed already.
+   */
+  _opensFullFrame() {
+    if (Visitor.isMobile()) return false;
+    if (this.mget(_a.kind) === "audio_player") return false;
+    return true;
+  }
+
+  /**
+   * First display of a full-frame viewer, or a re-display (reload) of one
+   * still in the full preset. A viewer the user has since tiled or reframed
+   * keeps the windowed behaviour.
+   */
+  _fullFrame() {
+    if (this._zoomed) return true;
+    if (this._fullFrameOpened) return false;
+    this._fullFrameOpened = 1;
+    return this._opensFullFrame();
+  }
+
+  /** Minimums for the full-frame geometry — the viewer's own snap minimums. */
+  _fullFrameOpt() {
+    if (_.isFunction(this._snapOpt)) return this._snapOpt();
+    return { minWidth: 200, minHeight: 200 };
+  }
+
+  /**
+   * Keep a full-frame viewer filling the viewport on a share page. The desk WM
+   * already re-fits zoomed windows on resize (manager `_clampWindow`), but the
+   * DMZ WM replaces that part of `onPartReady`, so nothing else would.
+   */
+  _followViewport() {
+    if (!Visitor.inDmz || this._onViewportFill) return;
+    const f = () => {
+      clearTimeout(this._viewportFillTimer);
+      this._viewportFillTimer = setTimeout(() => {
+        if (this.isDestroyed()) {
+          window.removeEventListener("resize", f);
+          return;
+        }
+        if (!this._zoomed) return;
+        // The document player sizes its content off its own helper.
+        if (_.isFunction(this._applyWorkspaceBounds)) {
+          this._applyWorkspaceBounds(false);
+          return;
+        }
+        const ws = snap.workspaceRect();
+        snap.applyBounds(
+          this,
+          { left: 0, top: 0, width: ws.width, height: ws.height },
+          { ...this._fullFrameOpt(), instant: true },
+        );
+      }, 150);
+    };
+    this._onViewportFill = f;
+    window.addEventListener("resize", f);
+  }
+
+  /**
+   * Light the "full" Move & Resize preset: the lit preset is inert, so the
+   * user never "zooms" an already full window back down by accident.
+   */
+  _markFullFrame() {
+    if (_.isFunction(this._markSnapPreset)) this._markSnapPreset("full");
+  }
+
+  /**
+   * Close instantly (Lexis, 2026-09-23) instead of ui-core's default
+   * shrink-to-the-tile tween.
+   */
+  goodbye() {
+    return super.goodbye({ now: true });
   }
 
   /**

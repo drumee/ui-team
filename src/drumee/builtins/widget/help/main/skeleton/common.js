@@ -37,7 +37,11 @@ function videoBlock(ui, video) {
     // Named so playVideo() can swap the poster out for the player without
     // re-rendering the rest of the page.
     sys_pn: "help-video",
-    attrOpt: { "data-placeholder": video ? 0 : 1 },
+    // data-poster tints the badge for a real thumbnail.
+    attrOpt: {
+      "data-placeholder": video ? 0 : 1,
+      "data-poster": video && ui.videoPosterUrl() ? 1 : 0,
+    },
     service: video ? "help-play-video" : null,
     uiHandler: video ? [ui] : undefined,
     kidsOpt: { active: 0 },

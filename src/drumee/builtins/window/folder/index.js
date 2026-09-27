@@ -1,7 +1,8 @@
 const mfsInteract = require("../interact");
+const { EVENT: SPLIT_BODY_EVENT } = require("libs/split-body-signal");
 const {
   VIEW_STATES,
-  isGrouped,
+  isSectioned,
   setGrouped,
   clearGrouped,
   groupViewState,
@@ -539,6 +540,9 @@ class __window_folder extends mfsInteract {
     }
     setGrouped(this, true);
     this.setViewMode(_a.icon, false);
+    // Team-chat unread count for the chat card header (see _paintChatUnread).
+    this._onWorkspaceUnread = () => this._paintChatUnread();
+    RADIO_BROADCAST.on("workspace-unread", this._onWorkspaceUnread);
     // `data-visible` is derived from privilege. Keep it in sync even when a
     // caller updates the model outside the explicit navigation/live-role paths.
     this.listenTo(
@@ -717,10 +721,41 @@ class __window_folder extends mfsInteract {
     return true;
   }
 
+  /**
+   * Where a Google Drive import started from this window lands.
+   *
+   * The directory the user is LOOKING AT, by the breadcrumb's current-node
+   * rule (refreshBreadcrumbsUI): the model nid follows in-window navigation,
+   * and a hub/workspace ROOT window's active directory is its actual_home_id.
+   * The title tracks navigation the same way, so the name comes from it.
+   *
+   * Two callers: this window's own "+ New → Migrate from Google Drive", and
+   * the migrate tour's live dialog (builtins/window/tutorial, _goLive), which
+   * must land an import in exactly the place that row would.
+   *
+   * @returns {{hub_id, nid, name, area, filetype}}
+   */
+  gdriveDestination() {
+    let nid = this.mget(_a.nid);
+    if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+      nid = this.mget(_a.actual_home_id);
+    }
+    return {
+      hub_id: this.mget(_a.hub_id) || Visitor.id,
+      nid: nid || Visitor.get(_a.home_id),
+      name: this.mget(_a.hub_name) || this.mget(_a.filename) || "",
+      area: this.mget(_a.area) || undefined,
+      // A hub ROOT is a workspace and gets its area badge; anything the user
+      // has navigated into is a plain folder.
+      filetype: nid === this.mget(_a.actual_home_id) ? _a.hub : _a.folder,
+    };
+  }
+
 
 
   onBeforeDestroy(opt) {
     clearGrouped(this);
+    RADIO_BROADCAST.off("workspace-unread", this._onWorkspaceUnread);
     if (this._folderGridSortTimer) {
       clearTimeout(this._folderGridSortTimer);
       this._folderGridSortTimer = null;
@@ -750,6 +785,37 @@ class __window_folder extends mfsInteract {
       Wm.$el.trigger("workspace:close", this);
     }
     if (super.onBeforeDestroy) return super.onBeforeDestroy(opt);
+  }
+
+  /**
+   * Show how many team-chat messages of this workspace are unread: the count
+   * beside "Team Chat" and a raised card (data-unread on the chat panel), so a
+   * conversation sitting in the Files side column is visibly waiting — until
+   * it is read (widget_chat markConversationRead → workspace-chat-read).
+   *
+   * Source: panel_activity's per-workspace counts (hub-counts.js), the same
+   * numbers the rail's Chat pill shows, so the two cannot disagree. Workspace
+   * team chat only — a window opened from a share (token) reads a folder
+   * conversation that the workspace count does not describe.
+   */
+  _paintChatUnread() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const pill = this.__chatUnread;
+    const shared = !!this.mget(_a.token);
+    const hub = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    const all = (window.ActivityHandler && window.ActivityHandler._hubCounts) || {};
+    const c = (!shared && hub != null && all[hub]) || {};
+    const n = parseInt(c.chat, 10) || 0;
+    const content = n > 99 ? "99+" : String(n);
+    if (pill && pill.el && !(pill.isDestroyed && pill.isDestroyed())) {
+      pill.el.innerText = n === 0 ? "" : content;
+      pill.el.dataset.count = content;
+    }
+    const panel = this.getPart && this.getPart("chat-panel");
+    if (panel && panel.el) {
+      if (n > 0) panel.el.dataset.unread = "1";
+      else delete panel.el.dataset.unread;
+    }
   }
 
   // Apply filename — or hub_name for an empty-filename root — to the title.
@@ -799,7 +865,7 @@ class __window_folder extends mfsInteract {
     // renamed tile in its old group until the next mode switch. Partitioning
     // alone re-reads the models and never installs a comparator, so the saved
     // ranks stay intact.
-    if (isGrouped(this) && this._partitionFoldersAndFiles && this.iconsList) {
+    if (isSectioned(this) && this._partitionFoldersAndFiles && this.iconsList) {
       this._partitionFoldersAndFiles(this.iconsList);
     }
     this._scheduleAlphabeticalGridSort();
@@ -1376,6 +1442,12 @@ class __window_folder extends mfsInteract {
       this.__zoomPresets = child;
       this._syncSnapPresets();
     }
+    if (pn === "chat-header-unread") {
+      // Re-fed with the header on every scope switch (chatHeaderBar), so it
+      // is repainted from the last counts each time it mounts.
+      this.__chatUnread = child;
+      this._paintChatUnread();
+    }
     if (pn === "folder-view") {
       this.__folderView = child;
       // Restore the user's persisted Files-tab split ratio (default 2:1).
@@ -1897,17 +1969,7 @@ class __window_folder extends mfsInteract {
       (cmd && cmd.getParentByKind?.(KIND.menu.topic)) ||
       (this.getPart && this.getPart("new-menu"));
     if (!menu) return;
-    const group = menu.el?.querySelector(
-      ".window-button__dropdown-menu__item--create-group",
-    );
-    if (group) group.dataset.submenu = _a.closed;
     if (menu.changeState) menu.changeState(0);
-  }
-
-  toggleNewCreateMenu(cmd) {
-    if (!cmd || !cmd.el) return;
-    cmd.el.dataset.submenu =
-      cmd.el.dataset.submenu === _a.open ? _a.closed : _a.open;
   }
 
   onUiEvent(cmd, args = {}) {
@@ -1950,9 +2012,6 @@ class __window_folder extends mfsInteract {
       case "tab-bar-page":
         return this._showTabCarouselPage(cmd);
 
-      case "toggle-new-create-menu":
-        return this.toggleNewCreateMenu(cmd);
-
       // Tap on the mobile dim layer behind the centred "+ New" card. Same
       // close a leaf row runs, so the card and its backdrop leave together.
       case "close-new-menu":
@@ -1980,25 +2039,15 @@ class __window_folder extends mfsInteract {
         // exist. singleton + wm_unique_id (per the multi-folder-windows fix)
         // prevents a duplicate popup on re-click.
         //
-        // Destination = the directory the user is LOOKING AT, mirroring the
-        // breadcrumb's current-node rule (refreshBreadcrumbsUI): the model nid
-        // follows in-window navigation, and a hub/workspace ROOT window's
-        // active directory is its actual_home_id. The previous order —
-        // actual_home_id first — sent every import to the workspace root even
-        // when the user had navigated into a sub-folder and clicked "+ New"
-        // right there. `direct: 1` tells the importer to land the content in
-        // this folder itself, not in a GoogleDriveMigration wrapper: the user
-        // picked the destination by standing in it.
+        // Destination = the directory the user is LOOKING AT; see
+        // gdriveDestination. The previous order — actual_home_id first — sent
+        // every import to the workspace root even when the user had navigated
+        // into a sub-folder and clicked "+ New" right there. `direct: 1` tells
+        // the importer to land the content in this folder itself, not in a
+        // GoogleDriveMigration wrapper: the user picked the destination by
+        // standing in it.
         this.closeNewMenu(cmd);
-        let destNid = this.mget(_a.nid);
-        if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
-          destNid = this.mget(_a.actual_home_id);
-        }
-        // The window title tracks navigation the same way the nid does
-        // (refreshBreadcrumbsUI msets hub_name to the current node's name).
-        const destName = this.mget(_a.hub_name) || this.mget(_a.filename) || "";
-        const destHub = this.mget(_a.hub_id) || Visitor.id;
-        const destNidFinal = destNid || Visitor.get(_a.home_id);
+        const dest = this.gdriveDestination();
         // Warmed NOW even when the launch waits for the tour, so the dialog is
         // rendered from memory the instant the tour comes down rather than
         // starting a chunk fetch at the moment it is finally wanted.
@@ -2011,18 +2060,13 @@ class __window_folder extends mfsInteract {
           return ready.then(() => Wm.launch(
             {
               kind: "migrate_gdrive_popup",
-              hub_id: destHub,
-              nid: destNidFinal,
-              destinationName: destName || undefined,
+              hub_id: dest.hub_id,
+              nid: dest.nid,
+              destinationName: dest.name || undefined,
               // What the destination LOOKS like, so the popup's card draws
-              // this folder's own shape rather than a generic one. Read off
-              // the same window the name and the nid come from — a hub ROOT
-              // window is a workspace and gets its area badge, anything the
-              // user has navigated into is a plain folder.
-              destArea: this.mget(_a.area) || undefined,
-              destFiletype: destNid === this.mget(_a.actual_home_id)
-                ? _a.hub
-                : _a.folder,
+              // this folder's own shape rather than a generic one.
+              destArea: dest.area,
+              destFiletype: dest.filetype,
               direct: 1,
               // Destination-scoped id (same scheme as window_folder-<hub>-<nid>).
               // A plain shared id made singleton raise() a popup opened from
@@ -2031,7 +2075,7 @@ class __window_folder extends mfsInteract {
               // import into the wrong place. Per-destination ids keep the
               // no-duplicate guarantee per folder while giving each launch
               // context its own popup.
-              wm_unique_id: `migrate_gdrive_popup-${destHub}-${destNidFinal}`,
+              wm_unique_id: `migrate_gdrive_popup-${dest.hub_id}-${dest.nid}`,
             },
             { explicit: 1, singleton: 1 },
           ));
@@ -2126,7 +2170,11 @@ class __window_folder extends mfsInteract {
           // to every member. Gating it would make the rail's Access a dead
           // control for a view-only member of their own team workspace.
           if (this.canUpload && !this.canUpload()) {
-            if (window.Butler && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
+            if (window.Butler && Butler.say) {
+              Butler.say(require("libs/permission-denied").weakPrivilegeMessage(
+                LOCALE.PERMISSION_ACTION_SHARE, this.mget(_a.privilege), _K.permission.write,
+              ));
+            }
             return;
           }
           // Contextual tour, raised BEFORE openManageAccess because that call
@@ -3110,6 +3158,21 @@ class __window_folder extends mfsInteract {
       const part = this.getPart && this.getPart("meeting-panel");
       if (!part || !part.el) return;
       this._schedPaintedDay = Dayjs().format("YYYY-MM-DD");
+      // The skin fades the grid in (`[data-painted="1"] > *`), and feed()
+      // recreates those children, so every refresh replayed the fade — the
+      // whole calendar blinking after a meeting was saved or removed, and a
+      // second time when a fetch changed the range just painted. Fade only
+      // for the reveal and for new content (another view or range); a
+      // repaint of what is on screen just appears. Stamped BEFORE the feed so
+      // the new children never pick the animation up.
+      const st = require("./skeleton/meeting-schedule").schedState(this);
+      const { stime, etime } = this._meetingRange();
+      const day = st.view === "daily" ? st.anchor.format("YYYY-MM-DD") : "";
+      const key = `${st.view}:${day}:${stime}:${etime}`;
+      const arriving =
+        key !== this._schedFadeKey || part.el.dataset.painted !== "1";
+      this._schedFadeKey = key;
+      part.el.dataset.schedFade = arriving ? "1" : "0";
       part.feed(require("./skeleton/meeting-schedule")(this).kids);
     };
     // Nothing known yet for this window: start from the last answer the
@@ -4229,7 +4292,24 @@ class __window_folder extends mfsInteract {
     // endpoint. All it decides is whether the schedule button reads "Start"
     // or "Join meeting" — realtime sentinels keep it correct either way, so
     // it can wait a tick and let the grid request go first.
-    _.defer(() => this._refreshMeetingActiveState());
+    //
+    // Idle, not just deferred: a `_.defer` still lands inside the switch's
+    // burst, next to show_node_by, the chat's own channel.messages and the
+    // task loads — this is a second channel.messages on the same endpoint.
+    // Pulled forward the moment the Meet tab is shown (showFolderTab), which is
+    // where the button it decides lives.
+    const run = () => {
+      if (this._meetingScanDone) return;
+      this._meetingScanDone = 1;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._refreshMeetingActiveState();
+    };
+    this._runMeetingScan = run;
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(run, { timeout: 2500 });
+    } else {
+      setTimeout(run, 1200);
+    }
   }
 
   // Best-effort initial scan: fetch this room's recent messages (newest first)
@@ -5269,6 +5349,11 @@ class __window_folder extends mfsInteract {
           this._threadRailItems = items;
           this._threadRailFolder = folderNid;
           this._threadRailGeneration = generation;
+          // Every Chat-tab press lands here, and the rail is usually already
+          // showing exactly these rows: a feed() would destroy and rebuild
+          // every thread row (~4 views each) for nothing. Signed per rail
+          // instance, so a remounted rail always paints.
+          if (this._sameThreadRailPaint(rail, items, scopedNid)) return;
           rail.feed(
             require("./skeleton/thread-menu")(this, {
               items,
@@ -5317,6 +5402,7 @@ class __window_folder extends mfsInteract {
     const rail = this._threadRailPart;
     if (!rail || !rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
     if (!_.isArray(this._threadRailItems)) return;
+    if (this._sameThreadRailPaint(rail, this._threadRailItems, scopedNid || "")) return;
     rail.feed(
       require("./skeleton/thread-menu")(this, {
         items: this._threadRailItems,
@@ -5324,6 +5410,16 @@ class __window_folder extends mfsInteract {
         variant: "rail",
       }),
     );
+  }
+
+  // True when `rail` already shows exactly (items, scopedNid) — the caller can
+  // skip its feed. Otherwise records the new signature and answers false.
+  _sameThreadRailPaint(rail, items, scopedNid) {
+    const sig = readCache.signature({ items, scopedNid: scopedNid || "" });
+    const hasRows = !!(rail.children && rail.children.length);
+    if (hasRows && rail._threadRailSig === sig) return true;
+    rail._threadRailSig = sig;
+    return false;
   }
 
   _closeThreadMenu() {
@@ -5671,9 +5767,16 @@ class __window_folder extends mfsInteract {
         board._restoreViewScroll(saved.task);
       }
     };
-    restore();
+    // Next frame ONLY. Restoring synchronously here forced the whole newly
+    // revealed pane (a display:none subtree has no style or layout — for the
+    // file grid, thousands of elements) to restyle and lay out INSIDE the
+    // click handler, on top of the frame that has to do it anyway. rAF runs
+    // before that frame paints, so the offset is still in place on first
+    // paint — nothing flashes at the top — and the layout is paid once.
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(restore);
+    } else {
+      restore();
     }
   }
 
@@ -5682,8 +5785,19 @@ class __window_folder extends mfsInteract {
       this.syncNewCtrlVisibility();
       return;
     }
+    // Note the outgoing panel's scroll offset FIRST, before this method writes
+    // anything (tab-bar state, chat layout, visibility stamps). Read here the
+    // layout is still clean from the last frame, so it costs nothing; read
+    // after those writes — where it used to be, inside switchView — it forced
+    // a synchronous style+layout flush of the window on every rail click.
+    this._stashPanelScroll();
     const prevTab = this.activeTab;
     this.activeTab = tab;
+    // The Start / Join button is on the Meet tab: its idle-deferred scan
+    // (_initMeetingPresence) must not be waited on once it is on screen.
+    if (tab === "meeting" && _.isFunction(this._runMeetingScan)) {
+      this._runMeetingScan();
+    }
     // The desk's switcher header lights its link chip while the secure-share
     // view is up (it is a toggle for it). Announced here, where every way in
     // and out ends — the opener, the panel's ✕, a rail press — so the chip
@@ -5746,8 +5860,8 @@ class __window_folder extends mfsInteract {
       // display:none drops a scroller's position, so the panels going out of
       // view are noted before the stamp and the ones coming in are put back
       // after it — a user who scrolled deep into a folder and glanced at the
-      // board should land where they were.
-      this._stashPanelScroll();
+      // board should land where they were. (Noted at the top of
+      // showFolderTab, before any write — see there.)
       // Where the column is switching FROM, for the skin's Team Chat <->
       // Who has access switch animation (skin/index.scss). Empty on first show.
       view.el.dataset.fromView = prevTab || "";
@@ -5758,6 +5872,14 @@ class __window_folder extends mfsInteract {
         case _a.chat:
           // Rail + side-panel layout is set up by _enterChatTabLayout (called
           // from showFolderTab); the chat panel itself is already mounted.
+          //
+          // Opening Team Chat is reading it — the one tab switch that marks
+          // the conversation read (widget_chat read_on_interaction). Measured
+          // a frame later, once the data-view stamp has laid it out.
+          requestAnimationFrame(() => {
+            const chat = this.getPart && this.getPart("folder-chat");
+            if (chat && _.isFunction(chat.readIfInView)) chat.readIfInView();
+          });
           return;
         case "files":
           return;
@@ -5901,7 +6023,29 @@ class __window_folder extends mfsInteract {
       this._entranceRaf = 0;
       if (this.isDestroyed && this.isDestroyed()) return;
       if (el.dataset) el.dataset.viewEntering = "1";
+      this._announceSplitBodyShown();
     });
+  }
+
+  /**
+   * Tell the desk this workspace's split body is on screen — once per pane.
+   *
+   * Here, in _playViewEntrance's frame, because it is the one path BOTH ways
+   * of showing the split body go through: its first paint (onPartReady
+   * "folder-view", which on the default Files tab never calls switchView) and
+   * every later tab switch. Inside the frame, so it has actually been drawn.
+   *
+   * A reload's screen restore waits on this (libs/split-body-signal, desk
+   * _restoreScreen) so the saved screen lands over a painted workspace, not
+   * before it. The flag is what a restore that starts late reads instead.
+   *
+   * Headless panes only: a floating folder window's split body is not the
+   * desk's.
+   */
+  _announceSplitBodyShown() {
+    if (this._splitBodyShown || !this.mget(_a.headless)) return;
+    this._splitBodyShown = 1;
+    RADIO_BROADCAST.trigger(SPLIT_BODY_EVENT, this);
   }
 
   getFolderActionTarget() {

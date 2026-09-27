@@ -785,6 +785,16 @@ export function chatHeaderBar(ui, opt = {}) {
       className: `${grp}__chat-header-title`,
       content: getChatLabel(ui),
     }),
+    // Unread count of the workspace team chat, next to its title. Filled by
+    // the folder window (_paintChatUnread) from the same per-workspace counts
+    // as the rail's Chat pill; blank and hidden at zero.
+    Skeletons.Note({
+      className: `${grp}__chat-header-unread`,
+      sys_pn: "chat-header-unread",
+      partHandler: ui,
+      content: "",
+      dataset: { count: 0 },
+    }),
     actions,
   ];
 }
@@ -847,6 +857,9 @@ export function chatPanel(ui) {
     send_icon: "raw-send-chat",
     attach_icon: "chat-link-simple",
     sys_pn: "folder-chat",
+    // Read only when actually read — its Chat tab on screen, or a click /
+    // keystroke in it — never by being mounted beside the file grid.
+    read_on_interaction: 1,
   };
 
   // Two scopes, and the difference is who is reading.
@@ -1117,7 +1130,7 @@ export function fileTypeFilterBar(ui) {
     { label: LOCALE.ALL, value: "all" },
     { label: LOCALE.DOCS, value: "docs" },
     { label: LOCALE.PDF, value: "pdf" },
-    { label: LOCALE.IMAGES, value: "image" },
+    { label: LOCALE.MEDIA, value: "image" },
     { label: LOCALE.OTHER, value: "other" },
   ];
   // Which tab is lit comes from the WINDOW, never from the tab's position.
@@ -1525,10 +1538,8 @@ export function windowHeader(ui, topbar) {
 
 /**
  * Merged "+ New" menu for the folder window Files tab (replaces the separate
- * header Upload + Add-new buttons). The outer `menu_topic` owns import actions
- * and a plain nested Box flyout owns create actions. Keeping one menu widget
- * preserves its outside-click lifecycle while matching the cascading menu used
- * elsewhere in the app.
+ * header Upload + Add-new buttons). A single flat `menu_topic` list holds both
+ * the import and the create actions.
  *
  * Kept separate from `newFileMenu` (still used by team/sharebox/dmz windows) so
  * those callers are untouched.
@@ -1544,55 +1555,25 @@ export function newMenu(ui, opt = {}) {
   // Row shape lives in ./new-menu-rows.
   const row = (spec) => menuRow(ui, spec);
 
-  const importRows = [
-    row({
-      service: _e.upload,
-      ico: "app-upload",
-      content: LOCALE.FROM_DEVICE,
-      className: `${cnItem}--from-device`,
-    }),
-    row({
-      service: "launch-gdrive-migration",
-      ico: "logo-google",
-      content: LOCALE.MIGRATE_GDRIVE_TITLE,
-      className: `${cnItem}--gdrive`,
-    }),
-  ];
-
-  // The four create rows, shared with the empty-state hero. `submenu: 1` adds
-  // the flyout-item class this surface's nested presentation indents on.
-  const createItems = createRows(ui, { submenu: 1 });
-
-  const createGroup = Skeletons.Box.X({
-    className: `${cnItem} ${cnItem}--create-group`,
-    sys_pn: "new-create-group",
-    partHandler: ui,
-    uiHandler: [ui],
-    service: "toggle-new-create-menu",
-    dataset: { submenu: _a.closed },
-    kidsOpt: { active: 0 },
-    kids: [
-      Skeletons.Note({
-        content: "+",
-        active: 0,
-        className: `${cnDropdown}__create-symbol`,
-      }),
-      Skeletons.Note({
-        content: LOCALE.ADD_NEW,
-        active: 0,
-        className: `${cnDropdown}__name`,
-      }),
-      Skeletons.Box.Y({
-        active: 0,
-        className: `${cnDropdown}__create-submenu`,
-        kids: createItems,
-      }),
-    ],
-  });
-
+  // One flat list: From device, the four create rows, then Migrate from
+  // Google Drive.
   const items = Skeletons.Box.Y({
     className: `${cnDropdown}__items`,
-    kids: [...importRows, createGroup],
+    kids: [
+      row({
+        service: _e.upload,
+        ico: "app-upload",
+        content: LOCALE.FROM_DEVICE,
+        className: `${cnItem}--from-device`,
+      }),
+      ...createRows(ui),
+      row({
+        service: "launch-gdrive-migration",
+        ico: "logo-google",
+        content: LOCALE.MIGRATE_GDRIVE_TITLE,
+        className: `${cnItem}--gdrive`,
+      }),
+    ],
   });
 
   // Use the same dedicated add glyph as the desk topbar so the plus has stable
@@ -1610,17 +1591,12 @@ export function newMenu(ui, opt = {}) {
     className: `${cnDropdown}__wrapper`,
     flow: _a.y,
     opening: _e.click,
-    // The parent row must be clickable without dismissing the outer panel.
-    // Folder leaf handlers close the ancestor menu explicitly.
+    // Folder row handlers close the menu explicitly (closeNewMenu).
     persistence: _a.always,
     // Instant ui-core tween: the root only reaches data-state="1" when it
     // completes, so any real duration just delays the panel. The show / close
     // animation is CSS (window/folder/skin, __new-ctrl).
     duration: 0.01,
-    callback: () => {
-      const group = ui.getPart && ui.getPart("new-create-group");
-      if (group && group.el) group.el.dataset.submenu = _a.closed;
-    },
     trigger,
     items,
   };

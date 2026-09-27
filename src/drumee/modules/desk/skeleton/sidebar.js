@@ -266,9 +266,12 @@ const createRailNav = (ui) => {
           // and _openDefaultWorkspace opens on the default tab), so an unlit
           // rail was disagreeing with the screen behind it.
           createNavItem(ui, "rail-files", LOCALE.FILES, "rail-files", "", null, "sidebar-files", null, { initialState: 1 }),
-          createNavItem(ui, "rail-chat", LOCALE.CHAT, "rail-chat", "", null, "sidebar-chat"),
-          createNavItem(ui, "rail-task", LOCALE.TASK, "rail-task", "", null, "sidebar-task"),
-          createNavItem(ui, "rail-meet", LOCALE.MEET, "rail-meet", "", null, "sidebar-meet"),
+          // Chat / Task / Meet carry an unread pill for the OPEN workspace
+          // (desk _writeRailCounts, fed by panel_activity's per-workspace
+          // counts). Hidden at zero by the skin.
+          createNavItem(ui, "rail-chat", LOCALE.CHAT, "rail-chat", "", null, "sidebar-chat", "rail-badge-chat"),
+          createNavItem(ui, "rail-task", LOCALE.TASK, "rail-task", "", null, "sidebar-task", "rail-badge-task"),
+          createNavItem(ui, "rail-meet", LOCALE.MEET, "rail-meet", "", null, "sidebar-meet", "rail-badge-meet"),
           createNavItem(ui, "rail-access", LOCALE.ACCESS, "rail-access", "", null, "sidebar-access"),
         ],
       }),

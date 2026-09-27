@@ -434,7 +434,7 @@ function seatLimitMessage(res = {}) {
   const count = seat > 0 ? ` (${used}/${seat})` : "";
   const next = canUpgradePlan()
     ? (LOCALE.QX_SEAT_BODY
-      || "You can not invite more members because you have reached limit of team plan. Upgrade to business plan now to invite more members.")
+      || "You can not invite more members because you have reached limit of team plan. Upgrade to a higher plan now to invite more members.")
     : (LOCALE.QX_ASK_OWNER
       || "Ask your workspace owner to review the organisation's plan.");
   return `${title}${count}. ${next}`;

@@ -301,12 +301,22 @@ class __webrtc_room extends __room {
    * 
    */
   setLocalUserInfo() {
-    let { username } = this.mget(_a.user) || {};
+    let { username, firstname, lastname } = this.mget(_a.user) || {};
     if (!Visitor.isGuest()) {
       username = Visitor.fullname();
     }
+    // JitsiConference.setDisplayName() silently drops a falsy name — no <nick>
+    // goes into our presence, and every peer's tile is left with no display
+    // name to fall back on while it waits for our userAttributes. Visitor
+    // .fullname() reads the profile JSON only (it answers the email when the
+    // parts are empty there, and undefined when even that is missing), so fall
+    // back through the name parts, which also read Visitor's top-level
+    // attributes, before giving up.
+    username = `${username || ""}`.trim()
+      || `${firstname || Visitor.firstname() || ""} ${lastname || Visitor.lastname() || ""}`.trim()
+      || `${Visitor.get(_a.email) || ""}`.trim();
     this.mset({ username })
-    this.room.setDisplayName(username);
+    if (username) this.room.setDisplayName(username);
   }
 
   /**
@@ -1484,11 +1494,24 @@ class __webrtc_room extends __room {
       mic = this.__ctrlAudio.getState();
     }
     let { firstname, lastname, username, uid } = this.mget(_a.user) || {};
+    // Publish a name field only when it holds something. `Visitor.firstname()`
+    // and `Visitor.lastname()` both end in `|| ''`, so an account with no name
+    // parts used to broadcast firstname:"" / lastname:"" — two empty strings
+    // that every peer copied straight onto their tile for us, leaving their
+    // profile widget with nothing to build initials from. Omitted keys let the
+    // receiving tile keep the display name it already resolved.
+    const named = (v) => {
+      const s = v == null ? "" : `${v}`.trim();
+      return s || undefined;
+    };
     let userAttributes = {
-      username,
+      // The display name is the one identity field every peer is guaranteed to
+      // see (it rides the MUC nick), so back it with the same chain the local
+      // tile uses rather than letting it go out empty.
+      username: named(username) || named(Visitor.fullname()),
       uid: uid || Visitor.id,
-      firstname: firstname || Visitor.firstname(),
-      lastname: lastname || Visitor.lastname(),
+      firstname: named(firstname) || named(Visitor.firstname()),
+      lastname: named(lastname) || named(Visitor.lastname()),
       quota: this.get(_a.quota),
       id: this.room.myUserId(),
       socket_id: Visitor.get(_a.socket_id),
@@ -1728,13 +1751,14 @@ class __webrtc_room extends __room {
    * Identity a peer has already published in its `userAttributes` presence
    * property, for seeding a tile at CREATION time.
    *
-   * USER_JOINED fires before lib-jitsi-meet processes the presence child nodes
-   * (ChatRoom.onPresence runs processNode only after MUC_MEMBER_JOINED), so for
-   * a peer whose attributes were already in the presence we saw — i.e. everyone
-   * who was in the room before us — the property is readable right here, and
-   * PARTICIPANT_PROPERTY_CHANGED is still to come. For a peer that joins after
-   * us the property is genuinely not set yet and this returns {}; the later
-   * property event fills it in (onPropertyChanged).
+   * Usually {}. ChatRoom.onPresence emits MUC_MEMBER_JOINED (-> USER_JOINED)
+   * BEFORE it walks the presence child nodes that install the jitsi_participant_*
+   * properties, in the same stanza — so at tile-creation time the property is
+   * normally still unset even for a peer who published it long ago, and it is
+   * PARTICIPANT_PROPERTY_CHANGED, a few statements later, that actually carries
+   * the identity. Kept because it costs nothing and does fire for a presence we
+   * re-read later; the tile no longer depends on it (see __remote_user's
+   * _applyIdentity / its re-read on mount).
    *
    * Seeding matters because the tile's avatar is a KIND.profile widget keyed on
    * `uid`, and Visitor.avatar() falls back to the LOCAL user's id when it gets
@@ -1766,7 +1790,13 @@ class __webrtc_room extends __room {
     for (const k of [
       _a.uid, _a.firstname, _a.lastname, _a.username, "avatar_mtime", "muted", "mic",
     ]) {
-      if (data[k] != null) out[k] = data[k];
+      if (data[k] == null) continue;
+      // An empty name part is not an answer. A peer whose profile carries no
+      // firstname/lastname publishes '' for them, and copying that over the
+      // display-name-derived value the tile already had is what left the avatar
+      // with nothing to build initials from.
+      if (typeof data[k] === "string" && !data[k].trim()) continue;
+      out[k] = data[k];
     }
     return out;
   }

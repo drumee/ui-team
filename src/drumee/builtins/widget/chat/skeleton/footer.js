@@ -43,6 +43,8 @@ const __skl_widget_chat_footer = function (ui) {
         no_emoji: ui.mget('no_emoji'),
         send_icon: ui.mget('send_icon'),
         attach_icon: ui.mget('attach_icon'),
+        // Opt-in: hosts that attach from the device only (the Inbox).
+        no_workspace_attach: ui.mget('no_workspace_attach'),
         bubble: 0
       }),
 

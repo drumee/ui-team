@@ -605,6 +605,16 @@
       border-radius: 16px 16px 16px 0;
     }
   }
+
+  // Unread in a workspace team chat the user has only glanced at (the Files
+  // side column) — widget_chat _markUnreadRows sets it, and clears it the
+  // moment the conversation is read (Chat tab on screen, a click in the chat,
+  // or a reply). A brand ring + tint, the same --overlay-brand / --primary-40
+  // pair the meeting card uses, so it reads in both themes.
+  &__ui[data-unread="1"] &__conversation-content.other {
+    background-color: var(--overlay-brand, rgba(89, 80, 255, 0.1));
+    box-shadow: 0 0 0 1px var(--primary-40, #5950ff);
+  }
 }
 
 // Meeting / file-thread system messages: centered row, larger text, no timestamp

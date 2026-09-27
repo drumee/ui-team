@@ -1,3 +1,5 @@
+const { isMeetingRollup } = require('../meeting-link');
+
 function escapeHtml(value = "") {
   return _.escape(String(value));
 }
@@ -434,8 +436,12 @@ function getActivityMeta(ui, data) {
     case 'contact': {
       // status === 'informed' marks the post-accept handshake half.
       const status = data.status || data.contact_status;
+      // `invite_accepted` is the raw yp.contact_activity row the accepter's
+      // side logs (contact.js); it carries no status, so without it the row
+      // read "<X> wants to connect".
       const accepted = status === 'informed'
         || data.event === 'contact.accept_informed'
+        || data.event === 'invite_accepted'
         || data.event_subtype === 'accepted';
       return {
         before: accepted
@@ -711,12 +717,10 @@ function getActivityMeta(ui, data) {
         // A scheduled meeting is a media node too (room.book creates a
         // `schedule` node), so notification_center_next rolls it up as an
         // upload — which is why an invitation used to read "<organizer>
-        // uploaded <Meeting-name>" and sat in the Files tab. Only a SINGLE-item
-        // rollup can be trusted here: the rollup groups per folder and takes
-        // MAX(item_filetype), so a folder holding both a meeting and a file
-        // would otherwise be relabelled a meeting. cnt > 1 keeps its old
-        // upload wording, exactly as before.
-        if (itemFiletype === 'schedule' && cnt <= 1) {
+        // uploaded <Meeting-name>" and sat in the Files tab. See
+        // isMeetingRollup for why only a single-item rollup qualifies; cnt > 1
+        // keeps its old upload wording, exactly as before.
+        if (isMeetingRollup(data)) {
           const meetingLabel = data.item_filename || name;
           const when = meetingTime(data.meeting_stime);
           return {
@@ -939,6 +943,78 @@ module.exports = function (ui) {
     ].filter(Boolean),
   });
 
+  // A WORKSPACE INVITATION IS NOW SOMETHING YOU ANSWER, so the row carries the
+  // two answers instead of only opening the workspace it names.
+  //
+  // 🚨 KEYED ON THE TOKEN, NOT ON THE CATEGORY. Two different things are both
+  // `hub_invite` rows: a real invitation, written by hub.invite, which carries
+  // `invite_token`; and the receipt _grantMembership writes when an admin adds
+  // somebody DIRECTLY through add_contributors, which has nothing to answer
+  // because the membership already exists. Rendering buttons by category would
+  // offer Accept on a workspace the user is already in, and would put them on
+  // every row written before this shipped. The token is the only field that
+  // distinguishes the two, and its absence is what makes an old row keep
+  // rendering exactly as it did.
+  //
+  // The buttons sit INSIDE the text block rather than in `__actions`, which is
+  // the fixed bookmark/trash column at the row's right edge: two labelled
+  // buttons do not fit there, and putting them under the sentence keeps them
+  // reading as the answer to it.
+  //
+  // Each button carries its own service, so the framework's handler contains
+  // the click (the same e.stopPropagation() the day-header note above relies
+  // on) and pressing Accept cannot also fire the text block's own service and
+  // navigate away underneath the answer.
+  //
+  // 🚨 AND KEYED ON THE STATUS WHEN THERE IS ONE. Answering an invitation only
+  // dismisses its row — it stays in the history, token and all — so keying on
+  // the token alone brought a declined invitation back from the refresh with
+  // both buttons live: Decline then did nothing and Accept reported an invalid
+  // link. The feed stamps `invite_status` from the token itself, and anything
+  // but `pending` gets a quiet label in place of the buttons. A row WITHOUT the
+  // field (the lookup was skipped or failed server-side) keeps the old
+  // token-only behaviour, so this can never hide an invitation that is still
+  // answerable.
+  const inviteToken = category === 'hub_invite' ? (data.invite_token || '') : '';
+  const inviteStatus = inviteToken ? (data.invite_status || '') : '';
+  const INVITE_STATUS_LABEL = {
+    accepted: LOCALE.INVITE_STATUS_ACCEPTED,
+    declined: LOCALE.DECLINED,
+    expired: LOCALE.INVITE_STATUS_UNAVAILABLE,
+    invalid: LOCALE.INVITE_STATUS_UNAVAILABLE,
+  };
+  const answered = inviteStatus && inviteStatus !== 'pending';
+  const answer = answered
+    ? Skeletons.Note({
+      className: `${pfx}__answer-status`,
+      // An unknown future value still hides the buttons — it is not `pending`
+      // — and reads as "no longer valid" rather than rendering blank.
+      content: INVITE_STATUS_LABEL[inviteStatus] || LOCALE.INVITE_STATUS_UNAVAILABLE,
+      dataset: { status: inviteStatus },
+    })
+    : inviteToken
+    ? Skeletons.Box.X({
+      className: `${pfx}__answer`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__accept`,
+          content: LOCALE.ACCEPT,
+          service: 'accept-invite',
+          uiHandler: ui,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__decline`,
+          // REFUSE, not DECLINE: the key is spelled REFUSE and its value is
+          // already "Decline" in en, with a real translation in all six locale
+          // files. DECLINE does not exist, and a missing key renders blank.
+          content: LOCALE.REFUSE,
+          service: 'decline-invite',
+          uiHandler: ui,
+        }),
+      ],
+    })
+    : null;
+
   const textBlockService = data.category === 'access_request'
     ? 'open-access-request'
     : data.category === 'meeting'
@@ -952,7 +1028,8 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Note({ className: `${pfx}__text`, content: text }),
       metaLine,
-    ],
+      answer,
+    ].filter(Boolean),
   });
 
 
@@ -974,19 +1051,31 @@ module.exports = function (ui) {
       }),
     ]
     : [
-      Skeletons.Button.Svg({
-        className: `${pfx}__bookmark`,
-        ico: 'notification_favorite',
-        service: 'toggle-favorite',
-        uiHandler: ui,
-      }),
+      // Only rows activity.get_feed decorated can be saved: the button needs
+      // the server's `bookmark_key`, and `is_saved` is what draws it lit again
+      // after the panel re-renders. A row without the key (the pinned pending
+      // access request, built from activity.list) gets no button rather than
+      // one that lights up and saves nothing.
+      data.bookmark_key
+        ? Skeletons.Button.Svg({
+          className: `${pfx}__bookmark`,
+          ico: 'notification_favorite',
+          service: 'toggle-favorite',
+          uiHandler: ui,
+          // dataset, NOT `state`: a `state` prop attaches ui-core's toggle
+          // behavior, which flips data-state on click on top of the row's own
+          // flip in _dispatchService — two flips, no change, and the request
+          // sent was the opposite of what was pressed.
+          dataset: { state: parseInt(data.is_saved, 10) === 1 ? '1' : '0' },
+        })
+        : null,
       Skeletons.Button.Svg({
         className: `${pfx}__trash`,
         ico: 'notification_trash',
         service: 'dismiss-activity',
         uiHandler: ui,
       }),
-    ];
+    ].filter(Boolean);
   const actions = Skeletons.Box.X({
     className: `${pfx}__actions`,
     kids: actionKids,

@@ -6,6 +6,7 @@ const {
   captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN,
 } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
+const { inviteWorkspaceScope } = require("libs/invite-scope");
 // "Open this file once I am signed in" — a Designation link opened by a visitor
 // with no session. Armed at module scope in index.web.js, consumed below.
 const fileDeepLink = require("libs/file-deep-link");
@@ -38,6 +39,8 @@ const DESK_BILLING_LOADER_DELAY = 220;
 // they share, which also gives it their mutual exclusion for free.
 const folderIcon = require("media/grid/template/folder");
 const { groupWorkspaces } = require("libs/workspace-groups");
+const { restoreScreen, pollFor } = require("libs/screen-restore");
+const { lightUtilityButton } = require("libs/utility-light");
 const {
   SECURE_SHARE_TAB,
   SECURE_SHARE_CLOSE,
@@ -182,6 +185,7 @@ class desk_module extends LetcBox {
     this.setModuleState = this.setModuleState.bind(this);
     this.lazyClasses = this.lazyClasses.bind(this);
     this._updateActivityBadge = this._updateActivityBadge.bind(this);
+    this._writeRailCounts = this._writeRailCounts.bind(this);
   }
 
   static initClass() {
@@ -220,6 +224,10 @@ class desk_module extends LetcBox {
     this._onWindowTutorial = this._onWindowTutorial.bind(this);
     RADIO_BROADCAST.on("window-tutorial:mount", this._onWindowTutorial);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
+    // Rail Chat / Task / Meet pills: new counts, or another workspace in front.
+    RADIO_BROADCAST.on("workspace-unread", this._writeRailCounts, this);
+    RADIO_BROADCAST.on("workspace:focus", this._writeRailCounts, this);
+    RADIO_BROADCAST.on("chat:read", this._writeRailCounts, this);
     // Ctrl/Cmd+Shift+F → search. Registered here, not at bootstrap, so the
     // capture listener only exists while a desk is alive — both of its targets
     // (the topbar file search and a chat window's message search) are desk-only,
@@ -835,6 +843,9 @@ class desk_module extends LetcBox {
       );
     }
     RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
+    RADIO_BROADCAST.off("workspace-unread", this._writeRailCounts, this);
+    RADIO_BROADCAST.off("workspace:focus", this._writeRailCounts, this);
+    RADIO_BROADCAST.off("chat:read", this._writeRailCounts, this);
     RADIO_BROADCAST.off("breadcrumb:content", this._updateAddmenu);
     RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceListChanged);
     if (this._folderTabsBound && window.Wm && Wm.$el) {
@@ -1597,6 +1608,99 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * How each restorable screen is put back after a reload — see
+   * _restoreScreen and libs/screen-restore.
+   *
+   *  slot     the part the screen mounts into
+   *  kind     the widget kind to wait for in it
+   *  selfPart the part IS the widget (Activity is a permanent part, not a
+   *           child fed into a slot)
+   *  isReal   tells the widget from the lazy placeholder, when it has no
+   *           whenItemsReady to tell by
+   *  ready    resolves once its first load painted; null = ready on mount
+   *  refresh  run once if ready never came
+   *
+   * Keyed like _RESTORABLE_SCREENS, which still decides what is SAVED.
+   */
+  static get _SCREEN_RESTORE() {
+    const alive = (w) => !(w.isDestroyed && w.isDestroyed());
+    // A screen that has not armed libs/items-ready yet (the admin console, a
+    // plugin) counts as ready on mount; the day it arms, this uses it.
+    const itemsReady = (w) => (_.isFunction(w.whenItemsReady) ? w.whenItemsReady() : true);
+    const restartPart = (pn) => (w) => {
+      const p = w.getPart && w.getPart(pn);
+      if (p && _.isFunction(p.restart) && alive(p)) p.restart();
+    };
+    const armed = (w) => _.isFunction(w.whenItemsReady);
+    const main = "settings-main-slot";
+    return {
+      "toggle-activity": {
+        slot: "activity-panel",
+        kind: "panel_activity",
+        selfPart: true,
+        isReal: armed,
+        ready: itemsReady,
+        refresh: (w) => {
+          w.refreshFeed();
+          w.refreshActivity();
+        },
+      },
+      "toggle-calendar": {
+        slot: main,
+        kind: "calendar_main",
+        isReal: armed,
+        ready: itemsReady,
+        // restoreScreen only guards a SYNC throw from refresh; catch here so a
+        // rejection from this chain never surfaces as an unhandled rejection.
+        refresh: (w) =>
+          w._loadItems()
+            .then(() => {
+              if (alive(w)) w._render();
+            })
+            .catch(() => {}),
+      },
+      "toggle-inbox": {
+        slot: INBOX_SLOT,
+        kind: "chat_p2p",
+        isReal: armed,
+        ready: itemsReady,
+        refresh: restartPart("contact-list"),
+      },
+      "toggle-contacts": {
+        slot: "chat-panel",
+        kind: "address_book",
+        isReal: armed,
+        ready: itemsReady,
+        refresh: (w) =>
+          w._loadContacts()
+            .then(() => {
+              if (alive(w)) w._refreshList();
+            })
+            .catch(() => {}),
+      },
+      "toggle-trash": {
+        slot: "trash-panel",
+        kind: "panel_trash",
+        isReal: armed,
+        ready: itemsReady,
+        refresh: restartPart(_a.list),
+      },
+      // `apps apps-main apps__item apps__ui` is the plugin root's own class
+      // list; `apps-main` is what the lazy placeholder does not carry.
+      "toggle-apps": {
+        slot: main,
+        kind: "apps_main",
+        isReal: (w) => armed(w) || !!(w.el && w.el.classList && w.el.classList.contains("apps-main")),
+        ready: itemsReady,
+        refresh: null,
+      },
+      "toggle-settings": { slot: main, kind: "settings_main", ready: null, refresh: null },
+      "toggle-help": { slot: main, kind: "help_main", ready: null, refresh: null },
+      "upgrade-plan": { slot: main, kind: "settings_billing", ready: null, refresh: null },
+    };
+  }
+
+  /**
    * Which sidebar screen is currently on top? Reads the live slot state
    * (not just _pendingKinds — keep-alive slots stay mounted when closed
    * with data-anim="out", and destroy-on-close children may already be
@@ -2028,12 +2132,88 @@ class desk_module extends LetcBox {
     }
   }
 
-  async _restoreSidebarService(service) {
-    if (!service || !desk_module._RESTORABLE_SCREENS[service]) return;
-    const sidebarPn = desk_module._RESTORABLE_SCREENS[service];
+  /**
+   * Put the last screen back after a reload — AFTER the workspace's split body
+   * is on screen, and not done until the screen's items have painted.
+   *
+   * The order and the guards live in libs/screen-restore (unit-tested); this
+   * is only the wiring into the desk. It replaced _restoreSidebarService,
+   * which replayed the screen 300ms after the pane MOUNTED — not when it
+   * painted — and never looked at whether the screen's rows ever came.
+   *
+   * @param {String} service a key of _RESTORABLE_SCREENS
+   * @param {Function} [onOpened] called once the screen is open —
+   *   _restoreDeskState stops waiting there
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.paneComing] false when the workspace step opened
+   *   nothing — no split body is coming, so do not wait for one
+   * @returns {Promise<String>} what happened (libs/screen-restore)
+   */
+  _restoreScreen(service, onOpened, opt = {}) {
+    const entry = desk_module._SCREEN_RESTORE[service] || null;
+    return restoreScreen({
+      service,
+      entry,
+      host: {
+        // window.Wm, never a bare `Wm`: see _restoreCurrentPath's note.
+        whenSplitBodyShown: (ms) =>
+          opt.paneComing === false
+            ? Promise.resolve("no-pane")
+            : window.Wm && _.isFunction(window.Wm.whenSplitBodyShown)
+              ? window.Wm.whenSplitBodyShown(ms)
+              : Promise.resolve(false),
+        navSeq: () => this._navSeq || 0,
+        currentScreen: () => this._currentScreenService(),
+        open: (s) => this._openRestoredScreen(s),
+        onOpened: onOpened || null,
+        awaitWidget: (e, ms) => this._awaitScreenWidget(e, ms),
+        lightRow: (s) => this._lightRestoredRow(s),
+        // The topbar icon of the restored screen (utility cluster). The open
+        // was a synthetic onUiEvent, so the radio never lit it — see
+        // libs/utility-light.
+        lightIcon: (s) =>
+          lightUtilityButton(s, {
+            getPart: (pn) => (_.isFunction(this.getPart) ? this.getPart(pn) : null),
+            broadcast: (channel, view) => RADIO_BROADCAST.trigger(channel, view),
+            // A press made while this screen mounted wins — see utility-light.
+            isLit: (v) => ~~v.mget(_a.state) === 1,
+            isBusy: () => {
+              const c = _.isFunction(this.getPart) ? this.getPart("utility-cluster") : null;
+              return !!(c && c.el && c.el.dataset.busy === "1");
+            },
+          }),
+        warn: (...args) => this.warn && this.warn(...args),
+      },
+    });
+  }
 
+  /**
+   * Open a saved screen the way its own control does, so every side effect of
+   * a real press comes with it (breadcrumb, rail, modal dismissal, the admin
+   * console's plugin load).
+   *
+   * Activity is the exception: its live service is a true TOGGLE, and the
+   * notifications panel predates togglePanel, so it is opened by hand, open-only.
+   * The toggles that do go through onUiEvent (Trash, Contacts) cannot close
+   * anything here: libs/screen-restore refuses to open when any screen is up.
+   *
+   * @param {String} service
+   */
+  /**
+   * Retitle the address chip for the Notifications panel. The bell press and
+   * the reload restore both open that panel by hand (it predates togglePanel),
+   * so the label lives here once rather than in each of them — the restore's
+   * copy of the open once left it out.
+   */
+  _announceActivityCrumb() {
+    RADIO_BROADCAST.trigger("breadcrumb:context", {
+      filename: LOCALE.NOTIFICATIONS,
+      ico: "top-bell",
+    });
+  }
+
+  async _openRestoredScreen(service) {
     if (service === "toggle-activity") {
-      // Open-only: the live toggle would close the panel if state is already 1.
       this._dismissWmModal();
       this._parkLiveCall();
       const p = await this.ensurePart("activity-panel");
@@ -2042,18 +2222,59 @@ class desk_module extends LetcBox {
         p.setState(1);
         this.closeOtherSidebarPanels("activity-panel");
         if (typeof p.refreshFeed === "function") p.refreshFeed();
+        // The one thing the hand-opened panel used to miss: without it the
+        // chip kept the workspace path over an open Notifications panel.
+        this._announceActivityCrumb();
       }
-    } else {
-      // `intent` matters for ONE of these services: "upgrade-plan" now opens
-      // the billing page on checkout when it can tell which plan is meant, and
-      // a RESTORE is not a click — it puts back the screen the reader was
-      // looking at before the reload, which was the plans view. Any declared
-      // intent other than 'upgrade' means "just open the page"; the other
-      // restorable services ignore the key entirely.
-      await this.onUiEvent({ mget: () => null }, { service, intent: "restore" });
+      return;
     }
+    // `intent` matters for ONE of these services: "upgrade-plan" opens the
+    // billing page on checkout when it can tell which plan is meant, and a
+    // RESTORE is not a click — it puts back the plans view the reader was on.
+    await this.onUiEvent({ mget: () => null }, { service, intent: "restore" });
+  }
 
-    this.ensurePart(sidebarPn)
+  /**
+   * The restored screen's REAL widget, once it is mounted.
+   *
+   * togglePanel settles when a kind is FED, not drawn, and these kinds are lazy
+   * import() chunks that paint a placeholder first — so the slot is polled for
+   * a live child of the right kind that entry.isReal accepts.
+   *
+   * @param {Object} entry a _SCREEN_RESTORE row
+   * @param {Number} timeout
+   * @returns {Promise<View|null>}
+   */
+  _awaitScreenWidget(entry, timeout) {
+    const live = (v) => v && !(v.isDestroyed && v.isDestroyed()) && v.el;
+    const find = () => {
+      const part = this.getPart && this.getPart(entry.slot);
+      if (!live(part)) return null;
+      const candidates = entry.selfPart
+        ? [part]
+        : part.children && part.children.toArray
+          ? part.children.toArray()
+          : [];
+      for (let i = candidates.length - 1; i >= 0; i--) {
+        const c = candidates[i];
+        if (!live(c) || c.mget(_a.kind) !== entry.kind) continue;
+        if (entry.isReal && !entry.isReal(c)) continue;
+        return c;
+      }
+      return null;
+    };
+    return pollFor(find, { timeout, interval: 100 });
+  }
+
+  /**
+   * Light the restored screen's sidebar row — the same broadcast a press of
+   * the row makes.
+   * @param {String} service
+   */
+  _lightRestoredRow(service) {
+    const pn = desk_module._RESTORABLE_SCREENS[service];
+    if (!pn) return;
+    this.ensurePart(pn)
       .then((p) => {
         if (p) RADIO_BROADCAST.trigger("sidebar-radio", p);
       })
@@ -2098,11 +2319,6 @@ class desk_module extends LetcBox {
       const wm = await this._waitForWm();
       if (!wm || (this.isDestroyed && this.isDestroyed())) return;
 
-      // Let mount-time renders (breadcrumb loadHome, wm skeleton) settle
-      // before feeding panels / windows, so nothing re-clears afterwards.
-      await new Promise((r) => setTimeout(r, 300));
-      if (this.isDestroyed && this.isDestroyed()) return;
-
       if (deepLink) {
         // Cold boot often reaches loadDefault before window.Wm exists, so
         // desk.route() skipped Wm.route(). Re-dispatch now that Wm is ready.
@@ -2121,22 +2337,31 @@ class desk_module extends LetcBox {
       if (saved.windows && saved.windows.length) {
         await this._restoreFloatingWindows(saved.windows);
       }
+      let paneComing;
       if (saved.workspace) {
         // `false` means it could not be restored — gone, or the pane never
         // mounted. Falling through to the default is the whole point of
         // verifying: this used to leave the desk on no workspace at all.
         const restored = await this._restoreWorkspace(saved.workspace);
-        if (!restored) await this._openDefaultWorkspace();
+        paneComing = restored || !!(await this._openDefaultWorkspace());
       } else {
         // Restorable state that names a SCREEN but no workspace (the user was
         // on Contacts / Settings / a floating window last time). The new shell
         // has no "no workspace" state to fall back to behind that screen, so
-        // seed one underneath it. Runs BEFORE _restoreSidebarService so the
+        // seed one underneath it. Runs BEFORE _restoreScreen so the
         // remembered screen still ends up on top.
-        await this._openDefaultWorkspace();
+        paneComing = !!(await this._openDefaultWorkspace());
       }
-      if (saved.service) {
-        await this._restoreSidebarService(saved.service);
+      if (saved.service && !(this.isDestroyed && this.isDestroyed())) {
+        // Wait for the OPEN only. The restore flag below exists to keep a
+        // late loadHome from wiping the screen being opened; the wait for the
+        // screen's items (up to 6s more) needs no such guard, and holding the
+        // flag through it blocked Home and the home-grid settle for as long.
+        // libs/screen-restore never rejects, and resolves on every exit path,
+        // including the ones that stop before an open.
+        await new Promise((resolve) => {
+          this._restoreScreen(saved.service, resolve, { paneComing }).then(resolve);
+        });
       }
     } finally {
       // Hold the flag a beat longer than the feed so late mount-time
@@ -4226,14 +4451,40 @@ class desk_module extends LetcBox {
     // the same answer and the descriptor is not needed. A create that asks to
     // be switched to is handled below, where it does have to be named.
     if (wasEmpty) {
-      // A PERSONAL workspace raises no follow-up panel — it is a home-root
-      // folder, not a hub, so media/form finishes as soon as it exists. Nothing
-      // to wait for, so open it now.
-      if (payload.personal) {
+      // NOTHING FOLLOWS THE FORM → open it now.
+      //
+      // Two ways to get here. A PERSONAL workspace raises no follow-up panel by
+      // its nature — it is a home-root folder, not a hub, so media/form
+      // finishes as soon as it exists. And an ordinary create no longer raises
+      // one either: the create dialog hands the user straight into the new
+      // workspace (media/form, the `post` block). Either way there is nothing
+      // to wait for, and waiting would cost the 4s fallback below.
+      //
+      // `payload.open` IS PART OF THE TEST, though this branch has never read
+      // it, because one create does NOT want to be taken in: the post-signup
+      // tour (desk/tutorial/workspace) calls createWorkspace with no options
+      // and opens the workspace itself when the walkthrough ends. It reaches
+      // here with neither flag, and it must keep landing on the two-stage wait
+      // below — which for it has always meant the 4s fallback — rather than
+      // being handed a new, faster way to have a workspace opened underneath
+      // its own screen.
+      //
+      // _walkthroughRunning() for the same reason, and it is the test the
+      // `created` branch below has always applied: reward-flow and
+      // activate-workspace create through the ORDINARY dialog, which asks to
+      // be taken in on their behalf whether they want it or not, and each owns
+      // its own sequel. They keep the route they have always taken.
+      if (
+        payload.personal
+        || (payload.open && !payload.panel && !this._walkthroughRunning())
+      ) {
         await this._openWorkspaceOrEmptyScreen({ force: true });
         return;
       }
-      // INTERNAL / EXTERNAL: wait for "Who has access" to be dismissed first.
+      // A SURFACE SAID IT WILL RAISE A PANEL (today: the activate-workspace
+      // walkthrough's override), never asked to be taken in at all, or is a
+      // walkthrough that owns what comes next — wait, exactly as this branch
+      // did for every create before.
       // See _openWorkspaceAfterAccessPanel for why it cannot be done now.
       this._openWorkspaceAfterAccessPanel();
       return;
@@ -4256,9 +4507,10 @@ class desk_module extends LetcBox {
         ? payload.workspace
         : null;
     if (created) {
-      // A personal workspace raises no follow-up panel — a home-root folder is
-      // not a hub — so there is nothing to wait for.
-      if (payload.personal) {
+      // Nothing follows the form — the ordinary create, and every personal one
+      // — so open it straight away. Same reasoning as the empty-screen branch
+      // above.
+      if (payload.personal || !payload.panel) {
         await this._openCreatedWorkspace(created);
         return;
       }
@@ -4301,21 +4553,22 @@ class desk_module extends LetcBox {
     if (!wsKey) return;
     const rows = await this._fetchWorkspaces();
     if (this.isDestroyed && this.isDestroyed()) return;
+    // ON FILES, both here and in the _switchWorkspace branch above: this
+    // workspace was created seconds ago, so inheriting the outgoing pane's Chat
+    // or Task tab would open it on a view that is empty by construction. See
+    // the `land_on_files` note in Wm.loadWorkspace.
     if ((rows || []).some((r) => this._workspaceKey(r) === wsKey)) {
-      return this._switchWorkspace(wsKey);
+      return this._switchWorkspace(wsKey, { landOnFiles: 1 });
     }
     if (!window.Wm || !_.isFunction(window.Wm.loadWorkspace)) return;
     // `filetype` is what libs/workspace-target branches on, and a descriptor
     // carries `area` instead — so say it, rather than letting a personal
     // workspace resolve as a hub and open Home.
     const row = ws.area === _a.personal ? { ...ws, filetype: _a.folder } : ws;
-    // Same as _switchWorkspace: read the tab the switch will carry BEFORE the
-    // pane is replaced, so the lit row is the one that comes up.
-    const landsOn = _.isFunction(window.Wm.paneTabToCarry)
-      ? window.Wm.paneTabToCarry()
-      : null;
-    window.Wm.loadWorkspace(this._workspaceTarget(row));
-    this._railHighlight(landsOn || "files");
+    const target = this._workspaceTarget(row);
+    if (target) target.land_on_files = 1;
+    window.Wm.loadWorkspace(target);
+    this._railHighlight("files");
     this._setWorkspaceLabel(ws.filename);
     // `row`, not `ws`: the line above already corrected a personal workspace's
     // filetype to `folder`, which is what decides whether the glyph is drawn as
@@ -4464,6 +4717,11 @@ class desk_module extends LetcBox {
     if (!chip || !chip.el || !chip.el.querySelector) return false;
     if (!chip.el.querySelector(".breadcrumb-item__icon")
       || !chip.el.querySelector(".breadcrumb-item__filename")) {
+      return false;
+    }
+    // A DEEPER PATH HAS NO SWITCHER: topbar.scss hides __ws-wrapper once the
+    // crumb track holds more than one item, so there is nothing to open.
+    if (chip.el.querySelector(".desk-breadcrumb__content > :nth-child(2)")) {
       return false;
     }
     if (!target || !_.isFunction(target.closest)) return true;
@@ -4618,8 +4876,16 @@ class desk_module extends LetcBox {
     );
   }
 
-  /** Switcher row -> open that workspace, then refresh the menu's current mark. */
-  async _switchWorkspace(wsKey) {
+  /**
+   * Switcher row -> open that workspace, then refresh the menu's current mark.
+   *
+   * @param {String} wsKey            the row key, see _workspaceKey
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.landOnFiles] open on Files rather than inheriting the
+   *   outgoing pane's tab. Asked for by _openCreatedWorkspace alone — see the
+   *   `land_on_files` note in Wm.loadWorkspace. Absent, nothing changes.
+   */
+  async _switchWorkspace(wsKey, opt = {}) {
     if (!wsKey) return;
     const rows = await this._fetchWorkspaces();
     // Matched on the KEY the row was built with. Finding by hub_id opened the
@@ -4640,18 +4906,28 @@ class desk_module extends LetcBox {
     // WHICH TAB THE NEW PANE WILL OPEN ON, asked BEFORE the call: a switch
     // hands the outgoing pane's tab to the incoming one (Wm.loadWorkspace →
     // `restore_tab`), and the pane that knows it is the one this call is about
-    // to replace. Null means Files.
-    const landsOn = _.isFunction(window.Wm.paneTabToCarry)
+    // to replace. Null means Files — which is also what `landOnFiles` forces,
+    // and the rail has to be told the same thing the pane is (below).
+    const landsOn = !opt.landOnFiles && _.isFunction(window.Wm.paneTabToCarry)
       ? window.Wm.paneTabToCarry()
       : null;
-    window.Wm.loadWorkspace(this._workspaceTarget(row));
+    const target = this._workspaceTarget(row);
+    // Read by loadWorkspace in place of paneTabToCarry(). Set on the target
+    // rather than passed as an argument because that is the one object the
+    // method reads before `apply` shadows its `data`.
+    if (target && opt.landOnFiles) target.land_on_files = 1;
+    window.Wm.loadWorkspace(target);
     // ONLY on a real change of workspace. Re-picking the open one makes
     // loadWorkspace an early return that merely raises the pane, so the window
     // keeps the tab it was on — restamping the rail there is at best a no-op.
     if (!wasOpen) this._railHighlight(landsOn || "files");
     this._setWorkspaceLabel(row.filename || row.name);
     this._setWorkspaceGlyph(row);
-    return this._renderWorkspaceMenu(this._wsListPart);
+    // In place: flip `data-current` and re-feed the header only. Re-feeding
+    // the whole list here rebuilt every switcher row on every switch — the
+    // exact cost _syncWorkspaceHighlight exists to avoid (the rows themselves
+    // did not change; only which one is current did).
+    return this._syncWorkspaceHighlight();
   }
 
   /**
@@ -4882,9 +5158,14 @@ class desk_module extends LetcBox {
   /**
    * OPEN THE NEW WORKSPACE ONCE THE ACCESS PANEL IS CLOSED.
    *
-   * Creating an internal or external workspace from the empty screen ends on
-   * `.permission-restricted__main` — media/form chains to it on success, into
-   * Wm's wrapper-modal. Opening the workspace cannot happen alongside that,
+   * ONLY REACHED WHEN THE CREATE ANNOUNCED `panel: 1`. The ordinary create no
+   * longer raises anything over the form — it hands the user straight into the
+   * new workspace — and _onWorkspaceCreated opens it directly in that case.
+   * Today the one surface that still asks for this is the activate-workspace
+   * walkthrough, whose Step 2 invites a teammate and so needs Step 1 to end on
+   * the members panel (see _createFormOverrides).
+   *
+   * When a panel IS raised, opening the workspace cannot happen alongside it,
    * because loadWorkspace CLEARS the wrapper-modal on its way in
    * (wm/index.js): open first and the panel the user was about to invite people
    * from is destroyed under them. So the order is the user's — panel, then
@@ -5022,6 +5303,37 @@ class desk_module extends LetcBox {
   _updateActivityBadge(args = {}) {
     if (args.unread_count == null) return;
     this._writeActivityCount(args.unread_count);
+  }
+
+  /**
+   * The rail's Chat / Task / Meet pills — what is unread IN THE OPEN
+   * WORKSPACE: team-chat messages, task notifications (assigned to me,
+   * mentions / replies on my tasks, moves into a column I watch) and meeting
+   * invitations. Counted by panel_activity from the rows it already fetched
+   * (panel/activity/hub-counts.js) and broadcast as `workspace-unread`; the
+   * last value is also kept on window.ActivityHandler, so a workspace switch
+   * (workspace:focus / chat:read) repaints without a request.
+   *
+   * getPart, not ensurePart — the desktop rail and the phone bar are
+   * per-device, and ensurePart never resolves for a part that will not mount
+   * here (same idiom as _readActivityCount).
+   */
+  _writeRailCounts() {
+    const all = (window.ActivityHandler && window.ActivityHandler._hubCounts) || {};
+    const ws = typeof Wm !== "undefined" && Wm ? Wm._curWorkspace : null;
+    const c = (ws && ws.hub_id != null && all[ws.hub_id]) || {};
+    const rows = { chat: c.chat, task: c.task, meet: c.meeting };
+    if (!_.isFunction(this.getPart)) return;
+    for (const key of Object.keys(rows)) {
+      const n = parseInt(rows[key], 10) || 0;
+      const content = n > 99 ? "99+" : String(n);
+      for (const pn of [`rail-badge-${key}`, `mrail-badge-${key}`]) {
+        const p = this.getPart(pn);
+        if (!p || !p.el || (p.isDestroyed && p.isDestroyed())) continue;
+        p.el.innerText = n === 0 ? "" : content;
+        p.el.dataset.count = content;
+      }
+    }
   }
 
   /**
@@ -5424,7 +5736,20 @@ class desk_module extends LetcBox {
       // another tour holding single-flight. The tab shows at once.
       return this._railTab(tab);
     }
-    require("libs/tutorial-tours").whenDone(tour, () => {
+    // THE TAB GOES IN UNDER THE TOUR, not after it. Parked on the release, it
+    // switched only when the tour's softDestroy had FINISHED — and that is a
+    // 0.5s fade-and-shrink during which the pane underneath is revealed. So
+    // Done on the chat tour faded out onto the Files view (files-panel + chat
+    // panel) and only then jumped to the Chat view (thread-rail + chat panel).
+    // Switched as soon as the tour has painted, the swap happens behind an
+    // opaque overlay and the fade reveals the tab the user asked for.
+    //
+    // The release stays as the fallback, for a tour that was claimed and never
+    // reached the screen. Whichever comes first runs; the other is a no-op.
+    let shown = false;
+    const show = () => {
+      if (shown) return;
+      shown = true;
       if (this.isDestroyed && this.isDestroyed()) return;
       // UNLESS THE USER HAS MOVED ON. Every way of ending this tour early runs
       // this callback — the release is the release — so without the check the
@@ -5433,7 +5758,9 @@ class desk_module extends LetcBox {
       // of a tour they walked out of over the workspace they switched into.
       // Both were reported; see _navigated.
       if ((this._navSeq || 0) === seq) this._railTab(tab);
-    });
+    };
+    this._windowTourShown = { tour, cb: show };
+    require("libs/tutorial-tours").whenDone(tour, show);
   }
 
   /**
@@ -5910,6 +6237,26 @@ class desk_module extends LetcBox {
       if (!p || !p.el || (p.isDestroyed && p.isDestroyed())) continue;
       p.setState(0);
     }
+  }
+
+  /**
+   * Leave the full-canvas section screen for the workspace underneath it —
+   * the Inbox's own X. Same exit the rail takes (_leaveSectionScreen), plus
+   * relighting the rail row the screen put out on the way in.
+   */
+  closeSectionScreen() {
+    const w = _.isFunction(this._railWorkspace) ? this._railWorkspace() : null;
+    this._leaveSectionScreen(w);
+    // With no workspace window _leaveSectionScreen cannot rebuild the path,
+    // and the bar would keep reading "Inbox" over whatever is underneath.
+    if (!w) {
+      const crumb = _.isFunction(this.getPart) ? this.getPart("breadcrumb") : null;
+      if (crumb && _.isFunction(crumb._restoreCurrentPath)) crumb._restoreCurrentPath();
+    }
+    // Opening the screen put the rail out (_railUnlight); relight the tab the
+    // workspace is on underneath, which _railTab / _railHighlight stamped.
+    const tab = (this.el && this.el.dataset.mtab) || "files";
+    this._railHighlight(tab);
   }
 
   /**
@@ -6525,9 +6872,9 @@ class desk_module extends LetcBox {
    * write bit), so this is not the enforcement — it exists so a view/chat member
    * is never offered a picker whose result can only be a 403.
    */
-  _guardWorkspaceWrite() {
+  _guardWorkspaceWrite(action) {
     if (this._curWorkspaceCanWrite()) return false;
-    this._sayWeakPrivilege();
+    this._sayWeakPrivilege(action, _K.permission.write);
     return true;
   }
 
@@ -6535,12 +6882,13 @@ class desk_module extends LetcBox {
    * The one place this batch says "you don't have the right for that".
    * Mirrors over-limit's notifyBlocked: Butler first, Wm.alert as the fallback,
    * and never allowed to throw into the caller's own path.
-   * LOCALE.WEAK_PRIVILEGE already exists in all six locales — no new key.
+   * Names the refused action and the viewer's level in the current workspace
+   * (libs/permission-denied); `needed` is the _K.permission bit it asks for.
    */
-  _sayWeakPrivilege() {
+  _sayWeakPrivilege(action, needed) {
     try {
-      if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
-      else if (typeof Wm !== "undefined" && Wm.alert) Wm.alert(LOCALE.WEAK_PRIVILEGE);
+      const PD = require("libs/permission-denied");
+      PD.sayWeakPrivilege(action, PD.workspacePrivilege(), needed);
     } catch (e) {
       /* a toast must never break the caller's own path */
     }
@@ -6574,6 +6922,38 @@ class desk_module extends LetcBox {
     // upload rows apply at all. Re-feed the topbar only when the answer actually
     // flips, so ordinary folder-to-folder navigation inside one workspace costs
     // nothing. Same re-feed mechanism _onOverLimitChanged already uses.
+    //
+    // UNKNOWN IS NOT "YES". Mid-switch, _curWorkspace already names the new
+    // hub but its pane is not findable yet (the outgoing pane's `closed`
+    // broadcast and the incoming pane's own, from its initialize, both land in
+    // that gap). The fail-open checks answered true/true there, so a member
+    // without write/admin rights paid a full top-bar rebuild to "yes" and a
+    // second one back to "no" on every switch — each rebuild remounting the
+    // breadcrumb (a get_path ahead of show_node_by), the switcher and every
+    // menu. Wait for the pane instead and decide once.
+    const ws = (window.Wm && window.Wm._curWorkspace) || null;
+    if (
+      ws &&
+      ws.hub_id &&
+      _.isFunction(window.Wm._findWorkspaceWindow) &&
+      !window.Wm._findWorkspaceWindow(ws.hub_id)
+    ) {
+      if (
+        this._addmenuWaitHub !== ws.hub_id &&
+        _.isFunction(window.Wm._awaitWorkspaceWindow)
+      ) {
+        const hub = (this._addmenuWaitHub = ws.hub_id);
+        window.Wm._awaitWorkspaceWindow(hub).then((win) => {
+          if (this._addmenuWaitHub !== hub) return;
+          this._addmenuWaitHub = null;
+          // Never mounted (the open failed): keep the current rows rather
+          // than re-arm a wait that would poll forever.
+          if (!win || (this.isDestroyed && this.isDestroyed())) return;
+          this._updateAddmenu();
+        });
+      }
+      return;
+    }
     const may = this._curWorkspaceCanWrite();
     const manage = this._curWorkspaceCanManage();
     if (this._addmenuMayWrite === may && this._addmenuMayManage === manage) return;
@@ -6957,6 +7337,19 @@ class desk_module extends LetcBox {
             if (this._windowTour !== child) return;
             this._endWindowTour({ immediate: true });
           });
+          return;
+        }
+        // The tab a rail press parked for this tour (_railTabWithTour) — now,
+        // under the tour, rather than on its release at the end of the fade.
+        // Two frames, so the tour has painted over the pane before the pane
+        // changes: switching first would show the answer before the question.
+        const parked = this._windowTourShown;
+        if (parked && parked.tour === wtTour) {
+          this._windowTourShown = null;
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (this._windowTour !== child) return;
+            parked.cb();
+          }));
         }
         return;
       }
@@ -8108,6 +8501,10 @@ class desk_module extends LetcBox {
     // need, so the first press does not sit on a fetch with the previous pane
     // on screen. Declines for almost every session too.
     this._warmWindowTourKinds();
+    // Same idea for the office editor: its ~3.6 MB bundle is what the first
+    // .docx / .xlsx open otherwise waits on. Loads it in a hidden iframe on the
+    // docserver origin once per docserver version; see libs/office-warmup.
+    require("libs/office-warmup").schedule(this);
     // Over-limit outranks the promo/reward flows: a locked workspace needs
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
@@ -8599,6 +8996,93 @@ class desk_module extends LetcBox {
     return KEEP_ALIVE_MAIN_KINDS.has(kind);
   }
 
+  /**
+   * Is `c` a keep-alive section screen currently parked (hidden) in the slot?
+   * Never the lazy-loader placeholder — see _slotKeepsChild.
+   */
+  _isParkedKeeper(c) {
+    if (!c || (c.isDestroyed && c.isDestroyed()) || !c.el) return false;
+    if (c.isLazyClass) return false;
+    if (c.el.dataset.anim !== "out") return false;
+    const kind = (c.mget && c.mget(_a.kind)) || c.el.dataset.kind;
+    return KEEP_ALIVE_MAIN_KINDS.has(kind);
+  }
+
+  /**
+   * Empty slot `pn` — except, in settings-main-slot, the keep-alive screens
+   * parked there. A plain p.clear() here used to throw away a parked Calendar
+   * or Settings just because a non-kept screen (Billing, Admin Console, the
+   * org view, the Inbox) was closed on top of it.
+   */
+  _clearSlotKeepingParked(pn, p) {
+    if (!p) return;
+    if (pn !== INBOX_SLOT) return p.clear();
+    const drop = p.children.toArray().filter((c) => !this._isParkedKeeper(c));
+    if (drop.length === p.children.length) return p.clear();
+    drop.forEach((c) => {
+      try {
+        c.selfDestroy({ now: 1 });
+      } catch (e) { }
+    });
+  }
+
+  /**
+   * Open `kind` in settings-main-slot WITHOUT destroying the section screens
+   * already parked there.
+   *
+   * The slot used to hold ONE child: opening Settings over a parked Calendar
+   * cleared it, so Calendar → Settings → Calendar rebuilt both screens and
+   * re-ran every mount load (Settings alone fires four requests). Now each
+   * KEEP_ALIVE_MAIN_KINDS screen parks in the slot (data-anim="out", which the
+   * skin hides) and the visible screen is always `children.last()` — the
+   * invariant every other reader of this slot (topChild, _slotKeepsChild,
+   * _hidePanel, _showPanel…) already relies on. At most one parked screen per
+   * kind, so the slot never holds more than those three plus the visible one.
+   *
+   * Returns false (caller falls back to the plain mount) when the slot is
+   * empty — nothing to preserve.
+   */
+  _switchMainSlot(p, kind, opt = {}) {
+    if (!p || p.isEmpty()) return false;
+    const pn = INBOX_SLOT;
+    const kindOf = (c) =>
+      (c && c.mget && c.mget(_a.kind)) || (c && c.el && c.el.dataset.kind);
+    // 1. Take the current screen off the top: park a keep-alive one, drop the
+    //    rest (including a lazy placeholder, which must never be parked).
+    if (this._slotKeepsChild(pn, p)) this._hidePanel(p);
+    this._clearSlotKeepingParked(pn, p);
+    // 2. A parked screen of this kind: a plain open brings it back as it was
+    //    left; an open WITH options describes a different screen, so the
+    //    parked one goes and a fresh mount reads them (same rule as the
+    //    single-screen keep-alive in togglePanel).
+    const parked = p.children.toArray().filter((c) => kindOf(c) === kind);
+    if (parked.length && _.isEmpty(opt)) {
+      const target = parked[parked.length - 1];
+      const last = p.children.last();
+      // Marionette's own swap: children container AND DOM, no re-render.
+      if (last && last !== target) p.swapChildViews(target, last);
+      this.closeOtherSidebarPanels(pn);
+      this._pendingKinds[pn] = kind;
+      this._showPanel(p);
+      return true;
+    }
+    parked.forEach((c) => {
+      try {
+        c.selfDestroy({ now: 1 });
+      } catch (e) { }
+    });
+    // 3. Mount the new screen ON TOP of whatever stays parked.
+    this.closeOtherSidebarPanels(pn);
+    this._parkLiveCall();
+    if (p.isEmpty()) {
+      this._loadKind(p, kind, pn, opt);
+      return true;
+    }
+    p.append({ kind, uiHandler: [this], ...opt });
+    this._pendingKinds[pn] = kind;
+    return true;
+  }
+
   _hidePanel(p) {
     if (!p || p.isEmpty()) return;
     const child = p.children.last();
@@ -8985,7 +9469,7 @@ class desk_module extends LetcBox {
       if (this._closeTimers[pn]) {
         clearTimeout(this._closeTimers[pn]);
         delete this._closeTimers[pn];
-        p.clear();
+        this._clearSlotKeepingParked(pn, p);
         this._pendingKinds[pn] = null;
       }
 
@@ -9021,6 +9505,9 @@ class desk_module extends LetcBox {
       if (sameKindMounted && !keepAlive) {
         const parked = p.children.last();
         if (parked && parked.el && parked.el.dataset.anim === "out") {
+          // Section screens: drop THIS parked one only — p.clear() would also
+          // throw away the other screens parked beside it (_switchMainSlot).
+          if (pn === INBOX_SLOT && this._switchMainSlot(p, kind, opt)) return;
           p.clear();
           this._pendingKinds[pn] = null;
           this.closeOtherSidebarPanels(pn);
@@ -9037,10 +9524,13 @@ class desk_module extends LetcBox {
         this._closeTimers[pn] = setTimeout(() => {
           delete this._closeTimers[pn];
           this._pendingKinds[pn] = null;
-          p.clear();
+          this._clearSlotKeepingParked(pn, p);
         }, 250);
         return;
       }
+
+      // Section screens PARK BESIDE EACH OTHER — see _switchMainSlot.
+      if (pn === INBOX_SLOT && this._switchMainSlot(p, kind, opt)) return;
 
       if (!p.isEmpty()) {
         p.clear();
@@ -9603,7 +10093,7 @@ class desk_module extends LetcBox {
             this._hidePanel(p);
           } else {
             this._pendingKinds[pn] = null;
-            p.clear();
+            this._clearSlotKeepingParked(pn, p);
           }
         });
       });
@@ -9631,6 +10121,11 @@ class desk_module extends LetcBox {
     // loadHome closes these same slots too, and an icon left lit over a screen
     // Home just closed is the same disagreement arriving by a different door.
     this._clusterUnlight();
+    // Every deliberate way out of a section screen comes through here (the
+    // rail, a workspace switch, a sidebar folder, search) — so the breadcrumb's
+    // section hold is released HERE, before the caller's path paint, which would
+    // otherwise be refused as a late echo (breadcrumb/section-hold).
+    RADIO_BROADCAST.trigger("breadcrumb:leave-section");
     const slots = ["settings-main-slot", "trash-panel", "chat-panel"];
     return Promise.all(
       slots.map((pn) => {
@@ -9644,7 +10139,7 @@ class desk_module extends LetcBox {
             this._hidePanel(p);
           } else {
             this._pendingKinds[pn] = null;
-            p.clear();
+            this._clearSlotKeepingParked(pn, p);
           }
         });
       }),
@@ -9705,7 +10200,7 @@ class desk_module extends LetcBox {
     // after would tear down the popup that row had just opened.
     //
     // Off the CLICKED VIEW, not off `service`: a synthetic dispatch
-    // (_deskServiceShim, _restoreSidebarService) carries the same service
+    // (_deskServiceShim, _restoreScreen) carries the same service
     // strings without anyone having touched the rail, and those must not count
     // as a navigation gesture.
     if (cmd && _.isFunction(cmd.mget) && cmd.mget("railRow")) {
@@ -9832,7 +10327,7 @@ class desk_module extends LetcBox {
         // Same reason, different cause: a view/chat member of the CURRENT
         // workspace cannot upload into it, and a picker that can only end in a
         // 403 is worse than no picker.
-        if (this._guardWorkspaceWrite()) return;
+        if (this._guardWorkspaceWrite(LOCALE.PERMISSION_ACTION_UPLOAD)) return;
         return Wm.handleUpload();
       }
 
@@ -9843,7 +10338,7 @@ class desk_module extends LetcBox {
         this.closeDeskNewMenu(cmd);
         // A Drive import writes into the current workspace (it lands on the same
         // upload path), so it needs the same right as "From device".
-        if (this._guardWorkspaceWrite()) return;
+        if (this._guardWorkspaceWrite(LOCALE.PERMISSION_ACTION_IMPORT)) return;
         const workspace = (Wm && Wm._curWorkspace) || {};
         return Kind.waitFor("migrate_gdrive_popup").then(() => {
           Wm.launch(
@@ -9992,10 +10487,7 @@ class desk_module extends LetcBox {
             // this desk toggle (setState directly), not the panel's own open
             // handler, so the refresh must be triggered here.
             if (typeof p.refreshFeed === "function") p.refreshFeed();
-            RADIO_BROADCAST.trigger("breadcrumb:context", {
-              filename: LOCALE.NOTIFICATIONS,
-              ico: "top-bell",
-            });
+            this._announceActivityCrumb();
           } else {
             // AND PUT THE PATH BACK, which only this case has to do by hand.
             //
@@ -10066,7 +10558,11 @@ class desk_module extends LetcBox {
       // Open-only, matching its sidebar neighbours.
       case "toggle-calendar": {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
-          filename: LOCALE.CALENDAR,
+          // The screen names itself "Personal Calendar" (its own page title,
+          // panel/calendar/skeleton/index.js), so the breadcrumb says the same
+          // thing. LOCALE.CALENDAR stays on the topbar button and the mobile
+          // sheet tile, which label the launcher, not the screen.
+          filename: LOCALE.PERSONAL_CALENDAR,
           ico: "top-calendar",
         });
         // See _railUnlight — the calendar covers the workspace pane entirely.
@@ -10445,7 +10941,7 @@ class desk_module extends LetcBox {
         //
         // TWO CALLERS REACH THIS SERVICE WITHOUT MEANING BUY, and both say so
         // by declaring some other intent: settings_main's "Manage subscription"
-        // card ('manage'), and _restoreSidebarService replaying the screen after
+        // card ('manage'), and _restoreScreen replaying the screen after
         // a reload ('restore'). Testing for "declared something else" rather
         // than for either name keeps the next such caller from having to be
         // remembered here.
@@ -10573,7 +11069,7 @@ class desk_module extends LetcBox {
         if (require("libs/over-limit").guardWrite("write")) return;
         // A note is saved into the current workspace (media.save asks for the
         // write bit), so refuse here rather than open an editor that cannot save.
-        if (this._guardWorkspaceWrite()) return;
+        if (this._guardWorkspaceWrite(LOCALE.PERMISSION_ACTION_CREATE_NOTE)) return;
         Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
@@ -10588,7 +11084,7 @@ class desk_module extends LetcBox {
         // "network error" path that the plugin's own error handler shows.
         if (require("libs/over-limit").guardWrite("write")) return;
         // Same for a viewer who simply lacks write in this workspace.
-        if (this._guardWorkspaceWrite()) return;
+        if (this._guardWorkspaceWrite(LOCALE.PERMISSION_ACTION_CREATE_DOCUMENT)) return;
         Wm.newDocument(cmd);
         return;
       }
@@ -10602,7 +11098,7 @@ class desk_module extends LetcBox {
         // Managing members needs the ADMIN bit (hub.invite is `src: admin`), so
         // refuse with words rather than open a popup whose submit can only 403.
         if (!this._curWorkspaceCanManage()) {
-          this._sayWeakPrivilege();
+          this._sayWeakPrivilege(LOCALE.PERMISSION_ACTION_INVITE, _K.permission.admin);
           return;
         }
         return this._openInvitePopup(cmd);
@@ -10908,6 +11404,18 @@ class desk_module extends LetcBox {
       Wm.__wrapperModal.feed({
         kind: "invite_popup",
         hub_id: ws.hub_id || Visitor.id,
+        // The sidebar's Invite row opens the popup about the CURRENT workspace
+        // (Figma 785:74990) — see libs/invite-scope. Every other caller of
+        // "invite-member" (topbar, context menu, the guided tours) keeps the
+        // organisation-wide popup with its "Invite to" tree.
+        ...inviteWorkspaceScope({
+          cmd,
+          ws,
+          rows: this._workspaces,
+          visitorId: Visitor.id,
+          wmName:
+            (Wm && _.isFunction(Wm.mget) && (Wm.mget(_a.hub_name) || Wm.mget(_a.filename))) || "",
+        }),
         uiHandler: [this],
       });
       this._invitePopup = Wm.__wrapperModal.children.last();
@@ -11409,6 +11917,33 @@ class desk_module extends LetcBox {
     ]) {
       Kind.waitFor(k);
     }
+    // Screens and panes a switch reaches first — the top bar's Calendar /
+    // Help / org view and the workspace pane's chat and task board. Each was a
+    // plain import() paid on its FIRST click (chunk fetch + parse, and a
+    // runtime <style> injection that restyles the document) behind a
+    // placeholder. One per idle slot, so warming them never competes with
+    // whatever the user is actually doing.
+    const idle = (fn) =>
+      typeof window.requestIdleCallback === "function"
+        ? window.requestIdleCallback(fn, { timeout: 4000 })
+        : setTimeout(fn, 300);
+    const warm = [
+      "widget_chat",
+      "tasks_panel",
+      "calendar_main",
+      "help_main",
+      "desk_org_view",
+    ];
+    const next = () => {
+      const k = warm.shift();
+      if (!k) return;
+      try {
+        const p = Kind.waitFor(k);
+        if (p && typeof p.catch === "function") p.catch(() => { });
+      } catch (e) { }
+      idle(next);
+    };
+    idle(next);
   }
 }
 

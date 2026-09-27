@@ -1,4 +1,5 @@
 const __room = require("builtins/webrtc/room/jitsi");
+const { planShareStrip } = require("builtins/webrtc/share-strip");
 const { canUpgradePlan } = require("libs/billing");
 const {
   mediaDeviceLabel,
@@ -204,6 +205,7 @@ class __window_meeting extends __room {
       // sliver. Superset of data-narrow, which keeps its own job (dropping the
       // secondary topbar controls).
       this.el.dataset.panelOverlay = w < CHAT_AUTO_CLOSE_W ? "1" : "0";
+      if (this._floatDocked()) this._layoutShareStrip();
     }
     this._applyChatAutoClose(w);
   }
@@ -481,6 +483,7 @@ class __window_meeting extends __room {
 
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
+    this._unwatchShareStrip();
     this._teardownCallParking();
     // Duration-cap timers. Left armed they would fire against a destroyed
     // window minutes after the meeting was over — and the cutoff one would
@@ -1236,6 +1239,8 @@ class __window_meeting extends __room {
     if (!panel) return;
     if (!opts.auto) this._chatAutoClosed = 0;
     panel.dataset.open = open ? "1" : "0";
+    // The share strip turns from a right-hand column into a bottom row.
+    if (this._floatDocked()) this._layoutShareStrip();
     // Opening the panel only clears the pane you actually land on — a chat
     // message shouldn't be marked seen because you opened Participants.
     if (open) this._clearUnreadForTab(panel.dataset.tab);
@@ -1501,6 +1506,7 @@ class __window_meeting extends __room {
   // Priority: raised hand > dominant speaker > local self-view.
   _updateFloatFocus() {
     if (!this._floatDocked()) return;
+    this._layoutShareStrip();
     const raisedUid = this._activeRaisedUid();
     if (raisedUid != null) return this._focusByUid(raisedUid);
     // While a REMOTE peer is presenting, spotlight THEIR camera tile — the float
@@ -1557,15 +1563,122 @@ class __window_meeting extends __room {
       .querySelectorAll('[data-focused="1"]')
       .forEach((n) => { n.dataset.focused = "0"; });
     el.dataset.focused = "1";
+    // The spotlighted tile takes the strip's first slot.
+    this._layoutShareStrip();
   }
 
   _clearFloatFocus() {
     if (!this.el) return;
+    // Undocked: the tiles go back to the grid, so the strip goes too.
+    this._clearShareStrip();
     const float = this.el.querySelector(`.${this.fig.family}__float-tiles`);
     if (!float) return;
     float
       .querySelectorAll('[data-focused="1"]')
       .forEach((n) => { n.dataset.focused = "0"; });
+  }
+
+  // ── Screen-share strip (Figma "Meeting — Avatar on Share", 775:152829) ──
+  // While a screen is shared, the docked tiles stop being a single floating
+  // thumbnail and become a strip of up to four tiles beside the shared screen:
+  // a column on the right, or a row under it when the side panel is open (or
+  // the window is narrow). More than four people → three tiles plus a "+N"
+  // tile, so at least three faces always stay visible. The parked call tile
+  // keeps the old single-thumbnail look (Figma "minimize"); the skin keys
+  // that off data-call-tile, so nothing here needs to know about parking.
+  //
+  // Everything is attributes on the live elements — tiles keep their tracks.
+  _stripTiles(mgr) {
+    return Array.from(mgr.children).filter(
+      (c) => c.dataset && /^webrtc_(local|remote)_user$/.test(c.dataset.kind || ""),
+    );
+  }
+
+  _layoutShareStrip() {
+    if (!this.el) return;
+    const participants = this.__participants;
+    const mgr = participants && !participants.isDestroyed() && participants.el;
+    if (!mgr || !this._floatDocked()) return this._clearShareStrip();
+    const panel = this._chatPanelEl();
+    const panelBeside =
+      !!panel && panel.dataset.open === "1" && this.el.dataset.panelOverlay !== "1";
+    const mode = panelBeside || this.el.dataset.narrow === "1" ? "row" : "column";
+    if (this.el.dataset.shareStrip !== mode) this.el.dataset.shareStrip = mode;
+    const tiles = this._stripTiles(mgr);
+    const plan = planShareStrip(tiles.map((el) => ({ focused: el.dataset.focused === "1" })));
+    // Runs on every speaker change: write only what moved, so a steady strip
+    // costs no style recalc.
+    tiles.forEach((el, i) => {
+      const order = String(plan.rank[i]);
+      const hidden = plan.visible[i] ? "0" : "1";
+      if (el.style.order !== order) el.style.order = order;
+      if (el.dataset.stripHidden !== hidden) el.dataset.stripHidden = hidden;
+    });
+    // The "+N" tile is the manager's ::after (skin); empty = no such tile.
+    const more = plan.more ? `+${plan.more}` : "";
+    if (mgr.dataset.more !== more) mgr.dataset.more = more;
+    this._watchShareStrip(mgr);
+  }
+
+  _clearShareStrip() {
+    if (!this.el) return;
+    delete this.el.dataset.shareStrip;
+    const mgr = this._stripWatched;
+    this._unwatchShareStrip();
+    if (!mgr) return;
+    delete mgr.dataset.more;
+    this._stripTiles(mgr).forEach((el) => {
+      el.style.order = "";
+      delete el.dataset.stripHidden;
+    });
+  }
+
+  // Someone joins or leaves mid-share: re-plan the slots. Only childList is
+  // observed, so the attributes written above cannot re-trigger it.
+  _watchShareStrip(mgr) {
+    if (this._stripWatched === mgr) return;
+    this._unwatchShareStrip();
+    this._stripWatched = mgr;
+    if (typeof MutationObserver === "function") {
+      this._stripObserver = new MutationObserver(() => {
+        if (this._stripRaf) return;
+        this._stripRaf = requestAnimationFrame(() => {
+          this._stripRaf = 0;
+          if (!this.isDestroyed()) this._layoutShareStrip();
+        });
+      });
+      this._stripObserver.observe(mgr, { childList: true });
+    }
+    // The "+N" tile opens the full list. It is a pseudo-element, so the click
+    // lands on the manager itself, never on a tile.
+    this._onStripMoreClick = (e) => {
+      if (e.target !== mgr || !mgr.dataset.more) return;
+      // Only past the last visible tile, where the "+N" sits — not in the
+      // gaps between tiles, which also land on the manager.
+      const row = this.el.dataset.shareStrip === "row";
+      const edge = this._stripTiles(mgr)
+        .filter((t) => t.dataset.stripHidden !== "1")
+        .reduce((m, t) => {
+          const r = t.getBoundingClientRect();
+          return Math.max(m, row ? r.right : r.bottom);
+        }, -Infinity);
+      if ((row ? e.clientX : e.clientY) <= edge) return;
+      e.stopPropagation();
+      this._switchPanelTab("participants");
+    };
+    mgr.addEventListener("click", this._onStripMoreClick, true);
+  }
+
+  _unwatchShareStrip() {
+    if (this._stripObserver) this._stripObserver.disconnect();
+    this._stripObserver = null;
+    if (this._stripRaf) cancelAnimationFrame(this._stripRaf);
+    this._stripRaf = 0;
+    if (this._stripWatched && this._onStripMoreClick) {
+      this._stripWatched.removeEventListener("click", this._onStripMoreClick, true);
+    }
+    this._stripWatched = null;
+    this._onStripMoreClick = null;
   }
 
   // ── Control-pill loading state ───────────────────────────────────────────

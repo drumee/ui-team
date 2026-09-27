@@ -97,6 +97,34 @@ class __media_interact extends media_core {
     this._dragStop = this._dragStop.bind(this);
   }
 
+  // ── Lazy tile geometry ─────────────────────────────────────────────────────
+  //
+  // `bbox` is read ONLY by drag-and-drop (seek_insertion, overlap tests,
+  // Wm.capture) and marquee selection. It used to be measured eagerly: once per
+  // tile on mount — `$el.draggable()` (a class write) then `$el.offset()` (a
+  // read), i.e. one forced style+layout flush PER TILE, back to back — and again
+  // for every tile on every scroll event of the list. On a large workspace that
+  // was the bulk of the main-thread cost of opening/switching to a folder.
+  //
+  // Now mount and scroll only mark the box stale; the first read re-measures.
+  // Readers that walk many tiles call `refreshStaleBounds()` first so every
+  // stale tile is measured in ONE read pass (one layout), before any write.
+  get bbox() {
+    if (this._bboxDirty) {
+      this._bboxDirty = 0;
+      this.initBounds();
+    }
+    return this._bbox;
+  }
+
+  set bbox(v) {
+    this._bbox = v;
+  }
+
+  invalidateBounds() {
+    this._bboxDirty = 1;
+  }
+
   /**
    *
    * @param {*} reason
@@ -191,6 +219,9 @@ class __media_interact extends media_core {
       return;
     }
     window.pointerDragged = true;
+    // Measure every stale sibling in one read pass BEFORE the drag starts
+    // writing (drag stamp, helper, insertion shifts) — see `get bbox`.
+    __media_interact.refreshStaleBounds(this.parent && this.parent.children);
     this.el.dataset.drag = _a.on;
     this.initBounds();
     this.initHelper(ui);
@@ -333,8 +364,13 @@ class __media_interact extends media_core {
     //
     // Production trace 2026-09-15: initBounds sat behind 134 forced recalcs
     // costing 6,838ms, second only to GSAP.
+    //
+    // Scrolling only marks the box stale now — it is re-measured when a drag or
+    // a marquee selection actually needs it (see `get bbox`).
     if (!this._onParentScroll) {
-      this._onParentScroll = () => this.initBounds();
+      this._onParentScroll = () => {
+        this._bboxDirty = 1;
+      };
     }
     this.parent.off(_e.scroll, this._onParentScroll);
     this.parent.on(_e.scroll, this._onParentScroll);
@@ -511,7 +547,9 @@ class __media_interact extends media_core {
     };
     const k = () => {
       this.$el.draggable(opt);
-      this.initBounds();
+      // No measurement here: reading $el.offset() right after draggable()'s
+      // class write forced one layout per tile at mount. See `get bbox`.
+      this._bboxDirty = 1;
     };
     this.waitElement(this.el, k);
 
@@ -574,6 +612,20 @@ class __media_interact extends media_core {
     // uploaded video is exactly that case: its vignette does not exist yet.
     // Render now from the glyph the template already draws.
     if (this.mget("iconOnly")) {
+      this.content.el.innerHTML = this.innerContent(this);
+      this._setupInteract();
+      this.trigger("content-ready");
+      return;
+    }
+    // A chat message's image / video shown as itself (inlineMedia, see
+    // grid/template): it loads its own large rendition, so it has no use for
+    // the vignette either — render now rather than wait on a fetch whose
+    // failure paths leave the card empty.
+    if (
+      this.mget("inlineMedia") &&
+      this.mget("isAttachment") &&
+      (filetype === _a.image || filetype === _a.video)
+    ) {
       this.content.el.innerHTML = this.innerContent(this);
       this._setupInteract();
       this.trigger("content-ready");
@@ -994,8 +1046,20 @@ class __media_interact extends media_core {
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));
 
-      case _e.download:
+      case _e.download: {
+        // Casual Docs / Sheets files are stored as JSON (.udoc / .usheet);
+        // hand the user a real .docx / .xlsx instead of the raw payload
+        // (builtins/editor/export). Any conversion failure falls back to the
+        // plain download so the click is never dead.
+        const { isCasualFile, downloadAsOffice } = require("builtins/editor/export");
+        if (isCasualFile(this)) {
+          return downloadAsOffice(this).catch((e) => {
+            this.warn("media: office export failed, raw download", e);
+            return this.download();
+          });
+        }
         return this.download();
+      }
 
       case 'open-in-window': {
         // Force-open a workspace (hub) as a window_folder, regardless of its
@@ -1010,8 +1074,12 @@ class __media_interact extends media_core {
         this.delete();
         return;
 
+      // The contextmenu "Move to trash" row (items.js `trash`). A single file
+      // or folder used to go straight to the bin; `confirm` asks first. The
+      // "Leave workspace" row posts the same service, but hubs never land in
+      // the bucket this flag gates — they keep their own dialogs.
       case _e.remove:
-        this.delete()
+        this.delete({ confirm: 1 });
         return;
 
       case "load-script":
@@ -1286,9 +1354,14 @@ class __media_interact extends media_core {
         break;
 
       case _e.paste:
-        if (!this.isGranted(_K.permission.write)) return;
         let media = Visitor.get("clipboard");
         if (!media) return;
+        if (!this.isGranted(_K.permission.write)) {
+          require("libs/permission-denied").sayWeakPrivilege(
+            LOCALE.PERMISSION_ACTION_COPY, this.mget(_a.privilege), _K.permission.write,
+          );
+          return;
+        }
         this.moveIn(media, 1);
         break;
 
@@ -2119,6 +2192,25 @@ class __media_interact extends media_core {
     });
   }
 }
+/**
+ * Re-measure every stale tile in `views` in one read-only pass, so a caller
+ * about to walk their `bbox`es (and write in between) pays a single layout.
+ * Accepts a Backbone/Marionette children container or an array.
+ */
+__media_interact.refreshStaleBounds = function (views) {
+  if (!views) return;
+  const each = (c) => {
+    if (c && c._bboxDirty && typeof c.initBounds === "function") {
+      c._bboxDirty = 0;
+      try {
+        c.initBounds();
+      } catch (e) { }
+    }
+  };
+  if (Array.isArray(views)) views.forEach(each);
+  else if (typeof views.each === "function") views.each(each);
+};
+
 __media_interact.initClass();
 
 module.exports = __media_interact;

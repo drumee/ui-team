@@ -64,6 +64,22 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     line-height: 0;
     margin-left: 0;
   }
+
+  // Except the workspace unread pills on Chat / Task / Meet (desk
+  // _writeRailCounts, the only badges in __nav-main): their NUMBER is the
+  // point, so they stay a small counted pill. Same left anchor, for the same
+  // clipping reason; 36px + a 2-digit pill still ends inside the 64px strip.
+  .desk-module-sidebar__nav-main .desk-module-sidebar__badge {
+    top: 2px;
+    left: 36px;
+    width: auto;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    font-size: 10px;
+    line-height: 16px;
+  }
 }
 
 .desk-module-sidebar {

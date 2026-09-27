@@ -10,7 +10,9 @@
     // leaves __body horizontally scrollable. Fixed is viewport-relative and
     // never does.
     position: fixed;
-    width: 500px;
+    // Figma 43:34212. At ≤ 1024px the panel covers the canvas instead (rule at
+    // the bottom of this file), so this only applies above.
+    width: 512px;
     // Sits INSIDE the padded canvas (43:23955), not over the whole viewport.
     // It used to be height:100vh at top:0/right:0, which covered the top bar
     // and ran past both gutters. --desk-* are published by the desk root; the
@@ -20,8 +22,8 @@
     bottom: var(--desk-gutter, 8px);
     height: auto;
     border-radius: 8px;
-    background-color: var(--normal-bg-90);
-    border: 1px solid var(--border-muted);
+    // White card, shadow only (no border) — Figma 43:34212.
+    background-color: var(--normal-bg);
     // Parked clear of the right gutter as well as its own width.
     transform: translateX(calc(100% + var(--desk-gutter, 8px)));
     transition: transform 0.25s ease-out;
@@ -108,29 +110,217 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
+    box-sizing: border-box;
+    padding: 12px;
+    gap: 12px;
   }
 
-  &__ui[data-empty="1"] {
-
-    .panel-trash__status-bar,
-    .panel-trash__footer {
-      display: none;
-    }
+  // Nothing to empty when the whole bin is. An empty Expiring soon is not an
+  // empty bin, so the button stays there.
+  &__ui[data-empty="1"]:not([data-filter="expiring"]) .panel-trash__empty-trash {
+    display: none;
   }
 
-  /* ── Topbar wrapper (header + status bar) ───────────────── */
+  /* ── Topbar wrapper ─────────────────────────────────────── */
   &__topbar {
     flex-shrink: 0;
   }
 
-  /* ── Header row: icon + title + close ───────────────────── */
+  /* ── Filter dropdown (header, left of the close button) ─── */
+  // Lives in the header, which data-empty never hides, so an empty Expiring
+  // soon still offers the way back. Shell copied from the desk account menu
+  // (desk/skin/topbar.scss __account-wrapper): right-anchored, since the
+  // button sits at the panel's right edge and a left-anchored list would run
+  // past it and be clipped.
+  &__header-actions {
+    align-items: center;
+    gap: 16px;
+  }
+
+  // A Button.Label drawn as the filter trigger's twin (same height, border and
+  // radius), so the header reads as two buttons and a close.
+  &__empty-trash {
+    display: inline-flex;
+    // Button.Label lays out icon then label; the design reads label then bin.
+    flex-direction: row-reverse !important;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    box-sizing: border-box;
+    padding: 0 8px 0 10px;
+    border: 1px solid var(--border-muted);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+
+    .inner,
+    .note-content,
+    .drumee-text {
+      @include drumee.typo($color: var(--primary-purple-100), $size: 12px, $weight: 500, $line: 1);
+      white-space: nowrap;
+    }
+
+    .svg-wrapper,
+    .drumee-svg,
+    svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: var(--signal-error);
+      fill: currentColor;
+    }
+
+    // The row bin's red wash (item/skin __delete), with a red edge.
+    &:hover {
+      background-color: rgba(255, 106, 101, 0.15);
+      border-color: var(--signal-error);
+
+      .inner,
+      .note-content,
+      .drumee-text {
+        color: var(--signal-error);
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--primary-purple-40);
+      outline-offset: 2px;
+    }
+  }
+
+  &__filter-menu {
+    position: relative;
+    flex: 0 0 auto;
+    overflow: visible;
+
+    .menu-topic,
+    .menu-topic__ui,
+    .menu-trigger {
+      position: relative;
+      overflow: visible;
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-topic-items__wrapper {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      left: auto;
+      width: max-content;
+      min-width: 200px;
+      z-index: 10;
+    }
+
+    .menu-topic-items,
+    .menu-items {
+      background-color: var(--normal-bg-elevated, #fff);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      padding: 6px;
+      width: max-content;
+      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      box-shadow:
+        0 4px 6px -4px rgba(0, 0, 0, 0.1),
+        0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    // Out of the flow while shut, or the list takes space under the header.
+    .menu-topic-items__wrapper[data-state="closed"],
+    .menu-topic-items__wrapper[data-state="0"],
+    &:not([data-state="1"]) .menu-topic-items__wrapper {
+      display: none;
+    }
+  }
+
+  &__filter-trigger {
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 8px 0 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-muted);
+    cursor: pointer;
+    transition: border-color 0.15s;
+
+    &:hover {
+      border-color: var(--border-default);
+    }
+  }
+
+  &__filter-label {
+    @include drumee.typo($color: var(--normal-fg-20),
+      $size: 12px,
+      $weight: 500,
+      $line: 1);
+    white-space: nowrap;
+  }
+
+  &__filter-caret {
+    width: 12px;
+    height: 12px;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__filter {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+
+    &:hover {
+      background-color: var(--normal-bg-90);
+    }
+  }
+
+  &__filter-name {
+    @include drumee.typo($color: inherit,
+      $size: 13px,
+      $weight: 500,
+      $line: 1.2);
+    white-space: nowrap;
+  }
+
+  &__filter-check {
+    width: 14px;
+    height: 14px;
+    visibility: hidden;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  // The panel root carries data-filter; light and tick the matching row.
+  &__ui[data-filter="latest"] .panel-trash__filter--latest,
+  &__ui[data-filter="earliest"] .panel-trash__filter--earliest,
+  &__ui[data-filter="expiring"] .panel-trash__filter--expiring {
+    color: var(--active-border);
+
+    .panel-trash__filter-check {
+      visibility: visible;
+    }
+  }
+
+  /* ── Header row: title | Empty trash, filter, close ────── */
   &__header {
     align-items: center;
     justify-content: space-between;
-    height: 56px;
-    padding: 0 24px;
-    background-color: var(--normal-bg);
-    color: var(--normal-fg-10);
+    color: var(--primary-purple-100);
   }
 
   &__header-left {
@@ -159,56 +349,19 @@
     }
   }
 
+  // Body/Sub Title: Geist SemiBold 20 / 1.2.
   &__header-title {
-    @include drumee.typo($size: 18px,
-      $weight: 700,
-      $line: 20px,
-      $color: var(--normal-fg-10));
+    @include drumee.typo($size: 20px, $line: 1.2, $color: var(--primary-purple-100));
+    font-family: var(--font-main);
+    font-weight: 600;
     align-items: center;
     display: flex;
-    letter-spacing: -0.45px;
-  }
-
-  /* ── Status bar row: selection count + empty trash ──────── */
-  &__status-bar {
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 24px;
-  }
-
-  &__selection-count {
-    @include drumee.typo($color: var(--normal-fg-50),
-      $size: 10px,
-      $weight: 600,
-      $line: 1);
-    font-family: var(--font-mono, var(--font-medium));
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-  }
-
-  &__empty-btn {
-    @include drumee.typo($color: var(--active-border),
-      $size: 10px,
-      $weight: 600,
-      $line: 1);
-    font-family: var(--font-mono, var(--font-medium));
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    cursor: pointer;
-    padding: 4px 10px;
-    border-radius: 6px;
-    transition: opacity 0.15s;
-
-    &:hover {
-      opacity: 0.8;
-    }
   }
 
   /* ── Item list ───────────────────────────────────────────── */
   &__list {
     flex: 1;
     overflow: hidden;
-    background-color: var(--normal-bg-90);
 
     >.smart-container {
       height: 100%;
@@ -383,20 +536,6 @@
     height: 100%;
   }
 
-  /* ── Footer row ──────────────────────────────────────────── */
-  &__footer {
-    justify-content: center;
-    align-items: center;
-    background-color: var(--normal-bg);
-    color: var(--normal-fg-50);
-    padding: 12px 24px;
-    border-top: 1px solid var(--border-muted);
-    @include drumee.typo($size: 10px, $weight: 600, $line: 1);
-    font-family: var(--font-mono, var(--font-medium));
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-  }
-
   /* ── Confirm dialog / purge ──────────────────────────────── */
   .window-confirm {
     &__main {
@@ -569,16 +708,23 @@
   // phone (≤ 800px + mobile UA, see Visitor.device()) also matches this
   // media query.
   //
-  // Depends on the desk skin giving .panel-container.left a real box at
-  // this breakpoint — by default it is width:0, and so is the
-  // __panel-inner wrapper this panel sits in.
+  // Covers the desk workspace (__right-side) — the box chat-p2p fills from
+  // settings-main-slot. It must stay position:fixed: this used to switch to
+  // `position:absolute; inset:0` against the LEFT panel-container, but since
+  // trash moved to the right container (4ee4277b) its containing block is a
+  // `position:absolute; width:0` __panel-inner, so the panel collapsed to 0px
+  // wide below 1024px. The --desk-canvas-inset-* insets are measured in JS
+  // (libs/desk-canvas); the fallbacks are the desktop canvas with the 64px
+  // mini rail, for the frame before the first measurement.
   @media (max-width: 1024px) {
     &__ui:not([data-device="mobile"]) {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      max-width: 100%;
+      top: var(--desk-canvas-inset-top, var(--desk-canvas-top, 54px));
+      right: var(--desk-canvas-inset-right, var(--desk-gutter, 8px));
+      bottom: var(--desk-canvas-inset-bottom, var(--desk-gutter, 8px));
+      left: var(--desk-canvas-inset-left, 80px);
+      width: auto;
+      max-width: none;
+      height: auto;
     }
   }
 }

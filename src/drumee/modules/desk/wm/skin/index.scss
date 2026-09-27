@@ -447,6 +447,15 @@
     }
   }
 
+  // Holds the "link copied" toast, which is absolutely positioned against
+  // wm-container — the layer itself takes no room in the column.
+  &__ack-layer {
+    flex: 0 0 0;
+    height: 0;
+    min-height: 0;
+    overflow: visible;
+  }
+
   // "File created" card, shown after a new document / spreadsheet /
   // presentation is created (notifyFileCreated). Bottom-right, same corner
   // as upload progress and one step above it so the card is never buried.

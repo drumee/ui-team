@@ -1044,6 +1044,12 @@
     cursor: pointer;
   }
 
+  // No row to point at (an anonymous open of a public link): the whole list is
+  // marked instead, with the same fill as a focused row.
+  &__events-section[data-focus="1"] {
+    background: var(--primary-10);
+  }
+
   &__events-toggle-label {
     @include drumee.typo($size: 11px, $line: 16px, $weight: 600, $color: var(--tertiary-text-color));
     text-transform: uppercase;
@@ -1110,6 +1116,16 @@
     align-items: center;
     justify-content: space-between;
     min-height: 16px;
+
+    // The opens a share-open notification points at (index.js
+    // focusAccessEvent). Same soft fill as a notification-revealed grid cell
+    // (media/grid skin, data-ui-highlight); the spread shadow pads it without
+    // moving the row, and the table's 16px row gap leaves room for it.
+    &[data-focus="1"] {
+      background: var(--primary-10);
+      box-shadow: 0 0 0 6px var(--primary-10);
+      border-radius: 2px;
+    }
   }
 
   &__events-cell {

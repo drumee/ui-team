@@ -84,6 +84,8 @@ class __player_vector extends __core {
       width: this.$el.width(),
       height: this.__content.$el.height() + 20
     }, () => {
+      // Full-frame owns the geometry; hugging the drawing would undo it.
+      if (this._zoomed) return;
       this.$el.css({
         height: _a.auto,
         minHeight: this.__content.$el.height(),

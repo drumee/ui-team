@@ -10,7 +10,7 @@ const FILTER_TABS = [
   { label: LOCALE.ALL || "All", value: "all" },
   { label: LOCALE.DOCS || "Docs", value: "docs" },
   { label: LOCALE.PDF || "PDF", value: "pdf" },
-  { label: LOCALE.IMAGES || "Images", value: "image" },
+  { label: LOCALE.MEDIA || "Media", value: "image" },
   { label: LOCALE.OTHER, value: "other" },
 ];
 

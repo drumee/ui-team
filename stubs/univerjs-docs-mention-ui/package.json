@@ -1,0 +1,12 @@
+{
+  "name": "@univerjs/docs-mention-ui",
+  "version": "0.25.1",
+  "type": "module",
+  "main": "./index.js",
+  "module": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false
+}

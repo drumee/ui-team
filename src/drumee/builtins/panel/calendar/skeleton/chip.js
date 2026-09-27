@@ -30,6 +30,9 @@ function provenancePill(pfx, row) {
  * @param {Object} ui    the calendar widget
  * @param {Object} row   normalized calendar.list row
  * @param {Object} opt   { compact: 1 } for the month grid's single-line chip;
+ *                       { hour: 1 } for the week/day hour block, which leads
+ *                       with the TITLE the way the workspace Meet tab's own
+ *                       schedule card does;
  *                       { style } for the hour canvas's absolute geometry —
  *                       passed in at construction rather than assigned to the
  *                       returned node, which the builder has already normalized
@@ -38,6 +41,7 @@ function provenancePill(pfx, row) {
 function chip(ui, row, opt = {}) {
   const pfx = ui.fig.family;
   const compact = !!opt.compact;
+  const hour = !!opt.hour;
   const meeting = row.kind === "meeting";
   const status = resolveStatus(row);
   const pm = priorityMeta(row.priority);
@@ -74,24 +78,54 @@ function chip(ui, row, opt = {}) {
         active: 0,
       });
 
-  const kids = [
-    lead,
-    Skeletons.Note({
-      className: `${pfx}__chip-title`,
-      content: row.title,
-      active: 0,
-    }),
-    // 43:31159 draws the month chip as lead + title and nothing else — at three
-    // chips to a cell there is no room for the pill, and it crowded out the
-    // title it was meant to qualify. The week/day block keeps it: those chips
-    // are full-height and the provenance is the whole point of an aggregated
-    // view. Month users still get it from the item itself on open.
-    compact ? null : provenancePill(pfx, row),
-  ];
+  const title = Skeletons.Note({
+    className: `${pfx}__chip-title`,
+    content: row.title,
+    active: 0,
+  });
+
+  // The hour block leads with the title, on its own line, with the time and the
+  // provenance pill folded into a meta row beneath it — the shape the Meet
+  // tab's schedule card has (title, then its agenda line). Stacked
+  // time-then-title-then-pill, a one-hour block spent its first two lines on
+  // when-and-where and clipped the title of the thing itself in half.
+  const kids = hour
+    ? [title]
+    : [
+        lead,
+        title,
+        // 43:31159 draws the month chip as lead + title and nothing else — at
+        // three chips to a cell there is no room for the pill, and it crowded
+        // out the title it was meant to qualify. Month users still get it from
+        // the item itself on open.
+        compact ? null : provenancePill(pfx, row),
+      ];
+
+  // Under the title, in the order the Meet tab's card reads: agenda line first,
+  // then the when-and-where the aggregated view can't do without. Every node in
+  // the meta row carries its own `active: 0` — a Box's does not reach its kids
+  // (see the note on the root below).
+  if (hour) {
+    if (row.description) {
+      kids.push(
+        Skeletons.Note({
+          className: `${pfx}__chip-desc`,
+          content: row.description,
+          active: 0,
+        }),
+      );
+    }
+    const meta = [lead, provenancePill(pfx, row)].filter(Boolean);
+    if (meta.length) {
+      kids.push(
+        Skeletons.Box.X({ className: `${pfx}__chip-meta`, active: 0, kids: meta }),
+      );
+    }
+  }
 
   // The week/day block has room for the agenda line and a status pill; the
   // month chip is one line and gets neither.
-  if (!compact) {
+  if (!compact && !hour) {
     if (row.description) {
       kids.push(
         Skeletons.Note({
@@ -169,6 +203,10 @@ function chip(ui, row, opt = {}) {
     // the two apart from the id alone — say so explicitly, or clicking an
     // occurrence would open the series for editing.
     itemOccurrence: isOccurrence ? 1 : 0,
+    // THIS chip's start, which for an occurrence is not the series'. The
+    // handler forwards it as the Meeting tab's anchor so the tab opens on the
+    // date that was clicked.
+    itemStime: row.stime || 0,
     attrOpt: {
       // Spread, never `title: undefined` — refresh() does a bare
       // setAttribute(k, v) over the attribute model, so an undefined value
