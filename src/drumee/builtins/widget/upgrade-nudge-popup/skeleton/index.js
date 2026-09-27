@@ -4,10 +4,13 @@
  * headline, family-specific meter, "Upgrade to X and get:" benefit list,
  * full-width brand CTA, "Not now".
  *
- * The benefit sets are the Figma card's own, keyed by the plan being sold
- * (server's target_plan). Copy waits on final Team/Business pricing from
- * marketing — LOCALE keys first, the Figma strings as fallbacks, exactly the
- * over-limit-popup arrangement, so the words can change without a deploy.
+ * Copy for the Business route follows the Drumee 2.0 Figma (file
+ * 3LDZYKjL7uHpXHdXKwAXxZ, node 1110:3754 — "trigger" = seats at 9/10,
+ * "storage 70%"); the Team and Pro routes keep the content-doc copy the
+ * designer has not redrawn. LOCALE keys first, the Figma strings as
+ * fallbacks, exactly the over-limit-popup arrangement, so the words can
+ * change without a deploy. A `**run**` inside a lead line renders bold
+ * (Figma: "You're using **70 GB of 100 GB.**").
  */
 const { canUpgradePlan } = require("libs/billing");
 const { filesize } = require("@drumee/ui-essentials");
@@ -18,10 +21,12 @@ function planLabel(plan) {
 }
 
 /**
- * Benefit rows per plan being sold — copy from the "Upgrade Popup Templates"
- * doc linked in the Figma comments. Order follows the doc: the storage face
- * leads with storage, the duration/seat faces lead with members; the seat
- * face also carries its own sub-lines for the member perk.
+ * Benefit rows per plan being sold. Business = the three Drumee 2.0 rows:
+ * the storage face leads with storage, the seats/duration faces with
+ * members; the seats face carries its own sub-lines and sells the admin
+ * panel + audit logs where the others sell audit permissions. Team and Pro
+ * keep the "Upgrade Popup Templates" doc rows (storage face leads with
+ * storage, the others with members).
  */
 function benefitRows(target, family) {
   const seats = family === "seats";
@@ -34,16 +39,17 @@ function benefitRows(target, family) {
         [LOCALE.UN_B_PRO_MEETINGS || "Unlimited meetings", LOCALE.UN_B_PRO_MEETINGS_SUB || "no more time limits on calls"],
       ];
     case "business": {
-      const storage = [LOCALE.UN_B_BIZ_STORAGE || "10× storage", LOCALE.UN_B_BIZ_STORAGE_SUB || "up to 1 TB total"];
-      const members = [
-        LOCALE.UN_B_BIZ_MEMBERS || "Unlimited members",
-        seats
-          ? (LOCALE.UN_B_BIZ_MEMBERS_SEATS_SUB || "no more seat limits")
-          : (LOCALE.UN_B_BIZ_MEMBERS_SUB || "bring your whole organization in"),
-      ];
-      const hubs = [LOCALE.UN_B_BIZ_HUBS || "Unlimited hubs", LOCALE.UN_B_BIZ_HUBS_SUB || "separate spaces per client or department"];
-      const console_ = [LOCALE.UN_B_BIZ_CONSOLE || "Premium admin console", LOCALE.UN_B_BIZ_CONSOLE_SUB || "full audit log included"];
-      return leadMembers ? [members, hubs, storage, console_] : [storage, members, hubs, console_];
+      if (seats) {
+        return [
+          [LOCALE.UN_B_BIZ_MEMBERS || "Unlimited members", LOCALE.UN_B_BIZ_MEMBERS_SEATS_SUB || "Invite without checking a counter"],
+          [LOCALE.UN_B_BIZ_STORAGE || "1 TB storage", LOCALE.UN_B_BIZ_STORAGE_SEATS_SUB || "Room for the team you're building"],
+          [LOCALE.UN_B_BIZ_CONSOLE || "Admin panel + audit logs", LOCALE.UN_B_BIZ_CONSOLE_SUB || "Track who has access to what"],
+        ];
+      }
+      const storage = [LOCALE.UN_B_BIZ_STORAGE || "1 TB storage", LOCALE.UN_B_BIZ_STORAGE_SUB || "10× more room to grow"];
+      const members = [LOCALE.UN_B_BIZ_MEMBERS || "Unlimited members", LOCALE.UN_B_BIZ_MEMBERS_SUB || "Bring your whole team in"];
+      const audit = [LOCALE.UN_B_BIZ_AUDIT || "Audit permissions", LOCALE.UN_B_BIZ_AUDIT_SUB || "More control over workspace access"];
+      return leadMembers ? [members, storage, audit] : [storage, members, audit];
     }
     case "team":
     default: {
@@ -85,29 +91,42 @@ function meter(fig, labelLeft, labelRight, pct, danger) {
   });
 }
 
-/** Family-specific headline + meter. */
+/**
+ * Family-specific headline, lead and meter; a face may also bring its own CTA
+ * label and opt out of the benefits heading (`benefitsTitle: false`).
+ */
 function face(fig, n) {
   const danger = /_(90)$/.test(n.trigger || "");
   const target = n.target_plan || "team";
   switch (n.family) {
     case "seats": {
       const cap = ~~n.seat_limit || 1;
+      const used = ~~n.seats_used;
+      const left = cap - used;
+      // Figma 2.0 seats card, the same shape for every route: "almost out of
+      // seats", the seats left, what the next tier does about the cap, the
+      // generic CTA, no benefits heading. Only line 2 depends on the tier.
+      const line1 = left > 0
+        ? (left === 1
+          ? (LOCALE.UN_SEATS_LEFT_ONE || "Only 1 seat left.")
+          : (LOCALE.UN_SEATS_LEFT || "Only {0} seats left.").format(left))
+        : (LOCALE.UN_SEATS_LEFT_NONE || "All {0} seats are taken.").format(cap);
+      const line2 = target === "business"
+        ? (LOCALE.UN_SEATS_NEXT_BIZ || "Business removes the seat cap entirely.")
+        : (LOCALE.UN_SEATS_NEXT_TEAM || "Team raises the cap to 10 members.");
       return {
         danger,
-        title: LOCALE.UN_TITLE_SEATS || "Your team is growing",
-        lead: (target === "business"
-          ? (LOCALE.UN_LEAD_SEATS_BIZ ||
-            "You've invited {0} of {1} members — almost there. Ready to bring in your whole organization?")
-          : (LOCALE.UN_LEAD_SEATS_TEAM ||
-            "You've invited {0} of {1} members — almost there. Ready to bring in more of your team?"))
-          .format(~~n.seats_used, cap),
+        title: LOCALE.UN_TITLE_SEATS || "You're almost out of seats",
+        lead: `${line1}\n${line2}`,
         meterBox: meter(
           fig,
           LOCALE.UN_METER_INVITED || "Invited",
-          (LOCALE.UN_METER_SEATS || "{0} / {1} seats").format(~~n.seats_used, cap),
-          (100 * ~~n.seats_used) / cap,
+          (LOCALE.UN_METER_SEATS || "{0} / {1} seats").format(used, cap),
+          (100 * used) / cap,
           danger
         ),
+        benefitsTitle: false,
+        cta: LOCALE.UN_CTA_SEATS || "Upgrade your plan",
       };
     }
     case "age": {
@@ -133,15 +152,12 @@ function face(fig, n) {
       const limit = filesize(n.disk_limit || 0, { round: 0 });
       return {
         danger,
-        // 70/80%: "growing"; 90%: "thriving — almost there" (content doc).
-        title: danger
-          ? (LOCALE.UN_TITLE_STORAGE_90 || "Your workspace is thriving")
-          : (LOCALE.UN_TITLE_STORAGE || "Your workspace is growing"),
-        lead: (danger
-          ? (LOCALE.UN_LEAD_STORAGE_90 ||
-            "You're using {0} of {1} — almost there. Ready to unlock more room to grow?")
-          : (LOCALE.UN_LEAD_STORAGE ||
-            "You're using {0} of {1}. Need more room for your files and team?"))
+        // Drumee 2.0 draws ONE storage card for every threshold — the content
+        // doc's 90% "thriving / almost there" variant is gone; only the badge
+        // and the meter turn red. Numbers in bold: the `**` run, see leadLine().
+        title: LOCALE.UN_TITLE_STORAGE || "Your workspace is growing",
+        lead: (LOCALE.UN_LEAD_STORAGE ||
+          "You're using **{0} of {1}.**\nNeed more room for your files and team?")
           .format(used, limit),
         meterBox: meter(
           fig,
@@ -153,6 +169,29 @@ function face(fig, n) {
       };
     }
   }
+}
+
+/**
+ * One lead line → a centred row of Notes, a `**run**` rendered bold. Segment
+ * edges are trimmed and the word gap re-added as a margin (`--gap`) so the
+ * spacing does not depend on how a Note treats a trailing space.
+ */
+function leadLine(fig, line) {
+  const raw = String(line).split(/\*\*(.+?)\*\*/);
+  const kids = [];
+  let gapPending = false;
+  raw.forEach((seg, i) => {
+    if (!seg) return;
+    const gap = gapPending || /^\s/.test(seg);
+    const text = seg.trim();
+    gapPending = /\s$/.test(seg);
+    if (!text) return;
+    kids.push(Skeletons.Note({
+      className: `${fig}__lead-text${i % 2 ? ` ${fig}__lead-strong` : ""}${gap && kids.length ? ` ${fig}__lead-text--gap` : ""}`,
+      content: text,
+    }));
+  });
+  return Skeletons.Box.X({ className: `${fig}__lead-line`, kids });
 }
 
 module.exports = function (ui) {
@@ -179,13 +218,11 @@ module.exports = function (ui) {
     }),
     Skeletons.Note({ className: `${fig}__title`, content: f.title }),
     // The lead carries its own line break (Figma: numbers on line 1, the
-    // question on line 2) — one Note per line, so the break is exact and no
+    // question on line 2) — one row per line, so the break is exact and no
     // template whitespace leaks in as pre-line would let it.
     Skeletons.Box.Y({
       className: `${fig}__lead`,
-      kids: String(f.lead || "").split("\n").map((line) =>
-        Skeletons.Note({ className: `${fig}__lead-line`, content: line })
-      ),
+      kids: String(f.lead || "").split("\n").map((line) => leadLine(fig, line)),
     }),
   ];
 
@@ -195,10 +232,10 @@ module.exports = function (ui) {
     Skeletons.Box.Y({
       className: `${fig}__benefits`,
       kids: [
-        Skeletons.Note({
+        ...(f.benefitsTitle === false ? [] : [Skeletons.Note({
           className: `${fig}__benefits-title`,
           content: (LOCALE.UN_BENEFITS_TITLE || "Upgrade to {0} and get:").format(planLabel(target)),
-        }),
+        })]),
         ...benefitRows(target, n.family).map(([title, sub]) =>
           Skeletons.Box.X({
             className: `${fig}__benefit-row`,
@@ -234,7 +271,7 @@ module.exports = function (ui) {
             // click-through: without active:0 the Note swallows the click and
             // the parent Box's service never fires (project rule).
             active: 0,
-            content: (LOCALE.UN_CTA || "Upgrade to {0}").format(planLabel(target)),
+            content: f.cta || (LOCALE.UN_CTA || "Upgrade to {0}").format(planLabel(target)),
           }),
         ],
       })
