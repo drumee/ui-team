@@ -77,6 +77,9 @@ module.exports = function (ui) {
     }
     return Skeletons.Box.Y({
       className: `${pfx}__day-body`,
+      // Inert: the empty space around the chips belongs to the cell's click
+      // (see dayCell). The chips inside keep their own.
+      active: 0,
       // The cell scrolls, but at rest its scrollbar is transparent (see
       // quiet-scroll) — so a busy day looked exactly like a truncated one and
       // read as "I cannot get to the rest of these". CSS cannot ask whether a
@@ -97,8 +100,24 @@ module.exports = function (ui) {
     // which is the Meet tab's cue.
     const numText = d.format("DD");
 
+    // The whole cell is the day's "add a task" target, not just its "+": a
+    // click anywhere in the square opens the create-task popup due that day,
+    // the same popup the week/day squares open (index.js "cal-day-add").
+    //
+    // For that to work every CONTAINER inside the cell is inert (`active: 0`).
+    // ui-core binds a click to every widget left at the default and calls
+    // e.stopPropagation() before triggerHandlers, so an active head, date or
+    // chip stack would swallow the click on its own area and the cell would
+    // never hear it. The things that DO something keep their own service and
+    // stay active, and that same stopPropagation keeps them from also firing
+    // the cell: a chip opens its item, "+N" opens the Day view, a chip's ×
+    // deletes, and the "+" adds exactly as the cell does.
     return Skeletons.Box.Y({
       className: `${pfx}__day`,
+      bubble: 0,
+      service: "cal-day-add",
+      uiHandler: [ui],
+      calDay: key,
       attrOpt: {
         "data-today": key === todayKey ? "1" : "0",
         "data-outside": inMonth ? "0" : "1",
@@ -106,12 +125,14 @@ module.exports = function (ui) {
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__day-head`,
+          active: 0,
           kids: [
             // The date on the left (the Meet tab's place for it), the
             // hover-revealed quick-add on the right.
             Skeletons.Note({
               className: `${pfx}__day-num`,
               content: numText,
+              active: 0,
             }),
             // Quick-add on the cell. A text glyph rather than the `plus`
             // sprite: the sprite symbol cannot be recoloured across the <use>

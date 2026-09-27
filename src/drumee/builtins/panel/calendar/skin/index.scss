@@ -571,6 +571,12 @@
     border-right: 1px solid var(--overlay-bg-05);
     border-bottom: 1px solid var(--overlay-bg-05);
     overflow: hidden;
+    // The whole square adds a task (skeleton/month.js dayCell). The pointer
+    // and the "+" revealed on hover are the cue. There is deliberately no hover
+    // wash: the chips sit INSIDE the cell, so hovering one would light the
+    // square too and promise "click adds" over an item that opens instead.
+    // Chips set their own cursor, so they keep theirs.
+    cursor: pointer;
 
     &[data-today="1"] .calendar-main__day-num {
       color: var(--primary-40);
