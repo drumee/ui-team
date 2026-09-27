@@ -551,6 +551,7 @@
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "Sent {0} invitation(s), {1} failed",
+  "INVITE_MAIL_FAILED": "The invitation to {0} was saved, but the email could not be sent. You can send it again from Pending invites.",
   "INVITE_EMAIL_INVALID": "Please enter a valid email address.",
   "INVITE_EMAIL_DUPLICATE": "This email is already in the list.",
   "INVITE_EMAIL_SELF": "You cannot invite yourself.",
