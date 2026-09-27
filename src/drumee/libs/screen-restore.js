@@ -7,9 +7,11 @@
  *   2. stop if the user already went somewhere
  *   3. open the screen
  *   4. find the REAL widget (lazy kinds paint a placeholder first)
- *   5. wait until its first load has painted (libs/items-ready)
- *   6. if it never did, refresh it ONCE
- *   7. light its sidebar row
+ *   5. light its topbar utility icon (host.lightIcon, optional) — the screen
+ *      is on the canvas now; a synthetic open never lights it
+ *   6. wait until its first load has painted (libs/items-ready)
+ *   7. if it never did, refresh it ONCE
+ *   8. light its sidebar row
  *
  * WHY THE SPLIT BODY FIRST. The screen used to be replayed 300ms after the
  * pane MOUNTED, which is not when it paints: the screen could land before the
@@ -160,6 +162,17 @@ async function restoreScreen({ service, entry, host, timeouts = TIMEOUTS }) {
       return "no-widget";
     }
     if (moved()) return "user-navigated";
+
+    // The screen is on the canvas: light its topbar icon now, not after the
+    // item wait (up to timeouts.items). The open was synthetic, so the radio
+    // behavior never lit it. Optional; a throw is the host's problem.
+    if (host.lightIcon) {
+      try {
+        host.lightIcon(service);
+      } catch (e) {
+        // never the restore's problem
+      }
+    }
 
     let status = "ready";
     if (entry.ready) {
