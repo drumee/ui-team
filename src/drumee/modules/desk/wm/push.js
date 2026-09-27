@@ -748,7 +748,9 @@ class __push_manager extends winman {
             Skeletons.Button.Svg({
               className: "desk-meeting-toast__close",
               ico: _a.cross,
-              tooltips: LOCALE.CLOSE,
+              // Object form: a bare string makes ui-core append an unstyled
+              // div INSIDE the button, which printed "Close" under the ×.
+              tooltips: { content: LOCALE.CLOSE, className: "desk-meeting-toast__close-tip" },
             }),
             // `noti-video-camera`, NOT `video-camera`. Figma's tile holds the
             // Phosphor VideoCamera (component 5:66204), which is exactly the

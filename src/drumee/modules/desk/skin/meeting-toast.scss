@@ -57,6 +57,36 @@
     }
   }
 
+  // Bubble hangs below the ×, right-aligned: the button sits 24px from the
+  // card's edge, so a centred tip would poke out past it. It is a CHILD of the
+  // 14px button (ui-core appends it there), hence width: max-content.
+  &__close-tip {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: -6px;
+    width: max-content;
+    z-index: 1;
+    pointer-events: none;
+    white-space: nowrap;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background-color: var(--normal-fg-10, #0b0a21);
+    color: var(--normal-bg-100, #ffffff);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: 400;
+
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 100%;
+      right: 8px;
+      border: 5px solid transparent;
+      border-bottom-color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
   // 48x48 brand-overlay tile holding the camera glyph (Figma 2561:154662).
   &__icon {
     align-self: center;
