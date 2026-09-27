@@ -231,3 +231,11 @@ test("every icon the map can return is in the sprite", () => {
   assert.ok(icons.length >= 13);
   for (const i of icons) assert.ok(sprite.includes(`id="--icon-${i}"`), i);
 });
+
+test("Restore and delete answer the pointer", () => {
+  assert.ok(declares(".trash-item__restore:hover", "background-color: rgba(89, 80, 255, 0.2)"));
+  assert.ok(declares(".trash-item__delete:hover", "background-color: rgba(255, 106, 101, 0.15)"));
+  // A halo, not padding: the 20px bin keeps its box, so the row doesn't shift.
+  assert.ok(declares(".trash-item__delete:hover", "box-shadow: 0 0 0 4px rgba(255, 106, 101, 0.15)"));
+  assert.ok(declares(".trash-item__restore", "transition: background-color 0.15s"));
+});

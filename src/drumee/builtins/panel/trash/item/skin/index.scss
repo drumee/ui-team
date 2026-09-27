@@ -152,6 +152,12 @@
     cursor: pointer;
     color: var(--primary-purple-40);
     background-color: rgba(89, 80, 255, 0.1);
+    transition: background-color 0.15s;
+
+    // Not in the frame: the same brand tint, doubled.
+    &:hover {
+      background-color: rgba(89, 80, 255, 0.2);
+    }
   }
 
   // Restore joins the badge while the pointer is on the row; the days left
@@ -165,7 +171,8 @@
     height: 20px;
     cursor: pointer;
     color: var(--signal-error);
-    transition: opacity 0.15s;
+    border-radius: 4px;
+    transition: background-color 0.15s, box-shadow 0.15s;
 
     svg {
       width: 20px;
@@ -173,8 +180,12 @@
       fill: currentColor;
     }
 
+    // Not in the frame: the days-left badge's red wash as a pad behind the
+    // bin. Drawn with a spread shadow rather than padding so the 20px box —
+    // and the row around it — doesn't move.
     &:hover {
-      opacity: 0.8;
+      background-color: rgba(255, 106, 101, 0.15);
+      box-shadow: 0 0 0 4px rgba(255, 106, 101, 0.15);
     }
   }
 }
