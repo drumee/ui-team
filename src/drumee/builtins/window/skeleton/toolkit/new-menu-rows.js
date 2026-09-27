@@ -54,6 +54,35 @@ export function menuRow(ui, { service, ico, content, area, name, className }) {
 }
 
 /**
+ * Endpoints where the Casual editors are NOT offered as a create option.
+ *
+ * The .udoc / .usheet editors are still a proof of concept, so the endpoints
+ * that carry real user data must not invite people to start documents in a
+ * format we may still change. Opening an existing .udoc / .usheet keeps
+ * working everywhere — only the two create rows disappear.
+ */
+const CASUAL_HIDDEN_ENDPOINTS = ["preview"];
+
+/**
+ * Whether this deployment may offer the Casual editors in the create list.
+ *
+ * `bootstrap()` (window.bootstrap, see drumee/api.js) reads the endpoint name
+ * off the bootstrap page's `data-instance`: "main" on a stage or production
+ * root, the endpoint's own name elsewhere. Unknown deployments keep the rows —
+ * the dev endpoints this POC is built for are the ones that need them.
+ *
+ * @returns {Boolean}
+ */
+function offersCasualEditors() {
+  try {
+    const env = (typeof bootstrap === "function" && bootstrap()) || {};
+    return !CASUAL_HIDDEN_ENDPOINTS.includes(String(env.endpointName || ""));
+  } catch (e) {
+    return true;
+  }
+}
+
+/**
  * The create rows — Folder / Document / Spreadsheet / Presentation.
  *
  * Services and filenames are the historical ones the window already handles;
@@ -64,6 +93,7 @@ export function menuRow(ui, { service, ico, content, area, name, className }) {
  */
 export function createRows(ui) {
   const cnItem = `${ui.fig.group}-button__dropdown-menu__item`;
+  const casual = offersCasualEditors();
   return [
     menuRow(ui, {
       service: "add-folder",
@@ -92,12 +122,14 @@ export function createRows(ui) {
     // ONLYOFFICE "Document" with the SAME label and glyph; only the icon
     // colour (Casual blue, see skin/mixins/drumee.scss) tells them apart.
     // Handled by window/core.js `add-doc` → Wm.launch(editor_docs).
-    menuRow(ui, {
-      service: "add-doc",
-      ico: "addmenu-document",
-      content: LOCALE.DOCUMENT,
-      className: `${cnItem}--doc`,
-    }),
+    casual
+      ? menuRow(ui, {
+          service: "add-doc",
+          ico: "addmenu-document",
+          content: LOCALE.DOCUMENT,
+          className: `${cnItem}--doc`,
+        })
+      : null,
     menuRow(ui, {
       service: "new-document",
       name: "spreadsheet.xlsx",
@@ -107,12 +139,14 @@ export function createRows(ui) {
     }),
     // Casual Sheets — same label and glyph as the ONLYOFFICE "Spreadsheet",
     // Casual teal icon colour.
-    menuRow(ui, {
-      service: "add-sheet",
-      ico: "addmenu-spreadsheet",
-      content: LOCALE.SPREADSHEET,
-      className: `${cnItem}--sheet`,
-    }),
+    casual
+      ? menuRow(ui, {
+          service: "add-sheet",
+          ico: "addmenu-spreadsheet",
+          content: LOCALE.SPREADSHEET,
+          className: `${cnItem}--sheet`,
+        })
+      : null,
     menuRow(ui, {
       service: "new-document",
       name: "presentation.pptx",
@@ -120,5 +154,7 @@ export function createRows(ui) {
       content: LOCALE.PRESENTATION,
       className: `${cnItem}--presentation`,
     }),
-  ];
+    // The Casual rows above are null where they are hidden; dropped here so
+    // the menu never receives a hole in its kids list.
+  ].filter(Boolean);
 }
