@@ -10,10 +10,9 @@
     // leaves __body horizontally scrollable. Fixed is viewport-relative and
     // never does.
     position: fixed;
-    // 720, was 500: each row's meta line now carries size and location as
-    // well as deleted-by and date. At ≤ 1024px the panel covers the canvas
-    // instead (rule at the bottom of this file), so this only applies above.
-    width: 720px;
+    // Figma 43:34212. At ≤ 1024px the panel covers the canvas instead (rule at
+    // the bottom of this file), so this only applies above.
+    width: 512px;
     // Sits INSIDE the padded canvas (43:23955), not over the whole viewport.
     // It used to be height:100vh at top:0/right:0, which covered the top bar
     // and ran past both gutters. --desk-* are published by the desk root; the
@@ -23,8 +22,8 @@
     bottom: var(--desk-gutter, 8px);
     height: auto;
     border-radius: 8px;
-    background-color: var(--normal-bg-90);
-    border: 1px solid var(--border-muted);
+    // White card, shadow only (no border) — Figma 43:34212.
+    background-color: var(--normal-bg);
     // Parked clear of the right gutter as well as its own width.
     transform: translateX(calc(100% + var(--desk-gutter, 8px)));
     transition: transform 0.25s ease-out;
@@ -111,17 +110,18 @@
     width: 100%;
     height: 100%;
     overflow: hidden;
+    box-sizing: border-box;
+    padding: 12px;
+    gap: 12px;
   }
 
-  &__ui[data-empty="1"] {
-
-    .panel-trash__status-bar,
-    .panel-trash__footer {
-      display: none;
-    }
+  // Nothing to empty when the whole bin is. An empty Expiring soon is not an
+  // empty bin, so the button stays there.
+  &__ui[data-empty="1"]:not([data-filter="expiring"]) .panel-trash__empty-trash {
+    display: none;
   }
 
-  /* ── Topbar wrapper (header + status bar) ───────────────── */
+  /* ── Topbar wrapper ─────────────────────────────────────── */
   &__topbar {
     flex-shrink: 0;
   }
@@ -134,7 +134,35 @@
   // past it and be clipped.
   &__header-actions {
     align-items: center;
-    gap: 12px;
+    gap: 16px;
+  }
+
+  &__empty-trash {
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  &__empty-trash-label {
+    @include drumee.typo($color: var(--primary-purple-100), $size: 14px, $weight: 400, $line: 1.2);
+    white-space: nowrap;
+  }
+
+  &__empty-trash-ico {
+    width: 20px;
+    height: 20px;
+    color: var(--signal-error);
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
   }
 
   &__filter-menu {
@@ -265,14 +293,11 @@
     }
   }
 
-  /* ── Header row: icon + title + close ───────────────────── */
+  /* ── Header row: title | Empty trash, filter, close ────── */
   &__header {
     align-items: center;
     justify-content: space-between;
-    height: 56px;
-    padding: 0 24px;
-    background-color: var(--normal-bg);
-    color: var(--normal-fg-10);
+    color: var(--primary-purple-100);
   }
 
   &__header-left {
@@ -301,56 +326,19 @@
     }
   }
 
+  // Body/Sub Title: Geist SemiBold 20 / 1.2.
   &__header-title {
-    @include drumee.typo($size: 18px,
-      $weight: 700,
-      $line: 20px,
-      $color: var(--normal-fg-10));
+    @include drumee.typo($size: 20px, $line: 1.2, $color: var(--primary-purple-100));
+    font-family: var(--font-main);
+    font-weight: 600;
     align-items: center;
     display: flex;
-    letter-spacing: -0.45px;
-  }
-
-  /* ── Status bar row: selection count + empty trash ──────── */
-  &__status-bar {
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 24px;
-  }
-
-  &__selection-count {
-    @include drumee.typo($color: var(--normal-fg-50),
-      $size: 10px,
-      $weight: 600,
-      $line: 1);
-    font-family: var(--font-mono, var(--font-medium));
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-  }
-
-  &__empty-btn {
-    @include drumee.typo($color: var(--active-border),
-      $size: 10px,
-      $weight: 600,
-      $line: 1);
-    font-family: var(--font-mono, var(--font-medium));
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    cursor: pointer;
-    padding: 4px 10px;
-    border-radius: 6px;
-    transition: opacity 0.15s;
-
-    &:hover {
-      opacity: 0.8;
-    }
   }
 
   /* ── Item list ───────────────────────────────────────────── */
   &__list {
     flex: 1;
     overflow: hidden;
-    background-color: var(--normal-bg-90);
 
     >.smart-container {
       height: 100%;
@@ -523,20 +511,6 @@
     position: absolute;
     width: 100%;
     height: 100%;
-  }
-
-  /* ── Footer row ──────────────────────────────────────────── */
-  &__footer {
-    justify-content: center;
-    align-items: center;
-    background-color: var(--normal-bg);
-    color: var(--normal-fg-50);
-    padding: 12px 24px;
-    border-top: 1px solid var(--border-muted);
-    @include drumee.typo($size: 10px, $weight: 600, $line: 1);
-    font-family: var(--font-mono, var(--font-medium));
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
   }
 
   /* ── Confirm dialog / purge ──────────────────────────────── */

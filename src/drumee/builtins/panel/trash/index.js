@@ -5,6 +5,7 @@ require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { DEFAULT_FILTER, normalizeFilter, showBinApi } = require("./filters");
+const { markGroupStarts } = require("./item/group");
 const WS_EVENT = "ws:event";
 class __panel_trash extends mfsInteract {
 
@@ -181,11 +182,6 @@ class __panel_trash extends mfsInteract {
       // end of data. The generation drops a listener left by an earlier reload
       // that the next restart's flush would otherwise fire on an empty list.
       const gen = (this._reloadGen = (this._reloadGen || 0) + 1);
-      // The count is only known at end of data. A bin larger than one page
-      // (pagelength 45) gets no eod until the user scrolls to the end, so the
-      // previous number would stand, now wrong. Blank it the way a first
-      // mount starts (skeleton/topbar content: '') until eod fills it in.
-      this.ensurePart('items-count').then((p) => p.set({ content: '' })).catch(() => { });
       // restart() resets the collection, which drops the scroll to the top.
       // Put it back once the reload lands so the user keeps their place.
       const top = list.__container ? list.__container.scrollTop : 0;
@@ -250,9 +246,6 @@ class __panel_trash extends mfsInteract {
           // Rows or the empty state are on screen. A reload's screen restore
           // waits on this (libs/items-ready).
           markItemsReady(this);
-          this.ensurePart('items-count').then((p) => {
-            p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
-          });
           this._refreshStorageUsed();
         });
         // A failed first page fires `error`, never `eod` (ui-core list
@@ -334,9 +327,9 @@ class __panel_trash extends mfsInteract {
         listPart.__placeholder = listPart.children.last();
       }
       this.el.dataset.empty = count ? 0 : 1;
-      return this.ensurePart('items-count').then((p) => {
-        p.set({ content: LOCALE.X_ITEMS_FOUND.format(count) });
-      });
+      // A removed row may have been the first of its day; re-mark the rest so
+      // the day label moves to the next row (item/group).
+      if (listPart.children) markGroupStarts(listPart.children.toArray());
     }).catch(() => { });
   }
 

@@ -19,6 +19,7 @@ class StubBase {
   mset() { }
   feed(x) { this.fed.push(x); }
   isDestroyed() { return false; }
+  ensurePart(name) { return Promise.resolve(this.parts[name]); }
 }
 // Webpack-alias / widget requests node cannot resolve. './skeleton' is
 // stubbed so a feed records which filter it was built with.
@@ -28,6 +29,8 @@ const STUBS = {
   "./skin": {},
   "libs/desk-canvas": { trackDeskCanvas: () => () => { } },
   "libs/items-ready": { armItemsReady: (w) => w, markItemsReady: () => { } },
+  "./item/group": { markGroupStarts: (views) => { STUBS.marked.push(views); } },
+  marked: [],
   "./skeleton": (ui) => ({ skeleton: true, filter: ui._filter }),
 };
 const load = Module._load;
@@ -63,6 +66,7 @@ test.after(() => {
 const panel = () => {
   const p = Object.create(Panel.prototype);
   p.initialize({});
+  p.parts = {};
   return p;
 };
 const chip = (value) => ({
@@ -124,16 +128,31 @@ const css = sass
   .compile(path.join(DIR, "skin/index.scss"), { loadPaths: [SRC, path.join(SRC, "skin")] })
   .css.replace(/\s+/g, " ");
 
-test("an empty bin never hides the filter dropdown", () => {
-  assert.doesNotMatch(css, /data-empty[^{]*(filter-menu|filter-trigger|__filters)/);
-});
-
 // Every rule as { selectors: [...], body }, so a selector is found whether
 // sass emitted it alone or grouped with others.
 const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
   .map(([, sel, body]) => ({ selectors: sel.split(",").map((x) => x.trim()), body }));
 const declares = (selector, decl) =>
   rules.some((r) => r.selectors.includes(selector) && r.body.includes(decl));
+
+test("after a row leaves, the day groups are re-marked on what remains", async () => {
+  const p = panel();
+  const rows = [{ model: {}, el: { dataset: {} } }];
+  p.parts.list = { collection: { filter: () => rows, length: 1 }, children: { toArray: () => rows } };
+  STUBS.marked.length = 0;
+  await p._updateItemsCount();
+  assert.deepEqual(STUBS.marked, [rows]);
+  assert.equal(`${p.el.dataset.empty}`, "0");
+});
+
+test("the panel is the design's 512px card", () => {
+  assert.ok(declares(".panel-trash__ui", "width: 512px"));
+});
+
+test("Empty trash hides only when the whole bin is empty", () => {
+  assert.ok(declares('.panel-trash__ui[data-empty="1"]:not([data-filter=expiring]) .panel-trash__empty-trash', "display: none"));
+  assert.doesNotMatch(css, /data-empty[^{]*(filter-menu|filter-trigger)/);
+});
 
 test("the row matching data-filter is lit and ticked", () => {
   for (const f of ["latest", "earliest", "expiring"]) {

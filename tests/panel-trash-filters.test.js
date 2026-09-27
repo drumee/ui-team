@@ -96,17 +96,24 @@ test("one menu row per filter, wired to trash-filter on the panel", () => {
     [en.TRASH_FILTER_LATEST, en.TRASH_FILTER_EARLIEST, en.TRASH_FILTER_EXPIRING]);
 });
 
-test("the dropdown sits in the header, right before the close button", () => {
+test("header: title, then Empty trash, the filter dropdown and close", () => {
   const top = require(path.join(DIR, "skeleton/topbar"))(ui());
   const header = walk(top).find((n) => has(n, "header"));
+  assert.equal(walk(header).find((n) => has(n, "header-title")).content, en.TRASH);
   const actions = walk(header).find((n) => has(n, "header-actions"));
-  assert.ok(actions, "header carries an actions group");
-  assert.equal(actions.kids.length, 2);
-  assert.ok(has(actions.kids[0], "filter-menu"));
-  assert.equal(actions.kids[1].service, "toggle-trash");
-  // Nothing filter-related is left in the status bar (hidden when empty).
-  const status = walk(top).find((n) => has(n, "status-bar"));
-  assert.ok(!walk(status).some((n) => has(n, "filter-menu") || has(n, "filters")));
+  assert.equal(actions.kids.length, 3);
+  const [purge, menu, close] = actions.kids;
+  assert.ok(has(purge, "empty-trash"));
+  assert.equal(purge.service, "empty-bin");
+  assert.ok(walk(purge).some((n) => n.content === en.PURGE));
+  assert.ok(walk(purge).some((n) => n.ico === "ph-trash"));
+  assert.ok(has(menu, "filter-menu"));
+  assert.equal(close.service, "toggle-trash");
+});
+
+test("no status bar and no item count (not in the design)", () => {
+  const top = require(path.join(DIR, "skeleton/topbar"))(ui());
+  assert.ok(!walk(top).some((n) => has(n, "status-bar") || n.sys_pn === "items-count"));
 });
 
 test("empty state names the filter when Expiring soon finds nothing", () => {

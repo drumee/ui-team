@@ -1,0 +1,171 @@
+// panel-trash-item.test.js — a Trash row as drawn in Figma 43:34212: day group
+// label, 40px icon tile, name, "Deleted by: <who> | Date: Mar 15", a days-left
+// badge that Restore replaces on hover, and a red bin for delete.
+//
+//   node --test tests/panel-trash-item.test.js
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const path = require("node:path");
+const dayjs = require("dayjs");
+
+const DIR = path.join(__dirname, "..", "src/drumee/builtins/panel/trash/item");
+const node = (type) => (opt = {}) => ({ type, ...opt });
+global.Skeletons = {
+  Box: { X: node("Box.X"), Y: node("Box.Y") },
+  Note: node("Note"),
+  Image: { Svg: node("Image.Svg") },
+  Button: { Svg: node("Button.Svg") },
+};
+const en = require("../locale/en.json");
+global.LOCALE = new Proxy(en, { get: (t, k) => (k in t ? t[k] : k) });
+String.prototype.format = function (...a) {
+  return String(this).replace(/\{(\d+)\}/g, (_, i) => a[i]);
+};
+global.Dayjs = dayjs;
+global._ = { escape: (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") };
+global._a = {
+  filename: "filename", ext: "ext", filetype: "filetype", modifier: "modifier",
+  mtime: "mtime", folder: "folder", hub: "hub",
+};
+
+const G = require(path.join(DIR, "group"));
+const skeleton = require(path.join(DIR, "skeleton"));
+
+const P = "trash-item";
+const at = (daysAgo, h = 12) => dayjs().startOf("day").subtract(daysAgo, "day").add(h, "hour").unix();
+const item = (attrs) => ({ fig: { family: P }, mget: (k) => attrs[k] });
+const walk = (n, out = []) => {
+  if (Array.isArray(n)) { n.forEach((k) => walk(k, out)); return out; }
+  if (!n || typeof n !== "object") return out;
+  out.push(n);
+  (n.kids || []).forEach((k) => walk(k, out));
+  return out;
+};
+const has = (n, c) => String(n.className || "").split(/\s+/).includes(`${P}__${c}`);
+const find = (t, c) => walk(t).find((n) => has(n, c));
+
+test("day label: Today, Yesterday, then 'Aug 13', with the year once it differs", () => {
+  const now = dayjs("2026-09-27T15:00:00");
+  assert.equal(G.dayLabel(now.subtract(2, "hour").unix(), now), en.TODAY);
+  assert.equal(G.dayLabel(now.subtract(1, "day").unix(), now), en.YESTERDAY);
+  assert.equal(G.dayLabel(dayjs("2026-08-13T09:00:00").unix(), now), "Aug 13");
+  assert.equal(G.dayLabel(dayjs("2025-12-31T09:00:00").unix(), now), "Dec 31, 2025");
+  assert.equal(G.dayLabel(0, now), "");
+});
+
+test("the deletion time is trashed_time, upload time only for legacy rows", () => {
+  assert.equal(G.trashedAt({ trashed_time: 50, mtime: 10 }), 50);
+  assert.equal(G.trashedAt({ trashed_time: 0, mtime: 10 }), 10);
+  assert.equal(G.trashedAt({ get: (k) => ({ trashed_time: 7 })[k] }), 7);
+});
+
+test("a group starts wherever the day changes from the row above", () => {
+  const view = (t) => ({ model: { trashed_time: t }, el: { dataset: {} } });
+  const views = [view(at(0, 10)), view(at(0, 9)), view(at(3)), view(at(3, 8)), view(at(5))];
+  G.markGroupStarts(views);
+  assert.deepEqual(views.map((v) => v.el.dataset.group), ["start", "", "start", "", "start"]);
+});
+
+test("row: icon tile, name, deleted-by and date, badge, restore, delete", () => {
+  const t = skeleton(item({
+    filename: "Marketing_Assets_2023", filetype: "folder",
+    modifier_name: "Alex Rivera", trashed_time: dayjs("2026-03-15T10:00:00").unix(),
+    days_remaining: 30,
+  }));
+  assert.equal(find(t, "tile-ico").ico, "ph-folder");
+  assert.equal(find(t, "name").content, "Marketing_Assets_2023");
+  const who = find(t, "deleted-by").content;
+  assert.match(who, /^Deleted by: <span class="trash-item__who">Alex Rivera<\/span>$/);
+  assert.match(find(t, "date").content, /^Date: Mar 15(, 2026)?$/);
+  assert.ok(find(t, "divider"));
+  assert.equal(find(t, "days-badge").content, "30 days left");
+  const restore = find(t, "restore");
+  assert.equal(restore.service, "restore-to-desk");
+  assert.equal(restore.content, en.RESTORE);
+  const del = find(t, "delete");
+  assert.equal(del.service, "delete-permanently");
+  assert.equal(del.ico, "ph-trash");
+});
+
+test("the group label carries the row's day (shown only on a group's first row)", () => {
+  const t = skeleton(item({ filename: "a", filetype: "document", ext: "pdf", trashed_time: at(0) }));
+  assert.equal(find(t, "group").content, en.TODAY);
+  assert.equal(find(t, "name").content, "a.pdf");
+  assert.equal(find(t, "tile-ico").ico, "ph-file-text");
+});
+
+test("names are escaped before they reach the markup", () => {
+  const t = skeleton(item({ filename: "x", modifier_name: "<b>Eve</b> & co" }));
+  assert.match(find(t, "deleted-by").content, /&lt;b&gt;Eve&lt;\/b&gt; &amp; co/);
+});
+
+test("a hub row gets the folder icon too; no name falls back to 'me'", () => {
+  const t = skeleton(item({ filename: "WS", filetype: "hub" }));
+  assert.equal(find(t, "tile-ico").ico, "ph-folder");
+  assert.match(find(t, "deleted-by").content, />me</);
+});
+
+const sass = require("sass");
+const SRC = path.join(__dirname, "..", "src/drumee");
+const css = sass
+  .compile(path.join(DIR, "skin/index.scss"), { loadPaths: [SRC, path.join(SRC, "skin")] })
+  .css.replace(/\s+/g, " ");
+const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)]
+  .map(([, sel, body]) => ({ selectors: sel.split(",").map((x) => x.trim()), body }));
+const declares = (selector, decl) =>
+  rules.some((r) => r.selectors.includes(selector) && r.body.includes(decl));
+
+test("the day label shows only on a group's first row", () => {
+  assert.ok(declares(".trash-item__group", "display: none"));
+  assert.ok(declares('.trash-item__ui[data-group=start] .trash-item__group', "display: block"));
+});
+
+test("Restore replaces the badge on hover", () => {
+  assert.ok(declares(".trash-item__restore", "display: none"));
+  assert.ok(declares(".trash-item__row:hover .trash-item__restore", "display: flex"));
+  assert.ok(declares(".trash-item__row:hover .trash-item__days-badge", "display: none"));
+});
+
+test("a touch screen, which never hovers, still gets Restore", () => {
+  assert.match(css, /@media \(hover: none\) \{[^@]*\.trash-item__restore \{ display: flex; \}/);
+});
+
+test("design colours come from the theme tokens", () => {
+  assert.ok(declares(".trash-item__days-badge", "color: var(--signal-error)"));
+  assert.ok(declares(".trash-item__restore", "color: var(--primary-purple-40)"));
+  assert.ok(declares(".trash-item__delete", "color: var(--signal-error)"));
+  assert.ok(declares(".trash-item__tile", "background-color: rgba(89, 80, 255, 0.1)"));
+});
+
+test("the row widget stamps data-group against the row above (first row always starts)", () => {
+  const Module = require("node:module");
+  const load = Module._load;
+  Module._load = function (r, p, m) { return r === "./skin" ? {} : load.call(this, r, p, m); };
+  global.LetcBox = class { feed() { } };
+  const Item = require(path.join(DIR, "index.js"));
+  Module._load = load;
+  const models = [at(0, 10), at(0, 9), at(2)].map((t) => ({ get: (k) => ({ trashed_time: t })[k] }));
+  // Backbone semantics: at(-1) is the LAST model.
+  const collection = { indexOf: (m) => models.indexOf(m), at: (i) => models[i < 0 ? models.length + i : i] };
+  const stamp = (m) => {
+    const w = Object.create(Item.prototype);
+    Object.assign(w, { fig: { family: P }, mget: () => undefined, el: { dataset: {} } });
+    w.model = Object.assign(m, { collection });
+    w.onDomRefresh();
+    return w.el.dataset.group;
+  };
+  assert.deepEqual(models.map(stamp), ["start", "", "start"]);
+  // A one-row list: at(-1) would be the row itself, which must not un-start it.
+  models.splice(1);
+  assert.equal(stamp(models[0]), "start");
+  delete global.LetcBox;
+});
+
+test("never --primary-100: revamp.scss declares it twice and the lilac one wins", () => {
+  const fs = require("node:fs");
+  for (const f of ["item/skin/index.scss", "skin/index.scss"]) {
+    const src = fs.readFileSync(path.join(DIR, "..", f), "utf8");
+    assert.doesNotMatch(src, /var\(--primary-100\)/, f);
+  }
+  assert.ok(declares(".trash-item__name", "color: var(--primary-purple-100)"));
+});
