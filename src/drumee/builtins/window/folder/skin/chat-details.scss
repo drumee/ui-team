@@ -2,6 +2,21 @@
 // Built by ../skeleton/chat-details.js, driven by ../chat-details/controller.js.
 @use "mixins/drumee";
 
+// Thin, quiet scrollbar for the lists that scroll inside the panel.
+@mixin cd-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+}
+
 .window-folder {
   // Chat details (Figma 775:131699). The panel is a sibling of
   // .window__chat-panel in the split body and takes the chat's grid cell
@@ -124,6 +139,13 @@
       gap: 4px;
       flex-shrink: 0;
     }
+    // Rows scroll under the fixed "File Threads" label once there are more
+    // than ~5: a workspace with dozens of threaded files would otherwise push
+    // the counts and members far down the panel.
+    &-thread-list {
+      max-height: 180px;
+      @include cd-scroll;
+    }
     &-thread {
       align-items: center;
       gap: 8px;
@@ -196,16 +218,22 @@
       background: #e5e5ea;
     }
 
+    // Members take whatever height is left and scroll inside it; 160px floor
+    // so a short window scrolls the panel instead of crushing the list.
     &-members {
+      flex: 1 1 0;
+      min-height: 160px;
       gap: 12px;
-      min-height: 0;
     }
     &-members-head {
       align-items: center;
       gap: 8px;
     }
     &-members-list {
+      flex: 1 1 0;
+      min-height: 0;
       gap: 12px;
+      @include cd-scroll;
     }
     &-member {
       align-items: center;

@@ -127,3 +127,19 @@ test("file tiles are coloured by type (Figma file-grid palette)", () => {
 test("action tiles are not bold", () => {
   assert.match(rule(".window-folder .window__chat-details-actions, .window-folder .window__chat-details-actions *"), /font-weight: 400/);
 });
+
+// Long thread / member lists scroll inside their own box instead of pushing
+// the panel: threads capped, members take the remaining height.
+test("thread and member lists handle overflow with their own scrollbar", () => {
+  const threads = rule(".window-folder .window__chat-details-thread-list");
+  assert.match(threads, /max-height: 180px/);
+  assert.match(threads, /overflow-y: auto/);
+  const members = rule(".window-folder .window__chat-details-members-list");
+  assert.match(members, /flex: 1 1 0/);
+  assert.match(members, /min-height: 0/);
+  assert.match(members, /overflow-y: auto/);
+  assert.match(rule(".window-folder .window__chat-details-members"), /flex: 1 1 0; min-height: 160px/);
+  for (const sel of ["thread-list", "members-list"]) {
+    assert.match(rule(`.window-folder .window__chat-details-${sel}`), /scrollbar-width: thin/, sel);
+  }
+});

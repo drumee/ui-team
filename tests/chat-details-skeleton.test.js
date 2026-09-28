@@ -163,3 +163,11 @@ test("file rows draw a per-type icon and tone", () => {
     ["other", "ph-file"],
   ]);
 });
+
+// The thread rows sit in their own list box (scrolls under a fixed label).
+test("thread rows live in a scrollable list under the File Threads label", () => {
+  const t = S.chatDetailsOverview(ui, data);
+  const list = walk(t).find((n) => n.className === "window__chat-details-thread-list");
+  assert.ok(list, "missing thread-list");
+  assert.deepEqual(list.kids.map((k) => k.file_nid), ["f1", "f2"]);
+});

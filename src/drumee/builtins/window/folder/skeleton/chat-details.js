@@ -58,24 +58,28 @@ function threadRows(ui, threads) {
     className: `${pfx}-threads`,
     kids: [
       Skeletons.Note({ className: `${pfx}-section-label`, content: LOCALE.FILE_THREADS }),
-      ...threads.map((it) => {
-        const name = it.user_filename || it.filename || "";
-        const unread = it.unread != null ? it.unread : it.unread_count;
-        return Skeletons.Box.X({
-          className: `${pfx}-thread`,
-          service: "chat-details-thread",
-          file_nid: `${it.file_nid || ""}`,
-          filename: name,
-          uiHandler: [ui],
-          kidsOpt: { active: 0 },
-          kids: [
-            Skeletons.Image.Svg({ className: `${pfx}-thread-ico`, ico: "app-attachment" }),
-            Skeletons.Note({ className: `${pfx}-thread-name`, content: name }),
-            Number(unread) > 0
-              ? Skeletons.Note({ className: `${pfx}-badge`, content: `${unread}` })
-              : null,
-          ].filter(Boolean),
-        });
+      // Own box so a long list scrolls under the fixed label (skin: -thread-list).
+      Skeletons.Box.Y({
+        className: `${pfx}-thread-list`,
+        kids: threads.map((it) => {
+          const name = it.user_filename || it.filename || "";
+          const unread = it.unread != null ? it.unread : it.unread_count;
+          return Skeletons.Box.X({
+            className: `${pfx}-thread`,
+            service: "chat-details-thread",
+            file_nid: `${it.file_nid || ""}`,
+            filename: name,
+            uiHandler: [ui],
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Image.Svg({ className: `${pfx}-thread-ico`, ico: "app-attachment" }),
+              Skeletons.Note({ className: `${pfx}-thread-name`, content: name }),
+              Number(unread) > 0
+                ? Skeletons.Note({ className: `${pfx}-badge`, content: `${unread}` })
+                : null,
+            ].filter(Boolean),
+          });
+        }),
       }),
     ],
   });
