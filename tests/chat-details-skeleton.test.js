@@ -124,3 +124,14 @@ test("⋮ opens details on a workspace, the thread menu on a share-token window"
   assert.equal(S.headerMenuService(win({ token: "tk" })), "open-thread-menu");
   assert.equal(S.headerMenuService(win({}, "window-sharebox")), "open-thread-menu");
 });
+
+test("icons match Figma's outline set (BellRinging, VideoCamera, DownloadSimple, thin X)", () => {
+  const t = S.chatDetailsOverview(ui, data);
+  const ico = (svc) => walk(byService(t, svc)).find((n) => n.ico).ico;
+  assert.equal(ico("chat-details-mute"), "top-bell");
+  assert.equal(ico("chat-details-meeting"), "noti-video-camera");
+  assert.equal(ico("chat-details-download"), "dl-download-simple");
+  assert.equal(byService(t, "close-chat-details")[0].ico, "meet-x");
+  const page = S.chatDetailsPage(ui, "file", []);
+  assert.equal(byService(page, "close-chat-details")[0].ico, "meet-x");
+});

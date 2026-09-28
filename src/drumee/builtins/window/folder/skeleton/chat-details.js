@@ -27,7 +27,7 @@ function header(ui, title, { back = false } = {}) {
       }),
       Skeletons.Button.Svg({
         className: `${pfx}-close`,
-        ico: "cross",
+        ico: "meet-x",
         service: "close-chat-details",
         uiHandler: [ui],
       }),
@@ -155,9 +155,9 @@ function chatDetailsOverview(ui, data = {}) {
     Skeletons.Box.X({
       className: `${pfx}-actions`,
       kids: [
-        actionTile(ui, "chat-details-mute", "bell", data.muted ? LOCALE.CD_UNMUTE : LOCALE.MUTE),
-        actionTile(ui, "chat-details-meeting", "video-camera", LOCALE.MEETING),
-        actionTile(ui, "chat-details-download", "download", LOCALE.DOWNLOAD),
+        actionTile(ui, "chat-details-mute", "top-bell", data.muted ? LOCALE.CD_UNMUTE : LOCALE.MUTE),
+        actionTile(ui, "chat-details-meeting", "noti-video-camera", LOCALE.MEETING),
+        actionTile(ui, "chat-details-download", "dl-download-simple", LOCALE.DOWNLOAD),
       ],
     }),
     threadRows(ui, data.threads),

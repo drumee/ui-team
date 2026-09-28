@@ -1,0 +1,305 @@
+// Chat details panel (Figma 775:131699, pages 775:132297..132300).
+// Built by ../skeleton/chat-details.js, driven by ../chat-details/controller.js.
+@use "mixins/drumee";
+
+.window-folder {
+  // Chat details (Figma 775:131699). The panel is a sibling of
+  // .window__chat-panel in the split body and takes the chat's grid cell
+  // while [data-details="open"]; hidden otherwise. !important on display
+  // because the framework's Box.Y default display:flex sits at (0,2,0)
+  // (see drumee-widget-flow-flex-beats-single-class).
+  &__split-body .window__chat-details {
+    display: none !important;
+  }
+  &__split-body[data-view="files"][data-details="open"] {
+    > .window__chat-panel {
+      display: none !important;
+    }
+    > .window__chat-details {
+      display: flex !important;
+      margin: 0 !important;
+      min-width: 0 !important;
+      width: auto !important;
+    }
+  }
+
+  .window__chat-details {
+    flex-direction: column;
+    gap: 20px;
+    padding: 12px;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--normal-bg, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    color: var(--normal-fg, #0b0a21);
+    font-family: Geist, sans-serif;
+
+    &[data-chat_gated="1"] > * {
+      display: none;
+    }
+
+    &-header {
+      height: 32px;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    &-title-wrap {
+      align-items: center;
+      gap: 12px;
+    }
+    &-title {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    &-back,
+    &-close {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      color: var(--normal-fg-50, #65656c);
+      fill: var(--normal-fg-50, #65656c);
+    }
+
+    &-actions {
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    &-action {
+      flex: 1 0 0;
+      min-width: 0;
+      align-items: center;
+      gap: 2px;
+      padding: 8px 20px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.05);
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.08);
+      }
+    }
+    &-action-ico {
+      width: 24px;
+      height: 24px;
+      fill: var(--normal-fg, #0b0a21);
+      color: var(--normal-fg, #0b0a21);
+    }
+    &-action-label {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    &-section-label {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    &-threads {
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    &-thread {
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+    &-thread-ico {
+      width: 20px;
+      height: 20px;
+      color: var(--primary-40, #5950ff);
+      fill: var(--primary-40, #5950ff);
+    }
+    &-thread-name {
+      flex: 1 1 0;
+      min-width: 0;
+      font-size: 14px;
+      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    &-badge {
+      height: 14px;
+      padding: 2px 4px;
+      min-width: 14px;
+      border-radius: 100px;
+      background: #d74e49;
+      color: #fff;
+      font-size: 8px;
+      line-height: 10px;
+      text-align: center;
+    }
+
+    &-counts {
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    &-count {
+      align-items: center;
+      gap: 20px;
+      cursor: pointer;
+    }
+    &-count-ico {
+      width: 20px;
+      height: 20px;
+      fill: var(--normal-fg-50, #65656c);
+      color: var(--normal-fg-50, #65656c);
+    }
+    &-count-label {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    &-divider {
+      height: 1px;
+      flex-shrink: 0;
+      background: #e5e5ea;
+    }
+
+    &-members {
+      gap: 12px;
+      min-height: 0;
+    }
+    &-members-head {
+      align-items: center;
+      gap: 8px;
+    }
+    &-members-list {
+      gap: 12px;
+    }
+    &-member {
+      align-items: center;
+      gap: 12px;
+    }
+    &-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    &-member-name {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+    &-member-status {
+      font-size: 12px;
+      line-height: 1.4;
+      color: #65656c;
+
+      &[data-online="1"] {
+        color: var(--primary-40, #5950ff);
+      }
+    }
+
+    // ── Pages ──
+    &-body {
+      gap: 12px;
+    }
+    &-month {
+      gap: 12px;
+    }
+    &-month-label {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    &-grid {
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    &-tile {
+      position: relative;
+      width: 61px;
+      height: 61px;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      justify-content: flex-end;
+      padding: 4px;
+    }
+    &-tile-img {
+      position: absolute;
+      inset: 0;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+    &-duration {
+      position: relative;
+      align-self: flex-start;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      background: rgba(20, 17, 35, 0.4);
+      color: #fff;
+      font-size: 10px;
+      line-height: 1.4;
+    }
+    &-duration-ico {
+      width: 12px;
+      height: 12px;
+    }
+    &-file {
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    &-file-ico {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.05);
+    }
+    &-file-name,
+    &-link-msg,
+    &-link-url {
+      min-width: 0;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    &-link {
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    &-link-thumb {
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.05);
+    }
+    &-link-text {
+      flex: 1 1 0;
+      min-width: 0;
+      gap: 2px;
+    }
+    &-link-url {
+      color: var(--primary-40, #5950ff);
+    }
+    &-empty {
+      color: #65656c;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+  }
+}
