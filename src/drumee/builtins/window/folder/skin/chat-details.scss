@@ -43,7 +43,9 @@
     gap: 20px;
     padding: 12px;
     min-height: 0;
-    overflow-y: auto;
+    // The panel itself never scrolls: the thread list, the members list and a
+    // page's body each scroll on their own.
+    overflow: hidden;
     background: var(--normal-bg, #fff);
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 8px;
@@ -143,7 +145,7 @@
     // than ~5: a workspace with dozens of threaded files would otherwise push
     // the counts and members far down the panel.
     &-thread-list {
-      max-height: 180px;
+      max-height: 108px; // ~3 rows
       @include cd-scroll;
     }
     &-thread {
@@ -218,11 +220,11 @@
       background: #e5e5ea;
     }
 
-    // Members take whatever height is left and scroll inside it; 160px floor
-    // so a short window scrolls the panel instead of crushing the list.
+    // Members take whatever height is left and scroll inside it (the panel
+    // does not scroll, so no floor).
     &-members {
       flex: 1 1 0;
-      min-height: 160px;
+      min-height: 0;
       gap: 12px;
     }
     &-members-head {
@@ -260,8 +262,17 @@
     }
 
     // ── Pages ──
+    // A page's content under the header: fills the panel and scrolls itself.
+    // 8px side gutter (cancelled by the negative margin) so the -8px hover
+    // backgrounds of file / link rows are not clipped by the scroller.
     &-body {
+      flex: 1 1 0;
+      min-height: 0;
       gap: 12px;
+      margin: 0 -8px;
+      padding: 0 8px;
+      @include cd-scroll;
+      overflow-x: hidden;
 
       // Hover rows carry 4px of vertical padding each: shrink the list gap by
       // the same 8px so rows keep Figma's 12px rhythm.

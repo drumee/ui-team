@@ -44,7 +44,9 @@ test("Figma geometry: card, action tiles, member avatar, media tiles, duration p
   assert.match(card, /gap: 20px/);
   assert.match(card, /padding: 12px/);
   assert.match(card, /border-radius: 8px/);
-  assert.match(card, /overflow-y: auto/);
+  // The panel itself never scrolls (on request): lists and page bodies do.
+  assert.match(card, /overflow: hidden/);
+  assert.doesNotMatch(card, /overflow-y: auto/);
   const tile = rule(".window-folder .window__chat-details-action");
   assert.match(tile, /padding: 8px 20px/);
   assert.match(tile, /border-radius: 12px/);
@@ -132,14 +134,25 @@ test("action tiles are not bold", () => {
 // the panel: threads capped, members take the remaining height.
 test("thread and member lists handle overflow with their own scrollbar", () => {
   const threads = rule(".window-folder .window__chat-details-thread-list");
-  assert.match(threads, /max-height: 180px/);
+  assert.match(threads, /max-height: 108px/); // ~3 rows
   assert.match(threads, /overflow-y: auto/);
   const members = rule(".window-folder .window__chat-details-members-list");
   assert.match(members, /flex: 1 1 0/);
   assert.match(members, /min-height: 0/);
   assert.match(members, /overflow-y: auto/);
-  assert.match(rule(".window-folder .window__chat-details-members"), /flex: 1 1 0; min-height: 160px/);
+  // No floor: with a non-scrolling panel the members list absorbs whatever is left.
+  assert.match(rule(".window-folder .window__chat-details-members"), /flex: 1 1 0; min-height: 0/);
   for (const sel of ["thread-list", "members-list"]) {
     assert.match(rule(`.window-folder .window__chat-details-${sel}`), /scrollbar-width: thin/, sel);
   }
+});
+
+// With the panel fixed, a page (Photos / Videos / Files / Links) scrolls its
+// own body under the header.
+test("page body fills the panel and scrolls itself", () => {
+  const body = rule(".window-folder .window__chat-details-body");
+  assert.match(body, /flex: 1 1 0/);
+  assert.match(body, /min-height: 0/);
+  assert.match(body, /overflow-y: auto/);
+  assert.match(body, /scrollbar-width: thin/);
 });
