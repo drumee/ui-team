@@ -85,8 +85,10 @@ const FILTERS = [
   { key: "meeting", label: "CAL_FILTER_MEETING" },
 ];
 
-// Hour rows the week/day grids draw. Kept narrow deliberately: an all-24 ruler
-// is mostly empty scroll, and the grid scrolls to the first item anyway.
+// The week/day grids draw all 24 hours (skeleton/hours.js), the same frame the
+// workspace Meet tab's schedule uses, so these no longer bound the ruler.
+// DAY_START_HOUR is now the hour the widget scrolls an EMPTY day onto — the
+// working-hours default, matching window/folder/index.js's own DEFAULT_HOUR.
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 21;
 
@@ -251,9 +253,12 @@ function rowEnd(row) {
 }
 
 /** 'HH:mm A' start label for a meeting chip; '' for an all-day task. */
+// "09:00" — the 24-hour form the workspace Meet tab's calendar cards use
+// (meeting-schedule.js monthCard: `HH:mm title`). The hour gutter keeps "9 AM",
+// as that tab's gutter does.
 function startLabel(row) {
   const s = row && row.kind === "meeting" ? fromEpoch(row.stime) : null;
-  return s ? s.format("h:mm A") : "";
+  return s ? s.format("HH:mm") : "";
 }
 
 /**
@@ -337,21 +342,24 @@ function viewRange(view, cursor) {
   return { from: gridStart, to: gridStart.add(6 * 7 - 1, "day").endOf("day") };
 }
 
-/** The range label above the grid: "June 2026" / "Jun 7 – 13, 2026" / a date. */
+// The range the toolbar names, worded exactly as the workspace Meet tab's
+// schedule words it (window/folder/skeleton/meeting-schedule.js rangeLabel):
+//   month  "September 2026"
+//   week   "September 20-26, 2026"  /  "Sep 28 - Oct 04, 2026" across months
+//   day    "September 25, 2026"
+// Two-digit days, as that toolbar and both calendars' day numbers use.
 function rangeLabel(view, cursor) {
   const anchor = day(cursor) || Dayjs();
-  if (view === "day") return anchor.format("dddd, MMMM D, YYYY");
+  if (view === "day") return anchor.format("MMMM DD, YYYY");
   if (view === "week") {
     const s = anchor.startOf("week");
-    const e = anchor.endOf("week");
+    const e = s.add(6, "day");
     if (s.month() === e.month()) {
-      return `${s.format("MMMM D")} – ${e.format("D")}, ${e.format("YYYY")}`;
+      return `${s.format("MMMM DD")}-${e.format("DD")}, ${e.format("YYYY")}`;
     }
-    return `${s.format("MMM D")} – ${e.format("MMM D")}, ${e.format("YYYY")}`;
+    return `${s.format("MMM DD")} - ${e.format("MMM DD")}, ${e.format("YYYY")}`;
   }
-  // Month mode names the month — never a week range, which is what the older
-  // 58222:* frames showed by mistake. 43:31159 sets the comma ("June, 2026").
-  return anchor.format("MMMM, YYYY");
+  return anchor.format("MMMM YYYY");
 }
 
 module.exports = {

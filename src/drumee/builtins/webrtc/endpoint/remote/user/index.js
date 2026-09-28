@@ -40,6 +40,7 @@ class __remote_user extends __stream {
 
     this.handleTrackEvents = this.handleTrackEvents.bind(this);
     this.onPropertyChanged = this.onPropertyChanged.bind(this);
+    this.onDisplayNameChanged = this.onDisplayNameChanged.bind(this);
     this.onStatsReceived = this.onStatsReceived.bind(this);
 
     this.logicalParent.on("TRACK_ADDED", this.handleTrackEvents);
@@ -56,6 +57,87 @@ class __remote_user extends __stream {
       JEVENTS.conference.ENDPOINT_STATS_RECEIVED,
       this.onStatsReceived
     );
+    // A nick set after the peer joined (a guest renaming themselves) never
+    // reached this tile: the display name is read once, in initialize.
+    this.room.on(
+      JEVENTS.conference.DISPLAY_NAME_CHANGED,
+      this.onDisplayNameChanged
+    );
+  }
+
+  /**
+   *
+   */
+  onDisplayNameChanged(id, displayName) {
+    if (id !== this.mget(PARTICIPANT_ID)) return;
+    const name = `${displayName || ""}`.trim();
+    if (!name || name === this.mget(_a.username)) return;
+    this.mset({ username: name, label: name });
+    this._rerender();
+  }
+
+  /**
+   * Merge an identity payload into the tile's model WITHOUT letting a blank
+   * field erase one we already resolved.
+   *
+   * This used to be `for (let name in data) this.mset(name, data[name])`, which
+   * copied the peer's userAttributes verbatim. A peer whose profile has no
+   * firstname/lastname broadcasts them as empty strings, so the first property
+   * update wiped the display-name-derived values initialize() had set, and the
+   * tile's profile widget was left with a pair of '' — which is exactly the
+   * input it renders as "??".
+   *
+   * `id` is deliberately skipped: userAttributes carries the peer's JITSI id
+   * under that key, and overwriting the model's `id` with it detaches the tile
+   * from its collection entry. Everything else (quota, muted, mic, socket_id,
+   * participant_id, avatar_mtime…) is passed through as before.
+   * @returns {Boolean} true when something actually changed
+   */
+  _applyIdentity(data) {
+    if (!data || typeof data !== "object") return false;
+    let changed = false;
+    for (const name in data) {
+      if (name === _a.id) continue;
+      const v = data[name];
+      if (v == null) continue;
+      if (typeof v === "string" && !v.trim()) continue;
+      if (this.mget(name) === v) continue;
+      this.mset(name, v);
+      changed = true;
+    }
+    return changed;
+  }
+
+  /**
+   * The peer's published identity, read straight off the JitsiParticipant.
+   *
+   * PARTICIPANT_PROPERTY_CHANGED fires once per value, and the presence that
+   * carries it is processed in the same stanza that produced USER_JOINED — a
+   * couple of statements after it (ChatRoom.onPresence emits MUC_MEMBER_JOINED
+   * before it walks the child nodes). Anything that delays this widget's
+   * construction past that point loses the only notification there will ever
+   * be, and the tile stays anonymous for the whole call. The properties
+   * themselves are cached on the participant, so re-reading them is free and
+   * makes the tile independent of that race.
+   * @returns {Object}
+   */
+  _publishedIdentity() {
+    const p = this.participant;
+    if (!p || !_.isFunction(p.getProperty)) return {};
+    let raw;
+    try {
+      raw = p.getProperty(_a.userAttributes);
+    } catch (e) {
+      return {};
+    }
+    if (!raw) return {};
+    try {
+      const data = JSON.parse(raw);
+      return _.isObject(data) ? data : {};
+    } catch (e) {
+      this.warn("unparsable userAttributes", e);
+      return {};
+    }
   }
 
   /**
@@ -75,6 +157,10 @@ class __remote_user extends __stream {
     this.room.off(
       JEVENTS.conference.TRACK_MUTE_CHANGED,
       this.handleTrackEvents
+    );
+    this.room.off(
+      JEVENTS.conference.DISPLAY_NAME_CHANGED,
+      this.onDisplayNameChanged
     );
 
     this.room = null;
@@ -156,6 +242,10 @@ class __remote_user extends __stream {
    *
    */
   async onDomRefresh() {
+    // Catch up on anything the peer published between this widget being
+    // constructed and now — see _publishedIdentity: the property event is a
+    // one-shot fired a few statements after the USER_JOINED that created us.
+    this._applyIdentity(this._publishedIdentity());
     // Render the real skeleton immediately so <audio sys_pn="output"> exists
     // before tracks arrive. The loader skeleton omitted it.
     this.feed(require('./skeleton')(this));
@@ -220,26 +310,32 @@ class __remote_user extends __stream {
   async onPropertyChanged(p, k) {
     if (p !== this.participant) return;
     if (k != "userAttributes") return;
-    let data = JSON.parse(p.getProperty(k));
-    for (let name in data) {
-      this.mset(name, data[name]);
-    }
+    let data = this._publishedIdentity();
+    this._applyIdentity(data);
+    await this._rerender();
+    this.updateCommandPanel(data);
+  }
+
+  /**
+   * Re-render the tile and put the live tracks back.
+   *
+   * feed() rebuilds <audio output> / <video> from scratch, which detaches the
+   * remote tracks (the Skeleton collection removes + recreates the id-less child
+   * elements). Re-attach the current ones through the normal dispatcher so a
+   * name/attribute update doesn't leave the tile silent / black.
+   * handleTrackEvents routes audio->attach and video->attach (with the
+   * camera/desktop/presenter logic) and is a no-op when there is no track.
+   */
+  async _rerender() {
     this.feed(require("./skeleton")(this));
     await this.ensurePart("output");
     await this.ensurePart("sound");
     await this.ensurePart("video");
     await this.ensurePart("audio");
-    // feed() above rebuilt <audio output> / <video> from scratch, which detaches
-    // the live remote tracks (the Skeleton collection removes + recreates the
-    // id-less child elements). Re-attach the current tracks via the normal
-    // dispatcher so a participant-attributes update doesn't leave the tile
-    // silent / black. handleTrackEvents routes audio->attach and video->attach
-    // (with the camera/desktop/presenter logic) and is a no-op when no track.
     const aTrack = this.getRemoteTrack(_a.audio);
     if (aTrack) this.handleTrackEvents(aTrack);
     const vTrack = this.getRemoteTrack(_a.video);
     if (vTrack) this.handleTrackEvents(vTrack);
-    this.updateCommandPanel(data);
   }
 
   /**

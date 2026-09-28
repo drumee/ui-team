@@ -19,9 +19,15 @@ const __skl_stream_remote = function (_ui_) {
   // tile while the People panel and the chat, which get the real name parts,
   // rendered "JD" in a different colour for the same person. Split the display
   // name so every surface agrees. Mirrors endpoint/local/user/skeleton.
+  //
+  // Pass undefined, never '': an empty-string PAIR is what made the profile
+  // widget print the literal "??" (see its initiales()), and it is the state
+  // this tile is in for the whole window between USER_JOINED and the peer's
+  // userAttributes landing. `surname` is the last resort the profile falls back
+  // to, so a tile that knows only a display name still shows real initials.
   const [unameFirst, ...unameRest] = String(uname || '').trim().split(/[\s,]+/);
-  const firstname = _ui_.mget(_a.firstname) || unameFirst || '';
-  const lastname = _ui_.mget(_a.lastname) || unameRest.join(' ') || '';
+  const firstname = _ui_.mget(_a.firstname) || unameFirst || undefined;
+  const lastname = _ui_.mget(_a.lastname) || unameRest.join(' ') || undefined;
 
   const avatar = {
     kind: KIND.profile,
@@ -31,6 +37,7 @@ const __skl_stream_remote = function (_ui_) {
     className: 'no-online-status',
     firstname,
     lastname,
+    surname: uname || undefined,
     // Version the avatar URL by ITS OWNER's mtime, not the viewer's. Without
     // this, a peer who changes their avatar produces a byte-identical URL on
     // every other client, which then serves the pre-change image from the HTTP

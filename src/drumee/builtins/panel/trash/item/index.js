@@ -1,4 +1,5 @@
 require('./skin');
+const { dayKey, trashedAt } = require('./group');
 
 class __trash_item extends LetcBox {
 
@@ -8,6 +9,12 @@ class __trash_item extends LetcBox {
    */
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
+    // Record this row's day; the panel decides which row heads each day
+    // (./group markDayGroups) and is asked to look again now that this row
+    // is on screen.
+    this.el.dataset.day = dayKey(trashedAt(this.model));
+    const parent = this.mget('logicalParent');
+    if (parent && typeof parent.regroupSoon === 'function') parent.regroupSoon();
   }
 
   /**

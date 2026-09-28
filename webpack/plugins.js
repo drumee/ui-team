@@ -62,8 +62,17 @@ module.exports = function (webpack, opt) {
     }),
     new StatsWriterPlugin({
       fields: ["assets", "modules"],
+      // NO `source: true`. That embeds every module's SOURCE in the JSON, and
+      // once the document/spreadsheet editors joined the graph the string
+      // passed V8's maximum length: `JSON.stringify` threw "Invalid string
+      // length" and took the whole production build down with it. Nothing
+      // reads sources out of this file — the asset and module lists are what
+      // it is for — so they are simply not collected any more.
       stats: {
-        source: true // Needed for webpack5+
+        source: false,
+        reasons: false,
+        moduleTrace: false,
+        chunkModules: false,
       }
     }),
     new CopyPlugin({

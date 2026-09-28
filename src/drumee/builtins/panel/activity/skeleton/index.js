@@ -27,6 +27,14 @@ module.exports = function (ui) {
             sys_pn: 'priority',
             partHandler: ui,
           }),
+          // Bookmarked rows, pinned above the feed (newest first). Their copy
+          // in the feed below is hidden while they are pinned and comes back in
+          // place when they are unsaved. Filled by the panel's _renderPinned.
+          Skeletons.Box.Y({
+            className: `${pfx}__saved`,
+            sys_pn: 'saved',
+            partHandler: ui,
+          }),
           Skeletons.List.Smart({
             className: `${pfx}__list`,
             sys_pn: _a.list,

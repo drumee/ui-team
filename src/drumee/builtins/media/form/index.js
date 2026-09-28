@@ -126,6 +126,15 @@ class __form_folder extends LetcBox {
     const status = this._status || "team";
     this._setPending(1);
 
+    // WHICH SURFACE FOLLOWS THE CREATE, decided BEFORE the create rather than
+    // after it. The broadcast that navigation listens to fires from inside
+    // createWorkspace, so the answer has to be in hand by then — see the
+    // `panel` note in libs/create-workspace announce().
+    //
+    // Nothing follows it by default any more. Creating a workspace now takes
+    // the user straight into it; see the `post` block below.
+    const post = this.mget("post_override") || null;
+
     // The create, the analytics row and the workspace:refresh broadcast all
     // live in libs/create-workspace — the tutorial's own create screen needs
     // every one of them, and three types' worth of service branching is not
@@ -140,14 +149,17 @@ class __form_folder extends LetcBox {
       // used to leave the desk exactly where it was — still inside the
       // workspace the user had open, with the new one reachable only by then
       // picking it out of the switcher. This says so once, in the broadcast;
-      // the desk owns the navigation and the timing (it has to wait for the
-      // access panel below to be dismissed first, or opening would destroy it).
+      // the desk owns the navigation.
       //
       // Unconditional, because this dialog cannot tell that a guided
       // walkthrough is driving it — reward-flow and activate-workspace both
       // create through this same form, and each owns its own sequel. The desk
       // is what knows a flow is running, and it declines there.
-      .createWorkspace(this, status, filename, { open: 1 })
+      //
+      // `panel`: only a walkthrough's override raises one now, and only then
+      // does navigation have to wait for it to be dismissed. On the ordinary
+      // path there is nothing to wait for and the workspace opens at once.
+      .createWorkspace(this, status, filename, { open: 1, panel: !!post })
       .then((res) => {
         if (!res.ok) {
           this._setPending(0);
@@ -180,25 +192,31 @@ class __form_folder extends LetcBox {
         /**
          * WHICH SURFACE OPENS AFTER THE WORKSPACE EXISTS, and who gets to decide.
          *
-         * By default the type decides, and both hub types end on the SAME
-         * follow-up panel — "Who has access" (permission_restricted) — so
-         * creating a shared workspace looks like creating a restricted one.
-         * That panel is workspace-MEMBERSHIP, driven purely by hub_id with no
-         * area branch of its own, so it serves a share hub exactly as it serves
-         * a private one.
+         * NOTHING, by default. Creating a workspace takes the user INTO it, on
+         * the Files tab — the desk does that off the `open` request above, and
+         * this form simply gets out of the way.
          *
-         * Share creation used to open the share-LINK surface instead — the
-         * secure-share v2 "Manage access" dock. Link minting stays where it
-         * belongs: the in-workspace share icon, which is privilege-gated.
+         * It used to end on "Who has access" (permission_restricted) for both
+         * hub types, and that panel is why creating a workspace did not feel
+         * like opening one: the panel was raised over the workspace the user
+         * still had open, so the name in the breadcrumb, the files on screen
+         * and the panel's own title disagreed about which workspace was in
+         * front of them. The new workspace only appeared once the panel was
+         * dismissed, because navigation was made to wait for exactly that. Both
+         * halves of that arrangement go together — see the `panel` flag above
+         * and desk's _openWorkspaceAfterAccessPanel. Reported by Duy
+         * 2026-09-22.
          *
-         * A caller may override it, and exactly one does today — the
-         * activate-workspace onboarding flow, which needs an external workspace
-         * to end on the members panel so its invite step has a surface to run
-         * on. The override is threaded desk -> wm -> here rather than decided
-         * here, because "is an onboarding walkthrough running" is not something
-         * this form can or should know.
+         * Access is not lost with it: the rail's Access opens the same panel on
+         * the workspace that is now actually in front of the user.
+         *
+         * A caller may still ask for one, and exactly one does today — the
+         * activate-workspace onboarding flow, which needs its new workspace to
+         * end on the members panel so its invite step has a surface to run on.
+         * The override is threaded desk -> wm -> here rather than decided here,
+         * because "is an onboarding walkthrough running" is not something this
+         * form can or should know.
          */
-        const post = this.mget("post_override") || "permission_restricted";
         const hub = res.hub;
         if (!post || !hub) return closeForm();
 

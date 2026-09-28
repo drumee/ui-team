@@ -76,7 +76,12 @@
       pointer-events: none;
     }
 
-    &.trash {
+    // `leave-workspace` is the trash row's non-admin face (skeleton/classes.js
+    // leaveWorkspace) and takes the same red: its consequence is the same kind
+    // of thing — the workspace stops being reachable from this account. Both
+    // keys carry `service: _e.remove`; only the copy differs.
+    &.trash,
+    &.leave-workspace {
       color: var(--red-500);
     }
 

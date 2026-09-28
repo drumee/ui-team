@@ -301,6 +301,12 @@ class __lib_messenger extends LetcBox {
         return;
 
       case _e.attach:
+        // A host that attaches from the device only (the Inbox): with one
+        // option left there is nothing to choose, so skip the menu.
+        if (this.mget('no_workspace_attach')) {
+          this._closeAttachMenu();
+          return this.__fileselector.open(this._upload.bind(this));
+        }
         return this._showAttachMenu();
 
       case 'attach-from-device':

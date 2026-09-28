@@ -2,7 +2,16 @@ module.exports = function (_ui_) {
   const pfx = _ui_.fig.family;
   const firstname = _ui_.mget(_a.firstname) || "";
   const lastname = _ui_.mget(_a.lastname) || "";
-  const fullname = _ui_.mget(_a.fullname) || `${firstname} ${lastname}`.trim();
+  // `fullname` arrives from hub_get_members_by_type as CONCAT(firstname,' ',
+  // lastname), so when the contact-book override blanked both parts it is a
+  // lone space — truthy, and enough to shadow every fallback below it. Trim
+  // first, then fall back to surname (which that proc DOES guard with IFNULL,
+  // down to the email) so the row keeps a readable name.
+  const fullname =
+    String(_ui_.mget(_a.fullname) || "").trim()
+    || `${firstname} ${lastname}`.trim()
+    || String(_ui_.mget(_a.surname) || "").trim()
+    || String(_ui_.mget(_a.email) || "").trim();
   const memberId = _ui_.mget(_a.drumate_id) || _ui_.mget(_a.entity_id);
   const isSelf = memberId != null && String(memberId) === String(Visitor.id);
 
@@ -109,6 +118,15 @@ module.exports = function (_ui_) {
         id: memberId,
         firstname,
         lastname,
+        // The parts above are routinely empty on this row while the row still
+        // knows who the person is: hub_get_members_by_type overwrites
+        // firstname/lastname from the REQUESTING user's own contact book, and a
+        // contact created from an email invitation has both NULL. Hand the
+        // profile the whole name as well so it can still derive initials — that
+        // is the difference between "VL" and a blank circle for the same member
+        // on two different participants' screens.
+        fullname,
+        surname: _ui_.mget(_a.surname) || fullname,
         live_status: 1,
         auto_color: 1,
       }),

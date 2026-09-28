@@ -4,7 +4,14 @@
  * @returns
  */
 const __skl_conference_attendee = function(_ui_) {
-  const fullname  = _ui_.mget(_a.fullname) || _ui_.mget(_a.username) || _ui_.mget('display');
+  // Trim before falling through: hub_get_members_by_type builds `fullname` as
+  // CONCAT(firstname,' ',lastname), which is a lone space — truthy — for a
+  // member whose name parts it blanked from the viewer's contact book. `surname`
+  // is the one field that proc guards with IFNULL, all the way down to the email.
+  const fullname  = String(_ui_.mget(_a.fullname) || '').trim()
+    || _ui_.mget(_a.username) || _ui_.mget('display')
+    || String(_ui_.mget(_a.surname) || '').trim()
+    || String(_ui_.mget(_a.email) || '').trim();
   const { family } = _ui_.fig;
 
   // Optional — only window_meeting passes _meetingUi (see
@@ -26,6 +33,11 @@ const __skl_conference_attendee = function(_ui_) {
   const contact = Skeletons.UserProfile({
     className   : `${family}__profile`,
     id          : memberId,
+    // Parts first (same source the roster card uses, so both surfaces produce
+    // the same initials and the same auto colour for one person), whole name as
+    // the fallback when the row carries no parts.
+    firstname   : _ui_.mget(_a.firstname),
+    lastname    : _ui_.mget(_a.lastname),
     fullname,
     online      : _ui_.mget(_a.online),
     live_status : 1,

@@ -14,6 +14,35 @@
 // activeTab / open_task_id / highlight all keep their meaning, so nothing about
 // how these rows are built had to change. "#/desk/wm/open/" itself is untouched
 // and still serves mail, chat, share and compact deep links.
+const { isMeetingRollup, meetingDeepLink } = require('./meeting-link');
+
+// What bookmark_add stores as a saved row's snapshot: the row as the server
+// sent it, minus what the list and the panel attach to the model (views and
+// handlers, which cannot be serialised) and minus per-render/per-state fields
+// the server recomputes when it serves the snapshot back (bookmark_rows).
+const SNAPSHOT_SKIP = new Set([
+  'kind', 'uiHandler', 'logicalParent', 'partHandler', 'widgetId',
+  'day_header', 'is_saved', 'is_read', 'pinned_view', 'pinned_source', 'bookmark_key',
+]);
+function snapshotRow(attrs) {
+  const out = {};
+  for (const k of Object.keys(attrs || {})) {
+    if (SNAPSHOT_SKIP.has(k)) continue;
+    const v = attrs[k];
+    if (_.isFunction(v)) continue;
+    // Only plain data: a Backbone view or model here would be circular.
+    if (v && typeof v === 'object' && !Array.isArray(v)
+      && Object.getPrototypeOf(v) !== Object.prototype) continue;
+    out[k] = v;
+  }
+  try {
+    JSON.stringify(out);
+  } catch (e) {
+    return null;
+  }
+  return out;
+}
+
 function parseJson(value, fallback) {
   if (!value) return fallback;
   if (_.isObject(value)) return value;
@@ -54,6 +83,89 @@ function getCategory(data) {
 // and then did nothing at all when clicked.
 function isFileCategory(category) {
   return category === _a.media || category === _a.mfs;
+}
+
+/**
+ * A share-open notification ("{who} opened {item}") also opens that item's
+ * share panel, with the opener's rows marked in "View access list"
+ * (window/secure-share focusAccessEvent). The reveal link above still does
+ * everything it did; this runs beside it.
+ *
+ * WAITS FOR THE LANDING (`landing`, the promise of Wm.openNotificationLocation,
+ * which resolves to the workspace pane once it is mounted, raised and
+ * navigated). Launched earlier, the panel would be wiped when loadWorkspace
+ * re-feeds headlessLayer — the pool a launched window lands in — or buried when
+ * the landing raises the pane over it. The panel's lazy chunk is fetched during
+ * that same wait, so it adds no time of its own. No landing (the hash fallback)
+ * means no panel: the click then does exactly what it did before.
+ *
+ * A panel already on screen for this node (drawer, column or floating) is
+ * pointed instead of doubled. A hidden one — the column stays mounted after its
+ * ✕ — does not count: that one is out of sight.
+ *
+ * Best-effort: every failure leaves the click exactly as it was before.
+ */
+function openShareOpenAccess({ landing, hub_id, nid, filetype, name, focus }) {
+  const wm = window.Wm;
+  if (!hub_id || !nid || !wm || !landing) return;
+  const chunk = Promise.resolve(Kind.waitFor("window_secure_share")).catch(() => {});
+  Promise.all([landing, chunk])
+    .then(([pane]) => {
+      if (!pane) return;
+      const onScreen = (wm.getItemsByKind("window_secure_share") || []).find(
+        (p) =>
+          p &&
+          !(p.isDestroyed && p.isDestroyed()) &&
+          `${p.mget(_a.nid)}` === `${nid}` &&
+          _.isFunction(p.focusAccessEvent) &&
+          p.el &&
+          p.el.getClientRects().length > 0,
+      );
+      if (onScreen) {
+        // Only a standalone window raises; raising a drawer or a column would
+        // lift it out of its folder window (window/core raise → z 10000).
+        if (!onScreen._embedded && _.isFunction(onScreen.raise)) onScreen.raise();
+        return onScreen.focusAccessEvent(focus);
+      }
+      // The workspace itself was shared: its link is minted on the root folder
+      // (window/folder/secure-share-column secureShareNid), whose node_filetype
+      // the feed reports as "root" (measured on stage), not "hub".
+      const isWorkspace =
+        filetype === _a.hub ||
+        filetype === "root" ||
+        `${pane.mget(_a.actual_home_id)}` === `${nid}`;
+      const isFolder = isWorkspace || !filetype || filetype === _a.folder;
+      const subject = isWorkspace ? "workspace" : isFolder ? "folder" : "file";
+      const uid = `window_secure_share-${nid}`;
+      const launched = wm.launch(
+        {
+          kind: "window_secure_share",
+          wm_unique_id: uid,
+          nid,
+          hub_id,
+          filetype: isFolder ? _a.folder : filetype,
+          area: pane.mget(_a.area),
+          // Slides in and out, like the player's Share (window/secure-share `_floating`).
+          floating: 1,
+          ...(isWorkspace ? { manage_access: 1 } : {}),
+          subject,
+          subject_data: {
+            name: name || (isWorkspace ? pane.mget(_a.filename) || pane.mget(_a.hub_name) : ""),
+            filetype: isWorkspace ? _a.hub : isFolder ? _a.folder : filetype,
+            area: pane.mget(_a.area),
+          },
+          access_focus: focus,
+        },
+        { explicit: 1, singleton: 1 },
+      );
+      // false = the singleton already exists but is out of sight (minimised):
+      // launch wakes it, and the focus has to be handed to it directly.
+      if (launched === false) {
+        const w = (wm.getItemsByAttr("wm_unique_id", uid) || [])[0];
+        if (w && _.isFunction(w.focusAccessEvent)) w.focusAccessEvent(focus);
+      }
+    })
+    .catch((e) => console.warn("[activity] share-open panel failed", e));
 }
 
 /**
@@ -107,6 +219,10 @@ class __activity_item extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
+    // Taken before anything below reshapes the model: bookmarking sends this
+    // so the server can pin the row, and the server only keeps it if it still
+    // hashes to the row's bookmark_key.
+    this._rawRow = snapshotRow(this.model.toJSON());
     if (opt.event === 'media.workspace_move' || opt.event === 'media.copy') {
       const source = parseJson(opt.src, {});
       const destination = parseJson(opt.dest, {});
@@ -192,6 +308,10 @@ class __activity_item extends LetcBox {
         // would dismiss a changelog id that does not exist, so the row would
         // reappear on the next reload.
         : opt.event === 'meeting_notice' ? 'contact_invite'
+        // Every other yp.contact_activity row (invite_accepted, invite_received,
+        // invite_refused, …) for the same reason: as 'mfs' a read dismissed a
+        // changelog id that does not exist and came back unread on reload.
+        : opt.event_type === 'contact' ? 'contact_invite'
         : 'mfs');
     const item_key = `${item_type}:${opt.id || opt.hub_id || opt.drumate_id || opt.key_id || ''}`;
     this.mset({ category, sender, autho_id, item_type, item_key })
@@ -228,6 +348,11 @@ class __activity_item extends LetcBox {
     // whole panel (repro: Shares → All activity closed it). The panel now
     // closes only via the explicit close button / sidebar toggle.
     this.feed(require('./skeleton')(this));
+    // A saved row is shown pinned on top by the panel, so its copy in the feed
+    // stays out of sight until it is unsaved (panel _pinFromRow / _unpinKey).
+    if (parseInt(this.mget('is_saved'), 10) === 1 && !this.mget('pinned_view')) {
+      this.el.dataset.twin = '1';
+    }
   }
 
   /**
@@ -252,6 +377,10 @@ class __activity_item extends LetcBox {
     switch (service) {
       case 'toggle-favorite':
         if (!cmd || !cmd.el) return;
+        // One request at a time per row: a second press while the first is in
+        // flight could land out of order and leave the store opposite to the
+        // button.
+        if (this._bookmarkPending) return;
         const next = cmd.el.dataset.state === '1' ? '0' : '1';
         cmd.el.dataset.state = next;
         if (cmd.mset) cmd.mset(_a.state, parseInt(next));
@@ -263,12 +392,12 @@ class __activity_item extends LetcBox {
             service: 'toggle-favorite',
             favorited: next === '1' ? 1 : 0,
             item_key: this.mget('item_key'),
-            message_id: this.mget('message_id')
-              || this.mget('key_id')
-              || this.mget(_a.id)
-              || this.mget('id')
-              || this.mget(_a.drumate_id),
-            hub_id: this.mget(_a.hub_id),
+            // Server-computed identity from activity.get_feed; the same key
+            // comes back on every refresh, which is what makes the saved state
+            // survive closing the panel or switching tabs.
+            bookmark_key: this.mget('bookmark_key'),
+            row: this._rawRow,
+            button: cmd,
           });
         }
         return;
@@ -393,6 +522,42 @@ class __activity_item extends LetcBox {
       }
       return;
     }
+    // 🚨 READ OFF THE CLICKED WIDGET, NOT `service`, for exactly the reason the
+    // day-header guard above does. A hub-invite row carries
+    // `service: 'open-workspace-invitation'` on its OWN model (the panel sets
+    // it when it builds the row), and the `service` chain prefers that over the
+    // button's — so both answers would resolve as "the row was clicked", fall
+    // through to _dispatchService, and navigate to the workspace instead of
+    // answering the invitation. The trash and bookmark buttons survive the same
+    // shadowing only because _dispatchService re-resolves from `cmd`.
+    const clicked = args.service || (cmd && cmd.get && cmd.get(_a.service));
+    if (clicked === 'accept-invite' || clicked === 'decline-invite') {
+      // Forwarded to the activity panel (logicalParent) for the same reason
+      // open-access-request is: _dispatchService knows only toggle-favorite and
+      // dismiss-activity, so anything else dies there silently — and the panel
+      // is what owns the feed refresh and the navigation that follow an answer.
+      //
+      // The token is passed in the args rather than looked up by the panel: the
+      // list factory consumes `kind`, so a kind-based lookup of a forwarded
+      // item can miss, and an answer that silently did nothing is exactly the
+      // failure this whole row exists to remove.
+      if (parent && parent.onUiEvent) {
+        parent.onUiEvent(this, {
+          // `clicked`, NOT `service` — the same shadowing the guard above is
+          // about. Forwarding `service` would hand the panel
+          // 'open-workspace-invitation' and it would match no case at all.
+          service: clicked,
+          invite_token: this.mget('invite_token'),
+          // Only as the fallback target for the post-accept navigation: the
+          // accept response carries its own hub_id and is preferred, because it
+          // is the workspace the TOKEN resolved rather than the one this row
+          // happens to name.
+          hub_id,
+          item_key,
+        });
+      }
+      return;
+    }
     if (service === 'join-meeting' || service === 'open-meeting-chat') {
       // Meeting notification. The green button joins the call directly
       // ('join-meeting'); clicking the row opens the folder chat where the
@@ -465,7 +630,17 @@ class __activity_item extends LetcBox {
         // calls showFolderTab() on the pane after it mounts, which renders the
         // schedule. Verified live: the calendar opens and no call window is
         // created. Do NOT copy this onto a Wm.launch/addWindow call.
-        location.hash = `#/desk/wm/reveal/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&activeTab=${_a.meeting}&ts=${ts}`;
+        //
+        // open_meeting_nid additionally opens THIS meeting's card on that
+        // calendar (openMeetingDeepLink, the Personal Calendar's call). Not for
+        // a cancellation: its node is hard-deleted, so the card would only be
+        // refused with "That meeting no longer exists" — that row keeps landing
+        // on the calendar alone. activeTab stays on the link as the fallback
+        // for a row without the meeting's id.
+        const mMeeting = this.mget('meeting_kind') !== 'cancelled' && this.mget('meeting_nid');
+        location.hash = `#/desk/wm/reveal/?hub_id=${mHub}&nid=${mNid}&filetype=folder&pid=0&activeTab=${_a.meeting}`
+          + meetingDeepLink(mMeeting, this.mget('meeting_stime'))
+          + `&ts=${ts}`;
       }
       this.triggerHandlers({ service: 'read-activity', hub_id: mHub, item_type, item_key, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
@@ -510,6 +685,25 @@ class __activity_item extends LetcBox {
       // shape the panel shows by DEFAULT, so until this label was added the
       // ordinary "<somebody> uploaded <file>" notification was a dead click.
       case _a.mfs:
+        if (isMeetingRollup(this.model.toJSON())) {
+          // "<Meeting-name> on <time>" — a scheduled meeting, not a file.
+          // Revealing its `schedule` node in the Files grid showed nothing
+          // useful, so it opens like the meeting_notice row above: the Meet
+          // tab's calendar with this meeting's card open. meeting_nid is
+          // stamped by the server (_stampMeetingRollups, matched on title);
+          // without it the row still lands on the calendar.
+          //
+          // The rollup's target is the folder the meeting was filed in; a
+          // workspace target is its root (0). The calendar is hub-wide either
+          // way — this only decides which folder the pane shows behind it.
+          const rFolder = (target_filetype === _a.folder && `${target_nid}` !== '0') ? target_nid : 0;
+          location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${rFolder}&filetype=folder&pid=0&activeTab=${_a.meeting}`
+            + meetingDeepLink(this.mget('meeting_nid'), this.mget('meeting_stime'))
+            + `&ts=${ts}`;
+          this.triggerHandlers({ service: 'read-activity', hub_id, nid: target_nid, item_type, changelog_id });
+          this.triggerHandlers({ service: 'close-activity-panel' });
+          return;
+        }
         // highlight=1 → reveal the file in its folder (scroll + select + flash)
         // instead of opening it in a player. Scoped to notification clicks.
         location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&highlight=1&ts=${ts}`;
@@ -614,7 +808,20 @@ class __activity_item extends LetcBox {
         const sharedFile = !!shareFiletype
           && shareFiletype !== _a.folder
           && shareFiletype !== 'hub';
-        if (sharedFile) {
+        //
+        // Landed through Wm.openNotificationLocation DIRECTLY — the very call the
+        // `#/desk/wm/reveal/` route makes, with the same payload the hash carried
+        // (as the strings the route would parse) — because the share panel
+        // opened below must come up AFTER it: it raises the workspace pane, and
+        // through the hash that happened ~1.3s later (measured on drumee.in),
+        // burying the panel under the pane. The hash stays as the fallback.
+        const revealArgs = sharedFile
+          ? { hub_id, nid: shareNid, filetype: shareFiletype, pid: `${shareParentId || "0"}`, highlight: "1", ts: `${ts}` }
+          : { hub_id, nid: shareNid, filetype: _a.folder, pid: "0", ts: `${ts}` };
+        let landing = null;
+        if (window.Wm && _.isFunction(Wm.openNotificationLocation)) {
+          landing = Promise.resolve(Wm.openNotificationLocation(revealArgs)).catch(() => null);
+        } else if (sharedFile) {
           location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${shareNid}&filetype=${shareFiletype}&pid=${shareParentId || "0"}&highlight=1&ts=${ts}`;
         } else {
           location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${shareNid}&filetype=folder&pid=0&ts=${ts}`;
@@ -625,6 +832,19 @@ class __activity_item extends LetcBox {
           recipient_email: this.mget('recipient_email'),
         });
         this.triggerHandlers({ service: 'close-activity-panel' });
+        // ...and, over it, the share panel pointed at who opened it.
+        openShareOpenAccess({
+          landing,
+          hub_id,
+          nid: shareNid,
+          filetype: shareFiletype,
+          name: this.mget('node_name'),
+          focus: {
+            token_id: this.mget('token_id'),
+            email: this.mget('recipient_email'),
+            actor_id: this.mget('author_id'),
+          },
+        });
         break;
       }
     }

@@ -9,6 +9,9 @@ module.exports = function (ui, contact, ctx) {
   const editTags = ui.getEditTags();
   const submitting = ui.isEditSubmitting();
 
+  // `placeholder` is not optional: ui-core's entry widget falls back to
+  // LOCALE.FORM_ENTRY when none is given, so an unset placeholder renders a
+  // generic hint in a field that already carries its own label above it.
   const labeledInput = (label, name, value) =>
     Skeletons.Box.Y({
       className: `${fig}__edit-field`,
@@ -20,6 +23,7 @@ module.exports = function (ui, contact, ctx) {
           formItem: name,
           attribute: { name },
           value: value || "",
+          placeholder: label,
           require: "any",
           bubble: 0,
         }),
@@ -36,6 +40,7 @@ module.exports = function (ui, contact, ctx) {
           className: `${fig}__modal-textarea`,
           formItem: name,
           value: value || "",
+          placeholder: label,
           require: "any",
           rows: 3,
           ignoreEnter: true,

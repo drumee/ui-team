@@ -142,6 +142,15 @@ class desk_selection extends Rectangle {
    * 
    * @returns 
    */
+  _refreshStaleBounds() {
+    const media = this.media;
+    if (!media || !media.length) return;
+    for (let k = 0; k < media.length; k++) {
+      const m = media[k];
+      if (m && m._bboxDirty) void m.bbox; // the getter re-measures
+    }
+  }
+
   onDomRefresh() {
     this.initBounds();
     this.waitElement(this.el, () => {
@@ -209,6 +218,9 @@ class desk_selection extends Rectangle {
     }
     this._window = t;
     this.media = t.iconsList.children.toArray();
+    // Tiles measure lazily (media/interact.js `get bbox`); take every stale
+    // box now, in one read pass, before this handler starts writing.
+    this._refreshStaleBounds();
     // MEASURE FIRST, THEN WRITE. These two lines used to sit AFTER the
     // `$rectangle.css(...)` below, which is the write/read order that forces a
     // synchronous style+layout flush: the css() call dirties style, then
@@ -384,6 +396,10 @@ class desk_selection extends Rectangle {
       }
       css_top = draw_y;
     }
+
+    // Tiles scrolled since the last sample are stale; measure them all here,
+    // read-only, so the loop below never forces a layout between its writes.
+    this._refreshStaleBounds();
 
     // The handler's ONE style write.
     this.$rectangle.css({

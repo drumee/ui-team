@@ -1,7 +1,12 @@
 const { resolve } = require("path");
 const drumee_path = 'src/drumee/';
 
-module.exports = function (basedir) {
+module.exports = function (basedir, mode) {
+  // CSS source maps only outside production. style-loader writes each map into
+  // its <style> tag as a base64 comment, so with maps on, every one of the
+  // ~670 skin modules shipped its full source map inside the production JS and
+  // the browser parsed it at every injection (webpack.js already passes mode).
+  const cssMaps = mode !== 'production';
   a = {
     rules: [{
       test: /\.(sa|sc|c)ss$/,
@@ -12,17 +17,17 @@ module.exports = function (basedir) {
         {
           loader: 'css-loader',
           options: {
-            sourceMap: true,
+            sourceMap: cssMaps,
             importLoaders: 1
           },
         }, {
           loader: 'sass-loader',
           options: {
-            sourceMap: true,
+            sourceMap: cssMaps,
             //api: "modern",
             sassOptions: {
-              sourceMap: true,
-              sourceMapEmbed: true,
+              sourceMap: cssMaps,
+              sourceMapEmbed: cssMaps,
               // Sass prepends a BOM to compressed output containing non-ASCII;
               // style-loader injects it glued to the first selector, which kills
               // the :root{--font-*} block. Never emit @charset/BOM.
@@ -49,8 +54,21 @@ module.exports = function (basedir) {
       include: resolve(basedir, drumee_path, 'assets', 'flags'),
       type: 'asset/resource',
     }, {
+      // @casualoffice ships real .woff2 fonts referenced from its own CSS.
+      // url-loader (deprecated under webpack 5) mis-emits them as JS modules
+      // under a .woff2 name, so the browser gets `export default "data:..."`,
+      // OTS rejects it as "invalid sfntVersion", and the Casual layout engine
+      // cannot measure text — the document page renders blank. Emit them as raw
+      // font files instead so the bytes reach the browser intact.
+      test: /\.woff2$/,
+      include: /[\\/]@casualoffice[\\/]/,
+      type: 'asset/resource',
+    }, {
       test: /(\.woff|\.woff2|\.ttf|\.eot|\.svg)($|\?.*$)/,
-      exclude: resolve(basedir, drumee_path, 'assets', 'flags'),
+      exclude: [
+        resolve(basedir, drumee_path, 'assets', 'flags'),
+        /[\\/]@casualoffice[\\/]/,
+      ],
       use: ['url-loader']
     }, {
       // Emit .wasm as a separate, content-hashed asset and resolve
@@ -60,6 +78,14 @@ module.exports = function (basedir) {
       // which would instantiate the module — is what we want here.
       test: /\.wasm$/,
       type: 'asset/resource',
+    }, {
+      // Media too heavy to inline (the Get help tutorial videos and their
+      // posters). Emitted as content-hashed files next to the bundle, so they
+      // ship with every UI deploy instead of depending on a static tree that
+      // each host has to sync by hand.
+      test: /\.(mp4|webm|webp)$/,
+      type: 'asset/resource',
+      generator: { filename: 'media/[name]-[contenthash:8][ext]' },
     }, {
       test: /babel(.*)\.js?$/,
       use: ['babel-loader']

@@ -39,20 +39,25 @@ const folderArt = require("media/grid/template/folder");
  * from the thing it is a drawing of. The step's skin loads that file for the
  * same reason (see ../index.js).
  *
- * The workspace it names is the tour's own fixture, like the address and the
- * link above it — an example, not the user's real destination, which the tour
- * has no way to know.
+ * The workspace it names is the REAL destination whenever the tour knows it:
+ * the in-window host passes the window's own (`import_dest`, the same answer
+ * the live import uses), so the card the user is taught names the place their
+ * files will land. Only the desk-level run, drawn over no window, falls back
+ * to the example — like the address and the link, which stay examples.
  */
-function destCard() {
+function destCard(dest = {}) {
+  const filetype = dest.filetype || _a.hub;
   return Skeletons.Box.X({ active: 0,
     className: `${POPUP}__dest-card`,
     kids: [
       Skeletons.Element({ active: 0,
         className: `${POPUP}__dest-ico`,
         content: folderArt({
-          area: _a.personal,
-          filetype: _a.hub,
-          role: "desk",
+          area: dest.area || _a.personal,
+          filetype,
+          // What tells the template to draw a workspace rather than a plain
+          // inner folder, and so whether there is a badge at all.
+          role: filetype === _a.hub ? "desk" : "",
           widgetId: _.uniqueId("mg-dest-"),
           isAttachment: 1,
         }),
@@ -66,7 +71,7 @@ function destCard() {
           }),
           Skeletons.Note({ active: 0,
             className: `${POPUP}__destination`,
-            content: LOCALE.MY_HOME || "My home",
+            content: dest.name || LOCALE.MY_HOME || "My home",
           }),
         ],
       }),
@@ -77,6 +82,8 @@ function destCard() {
 /**
  * @param {Object} ui
  * @param {Object} [opt]
+ * @param {Object} [opt.dest] the real destination {name, area, filetype};
+ *   without it the card shows the tour's example
  * @param {Boolean} [opt.copied] the address has been copied — Copy goes green
  * @param {Boolean} [opt.linked] a link has been pasted — Verify goes solid
  * @param {Boolean} [opt.enter] this screen is where the card arrives, so play
@@ -85,7 +92,7 @@ function destCard() {
  */
 module.exports = function (ui, opt = {}) {
   const pfx = ui.fig.family;
-  const { copied = false, linked = false, enter = false } = opt;
+  const { copied = false, linked = false, enter = false, dest } = opt;
 
   return Skeletons.Box.Y({ active: 0,
     className: `${pfx}__backdrop`,
@@ -108,7 +115,7 @@ module.exports = function (ui, opt = {}) {
             ],
           }),
 
-          destCard(),
+          destCard(dest),
 
           Skeletons.Box.Y({ active: 0,
             className: `${pfx}__step`,
@@ -189,3 +196,5 @@ module.exports = function (ui, opt = {}) {
     ],
   });
 };
+
+module.exports.destCard = destCard;

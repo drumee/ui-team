@@ -15,7 +15,10 @@ const { showChatToast, killChatToast } = require('./chat-toast');
 // refreshed from every mute_set — never per message. Suppresses the CARD only:
 // the feed, the badge and the tab counts are untouched by design.
 const { loadMuteState } = require('./mute');
+const { hubCounts, latestTime } = require('./hub-counts');
 require('./skin');
+const { trackDeskCanvas } = require('libs/desk-canvas');
+const { armItemsReady, markItemsReady } = require("libs/items-ready");
 
 class __panel_activity extends LetcBox {
   constructor(...args) {
@@ -28,6 +31,9 @@ class __panel_activity extends LetcBox {
     this.getCurrentApi = this.getCurrentApi.bind(this);
     this._notify = this._notify.bind(this);
     this._hide = this._hide.bind(this);
+    this._onWorkspaceChatRead = this._onWorkspaceChatRead.bind(this);
+    this._onRefreshRequest = this._onRefreshRequest.bind(this);
+    this._onWorkspaceTabSeen = this._onWorkspaceTabSeen.bind(this);
   }
 
   /**
@@ -38,6 +44,7 @@ class __panel_activity extends LetcBox {
     this.activityState = 0;
     opt.state = 0;
     super.initialize(opt);
+    armItemsReady(this);
     this.declareHandlers();
 
     window.ActivityHandler = this;
@@ -115,10 +122,35 @@ class __panel_activity extends LetcBox {
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.off('activity:notify', this._notify);
+    RADIO_BROADCAST.off('workspace-chat-read', this._onWorkspaceChatRead);
+    RADIO_BROADCAST.off('activity:refresh', this._onRefreshRequest);
+    RADIO_BROADCAST.off('workspace-tab-seen', this._onWorkspaceTabSeen);
+    if (this._refreshRequestTimer) clearTimeout(this._refreshRequestTimer);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
     // The card lives in the window layer, not inside this panel, so it would
     // outlive the panel — along with its pending dismiss timer.
     killChatToast(this);
+    if (this._untrackCanvas) this._untrackCanvas();
+  }
+
+  /**
+   * Cover the workspace at ≤ 1024px (see libs/desk-canvas). This panel is
+   * mounted once with the desk and opened through setState, so tracking is
+   * (re)tried on every open as well as on render, in case the desk was not
+   * in the DOM yet the first time.
+   */
+  _trackCanvas() {
+    if (this._untrackCanvas) return;
+    this._untrackCanvas = trackDeskCanvas(this.el);
+  }
+
+  /**
+   * The desk opens this panel with setState(1) directly, not through a
+   * service, so this is the one place every open passes.
+   */
+  setState(state, ...rest) {
+    if (~~state === 1) this._trackCanvas();
+    return super.setState(state, ...rest);
   }
 
   /**
@@ -138,8 +170,16 @@ class __panel_activity extends LetcBox {
    */
   onDomRefresh() {
     this.setState(0);
+    this._trackCanvas();
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.on('activity:notify', this._notify);
+    // off-before-on, same reason as the outside-click handler below.
+    RADIO_BROADCAST.off('workspace-chat-read', this._onWorkspaceChatRead);
+    RADIO_BROADCAST.on('workspace-chat-read', this._onWorkspaceChatRead);
+    RADIO_BROADCAST.off('activity:refresh', this._onRefreshRequest);
+    RADIO_BROADCAST.on('activity:refresh', this._onRefreshRequest);
+    RADIO_BROADCAST.off('workspace-tab-seen', this._onWorkspaceTabSeen);
+    RADIO_BROADCAST.on('workspace-tab-seen', this._onWorkspaceTabSeen);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
     // off-before-on: onDomRefresh can run again on re-feed; without this the
     // outside-click handler stacks up duplicate registrations.
@@ -165,6 +205,14 @@ class __panel_activity extends LetcBox {
       // them into item models — the one place the whole page is visible in
       // order, which is what day grouping needs.
       child.on(_e.data, (rows) => this._stampDayHeaders(child, rows));
+      // Same page of raw rows: the saved ones among them are pinned on top.
+      child.on(_e.data, (rows) => this._collectPinned(child, rows));
+      // The first page is down (rows or none): the feed has painted. A
+      // reload's screen restore waits on this (libs/items-ready).
+      child.once(_e.eod, () => markItemsReady(this));
+      // A failed first page fires `error`, never `eod` (ui-core list
+      // onServerComplain) — and a failed load is still a finished one.
+      child.once(_e.error, () => markItemsReady(this));
     }
     if (super.onPartReady) super.onPartReady(child, pn);
   }
@@ -238,6 +286,10 @@ class __panel_activity extends LetcBox {
     // Mentions / Shares tabs; the server defaults it to 'all', which is what the
     // old All tab sent anyway — so dropping it changes nothing.
     if (this._filter && this._filter !== DEFAULT_BUCKET) api.bucket = this._filter;
+    // Page 1 of a (re)started feed: fetch the pinned rows for the same view in
+    // parallel, so they land together with the first page (_collectPinned).
+    const list = this.__list;
+    if (!list || (list._curPage || 1) <= 1) this._startPinned();
     return api;
   }
 
@@ -259,12 +311,21 @@ class __panel_activity extends LetcBox {
       counts = await this.postService({
         service: (SERVICE.activity && SERVICE.activity.unread_counts) || 'activity.unread_counts',
         hub_id: Visitor.id,
+        // Rail Files pill: per workspace, count new files / folders only after
+        // the user last opened its Files tab (hub-counts.js "seen" marks).
+        files_since: this._filesSinceMarks(),
       });
     } catch (e) {
       this.warn('[panel_activity] unread_counts failed', e);
       return false;
     }
     if (!counts || typeof counts !== 'object') return false;
+    // New files / folders per workspace for the rail's Files pill. Only when
+    // the server sent the field: an older server leaves the last list alone.
+    if (Array.isArray(counts.files_by_hub)) {
+      this._filesByHub = counts.files_by_hub;
+      this._publishHubCounts();
+    }
     // THE BELL COMES FROM HERE TOO, so it can never disagree with the tabs.
     //
     // It used to be `merged.length` in refreshActivity, which counts only the
@@ -287,6 +348,8 @@ class __panel_activity extends LetcBox {
       this.ensurePart(`tab-count-${bucket}`).then((p) => {
         if (!p || !p.el) return;
         p.el.innerText = total > 99 ? '99+' : String(total);
+        // The real number, so _decrementTabCount can step down from past 99.
+        p.el.dataset.count = String(total);
         // Hidden rather than showing a 0 — the design has no zero state.
         p.el.dataset.empty = total ? '0' : '1';
       });
@@ -335,8 +398,15 @@ class __panel_activity extends LetcBox {
 
       // The TRASH BUTTON. Permanent since 2026-08-28: the row is removed and
       // stays removed across reloads.
-      case 'dismiss-activity':
-        return this._dismissActivity(cmd, args, 'delete');
+      case 'dismiss-activity': {
+        // Deleting a pinned (saved) row also unsaves it, or it would stay
+        // pinned on top after the user removed it. Key read BEFORE the delete:
+        // the row's view is destroyed once it succeeds.
+        const saved = this._savedItemOf(cmd);
+        const done = this._dismissActivity(cmd, args, 'delete');
+        if (saved) this._forgetSaved(saved.key, saved.item);
+        return done;
+      }
 
       // Opening a row's body. Records that the user has read it and leaves the
       // row in the list, without the unread tint. This is what a body click
@@ -429,6 +499,12 @@ class __panel_activity extends LetcBox {
           this._liftArOverlay(p);
         });
       }
+
+      case 'accept-invite':
+        return this._answerWorkspaceInvite('accept', args);
+
+      case 'decline-invite':
+        return this._answerWorkspaceInvite('decline', args);
 
       case 'ar-select-level': {
         // Multi-select: toggle this level in the grant set (the sender can grant
@@ -634,6 +710,115 @@ class __panel_activity extends LetcBox {
    * refresh the list so the handled request drops off. Caller must be the share
    * creator (enforced server-side).
    */
+  /**
+   * Answer a workspace invitation from its notification row.
+   *
+   * ACCEPT IS WHAT MAKES SOMEBODY A MEMBER now — hub.invite only mints the
+   * invitation — so this is not a convenience shortcut for something that has
+   * already happened. Declining is the other half, and it is the answer that
+   * previously had no way to be given at all.
+   *
+   * 🚨 THE PAYLOAD IS THE TOKEN AND NOTHING ELSE, deliberately. That is the
+   * exact shape modules/welcome has been calling hub.accept_invite with since
+   * the link flow shipped, and it is the proven one; both services are
+   * `src: anonymous` and resolve the workspace from the token themselves.
+   * Adding hub_id would make this the only call site that sends it, on a
+   * hub-scoped ACL, for no gain.
+   *
+   * WHY THE PANEL AND NOT THE ROW. The row is destroyed by the refresh this
+   * triggers, so anything it owned mid-flight would go with it; and the
+   * navigation after an accept belongs to whoever owns the desk's panels, which
+   * is this.
+   *
+   * @param {String} action 'accept' | 'decline'
+   * @param {Object} args   forwarded by the row: invite_token, hub_id, hub_name
+   */
+  async _answerWorkspaceInvite(action, args = {}) {
+    const token = args.invite_token;
+    // No token means the row is not answerable — an older invitation, or the
+    // receipt written when an admin added somebody directly. The buttons are
+    // not drawn in that case (see the item skeleton), so this is the belt to
+    // that braces: never post an answer with nothing to answer.
+    if (!token) return;
+    // Re-entrancy guard. Both answers are irreversible-ish and the row stays on
+    // screen until the refresh lands, so a double press would send two.
+    if (this._answeringInvite) return;
+    this._answeringInvite = 1;
+
+    let res;
+    try {
+      res = await this.postService(
+        action === 'accept' ? 'hub.accept_invite' : 'hub.decline_invite',
+        { token },
+      );
+    } catch (e) {
+      this.warn('[panel_activity] invite answer failed', e);
+      this._answeringInvite = 0;
+      this.refreshActivity(0);
+      return;
+    }
+    this._answeringInvite = 0;
+
+    // A rejected POST resolves undefined — doRequest hands a non-200 to
+    // onServerComplain, which only warns — so a falsy answer is a failure and
+    // must not be reported as a completed one.
+    const status = (res && res.status) || (res ? '' : 'invalid');
+
+    if (status === 'SEAT_LIMIT_REACHED') {
+      // The org is full. Same surface the member form raises for the same
+      // condition, and it is privilege-aware — only an org owner is shown the
+      // upgrade card, everyone else simply gets nothing rather than a dead end.
+      try {
+        const { canShowSeatLimitPopup } = require('libs/billing');
+        if (canShowSeatLimitPopup() && typeof Wm !== 'undefined' && Wm.openQuotaExceeded) {
+          Wm.openQuotaExceeded({ limit: 'seat' });
+        }
+      } catch (e) { /* the refresh below still runs */ }
+      this.refreshActivity(0);
+      return;
+    }
+
+    if (status && status !== 'declined') {
+      // invalid | expired | already_used | hub_not_found | not_authenticated |
+      // OVER_LIMIT. All of them mean the same thing to the person pressing the
+      // button: this invitation cannot be answered any more. One message, and
+      // it is a key that is genuinely translated in all six locale files.
+      if (typeof Wm !== 'undefined' && Wm.alert) Wm.alert(LOCALE.INVITE_LINK_INVALID);
+      // Refreshed even on failure: the server dismisses the notification when
+      // an invitation is answered, so a row reporting 'already_used' is a stale
+      // one and the refresh is what clears it.
+      this.refreshActivity(0);
+      return;
+    }
+
+    this.refreshActivity(0);
+
+    if (action !== 'accept') return;
+
+    // JOINED — take them into the workspace, which is what the invitation was
+    // for. `already_member: 1` comes back when they already had at least the
+    // access the invitation offered; that is still a successful answer and
+    // still lands on the workspace.
+    const hub_id = (res && res.hub_id) || args.hub_id;
+    if (!hub_id) return;
+    // The sidebar is built from a cached workspace list that predates this
+    // membership, so it has to be told before the switch — the desk rebuilds
+    // the switcher on this broadcast.
+    if (typeof RADIO_BROADCAST !== 'undefined') {
+      RADIO_BROADCAST.trigger('workspace:refresh');
+    }
+    if (typeof Wm !== 'undefined' && _.isFunction(Wm.loadWorkspace)) {
+      // nid ZERO, not omitted: loadWorkspace documents that a caller which
+      // knows only the hub must reach its media.attributes fetch with an
+      // explicit zero. Leaving it undefined skips that fetch and opens nothing.
+      Wm.loadWorkspace({ hub_id, nid: 0 });
+    }
+    // Close the panel, the way join-meeting does after it navigates — it
+    // overlays the workspace that was just opened.
+    this.activityState = 0;
+    this.setState(0);
+  }
+
   async _respondAccessRequest(action) {
     const req = this._arRequest || {};
     if (!req.request_id) return this._closeArOverlay();
@@ -694,30 +879,276 @@ class __panel_activity extends LetcBox {
     });
   }
 
+  /**
+   * Save / unsave one notification row.
+   *
+   * Goes through activity.bookmark_add / bookmark_remove, keyed by the
+   * `bookmark_key` activity.get_feed stamps on every row together with
+   * `is_saved`. This used to post channel.bookmark_add with a message_id
+   * guessed from key_id / id: that store is for chat messages and nothing
+   * reads it back into the feed, so the button lit up, persisted nothing
+   * useful, and was blank again on the next render.
+   *
+   * The row's button has already flipped (optimistic). The answer is checked
+   * rather than trusted: a rejected POST resolves undefined (doRequest hands a
+   * non-200 to onServerComplain, which only warns), so anything but the key
+   * echoed back with the requested state puts the button back.
+   */
   async _toggleFavorite(cmd, args = {}) {
     const item = this._findActivityItem(cmd);
-    const messageId = args.message_id
-      || (item && item.mget && (item.mget('message_id') || item.mget(_a.id) || item.mget('id')));
-    const hubId = args.hub_id
-      || (item && item.mget && item.mget('hub_id'))
-      || Visitor.id;
+    const bookmarkKey = args.bookmark_key || (item && item.mget && item.mget('bookmark_key'));
     const favorited = args.favorited ? 1 : 0;
-    this.verbose('[activity] toggle-favorite', { favorited, messageId, hubId, item_key: args.item_key });
-    if (!messageId) {
-      console.warn('[activity] toggle-favorite skipped — no message_id on row');
+    const button = args.button;
+    this.verbose('[activity] toggle-favorite', { favorited, bookmarkKey, item_key: args.item_key });
+    const setButton = (saved) => {
+      if (!button || !button.el) return;
+      button.el.dataset.state = saved ? '1' : '0';
+      if (button.mset) button.mset(_a.state, saved ? 1 : 0);
+    };
+    if (!bookmarkKey) {
+      this.warn('[activity] toggle-favorite skipped — no bookmark_key on row');
+      setButton(!favorited);
       return;
     }
+    if (item) item._bookmarkPending = 1;
+    let res;
     try {
-      if (favorited) {
-        await this.postService(SERVICE.channel.bookmark_add, { message_id: messageId, hub_id: hubId });
-      } else {
-        // ACL `scope:hub` requires hub_id for the permission check even
-        // though the proc itself ignores it (uniqueness is uid+message_id).
-        await this.postService(SERVICE.channel.bookmark_remove, { message_id: messageId, hub_id: hubId });
-      }
+      res = await this.postService(
+        favorited
+          ? ((SERVICE.activity && SERVICE.activity.bookmark_add) || 'activity.bookmark_add')
+          : ((SERVICE.activity && SERVICE.activity.bookmark_remove) || 'activity.bookmark_remove'),
+        // ACL `scope:hub` needs a hub for the permission check; the store
+        // itself is the caller's own drumate DB. Same hub get_feed uses.
+        // `row` lets the server keep a snapshot so the row stays pinned on top
+        // whatever feed page it sits on; it is only sent when saving.
+        favorited && args.row
+          ? { bookmark_key: bookmarkKey, hub_id: Visitor.id, row: args.row }
+          : { bookmark_key: bookmarkKey, hub_id: Visitor.id },
+      );
     } catch (e) {
       this.warn('toggle-favorite failed', e);
     }
+    if (item) item._bookmarkPending = 0;
+    const ok = res && res.bookmark_key === bookmarkKey
+      && parseInt(res.is_saved, 10) === favorited;
+    if (!ok) {
+      this.warn('[activity] toggle-favorite not saved', res);
+      setButton(!favorited);
+      return;
+    }
+    // Keep the model in step so a re-render of this row before the next fetch
+    // draws the saved state rather than the stale one.
+    if (item && item.mset) item.mset('is_saved', favorited);
+    if (favorited) this._pinFromRow(item, bookmarkKey);
+    else this._unpinKey(bookmarkKey);
+  }
+
+  // ── Bookmarked rows pinned on top ────────────────────────────────
+  //
+  // A saved row is shown in the `saved` part above the feed, newest first, and
+  // its copy in the feed is hidden (item data-twin) until it is unsaved, when
+  // the copy reappears in place. Rows come from two sources:
+  //  * the live feed row, whenever get_feed returned it -- true text and true
+  //    read state, so it always wins;
+  //  * the server snapshot (activity.bookmark_rows) for a saved row whose page
+  //    is not loaded. Its read state is unknown, so it is served read, and it
+  //    is not used under Unread ON, which lists only what is still unread.
+  // get_feed itself is untouched: the feed pages, their pagination and the
+  // mobile client see exactly what they saw before.
+
+  _startPinned() {
+    this._pinCycle = (this._pinCycle || 0) + 1;
+    this._pinnedRows = new Map();
+    this._pinnedReady = false;
+    this._pinnedQueue = [];
+    const bucket = (this._filter && this._filter !== DEFAULT_BUCKET) ? this._filter : null;
+    this._pinnedFetch = this._unreadsOnly ? Promise.resolve([]) : this._fetchPinned(bucket);
+  }
+
+  async _fetchPinned(bucket) {
+    try {
+      const res = await this.postService(
+        (SERVICE.activity && SERVICE.activity.bookmark_rows) || 'activity.bookmark_rows',
+        bucket ? { hub_id: Visitor.id, bucket } : { hub_id: Visitor.id },
+      );
+      return _.isArray(res) ? res : (_.isArray(res && res.data) ? res.data : []);
+    } catch (e) {
+      this.warn('[panel_activity] bookmark_rows failed', e);
+      return [];
+    }
+  }
+
+  /**
+   * Feed `data` hook (see onPartReady). Page 1 builds the pinned set once the
+   * snapshots are in; later pages only add saved rows not pinned yet.
+   * 🚨 try/catch is load-bearing, as in _stampDayHeaders: an exception here is
+   * swallowed by ui-core and would leave the feed blank.
+   */
+  _collectPinned(list, rows) {
+    try {
+      if (!_.isArray(rows)) return;
+      const live = rows.filter((r) => r && r.bookmark_key && parseInt(r.is_saved, 10) === 1);
+      if (!list || (list._curPage || 1) <= 1) {
+        const cycle = this._pinCycle;
+        (this._pinnedFetch || Promise.resolve([])).then((snapshots) => {
+          if (cycle !== this._pinCycle) return;
+          const map = new Map();
+          for (const r of snapshots || []) {
+            if (r && r.bookmark_key) map.set(r.bookmark_key, r);
+          }
+          for (const r of [...live, ...(this._pinnedQueue || [])]) map.set(r.bookmark_key, { ...r });
+          this._pinnedQueue = [];
+          this._pinnedRows = map;
+          this._pinnedReady = true;
+          this._renderPinned();
+        });
+        return;
+      }
+      for (const r of live) {
+        if (this._pinnedRows && this._pinnedRows.has(r.bookmark_key)) continue;
+        if (!this._pinnedReady) {
+          this._pinnedQueue.push(r);
+          continue;
+        }
+        this._insertPinned({ ...r });
+      }
+    } catch (e) {
+      this.warn('[panel_activity] pinned rows failed', e);
+    }
+  }
+
+  _pinnedTime(row) {
+    return Number((row && (row.timestamp || row.ctime)) || 0);
+  }
+
+  _sortedPinned() {
+    return [...(this._pinnedRows || new Map()).values()]
+      .sort((a, b) => this._pinnedTime(b) - this._pinnedTime(a));
+  }
+
+  _pinnedModel(row) {
+    const m = {
+      ...row,
+      is_saved: 1,
+      pinned_view: 1,
+      kind: 'activity_item',
+      uiHandler: this,
+      logicalParent: this,
+    };
+    // Day captions belong to the chronological feed, not to the pinned block.
+    delete m.day_header;
+    return m;
+  }
+
+  _renderPinned() {
+    const rows = this._sortedPinned();
+    // The feed restarts on every tab switch and on live updates while the
+    // panel is open; re-feeding an unchanged block would only replay its
+    // rows' fade-in.
+    const signature = rows.map((r) => `${r.bookmark_key}:${r.is_read ? 1 : 0}:${this._pinnedTime(r)}`).join('|');
+    if (signature === this._pinnedSignature) return;
+    this._pinnedSignature = signature;
+    const models = rows.map((r) => this._pinnedModel(r));
+    this.ensurePart('saved').then((p) => {
+      if (p && !p.isDestroyed()) p.feed(models);
+      this._markHasSaved();
+    });
+  }
+
+  // Hides the feed's "no notifications" line while pinned rows are showing
+  // (skin: __ui[data-has-saved="1"]), like data-has-priority does.
+  _markHasSaved() {
+    if (!this.el || !this.el.dataset) return;
+    this.el.dataset.hasSaved = (this._pinnedRows && this._pinnedRows.size) ? '1' : '0';
+  }
+
+  // Re-feeds the block rather than inserting at an index: ui-core's
+  // Box.append(c, index) splices the WRAPPING ARRAY into the collection (an
+  // empty "constructor" view) and cleanSet()s the whole part anyway. The block
+  // only ever holds the saved rows, so a full feed stays cheap.
+  _insertPinned(row) {
+    if (!row || !row.bookmark_key) return;
+    this._pinnedRows = this._pinnedRows || new Map();
+    this._pinnedRows.set(row.bookmark_key, row);
+    this._pinnedSignature = null;
+    this._renderPinned();
+  }
+
+  // Every rendered row (pinned block and feed) carrying this bookmark key.
+  _viewsWithKey(key) {
+    const out = [];
+    if (!key) return out;
+    for (const part of [this.__saved, this.__list]) {
+      if (!part || part.isDestroyed() || !part.children) continue;
+      part.children.each((v) => {
+        if (v && !v.isDestroyed() && v.mget && v.mget('bookmark_key') === key) out.push(v);
+      });
+    }
+    return out;
+  }
+
+  _pinFromRow(item, key) {
+    if (!item || !key) return;
+    if (!item.mget('pinned_view') && item.el) item.el.dataset.twin = '1';
+    const base = item._rawRow || {};
+    const row = {
+      ...base,
+      bookmark_key: key,
+      is_saved: 1,
+      is_read: item.mget('is_read'),
+      bucket: item.mget('bucket') || base.bucket,
+    };
+    if (!this._pinnedReady) {
+      this._pinnedQueue = this._pinnedQueue || [];
+      this._pinnedQueue.push(row);
+      return;
+    }
+    if (this._pinnedRows && this._pinnedRows.has(key)) return;
+    this._insertPinned(row);
+  }
+
+  _unpinKey(key) {
+    if (!key) return;
+    if (this._pinnedRows) this._pinnedRows.delete(key);
+    this._pinnedSignature = null;
+    this._markHasSaved();
+    if (this._pinnedQueue) this._pinnedQueue = this._pinnedQueue.filter((r) => r.bookmark_key !== key);
+    for (const v of this._viewsWithKey(key)) {
+      if (v.mget('pinned_view')) {
+        v.goodbye({ duration: 0.2, timeout: 50, now: 1 });
+        continue;
+      }
+      // The feed copy comes back where it always was, unsaved.
+      v.mset('is_saved', 0);
+      if (v.el) {
+        delete v.el.dataset.twin;
+        const btn = v.el.querySelector('.activity-item__bookmark');
+        if (btn) btn.dataset.state = '0';
+      }
+    }
+  }
+
+  // { key, item } when `cmd` is a saved row, else null.
+  _savedItemOf(cmd) {
+    const item = this._findActivityItem(cmd);
+    if (!item || !item.mget || parseInt(item.mget('is_saved'), 10) !== 1) return null;
+    const key = item.mget('bookmark_key');
+    return key ? { key, item } : null;
+  }
+
+  // A saved row was deleted: unsave it and drop every other view of it. The
+  // deleted view itself is left to _dismissActivity, which removes it.
+  _forgetSaved(key, except) {
+    if (this._pinnedRows) this._pinnedRows.delete(key);
+    this._pinnedSignature = null;
+    this._markHasSaved();
+    for (const v of this._viewsWithKey(key)) {
+      if (v !== except) v.goodbye({ duration: 0.2, timeout: 50, now: 1 });
+    }
+    this.postService(
+      (SERVICE.activity && SERVICE.activity.bookmark_remove) || 'activity.bookmark_remove',
+      { bookmark_key: key, hub_id: Visitor.id },
+    ).catch((e) => this.warn('[activity] bookmark_remove after delete failed', e));
   }
 
   _dismissFromOpen(cmd, args = {}) {
@@ -763,6 +1194,18 @@ class __panel_activity extends LetcBox {
     } catch (e) {
       this.warn('[activity] could not mark row read', e);
     }
+    // A pinned row and its hidden feed copy are the same notification: read
+    // one, and the other must not come back unread when it is unsaved.
+    if (!this._markingTwins && cmd.mget && parseInt(cmd.mget('is_saved'), 10) === 1) {
+      this._markingTwins = 1;
+      try {
+        for (const v of this._viewsWithKey(cmd.mget('bookmark_key'))) {
+          if (v !== cmd) this._markRowRead(v);
+        }
+      } finally {
+        this._markingTwins = 0;
+      }
+    }
   }
 
   _decrementBadge(by = 1) {
@@ -774,6 +1217,33 @@ class __panel_activity extends LetcBox {
       p.el.innerText = next === 0 ? '' : display;
       p.el.dataset.count = display;
     });
+  }
+
+  /**
+   * Step the tab badges down for one row the user just read or trashed: the
+   * row's own tab and All. Until this existed only the bell moved, so a Chat
+   * badge of 2 still read 2 after both rows were opened.
+   *
+   * Local on purpose — a text write on two existing badges, no request and no
+   * re-render. Re-fetching activity.unread_counts per click would run
+   * notification_center_next (a loop over every hub) on each read. The next
+   * regular refresh still replaces these numbers with the server's.
+   */
+  _decrementTabCount(bucket) {
+    const buckets = [DEFAULT_BUCKET];
+    if (bucket && bucket !== DEFAULT_BUCKET && TAB_BUCKETS.indexOf(bucket) !== -1) {
+      buckets.push(bucket);
+    }
+    for (const b of buckets) {
+      this.ensurePart(`tab-count-${b}`).then((p) => {
+        if (!p || !p.el) return;
+        const cur = parseInt(p.el.dataset.count || p.el.innerText || '0', 10) || 0;
+        const next = Math.max(0, cur - 1);
+        p.el.innerText = next > 99 ? '99+' : String(next);
+        p.el.dataset.count = String(next);
+        p.el.dataset.empty = next ? '0' : '1';
+      });
+    }
   }
 
   /**
@@ -1010,6 +1480,147 @@ class __panel_activity extends LetcBox {
     });
   }
 
+  /**
+   * Per-workspace unread counts for the desk rail (see ./hub-counts), computed
+   * from the rows refreshActivity already holds — no request of its own.
+   * Kept on the panel too, so a listener that mounts later can read the last
+   * value off window.ActivityHandler instead of waiting for the next refresh.
+   */
+  _publishHubCounts() {
+    try {
+      this._hubCounts = hubCounts(this._mergedRows, this._railSeenMarks(), this._filesByHub);
+      RADIO_BROADCAST.trigger('workspace-unread', this._hubCounts);
+    } catch (e) {
+      this.warn('[panel_activity] hub counts failed', e);
+    }
+  }
+
+  /**
+   * Per-workspace "tab opened over" marks for the rail's Task / Meet pills
+   * (see hub-counts.js): { [hub_id]: { task, meeting } }, server row times.
+   * Kept per user in localStorage so a reload does not bring back what was
+   * already looked at. Storage can throw or be empty (private window,
+   * blocked site data) — then the marks live for the session only.
+   */
+  _railSeenKey() {
+    return `drumee.rail-seen.${Visitor.id}`;
+  }
+
+  /** The Files marks alone, { [hub_id]: ts }, for unread_counts `files_since`. */
+  _filesSinceMarks() {
+    const out = {};
+    const marks = this._railSeenMarks();
+    for (const hub of Object.keys(marks)) {
+      const t = Number(marks[hub] && marks[hub].files) || 0;
+      if (t > 0) out[hub] = t;
+    }
+    return out;
+  }
+
+  _railSeenMarks() {
+    if (this._railSeen) return this._railSeen;
+    let marks = {};
+    try {
+      const raw = window.localStorage && window.localStorage.getItem(this._railSeenKey());
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && typeof parsed === 'object') marks = parsed;
+    } catch (e) {
+      marks = {};
+    }
+    this._railSeen = marks;
+    return marks;
+  }
+
+  /**
+   * The Task, Meeting or Files tab of a workspace is on screen (window_folder
+   * showFolderTab, or the desk while it stays there): everything of that
+   * kind that exists NOW is seen, so its rail pill clears; a newer row counts
+   * again. Only moves forward, and republishes only on a change, so the desk
+   * re-asking on every count update cannot loop.
+   * @param {Object} args { hub_id, tab: 'task' | 'meeting' | 'files' }
+   */
+  _onWorkspaceTabSeen(args = {}) {
+    const hub = args && args.hub_id != null ? String(args.hub_id) : null;
+    const kind = args && ['task', 'meeting', 'files'].includes(args.tab) ? args.tab : null;
+    if (!hub || !kind) return;
+    const t = latestTime(this._mergedRows, hub, kind, this._filesByHub);
+    if (!t) return;
+    const marks = this._railSeenMarks();
+    const cur = marks[hub] || {};
+    if ((Number(cur[kind]) || 0) >= t) return;
+    marks[hub] = { ...cur, [kind]: t };
+    try {
+      if (window.localStorage) window.localStorage.setItem(this._railSeenKey(), JSON.stringify(marks));
+    } catch (e) { }
+    this._publishHubCounts();
+  }
+
+  /**
+   * A workspace team chat was just read in this client (widget_chat
+   * markConversationRead). Its teamchat rollups are gone on the server, but
+   * this socket never hears its own channel.acknowledge, so drop them here —
+   * the Chat pill clears at once instead of on the next refresh.
+   * @param {Object} args { hub_id }
+   */
+  _onWorkspaceChatRead(args = {}) {
+    const hub = args && args.hub_id != null ? String(args.hub_id) : null;
+    if (!hub || !_.isArray(this._mergedRows)) return;
+    const before = this._mergedRows.length;
+    this._mergedRows = this._mergedRows.filter(
+      (r) => !(r && r.category === 'teamchat' && String(r.hub_id) === hub),
+    );
+    if (this._mergedRows.length !== before) this._publishHubCounts();
+  }
+
+  /**
+   * Somebody outside the panel knows a notification just arrived that the
+   * panel's own WS cases do not cover (room.scheduled is consumed by
+   * wm/push.js for its toast). Coalesced like the chat path: one refresh per
+   * burst, since a booking pushes once per invitee socket.
+   */
+  _onRefreshRequest() {
+    if (this._refreshRequestTimer) return;
+    this._refreshRequestTimer = setTimeout(() => {
+      this._refreshRequestTimer = null;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this.refreshActivity();
+    }, 1000);
+  }
+
+  /**
+   * A row was read or trashed in the panel: take it out of the rail counts
+   * straight away (the bell and tab badges are decremented the same way).
+   * Keyed on the row's item_type, never on a bare id: a changelog id and a
+   * contact_activity id live in different tables and can be equal.
+   *   contact_invite — task / meeting rows, by contact_activity id
+   *   teamchat       — the rollup of one workspace folder, by hub + nid
+   */
+  _forgetHubRow(cmd, args = {}, itemType, activityId) {
+    if (!_.isArray(this._mergedRows)) return;
+    const get = (k) => (args[k] != null ? args[k] : (cmd && cmd.mget ? cmd.mget(k) : null));
+    let keep;
+    if (itemType === 'contact_invite') {
+      const ids = new Set(
+        [activityId, get('key_id'), get('id'), get('last_id')]
+          .filter((v) => v != null && v !== '')
+          .map(String),
+      );
+      if (!ids.size) return;
+      keep = (r) => !(r && r.category === 'contact_invite' && ids.has(String(r.key_id)));
+    } else if (itemType === 'teamchat') {
+      const hub = get('hub_id');
+      if (hub == null) return;
+      const nid = String(get('nid') || '');
+      keep = (r) => !(r && r.category === 'teamchat'
+        && String(r.hub_id) === String(hub) && String(r.nid || '') === nid);
+    } else {
+      return;
+    }
+    const before = this._mergedRows.length;
+    this._mergedRows = this._mergedRows.filter(keep);
+    if (this._mergedRows.length !== before) this._publishHubCounts();
+  }
+
   async refreshActivity(timeout = 2000) {
     if (!Visitor.id || !Visitor.isOnline()) {
       Visitor.once('online', () => {
@@ -1157,6 +1768,8 @@ class __panel_activity extends LetcBox {
 
     // Kept so switching tabs can re-filter the pinned section without refetching.
     this._mergedRows = merged;
+    // Same rows, per workspace, for the desk rail's Chat / Task / Meet pills.
+    this._publishHubCounts();
     // The bell comes from activity.unread_counts' `all` (see _renderTabCounts),
     // so it can never disagree with the tab badges. `merged` is only the
     // FALLBACK for when that request fails: it holds access requests, task
@@ -1592,10 +2205,23 @@ class __panel_activity extends LetcBox {
               (meeting.by && !`${meeting.by}`.includes('@') && meeting.by) ||
               [opt.firstname, opt.lastname].filter(Boolean).join(' ') ||
               meeting.by || ''
-            opt.message = LOCALE.X_JOINED_MEETING_X.format(senderName, meeting.filename)
+            // "started", not "joined": this card is only ever posted by the
+            // person who opened the room.
+            opt.message = senderName
+              ? LOCALE.X_STARTED_A_MEETING.format(senderName)
+              : LOCALE.MEETING_STARTED
             const { hub_id, nid } = meeting;
-            if (hub_id) {
-              url = `${url}/meeting/?nid=${hub_id}&ts=${now}`
+            // Land on the card, NOT in the call. The old `/meeting/?nid=` link
+            // routes to open-node + start_meeting, i.e. it JOINS the room — and
+            // an OS notification can be clicked hours later (or reached again
+            // with Back), when the meeting is over: the clicker then sat alone
+            // in an empty room and, as its first joiner, "started a meeting"
+            // for the whole workspace. The card shows whether the meeting is
+            // still live and carries its own Join button.
+            if (hub_id && nid) {
+              url = `${url}/open/?hub_id=${hub_id}&nid=${nid}&filetype=folder&activeTab=${_a.chat}&message_id=${message_id}&ts=${now}`
+            } else if (hub_id) {
+              url = `${url}/channel/?hub_id=${hub_id}&ts=${now}`
             }
           } catch (e) {
             this.warn("Failed to parse", meeting)
@@ -1799,7 +2425,11 @@ class __panel_activity extends LetcBox {
     // is absent on live rollups and on client-built rows, which are unread by
     // construction, so an absent flag counts as unread.
     const wasUnread = !(cmd && cmd.mget && parseInt(cmd.mget('is_read'), 10) === 1);
-    if (wasUnread) this._decrementBadge(1);
+    if (wasUnread) {
+      this._decrementBadge(1);
+      this._decrementTabCount(cmd && cmd.mget && cmd.mget('bucket'));
+      this._forgetHubRow(cmd, args, itemType, changelogId);
+    }
 
     if (itemType === 'access_request') {
       // Pending secure-share request: no server-side dismiss endpoint (resolved via
@@ -1872,8 +2502,12 @@ class __panel_activity extends LetcBox {
       const activityId = changelogId
         || (cmd && cmd.mget && (cmd.mget(_a.id) || cmd.mget('id') || cmd.mget('last_id') || cmd.mget('key_id')));
       if (activityId) {
+        // READ goes through read_contact_event (dismissed_at only). It used to
+        // be dismiss_contact_event, which also stamps hidden_at — removal, the
+        // meaning mobile relies on — so a notification the user merely opened
+        // vanished from the list on the next reload.
         const svc = read
-          ? ((SERVICE.activity && SERVICE.activity.dismiss_contact_event) || 'activity.dismiss_contact_event')
+          ? ((SERVICE.activity && SERVICE.activity.read_contact_event) || 'activity.read_contact_event')
           : ((SERVICE.activity && SERVICE.activity.delete_contact_event) || 'activity.delete_contact_event');
         this.verbose('[activity] → POST', { svc, activity_id: activityId, mode });
         try {

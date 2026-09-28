@@ -24,8 +24,11 @@ const { ymd, day, rowStart } = require("./helpers");
 // rescue it — the last child of a hidden-overflow stack is the first thing lost.
 //
 // MONTH_FIT is how many compact chips stand in a cell at rest, and it only
-// labels the "+N". Measured in the shipped geometry: a 160px row leaves a 107px
-// body, three chips (26px + 4px gaps = 86px) plus the pinned footer. Nothing is
+// labels the "+N". Measured against the row FLOOR (--cal-cell-min: 118px in the
+// skin): 16px of padding, a 20px date line and a 2px gap leave 80px — three
+// 19px chips on 2px gaps (61px) plus the pinned footer. Rows grow with the
+// grid above that floor, as the Meet tab's do, so in a tall window the label
+// can run ahead of what is actually below the fold. Nothing is
 // hidden now, so the number reads as "this day runs past the fold" — and the
 // footer is sticky, so the one affordance that leads to the whole day cannot
 // itself scroll out of reach.
@@ -72,18 +75,49 @@ module.exports = function (ui) {
         }),
       );
     }
-    return Skeletons.Box.Y({ className: `${pfx}__day-body`, kids });
+    return Skeletons.Box.Y({
+      className: `${pfx}__day-body`,
+      // Inert: the empty space around the chips belongs to the cell's click
+      // (see dayCell). The chips inside keep their own.
+      active: 0,
+      // The cell scrolls, but at rest its scrollbar is transparent (see
+      // quiet-scroll) — so a busy day looked exactly like a truncated one and
+      // read as "I cannot get to the rest of these". CSS cannot ask whether a
+      // box overflows; the skeleton already knows, because it is the same
+      // comparison the "+N" is built from. Stamped here, inked in the skin.
+      attrOpt: { "data-overflow": more > 0 ? "1" : "0" },
+      kids,
+    });
   };
 
   const dayCell = (d) => {
     const key = ymd(d);
     const inMonth = d.month() === anchorMonth;
     const list = byDay[key] || [];
-    // Day 1 shows the month abbreviation ("Jun 1"), per Figma.
-    const numText = d.date() === 1 ? d.format("MMM D") : String(d.date());
+    // Two digits, top-left, as the Meet tab's month cell draws it ("07").
+    // It used to read "7" on the right and "Sep 1" on the first of a month;
+    // the month boundary is carried by the dimmed outside-month dates instead,
+    // which is the Meet tab's cue.
+    const numText = d.format("DD");
 
+    // The whole cell is the day's "add a task" target, not just its "+": a
+    // click anywhere in the square opens the create-task popup due that day,
+    // the same popup the week/day squares open (index.js "cal-day-add").
+    //
+    // For that to work every CONTAINER inside the cell is inert (`active: 0`).
+    // ui-core binds a click to every widget left at the default and calls
+    // e.stopPropagation() before triggerHandlers, so an active head, date or
+    // chip stack would swallow the click on its own area and the cell would
+    // never hear it. The things that DO something keep their own service and
+    // stay active, and that same stopPropagation keeps them from also firing
+    // the cell: a chip opens its item, "+N" opens the Day view, a chip's ×
+    // deletes, and the "+" adds exactly as the cell does.
     return Skeletons.Box.Y({
       className: `${pfx}__day`,
+      bubble: 0,
+      service: "cal-day-add",
+      uiHandler: [ui],
+      calDay: key,
       attrOpt: {
         "data-today": key === todayKey ? "1" : "0",
         "data-outside": inMonth ? "0" : "1",
@@ -91,7 +125,15 @@ module.exports = function (ui) {
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__day-head`,
+          active: 0,
           kids: [
+            // The date on the left (the Meet tab's place for it), the
+            // hover-revealed quick-add on the right.
+            Skeletons.Note({
+              className: `${pfx}__day-num`,
+              content: numText,
+              active: 0,
+            }),
             // Quick-add on the cell. A text glyph rather than the `plus`
             // sprite: the sprite symbol cannot be recoloured across the <use>
             // boundary and renders invisible (same reason as the board
@@ -112,10 +154,6 @@ module.exports = function (ui) {
                 }),
               ],
             }),
-            Skeletons.Note({
-              className: `${pfx}__day-num`,
-              content: numText,
-            }),
           ],
         }),
         dayBody(list, key),
@@ -127,9 +165,11 @@ module.exports = function (ui) {
   const weekdays = Skeletons.Box.X({
     className: `${pfx}__weekdays`,
     kids: Array.from({ length: 7 }, (_, i) =>
+      // Full day names, left-aligned in a bordered header row — the Meet tab's
+      // month header ("Monday"), not the centred "Mon" this grid used.
       Skeletons.Note({
         className: `${pfx}__weekday`,
-        content: weekStart.add(i, "day").format("ddd"),
+        content: weekStart.add(i, "day").format("dddd"),
       }),
     ),
   });

@@ -1,256 +1,199 @@
 @use "mixins/drumee";
 
 // =====================================================================
-// Mobile reflow for a trash row.
-//
-// The panel is a 360px card on a phone (panel/trash/skin), which leaves the
-// info column ~120px once the 40px icon, the actions cluster and 48px of
-// padding are taken out. The meta line needs ~257px for "Deleted by: me" plus
-// the date, so it cannot stay on one line — it stacks, and the row grows from
-// 72px to about 86px.
-//
-// The date is ellipsized as a floor, not as the plan: at 120px it shows roughly
-// "Date: 08/17/2026 - 13:4" and clips the seconds. Without it the 155px date
-// simply overflows the info column and reaches into the actions, which is the
-// bug this is fixing. Giving the date its full width costs another ~24px of row
-// height (the meta line has to span the row rather than sit beside the actions)
-// — a trade worth making only if the timestamp matters more than density.
-//
-// Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
-// answers "mobile" below 801px, so the attribute is absent in the DevTools
-// emulator and on a landscape phone.
+// A trash row — Figma 43:34212 ("notification card feed"):
+//   [day label, first row of its day only]
+//   [40px tile] name
+//               Deleted by: <who> | Date: Mar 15    [N days left|Restore] [bin]
+// Colours are the design's tokens (skin/vars/revamp.scss), so dark mode
+// follows.
 // =====================================================================
-@mixin trash-item-mobile-row {
-  // The fixed 72px cannot hold a stacked meta line.
-  height: auto;
-  min-height: 72px;
-
-  // The row's width:100% plus 48px of side padding on a content-box element
-  // made it 48px WIDER than the panel holding it — 408px inside the 360px
-  // mobile card — which pushed the actions past the panel's clipped edge and
-  // left the date running under the days badge.
-  //
-  // Scoped here rather than fixed on the base rule, even though the same
-  // arithmetic overflows the 500px desktop panel by the same 48px. Correcting
-  // it there hands those 48px back and narrows desktop's info column, which
-  // measurably cost the desktop row its timestamp ("13:40:…") and wrapped the
-  // days badge onto two lines. That is a real desktop layout question and it
-  // deserves its own change, not a side effect of this one.
-  .trash-item__row {
-    box-sizing: border-box;
-    min-width: 0;
-  }
-
-  // `stretch`, not `flex-start`. Stacked lines sized to their own content are
-  // not constrained by the 120px info column, so the 155px date simply
-  // overflowed into the actions and the ellipsis below never fired — the
-  // original bug in a new direction. Stretch makes each line the column's
-  // width, which is what gives overflow something to clip against. Text stays
-  // left-aligned because that is the writing direction, not the box width.
-  .trash-item__meta {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--spacer-2);
-    min-width: 0;
-  }
-
-  .trash-item__date {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  // Content width instead of the reserved 128px. That reservation exists for
-  // the "Restore" button, which this skin only reveals on :hover — a state a
-  // touch device never enters — so on a phone it was holding space for
-  // something unreachable. Hands the difference back to the date.
-  .trash-item__actions {
-    width: auto;
-  }
-}
-
 .trash-item {
   &__ui {
     width: 100%;
-    height: 72px;
+    // The list's 8px rhythm between rows and day labels.
+    padding-bottom: 8px;
+    box-sizing: border-box;
+  }
 
-    &[data-device="mobile"] {
-      @include trash-item-mobile-row;
-    }
+  &__container {
+    width: 100%;
+    gap: 8px;
+  }
 
-    @media (max-width: 650px) {
-      & {
-        @include trash-item-mobile-row;
-      }
-    }
+  // Every row carries its day; only a group's first row shows it
+  // (item/group.js stamps data-group="start").
+  &__group {
+    @include drumee.typo($color: var(--tertiary-grey-80), $size: 12px, $weight: 400, $line: 1.4);
+  }
+
+  // The hide is scoped to the row, not set on &__group alone: every Note root
+  // matches ui-styles/container.css `.drumee-widget[data-flow=y] { display:
+  // flex }` (0,2,0), which beat a bare `.trash-item__group { display: none }`
+  // (0,1,0) — on stage every row showed its day label. This is (0,3,0).
+  &__ui:not([data-group="start"]) &__group {
+    display: none;
+  }
+
+  &__ui[data-group="start"] &__group {
+    display: block;
   }
 
   &__row {
     align-items: center;
-    padding: var(--spacer-4) var(--spacer-6);
-    gap: var(--spacer-4);
+    gap: 12px;
+    padding: 8px 0;
     width: 100%;
-    transition: background-color 0.5s;
-
-    &:hover {
-      .restore {
-        display: flex;
-      }
-
-      .days-badge {
-        display: none;
-      }
-    }
+    min-width: 0;
+    border-radius: 8px;
   }
 
-  /* ── File type icon ──────────────────────────────────────── */
-  &__file-icon {
+  &__tile {
+    flex-shrink: 0;
     width: 40px;
     height: 40px;
-    flex-shrink: 0;
-    padding: var(--spacer-3);
-    background-color: var(--normal-bg-40);
-    border-radius: var(--corner-radius-2);
+    box-sizing: border-box;
+    padding: 6px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background-color: rgba(89, 80, 255, 0.1);
+  }
+
+  &__tile-ico {
+    width: 28px;
+    height: 28px;
+    color: var(--primary-purple-40);
+
+    // By file type (item/file-icon.js). text/pdf/note/sheet/slides are the
+    // Figma file grid's colours; the rest keep the folder's brand purple.
+    &--folder,
+    &--media,
+    &--other { color: var(--primary-purple-40); }
+    &--text { color: var(--primary-purple-30); }
+    &--pdf { color: var(--secondary-blue-50); }
+    &--note { color: var(--warning); }
+    &--sheet { color: var(--success); }
+    &--slides { color: var(--link-share); }
 
     svg {
-      width: 100%;
-      height: 100%;
-      fill: var(--normal-fg-10);
-    }
-
-    .folder-shape {
-      fill: var(--folder-fill);
+      width: 28px;
+      height: 28px;
+      fill: currentColor;
     }
   }
 
-  /* ── Info block: name + metadata ─────────────────────────── */
   &__info {
-    flex: 1;
+    flex: 1 1 0;
     min-width: 0;
-    gap: var(--spacer-2);
-    justify-content: center;
-    @include drumee.typo($size: 10px, $weight: 400, $line: 140%);
+    gap: 4px;
   }
 
+  // Body/Small Body: Geist Regular 14 / 1.2.
   &__name {
-    @include drumee.typo($size: 14px, $weight: 600, $line: 20px);
-    white-space: nowrap;
+    @include drumee.typo($color: var(--primary-purple-100), $size: 14px, $weight: 400, $line: 1.2);
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--normal-fg-10);
+    white-space: nowrap;
   }
 
   &__meta {
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    min-width: 0;
+    // A 360px phone card cannot hold both halves on one line.
+    flex-wrap: wrap;
+    row-gap: 2px;
   }
 
-  &__modifier {
-    @include drumee.typo($color: var(--normal-fg-20), $size: 12px, $line: 18px);
-    white-space: nowrap;
-  }
-
+  // Body/Mini Body: Geist Regular 12 / 1.4.
   &__deleted-by,
   &__date {
-    @include drumee.typo($color: var(--neutral-500), $size: 12px, $line: 18px);
+    @include drumee.typo($color: var(--tertiary-grey-80), $size: 12px, $weight: 400, $line: 1.4);
     white-space: nowrap;
   }
 
-  /* ── Actions: badge + buttons ────────────────────────────── */
+  &__who {
+    color: var(--primary-purple-100);
+  }
+
+  &__divider {
+    width: 1px;
+    height: 17px;
+    flex-shrink: 0;
+    background-color: var(--tertiary-grey-60);
+  }
+
   &__actions {
     align-items: center;
-    gap: var(--spacer-3);
+    gap: 6px;
     flex-shrink: 0;
-    width: 128px;
+  }
+
+  // Badge and Restore share the "Overlay" pill: 10px semibold, 8×4, r4.
+  &__days-badge,
+  &__restore {
+    @include drumee.typo($size: 10px, $line: 15px);
+    font-family: var(--font-main);
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
   }
 
   &__days-badge {
-    @include drumee.typo(
-      $color: var(--error),
-      $size: 11px,
-      $weight: 600,
-      $line: 16px
-    );
-    /* Auto layout */
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: var(--spacer-2) var(--spacer-4);
-    background: rgba(255, 0, 31, 0.2);
-    border-radius: var(--corner-radius-1);
+    color: var(--signal-error);
+    background-color: rgba(255, 106, 101, 0.15);
   }
 
-  &__btn {
-    width: 36px;
-    height: 36px;
-    padding: var(--spacer-3);
-    transition: opacity 0.15s;
+  &__restore {
+    display: none;
+    cursor: pointer;
+    color: var(--primary-purple-40);
+    background-color: rgba(89, 80, 255, 0.1);
+    transition: background-color 0.15s;
 
+    // Not in the frame: the same brand tint, doubled.
     &:hover {
-      color: var(--normal-fg-20);
-    }
-
-    &.restore {
-      display: none;
-      cursor: pointer;
-    }
-
-    &.delete {
-      display: flex;
-      cursor: pointer;
-      background-color: rgba(255, 0, 31, 0.2);
-      border-radius: var(--corner-radius-1);
-      color: #d74e49;
-
-      svg {
-        fill: currentColor;
-      }
-      &:hover {
-        color: var(--red-700, #b91c1c);
-      }
-    }
-
-    &.restore {
-      width: 100%;
-      overflow: visible;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      flex-wrap: wrap;
-      padding: var(--spacer-2) var(--spacer-4);
-      background: var(--trash-btn-bg);
-      border-radius: var(--corner-radius-1);
-      color: var(--trash-btn-fg);
-      font-size: 13px;
-      &:hover {
-        color: var(--trash-btn-fg-hover);
-      }
-
-      &-info {
-        position: absolute;
-        display: flex;
-        align-items: start;
-        gap: 8px;
-        width: 250px;
-        left: -160px;
-        top: 48px;
-        padding: var(--spacer-4);
-        background-color: var(--primary-purple-40);
-        color: var(--white);
-        border-radius: var(--corner-radius-1);
-        height: auto;
-        z-index: 2;
-        font-size: 12px;
-      }
+      background-color: rgba(89, 80, 255, 0.2);
     }
   }
-  &__restore-info-ico {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    margin-top: 1px;
-    fill: var(--white);
-    color: var(--white);
+
+  // Restore joins the badge while the pointer is on the row; the days left
+  // stay in view.
+  &__row:hover &__restore {
+    display: flex;
+  }
+
+  &__delete {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    color: var(--signal-error);
+    border-radius: 4px;
+    transition: background-color 0.15s, box-shadow 0.15s;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    // Not in the frame: the days-left badge's red wash as a pad behind the
+    // bin. Drawn with a spread shadow rather than padding so the 20px box —
+    // and the row around it — doesn't move.
+    &:hover {
+      background-color: rgba(255, 106, 101, 0.15);
+      box-shadow: 0 0 0 4px rgba(255, 106, 101, 0.15);
+    }
+  }
+}
+
+// A touch screen never hovers, so Restore would be unreachable there.
+@media (hover: none) {
+  .trash-item__restore {
+    display: flex;
   }
 }
 

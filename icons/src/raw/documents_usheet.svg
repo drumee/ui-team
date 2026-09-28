@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-label="Casual Sheets">
+  <!-- Casual Sheets logo (sheet.casualoffice.org). The original tile is a
+       #1aa3c4 → #0a5266 gradient; paint servers do not render from Drumee's
+       hidden sprite, so the tile is a solid mid-tone instead. -->
+  <rect x="3" y="3" width="42" height="42" rx="12" fill="#148aa8"/>
+  <path d="M3 15C3 8.373 8.373 3 15 3H33C39.627 3 45 8.373 45 15V18H3V15Z" fill="#ffffff" fill-opacity="0.12"/>
+  <rect x="13" y="13" width="10" height="10" rx="2.5" fill="#ffffff" fill-opacity="0.5"/>
+  <rect x="25" y="13" width="10" height="10" rx="2.5" fill="#ffffff" fill-opacity="0.5"/>
+  <rect x="13" y="25" width="10" height="10" rx="2.5" fill="#ffffff" fill-opacity="0.4"/>
+  <rect x="25" y="25" width="10" height="10" rx="2.5" fill="#ffffff"/>
+</svg>

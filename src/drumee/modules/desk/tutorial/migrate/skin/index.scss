@@ -205,6 +205,118 @@
       background: var(--primary-purple-50);
     }
   }
+
+  // ── live (after Done — see ../skeleton/live.js) ────────────────────────────
+  &__live-input {
+    width: 100%;
+
+    input {
+      @include drumee.typo($size: 14px, $line: 1.3);
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: var(--normal-fg);
+    }
+  }
+
+  &__live-status {
+    @include drumee.typo($size: 13px, $line: 1.4);
+    color: var(--normal-fg-50);
+
+    &[data-kind="ok"] { color: var(--success-fg, #1f8a52); }
+    &[data-kind="error"] { color: var(--danger-fg, #d93a35); }
+  }
+
+  &__live-bar {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--normal-bg-90);
+  }
+
+  &__live-fill {
+    height: 100%;
+    background: var(--primary-purple-40);
+    transition: width 0.4s ease;
+  }
+
+  &__live-count-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  &__live-count,
+  &__live-pct,
+  &__live-log-status {
+    @include drumee.typo($size: 13px, $line: 1.3);
+    color: var(--normal-fg-50);
+  }
+
+  &__live-log {
+    width: 100%;
+    gap: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  &__live-log-row {
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__live-log-name {
+    @include drumee.typo($size: 13px, $line: 1.3);
+    color: var(--normal-fg);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__live-summary {
+    @include drumee.typo($size: 14px, $line: 1.4);
+    color: var(--normal-fg);
+
+    &[data-kind="error"] { color: var(--danger-fg, #d93a35); }
+  }
+
+  &__live-actions {
+    width: 100%;
+    gap: 12px;
+
+    > * { flex: 1 1 0; }
+  }
+
+  &__live-secondary {
+    @include drumee.typo($size: 15px, $line: 1.2);
+    box-sizing: border-box;
+    padding: 14px 0;
+    border-radius: 12px;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--normal-fg);
+    background: var(--normal-bg-90);
+    cursor: pointer;
+  }
+
+  &__live-cancel[data-disabled="1"] {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+// The mock's controls are drawings and never answered a mouse; the live
+// card's do.
+.tutorial-migrate__dialog[data-live="1"] {
+  .tutorial-migrate__copy,
+  .tutorial-migrate__close,
+  .tutorial-migrate__submit[data-ready="1"] {
+    cursor: pointer;
+  }
 }
 
 // ── reduced motion ───────────────────────────────────────────────────────────

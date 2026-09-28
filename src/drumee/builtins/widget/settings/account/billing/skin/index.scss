@@ -1125,6 +1125,26 @@
       );
     }
 
+    // The availability verdict's slot. Out of the flow until a check comes
+    // back, or it would draw the org section's 12px gap around nothing.
+    // Driven by data-empty, NOT `:empty` — ui-core keeps a `blank` widget
+    // inside a Box with no kids, so the element is never childless.
+    &-org-ident-msg-slot[data-empty="1"] {
+      display: none;
+    }
+
+    &-org-ident-msg {
+      @include drumee.typo($size: 12px, $line: 16px, $weight: 500);
+
+      &.is-error {
+        color: var(--color-danger, #c0392b);
+      }
+
+      &.is-ok {
+        color: var(--color-success, #1f8a4c);
+      }
+    }
+
     &-left {
       // min-width:0 lets the column actually shrink — a flex item defaults to
       // min-width:auto, which is what pinned it at min-content and pushed the

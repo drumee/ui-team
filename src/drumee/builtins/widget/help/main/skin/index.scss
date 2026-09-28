@@ -230,23 +230,57 @@
       position: relative;
       width: 100%;
       aspect-ratio: 900 / 506;
-      border-radius: 12px;
+      border-radius: 20px;
       background: $surface;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       overflow: hidden;
-      border: 1px solid var(--border-default);
+      // No hairline: a soft, layered shadow lifts the frame off the page
+      // instead, and deepens on hover so the whole card reads as pressable.
+      box-shadow:
+        0 1px 3px rgba(11, 10, 33, 0.06),
+        0 14px 36px -12px rgba(11, 10, 33, 0.22);
+      transition: box-shadow $base $ease;
+
+      &:hover {
+        box-shadow:
+          0 1px 3px rgba(11, 10, 33, 0.07),
+          0 22px 48px -14px rgba(11, 10, 33, 0.32);
+      }
 
       &:hover .help-main__video-play {
-        transform: scale(1.06);
+        transform: scale(1.08);
         background: rgba(20, 17, 35, 0.55);
+      }
+
+      // A dark translucent badge goes muddy grey over a white still; the
+      // brand purple reads as the obvious call to action there.
+      &[data-poster="1"] .help-main__video-play {
+        background: $purple-base;
+        box-shadow: 0 8px 24px rgba(89, 80, 255, 0.35);
+      }
+
+      &[data-poster="1"]:hover .help-main__video-play {
+        background: $purple-deep;
+        box-shadow: 0 12px 32px rgba(89, 80, 255, 0.45);
+      }
+
+      // A short press-in, so the click visibly lands before the player swaps in.
+      &[data-placeholder="0"]:active .help-main__video-play {
+        transform: scale(0.96);
       }
 
       // No source yet: nothing to play, so drop the pointer affordance and
       // the hover growth on the badge.
       &[data-placeholder="1"] {
         cursor: default;
+
+        &:hover {
+          box-shadow:
+            0 1px 3px rgba(11, 10, 33, 0.06),
+            0 14px 36px -12px rgba(11, 10, 33, 0.22);
+        }
 
         .help-main__video-backdrop {
           filter: blur(18px);
@@ -264,16 +298,14 @@
     }
 
     // The player, once the poster has been swapped out for it. It fills the
-    // frame and inherits its rounded corners (the frame is overflow:hidden),
-    // sitting on a dark fill so a letterboxed video does not show $surface
-    // through the bars. `cursor` is reset here rather than on the frame: the
-    // frame keeps its click service, but the innermost element wins, so a
-    // playing video no longer reads as a button.
+    // frame and inherits its rounded corners (the frame is overflow:hidden).
+    // `cursor` is reset here rather than on the frame: the frame keeps its
+    // click service, but the innermost element wins, so a playing video no
+    // longer reads as a button.
     &-el {
       width: 100%;
       height: 100%;
       object-fit: contain;
-      background: #141123;
       cursor: default;
     }
 
@@ -305,9 +337,11 @@
       }
     }
 
-    // Badge + label stack, above the backdrop.
+    // Badge + label stack, above the backdrop. Pinned over the whole frame
+    // so the badge sits on the frame's exact centre.
     &-overlay {
-      position: relative;
+      position: absolute;
+      inset: 0;
       align-items: center;
       justify-content: center;
       gap: var(--spacer-4);
@@ -318,11 +352,16 @@
       height: 72px;
       border-radius: 50%;
       background: rgba(20, 17, 35, 0.4);
+      // Frosted, so the badge holds up over the pale gradient fallback.
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: 0 8px 24px rgba(11, 10, 33, 0.25);
       align-items: center;
       justify-content: center;
       transition:
         transform $base $ease,
-        background $base $ease;
+        background $base $ease,
+        box-shadow $base $ease;
 
       &-ico {
         width: 28px;
@@ -810,7 +849,7 @@
     }
 
     &__video-frame {
-      border-radius: 16px;
+      border-radius: 14px;
     }
 
     &__video-play {

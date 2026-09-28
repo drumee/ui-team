@@ -279,7 +279,10 @@ $theme-colors: (
     }
   }
 
-  &__ui[data-painted="1"] > .tasks-panel__root {
+  // Once, on the first paint. Every later _render recreates the root, and a new
+  // element would replay the fade — the whole board blinking on each Update,
+  // workspace open or notification. _stampRepaintFades sets data-settled.
+  &__ui[data-painted="1"]:not([data-settled="1"]) > .tasks-panel__root {
     @include drumee.skeleton-content-in;
   }
 
@@ -336,29 +339,44 @@ $theme-colors: (
     background: transparent;
   }
 
+  // ── Filter popover (index.js toggleFilter / filter-page) ─────────────
+  // One level on screen at a time: a fixed head (title + "Clear all", or
+  // "‹ Dimension" + "Clear") over ONE scrolling body. It replaced an accordion
+  // whose open sections each scrolled inside the popup's own scroll. top/right
+  // are written by _positionFilterPicker (under the Filter button, which moves
+  // when the viewbar wraps); the values here are only the first-paint guess.
   &__filter-picker {
     position: absolute;
-    top: 12px;
+    top: 56px;
     right: 12px;
     z-index: 30;
-    width: 218px;
-    padding: 8px;
-    gap: 4px;
-    max-height: 320px;
-    overflow-y: auto;
+    width: min(280px, calc(100cqw - 16px));
+    max-height: min(440px, 70vh);
+    overflow: hidden;
     align-items: stretch;
-    border-radius: 8px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    border-radius: 12px;
     background: var(--normal-bg-elevated, #fff);
-    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-    // No entrance animation: the panel re-renders on each pick, and replaying
-    // the pop-in on every selection read as a glitch.
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+    transform-origin: top right;
+    // Plays on OPEN only: a repaint patches the popover, so a pick keeps the
+    // element and nothing replays (what made the old pop-in read as a glitch).
+    animation: tasks-panel-pop-in 0.16s cubic-bezier(0.2, 0, 0, 1);
 
-    // Figma row: 28px tall, name/avatar left, checkbox right, no active tint.
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+
+    // Row: 32px, content left, checkbox right, no active tint.
     .tasks-panel__member-row {
+      flex: 0 0 auto;
       justify-content: space-between;
+      align-items: center;
       gap: 8px;
-      padding: 6px 6px;
-      border-radius: 6px;
+      min-height: 32px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      cursor: pointer;
 
       &[data-active="1"] {
         background: transparent;
@@ -369,9 +387,17 @@ $theme-colors: (
     }
   }
 
-  // Small heading at the top of the filter popup.
+  &__filter-head {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 44px;
+    padding: 6px 12px 6px 14px;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+  }
+
   &__filter-title {
-    padding: 2px 6px 4px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     @include drumee.typo(
@@ -380,31 +406,153 @@ $theme-colors: (
       $line: 16px,
       $color: var(--normal-fg-40, #84848c)
     );
+    font-weight: 600;
   }
 
-  // Hairline between "All members" and the member list.
-  &__filter-divider {
-    height: 1px;
-    margin: 2px 6px;
-    background: var(--border-default, rgba(0, 0, 0, 0.08));
+  // "‹ Priority" — back to the root page.
+  &__filter-back {
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin-left: -6px;
+    padding: 4px 8px 4px 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s;
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
   }
 
-  // Left group inside a filter row: avatar + name.
+  &__filter-back-chev {
+    @include drumee.typo(
+      $size: 20px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+    pointer-events: none;
+  }
+
+  &__filter-back-label {
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  &__filter-clear {
+    flex: 0 0 auto;
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--col-primary-40, #5950ff)
+    );
+    font-weight: 600;
+
+    // Hidden rather than unmounted while nothing is set, so the flag can be
+    // flipped in place (_syncFilterAffordances) without rebuilding the popover
+    // — which would destroy the keyword input the user is typing in.
+    &[data-active="0"] {
+      display: none !important;
+    }
+  }
+
+  // The popover's only scroller. A page change rebuilds it (data-page is in
+  // its attributes), so the slide plays on navigation: in from the right for a
+  // dimension, from the left going back to the root.
+  &__filter-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    align-items: stretch;
+    gap: 2px;
+    padding: 8px;
+    // Overrides the global .drumee-box bar (see every-box scrollbar note).
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-default, rgba(0, 0, 0, 0.18)) transparent;
+    animation: tasks-filter-page-in 0.16s cubic-bezier(0.2, 0, 0, 1);
+
+    &[data-page="root"] {
+      animation-name: tasks-filter-page-back;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  @keyframes tasks-filter-page-in {
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes tasks-filter-page-back {
+    from {
+      opacity: 0;
+      transform: translateX(-12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  // Left group inside a value row: avatar/dot + name.
   &__filter-row-main {
     align-items: center;
     gap: 8px;
     min-width: 0;
 
     .tasks-panel__member-name {
+      min-width: 0;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
       @include drumee.typo(
         $size: 14px,
         $weight: 400,
         $line: 20px,
-        $color: var(--normal-fg-30, #65656c)
+        $color: var(--normal-fg-20, #3a3a44)
       );
+
+      .note-content {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  // Rows the member search hid (index.js _filterMemberRows). !important: a
+  // Box's data-flow rule sets display:flex at the same specificity.
+  &__filter-row[data-hidden="1"] {
+    display: none !important;
+  }
+
+  &__filter-empty {
+    padding: 12px 8px;
+    justify-content: center;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 18px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+
+    &[data-visible="0"] {
+      display: none !important;
     }
   }
 
@@ -443,42 +591,12 @@ $theme-colors: (
     opacity: 1;
   }
 
-  // ── Multi-dimension filter popup, shared by every view (Figma 2099-50501) ──
-  &__filter-picker--list {
-    width: 244px;
-  }
-
-  &__filter-head {
-    align-items: center;
-    justify-content: space-between;
-    padding: 2px 6px 4px;
-  }
-
-  &__filter-clear {
-    cursor: pointer;
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 16px,
-      $color: var(--col-primary-40, #5950ff)
-    );
-
-    // Hidden rather than unmounted while no filter is set, so the flag can be
-    // flipped in place (see _syncFilterAffordances) without rebuilding the
-    // popup — which would destroy the keyword input the user is typing in.
-    &[data-active="0"] {
-      display: none;
-    }
-  }
-
-  // Accordion category (row + collapsible value body).
-  &__filter-cat {
-    align-items: stretch;
-  }
-
+  // Root-page row: icon, name, current value, chevron.
   &__filter-cat-head {
+    flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    min-height: 36px;
     padding: 6px 8px;
     border-radius: 8px;
     cursor: pointer;
@@ -487,6 +605,11 @@ $theme-colors: (
     &:hover {
       background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
     }
+
+    // The whole row is the target; its parts must not swallow the click.
+    & > * {
+      pointer-events: none;
+    }
   }
 
   &__filter-cat-ico {
@@ -494,6 +617,11 @@ $theme-colors: (
     width: 16px;
     height: 16px;
     color: var(--normal-fg-30, #65656c);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
   }
 
   &__filter-cat-label {
@@ -507,54 +635,55 @@ $theme-colors: (
     );
   }
 
-  // Chevron rotates down when the section is open.
+  // What the dimension is set to — "High, Urgent". Empty when off.
+  &__filter-cat-value {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 50%;
+    overflow: hidden;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--col-primary-40, #5950ff)
+    );
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   &__filter-cat-chev {
     flex: 0 0 auto;
     color: var(--normal-fg-40, #84848c);
-    transition: transform 0.15s, color 0.12s;
-    transform: rotate(0deg);
-  }
-  &__filter-cat[data-open="1"] &__filter-cat-chev {
-    transform: rotate(90deg);
+    @include drumee.typo($size: 16px, $weight: 400, $line: 16px);
   }
 
-  // A category holding an active value tints brand — the parent rows have no
-  // checkbox, so this is what tells you which dimensions are filtering while
-  // every category is collapsed. `data-active` comes from isFilterDimActive().
-  // font-weight is set explicitly: drumee.typo()'s $weight is a no-op.
+  // A dimension holding a value tints brand. font-weight explicitly:
+  // drumee.typo()'s $weight is a no-op.
   &__filter-cat-head[data-active="1"] &__filter-cat-label {
     font-weight: 600;
-    color: var(--col-primary-40, #5950ff);
   }
-  &__filter-cat-head[data-active="1"] &__filter-cat-ico,
-  &__filter-cat-head[data-active="1"] &__filter-cat-chev {
+  &__filter-cat-head[data-active="1"] &__filter-cat-ico {
     color: var(--col-primary-40, #5950ff);
   }
 
-  // Collapsed by default; max-height (not display) so it works regardless of
-  // the Box.Y flex display the engine sets.
-  &__filter-cat-body {
-    max-height: 0;
-    overflow: hidden;
-    gap: 2px;
-    padding-left: 6px;
-  }
-  &__filter-cat[data-open="1"] &__filter-cat-body {
-    max-height: 320px;
-    overflow-y: auto;
-    padding-top: 2px;
-    padding-bottom: 4px;
-  }
-
-  // Keyword search input inside the Task category.
+  // Task search (root page) / member search (Assignee page).
   &__filter-search {
+    flex: 0 0 auto;
+    margin-bottom: 6px;
+
     input {
       width: 100%;
       box-sizing: border-box;
+      height: 34px;
       padding: 6px 10px;
       border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
-      border-radius: 6px;
+      border-radius: 8px;
       outline: none;
+      background: var(--normal-bg-elevated, #fff);
       @include drumee.typo(
         $size: 13px,
         $weight: 400,
@@ -574,6 +703,109 @@ $theme-colors: (
     width: 10px;
     height: 10px;
     border-radius: 50%;
+  }
+
+  // ── Applied-filter chips (under the viewbar) ─────────────────────────
+  // One per active dimension. Hidden when nothing filters — !important
+  // because a Box's data-flow rule sets display at the same specificity.
+  &__filter-chips {
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    background: var(--normal-bg-elevated, #fff);
+
+    &[data-empty="1"] {
+      display: none !important;
+    }
+  }
+
+  &__filter-chip {
+    align-items: center;
+    gap: 4px;
+    height: 26px;
+    max-width: 320px;
+    min-width: 0;
+    padding: 0 3px 0 10px;
+    border: 1px solid transparent;
+    border-radius: 13px;
+    background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
+    cursor: pointer;
+    transition: border-color 0.12s;
+
+    &:hover {
+      border-color: var(--col-primary-40, #5950ff);
+    }
+  }
+
+  &__filter-chip-label {
+    flex: 0 0 auto;
+    pointer-events: none;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  &__filter-chip-value {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    pointer-events: none;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--col-primary-40, #5950ff)
+    );
+    font-weight: 600;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // × — sprite icons never size themselves: pin the wrapper AND the svg.
+  &__filter-chip-remove {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    padding: 5px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    color: var(--col-primary-40, #5950ff);
+    cursor: pointer;
+
+    svg {
+      width: 10px;
+      height: 10px;
+    }
+
+    &:hover {
+      background: var(--overlay-brand, rgba(89, 80, 255, 0.18));
+    }
+  }
+
+  &__filter-chips-clear {
+    padding: 0 6px;
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+    font-weight: 600;
+
+    &:hover {
+      color: var(--col-primary-40, #5950ff);
+    }
   }
 
   &__main {
@@ -845,6 +1077,40 @@ $theme-colors: (
     &.is-dragging {
       opacity: 0.5;
       transform: rotate(2deg);
+    }
+  }
+
+  // ── Card / row motion on a repaint (index.js _flipRepaint, _removeTask) ──
+  // A repaint now PATCHES the board — unchanged cards keep their element — so
+  // these only ever play on the card that actually arrived or left:
+  //   data-enter    a card the repaint created (a create, a filter bringing it
+  //                 back). Cleared on animationend.
+  //   data-pending  its delete is in flight: dimmed and inert, restored if the
+  //                 server refuses.
+  //   data-leaving  the delete was confirmed; fades out for TASK_EXIT_MS (0.14s,
+  //                 keep in step) before the row is pruned.
+  &__task-card,
+  &__list-row {
+    &[data-enter="1"] {
+      animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
+    }
+
+    &[data-pending="1"] {
+      opacity: 0.5;
+      pointer-events: none;
+      transition: opacity 0.12s ease;
+    }
+
+    &[data-leaving="1"] {
+      animation: tasks-panel-pop-out 0.14s cubic-bezier(0.4, 0, 1, 1) forwards;
+      pointer-events: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &[data-enter="1"],
+      &[data-leaving="1"] {
+        animation: none;
+      }
     }
   }
 
@@ -1852,6 +2118,47 @@ $theme-colors: (
 
   &__create-field {
     gap: 12px;
+  }
+
+  // Required title: message is always in the tree, shown only while the
+  // field carries `is-missing` (toggled in place by _flagTitleMissing).
+  &__title-missing {
+    font-weight: 500; // typo() drops $weight
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 500,
+      $line: 18px,
+      $color: var(--error, #f6514b)
+    );
+  }
+
+  // !important: ui-core's `.widget[data-flow]` rules give every Note
+  // display:flex at higher specificity, so a plain display:none never hid it.
+  &__title-field:not(.is-missing) .tasks-panel__title-missing {
+    display: none !important;
+  }
+
+  &__title-field.is-missing {
+    // Each mirrors its own focus ring: the create box is borderless with a
+    // 2px ring, the detail title has a 1px border plus a soft halo.
+    .tasks-panel__create-input textarea {
+      box-shadow: 0 0 0 2px var(--error, #f6514b);
+    }
+
+    .tasks-panel__detail-title textarea {
+      border-color: var(--error, #f6514b);
+      box-shadow: 0 0 0 3px rgba(246, 81, 75, 0.15);
+    }
+  }
+
+  &__detail-title-field {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+
+    .tasks-panel__title-missing {
+      padding: 0 6px;
+    }
   }
 
   &__create-label {
@@ -3046,10 +3353,16 @@ $theme-colors: (
 
   // Description box matches the Figma filled input (grey fill, no border,
   // radius 8, 12px padding, 16px text).
+  //
+  // The 12px gutter is a transparent BORDER, not padding: padding scrolls with
+  // the content, so a tall pasted image was clipped flush against the box
+  // edge. The scrollport ends at the padding box, so content clips 12px inside
+  // a fixed frame instead; the fill still covers it (background-clip defaults
+  // to border-box).
   &__desc-editor {
-    border: 0;
+    border: 12px solid transparent;
     border-radius: 8px;
-    padding: 12px;
+    padding: 0;
     background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
     @include drumee.typo(
       $size: 16px,
@@ -3059,13 +3372,17 @@ $theme-colors: (
     );
 
     &:focus {
-      border: 0;
-      // Inset ring: an outer box-shadow (0 0 0 2px) extends 2px beyond the box
-      // on every side, and since the editor sits flush against its container's
-      // left edge that overflow-clips it, the left side of the ring gets cut
-      // off (reads as a missing/enlarged left border). Drawing it inset keeps
-      // the ring inside the box — never clipped, no apparent size change.
-      box-shadow: inset 0 0 0 2px rgba(67, 60, 197, 0.35);
+      border-color: transparent;
+    }
+
+    // Ring drawn inside the box: an outer ring would be clipped by the
+    // container flush against the editor's left edge. An outline with a
+    // negative offset rather than an inset shadow, because an inset shadow is
+    // painted inside the border — 12px in, given the gutter above. Skipped
+    // while a drag is over the box so the dashed drop ring still shows.
+    &:focus:not([data-drop-active="1"]) {
+      outline: 2px solid rgba(67, 60, 197, 0.35);
+      outline-offset: -2px;
     }
   }
 
@@ -4904,7 +5221,9 @@ $theme-colors: (
   }
 
   // ── Calendar view ──────────────────────── (Figma 2042-20730 / 2045-132117)
-  // Viewbar controls: Weekly/Monthly toggle + ‹ period › navigator.
+  // __cal-controls / __cal-toggle / __cal-switch below are GANTT's viewbar
+  // controls now (skeleton/gantt.js reuses these classes for its Weeks/Months
+  // switch). The calendar's own toolbar is __tcal-* further down.
   &__cal-controls {
     align-items: center;
     gap: 12px;
@@ -4961,36 +5280,258 @@ $theme-colors: (
     left: 22px;
   }
 
-  &__cal-nav {
+  // ── Calendar toolbar: ‹ Today ›, range + mini calendar, view dropdown ────
+  // The Personal Calendar's toolbar (panel/calendar/skin/index.scss → __nav,
+  // __range, __view-button, __menu, __range-menu) and the Meet tab's picker,
+  // shape for shape. One adaptation, on purpose: it sits in a 30px viewbar next
+  // to the filter pill rather than on a page, so the text is 14px (not 16px)
+  // and the view button takes 5px of vertical padding (not 8px) — the same row
+  // height as __viewbar-filter, so opening the Calendar view does not make the
+  // bar jump. The __cal-controls / __cal-switch rules above are Gantt's now.
+  // Wraps, centred, when the viewbar gives it less room than it needs. On a
+  // phone the controls get a ~366px row of their own (the ≤700px container
+  // block below), and ‹ Today › + "Friday, September 25, 2026" + the view
+  // button is ~450px: unwrapped, the view button ran off the panel's right
+  // edge. !important for the same reason as __viewbar-dots — the framework's
+  // Box.X flex rule is 0,2,0 and sets the row to nowrap.
+  &__tcal-bar {
     align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: 71px;
-    background: var(--border-default, rgba(0, 0, 0, 0.05));
+    justify-content: center;
+    flex-wrap: wrap !important;
+    gap: 8px;
+    row-gap: 8px;
+    min-width: 0;
+    max-width: 100%;
   }
 
-  &__cal-nav-arrow {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
+  // [ ‹ range › ] — the Meet tab's nav pill (window/folder/skin/
+  // meeting-schedule.scss → __meeting-sched-nav / -nav-btn / -label). One
+  // density step down so the pill is the viewbar's 30px, like the filter pill
+  // beside it: 22px arrows in a 4px pad instead of 26px in 4px. The label is
+  // the Meet tab's 15px at the weight that tab actually renders — regular: its
+  // skin asks for 600 through drumee.typo, which emits no weight.
+  &__tcal-nav {
+    align-items: center;
+    gap: 2px;
+    padding: 4px 6px;
+    border-radius: 71px;
+    background: var(--overlay-bg-05);
+  }
 
+  &__tcal-arrow {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    padding: 4px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--normal-fg);
+    transition: background 0.12s ease;
+
+    // The wrapper's size is half of it; the sprite <svg> needs its own box.
     svg {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover {
+      background: var(--overlay-bg-05);
     }
   }
 
-  &__cal-nav-label {
+  // Each dropdown owns its own positioning context.
+  &__tcal-anchor {
+    position: relative;
+  }
+
+  &__tcal-range {
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 6px;
     cursor: pointer;
-    padding: 0 4px;
+    user-select: none;
     white-space: nowrap;
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 600,
-      $line: 20px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
+
+    &:hover,
+    &[data-open="1"] {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  &__tcal-range-label {
+    @include drumee.typo($size: 15px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  &__tcal-view-button {
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--normal-bg-90);
+    color: var(--normal-fg);
+
+    &:hover,
+    &[data-open="1"] {
+      background: var(--normal-bg-80);
+    }
+  }
+
+  &__tcal-view-ico,
+  &__tcal-view-caret {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    color: currentColor;
+  }
+
+  &__tcal-view-caret {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.15s ease-out;
+  }
+
+  &__tcal-view-button[data-open="1"] &__tcal-view-caret {
+    transform: rotate(180deg);
+  }
+
+  &__tcal-view-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
+    font-weight: 400;
+  }
+
+  // Shared dropdown shell. The controls sit at the RIGHT of the viewbar, so
+  // both open right-aligned: left-anchored, the 264px picker ran off the
+  // window's right edge from a label that is itself near that edge.
+  &__tcal-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 40;
+    padding: 8px;
+    gap: 4px;
+    background: var(--normal-bg-elevated);
+    // The Meet tab's dropdown shell: a lifted shadow and an 8% hairline.
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  &__tcal-view-menu {
+    min-width: 150px;
+  }
+
+  &__tcal-menu-item {
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    align-items: center;
+    min-height: 34px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    // Neutral wash on hover, the 8% brand wash on the active row only — the
+    // Meet tab's menu.
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+
+    &[data-active="1"] {
+      background: var(--hover-bg-40);
+      font-weight: 600;
+      color: var(--primary-40);
+    }
+  }
+
+  // The mini calendar — the Meet tab's picker and the Personal Calendar's
+  // range popup, metric for metric. Two classes so it wins over __tcal-menu's
+  // padding and gap regardless of source order.
+  &__tcal-menu#{&}__tcal-picker {
+    width: 264px;
+    padding: 12px;
+    gap: 0;
+  }
+
+  &__tcal-picker-head {
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  &__tcal-picker-month {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__tcal-picker-nav {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--normal-fg);
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  &__tcal-picker-dows,
+  &__tcal-picker-week {
+    flex-wrap: nowrap !important;
+  }
+
+  &__tcal-picker-dow {
+    flex: 1 1 0;
+    justify-content: center;
+    text-align: center;
+    padding: 2px 0;
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--normal-fg-50));
+    font-weight: 400;
+  }
+
+  &__tcal-picker-day {
+    flex: 1 1 0;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-radius: 6px;
+    cursor: pointer;
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    font-variant-numeric: tabular-nums;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+
+    &[data-in="0"] {
+      color: var(--border-strong);
+    }
+
+    &[data-sel="1"] {
+      background: var(--radio-on-bg);
+      color: var(--primary-40);
+      font-weight: 600;
+    }
+
+    &[data-today="1"] {
+      font-weight: 700;
+    }
   }
 
   // Grid container. container-type makes the calendar respond to the WINDOW
@@ -5005,57 +5546,96 @@ $theme-colors: (
     container-type: inline-size;
     container-name: cal;
     animation: tasks-cal-fade 0.16s ease;
+    // A month row's FLOOR (rows share the grid's height above it, as the Meet
+    // tab's do). skeleton/calendar.js MONTH_FIT = 3 is measured against it:
+    // 16px of padding, a 20px date line and a 2px gap, then three 19px chips
+    // on 2px gaps (61px) and the pinned "+N" — 117px, so 118. The Personal
+    // Calendar's --cal-cell-min is the same number for the same reason. Change
+    // one, change the other.
+    --tcal-cell-min: 118px;
   }
 
+  // The fade above is for a view switch or a new range. The same range
+  // repainted (an Update, a peer's edit) recreates the grid too, and must not
+  // blink it — _stampRepaintFades sets data-cal-fade.
+  &__ui[data-cal-fade="0"] &__calendar {
+    animation: none;
+  }
+
+  // The header row is the TOP of the grid, as on the Meet tab: its cells are
+  // ruled with the same 1px-gap-over-hairline technique as the grid's, so the
+  // column lines run unbroken from the day names down through the cells. It
+  // used to float 12px above a separate rounded box.
   &__cal-weekdays {
     flex: 0 0 auto;
-    padding: 0 0 12px;
+    gap: 1px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    border: 1px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    border-bottom: 0;
   }
 
+  // Centred over its column, as the Personal Calendar and the Meet tab draw
+  // it (this one alone right-aligned its labels). Note is a flex row, so the
+  // centring is justify-content on the wrapper, not text-align.
+  // Full day names, left-aligned, 12px padding — the Meet tab's month header.
+  // A Note is a flex row, so the ellipsis has to be set on .note-content, not
+  // on the wrapper (note-widget-is-a-flex-row).
   &__cal-weekday {
     flex: 1 1 0;
     min-width: 0;
-    padding-right: 12px;
+    padding: 12px;
     box-sizing: border-box;
-    text-align: right;
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 400,
-      $line: 20px,
-      $color: var(--normal-fg-30, #65656c)
-    );
+    overflow: hidden;
+    background: var(--normal-bg-elevated, #fff);
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
+    font-weight: 400;
+
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
   }
 
   // Single-line gridlines: the grid/rows carry a 1px gap over a border-coloured
   // background, so adjacent cells never double up their borders.
+  // `1 0 auto`: never shrink below its rows. With `1 1 auto` a short window
+  // squeezed the grid, and its overflow:hidden (there for the rounded
+  // corners) CLIPPED the last weeks of the month instead of letting
+  // __calendar scroll to them.
   &__cal-grid {
-    flex: 1 1 auto;
+    flex: 1 0 auto;
     align-items: stretch;
     gap: 1px;
-    background: var(--border-default, rgba(0, 0, 0, 0.06));
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
-    border-radius: 8px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    border: 1px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    // Square, as the Meet tab's grid is: it continues the header row above.
     overflow: hidden;
   }
 
-  // Each week shares the grid height in month mode; one tall row in week mode.
+  // Each week shares the grid height in month mode; one tall row in week and
+  // day mode. The floor is the token MONTH_FIT is measured against.
   &__cal-week-row {
     flex: 1 1 0;
     align-items: stretch;
     gap: 1px;
-    min-height: 116px;
-    background: var(--border-default, rgba(0, 0, 0, 0.06));
+    min-height: var(--tcal-cell-min);
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
   }
 
-  &__calendar[data-mode="week"] &__cal-week-row {
+  &__calendar[data-mode="week"] &__cal-week-row,
+  &__calendar[data-mode="day"] &__cal-week-row {
     flex: 1 1 auto;
     height: 100%;
     min-height: 0;
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
-    border-radius: 8px;
+    border: 1px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
     overflow: hidden;
   }
 
+  // A white cell, no hover wash — the Meet tab's cells. Week and day keep the
+  // 12px their full cards need; the month cell is the Meet tab's 8px 10px with
+  // 2px between the date and its chips.
   &__cal-day {
     flex: 1 1 0;
     min-width: 0;
@@ -5064,25 +5644,67 @@ $theme-colors: (
     box-sizing: border-box;
     background: var(--normal-bg-elevated, #fff);
     overflow: hidden;
-    transition: background 0.12s;
+  }
 
-    &:hover {
-      background: var(--hover-bg-40, rgba(0, 0, 0, 0.02));
-    }
-    // Today: light-grey wash on the cell + a filled accent on the number.
-    &[data-today="1"] {
-      background: var(--normal-bg-80, rgba(0, 0, 0, 0.05));
-    }
-    &[data-outside="1"] {
-      background: var(--normal-bg-95, #fafafa);
-    }
+  &__calendar[data-mode="month"] &__cal-day {
+    padding: 8px 10px;
+    gap: 2px;
+  }
+
+  // Today is the DATE in brand ink, in every view — the Meet tab's cue, here
+  // in the month cell and on the week/day column header (below). The month
+  // cell used to take a brand wash instead.
+  &__cal-day[data-today="1"] &__cal-day-num {
+    color: var(--primary-40);
+  }
+
+  // ── week / day column header: num over name ────────────────────────────
+  // The Personal Calendar's __hours-head-cell and the Meet tab's
+  // __meeting-sched-day. Today is the NUMBER in brand ink.
+  // A row: the date on the left, the day's hover "+" on the right — week and
+  // day cells carry no head of their own.
+  &__cal-headday {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 12px;
+    box-sizing: border-box;
+    align-items: flex-start;
+    justify-content: space-between;
+    background: var(--normal-bg-elevated, #fff);
+  }
+
+  &__cal-headday-date {
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__cal-headday:hover &__cal-day-add {
+    opacity: 1;
+  }
+
+  // 18/24 regular — the Meet tab's day number at the weight it renders.
+  &__cal-headday-num {
+    @include drumee.typo($size: 18px, $line: 24px, $color: var(--normal-fg));
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__cal-headday-name {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
+    font-weight: 400;
+  }
+
+  &__cal-headday[data-today="1"] &__cal-headday-num {
+    color: var(--primary-40);
   }
 
   // Keep these at the `.tasks-panel` top level, NOT nested in `&__cal-day` —
   // nested, `&__cal-day-add` doubles into `.tasks-panel__cal-day__cal-day-add`
   // (a non-existent class), so the "+" never reveals and outside days never dim.
+  // Lead/trail days dim their LABEL only, as the Meet tab's month does; the
+  // ground stays the same white as every other cell.
   &__cal-day[data-outside="1"] &__cal-day-num {
-    opacity: 0.4;
+    color: var(--border-strong);
   }
   &__cal-day:hover &__cal-day-add {
     opacity: 1;
@@ -5095,62 +5717,63 @@ $theme-colors: (
     gap: 8px;
   }
 
-  // Hover-revealed "add task on this day" affordance (top-left of the cell).
-  // Bare "+" glyph, no background — a brand-purple plus that darkens on hover.
+  // Hover-revealed "add task on this day" affordance (top-left of the cell) —
+  // the Personal Calendar's quick-add: a 26px box with a 22px glyph and a wash
+  // on hover. It was a bare 17px brand "+" that scaled itself on hover, which
+  // made the same control look and move differently in two tabs.
   &__cal-day-add {
     flex: 0 0 auto;
+    // Kept from growing the 20px date line it shares a row with.
+    margin: -3px -4px -3px 0;
+    width: 26px;
+    height: 26px;
     justify-content: center;
     align-items: center;
+    border-radius: 4px;
     cursor: pointer;
     opacity: 0;
-    color: var(--col-primary-40, #5950ff);
-    transition: opacity 0.12s, transform 0.12s, color 0.12s;
+    transition: opacity 0.12s ease-out;
 
     &:hover {
-      transform: scale(1.15);
-      color: var(--col-primary-50, #433cc5);
+      background: var(--overlay-bg-05);
     }
   }
 
-  // "+" text glyph — inherits the button colour.
   &__cal-day-add-ico {
-    font-size: 17px;
-    font-weight: 700;
-    line-height: 1;
-    color: currentColor;
+    @include drumee.typo($size: 22px, $line: 22px, $color: var(--normal-fg-20));
     user-select: none;
   }
 
+  // A plain label, as in the other two month grids. nowrap: the first cell of
+  // a month reads "Sep 1", and beside the 26px "+" a narrow cell broke it onto
+  // two lines and pushed the chips down a row.
+  // Top-left, two digits, in body ink — the Meet tab's month date.
   &__cal-day-num {
-    display: flex;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    box-sizing: border-box;
-    justify-content: flex-end;
-    align-items: center;
-    border-radius: 10px;
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 400,
-      $line: 20px,
-      $color: var(--normal-fg-30, #65656c)
-    );
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 400;
   }
 
-  // Today's number gets a filled brand pill (the universal "today" cue).
-  &__cal-day[data-today="1"] &__cal-day-num {
-    justify-content: center;
-    color: #fff;
-    font-weight: 600;
-    background: var(--col-primary-40, #5950ff);
-  }
-
+  // The cell's scroll container: every task renders, and a busy day is read
+  // by scrolling here or by following the "+N" into the Day view.
+  //
+  // Scrollbar set here, not left to .drumee-box's global 5px orange bar. It
+  // is transparent at rest, and inked when the skeleton stamps the cell as
+  // overflowing — otherwise a cell with more below the fold looks exactly
+  // like one that simply ends.
   &__cal-day-body {
     flex: 1 1 auto;
     min-height: 0;
-    gap: 6px;
+    gap: 4px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+
+    &:hover,
+    &[data-overflow="1"] {
+      scrollbar-color: var(--border-strong) transparent;
+    }
   }
 
   // Task card (mirrors the board card: dot, title, desc, file chips, status).
@@ -5214,14 +5837,21 @@ $theme-colors: (
     }
   }
 
-  // Compact month chip: status-tinted single line (dot + title).
+  // Compact month chip: status-tinted single line (dot + title). Its geometry
+  // is the Meet tab's month card — 19px, r=4, 12/15 bold title — as is the
+  // Personal Calendar's compact chip,
+  // so a task reads the same size in both month grids. The status tint is this
+  // board's own and stays: it is the only place a month cell says where a task
+  // stands, and the Personal Calendar has no columns to colour by.
   &__cal-chip {
     position: relative;
     flex: 0 0 auto;
     align-items: center;
     gap: 6px;
-    padding: 3px 8px;
-    border-radius: 6px;
+    min-height: 19px;
+    padding: 2px 6px;
+    box-sizing: border-box;
+    border-radius: 4px;
     cursor: pointer;
     transform-origin: left center;
     transition: filter 0.12s, transform 0.12s;
@@ -5270,9 +5900,9 @@ $theme-colors: (
   }
 
   &__cal-chip-dot {
-    flex: 0 0 6px;
-    width: 6px;
-    height: 6px;
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
   }
 
@@ -5280,28 +5910,27 @@ $theme-colors: (
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 500,
-      $line: 16px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
+    @include drumee.typo($size: 12px, $line: 15px, $color: var(--normal-fg));
+    font-weight: 600;
   }
 
+  // "+N" — pinned to the foot of the scrolling cell so the one way to the rest
+  // of a busy day can never scroll out of reach itself. The Personal
+  // Calendar's footer: 11px brand, painted on the cell's own ground so chips
+  // scroll UNDER it, never through it.
   &__cal-day-more {
+    flex: 0 0 auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin-top: -2px;
+    padding: 2px 0 0 4px;
     cursor: pointer;
-    padding: 1px 6px;
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 16px,
-      $color: var(--normal-fg-30, #65656c)
-    );
-
-    &:hover {
-      color: var(--col-primary-40, #5950ff);
-    }
+    background: var(--normal-bg-elevated, #fff);
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--primary-40));
+    font-weight: 600;
   }
+
 
   &__cal-card-dot {
     flex: 0 0 auto;
@@ -7989,15 +8618,12 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     padding: 8px;
     gap: 4px;
   }
-  .tasks-panel__cal-week-row {
-    min-height: 96px;
-  }
   // Week-mode full cards drop their description to stay legible when narrow.
   .tasks-panel__cal-card-desc {
     display: none;
   }
   .tasks-panel__cal-weekday {
-    padding-right: 8px;
+    padding: 8px;
     font-size: 12px;
   }
 }
@@ -8005,9 +8631,6 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
 @container cal (max-width: 560px) {
   .tasks-panel__cal-day {
     padding: 6px;
-  }
-  .tasks-panel__cal-week-row {
-    min-height: 76px;
   }
   // Week-mode cards collapse to the essentials on very narrow windows.
   .tasks-panel__cal-card {

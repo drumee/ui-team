@@ -75,6 +75,38 @@ const __media_tpl_grid = function (ui) {
 
   const filenameHtml = require('./filename')(m);
 
+  // A chat message's image / video, shown as itself (chat-item sets
+  // inlineMedia). Never for a composer chip (iconOnly) — that stays a name.
+  // `slide` is the large rendition the image player shows; a fresh upload may
+  // not have one yet, and media_grid _wireInlineMedia falls back to the
+  // original when it 404s. Video plays the original natively, and loads
+  // NOTHING until played (preload="none": "metadata" can pull most of a file
+  // whose index sits at its end, for every video in the conversation). A codec
+  // the browser cannot play falls back to the card (see _wireInlineMedia).
+  const inline =
+    m.inlineMedia && m.isAttachment && !m.iconOnly && !isFolder &&
+    (m.filetype === _a.image || m.filetype === _a.video);
+  if (inline) {
+    const slide = ui.actualNode(_a.slide).url;
+    const orig = ui.actualNode(_a.orig).url;
+    const media = m.filetype === _a.image
+      ? `<img class="media-grid__inline-img" src="${slide}" data-orig="${orig}" alt="" loading="lazy" draggable="false">`
+      : `<video class="media-grid__inline-video" src="${orig}" poster="${slide}" controls preload="none" playsinline></video>`;
+    const size = humanFileSize(m.filesize);
+    const sizeHtml = size ? `<span class="media-grid__filesize">${size}</span>` : '';
+    const sep = size ? `<span class="media-grid__meta-sep"> · </span>` : '';
+    html =
+      `<div class="media-grid__background media-grid__inline ${m.filetype}">${media}${require('../../template/command')(m)}</div>` +
+      `<div class="media-grid__meta-row">` +
+        `<div class="media-grid__meta-row-top">${filenameHtml}</div>` +
+        `<span class="media-grid__chatmeta">${sizeHtml}${sep}` +
+          `<a class="media-grid__reveal" data-service="show-in-folder">${LOCALE.SHOW_IN_FOLDER}</a>` +
+        `</span>` +
+      `</div>`;
+    if (!Visitor.inDmz) html = html + require('../../template/notify')(m);
+    return `<div class="full media-grid__content inline-media ${m.filetype}">${html}</div>`;
+  }
+
   if (isFolder) {
     // Folder/hub items keep flat layout (SVG folder shape + absolute-positioned filename).
     html = preview + filenameHtml;

@@ -1058,6 +1058,16 @@ class __player_image extends __core {
     this.el.dataset.ready = 1;
     this.el.style.pointerEvents = "";
 
+    // A later load is the prev/next slider swapping the picture inside the
+    // SAME window. The image letterboxes itself (`object-fit: contain`), so the
+    // window keeps whatever geometry it has — re-sizing it to every image is
+    // what made the viewer visibly shrink step by step through a folder
+    // (Lexis, 2026-09-23).
+    if (this._imageDisplayed) {
+      TweenMax.set(this.$el, { alpha: 1 });
+      return;
+    }
+
     // Reserve vertical space for the player chrome (topbar + bottom controls).
     const CHROME_H = 132;
     const max_w = window.innerWidth - 100;
@@ -1093,15 +1103,16 @@ class __player_image extends __core {
       height: Math.round(height),
     };
 
-    if (this._isPlaying) {
-      // Keep `alpha: 1` here too: `_play()` can flip `_isPlaying` before the
-      // first image finishes loading, and this branch used to leave the
-      // window permanently invisible in that race.
-      TweenMax.to(this.$el, 1.5, { width, height, alpha: 1 });
-    } else {
-      this.$el.css({ width, height, ...this._pos });
-      TweenMax.to(this.$el, 0.5, { alpha: 1 });
+    // Shown at once — no fade-in (Lexis, 2026-09-23).
+    this._imageDisplayed = 1;
+    TweenMax.set(this.$el, { alpha: 1 });
+    if (this._opensFullFrame()) {
+      snap.fillWorkspace(this, this._naturalBounds, this._snapOpt());
+      this._markFullFrame();
+      this._followViewport();
+      return;
     }
+    this.$el.css({ width, height, ...this._pos });
   }
 
   /**

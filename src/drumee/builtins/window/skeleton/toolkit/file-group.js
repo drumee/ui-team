@@ -30,11 +30,36 @@ const GROUP_LABEL = {
   [GROUP.sheet]: "SPREADSHEET",
   [GROUP.slide]: "PRESENTATION",
   [GROUP.pdf]: "GROUP_PDF",
-  [GROUP.media]: "GROUP_MEDIA",
+  [GROUP.media]: "MEDIA",
   [GROUP.markdown]: "GROUP_MARKDOWN",
   [GROUP.json]: "GROUP_JSON",
   [GROUP.html]: "GROUP_HTML",
   [GROUP.other]: "OTHER",
+};
+
+// The Media tab (type filter "image", which the server widens to pictures,
+// videos and sound) splits its grid into these sections, in this order. Keys
+// are prefixed so they can never be mistaken for a Group-view section.
+const MEDIA_FILTER = "image";
+const MEDIA_GROUP = {
+  image: "media-image",
+  video: "media-video",
+  audio: "media-audio",
+  other: "media-other",
+};
+
+const MEDIA_GROUP_ORDER = [
+  MEDIA_GROUP.image,
+  MEDIA_GROUP.video,
+  MEDIA_GROUP.audio,
+  MEDIA_GROUP.other,
+];
+
+const MEDIA_GROUP_LABEL = {
+  [MEDIA_GROUP.image]: "IMAGES",
+  [MEDIA_GROUP.video]: "VIDEOS",
+  [MEDIA_GROUP.audio]: "AUDIO",
+  [MEDIA_GROUP.other]: "OTHER",
 };
 
 const MEDIA_TYPES = new Set(["image", "video", "audio", "stream", "vector"]);
@@ -53,6 +78,11 @@ const GroupMode = new Map();
 function groupOf(node = {}) {
   const filetype = String(node.filetype || "").toLowerCase();
   const ext = String(node.ext || "").toLowerCase();
+  // Univer/Casual sheets persist as .json but ARE spreadsheets — group them
+  // with the office sheets, not under "JSON", using their dataType marker.
+  const dataType = node.dataType || (node.metadata && node.metadata.dataType);
+  if (dataType === "sheet.univer" || ext === "usheet") return GROUP.sheet;
+  if (dataType === "doc.casual" || ext === "udoc") return GROUP.doc;
 
   if (filetype === "folder" || filetype === "hub") return GROUP.folder;
   if (MEDIA_TYPES.has(filetype)) return GROUP.media;
@@ -71,11 +101,39 @@ function groupOf(node = {}) {
   return GROUP.other;
 }
 
-function bucketByGroup(items = [], resolveGroup = groupOf) {
-  const buckets = new Map(GROUP_ORDER.map((key) => [key, []]));
+/**
+ * Return the Media-tab section for an MFS node. Anything the server ever puts
+ * in that tab outside the three kinds lands in a trailing section of its own
+ * rather than being filed under a heading that misnames it.
+ */
+function mediaGroupOf(node = {}) {
+  const filetype = String(node.filetype || "").toLowerCase();
+  if (filetype === "image" || filetype === "vector") return MEDIA_GROUP.image;
+  if (filetype === "video" || filetype === "stream") return MEDIA_GROUP.video;
+  if (filetype === "audio") return MEDIA_GROUP.audio;
+  return MEDIA_GROUP.other;
+}
+
+// A set of titled sections the grid can be split into.
+const TYPE_SECTIONS = {
+  order: GROUP_ORDER,
+  label: GROUP_LABEL,
+  groupOf,
+  fallback: GROUP.other,
+};
+
+const MEDIA_SECTIONS = {
+  order: MEDIA_GROUP_ORDER,
+  label: MEDIA_GROUP_LABEL,
+  groupOf: mediaGroupOf,
+  fallback: MEDIA_GROUP.other,
+};
+
+function bucketByGroup(items = [], resolveGroup = groupOf, sections = TYPE_SECTIONS) {
+  const buckets = new Map(sections.order.map((key) => [key, []]));
   for (const item of items) {
     const key = resolveGroup(item);
-    const bucket = buckets.get(key) || buckets.get(GROUP.other);
+    const bucket = buckets.get(key) || buckets.get(sections.fallback);
     bucket.push(item);
   }
   return buckets;
@@ -83,6 +141,26 @@ function bucketByGroup(items = [], resolveGroup = groupOf) {
 
 function isGrouped(ui) {
   return !!(ui && GroupMode.get(ui.cid));
+}
+
+function isMediaFiltered(ui) {
+  return !!(ui && ui._filterType === MEDIA_FILTER);
+}
+
+// Which titled sections the icon views are split into right now, or null for
+// the plain workspace → folder → file stack. The Media tab wins over Group
+// view: grouping it by type would put every tile under one "Media" heading.
+// Only the icon views partition at all, so List is never affected.
+function sectionsFor(ui) {
+  if (isMediaFiltered(ui)) return MEDIA_SECTIONS;
+  if (isGrouped(ui)) return TYPE_SECTIONS;
+  return null;
+}
+
+// True while the grid is a classified presentation (Group view, or the Media
+// tab's Images / Videos / Audio split) rather than the hand-arranged order.
+function isSectioned(ui) {
+  return !!sectionsFor(ui);
 }
 
 function setGrouped(ui, enabled) {
@@ -112,7 +190,7 @@ function nextGroupViewState(ui, viewMode) {
 }
 
 function blocksGroupedArrange(target, captured, rearranging) {
-  return isGrouped(target) && !(captured && captured.over) && !!rearranging;
+  return isSectioned(target) && !(captured && captured.over) && !!rearranging;
 }
 
 module.exports = {
@@ -121,8 +199,11 @@ module.exports = {
   GROUP_LABEL,
   VIEW_STATES,
   groupOf,
+  mediaGroupOf,
   bucketByGroup,
   isGrouped,
+  sectionsFor,
+  isSectioned,
   setGrouped,
   clearGrouped,
   groupViewState,

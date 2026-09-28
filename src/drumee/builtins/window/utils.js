@@ -6,11 +6,8 @@ const Rectangle = require("rectangle-node");
 const { TimelineMax, Expo, TweenMax } = require("@drumee/ui-core/vendor");
 const EDITABLES = require('../player/document/editable');
 const {
-  GROUP_ORDER,
-  GROUP_LABEL,
-  groupOf,
   bucketByGroup,
-  isGrouped,
+  sectionsFor,
 } = require("./skeleton/toolkit/file-group");
 
 // Filetypes that open as a CONTAINER window rather than a file viewer — the
@@ -33,6 +30,35 @@ const SECTION_CLASSES = [
   "file-section",
   "group-section",
 ];
+// A MutationRecord that can affect partitioning (see _setupPartitionObserver):
+// any data-filetype attribute change, or a childList change whose target is
+// NOT inside a tile (i.e. the list, its container or a section wrapper).
+// "Inside a tile" is bounded to the list: an ANCESTOR of the list that happens
+// to carry data-filetype (a window root) must not make every record look like
+// a tile-internal one, or partitioning would silently stop.
+const isPartitionRecord = (r, listEl) => {
+  if (!r || r.type === "attributes") return true;
+  const t = r.target && (r.target.nodeType === 1 ? r.target : r.target.parentElement);
+  if (!t || !t.closest) return true;
+  const tile = t.closest("[data-filetype]");
+  if (!tile) return true;
+  if (!listEl || !listEl.contains(tile) || tile === listEl) return true;
+  return false;
+};
+
+// The container's settled layout. Written only when it differs: this runs on
+// every partition pass, and each redundant style write is a style
+// invalidation on the element that holds the whole grid.
+const setPartitionedStyle = (scrollEl) => {
+  const st = scrollEl.style;
+  if (st.display !== "flex") st.display = "flex";
+  if (st.flexDirection !== "column") st.flexDirection = "column";
+  if (st.alignItems !== "stretch") st.alignItems = "stretch";
+  if (st.justifyContent !== "flex-start") st.justifyContent = "flex-start";
+  if (st.visibility !== "visible") st.visibility = "visible";
+  if (scrollEl.dataset.partitioning !== "0") scrollEl.dataset.partitioning = 0;
+};
+
 const isSectionElement = (el) =>
   SECTION_CLASSES.some((className) => el.classList.contains(className));
 
@@ -500,7 +526,20 @@ class __window_mfs extends DrumeeMFS {
     if (this._partitionDebounce) {
       cancelAnimationFrame(this._partitionDebounce);
     }
-    this._partitionObserver = new MutationObserver(() => {
+    this._partitionObserver = new MutationObserver((records) => {
+      // Only mutations that can change WHICH SECTION a tile sits in matter:
+      // a tile added/removed/moved at the container or section level, or a
+      // tile's data-filetype flipping. The subtree option also reports every
+      // change INSIDE a tile — a thumbnail landing, a badge, a notify count,
+      // a rename — and each one used to schedule a full partition pass over
+      // every loaded tile. Those records are dropped here.
+      if (
+        records &&
+        records.length &&
+        !records.some((r) => isPartitionRecord(r, listPart.el))
+      ) {
+        return;
+      }
       const scrollEl = listPart.el.querySelector(".smart-container");
       if (scrollEl?.querySelector(":scope > .media-grid__ui")) {
         scrollEl.dataset.partitioning = 1;
@@ -613,7 +652,7 @@ class __window_mfs extends DrumeeMFS {
     );
   }
 
-  _doGroupPartition(listPart, scrollEl) {
+  _doGroupPartition(listPart, scrollEl, sections) {
     const collection = listPart.collection;
     const rankOf = new Map();
     const groupOfEl = new Map();
@@ -624,7 +663,9 @@ class __window_mfs extends DrumeeMFS {
         if (!view || !view.el || !view.model) return;
         const index = collection.indexOf(view.model);
         if (index >= 0) rankOf.set(view.el, index);
-        groupOfEl.set(view.el, groupOf(view.model.toJSON()));
+        // attributes, not toJSON(): groupOf only reads fields, and toJSON
+        // cloned every tile's model on every pass.
+        groupOfEl.set(view.el, sections.groupOf(view.model.attributes));
         if (view.el.dataset?.filetype && scrollEl.contains(view.el)) {
           items.add(view.el);
         }
@@ -652,7 +693,11 @@ class __window_mfs extends DrumeeMFS {
       const value = rankOf.get(el);
       return value == null ? Number.MAX_SAFE_INTEGER : value;
     };
-    const byGroup = bucketByGroup(items, (item) => groupOfEl.get(item));
+    const byGroup = bucketByGroup(
+      items,
+      (item) => groupOfEl.get(item),
+      sections,
+    );
 
     const existing = new Map();
     for (const child of [...scrollEl.children]) {
@@ -660,7 +705,14 @@ class __window_mfs extends DrumeeMFS {
       existing.set(child.dataset.group, child);
     }
 
-    for (const key of GROUP_ORDER) {
+    // MOVE ONLY WHAT IS OUT OF PLACE. This pass runs again on every relevant
+    // mutation (each upload, each page of a paged listing), and it used to
+    // re-append every tile and every section each time — O(loaded tiles) DOM
+    // moves per pass, each one detaching a tile and invalidating its layout.
+    // A section whose tiles are already in order is left untouched, and the
+    // sections themselves are only re-appended when their order is wrong.
+    const wanted = [];
+    for (const key of sections.order) {
       const groupedItems = byGroup.get(key).sort((a, b) => rank(a) - rank(b));
       let wrap = existing.get(key);
       if (!groupedItems.length) {
@@ -678,10 +730,23 @@ class __window_mfs extends DrumeeMFS {
         title.className = "group-section-title";
         wrap.prepend(title);
       }
-      title.textContent = LOCALE[GROUP_LABEL[key]];
-      groupedItems.forEach((item) => wrap.appendChild(item));
-      scrollEl.appendChild(wrap);
+      const label = LOCALE[sections.label[key]];
+      if (title.textContent !== label) title.textContent = label;
+      const current = [...wrap.children].filter((el) => el !== title);
+      const inOrder =
+        current.length === groupedItems.length &&
+        current.every((el, i) => el === groupedItems[i]);
+      if (!inOrder) groupedItems.forEach((item) => wrap.appendChild(item));
+      wanted.push(wrap);
     }
+    // Sections must sit, in order, at the END of the container (anything else
+    // left in it — legacy wrappers, stray nodes — is removed or precedes them).
+    const tail = [...scrollEl.children].slice(-wanted.length);
+    const placed =
+      wanted.length > 0 &&
+      tail.length === wanted.length &&
+      tail.every((el, i) => el === wanted[i]);
+    if (!placed) wanted.forEach((wrap) => scrollEl.appendChild(wrap));
 
     // Moving every media view above empties any legacy three-tier wrappers.
     // Remove them only after the move so a mode transition cannot discard a view.
@@ -690,13 +755,19 @@ class __window_mfs extends DrumeeMFS {
         child.remove();
       }
     }
+    // Same for a section left over from the OTHER set (Group view ↔ Media
+    // tab): its tiles have just moved out, and only a bare title would remain.
+    for (const child of [...scrollEl.children]) {
+      if (
+        child.classList.contains("group-section") &&
+        !sections.order.includes(child.dataset.group) &&
+        !child.querySelector(":scope > [data-filetype]")
+      ) {
+        child.remove();
+      }
+    }
 
-    scrollEl.style.display = "flex";
-    scrollEl.style.flexDirection = "column";
-    scrollEl.style.alignItems = "stretch";
-    scrollEl.style.justifyContent = "flex-start";
-    scrollEl.style.visibility = "visible";
-    scrollEl.dataset.partitioning = 0;
+    setPartitionedStyle(scrollEl);
     this._partitionListPart = null;
     listPart.el.style.visibility = "visible";
     return true;
@@ -706,8 +777,10 @@ class __window_mfs extends DrumeeMFS {
     const scrollEl = listPart.el.querySelector(".smart-container");
     if (!scrollEl) return false;
 
-    if (isGrouped(this)) {
-      return this._doGroupPartition(listPart, scrollEl);
+    // Group view, or the Media tab's Images / Videos / Audio split.
+    const sections = sectionsFor(this);
+    if (sections) {
+      return this._doGroupPartition(listPart, scrollEl, sections);
     }
 
     // A mode transition normally rebuilds the list. If an observer from the
@@ -796,12 +869,7 @@ class __window_mfs extends DrumeeMFS {
       wrap.insertBefore(item, before);
     });
 
-    scrollEl.style.display = "flex";
-    scrollEl.style.flexDirection = "column";
-    scrollEl.style.alignItems = "stretch";
-    scrollEl.style.justifyContent = "flex-start";
-    scrollEl.style.visibility = "visible";
-    scrollEl.dataset.partitioning = 0;
+    setPartitionedStyle(scrollEl);
 
     this._partitionListPart = null;
     listPart.el.style.visibility = "visible";
@@ -835,12 +903,21 @@ class __window_mfs extends DrumeeMFS {
   acknowledge(msg = LOCALE.ACK_COPY_LINK) {
     var c = require("@drumee/ui-core/letc/preset/ack")(this, msg);
     c.className = `${c.className} ${this.fig.group}-topbar__copy-link-ack`;
-    this.append(c);
-    const l = this.children.last();
+    const host = this._acknowledgeHost();
+    host.append(c);
+    const l = host.children.last();
     var f = () => {
       return l.suppress();
     };
     return setTimeout(f, Visitor.timeout());
+  }
+
+  /**
+   * Where `acknowledge` mounts its toast. The window itself by default; a
+   * window whose own children must not be re-rendered overrides it.
+   */
+  _acknowledgeHost() {
+    return this;
   }
 
   /**

@@ -305,6 +305,9 @@ module.exports = function (ui) {
       uiHandler: [ui],
       taskId: t.id,
       attrOpt: {
+        // The panel finds a task's row by this (delete exit, index.js
+        // _markTaskEls).
+        "data-tid": t.id,
         "data-done": ui.isDoneStatus(t.status) ? "1" : "0",
         // The skin indents and de-emphasises child rows off this flag.
         "data-sub": sub ? "1" : "0",

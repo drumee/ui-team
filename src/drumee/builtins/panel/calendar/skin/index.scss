@@ -45,15 +45,24 @@
 
 .calendar-main {
   // Chip / cell geometry in one place, so the three grids stay in step.
-  --cal-gap: 4px;
+  // 2px between chips: the Meet tab's month cards (window/folder/skin/
+  // meeting-schedule.scss → __meeting-sched-mcard, margin-top: 2px).
+  --cal-gap: 2px;
   --cal-radius: 8px;
-  // 43:31159 gives a month row ~150px. It does NOT "grow with its fullest cell":
-  // an explicit min-height replaces the row's content-based `min-height: auto`,
-  // so this is the row height, full stop, and the cell has to work within it.
-  // 160px is what leaves room for three compact chips (26px + 4px gaps) plus the
-  // pinned "+N" footer — see skeleton/month.js MONTH_FIT.
-  --cal-cell-min: 160px;
-  --cal-hour-height: 56px;
+  // A month row's FLOOR (rows share the grid's height above it, as the Meet
+  // tab's do). skeleton/month.js MONTH_FIT = 3 is measured against it:
+  // 8 + 8 cell padding, a 20px date line, a 2px gap, then three 19px chips on
+  // 2px gaps (61px) and the pinned "+N" (18px, less the 2px it overlaps) —
+  // 117px, so 118. The Meet tab floors its rows at 90px but has no "+N" to
+  // keep honest. Change one of these and the other goes stale silently.
+  --cal-cell-min: 118px;
+  // Hour-canvas geometry, matched to the workspace Meet tab's schedule grid
+  // (window/folder/skin/meeting-schedule.scss: 72px rows, an 85px hour gutter)
+  // so the day and week views read as the same calendar in both places. The
+  // row height is also what skeleton/hours.js's 24 rows are measured against
+  // when the widget scrolls the grid onto the first item.
+  --cal-hour-height: 72px;
+  --cal-hour-gutter: 85px;
 
   &__ui {
     width: 100%;
@@ -109,76 +118,63 @@
   // 999px capsule, which is why this corner read as a different design
   // language from the range label sitting right beside it: everything else in
   // this toolbar is a transparent r=8 control that fills only on hover.
+  // ── [ ‹ range › ] — the workspace Meet tab's nav pill ─────────────────────
+  // window/folder/skin/meeting-schedule.scss → __meeting-sched-nav / -nav-btn /
+  // -label, in this file's tokens. It replaced ‹ Today › and a separate range
+  // label, so the two calendars no longer answer "where am I" with two
+  // different controls.
+  //
+  // Weights: the Meet skin declares its label 600 through drumee.typo($weight),
+  // which emits nothing for 600 (typo-mixin-no-font-weight) — so what a user
+  // actually sees there is the regular face. Matched to what renders, with an
+  // explicit 400, so the two stay identical even if that mixin is fixed later
+  // (fix both together then).
   &__nav {
     align-items: center;
     gap: 4px;
+    padding: 4px 6px;
+    border-radius: 71px;
+    background: var(--overlay-bg-05);
   }
 
   &__nav-arrow {
-    // 19x19 in the frame; 20 keeps it on the even grid the rest of the bar
-    // uses and matches the label's line box, so the three sit on one axis.
-    width: 20px;
-    height: 20px;
+    width: 26px;
+    height: 26px;
     flex: 0 0 auto;
+    padding: 6px;
+    box-sizing: border-box;
     align-items: center;
     justify-content: center;
+    border-radius: 50%;
     cursor: pointer;
-    color: var(--normal-fg-20);
+    color: var(--normal-fg);
+    transition: background 0.12s ease;
 
-    // Sizing the BUTTON is only half of it — the <svg> inside carries the
-    // glyph and needs its own box, exactly like the workspace tick did.
-    //
-    // This also has to be a CARET, not `arrow-left`: that symbol's viewBox is
-    // 40x22, so `xMidYMid meet` fitted it to the full 20px width at 11px tall
-    // and drew a long horizontal arrow that dwarfed the 16px label beside it.
-    // caret-left/right are 256x256 — square, so they scale honestly.
+    // The wrapper's size is half of it; the sprite <svg> needs its own box.
+    // caret-left/right, never arrow-left (a 40x22 viewBox that draws a long
+    // horizontal arrow).
     svg {
       width: 14px;
       height: 14px;
     }
-    // Same hover affordance as __range — r=8 and the same wash, rather than a
-    // circle. The arrows carry no tooltip now (ui-core's `tooltips` paints an
-    // unstyled div here; the class is only styled in the editor skins), so
-    // this wash is the whole hover feedback and has to read clearly.
-    border-radius: 8px;
-    transition: background 0.12s ease, color 0.12s ease;
-
-    &:hover {
-      background: var(--overlay-bg-05);
-      color: var(--normal-fg);
-    }
-  }
-
-  &__nav-today {
-    // Byte-identical to __range-label: the frame gives BOTH 16px/w600, and
-    // they sit on the same row — a 20px line here against 22px there put them
-    // on different baselines.
-    @include drumee.typo($size: 16px, $line: 20px, $color: var(--normal-fg));
-    font-weight: 600;
-    cursor: pointer;
-    padding: 2px 8px;
-    border-radius: 8px;
-    white-space: nowrap;
-    transition: background 0.12s ease;
 
     &:hover {
       background: var(--overlay-bg-05);
     }
   }
 
-  // The range label owns a dropdown, so it needs its own positioning context.
+  // The popup is a sibling of the pill inside this box, so it anchors under
+  // the whole pill rather than moving with the label's text.
   &__range-picker {
     position: relative;
   }
 
-  // Caretless by design (Lexis, 2026-09-08): the label itself opens the month
-  // picker, so the only open-state cue is the wash below. `gap` is kept because
-  // __range is still a Box.X — it just has a single kid today.
+  // Caretless by design (Lexis, 2026-09-08): the label itself opens the mini
+  // calendar, so the only open-state cue is the wash below.
   &__range {
     align-items: center;
-    gap: 6px;
-    padding: 4px 6px;
-    border-radius: 8px;
+    padding: 3px 8px;
+    border-radius: 6px;
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
@@ -190,52 +186,108 @@
   }
 
   &__range-label {
-    // Identical ramp to __nav-today — see the note there.
-    @include drumee.typo($size: 16px, $line: 20px, $color: var(--normal-fg));
-    font-weight: 600;
+    @include drumee.typo($size: 15px, $line: 20px, $color: var(--normal-fg));
+    font-weight: 400;
     white-space: nowrap;
   }
 
-  &__range-menu {
-    width: 232px;
-    gap: 8px;
+  // ── the range label's mini calendar ───────────────────────────────────────
+  // The Meet tab's schedule picker, metric for metric
+  // (window/folder/skin/meeting-schedule.scss → &__meeting-sched-picker*), in
+  // this file's tokens. It replaced a 232px year-stepper + 12-month grid, which
+  // is why these classes changed name as well as shape.
+  // Doubled up on purpose: the popup carries BOTH classes, and the shared
+  // `&__menu` block is further down this file, so at equal specificity it wins
+  // on source order — which is why the old range menu's own `gap` never
+  // applied. Two classes take the padding and gap back.
+  &__menu#{&}__range-menu {
+    width: 264px;
+    padding: 12px;
+    gap: 0;
   }
 
-  &__range-year {
+  &__range-head {
     align-items: center;
     justify-content: space-between;
+    margin-bottom: 8px;
   }
 
-  &__range-year-label {
+  &__range-month-label {
     @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
-    font-weight: 600;
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
   }
 
-  // Four across, three down — the shape a month picker is read in. A wrapped
-  // Box.X rather than a grid: the framework owns `display` on Box-rendered
-  // elements, so setting `display: grid` here would fight it.
-  &__range-months {
-    flex-wrap: wrap;
-    gap: 4px;
+  // Same box as __nav-arrow, and for the same reason: the wrapper's size is
+  // only half of it, the sprite <svg> inside carries the glyph and needs its
+  // own — see the note there.
+  &__range-nav {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--normal-fg);
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
   }
 
-  &__range-month {
-    flex: 0 0 calc(25% - 3px);
-    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
-    padding: 7px 0;
+  // Seven across, never wrapping — a wrapped row would push a day onto its own
+  // line and break the column the weekday above it names.
+  &__range-dows,
+  &__range-week {
+    flex-wrap: nowrap !important;
+  }
+
+  &__range-dow {
+    flex: 1 1 0;
+    justify-content: center;
+    text-align: center;
+    padding: 2px 0;
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--normal-fg-50));
+    font-weight: 400;
+  }
+
+  &__range-day {
+    flex: 1 1 0;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     border-radius: 6px;
     cursor: pointer;
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    font-variant-numeric: tabular-nums;
 
     &:hover {
-      background: var(--radio-on-bg);
+      background: var(--overlay-bg-05);
     }
 
-    &[data-active="1"] {
-      background: var(--primary-40);
-      color: var(--gray-white);
+    // A day from the neighbouring month — shown so the weeks stay whole, but
+    // quiet, and still pickable. One step lighter than the weekday row above
+    // it, which is the Meet tab's own pairing (#84848c over #c7c7cc).
+    &[data-in="0"] {
+      color: var(--border-strong);
+    }
+
+    // The range on screen: the whole week band in week view, the day otherwise.
+    &[data-sel="1"] {
+      background: var(--radio-on-bg);
+      color: var(--primary-40);
       font-weight: 600;
+    }
+
+    &[data-today="1"] {
+      font-weight: 700;
     }
   }
 
@@ -288,12 +340,17 @@
     font-weight: 400;
   }
 
+  // The page's primary action, drawn as the Meet tab's "Schedule" button
+  // (__meeting-sched-schedule-btn): brand at rest, the darker brand on hover,
+  // r=8. It had those two colours the other way round and the view button's
+  // r=12, so the two tabs' main buttons read as different controls.
   &__new-button {
-    background: var(--primary-50);
+    border-radius: 8px;
+    background: var(--primary-40);
     color: var(--gray-white);
 
     &:hover {
-      background: var(--primary-40);
+      background: var(--primary-50);
     }
   }
 
@@ -316,16 +373,19 @@
     gap: 4px;
     z-index: 40;
     background: var(--normal-bg-elevated);
-    border: 1px solid var(--border-muted);
+    // The Meet tab's dropdown shell: a lifted shadow and an 8% hairline.
+    border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 8px;
-    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 
-    &[data-anchor="view"],
+    // The mini calendar hangs from the left-hand pill; the view and New menus
+    // sit in the right-hand group and open right-aligned, as the Meet tab's
+    // view menu does.
     &[data-anchor="range"] {
       left: 0;
     }
 
-    // Anchored right: the New button sits at the far edge of the toolbar.
+    &[data-anchor="view"],
     &[data-anchor="new"] {
       right: 0;
     }
@@ -341,12 +401,14 @@
     cursor: pointer;
     white-space: nowrap;
 
+    // Neutral wash on hover, the 8% brand wash only on the active row — the
+    // Meet tab's menu. A brand hover made every row look selected.
     &:hover {
-      background: var(--radio-on-bg);
+      background: var(--overlay-bg-05);
     }
 
     &[data-active="1"] {
-      background: var(--radio-on-bg);
+      background: var(--hover-bg-40);
       font-weight: 600;
       color: var(--primary-40);
     }
@@ -462,13 +524,25 @@
     border-bottom: 1px solid var(--overlay-bg-05);
   }
 
+  // The Meet tab's month header (__meeting-sched-day in -days--month): full
+  // day names, left-aligned, 12px padding, each cell ruled like the grid.
+  // A Note is a flex row, so the ellipsis goes on .note-content — set on the
+  // wrapper it never reaches the text (note-widget-is-a-flex-row).
   &__weekday {
     flex: 1 1 0;
     min-width: 0;
-    padding: 6px 12px;
-    text-align: center;
-    @include drumee.typo($size: 14px, $line: 17px, $color: var(--normal-fg-20));
+    padding: 12px;
+    overflow: hidden;
+    border-right: 1px solid var(--overlay-bg-05);
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
     font-weight: 400;
+
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
   }
 
   &__month {
@@ -482,34 +556,34 @@
     align-items: stretch;
   }
 
+  // The Meet tab's month cell (__meeting-sched-mcell): 8px 10px padding, 2px
+  // between the date and the cards, the same 5% hairline, a white ground.
+  //
+  // Today is the DATE in brand ink, not a wash over the cell — the Meet tab's
+  // cue, and the one this calendar's week/day header already uses. Days from
+  // the neighbouring months dim their date only, as the Meet tab's do; the
+  // "Jun 1" abbreviation that used to carry the month boundary is gone with it.
   &__day {
     flex: 1 1 0;
     min-width: 0;
-    // 43:31159: 12px cell padding, 10px between the head and the chip stack,
-    // and a 5%-black hairline rather than the heavier --border-default.
-    padding: 12px;
-    gap: 10px;
+    padding: 8px 10px;
+    gap: var(--cal-gap);
     border-right: 1px solid var(--overlay-bg-05);
     border-bottom: 1px solid var(--overlay-bg-05);
     overflow: hidden;
+    // The whole square adds a task (skeleton/month.js dayCell). The pointer
+    // and the "+" revealed on hover are the cue. There is deliberately no hover
+    // wash: the chips sit INSIDE the cell, so hovering one would light the
+    // square too and promise "click adds" over an item that opens instead.
+    // Chips set their own cursor, so they keep theirs.
+    cursor: pointer;
 
-    // 43:31159 does NOT dim the lead/trail days — every cell is the same white
-    // ground with the same --normal-fg-20 label, and the month boundary is
-    // carried entirely by the "Jun 1" / "Jul 1" abbreviation the 1st renders
-    // (see month.js numText). data-outside is still emitted, so restoring a
-    // dimmed treatment is a style-only change if the frame turns out to be
-    // wrong about this.
+    &[data-today="1"] .calendar-main__day-num {
+      color: var(--primary-40);
+    }
 
-    // Today's column tinted brand, per the frames.
-    &[data-today="1"] {
-      background: var(--radio-on-bg);
-
-      // The pinned footer paints its own ground so chips scroll under it
-      // rather than through it — on today's cell that ground is the tint,
-      // otherwise it would read as a white band across the wash.
-      .calendar-main__day-more {
-        background: var(--radio-on-bg);
-      }
+    &[data-outside="1"] .calendar-main__day-num {
+      color: var(--border-strong);
     }
 
     &:hover .calendar-main__day-add {
@@ -523,17 +597,24 @@
     justify-content: space-between;
   }
 
-  // Right-aligned, 14px/400 in --normal-fg-20 — the date is a label on the
-  // cell, not a heading for it.
+  // Top-left, two digits, in body ink — the Meet tab's __meeting-sched-mnum.
+  // (Its skin asks for 600 through drumee.typo, which emits no weight, so it
+  // renders regular; this matches what renders — see the note on __nav.)
   &__day-num {
-    @include drumee.typo($size: 14px, $line: 17px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
     font-weight: 400;
-    margin-left: auto;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
 
   &__day-add {
-    width: 18px;
-    height: 18px;
+    // Never shrinks: it is a hit target, and a squeezed cell must take the
+    // room out of the date label beside it, not out of the button. The
+    // negative margin keeps its 26px box from growing the 20px date line.
+    flex: 0 0 auto;
+    margin: -3px -4px -3px 0;
+    width: 26px;
+    height: 26px;
     align-items: center;
     justify-content: center;
     border-radius: 4px;
@@ -546,8 +627,11 @@
     }
   }
 
+  // Sized up from 18px/15px: this is a hover-revealed control on a cell the
+  // user is already pointing at, and at 18px square it was a smaller target
+  // than the day number beside it.
   &__day-add-ico {
-    @include drumee.typo($size: 15px, $line: 15px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 22px, $line: 22px, $color: var(--normal-fg-20));
   }
 
   // The cell's scroll container. Every item for the day renders — a busy day is
@@ -564,6 +648,16 @@
     min-height: 0;
     gap: var(--cal-gap);
     @include quiet-scroll;
+
+    // A cell that actually runs past the fold keeps its thumb inked at rest.
+    // The transparent default is right for the 40-odd cells that fit their
+    // day — 42 resting bars would stripe the grid — but it is wrong for the
+    // one or two that do not, which is exactly where the user needs to be
+    // told the region moves. The "+N" says there is more; the bar says how
+    // to reach it without leaving the month.
+    &[data-overflow="1"] {
+      scrollbar-color: var(--primary-40) transparent;
+    }
   }
 
   // Pinned to the bottom of the scroller, so the one affordance that leads to
@@ -642,21 +736,37 @@
       padding: 12px;
 
       // 12px of padding belongs to the week/day hour block, which is a
-      // full-height card with a description and a status pill. On the one-line
-      // compact chip it made a 42px slab — three of them overflowed the cell on
-      // their own, which is how a task-heavy month cell ended up showing a
-      // single item. Matched to the meeting chip's 4px so the two kinds share
-      // one rhythm down the cell (43:31159 draws them the same height).
+      // full-height card with a description and a status pill. The one-line
+      // chip (month cell, all-day strip) is the Meet tab's month card in size
+      // — 19px with its hairline, r=4 — kept a white card rather than a brand
+      // wash, so a task still reads differently from a meeting.
       &[data-compact="1"] {
-        padding: 4px 12px;
+        gap: 6px;
+        padding: 1px 6px;
+        border-radius: 4px;
       }
     }
 
+    // The Meet tab's meeting card: an 8% brand wash with a 3px brand bar and
+    // r=4 on the free corners. The one-line chip is its month card
+    // (__meeting-sched-mcard, 2px 6px); the hour block its schedule card
+    // (4px 8px, see __hour-blocks below).
     &[data-kind="meeting"] {
-      background: var(--radio-on-bg);
-      border-left: 4px solid var(--primary-40);
-      border-radius: 0 8px 8px 0;
-      padding: 4px 12px;
+      background: var(--hover-bg-40);
+      border-left: 3px solid var(--primary-40);
+      border-radius: 0 4px 4px 0;
+      padding: 4px 8px;
+
+      &[data-compact="1"] {
+        gap: 4px;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      // The Meet tab darkens its cards to a 16% wash on hover.
+      &:hover {
+        background: rgba(89, 80, 255, 0.16);
+      }
     }
 
     &[data-occurrence="1"] {
@@ -678,17 +788,19 @@
 
   // The time sits in body ink at regular weight — the bold belongs to the
   // title beside it, so the eye lands on what the item IS before when it is.
+  // "09:00 Title" in one 12/15 bold run, as the Meet tab's month card writes
+  // it — it used to be a lighter 17px-line time beside a 16px-line title.
   &__chip-time {
     flex: 0 0 auto;
-    @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg));
-    font-weight: 400;
+    @include drumee.typo($size: 12px, $line: 15px, $color: var(--normal-fg));
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
 
   &__chip-title {
     flex: 0 1 auto;
     min-width: 0;
-    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg));
+    @include drumee.typo($size: 12px, $line: 15px, $color: var(--normal-fg));
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -783,36 +895,46 @@
   }
 
   &__hours-head-spacer {
-    flex: 0 0 64px;
+    flex: 0 0 var(--cal-hour-gutter);
     border-right: 1px solid var(--border-default);
   }
 
   &__hours-head-cell {
     flex: 1 1 0;
     min-width: 0;
-    padding: 8px;
-    gap: 6px;
+    padding: 12px;
+    gap: 2px;
     border-right: 1px solid var(--border-default);
 
-    &[data-today="1"] {
-      background: var(--radio-on-bg);
+    // Today is the DATE in brand ink, not a wash over the column — the Meet
+    // tab's rule. The wash was invisible as a marker on the day view (there is
+    // only ever one column, so the whole grid went lavender) and it tinted
+    // every chip sitting on it.
+    &[data-today="1"] .calendar-main__hours-head-num {
+      color: var(--primary-40);
     }
   }
 
+  // Stacked num-over-name, the Meet tab's schedule header. It was a baseline
+  // ROW here, which is the one shape that made the same day read differently
+  // in the two calendars. Still the day's "add" target, unlike the Meet tab's —
+  // hence the pointer.
   &__hours-head-date {
-    align-items: baseline;
-    gap: 6px;
+    align-items: flex-start;
+    gap: 2px;
     cursor: pointer;
   }
 
+  // 18/24 in body ink, brand when today — the Meet tab's __meeting-sched-day-
+  // num, at the weight it actually renders (regular; see the note on __nav).
   &__hours-head-num {
-    @include drumee.typo($size: 18px, $line: 22px, $color: var(--normal-fg));
-    font-weight: 600;
+    @include drumee.typo($size: 18px, $line: 24px, $color: var(--normal-fg));
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
   }
 
   &__hours-head-name {
-    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
   }
 
   // All-day strip. Tasks live here rather than at an invented hour: due_date
@@ -843,16 +965,22 @@
   }
 
   &__hours-gutter {
-    flex: 0 0 64px;
+    flex: 0 0 var(--cal-hour-gutter);
     border-right: 1px solid var(--border-default);
   }
 
+  // Centred and pinned to the top of its row, on its own hour line — the Meet
+  // tab's hour column. It used to sit bottom-right in 11px grey with no rule
+  // beside it, which read as a caption under the hour above rather than a
+  // label for the hour beside it.
   &__hour-label {
     flex: 0 0 var(--cal-hour-height);
     height: var(--cal-hour-height);
-    padding: 2px 8px;
-    align-items: flex-end;
-    @include drumee.typo($size: 11px, $line: 14px, $color: var(--normal-fg-50));
+    padding-top: 12px;
+    align-items: center;
+    justify-content: flex-start;
+    border-bottom: 1px solid var(--border-muted);
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
     font-variant-numeric: tabular-nums;
   }
 
@@ -861,28 +989,43 @@
     min-width: 0;
     position: relative;
     border-right: 1px solid var(--border-default);
-
-    &[data-today="1"] {
-      background: var(--radio-on-bg);
-    }
   }
 
   &__hour-rules {
     flex: 1 1 auto;
   }
 
+  // Also the click target: a square opens the create-task popup due that day
+  // (index.js "cal-slot-add"). The tint on hover is what says so — the row
+  // carries no glyph, exactly like the Meet tab's cells.
+  //
+  // A chip sitting over this row is NOT a descendant of it (the blocks are
+  // their own absolutely-positioned layer), so hovering a meeting does not
+  // light up the band underneath and offer to book over it.
   &__hour-rule {
     flex: 0 0 var(--cal-hour-height);
     height: var(--cal-hour-height);
+    position: relative;
     border-bottom: 1px solid var(--border-muted);
+    cursor: pointer;
 
-    // Dashed half-hour line, per the frames.
-    background-image: linear-gradient(
-      to bottom,
-      transparent calc(50% - 1px),
-      var(--border-muted) calc(50%),
-      transparent calc(50% + 1px)
-    );
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+
+    // Dashed half-hour divider — the Meet tab draws the same line the same way
+    // (a real dashed border, not the faint gradient this row used to paint).
+    // An ::after, and explicitly pointer-events:none, so the line cannot take
+    // the click that belongs to the hour band it sits inside.
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 50%;
+      border-top: 1px dashed var(--border-strong);
+      pointer-events: none;
+    }
   }
 
   // Timed blocks sit over the rules. Geometry (top/height/left/width) is inline
@@ -893,13 +1036,70 @@
     pointer-events: none;
   }
 
+  // The timed block, built to read like the Meet tab's schedule card: a bold
+  // title on its own line, the agenda under it, the time and provenance in a
+  // meta row at the foot — and hover to see the rest of whatever a short slot
+  // had to cut. `height` / `min-height` / `left` / `width` are inline because
+  // they are data (skeleton/hours.js).
   &__hour-blocks > .calendar-main__chip {
     position: absolute;
     pointer-events: auto;
-    align-items: flex-start;
+    align-items: stretch;
     box-sizing: border-box;
     // Hairline gutter so adjacent concurrent blocks read as separate.
     margin-right: 2px;
+    gap: 2px;
+    padding: 4px 8px;
+    overflow: hidden;
+
+    &:hover {
+      // Above its neighbours while expanded. The skeleton sets `height`
+      // inline, so releasing it needs !important; `min-height` (also inline)
+      // is what stops a long block shrinking to its text.
+      z-index: 6;
+      height: auto !important;
+      overflow: visible;
+      box-shadow: 0 6px 16px rgba(11, 10, 33, 0.18);
+    }
+
+    // One line at slot size — the title is what the block is FOR, so it never
+    // shrinks and the agenda below it clips instead. Hover releases it.
+    .calendar-main__chip-title {
+      flex: 0 0 auto;
+      // Clear of the hover remove button.
+      padding-right: 18px;
+      // The Meet tab's schedule-card title: 14/18, bold.
+      @include drumee.typo($size: 14px, $line: 18px, $color: var(--normal-fg));
+      font-weight: 700;
+    }
+
+    &:hover .calendar-main__chip-title {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .calendar-main__chip-desc {
+      flex: 0 1 auto;
+      min-height: 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+    }
+
+    &:hover .calendar-main__chip-desc {
+      -webkit-line-clamp: unset;
+      display: block;
+    }
+  }
+
+  // Time + provenance, at the foot of an hour block.
+  &__chip-meta {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
     overflow: hidden;
   }
 
