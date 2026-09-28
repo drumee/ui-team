@@ -16,6 +16,7 @@ const {
 } = require("libs/billing");
 const readCache = require("libs/read-cache");
 const ChatDetails = require("./chat-details/controller");
+const { meetingTileState } = require("./skeleton/chat-details");
 const { extractUrl } = require("./chat-details/model");
 const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
@@ -2428,9 +2429,10 @@ class __window_folder extends mfsInteract {
         return ChatDetails.toggleMute(this);
 
       case "chat-details-meeting":
-        // The Meet tab (its calendar) — never starts a call; showFolderTab
-        // cannot start one. The tab switch also closes the details panel.
-        return this.showFolderTab("meeting");
+        // Same as the Meet schedule's start button (service "start-meeting"):
+        // start this room's call, or join the live one. Locked once joined.
+        if (meetingTileState(this).joined) return;
+        return this._launchMeetingInPanel();
 
       case "chat-details-download":
         return this._openChatExportModal();
@@ -4289,6 +4291,31 @@ class __window_folder extends mfsInteract {
       (this.el &&
         this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`));
     if (el) el.dataset.loading = on ? "1" : "0";
+    // The Chat details "Meeting" tile launches the same call: spin it too.
+    const tile = this._chatDetailsMeetingTile();
+    if (tile) tile.dataset.loading = on ? "1" : "0";
+  }
+
+  // Chat details "Meeting" tile, when the panel is showing its overview.
+  _chatDetailsMeetingTile() {
+    return (
+      (this.el &&
+        this.el.querySelector(`.${this.fig.group}__chat-details-action--meeting`)) ||
+      null
+    );
+  }
+
+  // Refresh the Chat details "Meeting" tile in place (label + locked state),
+  // from the same flags the schedule's start button reads.
+  _applyMeetingTileState() {
+    const tile = this._chatDetailsMeetingTile();
+    if (!tile) return;
+    const st = meetingTileState(this);
+    tile.dataset.joined = st.joined ? "1" : "0";
+    const label =
+      tile.querySelector(`.${this.fig.group}__chat-details-action-label .note-content`) ||
+      tile.querySelector(`.${this.fig.group}__chat-details-action-label`);
+    if (label) label.textContent = st.label;
   }
 
   // Is a standalone meeting window currently live? Meetings are a global Wm
@@ -4315,6 +4342,9 @@ class __window_folder extends mfsInteract {
   // same flags so an initial render is already correct. Only the "Joined" state
   // locks + paints the button ([data-joined="1"]); "Join Meeting" is clickable.
   _applyStartBtnState() {
+    // Before the early return: the tile is on screen even when the Meet tab
+    // (and so the schedule's button) was never opened.
+    this._applyMeetingTileState();
     const el =
       this.el &&
       this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`);

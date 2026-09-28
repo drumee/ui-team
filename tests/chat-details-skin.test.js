@@ -175,3 +175,18 @@ test("a loading tile / file row / link row shows a spinning indicator and takes 
     assert.match(css, new RegExp(`\\.window__chat-details-${i}\\[data-loading="1"\\][^{]*\\{[^}]*pointer-events: none`), i);
   }
 });
+
+// The "Meeting" tile follows the Meet start button's two states
+// (meeting-schedule.scss &__meeting-sched-start-btn).
+test("meeting tile: spinner in place of the icon while launching, brand + locked once joined", () => {
+  const loading = '.window-folder .window__chat-details-action--meeting[data-loading="1"]';
+  assert.match(rule(loading), /pointer-events: none/);
+  assert.match(rule(`${loading} .window__chat-details-action-ico`), /display: none/);
+  const spin = rule(`${loading}::before`);
+  assert.match(spin, /animation: chat-details-spin 0\.7s linear infinite/);
+  assert.match(spin, /width: 16px; height: 16px/);
+  const joined = rule('.window-folder .window__chat-details-action--meeting[data-joined="1"]');
+  assert.match(joined, /pointer-events: none/);
+  assert.match(joined, /background: var\(--primary-40, #5950ff\)/);
+  assert.match(rule('.window-folder .window__chat-details-action--meeting[data-joined="1"] *'), /color: #fff; fill: #fff/);
+});

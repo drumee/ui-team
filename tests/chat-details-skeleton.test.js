@@ -184,3 +184,34 @@ test("thread rows live in a scrollable list under the File Threads label", () =>
   assert.ok(list, "missing thread-list");
   assert.deepEqual(list.kids.map((k) => k.file_nid), ["f1", "f2"]);
 });
+
+// "Meeting" tile = the Meet schedule's start button (window-folder__meeting-
+// sched-start-btn): same launch, same three states, same permission rule —
+// starting is an edit-tier action, joining a live one is not.
+const meetUi = (flags = {}) => ({
+  fig: { group: "window", family: "window-folder" },
+  mget: (k) => ({ hub_id: "h1" })[k],
+  canUpload: () => flags.canUpload !== false,
+  _meetingJoined: flags.joined ? 1 : 0,
+  _meetingActive: flags.active ? 1 : 0,
+  _meetingWindowLive: () => !!flags.live,
+});
+const meetingTile = (u) => walk(S.chatDetailsOverview(u, data)).find((n) => n.service === "chat-details-meeting");
+
+test("meeting tile: idle → Meeting, live in room → Join meeting, in it → Joined (locked)", () => {
+  assert.deepEqual(S.meetingTileState(meetUi()), { label: en.MEETING, joined: false, hidden: false });
+  assert.deepEqual(S.meetingTileState(meetUi({ active: true })), { label: en.JOIN_MEETING, joined: false, hidden: false });
+  assert.deepEqual(S.meetingTileState(meetUi({ joined: true })), { label: en.JOINED, joined: true, hidden: false });
+  assert.deepEqual(S.meetingTileState(meetUi({ live: true })), { label: en.JOINED, joined: true, hidden: false });
+  const t = meetingTile(meetUi({ joined: true }));
+  assert.match(t.className, /window__chat-details-action--meeting/);
+  assert.equal(t.dataset.joined, 1);
+  assert.ok(walk(t).some((n) => n.content === en.JOINED));
+});
+
+test("meeting tile: a viewer who cannot start gets no tile, unless there is one to join", () => {
+  assert.equal(S.meetingTileState(meetUi({ canUpload: false })).hidden, true);
+  assert.equal(meetingTile(meetUi({ canUpload: false })), undefined);
+  assert.equal(S.meetingTileState(meetUi({ canUpload: false, active: true })).hidden, false);
+  assert.ok(meetingTile(meetUi({ canUpload: false, active: true })));
+});

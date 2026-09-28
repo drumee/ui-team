@@ -38,17 +38,51 @@ function header(ui, title, { back = false } = {}) {
   });
 }
 
-function actionTile(ui, service, ico, label) {
+function actionTile(ui, service, ico, label, { modifier, dataset } = {}) {
   const pfx = `${ui.fig.group}__chat-details`;
   return Skeletons.Box.Y({
-    className: `${pfx}-action`,
+    className: modifier ? `${pfx}-action ${pfx}-action--${modifier}` : `${pfx}-action`,
     service,
+    dataset,
     uiHandler: [ui],
     kidsOpt: { active: 0 },
     kids: [
       Skeletons.Image.Svg({ className: `${pfx}-action-ico`, ico }),
       Skeletons.Note({ className: `${pfx}-action-label`, content: label }),
     ],
+  });
+}
+
+/**
+ * The "Meeting" tile mirrors the Meet schedule's start button
+ * (window-folder__meeting-sched-start-btn, skeleton/meeting-schedule.js):
+ *   joined → "Joined", locked (the user is in this room's call)
+ *   active → "Join meeting" (a call is live here, the viewer is not in it)
+ *   idle   → "Meeting" (Figma's label; starts the call)
+ * Starting is edit-tier (canUpload, fail-open when absent); joining is not —
+ * so the tile is dropped only when it could only START one.
+ * Also read by the folder window to refresh a mounted tile in place.
+ */
+function meetingTileState(ui) {
+  const joined = !!(
+    ui._meetingJoined ||
+    (typeof ui._meetingWindowLive === "function" && ui._meetingWindowLive())
+  );
+  const active = !joined && !!ui._meetingActive;
+  const mayStart = typeof ui.canUpload !== "function" ? true : !!ui.canUpload();
+  return {
+    label: joined ? LOCALE.JOINED : active ? LOCALE.JOIN_MEETING : LOCALE.MEETING,
+    joined,
+    hidden: !mayStart && !joined && !active,
+  };
+}
+
+function meetingTile(ui) {
+  const st = meetingTileState(ui);
+  if (st.hidden) return null;
+  return actionTile(ui, "chat-details-meeting", "noti-video-camera", st.label, {
+    modifier: "meeting",
+    dataset: { joined: st.joined ? 1 : 0 },
   });
 }
 
@@ -163,9 +197,9 @@ function chatDetailsOverview(ui, data = {}) {
       className: `${pfx}-actions`,
       kids: [
         actionTile(ui, "chat-details-mute", "top-bell", data.muted ? LOCALE.CD_UNMUTE : LOCALE.MUTE),
-        actionTile(ui, "chat-details-meeting", "noti-video-camera", LOCALE.MEETING),
+        meetingTile(ui),
         actionTile(ui, "chat-details-download", "dl-download-simple", LOCALE.DOWNLOAD),
-      ],
+      ].filter(Boolean),
     }),
     threadRows(ui, data.threads),
     countRows(ui, data.stats),
@@ -324,4 +358,10 @@ function headerMenuService(ui) {
     : "open-thread-menu";
 }
 
-module.exports = { chatDetailsOverview, chatDetailsPage, chatDetailsPanel, headerMenuService };
+module.exports = {
+  chatDetailsOverview,
+  chatDetailsPage,
+  chatDetailsPanel,
+  headerMenuService,
+  meetingTileState,
+};

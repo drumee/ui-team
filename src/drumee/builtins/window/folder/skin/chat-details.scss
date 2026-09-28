@@ -144,6 +144,37 @@
         background: rgba(0, 0, 0, 0.08);
       }
     }
+    // "Meeting" tile — the Meet schedule's start button's two states
+    // (meeting-schedule.scss &__meeting-sched-start-btn), driven by the same
+    // folder flags (_setMeetingStartLoading / _applyMeetingTileState).
+    &-action--meeting {
+      // Launching: a spinner takes the icon's slot; no second click.
+      &[data-loading="1"] {
+        pointer-events: none;
+
+        .window__chat-details-action-ico {
+          display: none;
+        }
+
+        &::before {
+          @include cd-spinner(16px);
+          position: static;
+          border: 2px solid rgba(0, 0, 0, 0.15);
+          border-top-color: var(--primary-40, #5950ff);
+        }
+      }
+
+      // In the call: brand fill, white content, locked.
+      &[data-joined="1"] {
+        pointer-events: none;
+        background: var(--primary-40, #5950ff);
+
+        * {
+          color: #fff;
+          fill: #fff;
+        }
+      }
+    }
     &-action-ico {
       width: 20px;
       height: 20px;
