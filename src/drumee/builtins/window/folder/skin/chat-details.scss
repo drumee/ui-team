@@ -242,9 +242,11 @@
       font-size: 14px;
       line-height: 1.4;
     }
+    // Photos / Videos tile grid. 8px, wider than Figma's 4px, so each tile
+    // (and its hover ring) reads as a separate item.
     &-grid {
       flex-wrap: wrap;
-      gap: 4px;
+      gap: 8px;
     }
     &-tile {
       position: relative;

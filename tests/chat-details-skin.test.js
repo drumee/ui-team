@@ -50,7 +50,8 @@ test("Figma geometry: card, action tiles, member avatar, media tiles, duration p
   assert.match(tile, /border-radius: 12px/);
   assert.match(rule(".window-folder .window__chat-details-avatar"), /width: 32px; height: 32px/);
   assert.match(rule(".window-folder .window__chat-details-tile"), /width: 61px; height: 61px/);
-  assert.match(rule(".window-folder .window__chat-details-grid"), /gap: 4px/);
+  // Widened from Figma's 4px on request: tiles read as separate items.
+  assert.match(rule(".window-folder .window__chat-details-grid"), /gap: 8px/);
   assert.match(rule(".window-folder .window__chat-details-duration"), /background: rgba\(20, 17, 35, 0\.4\)/);
   assert.match(rule('.window-folder .window__chat-details-member-status[data-online="1"]'), /color: var\(--primary-40, #5950ff\)/);
 });
