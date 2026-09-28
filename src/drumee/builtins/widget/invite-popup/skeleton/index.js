@@ -405,7 +405,9 @@ module.exports = function (ui) {
       // is about THAT workspace, so its card replaces the org card and there
       // is no "Invite to" tree to pick from.
       ui._scope === "workspace" ? wsCard(ui, pfx) : orgCard(ui, pfx),
-      tabs(ui, pfx),
+      // Tabs hidden: the Public link has no backend yet (see _requestLink), so
+      // the popup is email-only — _tab stays "email" and the link panel stays
+      // off via the container's data-tab. Re-add tabs(ui, pfx) here to restore.
       emailPanel(ui, pfx),
       ui._scope === "workspace" ? null : inviteTo(ui, pfx),
       Skeletons.Box.Y({
