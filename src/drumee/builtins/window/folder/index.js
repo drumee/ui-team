@@ -2430,9 +2430,9 @@ class __window_folder extends mfsInteract {
 
       case "chat-details-meeting":
         // Same as the Meet schedule's start button (service "start-meeting"):
-        // start this room's call, or join the live one. Locked once joined.
-        if (meetingTileState(this).joined) return;
-        return this._launchMeetingInPanel();
+        // start this room's call, or join the live one (locked once joined),
+        // and light the desk rail's Meet row like a rail click would.
+        return ChatDetails.startMeeting(this);
 
       case "chat-details-download":
         return this._openChatExportModal();

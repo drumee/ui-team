@@ -25,7 +25,7 @@ String.prototype.format = function (...a) {
   return String(this).replace(/\{(\d+)\}/g, (_, i) => a[i]);
 };
 global._ = require("underscore");
-global._a = { hub_id: "hub_id", actual_hub_id: "actual_hub_id", privilege: "privilege" };
+global._a = { hub_id: "hub_id", actual_hub_id: "actual_hub_id", privilege: "privilege", headless: "headless" };
 global.KIND = { profile: "profile" };
 global.bootstrap = () => ({ endpoint: "/-/", keysel: "k" });
 global.SERVICE = {
@@ -51,7 +51,7 @@ const walk = (n, out = []) => {
 };
 const texts = (t) => walk(t).filter((n) => n.type === "Note").map((n) => n.content);
 
-function fakeWindow({ canChat = true } = {}) {
+function fakeWindow({ canChat = true, attrs = {} } = {}) {
   const panel = { el: { dataset: {} }, fed: [], feed(k) { this.fed.push(k); } };
   const view = { el: { dataset: {} } };
   const pending = [];
@@ -65,7 +65,7 @@ function fakeWindow({ canChat = true } = {}) {
     threadMenuClosed: 0,
     __folderView: view,
     fig: { group: "window", family: "window-folder" },
-    mget: (k) => ({ hub_id: "h1", privilege: canChat ? 7 : 1 })[k],
+    mget: (k) => ({ hub_id: "h1", privilege: canChat ? 7 : 1, ...attrs })[k],
     _privilegeGrantsChat: () => canChat,
     _closeThreadMenu() { this.threadMenuClosed++; },
     _fetchThreadList: () => Promise.resolve([{ file_nid: "f1", filename: "Spec" }]),
@@ -265,4 +265,53 @@ test("openItem: a quick open keeps the spinner up for the minimum time", async (
   await C.openItem(w, cmd, () => undefined, { minMs: 60 });
   assert.ok(Date.now() - t0 >= 55, `cleared after ${Date.now() - t0}ms`);
   assert.equal(cmd.el.dataset.loading, "0");
+});
+
+// Meeting tile → start / join this room's call AND light the desk rail's Meet
+// row (Desk._railHighlight), the way a rail click would — but only when the
+// launch went ahead, and only for the docked workspace pane the rail stands for.
+const meetWin = (opts = {}) => {
+  const { headless = 1, joined = false } = opts;
+  // An explicit `launched: undefined` must stay undefined — it is what
+  // _launchMeetingStandalone returns when another call blocks the launch.
+  const launched = "launched" in opts ? opts.launched : true;
+  const w = fakeWindow({ attrs: { headless } });
+  w.launches = 0;
+  w._meetingJoined = joined ? 1 : 0;
+  w._launchMeetingInPanel = () => { w.launches++; return launched; };
+  return w;
+};
+const desk = () => ({ lit: [], _railHighlight(tab) { this.lit.push(tab); } });
+
+test("startMeeting: launches and lights the rail's Meet row", () => {
+  const w = meetWin();
+  const d = desk();
+  assert.equal(C.startMeeting(w, d), true);
+  assert.equal(w.launches, 1);
+  assert.deepEqual(d.lit, ["meeting"]);
+});
+
+test("startMeeting: a refused launch (another call up) leaves the rail alone", () => {
+  const w = meetWin({ launched: undefined });
+  const d = desk();
+  C.startMeeting(w, d);
+  assert.deepEqual(d.lit, []);
+});
+
+test("startMeeting: a floating folder window never touches the desk rail", () => {
+  const d = desk();
+  C.startMeeting(meetWin({ headless: 0 }), d);
+  assert.deepEqual(d.lit, []);
+});
+
+test("startMeeting: already joined → nothing launches, nothing lights", () => {
+  const w = meetWin({ joined: true });
+  const d = desk();
+  assert.equal(C.startMeeting(w, d), false);
+  assert.equal(w.launches, 0);
+  assert.deepEqual(d.lit, []);
+});
+
+test("startMeeting: no desk (DMZ / share) is fine", () => {
+  assert.equal(C.startMeeting(meetWin(), undefined), true);
 });

@@ -15,7 +15,11 @@
  * is dropped instead of painting over what the user is now looking at.
  */
 const M = require("./model");
-const { chatDetailsOverview, chatDetailsPage } = require("../skeleton/chat-details");
+const {
+  chatDetailsOverview,
+  chatDetailsPage,
+  meetingTileState,
+} = require("../skeleton/chat-details");
 const Mute = require("../../../panel/activity/mute");
 
 function hubId(win) {
@@ -177,4 +181,31 @@ function openItem(win, cmd, run, { minMs = 350, maxMs = 15000 } = {}) {
     });
 }
 
-module.exports = { open, close, showPage, toggleMute, setOpen, openItem };
+/**
+ * "Meeting" tile: start / join this room's call — the Meet schedule start
+ * button's launch — and light the desk rail's Meet row the way a rail click
+ * would (Desk._railHighlight, the radio broadcast; a bare setState would not
+ * put the other row out).
+ *
+ * The rail only moves when the launch went ahead (_launchMeetingStandalone
+ * returns Wm.launch's truthy result; nothing when another call blocks it) and
+ * only for the docked workspace pane — a floating folder window is not what
+ * the rail stands for. No desk (DMZ / share) → launch only.
+ *
+ * @returns {Boolean} whether a launch went ahead
+ */
+function startMeeting(win, desk = typeof Desk !== "undefined" ? Desk : undefined) {
+  if (meetingTileState(win).joined) return false;
+  const launched = win._launchMeetingInPanel();
+  if (
+    launched &&
+    win.mget(_a.headless) &&
+    desk &&
+    typeof desk._railHighlight === "function"
+  ) {
+    desk._railHighlight("meeting");
+  }
+  return !!launched;
+}
+
+module.exports = { open, close, showPage, toggleMute, setOpen, openItem, startMeeting };
