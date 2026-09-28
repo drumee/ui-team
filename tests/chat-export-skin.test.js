@@ -64,8 +64,21 @@ test("every item is downsized", () => {
   assert.match(rule(`${P}__scope-label`), /font-size: 13px;.*line-height: 18px/);
   assert.match(rule(`${P}__date-switch`), /width: 34px; height: 18px/);
   assert.match(rule(`${P}__date-input-wrap`), /padding: 6px 8px/);
-  assert.match(rule(`${P}__date-input`), /font-size: 13px;.*line-height: 18px/);
+  assert.match(rule(`${P}__date-input-wrap ${P}__date-input`), /font-size: 13px;.*line-height: 18px/);
   assert.match(rule(`${P}__footer-hint`), /font-size: 12px;.*line-height: 16px/);
   assert.match(rule(`${P}__download-btn`), /padding: 10px 20px/);
   assert.match(rule(`${P}__download-btn-label`), /font-size: 14px;.*line-height: 20px/);
+});
+
+// flatpickr picker inside the wrap (widget/datepicker): its field sits flush in
+// the wrap — the datepicker skin's own boxed input (.datepicker input: border,
+// 36px, padding) is overridden — and no native date-picker CSS is left.
+test("date fields are flatpickr pickers styled flush inside the wrap", () => {
+  const input = rule(`${P}__date-input-wrap ${P}__date-input`);
+  assert.match(input, /border: none/);
+  assert.match(input, /height: auto/);
+  assert.match(input, /padding: 0/);
+  assert.match(input, /background: transparent/);
+  assert.match(rule(`${P}__date-picker`), /flex: 1; min-width: 0/);
+  assert.doesNotMatch(css, /calendar-picker-indicator/);
 });

@@ -80,31 +80,6 @@ class __widget_chat_export extends LetcBox {
         this.__progressArea = child;
         break;
 
-      case "date-start": {
-        // Wire native <input type=date> change → _setStartDate.
-        const el = child && child.el;
-        if (el) {
-          el.addEventListener("change", (e) => {
-            if (!this.isDestroyed || !this.isDestroyed()) {
-              this._setStartDate(e.target.value);
-            }
-          });
-        }
-        break;
-      }
-
-      case "date-end": {
-        const el = child && child.el;
-        if (el) {
-          el.addEventListener("change", (e) => {
-            if (!this.isDestroyed || !this.isDestroyed()) {
-              this._setEndDate(e.target.value);
-            }
-          });
-        }
-        break;
-      }
-
       default:
         if (super.onPartReady) super.onPartReady(child, pn);
     }

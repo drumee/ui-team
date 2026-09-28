@@ -403,9 +403,9 @@
     align-items: center;
   }
 
-  // Date input: the native calendar-picker-indicator is expanded to cover the
-  // whole input so clicking anywhere opens the OS date picker reliably on every
-  // click (no showPicker() JS, which only fired once).
+  // Date field: a flatpickr picker (widget/datepicker, kind date_picker) sits
+  // in the wrap next to the calendar icon; clicking anywhere on the field
+  // opens the app's calendar (Cancel / Done).
   &__date-input-wrap {
     position: relative;
     flex: 1;
@@ -426,37 +426,31 @@
     height: 14px;
     color: var(--tertiary-grey-80);
     flex-shrink: 0;
-    pointer-events: none; // decorative; the indicator overlay handles clicks
+    pointer-events: none; // decorative
   }
 
-  &__date-input {
-    position: relative;
+  // The picker widget's root fills the rest of the wrap.
+  &__date-picker {
+    flex: 1;
+    min-width: 0;
+  }
+
+  // The visible field (flatpickr's altInput carries innerClass). Two classes
+  // to beat the datepicker skin's own boxed input (.datepicker input: border,
+  // 36px height, padding) — here the wrap is the box.
+  &__date-input-wrap &__date-input {
     border: none;
     outline: none;
-    flex: 1;
+    height: auto;
+    padding: 0;
     width: 100%;
+    background: transparent;
     cursor: pointer;
     @include drumee.typo(
       $color: var(--primary-purple-100),
       $size: 13px,
       $line: 18px
     );
-    background: transparent;
-
-    // Transparent indicator stretched over the input → clicking the field
-    // opens the native picker every time.
-    &::-webkit-calendar-picker-indicator {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      width: auto;
-      height: auto;
-      margin: 0;
-      opacity: 0;
-      cursor: pointer;
-    }
   }
 
   &__date-arrow {

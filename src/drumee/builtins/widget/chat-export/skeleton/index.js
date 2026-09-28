@@ -505,10 +505,18 @@ function _dateRangeSection(pfx, ui) {
 }
 
 function _dateInput(pfx, ui, which) {
-  const pn = `date-${which}`;
-  // Native <input type=date>; the skin stretches its calendar-picker-indicator
-  // over the field so a click opens the OS picker every time. Change event is
-  // wired in onPartReady via sys_pn.
+  // The app's flatpickr date picker (widget/datepicker, same as the meeting
+  // modal) instead of a native <input type=date>: the Figma calendar with
+  // Cancel / Done. It posts "date-start-change" / "date-end-change", which
+  // index.js already handles by parsing cmd.mget("value").
+  //   dateFormat Y-m-d → the value _setStartDate / _setEndDate parse;
+  //   altInput d/m/Y  → what the user reads in the field;
+  //   appendTo body   → out of the scrolling card, so it is never clipped
+  //                     (flatpickr's open z-index 99999 clears the 99997
+  //                     backdrop).
+  // `value` re-seeds the chosen date whenever the section is re-rendered; an
+  // empty string starts with nothing picked (the widget's "unset" contract).
+  const ts = which === "start" ? ui._startDate : ui._endDate;
   return Skeletons.Box.X({
     className: `${pfx}__date-input-wrap`,
     kids: [
@@ -516,13 +524,22 @@ function _dateInput(pfx, ui, which) {
         ico: "calendar",
         className: `${pfx}__date-icon`,
       }),
-      Skeletons.Element({
-        tagName: "input",
-        className: `${pfx}__date-input`,
-        attrOpt: { type: "date", placeholder: "dd/mm/yyyy" },
-        sys_pn: pn,
-        partHandler: ui,
-      }),
+      {
+        kind: "date_picker",
+        className: `${pfx}__date-picker`,
+        innerClass: `${pfx}__date-input`,
+        name: `chat-export-date-${which}`,
+        placeholder: "dd/mm/yyyy",
+        value: ts ? Dayjs.unix(ts).format("YYYY-MM-DD") : "",
+        vendorOpt: {
+          dateFormat: "Y-m-d",
+          altInput: true,
+          altFormat: "d/m/Y",
+          appendTo: document.body,
+        },
+        service: `date-${which}-change`,
+        uiHandler: [ui],
+      },
     ],
   });
 }
