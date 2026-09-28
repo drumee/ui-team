@@ -209,6 +209,17 @@ class settings_main extends LetcBox {
    *
    */
   async saveProfile() {
+    // One save at a time: a second click mid-request would post again.
+    if (this._savingProfile) return;
+    this._savingProfile = true;
+    try {
+      return await this._saveProfile();
+    } finally {
+      this._savingProfile = false;
+    }
+  }
+
+  async _saveProfile() {
     const data = this.getData();
     const current = Visitor.profile() || {};
     // Split a single "Display Name" input into firstname / lastname on the
@@ -244,8 +255,10 @@ class settings_main extends LetcBox {
     });
     if (!res || res.error) {
       // Surface the failure instead of silently doing nothing — otherwise
-      // the user can't tell a click did anything at all.
-      this._flashSaveStatus(false);
+      // the user can't tell a click did anything at all. Username errors
+      // (USERNAME_TAKEN / USERNAME_INVALID) reject the whole save server-side.
+      const message = res && res.error && LOCALE[res.error];
+      this._flashSaveStatus(false, message);
       return;
     }
     // Server returns the full updated profile object. Fall back to the
@@ -254,7 +267,9 @@ class settings_main extends LetcBox {
     const nextProfile = (res && typeof res === 'object' && !Array.isArray(res))
       ? { ...current, ...res }
       : { ...current, ...profile };
-    Visitor.set({ profile: nextProfile });
+    // Visitor.username (top-level) is what the rest of the app reads as the
+    // ident; keep it in step with the renamed profile.
+    Visitor.set({ profile: nextProfile, username: nextProfile.username });
     // Re-render first (refreshes the displayed name/avatar), THEN reveal the
     // confirmation on the freshly-rendered "save-status" part.
     this.feed(require("./skeleton").default(this));
@@ -267,13 +282,13 @@ class settings_main extends LetcBox {
    * The pill is part of the skeleton (sys_pn:"save-status", hidden at
    * data-state="0"); we flip it on, then fade it back out after a delay.
    */
-  _flashSaveStatus(ok = true) {
+  _flashSaveStatus(ok = true, message) {
     return this.ensurePart("save-status").then((p) => {
       if (!p || !p.el) return;
       p.set({
         content: ok
           ? (LOCALE.PROFILE_SAVED || "Profile saved")
-          : (LOCALE.PROFILE_SAVE_FAILED || "Couldn't save profile. Please try again."),
+          : (message || LOCALE.PROFILE_SAVE_FAILED || "Couldn't save profile. Please try again."),
       });
       p.el.dataset.variant = ok ? "success" : "error";
       p.el.dataset.state = "1";

@@ -388,6 +388,8 @@
   "UPLOAD": "Upload",
   "UPDATE_AT": "Update",
   "USERNAME": "Username",
+  "USERNAME_TAKEN": "This username is already taken.",
+  "USERNAME_INVALID": "Username must be 2–80 characters: letters, numbers, dots, dashes or underscores, starting with a letter or number.",
   "VALIDATE": "Validate",
   "VIDEO": "Video",
   "VIDEOS": "Videos",
