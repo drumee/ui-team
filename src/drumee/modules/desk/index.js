@@ -224,7 +224,7 @@ class desk_module extends LetcBox {
     this._onWindowTutorial = this._onWindowTutorial.bind(this);
     RADIO_BROADCAST.on("window-tutorial:mount", this._onWindowTutorial);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
-    // Rail Chat / Task / Meet pills: new counts, or another workspace in front.
+    // Rail Files / Chat / Task / Meet pills: new counts, or another workspace in front.
     RADIO_BROADCAST.on("workspace-unread", this._writeRailCounts, this);
     RADIO_BROADCAST.on("workspace:focus", this._writeRailCounts, this);
     RADIO_BROADCAST.on("chat:read", this._writeRailCounts, this);
@@ -5306,10 +5306,10 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * The rail's Chat / Task / Meet pills — what is unread IN THE OPEN
-   * WORKSPACE: team-chat messages, task notifications (assigned to me,
-   * mentions / replies on my tasks, moves into a column I watch) and meeting
-   * invitations. Counted by panel_activity from the rows it already fetched
+   * The rail's Files / Chat / Task / Meet pills — what is unread IN THE OPEN
+   * WORKSPACE: new files and folders, team-chat messages, task notifications
+   * (assigned to me, mentions / replies on my tasks, moves into a column I
+   * watch) and meeting invitations. Counted by panel_activity from the rows it already fetched
    * (panel/activity/hub-counts.js) and broadcast as `workspace-unread`; the
    * last value is also kept on window.ActivityHandler, so a workspace switch
    * (workspace:focus / chat:read) repaints without a request.
@@ -5326,10 +5326,10 @@ class desk_module extends LetcBox {
     // BEFORE the counts are read: a moved mark republishes synchronously, and
     // reading first would paint the stale numbers over the fresh ones.
     const pane = ws && ws.hub_id != null ? this._railWorkspace() : null;
-    if (pane && _.isFunction(pane._announceTabSeen)) pane._announceTabSeen(pane.activeTab);
+    if (pane && _.isFunction(pane._announceTabSeen)) pane._announceTabSeen(pane.activeTab || "files");
     const all = (window.ActivityHandler && window.ActivityHandler._hubCounts) || {};
     const c = (ws && ws.hub_id != null && all[ws.hub_id]) || {};
-    const rows = { chat: c.chat, task: c.task, meet: c.meeting };
+    const rows = { files: c.files, chat: c.chat, task: c.task, meet: c.meeting };
     if (!_.isFunction(this.getPart)) return;
     for (const key of Object.keys(rows)) {
       const n = parseInt(rows[key], 10) || 0;

@@ -819,12 +819,20 @@ class __window_folder extends mfsInteract {
   }
 
   /**
-   * Tell panel_activity the Task / Meet tab of this workspace is on screen,
-   * so the rail pill for it clears (hub-counts.js "seen" marks).
+   * Tell panel_activity the Task / Meet / Files tab of this workspace is on
+   * screen, so the rail pill for it clears (hub-counts.js "seen" marks).
+   * No tab yet means Files — a fresh window_folder starts with `activeTab`
+   * unset and every reader treats that as Files.
    * @param {String} tab folder-window tab
    */
   _announceTabSeen(tab) {
-    const kind = tab === _a.task ? "task" : tab === "meeting" ? "meeting" : null;
+    const kind = tab === _a.task
+      ? "task"
+      : tab === "meeting"
+        ? "meeting"
+        : !tab || tab === "files"
+          ? "files"
+          : null;
     if (!kind || this.mget(_a.token)) return;
     const hub = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
     if (hub == null || typeof RADIO_BROADCAST === "undefined") return;
@@ -5806,7 +5814,7 @@ class __window_folder extends mfsInteract {
     this._stashPanelScroll();
     const prevTab = this.activeTab;
     this.activeTab = tab;
-    // Opening Task or Meet clears that rail pill (panel_activity marks what is
+    // Opening Task, Meet or Files clears that rail pill (panel_activity marks what is
     // there now as seen; anything newer counts again). Every way onto a tab
     // passes here — the rail, a notification deep link, a switch that keeps
     // the tab. Not for a window opened from a share (token): the pill

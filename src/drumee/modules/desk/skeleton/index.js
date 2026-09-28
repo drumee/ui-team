@@ -299,7 +299,7 @@ const _build_mobile_rail = (ui) => {
     sys_pn: "mobile-rail",
     partHandler: ui,
     kids: [
-      item({ ico: "rail-files", label: LOCALE.FILES, service: "rail-files", pn: "mrail-files" }),
+      item({ ico: "rail-files", label: LOCALE.FILES, service: "rail-files", pn: "mrail-files", badge: "mrail-badge-files" }),
       item({ ico: "rail-chat", label: LOCALE.CHAT, service: "rail-chat", pn: "mrail-chat", badge: "mrail-badge-chat" }),
       item({ ico: "rail-task", label: LOCALE.TASK, service: "rail-task", pn: "mrail-task", badge: "mrail-badge-task" }),
       item({ ico: "rail-meet", label: LOCALE.MEET, service: "rail-meet", pn: "mrail-meet", badge: "mrail-badge-meet" }),

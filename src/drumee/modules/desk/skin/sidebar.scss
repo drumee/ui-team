@@ -65,7 +65,7 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     margin-left: 0;
   }
 
-  // Except the workspace unread pills on Chat / Task / Meet (desk
+  // Except the workspace unread pills on Files / Chat / Task / Meet (desk
   // _writeRailCounts, the only badges in __nav-main): their NUMBER is the
   // point, so they stay a small counted pill. Same left anchor, for the same
   // clipping reason; 36px + a 2-digit pill still ends inside the 64px strip.
