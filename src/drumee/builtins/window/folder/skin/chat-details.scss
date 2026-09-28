@@ -83,6 +83,13 @@
     &-actions {
       gap: 8px;
       flex-shrink: 0;
+
+      // Regular labels (Figma 775:132186): the tiles are clickable Boxes, and
+      // global button typography would otherwise bold them.
+      &,
+      & * {
+        font-weight: 400;
+      }
     }
     &-action {
       flex: 1 0 0;

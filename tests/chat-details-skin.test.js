@@ -121,3 +121,9 @@ test("file tiles are coloured by type (Figma file-grid palette)", () => {
   );
   assert.match(rule(".window-folder .window__chat-details-file-ico svg"), /fill: currentcolor/);
 });
+
+// Mute / Meeting / Download labels are Regular in Figma (775:132186); global
+// button typography must not bold them.
+test("action tiles are not bold", () => {
+  assert.match(rule(".window-folder .window__chat-details-actions, .window-folder .window__chat-details-actions *"), /font-weight: 400/);
+});
