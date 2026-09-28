@@ -93,3 +93,15 @@ test("icons are painted through fill (sprite glyphs ignore color alone); thread 
 test("file and link lists keep Figma's row rhythm with hover padding", () => {
   assert.match(rule(".window-folder .window__chat-details-body[data-page=file], .window-folder .window__chat-details-body[data-page=link]"), /gap: 4px/);
 });
+
+// Photos / Videos: a hovered tile gets a border. Drawn on an overlay above the
+// absolutely placed image (a box-shadow on the tile itself would sit under it),
+// as an inset ring so the 61px grid never shifts, and click-through.
+test("photo and video tiles show a border on hover", () => {
+  const ring = rule(".window-folder .window__chat-details-tile::after");
+  assert.match(ring, /position: absolute/);
+  assert.match(ring, /inset: 0/);
+  assert.match(ring, /border-radius: 8px/);
+  assert.match(ring, /pointer-events: none/);
+  assert.match(rule(".window-folder .window__chat-details-tile:hover::after"), /box-shadow: inset 0 0 0 2px var\(--primary-40, #5950ff\)/);
+});
