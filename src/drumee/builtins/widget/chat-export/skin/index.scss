@@ -141,12 +141,58 @@
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    // Default tint (purple) — overridden inline via styleOpt when folder_color
-    // is available (Fix #2: real folder color from colorFromName).
-    background: rgba(89, 80, 255, 0.1);
+    // Neutral tile: the workspace art inside carries the type colour.
+    background: rgba(0, 0, 0, 0.05);
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+
+    // Workspace art (media/grid/template/folder), sized and tinted as the desk
+    // sidebar draws it (desk/workspace-item skin): folder shape by type,
+    // white badge at its bottom-left. Hex fallbacks: the overlay may not
+    // resolve every theme variable.
+    .media-grid__folder-art {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 18px;
+    }
+
+    .folder-shape {
+      width: 22px;
+      height: 18px;
+      fill: #885eff;
+
+      &.private {
+        fill: var(--area-private, #eb6159);
+      }
+
+      &.share,
+      &.dmz {
+        fill: var(--area-share, #ffa8dc);
+      }
+
+      &.personal {
+        fill: var(--area-personal, #433cc5);
+      }
+
+      &.public {
+        fill: var(--area-public, #44b8ff);
+      }
+    }
+
+    .badge {
+      position: absolute;
+      left: -3px;
+      bottom: -3px;
+      width: 14px !important;
+      height: 14px !important;
+      color: var(--grid-color-folder-badge, #ffffff);
+      fill: currentColor;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+    }
   }
 
   &__folder-icon {
@@ -215,7 +261,9 @@
     border: 1.5px solid rgba(0, 0, 0, 0.05);
     border-radius: 8px;
     padding: 10px;
-    gap: 4px;
+    // One row: icon | title over subtitle.
+    align-items: center;
+    gap: 10px;
     cursor: pointer;
     transition: border-color 0.15s;
 
@@ -231,6 +279,13 @@
   &__format-card-top {
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
+  }
+
+  &__format-text {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 2px;
   }
 
   &__format-icon-box {
@@ -264,6 +319,9 @@
       $weight: 600,
       $line: 20px
     );
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     &.is-active {
       color: var(--primary-purple-40);
@@ -281,6 +339,9 @@
       $size: 12px,
       $line: 16px
     );
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   // ── scope list ───────────────────────────────────────────────

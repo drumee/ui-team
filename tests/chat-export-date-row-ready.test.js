@@ -8,12 +8,13 @@ const assert = require("node:assert/strict");
 const { watchDateRowReady } = require("../src/drumee/builtins/widget/chat-export/date-row-ready");
 
 // A row with two field wraps; `inputs` flatpickr inputs mounted so far.
-function row(inputs = 0) {
+function row(inputs = 0, wraps = 2) {
   const el = {
     dataset: {},
     inputs,
+    wraps,
     querySelectorAll(sel) {
-      if (sel === ".widget-chat-export__date-input-wrap") return [1, 2];
+      if (sel === ".widget-chat-export__date-input-wrap") return Array.from({ length: this.wraps });
       if (sel === ".flatpickr-input") return Array.from({ length: this.inputs });
       return [];
     },
@@ -44,10 +45,10 @@ test("loading until BOTH pickers have mounted, then ready and disconnected", () 
   const kit = observerKit();
   const el = row(0);
   watchDateRowReady(el, { MutationObserver: kit.MO, timeout: 1000 });
-  assert.equal(el.dataset.ready, "0");
+  assert.notEqual(el.dataset.ready, "1"); // no stamp = loading
   el.inputs = 1;
   kit.fire();
-  assert.equal(el.dataset.ready, "0");
+  assert.notEqual(el.dataset.ready, "1"); // no stamp = loading
   el.inputs = 2;
   kit.fire();
   assert.equal(el.dataset.ready, "1");
@@ -65,4 +66,20 @@ test("never mounts → released after the timeout (no endless spinner)", async (
 
 test("no element → no-op", () => {
   assert.doesNotThrow(() => watchDateRowReady(null));
+});
+
+// onPartReady fires before the row's fields exist: 0 fields / 0 pickers must
+// NOT read as ready (it did — and the row was then stuck spinning once render
+// wrote the model's data-ready back).
+test("fields not rendered yet → not ready, keeps watching until they mount", () => {
+  const kit = observerKit();
+  const el = row(0, 0);
+  watchDateRowReady(el, { MutationObserver: kit.MO, timeout: 1000 });
+  assert.notEqual(el.dataset.ready, "1");
+  el.wraps = 2;
+  kit.fire();
+  assert.notEqual(el.dataset.ready, "1");
+  el.inputs = 2;
+  kit.fire();
+  assert.equal(el.dataset.ready, "1");
 });

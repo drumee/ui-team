@@ -1,4 +1,7 @@
 const { positionCalendar } = require("../calendar-position");
+// The desk sidebar's workspace art (folder shape + internal / external /
+// personal badge), so the dialog names the workspace type the same way.
+const workspaceArt = require("../../../media/grid/template/folder");
 /* ============================================================ *
  * Skeleton: chat-export modal
  * Figma node 2216-257014 — "Export chat history"
@@ -87,9 +90,6 @@ function _folderCard(pfx, ui) {
   // Prefer the real folder name from the model (the folder the user opened);
   // backend hub.name may resolve to the hub_id hash until export_scope is fixed.
   const hubName = ui.mget(_a.name) || ui._hubName || LOCALE.LOADING || "…";
-  // #3: folder icon glyph coloured by access level via the fg-* class (reliable
-  // global hex); the box keeps its light tint so the icon is always visible.
-  const access = AREA_ACCESS[ui.mget(_a.area)] || "private";
   // #4: message count is hidden entirely when 0/unavailable (per user request).
   const msgCount = ui._messageCount || 0;
   // mtime is epoch SECONDS (INT) — use Dayjs.unix; Dayjs(seconds) treats it as
@@ -129,14 +129,22 @@ function _folderCard(pfx, ui) {
       Skeletons.Box.X({
         className: `${pfx}__folder-left`,
         kids: [
-          // Folder icon: glyph coloured by access level (#3, fg-* class), on the
-          // default light box so it's always visible.
+          // Workspace icon, as the desk sidebar draws it: folder shape tinted
+          // by the workspace type + its badge (internal = private, external =
+          // share/dmz, personal). isAttachment → no kebab in a dialog.
           Skeletons.Box.Y({
             className: `${pfx}__folder-icon-box`,
+            dataset: { area: ui.mget(_a.area) || "" },
             kids: [
-              Skeletons.Image.Svg({
-                ico: "apps-folder-card",
-                className: `${pfx}__folder-icon fg-${access}`,
+              Skeletons.Element({
+                className: `${pfx}__folder-art`,
+                content: workspaceArt({
+                  area: ui.mget(_a.area),
+                  filetype: _a.hub,
+                  role: "desk",
+                  isAttachment: 1,
+                  widgetId: _.uniqueId("chat-export-ws-"),
+                }),
               }),
             ],
           }),
@@ -255,7 +263,9 @@ function _formatCard(pfx, ui, fmt, active) {
   // Fix #6: Use Button.Label for the whole card so the entire card is a
   // proper interactive element (full-width tap area, reliable single-click).
   // The existing set-format service + uiHandler wire is preserved.
-  return Skeletons.Box.Y({
+  // One row: the icon (format-card-top) on the left, then a text column with
+  // the title and the subtitle, each on a single line.
+  return Skeletons.Box.X({
     className: `${pfx}__format-card${active ? " is-active" : ""}`,
     service: "set-format",
     format: fmt,
@@ -276,14 +286,19 @@ function _formatCard(pfx, ui, fmt, active) {
           }),
         ],
       }),
-      // Fix #3: weight 700 applied via __format-title--bold modifier class.
-      Skeletons.Note({
-        className: `${pfx}__format-title${active ? " is-active" : ""} ${pfx}__format-title--bold`,
-        content: title,
-      }),
-      Skeletons.Note({
-        className: `${pfx}__format-subtitle`,
-        content: subtitle,
+      Skeletons.Box.Y({
+        className: `${pfx}__format-text`,
+        kids: [
+          // Fix #3: weight 700 applied via __format-title--bold modifier class.
+          Skeletons.Note({
+            className: `${pfx}__format-title${active ? " is-active" : ""} ${pfx}__format-title--bold`,
+            content: title,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__format-subtitle`,
+            content: subtitle,
+          }),
+        ],
       }),
     ],
   });
@@ -467,9 +482,11 @@ function _dateRangeSection(pfx, ui) {
           className: `${pfx}__date-row`,
           // Loading until both lazy pickers have mounted: index.js
           // onPartReady("date-row") → date-row-ready.js stamps data-ready="1".
+          // No `dataset` here on purpose: ui-core's onRender writes a model
+          // dataset AFTER onPartReady, which reset the stamp to "0" and left
+          // the row spinning. A missing stamp already reads as loading.
           sys_pn: "date-row",
           partHandler: ui,
-          dataset: { ready: 0 },
           kids: [
             _dateInput(pfx, ui, "start"),
             Skeletons.Image.Svg({

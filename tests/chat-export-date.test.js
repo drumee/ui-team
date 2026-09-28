@@ -104,5 +104,52 @@ test("date row is a named part that starts loading", () => {
   const rowNode = walk(t).find((n) => n.className === "widget-chat-export__date-row");
   assert.equal(rowNode.sys_pn, "date-row");
   assert.equal(rowNode.partHandler.fig.family, "widget-chat-export");
-  assert.equal(rowNode.dataset.ready, 0);
+  // No model dataset: onRender would write it AFTER the watcher's stamp and
+  // put the row back to loading. A missing stamp already reads as loading.
+  assert.equal(rowNode.dataset, undefined);
+});
+
+// Format cards: one row — the icon (format-card-top) left, then a text column
+// with the title and the subtitle, each on its own single line.
+test("format card lays out icon | title over subtitle in a row", () => {
+  const t = build({ _format: "json" });
+  const cards = walk(t).filter((n) => /widget-chat-export__format-card(\s|$)/.test(n.className || ""));
+  assert.equal(cards.length, 2);
+  for (const c of cards) {
+    assert.equal(c.type, "Box.X");
+    assert.equal(c.service, "set-format");
+    const [top, text] = c.kids;
+    assert.equal(top.className, "widget-chat-export__format-card-top");
+    assert.equal(text.className, "widget-chat-export__format-text");
+    assert.equal(text.type, "Box.Y");
+    assert.match(text.kids[0].className, /widget-chat-export__format-title/);
+    assert.match(text.kids[1].className, /widget-chat-export__format-subtitle/);
+  }
+  assert.match(cards[1].className, /is-active/);
+});
+
+// Folder card icon = the desk's workspace art (media/grid/template/folder,
+// what the sidebar draws): folder shape tinted by the workspace type plus its
+// badge — internal (private), external (share), personal.
+const iconHtml = (area) => {
+  const t = (sk.default || sk)({
+    fig: { family: "widget-chat-export", group: "widget" },
+    mget: (k) => ({ name: "Workspace", area })[k],
+    _format: "pdf", _folders: [], _fileThreads: [],
+    _checkedFolderNids: new Set(), _checkedThreadIds: new Set(), _allChecked: true,
+  });
+  const box = walk(t).find((n) => n.className === "widget-chat-export__folder-icon-box");
+  const art = walk(box).find((n) => n.type === "Element");
+  assert.ok(art, `no workspace art for ${area}`);
+  assert.equal(walk(box).filter((n) => n.type === "Image.Svg").length, 0);
+  return art.content;
+};
+
+test("folder icon box shows the workspace art for internal / external / personal", () => {
+  for (const area of ["private", "share", "personal"]) {
+    const html = iconHtml(area);
+    assert.match(html, new RegExp(`class="folder-shape ${area}"`), area);
+    assert.match(html, new RegExp(`class="badge ${area}`), area);
+    assert.doesNotMatch(html, /folder-trigger/); // no kebab in a dialog
+  }
 });

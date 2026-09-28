@@ -22,14 +22,21 @@ function watchDateRowReady(el, opt = {}) {
     (typeof MutationObserver !== "undefined" ? MutationObserver : null);
   const timeout = opt.timeout == null ? 10000 : opt.timeout;
 
-  const isReady = () =>
-    el.querySelectorAll(PICKED).length >= el.querySelectorAll(WRAP).length;
+  // Fields must exist first: onPartReady fires before the row's kids render,
+  // and "0 pickers for 0 fields" used to read as ready — the stamp went on too
+  // early and the row then stuck on loading.
+  const isReady = () => {
+    const fields = el.querySelectorAll(WRAP).length;
+    return fields > 0 && el.querySelectorAll(PICKED).length >= fields;
+  };
 
   if (isReady() || !MO) {
     el.dataset.ready = "1";
     return;
   }
-  el.dataset.ready = "0";
+  // No "0" written here: the skin reads a MISSING stamp as loading, and the
+  // row carries no model dataset that render could write back over "1".
+  delete el.dataset.ready;
 
   let timer = null;
   const observer = new MO(() => {

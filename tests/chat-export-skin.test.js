@@ -107,3 +107,31 @@ test("date row shows a spinner per field until the pickers are ready", () => {
   assert.match(spin, /animation: _chat-export-spin 0\.7s linear infinite/);
   assert.match(spin, /border-top-color: var\(--primary-purple-40\)/);
 });
+
+test("format card is a row; title and subtitle stay one line each", () => {
+  assert.match(rule(`${P}__format-card`), /align-items: center/);
+  assert.match(rule(`${P}__format-card`), /gap: 10px/);
+  const text = rule(`${P}__format-text`);
+  assert.match(text, /flex: 1 1 0/);
+  assert.match(text, /min-width: 0/);
+  for (const el of ["title", "subtitle"]) {
+    const r = rule(`${P}__format-${el}`);
+    assert.match(r, /white-space: nowrap/, el);
+    assert.match(r, /text-overflow: ellipsis/, el);
+  }
+});
+
+// Workspace art in the folder icon box, tinted like the desk sidebar
+// (workspace-item skin) — with hex fallbacks, as the overlay may not resolve
+// every theme variable.
+test("folder icon box tints the workspace art per type", () => {
+  const box = `${P}__folder-icon-box`;
+  assert.match(rule(`${box} .folder-shape`), /width: 22px; height: 18px/);
+  assert.match(rule(`${box} .folder-shape.private`), /fill: var\(--area-private, #eb6159\)/);
+  assert.match(rule(`${box} .folder-shape.share, ${box} .folder-shape.dmz`), /fill: var\(--area-share, #ffa8dc\)/);
+  assert.match(rule(`${box} .folder-shape.personal`), /fill: var\(--area-personal, #433cc5\)/);
+  assert.match(rule(`${box} .folder-shape.public`), /fill: var\(--area-public, #44b8ff\)/);
+  const badge = rule(`${box} .badge`);
+  assert.match(badge, /position: absolute/);
+  assert.match(badge, /width: 14px !important; height: 14px !important/);
+});
