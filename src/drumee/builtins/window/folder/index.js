@@ -2426,7 +2426,8 @@ class __window_folder extends mfsInteract {
         return ChatDetails.showPage(this, cmd && cmd.mget && cmd.mget("page"));
 
       case "chat-details-mute":
-        return ChatDetails.toggleMute(this);
+        // Spinner on the tile for the mute_set round trip.
+        return ChatDetails.openItem(this, cmd, () => ChatDetails.toggleMute(this));
 
       case "chat-details-meeting":
         // Same as the Meet schedule's start button (service "start-meeting"):
@@ -2435,7 +2436,8 @@ class __window_folder extends mfsInteract {
         return ChatDetails.startMeeting(this);
 
       case "chat-details-download":
-        return this._openChatExportModal();
+        // Spinner on the tile until the export dialog's chunk has loaded.
+        return ChatDetails.openItem(this, cmd, () => this._openChatExportModal());
 
       case "chat-details-thread": {
         // Same as the thread dropdown's file row: scope the chat, in place,
@@ -2890,7 +2892,9 @@ class __window_folder extends mfsInteract {
       }),
     );
 
-    this.ensurePart("wrapper-chat-export").then((wrapper) => {
+    // Returns once the dialog's lazy chunk is in (Chat details' Download tile
+    // spins until then); other callers ignore the value.
+    return this.ensurePart("wrapper-chat-export").then((wrapper) => {
       if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
       this._chatExportWrapper = wrapper;
 
@@ -2907,6 +2911,9 @@ class __window_folder extends mfsInteract {
         area: this.mget(_a.area),
         uiHandler: [this],
       });
+      if (typeof Kind !== "undefined" && Kind && _.isFunction(Kind.waitFor)) {
+        return Kind.waitFor("widget_chat_export");
+      }
     });
   }
 

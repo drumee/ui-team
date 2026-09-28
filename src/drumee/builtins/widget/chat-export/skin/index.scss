@@ -55,20 +55,35 @@
 .widget-chat-export {
 
   // ── modal card ──────────────────────────────────────────────
+  // Everything in the dialog is downsized to ~80% of the Figma sizes on
+  // request (card 530 → 440, padding 33 → 24, titles 24 → 18, body 16/14 →
+  // 14/12-13); tests/chat-export-skin.test.js pins them.
   &__card {
     background: #ffffff;
-    border-radius: 24px;
-    padding: 33px;
-    gap: 24px;
-    // Figma: inner content column is 464px; card = 464 + 33*2 padding = 530px.
-    width: 530px;
+    border-radius: 16px;
+    padding: 24px;
+    gap: 16px;
+    // Inner content column 392px; card = 392 + 24*2 padding = 440px.
+    width: 440px;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 8px 40px var(--primary-purple-80-5, rgba(45, 42, 106, 0.37));
   }
 
   // ── header ──────────────────────────────────────────────────
+  // Fixed while the card scrolls. top: -24px cancels the card padding (sticky
+  // otherwise clamps inside it); the negative margins + matching padding let
+  // the white header cover that strip so scrolled content never shows above
+  // it, and the top radius follows the card's corners.
   &__header {
+    position: sticky;
+    top: -24px;
+    z-index: 2;
+    margin: -24px -24px -12px;
+    padding: 24px 24px 12px;
+    background: #ffffff;
+    border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
     justify-content: space-between;
     align-items: center;
   }
@@ -79,24 +94,24 @@
   }
 
   &__header-ico {
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     color: var(--primary-purple-40);
   }
 
   &__header-title {
     @include drumee.typo(
       $color: #34343a,  // no token; nearest is --neutral-900 #222732 (too dark), used Figma value
-      $size: 24px,
+      $size: 18px,
       $weight: 600,
-      $line: 32px
+      $line: 24px
     );
   }
 
   &__header-close {
-    width: 32px;
-    height: 32px;
-    padding: 9px;
+    width: 28px;
+    height: 28px;
+    padding: 7px;
     border-radius: 8px;
     color: var(--neutral-700);
     cursor: pointer;
@@ -111,8 +126,8 @@
   // here but will never match (safe to leave for any stale DOM).
   &__folder-card {
     border: 1px solid var(--neutral-200);
-    border-radius: 12px;
-    padding: 12px;
+    border-radius: 10px;
+    padding: 10px;
     justify-content: space-between;
     align-items: center;
   }
@@ -123,8 +138,8 @@
   }
 
   &__folder-icon-box {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
     // Default tint (purple) — overridden inline via styleOpt when folder_color
     // is available (Fix #2: real folder color from colorFromName).
@@ -135,8 +150,8 @@
   }
 
   &__folder-icon {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     // Default — overridden inline when folder_color is available.
     color: var(--primary-purple-40);
   }
@@ -148,8 +163,8 @@
   &__folder-name {
     @include drumee.typo(
       $color: var(--primary-purple-100),
-      $size: 16px,
-      $line: 22px
+      $size: 14px,
+      $line: 20px
     );
   }
 
@@ -159,48 +174,48 @@
   }
 
   &__folder-meta-ico {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     color: var(--tertiary-grey-80);
   }
 
   &__folder-meta-text {
     @include drumee.typo(
       $color: var(--tertiary-grey-80),
-      $size: 14px,
-      $line: 20px
+      $size: 12px,
+      $line: 16px
     );
   }
 
   &__folder-meta-sep {
-    @include drumee.typo($color: var(--tertiary-grey-80), $size: 14px);
+    @include drumee.typo($color: var(--tertiary-grey-80), $size: 12px);
   }
 
   // ── sections ────────────────────────────────────────────────
   &__section {
-    gap: 10px;
+    gap: 8px;
   }
 
   &__section-label {
     @include drumee.typo(
       $color: var(--primary-purple-100),
-      $size: 16px,
+      $size: 14px,
       $weight: 600,
-      $line: 22px
+      $line: 20px
     );
   }
 
   // ── format cards ─────────────────────────────────────────────
   &__format-row {
-    gap: 12px;
+    gap: 8px;
   }
 
   &__format-card {
     flex: 1;
     border: 1.5px solid rgba(0, 0, 0, 0.05);
     border-radius: 8px;
-    padding: 12px;
-    gap: 6px;
+    padding: 10px;
+    gap: 4px;
     cursor: pointer;
     transition: border-color 0.15s;
 
@@ -219,8 +234,8 @@
   }
 
   &__format-icon-box {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 6px;
     background: var(--neutral-100);
     align-items: center;
@@ -233,8 +248,8 @@
   }
 
   &__format-icon {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     color: var(--neutral-600);
 
     .is-active & {
@@ -245,9 +260,9 @@
   &__format-title {
     @include drumee.typo(
       $color: var(--primary-purple-100),
-      $size: 16px,
+      $size: 14px,
       $weight: 600,
-      $line: 24px
+      $line: 20px
     );
 
     &.is-active {
@@ -263,17 +278,17 @@
   &__format-subtitle {
     @include drumee.typo(
       $color: var(--tertiary-grey-80),
-      $size: 14px,
-      $line: 20px
+      $size: 12px,
+      $line: 16px
     );
   }
 
   // ── scope list ───────────────────────────────────────────────
   &__scope-list {
     border: 1px solid var(--neutral-200);
-    border-radius: 12px;
+    border-radius: 10px;
     padding: 4px 0;
-    max-height: 220px;
+    max-height: 180px;
     overflow-y: auto;
   }
 
@@ -281,8 +296,8 @@
   // the entire row is the tap target. kidsOpt active:0 on child nodes ensures
   // clicks don't stop at an inner element before reaching the row handler.
   &__scope-row {
-    padding: 10px 14px;
-    gap: 10px;
+    padding: 8px 12px;
+    gap: 8px;
     align-items: center;
     cursor: pointer;
 
@@ -291,13 +306,13 @@
     }
 
     &--child {
-      padding-left: 40px; // ~26px indent from spec + 14px base
+      padding-left: 34px; // ~22px indent + 12px base
     }
   }
 
   &__checkbox {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 4px;
     border: 1.5px solid var(--neutral-400);
     flex-shrink: 0;
@@ -314,8 +329,8 @@
   // The containing __checkbox box provides the purple square; the icon is
   // just the white tick stroke on top.
   &__checkbox-ico {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     color: #ffffff;
     // chat-tick uses stroke, not fill — ensure currentColor flows through.
     stroke: currentColor;
@@ -324,21 +339,21 @@
   &__scope-label {
     @include drumee.typo(
       $color: var(--primary-purple-100),
-      $size: 14px,
-      $line: 20px
+      $size: 13px,
+      $line: 18px
     );
   }
 
   &__scope-thread-ico {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: var(--tertiary-grey-80);
     flex-shrink: 0;
   }
 
   &__scope-caret {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: var(--tertiary-grey-80);
     margin-left: auto;
     transition: transform 0.15s;
@@ -356,8 +371,8 @@
 
   &__date-switch {
     // Track + knob toggle (no Skeletons.Switch builder exists).
-    width: 40px;
-    height: 20px;
+    width: 34px;
+    height: 18px;
     flex-shrink: 0;
     padding: 2px;
     border-radius: 12px;
@@ -372,19 +387,19 @@
   }
 
   &__date-switch-knob {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: var(--white);
     transition: transform 0.15s ease;
   }
 
   &__date-switch[data-state="1"] &__date-switch-knob {
-    transform: translateX(20px);
+    transform: translateX(16px);
   }
 
   &__date-row {
-    gap: 8px;
+    gap: 6px;
     align-items: center;
   }
 
@@ -396,7 +411,7 @@
     flex: 1;
     border: 1px solid var(--neutral-300);
     border-radius: 8px;
-    padding: 8px 10px;
+    padding: 6px 8px;
     gap: 6px;
     align-items: center;
     cursor: pointer;
@@ -407,8 +422,8 @@
   }
 
   &__date-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: var(--tertiary-grey-80);
     flex-shrink: 0;
     pointer-events: none; // decorative; the indicator overlay handles clicks
@@ -423,8 +438,8 @@
     cursor: pointer;
     @include drumee.typo(
       $color: var(--primary-purple-100),
-      $size: 14px,
-      $line: 20px
+      $size: 13px,
+      $line: 18px
     );
     background: transparent;
 
@@ -445,8 +460,8 @@
   }
 
   &__date-arrow {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: var(--neutral-500);
     flex-shrink: 0;
   }
@@ -466,16 +481,16 @@
   &__footer-hint {
     @include drumee.typo(
       $color: var(--tertiary-grey-80),
-      $size: 14px,
-      $line: 20px
+      $size: 12px,
+      $line: 16px
     );
   }
 
   &__footer-filename-hint {
     @include drumee.typo(
       $color: var(--primary-purple-40),
-      $size: 14px,
-      $line: 20px
+      $size: 12px,
+      $line: 16px
     );
   }
 
@@ -483,7 +498,7 @@
   &__download-btn {
     background: var(--primary-purple-50);  // #433cc5
     border-radius: 4px;
-    padding: 12px 24px;
+    padding: 10px 20px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -517,9 +532,9 @@
   &__download-btn-label {
     @include drumee.typo(
       $color: #ffffff,
-      $size: 16px,
+      $size: 14px,
       $weight: 600,
-      $line: 24px
+      $line: 20px
     );
   }
 
@@ -530,8 +545,8 @@
 
   // Indeterminate ring spinner shown left of "Generating".
   &__download-spinner {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     border-radius: 50%;
     border: 2px solid var(--neutral-300);
@@ -560,8 +575,8 @@
   &__progress-error {
     @include drumee.typo(
       $color: var(--red-600),
-      $size: 13px,
-      $line: 18px
+      $size: 12px,
+      $line: 16px
     );
     padding: 6px 0;
   }

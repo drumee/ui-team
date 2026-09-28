@@ -178,8 +178,9 @@ test("a loading tile / file row / link row shows a spinning indicator and takes 
 
 // The "Meeting" tile follows the Meet start button's two states
 // (meeting-schedule.scss &__meeting-sched-start-btn).
-test("meeting tile: spinner in place of the icon while launching, brand + locked once joined", () => {
-  const loading = '.window-folder .window__chat-details-action--meeting[data-loading="1"]';
+test("action tiles: spinner in place of the icon while working; meeting tile brand + locked once joined", () => {
+  // Every action tile (Mute / Meeting / Download) shows the same loading state.
+  const loading = '.window-folder .window__chat-details-action[data-loading="1"]';
   assert.match(rule(loading), /pointer-events: none/);
   assert.match(rule(`${loading} .window__chat-details-action-ico`), /display: none/);
   const spin = rule(`${loading}::before`);
