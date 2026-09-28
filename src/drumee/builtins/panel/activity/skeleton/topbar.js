@@ -18,37 +18,9 @@ module.exports = function (ui) {
             service: 'clear-all',
             uiHandler: [ui],
           }),
-          Skeletons.Box.X({
-            className: `${pfx}__unread-toggle`,
-            sys_pn: 'unread-toggle',
-            service: 'toggle-unreads',
-            state: ui._unreadsOnly ? 1 : 0,
-            uiHandler: ui,
-            partHandler: ui,
-            // `active: 0` on EVERY descendant, not via `kidsOpt`, and not only on
-            // the direct kids. kidsOpt is a no-op — ui-core's mergeKidsOptions
-            // rebinds its local `item` and discards the map result — and `active`
-            // does not cascade either: letc.js gates the binding per widget with
-            // `if (!active) return`. Any active element in the click path binds
-            // its own onclick, and __handleClick calls stopPropagation() BEFORE
-            // triggerHandlers, so the click dies there and `toggle-unreads`
-            // never fires. Before this, only the bare padding around the label
-            // and track toggled Unreads. Same cause and fix as 97be5a4e (#510).
-            kids: [
-              Skeletons.Note({
-                className: `${pfx}__unread-label`,
-                content: LOCALE.UNREADS,
-                active: 0,
-              }),
-              Skeletons.Box.X({
-                className: `${pfx}__toggle-track`,
-                active: 0,
-                kids: [
-                  Skeletons.Box.X({ className: `${pfx}__toggle-thumb`, active: 0 }),
-                ],
-              }),
-            ],
-          }),
+          // Filter button + popup (All / Unread / Bookmarked). Replaces the
+          // Unreads toggle: its ON state is the `unread` filter.
+          require('./view-filter')(ui),
         ],
       }),
       // Close button, on every device. LAST, so on desktop it sits at the end

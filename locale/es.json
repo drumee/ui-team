@@ -3080,5 +3080,9 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "eliminar este espacio",
   "PERMISSION_ACTION_MANAGE_SHARE": "gestionar enlaces para compartir",
   "X_ITEMS": "{0} elementos",
-  "ONE_ITEM": "1 elemento"
+  "ONE_ITEM": "1 elemento",
+  "NOTI_FILTER_TITLE": "Filtrar notificaciones",
+  "NOTI_FILTER_UNREAD": "No leídas",
+  "NOTI_FILTER_BOOKMARKED": "Guardadas",
+  "NO_BOOKMARKED_NOTIFICATIONS": "No hay notificaciones guardadas"
 }

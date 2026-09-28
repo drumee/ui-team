@@ -3293,5 +3293,9 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "supprimer cet espace de travail",
   "PERMISSION_ACTION_MANAGE_SHARE": "gérer les liens de partage",
   "X_ITEMS": "{0} éléments",
-  "ONE_ITEM": "1 élément"
+  "ONE_ITEM": "1 élément",
+  "NOTI_FILTER_TITLE": "Filtrer les notifications",
+  "NOTI_FILTER_UNREAD": "Non lues",
+  "NOTI_FILTER_BOOKMARKED": "Enregistrées",
+  "NO_BOOKMARKED_NOTIFICATIONS": "Aucune notification enregistrée"
 }

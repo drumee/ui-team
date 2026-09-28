@@ -3292,5 +3292,9 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "delete this workspace",
   "PERMISSION_ACTION_MANAGE_SHARE": "manage share links",
   "X_ITEMS": "{0} items",
-  "ONE_ITEM": "1 item"
+  "ONE_ITEM": "1 item",
+  "NOTI_FILTER_TITLE": "Filter notifications",
+  "NOTI_FILTER_UNREAD": "Unread",
+  "NOTI_FILTER_BOOKMARKED": "Bookmarked",
+  "NO_BOOKMARKED_NOTIFICATIONS": "No bookmarked notifications"
 }

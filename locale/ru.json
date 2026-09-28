@@ -3085,5 +3085,9 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "удалить это пространство",
   "PERMISSION_ACTION_MANAGE_SHARE": "управлять ссылками для общего доступа",
   "X_ITEMS": "Элементов: {0}",
-  "ONE_ITEM": "1 элемент"
+  "ONE_ITEM": "1 элемент",
+  "NOTI_FILTER_TITLE": "Фильтр уведомлений",
+  "NOTI_FILTER_UNREAD": "Непрочитанные",
+  "NOTI_FILTER_BOOKMARKED": "В закладках",
+  "NO_BOOKMARKED_NOTIFICATIONS": "Нет уведомлений в закладках"
 }

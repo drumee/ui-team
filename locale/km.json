@@ -3079,5 +3079,9 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "លុបកន្លែងធ្វើការនេះ",
   "PERMISSION_ACTION_MANAGE_SHARE": "គ្រប់គ្រងតំណចែករំលែក",
   "X_ITEMS": "{0} ធាតុ",
-  "ONE_ITEM": "1 ធាតុ"
+  "ONE_ITEM": "1 ធាតុ",
+  "NOTI_FILTER_TITLE": "តម្រងការជូនដំណឹង",
+  "NOTI_FILTER_UNREAD": "មិនទាន់អាន",
+  "NOTI_FILTER_BOOKMARKED": "បានរក្សាទុក",
+  "NO_BOOKMARKED_NOTIFICATIONS": "គ្មានការជូនដំណឹងដែលបានរក្សាទុក"
 }
