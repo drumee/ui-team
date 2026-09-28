@@ -818,6 +818,19 @@ class __window_folder extends mfsInteract {
     }
   }
 
+  /**
+   * Tell panel_activity the Task / Meet tab of this workspace is on screen,
+   * so the rail pill for it clears (hub-counts.js "seen" marks).
+   * @param {String} tab folder-window tab
+   */
+  _announceTabSeen(tab) {
+    const kind = tab === _a.task ? "task" : tab === "meeting" ? "meeting" : null;
+    if (!kind || this.mget(_a.token)) return;
+    const hub = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    if (hub == null || typeof RADIO_BROADCAST === "undefined") return;
+    RADIO_BROADCAST.trigger("workspace-tab-seen", { hub_id: hub, tab: kind });
+  }
+
   // Apply filename — or hub_name for an empty-filename root — to the title.
   // Uses the bound ref directly (NOT ensurePart): calling ensurePart for a part
   // from within its own onPartReady replays onPartReady and loops forever.
@@ -5793,6 +5806,12 @@ class __window_folder extends mfsInteract {
     this._stashPanelScroll();
     const prevTab = this.activeTab;
     this.activeTab = tab;
+    // Opening Task or Meet clears that rail pill (panel_activity marks what is
+    // there now as seen; anything newer counts again). Every way onto a tab
+    // passes here — the rail, a notification deep link, a switch that keeps
+    // the tab. Not for a window opened from a share (token): the pill
+    // describes the workspace the user belongs to.
+    this._announceTabSeen(tab);
     // The Start / Join button is on the Meet tab: its idle-deferred scan
     // (_initMeetingPresence) must not be waited on once it is on screen.
     if (tab === "meeting" && _.isFunction(this._runMeetingScan)) {

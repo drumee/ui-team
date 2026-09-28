@@ -5333,8 +5333,15 @@ class desk_module extends LetcBox {
    * here (same idiom as _readActivityCount).
    */
   _writeRailCounts() {
-    const all = (window.ActivityHandler && window.ActivityHandler._hubCounts) || {};
     const ws = typeof Wm !== "undefined" && Wm ? Wm._curWorkspace : null;
+    // Standing on Task / Meet: what just arrived is on screen, so it is seen
+    // (window_folder _announceTabSeen). panel_activity republishes only when a
+    // mark moves, so this re-ask on every count update cannot loop. Asked
+    // BEFORE the counts are read: a moved mark republishes synchronously, and
+    // reading first would paint the stale numbers over the fresh ones.
+    const pane = ws && ws.hub_id != null ? this._railWorkspace() : null;
+    if (pane && _.isFunction(pane._announceTabSeen)) pane._announceTabSeen(pane.activeTab);
+    const all = (window.ActivityHandler && window.ActivityHandler._hubCounts) || {};
     const c = (ws && ws.hub_id != null && all[ws.hub_id]) || {};
     const rows = { chat: c.chat, task: c.task, meet: c.meeting };
     if (!_.isFunction(this.getPart)) return;
