@@ -3112,5 +3112,22 @@
   "TASK_TOAST_UNLINKED": "从“{task}”移除了一个文件",
   "MIGRATE_GDRIVE_SUMMARY_EXISTING": "{0} 个已存在，已跳过。",
   "MIGRATE_GDRIVE_CANCEL_TOO_LATE": "迁移在取消生效前已经完成。",
-  "MIGRATE_GDRIVE_DONE_HINT_NONE": "没有导入新文件。"
+  "MIGRATE_GDRIVE_DONE_HINT_NONE": "没有导入新文件。",
+  "CD_CHAT_DETAILS": "聊天详情",
+  "CD_FILE": "{0} 个文件",
+  "CD_FILES": "{0} 个文件",
+  "CD_LAST_SEEN": "最后在线 {0}",
+  "CD_LAST_SEEN_RECENTLY": "最近在线",
+  "CD_LINK": "{0} 个共享链接",
+  "CD_LINKS": "{0} 个共享链接",
+  "CD_LINKS_TITLE": "链接",
+  "CD_MEMBERS": "{0} 位成员",
+  "CD_NOTHING_YET": "此聊天中尚未共享任何内容",
+  "CD_ONLINE": "在线",
+  "CD_PHOTO": "{0} 张照片",
+  "CD_PHOTOS": "{0} 张照片",
+  "CD_PHOTOS_TITLE": "照片",
+  "CD_UNMUTE": "取消静音",
+  "CD_VIDEO": "{0} 个视频",
+  "CD_VIDEOS": "{0} 个视频"
 }

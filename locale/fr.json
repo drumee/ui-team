@@ -3342,5 +3342,22 @@
   "UPLOAD_FAILED_SHORT": "Échec",
   "MIGRATE_GDRIVE_SUMMARY_EXISTING": "{0} déjà présent(s), ignoré(s).",
   "MIGRATE_GDRIVE_CANCEL_TOO_LATE": "La migration était déjà terminée avant de pouvoir être annulée.",
-  "MIGRATE_GDRIVE_DONE_HINT_NONE": "Aucun nouveau fichier n'a été importé."
+  "MIGRATE_GDRIVE_DONE_HINT_NONE": "Aucun nouveau fichier n'a été importé.",
+  "CD_CHAT_DETAILS": "Détails de la discussion",
+  "CD_FILE": "{0} fichier",
+  "CD_FILES": "{0} fichiers",
+  "CD_LAST_SEEN": "vu {0}",
+  "CD_LAST_SEEN_RECENTLY": "vu récemment",
+  "CD_LINK": "{0} lien partagé",
+  "CD_LINKS": "{0} liens partagés",
+  "CD_LINKS_TITLE": "Liens",
+  "CD_MEMBERS": "{0} membres",
+  "CD_NOTHING_YET": "Rien n'a encore été partagé dans cette discussion",
+  "CD_ONLINE": "en ligne",
+  "CD_PHOTO": "{0} photo",
+  "CD_PHOTOS": "{0} photos",
+  "CD_PHOTOS_TITLE": "Photos",
+  "CD_UNMUTE": "Réactiver",
+  "CD_VIDEO": "{0} vidéo",
+  "CD_VIDEOS": "{0} vidéos"
 }

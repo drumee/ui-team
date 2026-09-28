@@ -3113,5 +3113,22 @@
   "TASK_TOAST_UNLINKED": "quitó un archivo de \"{task}\"",
   "MIGRATE_GDRIVE_SUMMARY_EXISTING": "{0} ya existían, omitidos.",
   "MIGRATE_GDRIVE_CANCEL_TOO_LATE": "La migración ya había terminado antes de poder cancelarse.",
-  "MIGRATE_GDRIVE_DONE_HINT_NONE": "No se importaron archivos nuevos."
+  "MIGRATE_GDRIVE_DONE_HINT_NONE": "No se importaron archivos nuevos.",
+  "CD_CHAT_DETAILS": "Detalles del chat",
+  "CD_FILE": "{0} archivo",
+  "CD_FILES": "{0} archivos",
+  "CD_LAST_SEEN": "visto {0}",
+  "CD_LAST_SEEN_RECENTLY": "visto recientemente",
+  "CD_LINK": "{0} enlace compartido",
+  "CD_LINKS": "{0} enlaces compartidos",
+  "CD_LINKS_TITLE": "Enlaces",
+  "CD_MEMBERS": "{0} miembros",
+  "CD_NOTHING_YET": "Aún no se ha compartido nada en este chat",
+  "CD_ONLINE": "en línea",
+  "CD_PHOTO": "{0} foto",
+  "CD_PHOTOS": "{0} fotos",
+  "CD_PHOTOS_TITLE": "Fotos",
+  "CD_UNMUTE": "Reactivar sonido",
+  "CD_VIDEO": "{0} vídeo",
+  "CD_VIDEOS": "{0} vídeos"
 }
