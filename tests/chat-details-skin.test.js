@@ -109,19 +109,15 @@ test("photo and video tiles show a border on hover", () => {
   assert.match(rule(".window-folder .window__chat-details-tile:hover::after"), /box-shadow: inset 0 0 0 2px var\(--primary-40, #5950ff\)/);
 });
 
-test("file tiles are coloured by type (Figma file-grid palette)", () => {
-  const tone = (t) => rule(`.window-folder .window__chat-details-file-ico--${t}`);
-  assert.match(tone("text"), /color: var\(--primary-purple-30\)/);
-  assert.match(tone("pdf"), /color: var\(--secondary-blue-50\)/);
-  assert.match(tone("note"), /color: var\(--warning\)/);
-  assert.match(tone("sheet"), /color: var\(--success\)/);
-  assert.match(tone("slides"), /color: var\(--link-share\)/);
-  // folder / media / other share one grouped rule.
-  assert.match(
-    rule(["folder", "media", "other"].map((t) => `.window-folder .window__chat-details-file-ico--${t}`).join(", ")),
-    /color: var\(--primary-purple-40\)/,
-  );
-  assert.match(rule(".window-folder .window__chat-details-file-ico svg"), /fill: currentcolor/);
+// Same painting as a chat attachment chip (widget/chat/skin/attachment.scss):
+// the glyph takes the text colour, and the office raw icons get their page
+// body whitened (it has no fill of its own and would default to black).
+test("file tiles are painted like chat attachment chips", () => {
+  assert.match(rule(".window-folder .window__chat-details-file-ico svg"), /color: var\(--normal-fg-10, #0b0a21\); fill: currentcolor/);
+  const office = ["doc", "docx", "xls", "xlsx", "ppt", "pptx"]
+    .map((e) => `.window-folder .window__chat-details-file-ico[data-ext=${e}] svg`).join(", ");
+  assert.match(rule(office), /color: var\(--white, #ffffff\); fill: var\(--white, #ffffff\)/);
+  assert.doesNotMatch(css, /window__chat-details-file-ico--/);
 });
 
 // Mute / Meeting / Download labels are Regular in Figma (775:132186); global

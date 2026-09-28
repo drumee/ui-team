@@ -5,8 +5,9 @@
  * folder window's onUiEvent handles.
  */
 const M = require("../chat-details/model");
-// Same type → icon/tone mapping the Trash panel draws (Figma file-grid palette).
-const { fileIcon } = require("../../../panel/trash/item/file-icon");
+// The glyph a chat attachment chip draws for a file (office types keep their
+// coloured raw icons) — one icon set for chat, task comments and this list.
+const { chipGlyph } = require("../../../../libs/file-meta");
 
 function header(ui, title, { back = false } = {}) {
   const pfx = `${ui.fig.group}__chat-details`;
@@ -206,9 +207,7 @@ function mediaTile(ui, row) {
 
 function fileRow(ui, row) {
   const pfx = `${ui.fig.group}__chat-details`;
-  // media_list rows carry the media category and extension; fileIcon keys on
-  // the same pair (a "document" goes by its extension: text/sheet/slides).
-  const icon = fileIcon({ filetype: row.category, ext: row.extension });
+  const ext = `${row.extension || ""}`.toLowerCase();
   return Skeletons.Box.X({
     className: `${pfx}-file`,
     service: "chat-details-open-media",
@@ -219,9 +218,11 @@ function fileRow(ui, row) {
     kidsOpt: { active: 0 },
     kids: [
       Skeletons.Box.X({
-        className: `${pfx}-file-ico ${pfx}-file-ico--${icon.tone}`,
-        dataset: { ext: `${row.extension || ""}`.toLowerCase() },
-        kids: [Skeletons.Image.Svg({ ico: icon.ico })],
+        className: `${pfx}-file-ico`,
+        // data-ext lets the skin whiten the office icons' page body, exactly
+        // as the chat attachment chip does.
+        dataset: { ext },
+        kids: [Skeletons.Image.Svg({ ico: chipGlyph({ extension: ext }) })],
       }),
       Skeletons.Note({ className: `${pfx}-file-name`, content: row.filename || "" }),
     ],

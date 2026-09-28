@@ -24,6 +24,15 @@ global.KIND = { profile: "profile" };
 global._K = { permission: { download: 4 } };
 global.bootstrap = () => ({ endpoint: "/-/", keysel: "k" });
 
+// webpack alias used by libs/file-meta chipGlyph — map it to the real module
+// so the test sees the same glyphs the app does.
+const Module = require("node:module");
+const MAP = require("../src/drumee/builtins/media/template/map");
+const _load = Module._load;
+Module._load = function (request, ...rest) {
+  if (request === "media/template/map") return MAP;
+  return _load.call(this, request, ...rest);
+};
 const S = require("../src/drumee/builtins/window/folder/skeleton/chat-details");
 const ui = { fig: { group: "window", family: "window-folder" }, mget: (k) => ({ hub_id: "h1" })[k] };
 const walk = (n, out = []) => {
@@ -136,32 +145,36 @@ test("icons match Figma's outline set (BellRinging, VideoCamera, DownloadSimple,
   assert.equal(byService(page, "close-chat-details")[0].ico, "meet-x");
 });
 
-// Files page: each row's tile shows its file type (same mapping and palette as
-// the Trash panel / Figma file grid), not one generic glyph.
-test("file rows draw a per-type icon and tone", () => {
+// Files page: each row's tile shows the SAME glyph a chat attachment chip
+// shows for that file (libs/file-meta chipGlyph) — office types keep their
+// coloured raw icons, everything else the flat app-* family.
+test("file rows use the chat attachment glyphs", () => {
   const rows = [
-    ["Q1 Campaign Assets.docx", "docx", "document"],
-    ["Product Roadmap H2.xlsx", "xlsx", "document"],
-    ["Brand Guidelines 2026.pdf", "pdf", "pdf"],
-    ["Investor Pitch Deck - Draft.pptx", "pptx", "document"],
-    ["meeting notes", "", "note"],
-    ["release.zip", "zip", "other"],
-    ["track.mp3", "mp3", "audio"],
-    ["mystery.bin", "bin", "other"],
-  ].map(([filename, extension, category], i) => ({ nid: `f${i}`, filename, extension, category }));
+    ["Q1 Campaign Assets.docx", "docx"],
+    ["Product Roadmap H2.xlsx", "xlsx"],
+    ["Investor Pitch Deck - Draft.pptx", "pptx"],
+    ["Brand Guidelines 2026.pdf", "pdf"],
+    ["readme.md", "md"],
+    ["notes.txt", "txt"],
+    ["track.mp3", "mp3"],
+    ["release.zip", "zip"],
+    ["no extension", ""],
+  ].map(([filename, extension], i) => ({ nid: `f${i}`, filename, extension, category: "document" }));
   const t = S.chatDetailsPage(ui, "file", rows);
   const tiles = walk(t).filter((n) => /chat-details-file-ico(\s|$)/.test(n.className || ""));
-  const got = tiles.map((n) => [n.className.match(/--([a-z]+)/)[1], walk(n).find((k) => k.ico).ico]);
-  assert.deepEqual(got, [
-    ["text", "ph-file-text"],
-    ["sheet", "ph-table"],
-    ["pdf", "ph-file-pdf"],
-    ["slides", "ph-presentation"],
-    ["note", "ph-note-pencil"],
-    ["other", "ph-file-zip"],
-    ["media", "ph-file-audio"],
-    ["other", "ph-file"],
+  assert.deepEqual(tiles.map((n) => walk(n).find((k) => k.ico).ico), [
+    "raw-documents_word",
+    "raw-documents_excel",
+    "raw-documents_powerpoint",
+    "raw-documents_pdf",
+    "raw-markdown",
+    "app-txt-file",
+    "app-audio-file",
+    "app-file",
+    "app-file",
   ]);
+  // The extension rides on the tile so the skin can whiten the office page body.
+  assert.deepEqual(tiles.map((n) => n.dataset.ext), ["docx", "xlsx", "pptx", "pdf", "md", "txt", "mp3", "zip", ""]);
 });
 
 // The thread rows sit in their own list box (scrolls under a fixed label).
