@@ -328,10 +328,24 @@
       border-radius: 6px;
       background: rgba(0, 0, 0, 0.05);
 
+      color: var(--primary-purple-40);
+
       svg {
         width: 18px;
         height: 18px;
+        fill: currentcolor;
       }
+
+      // By file type (panel/trash/item/file-icon.js): text/pdf/note/sheet/
+      // slides are the Figma file grid's colours; the rest keep brand purple.
+      &--folder,
+      &--media,
+      &--other { color: var(--primary-purple-40); }
+      &--text { color: var(--primary-purple-30); }
+      &--pdf { color: var(--secondary-blue-50); }
+      &--note { color: var(--warning); }
+      &--sheet { color: var(--success); }
+      &--slides { color: var(--link-share); }
     }
     &-file-name,
     &-link-msg,

@@ -5,6 +5,8 @@
  * folder window's onUiEvent handles.
  */
 const M = require("../chat-details/model");
+// Same type → icon/tone mapping the Trash panel draws (Figma file-grid palette).
+const { fileIcon } = require("../../../panel/trash/item/file-icon");
 
 function header(ui, title, { back = false } = {}) {
   const pfx = `${ui.fig.group}__chat-details`;
@@ -200,6 +202,9 @@ function mediaTile(ui, row) {
 
 function fileRow(ui, row) {
   const pfx = `${ui.fig.group}__chat-details`;
+  // media_list rows carry the media category and extension; fileIcon keys on
+  // the same pair (a "document" goes by its extension: text/sheet/slides).
+  const icon = fileIcon({ filetype: row.category, ext: row.extension });
   return Skeletons.Box.X({
     className: `${pfx}-file`,
     service: "chat-details-open-media",
@@ -210,9 +215,9 @@ function fileRow(ui, row) {
     kidsOpt: { active: 0 },
     kids: [
       Skeletons.Box.X({
-        className: `${pfx}-file-ico`,
+        className: `${pfx}-file-ico ${pfx}-file-ico--${icon.tone}`,
         dataset: { ext: `${row.extension || ""}`.toLowerCase() },
-        kids: [Skeletons.Image.Svg({ ico: "ph-file-text" })],
+        kids: [Skeletons.Image.Svg({ ico: icon.ico })],
       }),
       Skeletons.Note({ className: `${pfx}-file-name`, content: row.filename || "" }),
     ],

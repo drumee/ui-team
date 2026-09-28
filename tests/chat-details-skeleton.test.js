@@ -135,3 +135,31 @@ test("icons match Figma's outline set (BellRinging, VideoCamera, DownloadSimple,
   const page = S.chatDetailsPage(ui, "file", []);
   assert.equal(byService(page, "close-chat-details")[0].ico, "meet-x");
 });
+
+// Files page: each row's tile shows its file type (same mapping and palette as
+// the Trash panel / Figma file grid), not one generic glyph.
+test("file rows draw a per-type icon and tone", () => {
+  const rows = [
+    ["Q1 Campaign Assets.docx", "docx", "document"],
+    ["Product Roadmap H2.xlsx", "xlsx", "document"],
+    ["Brand Guidelines 2026.pdf", "pdf", "pdf"],
+    ["Investor Pitch Deck - Draft.pptx", "pptx", "document"],
+    ["meeting notes", "", "note"],
+    ["release.zip", "zip", "other"],
+    ["track.mp3", "mp3", "audio"],
+    ["mystery.bin", "bin", "other"],
+  ].map(([filename, extension, category], i) => ({ nid: `f${i}`, filename, extension, category }));
+  const t = S.chatDetailsPage(ui, "file", rows);
+  const tiles = walk(t).filter((n) => /chat-details-file-ico(\s|$)/.test(n.className || ""));
+  const got = tiles.map((n) => [n.className.match(/--([a-z]+)/)[1], walk(n).find((k) => k.ico).ico]);
+  assert.deepEqual(got, [
+    ["text", "ph-file-text"],
+    ["sheet", "ph-table"],
+    ["pdf", "ph-file-pdf"],
+    ["slides", "ph-presentation"],
+    ["note", "ph-note-pencil"],
+    ["other", "ph-file-zip"],
+    ["media", "ph-file-audio"],
+    ["other", "ph-file"],
+  ]);
+});

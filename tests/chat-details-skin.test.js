@@ -106,3 +106,18 @@ test("photo and video tiles show a border on hover", () => {
   assert.match(ring, /pointer-events: none/);
   assert.match(rule(".window-folder .window__chat-details-tile:hover::after"), /box-shadow: inset 0 0 0 2px var\(--primary-40, #5950ff\)/);
 });
+
+test("file tiles are coloured by type (Figma file-grid palette)", () => {
+  const tone = (t) => rule(`.window-folder .window__chat-details-file-ico--${t}`);
+  assert.match(tone("text"), /color: var\(--primary-purple-30\)/);
+  assert.match(tone("pdf"), /color: var\(--secondary-blue-50\)/);
+  assert.match(tone("note"), /color: var\(--warning\)/);
+  assert.match(tone("sheet"), /color: var\(--success\)/);
+  assert.match(tone("slides"), /color: var\(--link-share\)/);
+  // folder / media / other share one grouped rule.
+  assert.match(
+    rule(["folder", "media", "other"].map((t) => `.window-folder .window__chat-details-file-ico--${t}`).join(", ")),
+    /color: var\(--primary-purple-40\)/,
+  );
+  assert.match(rule(".window-folder .window__chat-details-file-ico svg"), /fill: currentcolor/);
+});
