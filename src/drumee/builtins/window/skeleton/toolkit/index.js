@@ -1,6 +1,10 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const { isGrouped } = require("./file-group");
 const { menuRow, createRows } = require("./new-menu-rows");
+const {
+  chatDetailsPanel,
+  headerMenuService,
+} = require("../../folder/skeleton/chat-details");
 
 const AREA_LABELS = {
   // Personal workspaces are personal-area folders at the home root.
@@ -715,11 +719,13 @@ export function chatHeaderBar(ui, opt = {}) {
   const actions = Skeletons.Box.X({
     className: `${grp}__chat-header-actions`,
     kids: [
-      // 3-dot (Figma DotsThreeVertical) FIRST — opens the thread menu.
+      // 3-dot (Figma DotsThreeVertical) FIRST. On a workspace folder window it
+      // opens Chat details (Figma 775:131699), which carries the thread list
+      // and Download itself; elsewhere (share-token windows) the thread menu.
       Skeletons.Button.Svg({
         className: `${grp}__chat-header-btn`,
         ico: "apps-dots-vertical",
-        service: "open-thread-menu",
+        service: headerMenuService(ui),
         uiHandler: [ui],
         partHandler: ui,
       }),
@@ -1493,6 +1499,9 @@ export function folderFilesView(ui) {
     filesSplitter(ui),
     threadRail(ui),
     chatPanel(ui),
+    // Chat details (Figma 775:131699): takes the chat panel's cell while the
+    // split body carries data-details="open" (folder/skin/chat-details.scss).
+    chatDetailsPanel(ui),
     fileThreadPanel(ui),
   ].filter(Boolean);
 }

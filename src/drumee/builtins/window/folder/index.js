@@ -15,6 +15,8 @@ const {
   showSeatLimitReached,
 } = require("libs/billing");
 const readCache = require("libs/read-cache");
+const ChatDetails = require("./chat-details/controller");
+const { extractUrl } = require("./chat-details/model");
 const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
   SECURE_SHARE_TAB,
@@ -2408,6 +2410,58 @@ class __window_folder extends mfsInteract {
 
       case "close-chat-search":
         return this._closeChatSearch();
+
+      // ── Chat details panel (Figma 775:131699) — chat-details/controller ──
+      case "open-chat-details":
+        return this._openChatDetails();
+
+      case "close-chat-details":
+        return this._closeChatDetails();
+
+      case "chat-details-back":
+        return ChatDetails.showPage(this, "overview");
+
+      case "chat-details-page":
+        return ChatDetails.showPage(this, cmd && cmd.mget && cmd.mget("page"));
+
+      case "chat-details-mute":
+        return ChatDetails.toggleMute(this);
+
+      case "chat-details-meeting":
+        // The Meet tab (its calendar) — never starts a call; showFolderTab
+        // cannot start one. The tab switch also closes the details panel.
+        return this.showFolderTab("meeting");
+
+      case "chat-details-download":
+        return this._openChatExportModal();
+
+      case "chat-details-thread": {
+        // Same as the thread dropdown's file row: scope the chat, in place,
+        // to that file's thread — back on the chat, not the details.
+        const fileNid = cmd && cmd.mget && cmd.mget("file_nid");
+        this._closeChatDetails();
+        if (!fileNid) return;
+        return this.scopeChatToFile(fileNid, cmd.mget("filename") || "");
+      }
+
+      case "chat-details-open-media": {
+        const nid = cmd && cmd.mget && cmd.mget("nid");
+        if (!nid) return;
+        return this.openFileLocation({
+          nid: `${nid}`,
+          hub_id: this.mget(_a.actual_hub_id) || this.mget(_a.hub_id),
+          pid: this.mget(_a.nid),
+          area: this.mget(_a.area),
+          filetype: cmd.mget("filetype") || undefined,
+        });
+      }
+
+      case "chat-details-open-link": {
+        // Re-extracted, never trusted as given: only an http(s) URL opens.
+        const url = extractUrl(cmd && cmd.mget && cmd.mget("url"));
+        if (url) window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
 
       // ── Team-chat header thread-switch dropdown (Figma 2216-170337) ──
       case "open-thread-menu":
@@ -5458,6 +5512,17 @@ class __window_folder extends mfsInteract {
     return false;
   }
 
+  // ── Chat details panel (Figma 775:131699) ─────────────────────────────
+  // Behaviour lives in ./chat-details/controller (tested against a fake
+  // window); these are the entry points the rest of the window calls.
+  _openChatDetails() {
+    return ChatDetails.open(this);
+  }
+
+  _closeChatDetails() {
+    return ChatDetails.close(this);
+  }
+
   _closeThreadMenu() {
     const menu = this._threadMenuPart;
     if (menu && menu.el && !(menu.isDestroyed && menu.isDestroyed()))
@@ -5827,6 +5892,9 @@ class __window_folder extends mfsInteract {
     // after those writes — where it used to be, inside switchView — it forced
     // a synchronous style+layout flush of the window on every rail click.
     this._stashPanelScroll();
+    // Chat details stands in for the Files-view chat column only: any tab
+    // switch closes it, so coming back to Files shows the conversation.
+    this._closeChatDetails();
     const prevTab = this.activeTab;
     this.activeTab = tab;
     // Opening Task, Meet or Files clears that rail pill (panel_activity marks what is
@@ -6740,12 +6808,15 @@ class __window_folder extends mfsInteract {
     // The thread rail and the file-thread side panel are SIBLINGS of the chat
     // panel in the Chat-tab grid (their own columns), not descendants — gating
     // only .window__chat-panel left a downgraded member able to read the file
-    // thread list and, on opening one, its whole conversation. Flag all three.
+    // thread list and, on opening one, its whole conversation. Flag all of
+    // them, Chat details included (member list, media, links).
     this.$el
       .find(
-        ".window__chat-panel, .window__file-thread-panel, .window__thread-rail",
+        ".window__chat-panel, .window__chat-details, .window__file-thread-panel, .window__thread-rail",
       )
       .attr("data-chat_gated", gated);
+    // A live downgrade must not leave the details panel open on screen.
+    if (gated) this._closeChatDetails();
   }
 
   // Gate the merged "+ New" button (upload / create / gdrive-import) on BOTH

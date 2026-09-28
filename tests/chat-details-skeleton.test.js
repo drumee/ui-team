@@ -19,8 +19,9 @@ global.LOCALE = new Proxy(en, { get: (t, k) => (k in t ? t[k] : k) });
 String.prototype.format = function (...a) {
   return String(this).replace(/\{(\d+)\}/g, (_, i) => a[i]);
 };
-global._a = { hub_id: "hub_id", actual_hub_id: "actual_hub_id" };
+global._a = { hub_id: "hub_id", actual_hub_id: "actual_hub_id", token: "token", privilege: "privilege" };
 global.KIND = { profile: "profile" };
+global._K = { permission: { download: 4 } };
 global.bootstrap = () => ({ endpoint: "/-/", keysel: "k" });
 
 const S = require("../src/drumee/builtins/window/folder/skeleton/chat-details");
@@ -100,4 +101,26 @@ test("link page: message + url, clicking carries the url", () => {
 test("empty page shows the empty note, never a blank card", () => {
   const t = S.chatDetailsPage(ui, "file", []);
   assert.ok(texts(t).includes(en.CD_NOTHING_YET));
+});
+
+const win = (attrs, family = "window-folder") => ({
+  fig: { group: "window", family },
+  mget: (k) => attrs[k],
+});
+
+test("panel part: folder window only, never on a share-token window", () => {
+  const p = S.chatDetailsPanel(win({ privilege: 7 }));
+  assert.equal(p.className, "window__chat-details");
+  assert.equal(p.sys_pn, "chat-details");
+  assert.equal(p.dataset.page, "overview");
+  assert.equal(p.dataset.chat_gated, 0);
+  assert.equal(S.chatDetailsPanel(win({ privilege: 1 })).dataset.chat_gated, 1);
+  assert.equal(S.chatDetailsPanel(win({ privilege: 7, token: "tk" })), null);
+  assert.equal(S.chatDetailsPanel(win({ privilege: 7 }, "window-sharebox")), null);
+});
+
+test("⋮ opens details on a workspace, the thread menu on a share-token window", () => {
+  assert.equal(S.headerMenuService(win({})), "open-chat-details");
+  assert.equal(S.headerMenuService(win({ token: "tk" })), "open-thread-menu");
+  assert.equal(S.headerMenuService(win({}, "window-sharebox")), "open-thread-menu");
 });

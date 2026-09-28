@@ -283,4 +283,35 @@ function chatDetailsPage(ui, page, rows = [], { loading = false } = {}) {
   ];
 }
 
-module.exports = { chatDetailsOverview, chatDetailsPage };
+/**
+ * The empty "chat-details" part that sits beside .window__chat-panel in the
+ * folder window's split body (window/skeleton/toolkit folderFilesView). Filled
+ * by chat-details/controller when the ⋮ opens it. Workspace folder chat only:
+ * a share-token window gets none, since member lists and media counts are
+ * workspace data a share recipient must not see.
+ */
+function chatDetailsPanel(ui) {
+  if (ui.fig.family !== "window-folder" || ui.mget(_a.token)) return null;
+  return Skeletons.Box.Y({
+    className: `${ui.fig.group}__chat-details`,
+    sys_pn: "chat-details",
+    partHandler: ui,
+    dataset: {
+      page: "overview",
+      chat_gated: Number(ui.mget(_a.privilege)) & _K.permission.download ? 0 : 1,
+    },
+  });
+}
+
+/**
+ * What the team-chat header ⋮ does: open Chat details on a workspace folder
+ * window; keep the thread-switch dropdown everywhere else (share-token
+ * windows, and any other family that reuses chatHeaderBar).
+ */
+function headerMenuService(ui) {
+  return ui.fig.family === "window-folder" && !ui.mget(_a.token)
+    ? "open-chat-details"
+    : "open-thread-menu";
+}
+
+module.exports = { chatDetailsOverview, chatDetailsPage, chatDetailsPanel, headerMenuService };
