@@ -325,15 +325,20 @@
     }
   }
 
-  // Fix #5: chat-tick is a bare stroke-only tick (no circle background).
-  // The containing __checkbox box provides the purple square; the icon is
-  // just the white tick stroke on top.
+  // editbox_checkmark (a filled glyph, as in the invite popup): white on the
+  // purple __checkbox square.
   &__checkbox-ico {
     width: 10px;
     height: 10px;
+    line-height: 0;
     color: #ffffff;
-    // chat-tick uses stroke, not fill — ensure currentColor flows through.
-    stroke: currentColor;
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
   }
 
   &__scope-label {

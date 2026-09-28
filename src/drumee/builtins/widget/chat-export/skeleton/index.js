@@ -1,3 +1,4 @@
+const { positionCalendar } = require("../calendar-position");
 /* ============================================================ *
  * Skeleton: chat-export modal
  * Figma node 2216-257014 — "Export chat history"
@@ -441,13 +442,14 @@ function _scopeSection(pfx, ui) {
 
 /**
  * Renders a visual checkbox state indicator.
- * Fix #5: uses "chat-tick" (plain checkmark, no circle) instead of "app-check".
+ * Uses the app's checkmark glyph (editbox_checkmark — the invite popup's and
+ * the settings dialogs' tick), painted white on the purple box by the skin.
  */
 function _checkbox(pfx, checked) {
   return Skeletons.Box.Y({
     className: `${pfx}__checkbox${checked ? " is-checked" : ""}`,
     kids: checked
-      ? [Skeletons.Image.Svg({ ico: "chat-tick", className: `${pfx}__checkbox-ico` })]
+      ? [Skeletons.Image.Svg({ ico: "editbox_checkmark", className: `${pfx}__checkbox-ico` })]
       : [],
   });
 }
@@ -536,6 +538,10 @@ function _dateInput(pfx, ui, which) {
           altInput: true,
           altFormat: "d/m/Y",
           appendTo: document.body,
+          // Viewport-coordinate, position:fixed placement anchored to this
+          // wrap (./calendar-position): flatpickr's own page-coordinate one
+          // drifted off the field and ran off-screen in the desk.
+          position: positionCalendar,
         },
         service: `date-${which}-change`,
         uiHandler: [ui],

@@ -29,6 +29,7 @@ const BODY = { tag: "body" };
 global.document = { body: BODY };
 
 const sk = require("../src/drumee/builtins/widget/chat-export/skeleton/index.js");
+const { positionCalendar } = require("../src/drumee/builtins/widget/chat-export/calendar-position");
 const build = (extra = {}) =>
   (sk.default || sk)({
     fig: { family: "widget-chat-export", group: "widget" },
@@ -64,6 +65,8 @@ test("date range: two flatpickr pickers inside the input wraps, no native date i
     assert.equal(x.vendorOpt.altFormat, "d/m/Y");
     // Out of the scrolling card, so it is never clipped.
     assert.equal(x.vendorOpt.appendTo, BODY);
+    // Our viewport-coordinate placement, not flatpickr's page-coordinate one.
+    assert.equal(x.vendorOpt.position, positionCalendar);
     assert.equal(x.uiHandler[0].fig.family, "widget-chat-export");
   }
   const wraps = walk(t).filter((n) => n.className === "widget-chat-export__date-input-wrap");
@@ -83,4 +86,13 @@ test("date range: an unset date starts empty, a set one is re-seeded on re-rende
 
 test("date range off: no pickers", () => {
   assert.equal(pickers(build({ _dateEnabled: false })).length, 0);
+});
+
+// Chat scope checkboxes draw the app's checkmark glyph (editbox_checkmark, as
+// the invite popup and the settings dialogs do), not chat-tick.
+test("a checked scope checkbox shows editbox_checkmark", () => {
+  const t = build({ _allChecked: true });
+  const ticks = walk(t).filter((n) => n.className === "widget-chat-export__checkbox-ico");
+  assert.ok(ticks.length >= 1);
+  for (const n of ticks) assert.equal(n.ico, "editbox_checkmark");
 });

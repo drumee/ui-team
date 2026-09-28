@@ -82,3 +82,13 @@ test("date fields are flatpickr pickers styled flush inside the wrap", () => {
   assert.match(rule(`${P}__date-picker`), /flex: 1; min-width: 0/);
   assert.doesNotMatch(css, /calendar-picker-indicator/);
 });
+
+// editbox_checkmark is a filled glyph: painted white through fill, sized to
+// the 16px box (the old chat-tick rule painted a stroke).
+test("checkbox tick is the white filled checkmark", () => {
+  const ico = rule(`${P}__checkbox-ico`);
+  assert.match(ico, /width: 10px; height: 10px/);
+  assert.match(ico, /color: #ffffff/);
+  assert.match(rule(`${P}__checkbox-ico svg`), /display: block; width: 100%; height: 100%; fill: currentColor/);
+  assert.doesNotMatch(ico, /stroke/);
+});
