@@ -69,6 +69,17 @@ function extractUrl(text) {
   return m ? m[0] : "";
 }
 
+// Tile image for a shared photo/video: the node's server-side vignette,
+// addressed like widget/chat/node-icon (file/<format>/<nid>/<hub_id>, keyed
+// for the session unless public). `boot` is bootstrap(), injected so this
+// stays pure.
+function thumbUrl(row = {}, hub_id, boot = {}) {
+  if (!row.nid || !hub_id) return "";
+  const format = row.category === "vector" ? "orig" : "vignette";
+  const url = `${boot.endpoint || ""}file/${format}/${row.nid}/${hub_id}`;
+  return boot.keysel && row.area !== "public" ? `${url}?keysel=${boot.keysel}` : url;
+}
+
 function uniqueMembers(list) {
   const seen = new Set();
   return (list || []).filter((m) => {
@@ -95,6 +106,7 @@ module.exports = {
   lastSeenLabel,
   durationLabel,
   extractUrl,
+  thumbUrl,
   uniqueMembers,
   generation,
 };

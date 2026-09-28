@@ -74,3 +74,12 @@ test("generation: only the latest request is current", () => {
   assert.equal(g.isCurrent(first), false);
   assert.equal(g.isCurrent(second), true);
 });
+
+test("thumbUrl: vignette for photos/videos, orig for vectors, keysel unless public", () => {
+  const boot = { endpoint: "/-/", keysel: "k1" };
+  assert.equal(M.thumbUrl({ nid: "n1", category: "image" }, "h1", boot), "/-/file/vignette/n1/h1?keysel=k1");
+  assert.equal(M.thumbUrl({ nid: "n2", category: "vector" }, "h1", boot), "/-/file/orig/n2/h1?keysel=k1");
+  assert.equal(M.thumbUrl({ nid: "n3", category: "video" }, "h1", { endpoint: "/-/" }), "/-/file/vignette/n3/h1");
+  assert.equal(M.thumbUrl({ nid: "n4", category: "image", area: "public" }, "h1", boot), "/-/file/vignette/n4/h1");
+  assert.equal(M.thumbUrl({ category: "image" }, "h1", boot), "");
+});
