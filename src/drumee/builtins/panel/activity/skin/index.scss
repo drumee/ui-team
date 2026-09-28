@@ -799,7 +799,9 @@
 
   &__saved-empty {
     @include drumee.typo($color: #65656c, $size: 12px, $line: 17px);
-    display: none;
+    // !important: a Note carries ui-core's `.drumee-widget[data-flow="wrap"]`
+    // display:flex, which outranks a single class.
+    display: none !important;
     padding: 40px 16px;
     text-align: center;
     width: 100%;
@@ -807,7 +809,7 @@
 
   // Only once the pinned rows for this view are in, so it never flashes.
   &__ui[data-view-filter="bookmarked"][data-saved-ready="1"]:not([data-has-saved="1"]) &__saved-empty {
-    display: block;
+    display: block !important;
   }
 
   // ── Responsive: fill the workspace on tablet (≤ 1024px) ──────────

@@ -18,8 +18,11 @@ const VIEW_FILTER_LABELS = {
 };
 
 // What the button reads: the active filter's name, or "Filter" when none.
+// Keyed lookup only: LOCALE is a safe object, LOCALE[undefined] is the truthy
+// string "undefined", so a `||` fallback would never reach FILTER.
 function buttonLabel(filter) {
-  return LOCALE[VIEW_FILTER_LABELS[filter]] || LOCALE.FILTER;
+  const key = VIEW_FILTER_LABELS[filter];
+  return key ? LOCALE[key] : LOCALE.FILTER;
 }
 
 function option(ui, pfx, filter) {

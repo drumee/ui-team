@@ -1004,7 +1004,37 @@ class __panel_activity extends LetcBox {
     const bucket = (this._filter && this._filter !== DEFAULT_BUCKET) ? this._filter : null;
     // Only the Unread filter goes without snapshots (they are served read). The
     // All filter runs the unread feed too but pins every saved row.
-    this._pinnedFetch = this._viewFilter === 'unread' ? Promise.resolve([]) : this._fetchPinned(bucket);
+    if (this._viewFilter === 'unread') {
+      this._pinnedFetch = Promise.resolve([]);
+    } else if (this._viewFilter === 'all') {
+      // Its list is the UNREAD feed, so the saved READ rows of the full feed's
+      // first page (the ones with no snapshot, saved on mobile or before
+      // snapshots existed) would be missing next to the unfiltered view. Read
+      // that page as well; listed after the snapshots, live rows win.
+      this._pinnedFetch = Promise.all([this._fetchPinned(bucket), this._fetchLiveSaved(bucket)])
+        .then(([snapshots, live]) => [...snapshots, ...live]);
+    } else {
+      this._pinnedFetch = this._fetchPinned(bucket);
+    }
+  }
+
+  // Saved rows of the full feed's first page (read + unread), for the All filter.
+  async _fetchLiveSaved(bucket) {
+    try {
+      const api = {
+        hub_id: Visitor.id,
+        unread_only: 0,
+        page: 1,
+        pagelength: (this.__list && this.__list.mget('pagelength')) || _K.pagelength,
+      };
+      if (bucket) api.bucket = bucket;
+      const rows = await this.fetchService(SERVICE.activity.get_feed, api);
+      return (_.isArray(rows) ? rows : [])
+        .filter((r) => r && r.bookmark_key && parseInt(r.is_saved, 10) === 1);
+    } catch (e) {
+      this.warn('[panel_activity] saved feed rows failed', e);
+      return [];
+    }
   }
 
   async _fetchPinned(bucket) {
