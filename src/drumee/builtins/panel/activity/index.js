@@ -311,12 +311,21 @@ class __panel_activity extends LetcBox {
       counts = await this.postService({
         service: (SERVICE.activity && SERVICE.activity.unread_counts) || 'activity.unread_counts',
         hub_id: Visitor.id,
+        // Rail Files pill: per workspace, count new files / folders only after
+        // the user last opened its Files tab (hub-counts.js "seen" marks).
+        files_since: this._filesSinceMarks(),
       });
     } catch (e) {
       this.warn('[panel_activity] unread_counts failed', e);
       return false;
     }
     if (!counts || typeof counts !== 'object') return false;
+    // New files / folders per workspace for the rail's Files pill. Only when
+    // the server sent the field: an older server leaves the last list alone.
+    if (Array.isArray(counts.files_by_hub)) {
+      this._filesByHub = counts.files_by_hub;
+      this._publishHubCounts();
+    }
     // THE BELL COMES FROM HERE TOO, so it can never disagree with the tabs.
     //
     // It used to be `merged.length` in refreshActivity, which counts only the
@@ -1479,7 +1488,7 @@ class __panel_activity extends LetcBox {
    */
   _publishHubCounts() {
     try {
-      this._hubCounts = hubCounts(this._mergedRows, this._railSeenMarks());
+      this._hubCounts = hubCounts(this._mergedRows, this._railSeenMarks(), this._filesByHub);
       RADIO_BROADCAST.trigger('workspace-unread', this._hubCounts);
     } catch (e) {
       this.warn('[panel_activity] hub counts failed', e);
@@ -1497,6 +1506,17 @@ class __panel_activity extends LetcBox {
     return `drumee.rail-seen.${Visitor.id}`;
   }
 
+  /** The Files marks alone, { [hub_id]: ts }, for unread_counts `files_since`. */
+  _filesSinceMarks() {
+    const out = {};
+    const marks = this._railSeenMarks();
+    for (const hub of Object.keys(marks)) {
+      const t = Number(marks[hub] && marks[hub].files) || 0;
+      if (t > 0) out[hub] = t;
+    }
+    return out;
+  }
+
   _railSeenMarks() {
     if (this._railSeen) return this._railSeen;
     let marks = {};
@@ -1512,18 +1532,18 @@ class __panel_activity extends LetcBox {
   }
 
   /**
-   * The Task or Meeting tab of a workspace is on screen (window_folder
+   * The Task, Meeting or Files tab of a workspace is on screen (window_folder
    * showFolderTab, or the desk while it stays there): everything of that
    * kind that exists NOW is seen, so its rail pill clears; a newer row counts
    * again. Only moves forward, and republishes only on a change, so the desk
    * re-asking on every count update cannot loop.
-   * @param {Object} args { hub_id, tab: 'task' | 'meeting' }
+   * @param {Object} args { hub_id, tab: 'task' | 'meeting' | 'files' }
    */
   _onWorkspaceTabSeen(args = {}) {
     const hub = args && args.hub_id != null ? String(args.hub_id) : null;
-    const kind = args && args.tab === 'task' ? 'task' : args && args.tab === 'meeting' ? 'meeting' : null;
+    const kind = args && ['task', 'meeting', 'files'].includes(args.tab) ? args.tab : null;
     if (!hub || !kind) return;
-    const t = latestTime(this._mergedRows, hub, kind);
+    const t = latestTime(this._mergedRows, hub, kind, this._filesByHub);
     if (!t) return;
     const marks = this._railSeenMarks();
     const cur = marks[hub] || {};

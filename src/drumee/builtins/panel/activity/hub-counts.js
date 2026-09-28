@@ -18,8 +18,13 @@
 //             created in or moved to a column I watch (task_column_change).
 //   meeting — one per meeting notice that invites me (invite, or the same
 //             meeting moved). A cancellation is not something to attend.
+//   files   — new files AND folders others put in the workspace (upload,
+//             create), NOT from these rows: the media rollup cannot carry a
+//             folder (created without _seen_), so the server counts them from
+//             yp.mfs_changelog (activity.unread_counts `files_by_hub`,
+//             mfs_new_by_hub) and the panel hands that list in here.
 //
-// OPENING THE TAB CLEARS ITS PILL (Duy 2026-09-27). Task and Meet count only
+// OPENING THE TAB CLEARS ITS PILL (Duy 2026-09-27). Task, Meet and Files count only
 // what arrived AFTER the user last opened that tab in that workspace: `seen`
 // holds, per workspace, the newest row time the tab was opened over, and a
 // row counts only when it is newer. Row times are the SERVER's
@@ -78,12 +83,28 @@ function kindOfRow(r) {
 
 /**
  * @param {Array} rows refreshActivity's merged rows
- * @param {Object} [seen] { [hub_id]: { task, meeting } } — newest row time
- *                        each tab was opened over (see the header)
- * @returns {Object} { [hub_id]: { chat, task, meeting } }
+ * @param {Object} [seen] { [hub_id]: { task, meeting, files } } — newest row
+ *                        time each tab was opened over (see the header)
+ * @param {Array} [filesByHub] unread_counts.files_by_hub:
+ *                        [{ hub_id, cnt, last_ts }], already cut by the server
+ *                        to what came after the marks the request carried
+ * @returns {Object} { [hub_id]: { chat, task, meeting, files } }
  */
-function hubCounts(rows, seen) {
+function hubCounts(rows, seen, filesByHub) {
   const out = {};
+  const slot = (hub) => out[hub] || (out[hub] = { chat: 0, task: 0, meeting: 0, files: 0 });
+  if (Array.isArray(filesByHub)) {
+    for (const f of filesByHub) {
+      const hub = f ? idOf(f.hub_id) : null;
+      const n = f ? toCount(f.cnt) : 0;
+      if (!hub || !n) continue;
+      // A mark set AFTER that request (the user opened Files meanwhile) covers
+      // everything up to its newest event: nothing of it is new any more.
+      const mark = seen && seen[hub] ? Number(seen[hub].files) || 0 : 0;
+      if (mark && (parseInt(f.last_ts, 10) || 0) <= mark) continue;
+      slot(hub).files += n;
+    }
+  }
   if (!Array.isArray(rows)) return out;
   for (const r of rows) {
     const kind = kindOfRow(r);
@@ -94,19 +115,27 @@ function hubCounts(rows, seen) {
       const mark = seen && seen[hub] ? Number(seen[hub][kind]) || 0 : 0;
       if (mark && rowTime(r) <= mark) continue;
     }
-    const c = out[hub] || (out[hub] = { chat: 0, task: 0, meeting: 0 });
-    c[kind] += kind === 'chat' ? toCount(r.cnt) : 1;
+    slot(hub)[kind] += kind === 'chat' ? toCount(r.cnt) : 1;
   }
   return out;
 }
 
 /**
  * Newest row time of one workspace's `kind` rows — what opening that tab
- * marks as seen. 0 when there is none.
+ * marks as seen. 0 when there is none. Files reads `filesByHub` (last_ts).
  */
-function latestTime(rows, hub, kind) {
+function latestTime(rows, hub, kind, filesByHub) {
   let max = 0;
-  if (!Array.isArray(rows) || hub == null) return max;
+  if (hub == null) return max;
+  if (kind === 'files') {
+    for (const f of Array.isArray(filesByHub) ? filesByHub : []) {
+      if (!f || idOf(f.hub_id) !== String(hub)) continue;
+      const t = parseInt(f.last_ts, 10) || 0;
+      if (t > max) max = t;
+    }
+    return max;
+  }
+  if (!Array.isArray(rows)) return max;
   for (const r of rows) {
     if (kindOfRow(r) !== kind || hubOfRow(r) !== String(hub)) continue;
     const t = rowTime(r);

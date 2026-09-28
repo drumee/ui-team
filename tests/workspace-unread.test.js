@@ -22,8 +22,8 @@ test("hub counts: team chat sums the unread messages of every folder rollup", ()
     { category: "teamchat", hub_id: "H1", nid: "F1", cnt: "3" },
     { category: "teamchat", hub_id: "H2", nid: null, cnt: 1 },
   ]);
-  assert.deepEqual(c.H1, { chat: 5, task: 0, meeting: 0 });
-  assert.deepEqual(c.H2, { chat: 1, task: 0, meeting: 0 });
+  assert.deepEqual(c.H1, { chat: 5, task: 0, meeting: 0, files: 0 });
+  assert.deepEqual(c.H2, { chat: 1, task: 0, meeting: 0, files: 0 });
 });
 
 test("hub counts: assigned, mentioned/replied and watched-column rows are one task each", () => {
@@ -68,11 +68,11 @@ test("opening Task / Meet clears the pill; only a newer (or refreshed) row count
     { category: "contact_invite", event: "meeting_notice", meeting_kind: "invite", meeting_hub_id: "H1", key_id: "3", timestamp: 120 },
     { category: "teamchat", hub_id: "H1", cnt: "2" },
   ];
-  assert.deepEqual(hubCounts(rows), { H1: { chat: 2, task: 2, meeting: 1 } });
+  assert.deepEqual(hubCounts(rows), { H1: { chat: 2, task: 2, meeting: 1, files: 0 } });
   // The user opens Task: what is there now is seen.
   const seen = { H1: { task: latestTime(rows, "H1", "task") } };
   assert.equal(seen.H1.task, 150, "server time, the newest of that tab's rows");
-  assert.deepEqual(hubCounts(rows, seen).H1, { chat: 2, task: 0, meeting: 1 }, "only Task clears; chat untouched");
+  assert.deepEqual(hubCounts(rows, seen).H1, { chat: 2, task: 0, meeting: 1, files: 0 }, "only Task clears; chat untouched");
   // A new task is created afterwards.
   rows.push({ category: "contact_invite", event: "task_assigned", task_hub_id: "H1", key_id: "4", timestamp: 200 });
   assert.equal(hubCounts(rows, seen).H1.task, 1);
@@ -83,6 +83,28 @@ test("opening Task / Meet clears the pill; only a newer (or refreshed) row count
   rows.push({ category: "contact_invite", event: "task_assigned", task_hub_id: "H2", key_id: "5", timestamp: 50 });
   assert.equal(hubCounts(rows, seen).H2.task, 1);
   assert.equal(latestTime(rows, "H9", "task"), 0);
+});
+
+test("Files pill: the server's per-workspace new files + folders; a later Files-tab mark clears them", () => {
+  const files = [
+    { hub_id: "H1", cnt: 12, last_ts: 300 },
+    { hub_id: "H2", cnt: 1, last_ts: 50 },
+    { hub_id: "", cnt: 4, last_ts: 60 },
+    { hub_id: "H3", cnt: 0, last_ts: 70 },
+    null,
+  ];
+  const c = hubCounts([], {}, files);
+  assert.equal(c.H1.files, 12, "counted per file, folders included (server side)");
+  assert.equal(c.H2.files, 1);
+  assert.equal(c.H3, undefined, "zero and nameless entries are ignored");
+  // Opening H1's Files tab marks its newest event as seen.
+  assert.equal(latestTime([], "H1", "files", files), 300);
+  const seen = { H1: { files: 300 } };
+  assert.equal(hubCounts([], seen, files).H1, undefined, "cleared before the next request comes back");
+  // The next request carries the mark; the server returns only what is newer.
+  assert.equal(hubCounts([], seen, [{ hub_id: "H1", cnt: 2, last_ts: 320 }]).H1.files, 2);
+  // An old server sends no list: nothing breaks, nothing is counted.
+  assert.deepEqual(hubCounts([], seen, undefined), {});
 });
 
 // ── 2. widget_chat ───────────────────────────────────────────────────
