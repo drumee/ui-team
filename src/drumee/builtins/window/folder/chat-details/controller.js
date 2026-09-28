@@ -81,10 +81,18 @@ function open(win) {
   });
 }
 
+// The panel is its own scroll container and outlives every feed: without
+// this, a user who scrolled the overview down to reach a count landed on the
+// page still scrolled down, back arrow out of view.
+function toTop(panel) {
+  panel.el.scrollTop = 0;
+}
+
 function showPage(win, page) {
   const panel = win._chatDetailsPart;
   if (!alive(panel)) return Promise.resolve();
   const token = gen(win).next();
+  toTop(panel);
   if (!M.PAGES.includes(page)) {
     panel.el.dataset.page = "overview";
     if (win.__cdOverview) {
@@ -101,6 +109,7 @@ function showPage(win, page) {
     .then((res) => {
       if (!gen(win).isCurrent(token) || !alive(panel)) return;
       panel.feed(chatDetailsPage(win, page, rowsOf(res)));
+      toTop(panel);
     });
 }
 

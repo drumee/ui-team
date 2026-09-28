@@ -55,8 +55,41 @@ test("Figma geometry: card, action tiles, member avatar, media tiles, duration p
   assert.match(rule('.window-folder .window__chat-details-member-status[data-online="1"]'), /color: var\(--primary-40, #5950ff\)/);
 });
 
+test("every text in the panel uses the app font", () => {
+  assert.match(rule(".window-folder .window__chat-details, .window-folder .window__chat-details *"), /font-family: var\(--font-main\)/);
+});
+
+// Back must stay reachable on a long Files / Links list.
+test("the header sticks to the top of the scrolling panel", () => {
+  const h = rule(".window-folder .window__chat-details-header");
+  assert.match(h, /position: sticky/);
+  // -12px cancels the panel padding: sticky clamps inside the scrollport padding otherwise,
+  // which left the header 12px low with rows showing above it.
+  assert.match(h, /top: -12px/);
+  assert.match(h, /z-index: 1/);
+});
+
+test("count rows and every page item answer the pointer", () => {
+  for (const item of ["count", "file", "link"]) {
+    assert.match(rule(`.window-folder .window__chat-details-${item}:hover`), /background: rgba\(0, 0, 0, 0\.05\)/, item);
+  }
+  assert.match(rule(".window-folder .window__chat-details-tile:hover"), /opacity: 0\.85/);
+});
+
+test("link and file thumbnails are compact, their glyph sized, not left to fill the box", () => {
+  assert.match(rule(".window-folder .window__chat-details-link-thumb"), /width: 32px; height: 32px/);
+  assert.match(rule(".window-folder .window__chat-details-link-thumb svg"), /width: 16px; height: 16px/);
+  assert.match(rule(".window-folder .window__chat-details-file-ico svg"), /width: 18px; height: 18px/);
+});
+
 test("icons are painted through fill (sprite glyphs ignore color alone); thread paperclip is brand purple", () => {
   assert.match(rule(".window-folder .window__chat-details-thread-ico"), /fill: var\(--primary-40, #5950ff\)/);
   assert.match(rule(".window-folder .window__chat-details-count-ico"), /fill: var\(--normal-fg-50, #65656c\)/);
   assert.match(rule(".window-folder .window__chat-details-action-ico"), /fill: var\(--normal-fg, #0b0a21\)/);
+});
+
+// Hover rows carry 4px of vertical padding each, so the list gap shrinks by
+// the same 8px to keep Figma's 12px between rows.
+test("file and link lists keep Figma's row rhythm with hover padding", () => {
+  assert.match(rule(".window-folder .window__chat-details-body[data-page=file], .window-folder .window__chat-details-body[data-page=link]"), /gap: 4px/);
 });

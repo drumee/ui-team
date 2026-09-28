@@ -178,6 +178,26 @@ test("page: back to overview repaints the cached overview without refetching", a
   assert.equal(w.panel.el.dataset.page, "overview");
 });
 
+// The panel is its own scroll container and survives every feed. A user who
+// scrolled the overview down to reach "175 files" landed on a long list still
+// scrolled down, with the header — and its back arrow — out of view above.
+test("every page switch, back included, starts at the top", async () => {
+  const w = fakeWindow();
+  const o = C.open(w);
+  await flush();
+  w.pending[0].resolve({ stats: { files: 3 }, members: [] });
+  await o;
+  w.panel.el.scrollTop = 400;
+  const files = C.showPage(w, "file");
+  assert.equal(w.panel.el.scrollTop, 0);
+  w.pending.at(-1).resolve([{ nid: "d1", category: "document", filename: "a.docx" }]);
+  await files;
+  assert.equal(w.panel.el.scrollTop, 0);
+  w.panel.el.scrollTop = 250;
+  C.showPage(w, "overview");
+  assert.equal(w.panel.el.scrollTop, 0);
+});
+
 test("mute: posts this hub, repaints Unmute only when the server confirms", async () => {
   const w = fakeWindow();
   const o = C.open(w);

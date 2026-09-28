@@ -33,17 +33,34 @@
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 8px;
     color: var(--normal-fg, #0b0a21);
-    font-family: Geist, sans-serif;
+
+    // The app font on every text in the panel — Notes and Entries otherwise
+    // pick up their own family from the global typography.
+    &,
+    & * {
+      font-family: var(--font-main);
+    }
 
     &[data-chat_gated="1"] > * {
       display: none;
     }
 
+    // Sticky so the back arrow stays reachable on a long Files / Links list.
+    // top: -12px cancels the panel's padding (sticky otherwise clamps inside
+    // it); the negative margins + matching padding let the header cover that
+    // strip, so rows never show above it while scrolling.
     &-header {
+      position: sticky;
+      top: -12px;
+      z-index: 1;
       height: 32px;
+      margin: -12px -12px -8px;
+      padding: 12px 12px 8px;
+      box-sizing: content-box;
       align-items: center;
       justify-content: space-between;
       flex-shrink: 0;
+      background: var(--normal-bg, #fff);
     }
     &-title-wrap {
       align-items: center;
@@ -146,6 +163,14 @@
       align-items: center;
       gap: 20px;
       cursor: pointer;
+      padding: 4px 8px;
+      margin: 0 -8px;
+      border-radius: 8px;
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
     }
     &-count-ico {
       width: 20px;
@@ -202,6 +227,13 @@
     // ── Pages ──
     &-body {
       gap: 12px;
+
+      // Hover rows carry 4px of vertical padding each: shrink the list gap by
+      // the same 8px so rows keep Figma's 12px rhythm.
+      &[data-page="file"],
+      &[data-page="link"] {
+        gap: 4px;
+      }
     }
     &-month {
       gap: 12px;
@@ -223,6 +255,11 @@
       cursor: pointer;
       justify-content: flex-end;
       padding: 4px;
+      transition: opacity 0.15s ease;
+
+      &:hover {
+        opacity: 0.85;
+      }
     }
     &-tile-img {
       position: absolute;
@@ -254,6 +291,14 @@
       align-items: center;
       gap: 8px;
       cursor: pointer;
+      padding: 4px 8px;
+      margin: 0 -8px;
+      border-radius: 8px;
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
     }
     &-file-ico {
       width: 30px;
@@ -263,6 +308,11 @@
       justify-content: center;
       border-radius: 6px;
       background: rgba(0, 0, 0, 0.05);
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
     }
     &-file-name,
     &-link-msg,
@@ -278,15 +328,28 @@
       align-items: center;
       gap: 8px;
       cursor: pointer;
+      padding: 4px 8px;
+      margin: 0 -8px;
+      border-radius: 8px;
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
     }
     &-link-thumb {
-      width: 40px;
-      height: 40px;
+      width: 32px;
+      height: 32px;
       flex-shrink: 0;
       align-items: center;
       justify-content: center;
       border-radius: 8px;
       background: rgba(0, 0, 0, 0.05);
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
     }
     &-link-text {
       flex: 1 1 0;
