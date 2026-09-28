@@ -12,7 +12,7 @@ const path = require("node:path");
 const Module = require("node:module");
 
 const SRC = path.join(__dirname, "..", "src/drumee");
-const { hubCounts, kindOfRow, hubOfRow } = require(path.join(SRC, "builtins/panel/activity/hub-counts.js"));
+const { hubCounts, kindOfRow, hubOfRow, latestTime } = require(path.join(SRC, "builtins/panel/activity/hub-counts.js"));
 
 // ── 1. hub-counts ────────────────────────────────────────────────────
 
@@ -59,6 +59,30 @@ test("hub counts: files, DMs, access requests and rows with no workspace are ign
   assert.deepEqual(hubCounts(undefined), {});
   assert.equal(kindOfRow({ category: "media" }), null);
   assert.equal(hubOfRow({ event: "task_mention", hub_id: "H3" }), "H3");
+});
+
+test("opening Task / Meet clears the pill; only a newer (or refreshed) row counts again", () => {
+  const rows = [
+    { category: "contact_invite", event: "task_assigned", task_hub_id: "H1", key_id: "1", timestamp: 100 },
+    { category: "contact_invite", event: "task_mention", hub_id: "H1", key_id: "2", ctime: 150 },
+    { category: "contact_invite", event: "meeting_notice", meeting_kind: "invite", meeting_hub_id: "H1", key_id: "3", timestamp: 120 },
+    { category: "teamchat", hub_id: "H1", cnt: "2" },
+  ];
+  assert.deepEqual(hubCounts(rows), { H1: { chat: 2, task: 2, meeting: 1 } });
+  // The user opens Task: what is there now is seen.
+  const seen = { H1: { task: latestTime(rows, "H1", "task") } };
+  assert.equal(seen.H1.task, 150, "server time, the newest of that tab's rows");
+  assert.deepEqual(hubCounts(rows, seen).H1, { chat: 2, task: 0, meeting: 1 }, "only Task clears; chat untouched");
+  // A new task is created afterwards.
+  rows.push({ category: "contact_invite", event: "task_assigned", task_hub_id: "H1", key_id: "4", timestamp: 200 });
+  assert.equal(hubCounts(rows, seen).H1.task, 1);
+  // The server refreshes an old row in place (dedupe): its new time counts.
+  rows[0].timestamp = 210;
+  assert.equal(hubCounts(rows, seen).H1.task, 2);
+  // Another workspace is not affected by H1's mark.
+  rows.push({ category: "contact_invite", event: "task_assigned", task_hub_id: "H2", key_id: "5", timestamp: 50 });
+  assert.equal(hubCounts(rows, seen).H2.task, 1);
+  assert.equal(latestTime(rows, "H9", "task"), 0);
 });
 
 // ── 2. widget_chat ───────────────────────────────────────────────────
@@ -166,7 +190,7 @@ test("team chat: unread rows light up on load, only someone else's and only if I
   assert.equal(lit(), 2);
 });
 
-test("team chat: a message arriving in the side column is lit, and reading clears it + tells the desk", () => {
+test("team chat: a message arriving in the side column is lit, and replying clears it + tells the desk", () => {
   const rows = [row({ message_id: "M9", author_id: "P1" })];
   const { w, posts, lit } = teamChat({ inView: false, rows });
   broadcasts.length = 0;

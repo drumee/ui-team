@@ -15,7 +15,7 @@ const { showChatToast, killChatToast } = require('./chat-toast');
 // refreshed from every mute_set — never per message. Suppresses the CARD only:
 // the feed, the badge and the tab counts are untouched by design.
 const { loadMuteState } = require('./mute');
-const { hubCounts } = require('./hub-counts');
+const { hubCounts, latestTime } = require('./hub-counts');
 require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
@@ -33,6 +33,7 @@ class __panel_activity extends LetcBox {
     this._hide = this._hide.bind(this);
     this._onWorkspaceChatRead = this._onWorkspaceChatRead.bind(this);
     this._onRefreshRequest = this._onRefreshRequest.bind(this);
+    this._onWorkspaceTabSeen = this._onWorkspaceTabSeen.bind(this);
   }
 
   /**
@@ -123,6 +124,7 @@ class __panel_activity extends LetcBox {
     RADIO_BROADCAST.off('activity:notify', this._notify);
     RADIO_BROADCAST.off('workspace-chat-read', this._onWorkspaceChatRead);
     RADIO_BROADCAST.off('activity:refresh', this._onRefreshRequest);
+    RADIO_BROADCAST.off('workspace-tab-seen', this._onWorkspaceTabSeen);
     if (this._refreshRequestTimer) clearTimeout(this._refreshRequestTimer);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
     // The card lives in the window layer, not inside this panel, so it would
@@ -176,6 +178,8 @@ class __panel_activity extends LetcBox {
     RADIO_BROADCAST.on('workspace-chat-read', this._onWorkspaceChatRead);
     RADIO_BROADCAST.off('activity:refresh', this._onRefreshRequest);
     RADIO_BROADCAST.on('activity:refresh', this._onRefreshRequest);
+    RADIO_BROADCAST.off('workspace-tab-seen', this._onWorkspaceTabSeen);
+    RADIO_BROADCAST.on('workspace-tab-seen', this._onWorkspaceTabSeen);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
     // off-before-on: onDomRefresh can run again on re-feed; without this the
     // outside-click handler stacks up duplicate registrations.
@@ -1475,11 +1479,60 @@ class __panel_activity extends LetcBox {
    */
   _publishHubCounts() {
     try {
-      this._hubCounts = hubCounts(this._mergedRows);
+      this._hubCounts = hubCounts(this._mergedRows, this._railSeenMarks());
       RADIO_BROADCAST.trigger('workspace-unread', this._hubCounts);
     } catch (e) {
       this.warn('[panel_activity] hub counts failed', e);
     }
+  }
+
+  /**
+   * Per-workspace "tab opened over" marks for the rail's Task / Meet pills
+   * (see hub-counts.js): { [hub_id]: { task, meeting } }, server row times.
+   * Kept per user in localStorage so a reload does not bring back what was
+   * already looked at. Storage can throw or be empty (private window,
+   * blocked site data) — then the marks live for the session only.
+   */
+  _railSeenKey() {
+    return `drumee.rail-seen.${Visitor.id}`;
+  }
+
+  _railSeenMarks() {
+    if (this._railSeen) return this._railSeen;
+    let marks = {};
+    try {
+      const raw = window.localStorage && window.localStorage.getItem(this._railSeenKey());
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed && typeof parsed === 'object') marks = parsed;
+    } catch (e) {
+      marks = {};
+    }
+    this._railSeen = marks;
+    return marks;
+  }
+
+  /**
+   * The Task or Meeting tab of a workspace is on screen (window_folder
+   * showFolderTab, or the desk while it stays there): everything of that
+   * kind that exists NOW is seen, so its rail pill clears; a newer row counts
+   * again. Only moves forward, and republishes only on a change, so the desk
+   * re-asking on every count update cannot loop.
+   * @param {Object} args { hub_id, tab: 'task' | 'meeting' }
+   */
+  _onWorkspaceTabSeen(args = {}) {
+    const hub = args && args.hub_id != null ? String(args.hub_id) : null;
+    const kind = args && args.tab === 'task' ? 'task' : args && args.tab === 'meeting' ? 'meeting' : null;
+    if (!hub || !kind) return;
+    const t = latestTime(this._mergedRows, hub, kind);
+    if (!t) return;
+    const marks = this._railSeenMarks();
+    const cur = marks[hub] || {};
+    if ((Number(cur[kind]) || 0) >= t) return;
+    marks[hub] = { ...cur, [kind]: t };
+    try {
+      if (window.localStorage) window.localStorage.setItem(this._railSeenKey(), JSON.stringify(marks));
+    } catch (e) { }
+    this._publishHubCounts();
   }
 
   /**
