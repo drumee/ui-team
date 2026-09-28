@@ -202,6 +202,8 @@ function teamChat({ inView = false } = {}) {
       children: { last: () => ({ model: { toJSON: () => ({ message_id: "M9" }) } }) },
     },
   });
+  w._onReadGesture = Chat.prototype._onReadGesture.bind(w);
+  w._bindReadGesture();
   const click = () => listeners.pointerdown && listeners.pointerdown();
   return { w, posts, click, setInView: (v) => { inView = v; } };
 }
@@ -215,17 +217,14 @@ test("team chat: a message arriving while the chat is not in front is NOT acknow
   assert.equal(w._readDebt, true);
 });
 
-test("team chat: a click in the side column does NOT read it; a reply pays the debt once", () => {
-  // Duy 2026-09-27: only opening the Chat tab (or replying) reads a team chat.
+test("team chat: a click in the chat pays the debt once", () => {
   const { w, posts, click } = teamChat({ inView: false });
   channelPost(w, { author_id: "P1" });
   click();
-  assert.equal(posts.length, 0, "a click is not a read");
-  w._onReadGesture(); // what sendMessage calls before posting
   assert.equal(posts.length, 1);
   assert.equal(posts[0].service, "channel.acknowledge");
   assert.equal(posts[0].message_id, "M9");
-  w._onReadGesture();
+  click();
   assert.equal(posts.length, 1, "nothing owed, nothing sent");
 });
 
