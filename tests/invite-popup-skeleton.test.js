@@ -79,10 +79,11 @@ test("org card is an always-present slot, empty and off outside an organisation"
   assert.ok(texts.includes("Acme") && texts.includes("3") && texts.includes("24"));
 });
 
-test("two tabs, the active one stamped", () => {
-  const tabs = cls(skeleton(ui({ _tab: "link" })), "tab");
-  assert.deepEqual(tabs.map((t) => [t.dataset.tab, t.dataset.state]), [["email", 0], ["link", 1]]);
-  assert.ok(tabs.every((t) => t.service === "switch-tab"));
+test("no tab strip: the popup is email-only, stamped data-tab=email", () => {
+  const t = skeleton(ui({ _tab: "email" }));
+  assert.equal(cls(t, "tabs").length, 0);
+  assert.equal(cls(t, "tab").length, 0);
+  assert.equal(t.dataset.tab, "email");
 });
 
 test("email panel keeps the chips/input/suggestions parts", () => {
@@ -189,8 +190,8 @@ test("workspace scope: its own title, a workspace card, no org card or tree", ()
   assert.equal(cls(t, "invite-to").length, 0);
   const pns = walk(t).map((n) => n.sys_pn).filter(Boolean);
   assert.ok(pns.includes("ws-card") && !pns.includes("tree") && !pns.includes("all-check"));
-  // Both tabs and their panels stay.
-  assert.equal(cls(t, "tab").length, 2);
+  // No tab strip; both panels stay (the link one hidden by data-tab).
+  assert.equal(cls(t, "tab").length, 0);
   assert.ok(pns.includes("email-input") && pns.includes("link-panel") && pns.includes("send-btn"));
 });
 
