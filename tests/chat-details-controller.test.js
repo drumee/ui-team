@@ -25,7 +25,7 @@ String.prototype.format = function (...a) {
   return String(this).replace(/\{(\d+)\}/g, (_, i) => a[i]);
 };
 global._ = require("underscore");
-global._a = { hub_id: "hub_id", actual_hub_id: "actual_hub_id", privilege: "privilege", hub_name: "hub_name", filename: "filename", area: "area" };
+global._a = { hub_id: "hub_id", actual_hub_id: "actual_hub_id", privilege: "privilege" };
 global.KIND = { profile: "profile" };
 global.bootstrap = () => ({ endpoint: "/-/", keysel: "k" });
 global.SERVICE = {
@@ -51,7 +51,7 @@ const walk = (n, out = []) => {
 };
 const texts = (t) => walk(t).filter((n) => n.type === "Note").map((n) => n.content);
 
-function fakeWindow({ canChat = true, attrs = {} } = {}) {
+function fakeWindow({ canChat = true } = {}) {
   const panel = { el: { dataset: {} }, fed: [], feed(k) { this.fed.push(k); } };
   const view = { el: { dataset: {} } };
   const pending = [];
@@ -65,7 +65,7 @@ function fakeWindow({ canChat = true, attrs = {} } = {}) {
     threadMenuClosed: 0,
     __folderView: view,
     fig: { group: "window", family: "window-folder" },
-    mget: (k) => ({ hub_id: "h1", privilege: canChat ? 7 : 1, ...attrs })[k],
+    mget: (k) => ({ hub_id: "h1", privilege: canChat ? 7 : 1 })[k],
     _privilegeGrantsChat: () => canChat,
     _closeThreadMenu() { this.threadMenuClosed++; },
     _fetchThreadList: () => Promise.resolve([{ file_nid: "f1", filename: "Spec" }]),
@@ -211,38 +211,4 @@ test("mute: posts this hub, repaints Unmute only when the server confirms", asyn
   w.muteReply = { status: "ok", global: 0, hubs: ["h1"] };
   await C.toggleMute(w);
   assert.ok(texts(w.panel.fed.at(-1)).includes(en.CD_UNMUTE));
-});
-
-// TEMP mock (chat-details/mock.js) — revert with that commit before merge.
-// The internal workspace named "test" gets padded threads + members so the
-// list overflow can be seen on stage; nothing else is touched.
-const openWith = async (attrs, details = { stats: {}, members: [{ id: "real", fullname: "Real Member", online: 1 }] }) => {
-  const w = fakeWindow({ attrs });
-  const o = C.open(w);
-  await flush();
-  w.pending[0].resolve(details);
-  await o;
-  return w;
-};
-const counts = (w) => {
-  const tree = w.panel.fed.at(-1);
-  return {
-    threads: walk(tree).filter((n) => n.service === "chat-details-thread").length,
-    members: walk(tree).filter((n) => n.kind === "profile").length,
-  };
-};
-
-test("mock: internal workspace \"test\" is padded so both lists overflow, real rows first", async () => {
-  const w = await openWith({ hub_name: "Test", area: "private" });
-  const c = counts(w);
-  assert.ok(c.threads >= 15, `threads ${c.threads}`);
-  assert.ok(c.members >= 30, `members ${c.members}`);
-  const tree = w.panel.fed.at(-1);
-  assert.equal(walk(tree).find((n) => n.service === "chat-details-thread").file_nid, "f1");
-  assert.equal(texts(tree).filter((x) => x === "Real Member").length, 1);
-});
-
-test("mock: any other workspace, or a shared \"test\", is left alone", async () => {
-  assert.deepEqual(counts(await openWith({ hub_name: "Marketing", area: "private" })), { threads: 1, members: 1 });
-  assert.deepEqual(counts(await openWith({ hub_name: "test", area: "share" })), { threads: 1, members: 1 });
 });

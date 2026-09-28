@@ -17,8 +17,6 @@
 const M = require("./model");
 const { chatDetailsOverview, chatDetailsPage } = require("../skeleton/chat-details");
 const Mute = require("../../../panel/activity/mute");
-// 🚧 TEMPORARY — revert with its commit before merge (see ./mock.js).
-const Mock = require("./mock");
 
 function hubId(win) {
   return win.mget(_a.actual_hub_id) || win.mget(_a.hub_id);
@@ -72,12 +70,12 @@ function open(win) {
     ]).then(([details, threads]) => {
       if (!gen(win).isCurrent(token) || !alive(panel)) return;
       const d = details || {};
-      win.__cdOverview = Mock.pad(win, {
+      win.__cdOverview = {
         stats: d.stats || {},
         threads: threads || [],
         members: d.members || [],
         muted: Mute.isPopupMuted({ hub_id }),
-      });
+      };
       panel.feed(chatDetailsOverview(win, win.__cdOverview));
     });
   });
