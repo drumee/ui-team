@@ -3079,5 +3079,9 @@
   "ALLOW_DOWNLOADS_TO_START": "Permite las descargas",
   "DOWNLOADING_IN_BROWSER": "Descargando en el navegador",
   "DOWNLOAD_FAILED": "Error en la descarga",
-  "DOWNLOAD_SAVING_IN_BROWSER": "Tu archivo se está guardando en las descargas del navegador; puedes seguir trabajando."
+  "DOWNLOAD_SAVING_IN_BROWSER": "Tu archivo se está guardando en las descargas del navegador; puedes seguir trabajando.",
+  "NOTI_FILTER_TITLE": "Filtrar notificaciones",
+  "NOTI_FILTER_UNREAD": "No leídas",
+  "NOTI_FILTER_BOOKMARKED": "Guardadas",
+  "NO_BOOKMARKED_NOTIFICATIONS": "No hay notificaciones guardadas"
 }

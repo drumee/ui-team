@@ -3289,5 +3289,9 @@
   "PREPARING_DOWNLOAD": "Preparing download…",
   "ALLOW_DOWNLOADS_TO_START": "Allow downloads to start",
   "DOWNLOADING_IN_BROWSER": "Downloading in your browser",
-  "DOWNLOAD_FAILED": "Download failed"
+  "DOWNLOAD_FAILED": "Download failed",
+  "NOTI_FILTER_TITLE": "Filter notifications",
+  "NOTI_FILTER_UNREAD": "Unread",
+  "NOTI_FILTER_BOOKMARKED": "Bookmarked",
+  "NO_BOOKMARKED_NOTIFICATIONS": "No bookmarked notifications"
 }

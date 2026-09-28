@@ -3084,5 +3084,9 @@
   "ALLOW_DOWNLOADS_TO_START": "Разрешите загрузки",
   "DOWNLOADING_IN_BROWSER": "Загрузка в браузере",
   "DOWNLOAD_FAILED": "Не удалось скачать",
-  "DOWNLOAD_SAVING_IN_BROWSER": "Файл сохраняется в загрузки браузера — можно продолжать работу."
+  "DOWNLOAD_SAVING_IN_BROWSER": "Файл сохраняется в загрузки браузера — можно продолжать работу.",
+  "NOTI_FILTER_TITLE": "Фильтр уведомлений",
+  "NOTI_FILTER_UNREAD": "Непрочитанные",
+  "NOTI_FILTER_BOOKMARKED": "В закладках",
+  "NO_BOOKMARKED_NOTIFICATIONS": "Нет уведомлений в закладках"
 }

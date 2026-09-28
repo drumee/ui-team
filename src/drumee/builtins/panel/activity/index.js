@@ -8,6 +8,8 @@ const WS_EVENT = "ws:event";
 // The tab set is declared once, in the tab bar skeleton, and imported here so
 // the panel and the bar can never disagree about which buckets exist.
 const { BUCKETS: TAB_BUCKETS, DEFAULT_BUCKET } = require('./skeleton/tabbar');
+// Header Filter popup (All / Unread / Bookmarked), declared once in its skeleton.
+const { VIEW_FILTERS, buttonLabel: viewFilterLabel } = require('./skeleton/view-filter');
 // Round 3 Phase 2: the real-time chat card. Built to Figma
 // (58208:83650) — see chat-toast.js for the measurements and the rules.
 const { showChatToast, killChatToast } = require('./chat-toast');
@@ -60,6 +62,9 @@ class __panel_activity extends LetcBox {
     // [data-unread="1"]). Before this the panel opened unread-only, so a row
     // was filtered out the moment it was read.
     this._unreadsOnly = 0;
+    // Header Filter (skeleton/view-filter): '' = no filter, the panel as above.
+    // _unreadsOnly is derived from it in _applyViewFilter.
+    this._viewFilter = '';
     // Selected Notification Center tab. 'all' = no bucket scope, so the very
     // first render requests the same unscoped feed the panel always has.
     this._filter = DEFAULT_BUCKET;
@@ -85,6 +90,7 @@ class __panel_activity extends LetcBox {
    * 
    */
   _hide() {
+    this._closeViewFilter();
     this.el.dataset.anim = "out";
     this.setState(0)
     this.activityState = 0
@@ -94,6 +100,12 @@ class __panel_activity extends LetcBox {
    * @param {*} e 
    */
   _onOutsideClick(e, source) {
+    // The Filter popup closes on any click outside itself and its button, on
+    // every device, before the panel-level rules below.
+    const target = e && e.target;
+    if (!(target && target.closest && target.closest('.panel-activity__vf'))) {
+      this._closeViewFilter();
+    }
     // Clicks coming from a sidebar toggle button are owned by
     // Desk.togglePanel / toggle-activity — bail so we don't race the
     // toggle handler and immediately reopen what it just closed.
@@ -207,6 +219,13 @@ class __panel_activity extends LetcBox {
       child.on(_e.data, (rows) => this._stampDayHeaders(child, rows));
       // Same page of raw rows: the saved ones among them are pinned on top.
       child.on(_e.data, (rows) => this._collectPinned(child, rows));
+      // An EMPTY first page never emits `data` (ui-core handleResponse goes
+      // straight to eod), which would leave the pinned block unbuilt: the
+      // Unread / All filters on a view with nothing unread. Build it from the
+      // snapshots alone then.
+      child.on(_e.eod, () => {
+        if (this._pinCollected !== this._pinCycle) this._collectPinned(child, []);
+      });
       // The first page is down (rows or none): the feed has painted. A
       // reload's screen restore waits on this (libs/items-ready).
       child.once(_e.eod, () => markItemsReady(this));
@@ -461,12 +480,31 @@ class __panel_activity extends LetcBox {
       //   return;
       // }
 
-      case 'toggle-unreads':
-        this._unreadsOnly = this._unreadsOnly ? 0 : 1;
-        this.ensurePart('unread-toggle').then((p) => {
-          if (p && p.el) p.el.dataset.state = this._unreadsOnly ? '1' : '0';
-        });
-        return this.ensurePart(_a.list).then((list) => list.restart());
+      // Header Filter popup. Picking a radio only moves the pending choice;
+      // Apply commits it, Clear goes back to no filter.
+      case 'view-filter-open':
+        return this._toggleViewFilter();
+
+      case 'view-filter-close':
+        return this._closeViewFilter();
+
+      case 'view-filter-pick': {
+        const pick = cmd.mget && cmd.mget(_a.name);
+        const popup = this._vfPart('view-filter-popup');
+        if (popup && popup.el && VIEW_FILTERS.indexOf(pick) !== -1) popup.el.dataset.pick = pick;
+        return '';
+      }
+
+      case 'view-filter-apply': {
+        const popup = this._vfPart('view-filter-popup');
+        const pick = popup && popup.el && popup.el.dataset.pick;
+        this._closeViewFilter();
+        return this._applyViewFilter(VIEW_FILTERS.indexOf(pick) !== -1 ? pick : '');
+      }
+
+      case 'view-filter-clear':
+        this._closeViewFilter();
+        return this._applyViewFilter('');
 
       case 'clear-all':
         return this._clearAll();
@@ -952,7 +990,8 @@ class __panel_activity extends LetcBox {
   //    read state, so it always wins;
   //  * the server snapshot (activity.bookmark_rows) for a saved row whose page
   //    is not loaded. Its read state is unknown, so it is served read, and it
-  //    is not used under Unread ON, which lists only what is still unread.
+  //    is not used under the Unread filter, which lists only what is still
+  //    unread (the All filter does use it: it pins every saved row).
   // get_feed itself is untouched: the feed pages, their pagination and the
   // mobile client see exactly what they saw before.
 
@@ -961,8 +1000,11 @@ class __panel_activity extends LetcBox {
     this._pinnedRows = new Map();
     this._pinnedReady = false;
     this._pinnedQueue = [];
+    if (this.el && this.el.dataset) this.el.dataset.savedReady = '0';
     const bucket = (this._filter && this._filter !== DEFAULT_BUCKET) ? this._filter : null;
-    this._pinnedFetch = this._unreadsOnly ? Promise.resolve([]) : this._fetchPinned(bucket);
+    // Only the Unread filter goes without snapshots (they are served read). The
+    // All filter runs the unread feed too but pins every saved row.
+    this._pinnedFetch = this._viewFilter === 'unread' ? Promise.resolve([]) : this._fetchPinned(bucket);
   }
 
   async _fetchPinned(bucket) {
@@ -990,6 +1032,7 @@ class __panel_activity extends LetcBox {
       const live = rows.filter((r) => r && r.bookmark_key && parseInt(r.is_saved, 10) === 1);
       if (!list || (list._curPage || 1) <= 1) {
         const cycle = this._pinCycle;
+        this._pinCollected = cycle;
         (this._pinnedFetch || Promise.resolve([])).then((snapshots) => {
           if (cycle !== this._pinCycle) return;
           const map = new Map();
@@ -1001,6 +1044,9 @@ class __panel_activity extends LetcBox {
           this._pinnedRows = map;
           this._pinnedReady = true;
           this._renderPinned();
+          // The Bookmarked filter's empty line waits for this (skin).
+          this._markHasSaved();
+          if (this.el && this.el.dataset) this.el.dataset.savedReady = '1';
         });
         return;
       }
@@ -1332,6 +1378,52 @@ class __panel_activity extends LetcBox {
     this._filter = bucket || DEFAULT_BUCKET;
     this.updatePriorityListUnified(this._mergedRows || []);
     this.ensurePart(_a.list).then((list) => list.restart());
+  }
+
+  // ── Header Filter (All / Unread / Bookmarked) ──────────────────────
+  //
+  // Lexis 2026-09-28. Built on the two views the panel already had, so
+  // nothing new is asked of the server:
+  //  * ''         — no filter: full feed, bookmarked rows pinned on top.
+  //  * unread     — exactly the old Unreads toggle ON.
+  //  * all        — the unread feed with EVERY bookmarked row pinned on top
+  //                 (snapshots included, read or unread).
+  //  * bookmarked — the pinned block alone: the skin hides the feed and the
+  //                 priority rows under data-view-filter="bookmarked". The feed
+  //                 still loads its first page, whose saved rows replace their
+  //                 snapshots with the live ones (true text and read state).
+
+  // A part by name, synchronously; null while it is not rendered.
+  _vfPart(name) {
+    const part = this._branches && this._branches[name];
+    return part && !part.isDestroyed() ? part : null;
+  }
+
+  _toggleViewFilter() {
+    const popup = this._vfPart('view-filter-popup');
+    if (!popup || !popup.el) return;
+    if (popup.el.dataset.open === '1') return this._closeViewFilter();
+    // Reopened, it shows the filter in force, not a choice left un-applied.
+    popup.el.dataset.pick = this._viewFilter || VIEW_FILTERS[0];
+    popup.el.dataset.open = '1';
+  }
+
+  _closeViewFilter() {
+    const popup = this._vfPart('view-filter-popup');
+    if (popup && popup.el) popup.el.dataset.open = '0';
+  }
+
+  _applyViewFilter(filter) {
+    const next = VIEW_FILTERS.indexOf(filter) !== -1 ? filter : '';
+    const button = this._vfPart('view-filter-button');
+    if (button && button.el) button.el.dataset.active = next ? '1' : '0';
+    const label = this._vfPart('view-filter-label');
+    if (label && label.el) label.el.innerText = viewFilterLabel(next);
+    if (next === this._viewFilter) return;
+    this._viewFilter = next;
+    if (this.el && this.el.dataset) this.el.dataset.viewFilter = next || 'none';
+    this._unreadsOnly = (next === 'unread' || next === 'all') ? 1 : 0;
+    return this.ensurePart(_a.list).then((list) => list.restart());
   }
 
 

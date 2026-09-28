@@ -3290,5 +3290,9 @@
   "PREPARING_DOWNLOAD": "Préparation du téléchargement…",
   "ALLOW_DOWNLOADS_TO_START": "Autorisez les téléchargements",
   "DOWNLOADING_IN_BROWSER": "Téléchargement dans le navigateur",
-  "DOWNLOAD_FAILED": "Échec du téléchargement"
+  "DOWNLOAD_FAILED": "Échec du téléchargement",
+  "NOTI_FILTER_TITLE": "Filtrer les notifications",
+  "NOTI_FILTER_UNREAD": "Non lues",
+  "NOTI_FILTER_BOOKMARKED": "Enregistrées",
+  "NO_BOOKMARKED_NOTIFICATIONS": "Aucune notification enregistrée"
 }

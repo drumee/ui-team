@@ -3078,5 +3078,9 @@
   "ALLOW_DOWNLOADS_TO_START": "សូមអនុញ្ញាតការទាញយក",
   "DOWNLOADING_IN_BROWSER": "កំពុងទាញយកក្នុងកម្មវិធីរុករក",
   "DOWNLOAD_FAILED": "ការទាញយកបានបរាជ័យ",
-  "DOWNLOAD_SAVING_IN_BROWSER": "ឯកសាររបស់អ្នកកំពុងរក្សាទុកក្នុងការទាញយករបស់កម្មវិធីរុករក — អ្នកអាចបន្តធ្វើការបាន។"
+  "DOWNLOAD_SAVING_IN_BROWSER": "ឯកសាររបស់អ្នកកំពុងរក្សាទុកក្នុងការទាញយករបស់កម្មវិធីរុករក — អ្នកអាចបន្តធ្វើការបាន។",
+  "NOTI_FILTER_TITLE": "តម្រងការជូនដំណឹង",
+  "NOTI_FILTER_UNREAD": "មិនទាន់អាន",
+  "NOTI_FILTER_BOOKMARKED": "បានរក្សាទុក",
+  "NO_BOOKMARKED_NOTIFICATIONS": "គ្មានការជូនដំណឹងដែលបានរក្សាទុក"
 }

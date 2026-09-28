@@ -35,6 +35,12 @@ module.exports = function (ui) {
             sys_pn: 'saved',
             partHandler: ui,
           }),
+          // Bookmarked filter with nothing saved: the feed (and its own empty
+          // line) is hidden there, so this one speaks. Shown by the skin only.
+          Skeletons.Note({
+            className: `${pfx}__saved-empty`,
+            content: LOCALE.NO_BOOKMARKED_NOTIFICATIONS,
+          }),
           Skeletons.List.Smart({
             className: `${pfx}__list`,
             sys_pn: _a.list,
