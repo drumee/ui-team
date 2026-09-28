@@ -7,11 +7,12 @@ const { sendOtp, openOtpModal } = require("../../otp-gate");
  * the server accepts the change.
  *
  * BE flow (server-team/service/private/drumate.js#change_email):
- *   - The server only takes `email` and validates format + uniqueness.
- *     It does NOT verify the password. We therefore pre-validate the
- *     current password via SERVICE.yp.check_password, then short-circuit
- *     on existing-address via SERVICE.yp.email_exists, and only then call
- *     SERVICE.drumate.change_email.
+ *   - The server takes `email` plus a step-up credential: `password` when
+ *     profile.password_set=1, else `secret`+`code` (email OTP). A missing
+ *     credential is a 412 "VARIABLE password IS MANDATORY". We still
+ *     pre-validate the password via SERVICE.yp.check_password and
+ *     short-circuit on existing-address via SERVICE.yp.email_exists for
+ *     friendlier inline errors, then call SERVICE.drumate.change_email.
  *   - On format/existence failure the server replies 400 with a localized
  *     `error` string via exception.user(). That bypasses the postService
  *     promise (resolves to undefined) and lands in onServerComplain — we
@@ -27,7 +28,6 @@ class settings_change_email extends LetcBox {
     this._values = { email: "", password: "" };
     this._error = "";
     this._submitting = false;
-    this._resending = false;
     this._sentTo = "";
   }
 
@@ -72,18 +72,18 @@ class settings_change_email extends LetcBox {
       message = payload.error;
     }
     this._submitting = false;
-    this._resending = false;
     this._error = message || LOCALE.EMAIL_CHANGE_FAILED;
     this.rerender();
   }
 
-  async _callChangeEmail(email) {
+  async _callChangeEmail(email, credentials = {}) {
     // hub_id pins the ACL owner check to the user's personal hub
     // (acl/drumate.json: scope=hub, src=owner) — otherwise 403.
     return this.postService({
       service: SERVICE.drumate.change_email,
       hub_id: Visitor.id,
       email,
+      ...credentials,
     });
   }
 
@@ -195,22 +195,6 @@ class settings_change_email extends LetcBox {
     this.rerender();
   }
 
-  async resend() {
-    if (this._resending || !this._sentTo) return;
-    this._resending = true;
-    this._error = "";
-    this.rerender();
-
-    const data = await this._callChangeEmail(this._sentTo);
-    if (this._error) return;
-
-    if (data && data.profile) {
-      Visitor.set(_a.profile, data.profile);
-    }
-    this._resending = false;
-    this.rerender();
-  }
-
   onUiEvent(cmd, args = {}) {
     const service = args.service || (cmd && cmd.mget && cmd.mget(_a.service));
     switch (service) {
@@ -222,8 +206,6 @@ class settings_change_email extends LetcBox {
         return this.submit();
       case "change-email-done":
         return this.done();
-      case "change-email-resend":
-        return this.resend();
       default:
         return;
     }
