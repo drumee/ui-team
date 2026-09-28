@@ -152,3 +152,8 @@ test("page body fills the panel and scrolls itself", () => {
   assert.match(body, /overflow-y: auto/);
   assert.match(body, /scrollbar-width: thin/);
 });
+
+// Header controls downsized from Figma's 24px on request.
+test("back and close are 18px", () => {
+  assert.match(rule(".window-folder .window__chat-details-back, .window-folder .window__chat-details-close"), /width: 18px; height: 18px/);
+});
