@@ -1,4 +1,5 @@
 const { sendOtp, openOtpModal } = require("../../otp-gate");
+const { missingPasswordRules, passwordNeedsMessage } = require("../password-policy");
 
 /**
  * Change-password modal opened from the Account Credentials card in
@@ -113,7 +114,10 @@ class settings_change_password extends LetcBox {
   async submit() {
     if (this._submitting) return;
     this._captureValues();
-    const { current, next, confirm } = this._values;
+    const { current } = this._values;
+    // Trimmed like signup: the server trims before hashing and login trims too.
+    const next = this._values.next.trim();
+    const confirm = this._values.confirm.trim();
     const usePassword = this.usePassword();
 
     if ((usePassword && !current) || !next || !confirm) {
@@ -124,8 +128,10 @@ class settings_change_password extends LetcBox {
       this._error = LOCALE.PASSWORD_SAME_AS_CURRENT;
       return this.rerender();
     }
-    if (next.length < 8) {
-      this._error = LOCALE.PASSWORD_TOO_SHORT;
+    // Same rules as the signup form (see ../password-policy).
+    const missing = missingPasswordRules(next);
+    if (missing.length) {
+      this._error = passwordNeedsMessage(missing);
       return this.rerender();
     }
     if (next !== confirm) {
@@ -168,7 +174,7 @@ class settings_change_password extends LetcBox {
     }
     if (code === "uncompliant_password") {
       this._submitting = false;
-      this._error = LOCALE.PASSWORD_TOO_SHORT;
+      this._error = passwordNeedsMessage(res.missing);
       return this.rerender();
     }
     if (code) {
@@ -210,10 +216,13 @@ class settings_change_password extends LetcBox {
   _onOtpSuccess(data) {
     if (data && data.error) {
       this._submitting = false;
-      this._error =
-        data.error === "INVALID_CODE"
-          ? LOCALE.INVALID_CODE
-          : LOCALE.PASSWORD_CHANGE_FAILED;
+      if (data.error === "INVALID_CODE") {
+        this._error = LOCALE.INVALID_CODE;
+      } else if (data.error === "uncompliant_password") {
+        this._error = passwordNeedsMessage(data.missing);
+      } else {
+        this._error = LOCALE.PASSWORD_CHANGE_FAILED;
+      }
       return this.rerender();
     }
     this._step = "success";

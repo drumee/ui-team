@@ -20,25 +20,31 @@ function header(ui) {
           }),
         ],
       }),
-      Skeletons.Box.X({
-        className: `${pfx}-actions`,
-        kids: [
-          // Save confirmation pill. Hidden while data-state="0"; saveProfile()
-          // flips it to "1" (success) / "1" + data-variant="error" (failure)
-          // and a timer fades it back out — see _flashSaveStatus().
-          Skeletons.Note({
-            className: `${pfx}-saved`,
-            sys_pn: "save-status",
-            state: 0,
-            content: LOCALE.PROFILE_SAVED || "Profile saved",
-          }),
-          button(ui, {
-            label: LOCALE.SAVE_PROFILE || "Save Profile",
-            className: `${pfx}-save`,
-            priority: "primary",
-            service: "save-profile",
-          }),
-        ],
+    ],
+  });
+}
+
+// Save Profile + its confirmation pill, at the foot of the General Profile
+// fields (the only inputs it saves).
+function profileActions(ui) {
+  const pfx = `${ui.fig.family}__profile`;
+  return Skeletons.Box.X({
+    className: `${pfx}-actions`,
+    kids: [
+      // Save confirmation pill. Hidden while data-state="0"; saveProfile()
+      // flips it to "1" (success) / "1" + data-variant="error" (failure)
+      // and a timer fades it back out — see _flashSaveStatus().
+      Skeletons.Note({
+        className: `${pfx}-saved`,
+        sys_pn: "save-status",
+        state: 0,
+        content: LOCALE.PROFILE_SAVED || "Profile saved",
+      }),
+      button(ui, {
+        label: LOCALE.SAVE_PROFILE || "Save Profile",
+        className: `${pfx}-save`,
+        priority: "primary",
+        service: "save-profile",
       }),
     ],
   });
@@ -123,7 +129,10 @@ function generalProfileCard(ui) {
           entry(ui, {
             label: LOCALE.DISPLAY_NAME || "Display Name",
             name: "display_name",
-            value: profile.firstname || "",
+            // Full name: saveProfile() splits this back into firstname /
+            // lastname, so showing only firstname wiped the last name on
+            // every save.
+            value: [profile.firstname, profile.lastname].filter(Boolean).join(" "),
           }),
           entry(ui, {
             label: LOCALE.USERNAME || "Username",
@@ -152,6 +161,7 @@ function generalProfileCard(ui) {
           }),
         ],
       }),
+      profileActions(ui),
     ],
   });
 
@@ -608,19 +618,15 @@ function settings_body(ui) {
       kids: [generalProfileCard(ui), preferencesCard(ui)],
     }),
     // Figma 2769-277671: Billing, Account Credentials and Danger zone sit in
-    // ONE 3-column row. Referral/invite isn't part of that frame — kept as
-    // its own full-width row instead of crowding the trio.
+    // ONE 3-column row. Referral/invite isn't part of that frame — it pairs
+    // with Linked accounts in the row below instead of crowding the trio.
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-2`,
       kids: [billingCard(ui), accountCredentialsCard(ui), dangerZoneCard(ui)],
     }),
     Skeletons.Box.X({
-      className: `${pfx}__row ${pfx}__row-referral`,
-      kids: [referralCard(ui)],
-    }),
-    Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-3`,
-      kids: [linkedAccountsCard(ui)],
+      kids: [referralCard(ui), linkedAccountsCard(ui)],
     }),
     Skeletons.Wrapper.Y({
       className: `${pfx}__overlay`,
