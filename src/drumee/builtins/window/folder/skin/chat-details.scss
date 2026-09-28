@@ -134,8 +134,9 @@
       min-width: 0;
       align-items: center;
       gap: 2px;
-      padding: 8px 20px;
-      border-radius: 12px;
+      // Downsized from Figma's 8px 20px / 12px radius on request.
+      padding: 6px 12px;
+      border-radius: 10px;
       background: rgba(0, 0, 0, 0.05);
       cursor: pointer;
 
@@ -144,13 +145,13 @@
       }
     }
     &-action-ico {
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
       fill: var(--normal-fg, #0b0a21);
       color: var(--normal-fg, #0b0a21);
     }
     &-action-label {
-      font-size: 14px;
+      font-size: 12px;
       line-height: 1.4;
     }
 

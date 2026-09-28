@@ -48,8 +48,11 @@ test("Figma geometry: card, action tiles, member avatar, media tiles, duration p
   assert.match(card, /overflow: hidden/);
   assert.doesNotMatch(card, /overflow-y: auto/);
   const tile = rule(".window-folder .window__chat-details-action");
-  assert.match(tile, /padding: 8px 20px/);
-  assert.match(tile, /border-radius: 12px/);
+  // Downsized from Figma (8px 20px / 12px radius / 24px icon / 14px label) on request.
+  assert.match(tile, /padding: 6px 12px/);
+  assert.match(tile, /border-radius: 10px/);
+  assert.match(rule(".window-folder .window__chat-details-action-ico"), /width: 20px; height: 20px/);
+  assert.match(rule(".window-folder .window__chat-details-action-label"), /font-size: 12px/);
   assert.match(rule(".window-folder .window__chat-details-avatar"), /width: 32px; height: 32px/);
   assert.match(rule(".window-folder .window__chat-details-tile"), /width: 61px; height: 61px/);
   // Widened from Figma's 4px on request: tiles read as separate items.
