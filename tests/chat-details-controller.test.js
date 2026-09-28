@@ -212,3 +212,57 @@ test("mute: posts this hub, repaints Unmute only when the server confirms", asyn
   await C.toggleMute(w);
   assert.ok(texts(w.panel.fed.at(-1)).includes(en.CD_UNMUTE));
 });
+
+// Clicking a tile / file / link row shows a loading state on THAT item until
+// the open settles — openFileLocation awaits a fetch and the player launch.
+const item = () => ({ el: { dataset: {} } });
+
+test("openItem: loading while the open runs, cleared when it settles", async () => {
+  const w = fakeWindow();
+  const cmd = item();
+  const d = deferred();
+  const p = C.openItem(w, cmd, () => d.promise, { minMs: 0 });
+  assert.equal(cmd.el.dataset.loading, "1");
+  d.resolve();
+  await p;
+  assert.equal(cmd.el.dataset.loading, "0");
+});
+
+test("openItem: a second click while loading does not open again", async () => {
+  const w = fakeWindow();
+  const cmd = item();
+  const d = deferred();
+  let runs = 0;
+  const run = () => { runs++; return d.promise; };
+  const p = C.openItem(w, cmd, run, { minMs: 0 });
+  await C.openItem(w, cmd, run, { minMs: 0 });
+  assert.equal(runs, 1);
+  d.resolve();
+  await p;
+});
+
+test("openItem: a failing or throwing open still clears the loading state", async () => {
+  const w = fakeWindow();
+  const a = item();
+  await C.openItem(w, a, () => Promise.reject(new Error("404")), { minMs: 0 });
+  assert.equal(a.el.dataset.loading, "0");
+  const b = item();
+  await C.openItem(w, b, () => { throw new Error("boom"); }, { minMs: 0 });
+  assert.equal(b.el.dataset.loading, "0");
+});
+
+test("openItem: an open that never settles is released by the safety timeout", async () => {
+  const w = fakeWindow();
+  const cmd = item();
+  await C.openItem(w, cmd, () => new Promise(() => {}), { minMs: 0, maxMs: 10 });
+  assert.equal(cmd.el.dataset.loading, "0");
+});
+
+test("openItem: a quick open keeps the spinner up for the minimum time", async () => {
+  const w = fakeWindow();
+  const cmd = item();
+  const t0 = Date.now();
+  await C.openItem(w, cmd, () => undefined, { minMs: 60 });
+  assert.ok(Date.now() - t0 >= 55, `cleared after ${Date.now() - t0}ms`);
+  assert.equal(cmd.el.dataset.loading, "0");
+});

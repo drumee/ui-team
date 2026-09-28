@@ -2447,20 +2447,26 @@ class __window_folder extends mfsInteract {
       case "chat-details-open-media": {
         const nid = cmd && cmd.mget && cmd.mget("nid");
         if (!nid) return;
-        return this.openFileLocation({
-          nid: `${nid}`,
-          hub_id: this.mget(_a.actual_hub_id) || this.mget(_a.hub_id),
-          pid: this.mget(_a.nid),
-          area: this.mget(_a.area),
-          filetype: cmd.mget("filetype") || undefined,
-        });
+        // Spinner on the clicked tile / row until the player is up.
+        return ChatDetails.openItem(this, cmd, () =>
+          this.openFileLocation({
+            nid: `${nid}`,
+            hub_id: this.mget(_a.actual_hub_id) || this.mget(_a.hub_id),
+            pid: this.mget(_a.nid),
+            area: this.mget(_a.area),
+            filetype: cmd.mget("filetype") || undefined,
+          }),
+        );
       }
 
       case "chat-details-open-link": {
         // Re-extracted, never trusted as given: only an http(s) URL opens.
         const url = extractUrl(cmd && cmd.mget && cmd.mget("url"));
-        if (url) window.open(url, "_blank", "noopener,noreferrer");
-        return;
+        if (!url) return;
+        // Same loading feedback as the other pages (brief: the tab opens at once).
+        return ChatDetails.openItem(this, cmd, () => {
+          window.open(url, "_blank", "noopener,noreferrer");
+        });
       }
 
       // ── Team-chat header thread-switch dropdown (Figma 2216-170337) ──

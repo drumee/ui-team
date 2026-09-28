@@ -138,4 +138,43 @@ async function toggleMute(win) {
   }
 }
 
-module.exports = { open, close, showPage, toggleMute, setOpen };
+/**
+ * Open one item of a page (photo / video tile, file row, link row) with a
+ * loading state on THAT item: data-loading="1" (skin: spinner) while `run`
+ * settles. openFileLocation awaits a fetch and the player launch, so a click
+ * otherwise looked dead for a moment.
+ *
+ * - A repeat click while loading is ignored (no double launch).
+ * - Cleared on success, rejection or a synchronous throw.
+ * - Kept at least `minMs` so a fast open does not just flicker.
+ * - `maxMs` safety net: an open that never settles releases the item anyway.
+ */
+function openItem(win, cmd, run, { minMs = 350, maxMs = 15000 } = {}) {
+  const el = cmd && cmd.el;
+  if (!el || !el.dataset) return Promise.resolve();
+  if (el.dataset.loading === "1") return Promise.resolve();
+  el.dataset.loading = "1";
+  const started = Date.now();
+  let task;
+  try {
+    task = Promise.resolve(run());
+  } catch (e) {
+    task = Promise.reject(e);
+  }
+  let safety;
+  const timeout = new Promise((resolve) => {
+    safety = setTimeout(resolve, maxMs);
+  });
+  return Promise.race([task, timeout])
+    .catch(() => {})
+    .then(() => {
+      clearTimeout(safety);
+      const wait = Math.max(0, minMs - (Date.now() - started));
+      return new Promise((resolve) => setTimeout(resolve, wait));
+    })
+    .then(() => {
+      if (el.dataset) el.dataset.loading = "0";
+    });
+}
+
+module.exports = { open, close, showPage, toggleMute, setOpen, openItem };

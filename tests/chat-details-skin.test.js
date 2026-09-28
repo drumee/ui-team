@@ -157,3 +157,18 @@ test("page body fills the panel and scrolls itself", () => {
 test("back and close are 18px", () => {
   assert.match(rule(".window-folder .window__chat-details-back, .window-folder .window__chat-details-close"), /width: 18px; height: 18px/);
 });
+
+// Loading state set by chat-details/controller openItem on the clicked item.
+test("a loading tile / file row / link row shows a spinning indicator and takes no clicks", () => {
+  assert.match(css, /@keyframes chat-details-spin \{ to \{ transform: rotate\(360deg\); \} \}/);
+  const tile = rule('.window-folder .window__chat-details-tile[data-loading="1"]::before');
+  assert.match(tile, /animation: chat-details-spin 0\.7s linear infinite/);
+  assert.match(tile, /border-top-color: #fff/);
+  assert.match(rule('.window-folder .window__chat-details-tile[data-loading="1"]::after'), /background: rgba\(0, 0, 0, 0\.3\)/);
+  const row = rule('.window-folder .window__chat-details-file[data-loading="1"]::before, .window-folder .window__chat-details-link[data-loading="1"]::before');
+  assert.match(row, /animation: chat-details-spin 0\.7s linear infinite/);
+  assert.match(row, /border-top-color: var\(--primary-40, #5950ff\)/);
+  for (const i of ["tile", "file", "link"]) {
+    assert.match(css, new RegExp(`\\.window__chat-details-${i}\\[data-loading="1"\\][^{]*\\{[^}]*pointer-events: none`), i);
+  }
+});
