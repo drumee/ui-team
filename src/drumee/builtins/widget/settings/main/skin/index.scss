@@ -159,16 +159,10 @@
     }
   }
 
+  // Referral/invite (not in the Figma frame) + Linked accounts, equal halves.
   &__row-3 {
+    .settings-main__referral-card,
     .settings-main__linked-card {
-      flex: 1 1 0;
-      min-width: 0;
-    }
-  }
-
-  // Referral/invite isn't part of the Figma frame — its own full-width row.
-  &__row-referral {
-    .settings-main__referral-card {
       flex: 1 1 0;
       min-width: 0;
     }
@@ -1013,6 +1007,7 @@
     .settings-main__preferences-card,
     .settings-main__credentials-card,
     .settings-main__danger-card,
+    .settings-main__referral-card,
     .settings-main__linked-card {
       flex: 1 1 auto;
     }
@@ -1035,6 +1030,7 @@
       .settings-main__preferences-card,
       .settings-main__credentials-card,
       .settings-main__danger-card,
+      .settings-main__referral-card,
       .settings-main__linked-card {
         flex: 1 1 auto;
       }

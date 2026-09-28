@@ -608,19 +608,15 @@ function settings_body(ui) {
       kids: [generalProfileCard(ui), preferencesCard(ui)],
     }),
     // Figma 2769-277671: Billing, Account Credentials and Danger zone sit in
-    // ONE 3-column row. Referral/invite isn't part of that frame — kept as
-    // its own full-width row instead of crowding the trio.
+    // ONE 3-column row. Referral/invite isn't part of that frame — it pairs
+    // with Linked accounts in the row below instead of crowding the trio.
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-2`,
       kids: [billingCard(ui), accountCredentialsCard(ui), dangerZoneCard(ui)],
     }),
     Skeletons.Box.X({
-      className: `${pfx}__row ${pfx}__row-referral`,
-      kids: [referralCard(ui)],
-    }),
-    Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-3`,
-      kids: [linkedAccountsCard(ui)],
+      kids: [referralCard(ui), linkedAccountsCard(ui)],
     }),
     Skeletons.Wrapper.Y({
       className: `${pfx}__overlay`,
