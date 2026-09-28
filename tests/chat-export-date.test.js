@@ -96,3 +96,13 @@ test("a checked scope checkbox shows editbox_checkmark", () => {
   assert.ok(ticks.length >= 1);
   for (const n of ticks) assert.equal(n.ico, "editbox_checkmark");
 });
+
+// The row is a named part, rendered loading (data-ready 0) until
+// date-row-ready.js stamps it once both pickers have mounted.
+test("date row is a named part that starts loading", () => {
+  const t = build();
+  const rowNode = walk(t).find((n) => n.className === "widget-chat-export__date-row");
+  assert.equal(rowNode.sys_pn, "date-row");
+  assert.equal(rowNode.partHandler.fig.family, "widget-chat-export");
+  assert.equal(rowNode.dataset.ready, 0);
+});

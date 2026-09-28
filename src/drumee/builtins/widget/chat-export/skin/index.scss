@@ -408,6 +408,32 @@
     align-items: center;
   }
 
+  // Loading until both flatpickr pickers have mounted (the lazy date_picker
+  // kind imports flatpickr on top): date-row-ready.js stamps data-ready="1".
+  // Gated on that positive stamp so it fails closed. Each field keeps its
+  // box and icon, hides the not-yet-mounted picker and spins at its end.
+  &__date-row:not([data-ready="1"]) &__date-input-wrap {
+    pointer-events: none;
+    min-height: 32px;
+
+    &::after {
+      content: "";
+      position: absolute;
+      right: 10px;
+      top: calc(50% - 8px);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--neutral-200);
+      border-top-color: var(--primary-purple-40);
+      animation: _chat-export-spin 0.7s linear infinite;
+    }
+  }
+
+  &__date-row:not([data-ready="1"]) &__date-picker {
+    visibility: hidden;
+  }
+
   // Date field: a flatpickr picker (widget/datepicker, kind date_picker) sits
   // in the wrap next to the calendar icon; clicking anywhere on the field
   // opens the app's calendar (Cancel / Done).

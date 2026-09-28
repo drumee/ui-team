@@ -17,8 +17,10 @@ const css = sass
   })
   .css.replace(/\s+/g, " ");
 
+// Anchored at a rule start (after "}" or the top), so ".a .b {" never matches
+// inside a longer selector like ".x:not(...) .a .b {".
 const rule = (sel) => {
-  const m = css.match(new RegExp(sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + " \\{([^}]*)\\}"));
+  const m = css.match(new RegExp("(?:^|\\}\\s*)" + sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + " \\{([^}]*)\\}"));
   assert.ok(m, `missing rule ${sel}`);
   return m[1];
 };
@@ -91,4 +93,17 @@ test("checkbox tick is the white filled checkmark", () => {
   assert.match(ico, /color: #ffffff/);
   assert.match(rule(`${P}__checkbox-ico svg`), /display: block; width: 100%; height: 100%; fill: currentColor/);
   assert.doesNotMatch(ico, /stroke/);
+});
+
+// Date row loading state (until date-row-ready.js stamps data-ready="1"):
+// each field shows a spinner in place of its not-yet-mounted picker and
+// takes no clicks. Gated on the positive stamp, so it fails closed.
+test("date row shows a spinner per field until the pickers are ready", () => {
+  assert.match(css, /@keyframes _chat-export-spin/);
+  const wrap = rule(`${P}__date-row:not([data-ready="1"]) ${P}__date-input-wrap`);
+  assert.match(wrap, /pointer-events: none/);
+  assert.match(rule(`${P}__date-row:not([data-ready="1"]) ${P}__date-picker`), /visibility: hidden/);
+  const spin = rule(`${P}__date-row:not([data-ready="1"]) ${P}__date-input-wrap::after`);
+  assert.match(spin, /animation: _chat-export-spin 0\.7s linear infinite/);
+  assert.match(spin, /border-top-color: var\(--primary-purple-40\)/);
 });

@@ -1,3 +1,4 @@
+const { watchDateRowReady } = require("./date-row-ready");
 /* ============================================================ *
  * Widget: chat-export
  * Export chat history modal — launched from the folder window
@@ -78,6 +79,11 @@ class __widget_chat_export extends LetcBox {
     switch (pn) {
       case "progress-area":
         this.__progressArea = child;
+        break;
+
+      case "date-row":
+        // Loading state until both flatpickr pickers have mounted.
+        watchDateRowReady(child && child.el);
         break;
 
       default:

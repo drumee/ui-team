@@ -465,6 +465,11 @@ function _dateRangeSection(pfx, ui) {
     ? [
         Skeletons.Box.X({
           className: `${pfx}__date-row`,
+          // Loading until both lazy pickers have mounted: index.js
+          // onPartReady("date-row") → date-row-ready.js stamps data-ready="1".
+          sys_pn: "date-row",
+          partHandler: ui,
+          dataset: { ready: 0 },
           kids: [
             _dateInput(pfx, ui, "start"),
             Skeletons.Image.Svg({
