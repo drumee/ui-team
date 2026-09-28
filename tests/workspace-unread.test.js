@@ -203,6 +203,25 @@ test("team chat: a message arriving in the side column is lit, and replying clea
   assert.deepEqual(broadcasts, [["workspace-chat-read", { hub_id: "HUB" }]]);
 });
 
+test("team chat: a click in the Files side column reads it — clears the rows and tells the desk; autofocus still does not", () => {
+  const rows = [row({ message_id: "M9", author_id: "P1" })];
+  const { w, posts, lit } = teamChat({ inView: false, rows });
+  const listeners = {};
+  w.el.addEventListener = (ev, fn) => { listeners[ev] = fn; };
+  w._onReadGesture = Chat.prototype._onReadGesture.bind(w);
+  w._bindReadGesture();
+  broadcasts.length = 0;
+  w.onWsMessage("live.update", { hub_id: "HUB", message_id: "M9", author_id: "P1" }, { service: "channel.post" });
+  w.onUiEvent({ get: () => "input-focus", mget: () => "input-focus" }, { service: "input-focus" });
+  assert.equal(posts.length, 0, "autofocus / window re-focus is not a read");
+  assert.equal(lit(), 1);
+  listeners.pointerdown();
+  assert.equal(posts.length, 1, "a real click is");
+  assert.equal(posts[0].service, "channel.acknowledge");
+  assert.equal(lit(), 0);
+  assert.deepEqual(broadcasts, [["workspace-chat-read", { hub_id: "HUB" }]]);
+});
+
 test("a DM never lights rows nor announces a workspace read", () => {
   const rows = [row({ message_id: "M9", author_id: "P1" })];
   const { w, posts, lit } = teamChat({ area: "privateRoom", readOnInteraction: false, rows });

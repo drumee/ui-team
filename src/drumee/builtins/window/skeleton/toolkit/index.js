@@ -857,8 +857,9 @@ export function chatPanel(ui) {
     send_icon: "raw-send-chat",
     attach_icon: "chat-link-simple",
     sys_pn: "folder-chat",
-    // Read only when actually read — its Chat tab on screen, or a reply sent
-    // from it — never by being mounted beside the file grid.
+    // Read only when actually read — its Chat tab on screen, a click / tap in
+    // it, or a reply — never by being mounted (or autofocused) beside the
+    // file grid.
     read_on_interaction: 1,
   };
 

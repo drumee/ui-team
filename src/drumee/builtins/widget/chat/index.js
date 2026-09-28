@@ -214,8 +214,8 @@ class __widget_chat extends LetcBox {
     RADIO_BROADCAST.on("chat:read", this._onReadContext);
 
     // A workspace TEAM chat (window_folder's chatPanel) is read only when the
-    // user actually reads it — its Chat tab open and on screen, or a reply
-    // sent from it. It used to be marked read by merely being mounted: the
+    // user actually reads it — its Chat tab open and on screen, a click / tap
+    // in it, or a reply. It used to be marked read by merely being mounted: the
     // Files tab shows it as a side column, so opening a workspace, raising it,
     // walking into a folder, or a message arriving while the user was on Task
     // all stamped them as having read the whole conversation — which is what
@@ -256,6 +256,10 @@ class __widget_chat extends LetcBox {
     this.unbindEvent(_a.live);
     RADIO_BROADCAST.off("chat:read", this._onReadContext);
     RADIO_BROADCAST.off("chat:posted", this._onPeerChatPosted);
+    if (this._readGestureBound && this.el) {
+      this.el.removeEventListener("pointerdown", this._onReadGesture, true);
+      this._readGestureBound = false;
+    }
     if (this._inlineGrowthBound && this.el) {
       this.el.removeEventListener("drumee:inline-media-grown", this._onInlineMediaGrown);
       this._inlineGrowthBound = false;
@@ -452,9 +456,9 @@ class __widget_chat extends LetcBox {
 
   /**
    * Mark read if the user is looking at it. For team chats this — the Chat
-   * tab on screen — is how a message becomes read; the only other way is
-   * replying (sendMessage → _onReadGesture). A click in the Files side
-   * column, the composer included, is NOT a read (Duy 2026-09-27).
+   * tab on screen — is the only AUTOMATIC way a message becomes read; the
+   * others are the user's own gestures: a click / tap in the chat, the
+   * composer included (_onReadGesture), or a reply (sendMessage).
    */
   readIfInView() {
     if (this.isDestroyed && this.isDestroyed()) return;
@@ -463,15 +467,23 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * The user replied in a team chat: pays what arrived unread, once —
-   * nothing is sent when nothing is owed. It used to be bound to every
-   * pointerdown in the chat too; a click is no longer a read (Duy
-   * 2026-09-27: only opening the Chat tab, or replying, reads it).
+   * The user clicked / tapped anywhere in a team chat — the Files side column
+   * included, composer and all (Duy 2026-09-27) — or replied from it: they
+   * are reading it. Pays what arrived unread, once — nothing is sent when
+   * nothing is owed. A pointerdown, so only a REAL user gesture: the
+   * composer's autofocus and the browser's re-focus on window return are
+   * focus events, which do not read (see "input-focus").
    */
   _onReadGesture() {
     if (!this._readDebt) return;
     this._lastReadAt = 0;
     this.markConversationRead();
+  }
+
+  _bindReadGesture() {
+    if (!this._readOnInteraction || this._readGestureBound || !this.el) return;
+    this.el.addEventListener("pointerdown", this._onReadGesture, true);
+    this._readGestureBound = true;
   }
 
   /**
@@ -1177,6 +1189,7 @@ class __widget_chat extends LetcBox {
       this.feed(require("./skeleton")(this));
       this._bindMentionKeyboard();
       this._bindClipboardPaste();
+      this._bindReadGesture();
       if (!this._inlineGrowthBound && this.el) {
         this.el.addEventListener("drumee:inline-media-grown", this._onInlineMediaGrown);
         this._inlineGrowthBound = true;
@@ -1297,8 +1310,8 @@ class __widget_chat extends LetcBox {
         // re-focuses it (focusin again) whenever the window comes back to the
         // front. Acking on that marked the whole conversation read while the
         // user was looking at their files. Focus reads only when the chat is
-        // actually on screen (Chat tab); clicking into the composer in the
-        // side column is not a read either (Duy 2026-09-27).
+        // actually on screen (Chat tab); a real click in the composer is a
+        // pointerdown, which _onReadGesture pays.
         if (this._readOnInteraction) return this.readIfInView();
         return this.markConversationRead();
 
@@ -3588,7 +3601,7 @@ class __widget_chat extends LetcBox {
         } catch (e) {}
         // A team chat that is not in front of the user (Files side column,
         // another tab, a covered or background window) owes the ack until
-        // they open its Chat tab or reply.
+        // they click in it, reply, or open its Chat tab.
         if (this._readOnInteraction && !this._isInReadingView()) {
           if ((hubMatch && inScope) || privateMach || ticketMach) {
             if (Visitor.id !== data.author_id) {
