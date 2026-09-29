@@ -305,9 +305,36 @@ $primary-hover: var(--primary-purple-60, #4642a9);
 }
 
 // Phone: stack the stat tiles.
+//
+// 🚨 The selector needs the card AND `[data-flow]`: the framework's
+// `.drumee-box[data-flow="x"]` (container.scss) sets `flex-direction: row`
+// at 0,2,0, so the bare `__stats` class (0,1,0) lost and the tiles stayed in
+// one row on phones — their labels spilled out of the tiles.
+//
+// Stacked, the card is ~640px tall, which some phones do not have: cap it and
+// let it scroll, or the centred card is clipped top and bottom. Inert while it
+// fits.
 @media (max-width: 480px) {
-  .daily-reminder-popup__stats {
+  .daily-reminder-popup__card {
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+  }
+
+  .daily-reminder-popup__card .daily-reminder-popup__stats[data-flow] {
     flex-direction: column;
+  }
+
+  // Two buttons share ~270px here, and "Open my calendar" (longer still in
+  // fr/ru/km) wraps — past the fixed 44px, out of the button. Grow with the
+  // text instead; a one-line label still measures exactly 44px.
+  .daily-reminder-popup__btn {
+    height: auto;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 10px 0;
+    line-height: 20px;
+    text-align: center;
   }
 }
 
