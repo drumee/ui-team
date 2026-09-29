@@ -109,7 +109,8 @@ test("icons are painted through fill (sprite glyphs ignore color alone); thread 
 // Hover rows carry 4px of vertical padding each, so the list gap shrinks by
 // the same 8px to keep Figma's 12px between rows.
 test("file and link lists keep Figma's row rhythm with hover padding", () => {
-  assert.match(rule(".widget-chat-details__ui .widget-chat-details-body[data-page=file], .widget-chat-details__ui .widget-chat-details-body[data-page=link]"), /gap: 4px/);
+  // Rows now sit in a per-month list (every page groups by month).
+  assert.match(rule(".widget-chat-details__ui .widget-chat-details-month-list"), /gap: 4px/);
 });
 
 // Photos / Videos: a hovered tile gets a border. Drawn on an overlay above the

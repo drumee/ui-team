@@ -255,15 +255,14 @@ function pageSkeleton(pfx, page) {
   if (page === "photo") {
     kids = [Skeletons.Box.X({ className: `${pfx}-grid`, kids: Array.from({ length: 14 }, () => sk(pfx, "tile")) })];
   } else if (page === "video") {
-    kids = [
-      sk(pfx, "bar", "w25", "month"),
-      Skeletons.Box.X({ className: `${pfx}-grid`, kids: Array.from({ length: 7 }, () => sk(pfx, "tile")) }),
-    ];
+    kids = [Skeletons.Box.X({ className: `${pfx}-grid`, kids: Array.from({ length: 7 }, () => sk(pfx, "tile")) })];
   } else if (page === "file") {
     kids = ["w60", "w45", "w70", "w50", "w65", "w40"].map((w) => skRow(pfx, "file", "square", [w]));
   } else {
     kids = ["w80", "w70", "w75", "w65"].map((w) => skRow(pfx, "link", "thumb", [w, "w50"]));
   }
+  // Every page opens on a month label (chatDetailsPage groups by month).
+  kids.unshift(sk(pfx, "bar", "w25", "month"));
   return Skeletons.Box.Y({ className: `${pfx}-skeleton`, dataset: { page }, kids });
 }
 
@@ -405,24 +404,21 @@ function chatDetailsPage(ui, page, rows = [], { loading = false } = {}) {
   if (!rows.length) {
     return [head, Skeletons.Note({ className: `${pfx}-empty`, content: LOCALE.CD_NOTHING_YET })];
   }
-  let body;
-  if (page === "video") {
-    body = M.groupByMonth(rows).map((g) =>
-      Skeletons.Box.Y({
-        className: `${pfx}-month`,
-        kids: [
-          Skeletons.Note({ className: `${pfx}-month-label`, content: g.label }),
-          Skeletons.Box.X({ className: `${pfx}-grid`, kids: g.rows.map((r) => mediaTile(ui, r)) }),
-        ],
-      }),
-    );
-  } else if (page === "photo") {
-    body = [Skeletons.Box.X({ className: `${pfx}-grid`, kids: rows.map((r) => mediaTile(ui, r)) })];
-  } else if (page === "file") {
-    body = rows.map((r) => fileRow(ui, r));
-  } else {
-    body = rows.map((r) => linkRow(ui, r));
-  }
+  // Every page is split into months, newest first, each under its label:
+  // a tile grid for Photos / Videos, a row list for Files / Links.
+  const monthKids = (g) => {
+    if (page === "photo" || page === "video") {
+      return Skeletons.Box.X({ className: `${pfx}-grid`, kids: g.rows.map((r) => mediaTile(ui, r)) });
+    }
+    const row = page === "file" ? fileRow : linkRow;
+    return Skeletons.Box.Y({ className: `${pfx}-month-list`, kids: g.rows.map((r) => row(ui, r)) });
+  };
+  const body = M.groupByMonth(rows).map((g) =>
+    Skeletons.Box.Y({
+      className: `${pfx}-month`,
+      kids: [Skeletons.Note({ className: `${pfx}-month-label`, content: g.label }), monthKids(g)],
+    }),
+  );
   return [
     head,
     Skeletons.Box.Y({

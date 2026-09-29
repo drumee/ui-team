@@ -304,3 +304,34 @@ test("the overview has no divider (loaded or loading)", () => {
     assert.ok(!JSON.stringify(t).includes("-divider"));
   }
 });
+
+// Every page, not only Videos, is split into months (newest first) under a
+// month label; a list row's month is its message's ctime.
+test("Photos, Files and Links group by month under a month label, like Videos", () => {
+  const now = dayjs();
+  const thisMonth = now.startOf("month").add(1, "day").unix();
+  const lastYear = now.subtract(1, "year").startOf("month").add(1, "day").unix();
+  const rows = {
+    photo: (ct, i) => ({ nid: `p${i}`, category: "image", filename: "a.png", ctime: ct }),
+    video: (ct, i) => ({ nid: `v${i}`, category: "video", ctime: ct }),
+    file: (ct, i) => ({ nid: `f${i}`, category: "document", filename: "a.pdf", extension: "pdf", ctime: ct }),
+    link: (ct, i) => ({ message_id: `m${i}`, preview: "see", url: `https://x.io/${i}`, ctime: ct }),
+  };
+  const labels = [now.format("MMMM"), dayjs.unix(lastYear).format("MMMM YYYY")];
+  for (const [page, mk] of Object.entries(rows)) {
+    const t = S.chatDetailsPage(ui, page, [mk(lastYear, 1), mk(thisMonth, 2), mk(thisMonth, 3)]);
+    const months = walk(t).filter((n) => hasClass(n, "month"));
+    assert.equal(months.length, 2, page);
+    const monthLabels = walk(t).filter((n) => hasClass(n, "month-label")).map((n) => n.content);
+    assert.deepEqual(monthLabels, labels, page);
+    const items = (m) => byService(m, page === "link" ? "chat-details-open-link" : "chat-details-open-media").length;
+    assert.deepEqual(months.map(items), [2, 1], page);
+  }
+});
+
+test("every page's loading placeholder starts with a month label bar", () => {
+  for (const page of ["photo", "video", "file", "link"]) {
+    const t = S.chatDetailsPage(ui, page, [], { loading: true });
+    assert.ok(walk(t).some((n) => hasClass(n, "sk--month")), page);
+  }
+});

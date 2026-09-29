@@ -333,15 +333,16 @@
       @include cd-scroll;
       overflow-x: hidden;
 
-      // Hover rows carry 4px of vertical padding each: shrink the list gap by
-      // the same 8px so rows keep Figma's 12px rhythm.
-      &[data-page="file"],
-      &[data-page="link"] {
-        gap: 4px;
-      }
     }
+    // One month of any page: its label over a tile grid (Photos / Videos) or
+    // a row list (Files / Links).
     &-month {
       gap: 12px;
+    }
+    // Hover rows carry 4px of vertical padding each: shrink the list gap by
+    // the same 8px so rows keep Figma's 12px rhythm.
+    &-month-list {
+      gap: 4px;
     }
     &-month-label {
       font-size: 14px;
