@@ -862,7 +862,7 @@ class __invite_popup extends LetcBox {
     ];
     const assignments = [...this._checked].map((hub_id) => ({
       hub_id,
-      permission: computePrivilege([this._roles.get(hub_id) || DEFAULT_ROLE_IDS[0]]),
+      privilege: computePrivilege([this._roles.get(hub_id) || DEFAULT_ROLE_IDS[0]]),
     }));
     if (!assignments.length) {
       this._setWorkspaceError(
@@ -876,10 +876,13 @@ class __invite_popup extends LetcBox {
     if (this._sendBtn) this._sendBtn.el.dataset.loading = 1;
 
     const promises = assignments.map((a) =>
+      // `privilege`, the name hub.invite reads (acl/hub.json). It used to be
+      // sent as `permission`, which the server ignores — every invitee got the
+      // workspace's default_privilege whatever role was picked here.
       this.postService(SERVICE.hub.invite, {
         hub_id: a.hub_id,
         invitees: emails,
-        permission: a.permission,
+        privilege: a.privilege,
       }),
     );
 
@@ -916,12 +919,29 @@ class __invite_popup extends LetcBox {
           results: flat,
         });
         if (failed.length) {
-          Wm.alert(
-            LOCALE.INVITE_PARTIAL_FAILED.format(
-              flat.length - failed.length,
-              failed.length,
-            ),
+          // The counts, then WHY — one line per distinct server reason. The
+          // counts alone ("Sent 0 invitation(s), 1 failed") read as "nothing
+          // happened", yet a mail the relay refused still leaves the invitation
+          // recorded and the notification delivered; hub.js
+          // _inviteFailureReason spells out which, per address. Deduped: one
+          // address failing in several workspaces yields one reason each, and
+          // an identical line twice says nothing new.
+          const reasons = [
+            ...new Set(failed.map((r) => r.reason).filter(Boolean)),
+          ];
+          const summary = LOCALE.INVITE_PARTIAL_FAILED.format(
+            flat.length - failed.length,
+            failed.length,
           );
+          Wm.alert({
+            kind: "window_info",
+            // window_info's own message class, as a plain Wm.alert(string)
+            // gets (info/skeleton/message.js) — each line styled and spaced
+            // like one.
+            message: [summary, ...reasons].map((line) =>
+              Skeletons.Note(line, "window-info__message inner"),
+            ),
+          });
         } else {
           // Branded "notice" toast (the drumee-logo card with a primary Close),
           // matching the permission panel's invite-sent confirmation. `kind` is
@@ -948,6 +968,13 @@ class __invite_popup extends LetcBox {
       .catch((err) => {
         this.warn("[invite-popup] hub.invite failed", err);
         if (this._sendBtn) delete this._sendBtn.el.dataset.loading;
+        // Say so: clearing the spinner alone left the user with no idea
+        // whether anything went out. The popup has no onServerComplain, so
+        // ui-essentials' doRequest THROWS here for a network failure, a non-200
+        // and a 200 carrying `error` (an ACL refusal) alike — the last one has
+        // a reason worth showing, same as the errored branch above. The popup
+        // stays open, chips and ticks intact, for a retry.
+        Wm.alert((err && (err.reason || err.error)) || LOCALE.TRY_AGAIN);
       });
   }
 
