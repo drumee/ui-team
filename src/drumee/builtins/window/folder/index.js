@@ -3673,12 +3673,21 @@ class __window_folder extends mfsInteract {
       `.${fig}__meeting-modal-time-seg[data-active="1"]`,
     );
     let h = parseInt((hourEl && hourEl.value) || "", 10);
+    let ampm = active ? active.dataset.ampm : "am";
+    // A 24-hour entry (13-23, e.g. "16" for 4 PM) is unambiguous: keep it as
+    // that hour and show it the 12h way (04 + PM). Clamping it to 12 booked the
+    // meeting at 12:xx while the box still read "16".
+    if (h >= 13 && h <= 23) {
+      h -= 12;
+      ampm = "pm";
+      if (hourEl) hourEl.value = p2(h);
+      this._mmActivateAmpm(picker, ampm);
+    }
     if (isNaN(h) || h < 1) h = 12;
     if (h > 12) h = 12;
     let mi = parseInt((minEl && minEl.value) || "", 10);
     if (isNaN(mi) || mi < 0) mi = 0;
     if (mi > 59) mi = 59;
-    const ampm = active ? active.dataset.ampm : "am";
     let h24 = h % 12;
     if (ampm === "pm") h24 += 12;
     const hidden = picker.querySelector(`[name="mm-${which}"]`);
@@ -3696,11 +3705,17 @@ class __window_folder extends mfsInteract {
       `.${fig}__meeting-modal-time-picker[data-timefor="${which}"]`,
     );
     if (!picker) return;
+    this._mmActivateAmpm(picker, ampm);
+    this._recomputeTime(which);
+    this._checkAvailability();
+  }
+
+  // Light the AM or PM segment of one time picker.
+  _mmActivateAmpm(picker, ampm) {
+    const fig = this.fig.family;
     picker.querySelectorAll(`.${fig}__meeting-modal-time-seg`).forEach((s) => {
       s.dataset.active = s.dataset.ampm === ampm ? "1" : "0";
     });
-    this._recomputeTime(which);
-    this._checkAvailability();
   }
 
   // Add a searched member to the invitee set; clear the search box + dropdown.

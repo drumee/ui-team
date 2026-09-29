@@ -673,12 +673,19 @@ class __calendar_main extends LetcBox {
     });
 
     // start_hour / start_minute / end_hour / end_minute → draft.start / .end,
-    // leaving the meridiem the toggle already set.
+    // leaving the meridiem the toggle already set (except for a 24h hour).
     ["start", "end"].forEach((which) => {
       const part = draft[which] || {};
       const hour = data[`${which}_hour`];
       const minute = data[`${which}_minute`];
       if (hour != null && `${hour}`.trim() !== "") part.hour = `${hour}`.trim();
+      // A 24-hour entry (13-23, e.g. "16" for 4 PM) is unambiguous: store it
+      // the 12h way (4 + PM) instead of letting _epochFor clamp it to 12.
+      const h = parseInt(part.hour, 10);
+      if (h >= 13 && h <= 23) {
+        part.hour = String(h - 12);
+        part.meridiem = "PM";
+      }
       if (minute != null && `${minute}`.trim() !== "") {
         part.minute = `${minute}`.trim();
       }
