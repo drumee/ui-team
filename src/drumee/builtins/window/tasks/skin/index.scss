@@ -3725,25 +3725,37 @@ $theme-colors: (
     justify-content: space-between;
   }
 
+  // The whole group is the toggle's click target (service on this box), so it
+  // carries the pointer and a hover cue on the switch track.
   &__due-duration {
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+
+    * {
+      cursor: pointer;
+    }
+
+    &:hover .tasks-panel__toggle {
+      filter: brightness(0.94);
+    }
   }
 
   &__due-duration-label {
     @include drumee.typo(
-      $size: 16px,
+      $size: 13px,
       $weight: 400,
-      $line: 22px,
+      $line: 18px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
   &__toggle {
-    flex: 0 0 40px;
-    width: 40px;
-    height: 20px;
-    border-radius: 12px;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 16px;
+    border-radius: 10px;
     background: var(--normal-bg-70, #d1d1d6);
     align-items: center;
     padding: 2px;
@@ -3757,9 +3769,9 @@ $theme-colors: (
   }
 
   &__toggle-knob {
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: #fff;
   }
@@ -8445,26 +8457,9 @@ html[data-theme="dark"] .tasks-panel {
   box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.18);
   font-family: Manrope, system-ui, sans-serif;
 
-  .flatpickr-day {
-    border-radius: 6px;
-
-    &.selected,
-    &.selected:hover,
-    &.startRange,
-    &.endRange {
-      background: #433cc5;
-      border-color: #433cc5;
-    }
-
-    &.today {
-      border-color: #433cc5;
-
-      &:hover {
-        background: rgba(67, 60, 197, 0.08);
-        color: #433cc5;
-      }
-    }
-  }
+  // Day markers (hover, picked, in-range, adjacent-month) come from the shared
+  // date_picker skin (`.dp-skin`), drawn as a circle on ::before. Don't paint
+  // the day ELEMENT here — that stacks a rounded square behind the circle.
 
   // Step hint guiding the two-click range pick ("Select start/end date").
   .tasks-panel__dp-hint {
@@ -8555,39 +8550,49 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     background: transparent;
   }
 
+  // Dark re-colour of the shared circle markers. Same structure as the
+  // `.dp-skin` rules: adjacent-month days are muted first, then hover and
+  // selection paint the ::before circle, so a leading/trailing day still gets
+  // a hover circle (text stays muted) and shows a pick.
   .flatpickr-day {
     color: var(--normal-fg-10, #e4e3ff);
-    background: transparent;
-    border-color: transparent;
 
-    &:hover,
-    &.prevMonthDay:hover,
-    &.nextMonthDay:hover {
-      background: var(--hover-bg-40, rgba(89, 80, 255, 0.15));
-      border-color: transparent;
-    }
-
-    &.today {
-      border-color: var(--active-border, #5950ff);
-      &:hover {
-        background: rgba(89, 80, 255, 0.15);
-        color: var(--normal-fg-10, #e4e3ff);
-      }
-    }
-
-    &.selected,
-    &.selected:hover,
-    &.startRange,
-    &.endRange {
-      background: var(--active-border, #5950ff);
-      border-color: var(--active-border, #5950ff);
-      color: #ffffff;
-    }
-
-    &.flatpickr-disabled,
     &.prevMonthDay,
     &.nextMonthDay {
       color: rgba(228, 227, 255, 0.35);
+    }
+
+    &:hover::before {
+      background: rgba(89, 80, 255, 0.22);
+    }
+
+    &.inRange::before {
+      background: rgba(89, 80, 255, 0.18);
+    }
+
+    &.inRange {
+      color: var(--normal-fg-10, #e4e3ff);
+    }
+
+    &.selected::before,
+    &.startRange::before,
+    &.endRange::before {
+      background: var(--active-border, #5950ff);
+      border-color: var(--active-border, #5950ff);
+    }
+
+    &.selected,
+    &.startRange,
+    &.endRange {
+      color: #ffffff;
+    }
+
+    &.flatpickr-disabled {
+      color: rgba(228, 227, 255, 0.25);
+
+      &::before {
+        background: transparent;
+      }
     }
   }
 

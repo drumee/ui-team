@@ -276,6 +276,17 @@ $cell: 36px;
       box-shadow: none;
     }
 
+    // Days of the previous / next month: muted text only. Declared BEFORE the
+    // hover and selection rules (same specificity) so those still apply — a
+    // leading/trailing day must light up on hover and show a pick like any
+    // other day (clicking it jumps to that month and selects it).
+    &.prevMonthDay,
+    &.nextMonthDay {
+      color: $grey-muted;
+    }
+
+    // Hover: soft circle; the number keeps its own colour, so an adjacent-month
+    // day stays muted under the circle.
     &:hover::before {
       background: $brand-hover;
     }
@@ -284,38 +295,51 @@ $cell: 36px;
     // mistaken for an auto-selected start date. (The element-background reset
     // above also strips flatpickr's default today border.)
 
-    // In-between range days + single/multiple select: soft filled circle.
-    &.selected::before,
+    // In-between range days: soft filled circle.
     &.inRange::before {
       background: $brand-soft;
       border-color: transparent;
     }
 
-    // Range endpoints (and single-select): soft fill + ring.
+    &.inRange {
+      color: $brand-deep;
+    }
+
+    // Picked dates — single, every date in multiple mode, and both range
+    // endpoints: solid brand circle with a white number. Adjacent picks touch,
+    // so a run of consecutive dates reads as a chain of circles.
     &.selected::before,
     &.startRange::before,
     &.endRange::before {
-      background: $brand-soft;
+      background: $brand;
       border-color: $brand;
     }
 
     &.selected,
     &.startRange,
-    &.endRange,
-    &.inRange {
-      color: $brand-deep;
+    &.endRange {
+      color: $white;
+      font-weight: 500;
     }
 
-    &.flatpickr-disabled,
-    &.prevMonthDay,
-    &.nextMonthDay {
+    // Unpickable days (minDate/maxDate): muted, no hover circle.
+    &.flatpickr-disabled {
       color: $grey-muted;
+      cursor: not-allowed;
 
       &::before {
         background: transparent;
         border-color: transparent;
       }
     }
+  }
+
+  // flatpickr bridges range days with a coloured box-shadow bar (e.g.
+  // `.selected.startRange + .endRange:not(:nth-child(7n+1))`, specificity
+  // 0,5,0), which the element reset above can't outrank. The circles are the
+  // only marker, so repeat the class to win at 0,6,0.
+  .dayContainer .flatpickr-day.flatpickr-day.flatpickr-day {
+    box-shadow: none;
   }
 
   // ---- Time (only when a consumer enables it, e.g. secure-share) ----------

@@ -3949,8 +3949,17 @@ function buildDueSectionContent(ui, scope = "detail") {
           className: `${pfx}__${scope}-label`,
           content: LOCALE.DUE_DATE,
         }),
+        // The whole "Duration [N days] (switch)" group is the click target, so
+        // the label toggles too. Its kids are inactive (kidsOpt, and the switch
+        // passes it on to its knob): ui-core binds onclick on every ACTIVE
+        // widget and __handleClick always stops propagation, so an active
+        // child would swallow the click before it reached this service.
         Skeletons.Box.X({
           className: `${pfx}__due-duration`,
+          bubble: 0,
+          service: "toggle-duration",
+          uiHandler: [ui],
+          kidsOpt: { active: 0 },
           kids: [
             Skeletons.Note({
               className: `${pfx}__due-duration-label`,
@@ -3969,9 +3978,7 @@ function buildDueSectionContent(ui, scope = "detail") {
             Skeletons.Box.X({
               className: `${pfx}__toggle`,
               attrOpt: { "data-on": draft.duration_on ? "1" : "0" },
-              bubble: 0,
-              service: "toggle-duration",
-              uiHandler: [ui],
+              kidsOpt: { active: 0 },
               kids: [Skeletons.Box.X({ className: `${pfx}__toggle-knob` })],
             }),
           ],
