@@ -1267,6 +1267,7 @@
   "UNTITLED_DOCUMENT": "Document sans titre",
   "DOC": "Doc",
   "UNSAVED_CHANGES": "Modifications non enregistrées",
+  "UNSAVED_PROFILE_CHANGES_DESC": "Vous avez modifié votre profil. Enregistrer les modifications avant de quitter ?",
   "ALL_CHANGES_SAVED": "Toutes les modifications sont enregistrées",
   "CURRENT_PLAN": "Formule actuelle",
   "PRO": "Pro",

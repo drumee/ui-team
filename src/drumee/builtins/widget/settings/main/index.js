@@ -20,6 +20,16 @@ class settings_main extends LetcBox {
     // True while a picked avatar is being converted (HEIC) and/or uploaded.
     // The skeleton reads this via isAvatarProcessing() to show the spinner.
     this._avatarProcessing = false;
+    // Reload / tab close with unsaved profile edits: the browser's own
+    // "Leave site?" prompt (the only one a page may show there). In-app
+    // navigation asks through confirmLeave() instead — see desk_module
+    // _guardSettingsLeave.
+    this._onBeforeUnload = (e) => {
+      if (!this.hasUnsavedProfile()) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", this._onBeforeUnload);
   }
 
   /** Skeleton reads this to seed the avatar-frame's data-processing flag. */
@@ -210,7 +220,8 @@ class settings_main extends LetcBox {
    */
   async saveProfile() {
     // One save at a time: a second click mid-request would post again.
-    if (this._savingProfile) return;
+    // Resolves true once saved, false on failure (confirmLeave relies on it).
+    if (this._savingProfile) return false;
     this._savingProfile = true;
     try {
       return await this._saveProfile();
@@ -259,7 +270,7 @@ class settings_main extends LetcBox {
       // (USERNAME_TAKEN / USERNAME_INVALID) reject the whole save server-side.
       const message = res && res.error && LOCALE[res.error];
       this._flashSaveStatus(false, message);
-      return;
+      return false;
     }
     // Server returns the full updated profile object. Fall back to the
     // request payload if the response is an unexpected scalar/array so
@@ -274,6 +285,99 @@ class settings_main extends LetcBox {
     // confirmation on the freshly-rendered "save-status" part.
     this.feed(require("./skeleton").default(this));
     this._flashSaveStatus(true);
+    return true;
+  }
+
+  /**
+   * The General Profile values as the page last rendered them. The skeleton
+   * derives the fields from Visitor.profile() the same way, and every save
+   * re-renders from it, so this is the "nothing changed" state.
+   */
+  _profileBaseline() {
+    const profile = Visitor.profile() || {};
+    return {
+      display_name: [profile.firstname, profile.lastname].filter(Boolean).join(" "),
+      username: profile.username || "",
+      bio: profile.bio || "",
+    };
+  }
+
+  /**
+   * Does the General Profile card hold edits that Save Profile has not sent?
+   * Compared the way saveProfile sends them: name and username trimmed, bio
+   * as typed. False while a save is in flight (it will land either way) and
+   * before the card has rendered.
+   */
+  hasUnsavedProfile() {
+    if (!this.el || this._savingProfile) return false;
+    if (this.isDestroyed && this.isDestroyed()) return false;
+    const data = this.getData() || {};
+    if (typeof data.display_name !== "string") return false;
+    const base = this._profileBaseline();
+    const bio = typeof data.bio === "string" ? data.bio : base.bio;
+    return (
+      data.display_name.trim() !== base.display_name.trim() ||
+      String(data.username || "").trim() !== base.username.trim() ||
+      bio !== base.bio
+    );
+  }
+
+  /** Put the General Profile fields back to the saved values. */
+  discardProfileChanges() {
+    this.feed(require("./skeleton").default(this));
+  }
+
+  /**
+   * Ask whether to save or discard unsaved profile edits before the desk
+   * shows another screen. Resolves true when the user may leave (saved, or
+   * discarded), false to stay here (the X, Escape, a click outside the card,
+   * or a save that failed — its error shows in the save pill).
+   * @returns {Promise<Boolean>}
+   */
+  confirmLeave() {
+    if (this._leavePrompt) return this._leavePrompt;
+    this._leavePrompt = new Promise((resolve) => {
+      this._leaveResolve = resolve;
+      Kind.waitFor("settings_leave_confirm")
+        .then(() => this.ensurePart("overlay"))
+        .then((p) => p.feed({ kind: "settings_leave_confirm", uiHandler: [this] }))
+        .catch((e) => {
+          this.warn("settings_main: leave dialog failed", e);
+          resolve(false);
+        });
+    }).finally(() => {
+      this._leavePrompt = null;
+      this._leaveResolve = null;
+    });
+    return this._leavePrompt;
+  }
+
+  /**
+   * An answer from the leave dialog.
+   * @param {String} service  leave-confirm-save | -discard | -stay
+   * @param {LetcBox} dialog  the settings_leave_confirm that asked
+   */
+  async _answerLeave(service, dialog) {
+    const resolve = this._leaveResolve;
+    if (!resolve) return this.closeOverlay();
+    switch (service) {
+      case "leave-confirm-discard":
+        // Re-rendering resets the fields and takes the dialog down with it.
+        this.discardProfileChanges();
+        return resolve(true);
+      case "leave-confirm-save": {
+        if (dialog && _.isFunction(dialog.setBusy)) dialog.setBusy(true);
+        // A successful save re-renders the page, dialog included.
+        if (await this.saveProfile()) return resolve(true);
+        // Failed (e.g. username taken): stay, so the user can read the error
+        // in the save pill and fix the field.
+        await this.closeOverlay();
+        return resolve(false);
+      }
+      default:
+        await this.closeOverlay();
+        return resolve(false);
+    }
   }
 
   /**
@@ -300,6 +404,8 @@ class settings_main extends LetcBox {
   }
 
   onBeforeDestroy() {
+    window.removeEventListener("beforeunload", this._onBeforeUnload);
+    if (this._leaveResolve) this._leaveResolve(false);
     clearTimeout(this._saveStatusTimer);
     clearTimeout(this._toastTimer);
     if (super.onBeforeDestroy) super.onBeforeDestroy();
@@ -833,6 +939,11 @@ class settings_main extends LetcBox {
     switch (service) {
       case "save-profile":
         return this.saveProfile();
+
+      case "leave-confirm-save":
+      case "leave-confirm-discard":
+      case "leave-confirm-stay":
+        return this._answerLeave(service, cmd);
 
       case "set-theme":
         return this.setThemeMode(cmd && cmd.mget && cmd.mget("theme_mode"));

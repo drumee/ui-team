@@ -326,6 +326,7 @@
   "UNTITLED_DOCUMENT": "Untitled document",
   "DOC": "Doc",
   "UNSAVED_CHANGES": "Unsaved changes",
+  "UNSAVED_PROFILE_CHANGES_DESC": "You've changed your profile. Save the changes before you leave?",
   "ALL_CHANGES_SAVED": "All changes saved",
   "CURRENT_PLAN": "Plan actual",
   "PRO": "Pro",
