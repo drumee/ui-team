@@ -279,3 +279,21 @@ test("the widget root is a flex column by itself (no data-flow on a fed widget)"
 test("no divider between the counts and the members", () => {
   assert.doesNotMatch(css, /widget-chat-details-divider/);
 });
+
+// Chat tab: every column is its own card (r=8, 5%-black hairline) with a
+// gutter between them — rail | chat | file thread | details. The details
+// card is the widget root itself, so its slot draws no border of its own.
+test("Chat tab: columns are separate cards with a gap between them", () => {
+  const body = ".window-folder__split-body.window__split-body[data-view=chat]";
+  assert.match(ruleIn(folderCss, body), /gap: 8px/);
+  const cards = ruleIn(folderCss, `${body} > .window__thread-rail, ${body} > .window__chat-panel, ${body} > .window__file-thread-panel`);
+  assert.match(cards, /border: 1px solid rgba\(0, 0, 0, 0\.05\)/);
+  assert.match(cards, /border-radius: 8px/);
+  // The card rule must not clip the rail: its thread list scrolls.
+  assert.doesNotMatch(cards, /overflow/);
+  assert.match(ruleIn(folderCss, ".window-folder .window__thread-rail"), /overflow-y: auto/);
+  const root = rule(".widget-chat-details__ui");
+  assert.match(root, /border: 1px solid rgba\(0, 0, 0, 0\.05\)/);
+  assert.match(root, /border-radius: 8px/);
+  assert.doesNotMatch(ruleIn(folderCss, ".window-folder__split-body[data-view=chat][data-details=open] > .window__chat-details"), /border/);
+});

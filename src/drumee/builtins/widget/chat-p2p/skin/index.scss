@@ -15,13 +15,12 @@
     position: relative;
     width: 100%;
     height: 100%;
-    background-color: var(--normal-bg);
     overflow: hidden;
-    // The section outline the frame draws around the whole inbox panel
-    // (stroke #000 @5%, r=8) — the same treatment the workspace and chat
-    // cards carry, which this was missing entirely.
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: 8px;
+    // No outline of its own: the sidebar, the chat area and Chat details are
+    // each a card (stroke #000 @5%, r=8 — the workspace cards' treatment) on
+    // the canvas, with a gutter between them (&__main).
+    border: none;
+    background-color: transparent;
     box-sizing: border-box;
 
     // data-anim is still the DESK'S show/hide switch for this slot
@@ -34,9 +33,10 @@
   }
 
   &__main {
-    background-color: inherit;
+    background-color: transparent;
     height: 100%;
     width: 100%;
+    gap: 8px;
   }
 
   // ── Left sidebar ────────────────────────────────────────────────
@@ -45,9 +45,10 @@
   // and carries the #F2F2F7 ground (43:32209).
   &__sidebar {
     background-color: var(--normal-bg-elevated, #fff);
-    // 43:32209 strokes both panes at 5% black; the list column's right edge is
-    // the seam between them.
-    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    // A card (43:32209 strokes the panes at 5% black), apart from the chat.
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    box-sizing: border-box;
     flex-shrink: 0;
     height: 100%;
     overflow: hidden;
@@ -700,7 +701,9 @@
 
   &__chat-area {
     background-color: var(--normal-bg);
-    border-left: 1px solid var(--border-muted);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    box-sizing: border-box;
     flex: 1;
     height: 100%;
     min-width: 0;
@@ -721,8 +724,7 @@
     height: 100%;
     min-width: 0;
     overflow: hidden;
-    border-left: 1px solid var(--border-muted);
-    background-color: var(--normal-bg);
+    // The card is widget_chat_details' own root; the slot draws nothing.
   }
 
   // ── Chat header ──────────────────────────────────────────────────
@@ -1175,12 +1177,10 @@
     }
 
     &__sidebar {
-      border-right: none;
       width: 100%;
     }
 
     &__chat-area {
-      border-left: none;
       width: 100%;
     }
 
@@ -1220,7 +1220,6 @@
 
     &__ui[data-details="open"] &__chat-details {
       width: 100%;
-      border-left: none;
     }
   }
 }

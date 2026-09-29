@@ -3849,6 +3849,25 @@
     );
   }
 
+  // Chat tab: every column is its own card — the 43:23955 treatment the
+  // Files view already gives its two panels (r=8, 5%-black hairline) — with
+  // an 8px gutter between them: rail | chat | file thread | details. Both
+  // classes: beats the docked pane's 4px gutter ([data-headless] … (0,3,0)),
+  // which comes earlier in this file. The details card is widget_chat_details'
+  // own root, so its slot (chat-details.scss) draws none.
+  &__split-body.window__split-body[data-view="chat"] {
+    gap: 8px;
+
+    > .window__thread-rail,
+    > .window__chat-panel,
+    > .window__file-thread-panel {
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      // No overflow here: the rail must keep its own overflow-y:auto (a
+      // scrolling box clips to its radius anyway); the chat panel clips.
+    }
+  }
+
   &__split-body[data-view="chat"] {
     // Two columns: docked thread rail (Figma 2328-115485) + chat fills the rest.
     grid-template-columns: clamp(240px, 22vw, 300px) minmax(0, 1fr);

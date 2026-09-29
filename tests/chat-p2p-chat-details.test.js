@@ -222,3 +222,21 @@ test("skin: hidden until open; a side column on desktop; the whole pane on narro
   assert.match(col, /width: clamp\(320px, 28vw, 400px\)/);
   assert.match(css, /@media \(max-width: 1024px\) \{[^@]*\.chat-p2p__ui\[data-mview=details\] \.chat-p2p__chat-area, \.chat-p2p__ui\[data-mview=details\] \.chat-p2p__sidebar \{ display: none; \}/);
 });
+
+// Inbox: sidebar | chat area | details are separate cards with a gutter, not
+// panes of one outlined box.
+test("skin: Inbox panes are separate cards with a gap between them", () => {
+  assert.match(rule(".chat-p2p__main"), /gap: 8px/);
+  const ui = rule(".chat-p2p__ui");
+  assert.match(ui, /border: none/);
+  assert.match(ui, /background-color: transparent/);
+  for (const pane of [".chat-p2p__sidebar", ".chat-p2p__chat-area"]) {
+    const r = rule(pane);
+    assert.match(r, /border: 1px solid rgba\(0, 0, 0, 0\.05\)/, pane);
+    assert.match(r, /border-radius: 8px/, pane);
+    assert.doesNotMatch(r, /border-(left|right):/, pane);
+  }
+  assert.doesNotMatch(rule('.chat-p2p__ui[data-details=open] .chat-p2p__chat-details'), /border-left/);
+  // Narrow screens keep the card edges (no one-sided resets).
+  assert.doesNotMatch(css, /@media \(max-width: 1024px\) \{[^@]*\.chat-p2p__(chat-area|sidebar) \{[^}]*border-(left|right): none/);
+});
