@@ -197,3 +197,25 @@ test("desk: no prompt when clean, parked, or when the service keeps Settings up"
   }
   assert.equal(desk()._guardSettingsLeave({ mget: () => 0 }, "home", {}), true, "_e.home counts as Home");
 });
+
+test("Export / Delete buttons spin until their dialog is up, and ignore a second click", async () => {
+  const s = settings({});
+  const btn = { el: { dataset: {} } };
+  let opened = 0;
+  let finish;
+  const run = () => { opened++; return new Promise((r) => { finish = r; }); };
+  const first = s._withButtonLoading(btn, run);
+  assert.equal(btn.el.dataset.loading, "1");
+  await s._withButtonLoading(btn, run); // double click while loading
+  assert.equal(opened, 1);
+  finish();
+  await first;
+  assert.equal(btn.el.dataset.loading, "0");
+});
+
+test("a failed open still stops the spinner", async () => {
+  const s = settings({});
+  const btn = { el: { dataset: {} } };
+  await assert.rejects(s._withButtonLoading(btn, () => Promise.reject(new Error("chunk failed"))));
+  assert.equal(btn.el.dataset.loading, "0");
+});

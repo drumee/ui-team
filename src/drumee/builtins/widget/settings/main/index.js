@@ -91,8 +91,6 @@ class settings_main extends LetcBox {
     const signature = readCache.signature([links, gdrive, referral, Visitor.profile()]);
     if (!opt.force && signature === this._pageSignature) return;
     this._pageSignature = signature;
-    // New feed, new billing card: let the status line resolve itself again.
-    this._subStatusText = null;
     this.feed(require("./skeleton").default(this));
   }
 
@@ -855,60 +853,22 @@ class settings_main extends LetcBox {
   }
 
   /**
-   * Billing card status line: "Renews on …" / "Your subscription will be
-   * canceled on …" from payment.subscription_status (org-aware server-side).
-   * Fired by onPartReady("billing-sub-status") so the fetch only runs when the
-   * billing card is actually rendered.
+   * Spin `cmd` (a card button) while `run` opens its dialog — the dialog's
+   * code is a lazy chunk, so the first click can take a moment with no other
+   * sign it registered. A click while it spins is ignored, so a double click
+   * does not open the dialog twice. Skin: [data-loading="1"] on the
+   * __danger-export-btn / __danger-delete-btn buttons.
+   * @param {LetcBox} cmd
+   * @param {Function} run  returns a promise that settles once the dialog is up
    */
-  onPartReady(child, pn) {
-    if (pn === "billing-sub-status") {
-      // A Note re-renders on set() (ui-core text.set -> mould -> render), and
-      // every render of a sys_pn part fires onPartReady again. Setting the
-      // status line from here therefore re-enters this handler: without the
-      // guards below each pass fetched subscription_status and set the same
-      // text again, an unbounded loop at ~10 req/s that froze the whole tab
-      // for any subscriber who opened Settings (only subscribers reach the
-      // set — a caller with no subscription_id returns before it).
-      if (this._subStatusText != null && child.mget(_a.content) === this._subStatusText) return;
-      this._fillSubscriptionStatus(child);
-      return;
-    }
-    if (super.onPartReady) super.onPartReady(child, pn);
-  }
-
-  /**
-   * Resolve the status line ONCE per page feed (cached in _subStatusText,
-   * cleared by _refreshPage before it feeds) and write it only when the part
-   * does not already show it — the write itself re-renders the part and
-   * re-enters onPartReady, which is where the loop lived.
-   */
-  async _fillSubscriptionStatus(part) {
-    if (this._subStatusPending) return;
-    this._subStatusPending = true;
+  async _withButtonLoading(cmd, run) {
+    const el = cmd && cmd.el;
+    if (el && el.dataset.loading === "1") return;
+    if (el) el.dataset.loading = "1";
     try {
-      let text = this._subStatusText;
-      if (text == null) {
-        text = "";
-        const sub = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id });
-        if (sub && sub.subscription_id) {
-          const when = sub.period_end ? Dayjs(Number(sub.period_end) * 1000).format("MMM D, YYYY") : "";
-          if (when) {
-            const canceled = ["canceled", "unpaid", "incomplete_expired"].includes(sub.status);
-            text = canceled
-              ? (LOCALE.SUBSCRIPTION_CANCELS_ON || "Your subscription will be canceled on {0}").format(when)
-              : (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when);
-          }
-        }
-        this._subStatusText = text;
-      }
-      if (this.isDestroyed && this.isDestroyed()) return;
-      if (!part || !part.el || (part.isDestroyed && part.isDestroyed())) return;
-      if (!text || part.mget(_a.content) === text) return;
-      part.set({ content: text });
-    } catch (e) {
-      /* status line is cosmetic — leave empty on failure */
+      return await run();
     } finally {
-      this._subStatusPending = false;
+      if (el) el.dataset.loading = "0";
     }
   }
 
@@ -1034,13 +994,13 @@ class settings_main extends LetcBox {
         return this.editPassword();
 
       case "export-data":
-        return this.exportData();
+        return this._withButtonLoading(cmd, () => this.exportData());
 
       case "export-data-cancel":
         return this.closeOverlay();
 
       case "delete-account":
-        return this.confirmDeleteAccount();
+        return this._withButtonLoading(cmd, () => this.confirmDeleteAccount());
 
       case "delete-account-confirm":
         return this.performDeleteAccount(args);
