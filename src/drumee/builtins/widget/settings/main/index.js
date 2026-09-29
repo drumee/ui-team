@@ -588,7 +588,42 @@ class settings_main extends LetcBox {
           ],
         })
       );
+      this._placeToast(part);
     });
+  }
+
+  /**
+   * Hang the toast from the topbar's utility icons (desk-module-topbar
+   * __utility-cluster): right edges aligned, TOAST_GAP below the cluster.
+   * Measured at each show, since where the cluster sits depends on the
+   * topbar's contents. Without a cluster on screen (the phone topbar has
+   * none) the slot keeps its CSS corner.
+   *
+   * The wanted spot is set, then the slot is measured and corrected by the
+   * difference: `position: fixed` is only viewport-relative when no
+   * ancestor is transformed, and this slot lives inside the desk's animated
+   * main slot, so the offsets cannot be trusted to be viewport pixels.
+   */
+  _placeToast(part) {
+    const TOAST_GAP = 8;
+    const slot = part && part.el;
+    if (!slot) return;
+    slot.style.top = "";
+    slot.style.right = "";
+    const cluster = document.querySelector(".desk-module-topbar__utility-cluster");
+    const c = cluster && cluster.getBoundingClientRect();
+    if (!c || !c.width || !c.height) return;
+    const want = { top: c.bottom + TOAST_GAP, right: c.right };
+    const style = getComputedStyle(slot);
+    const got = slot.getBoundingClientRect();
+    // A scaled ancestor scales these offsets too: rendered size over layout
+    // size is that scale, so the correction is divided by it.
+    const sx = slot.offsetWidth ? got.width / slot.offsetWidth : 1;
+    const sy = slot.offsetHeight ? got.height / slot.offsetHeight : 1;
+    const top = (parseFloat(style.top) || 0) + (want.top - got.top) / (sy || 1);
+    const right = (parseFloat(style.right) || 0) + (got.right - want.right) / (sx || 1);
+    slot.style.top = `${top}px`;
+    slot.style.right = `${right}px`;
   }
 
   _resetMfaState() {
