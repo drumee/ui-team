@@ -140,8 +140,8 @@ class __calendar_main extends LetcBox {
   /**
    * Point the screen at `view`, on TODAY — for an entry point that names one
    * rather than taking the screen as the user left it. The Daily Reminder
-   * card's [My calendar] is the only such caller today: its whole subject is
-   * this day, so it opens the day view on this day.
+   * card's [My calendar] is the only such caller today: it opens the month
+   * view on the current month.
    *
    * A FRESH mount reads the same thing from its `startView` option, and that
    * is the path that matters most, because the kind may still be lazy-loading
