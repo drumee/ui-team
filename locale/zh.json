@@ -3084,5 +3084,8 @@
   "NOTI_FILTER_TITLE": "筛选通知",
   "NOTI_FILTER_UNREAD": "未读",
   "NOTI_FILTER_BOOKMARKED": "已收藏",
-  "NO_BOOKMARKED_NOTIFICATIONS": "没有已收藏的通知"
+  "NO_BOOKMARKED_NOTIFICATIONS": "没有已收藏的通知",
+  "CONTACT_NO_DRUMEE_ACCOUNT": "该联系人还没有 Drumee 账户",
+  "CONTACT_UNBLOCK_TO_REACH": "解除屏蔽该联系人后才能聊天或通话",
+  "SEND_AN_EMAIL": "发送电子邮件"
 }

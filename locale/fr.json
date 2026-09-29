@@ -3298,5 +3298,8 @@
   "NOTI_FILTER_TITLE": "Filtrer les notifications",
   "NOTI_FILTER_UNREAD": "Non lues",
   "NOTI_FILTER_BOOKMARKED": "Enregistrées",
-  "NO_BOOKMARKED_NOTIFICATIONS": "Aucune notification enregistrée"
+  "NO_BOOKMARKED_NOTIFICATIONS": "Aucune notification enregistrée",
+  "CONTACT_NO_DRUMEE_ACCOUNT": "Ce contact n'a pas encore de compte Drumee",
+  "CONTACT_UNBLOCK_TO_REACH": "Débloquez ce contact pour discuter ou appeler",
+  "SEND_AN_EMAIL": "Envoyer un e-mail"
 }

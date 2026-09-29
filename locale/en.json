@@ -3297,5 +3297,8 @@
   "NOTI_FILTER_TITLE": "Filter notifications",
   "NOTI_FILTER_UNREAD": "Unread",
   "NOTI_FILTER_BOOKMARKED": "Bookmarked",
-  "NO_BOOKMARKED_NOTIFICATIONS": "No bookmarked notifications"
+  "NO_BOOKMARKED_NOTIFICATIONS": "No bookmarked notifications",
+  "CONTACT_NO_DRUMEE_ACCOUNT": "This contact doesn't have a Drumee account yet",
+  "CONTACT_UNBLOCK_TO_REACH": "Unblock this contact to chat or call",
+  "SEND_AN_EMAIL": "Send an email"
 }

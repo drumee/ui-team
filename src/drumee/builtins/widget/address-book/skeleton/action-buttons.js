@@ -46,4 +46,23 @@ function iconTextBtn(fig, kind, ico, label, service, extra, ui) {
   });
 }
 
-module.exports = { actionBtn, iconBtn, iconTextBtn };
+// Tile button for the detail panel's action grid: icon above label (Figma
+// "Contact — Multi-Action"). `kind` is "primary", "neutral" or "danger".
+// A non-empty `disabledReason` renders the tile inert — no service, so a
+// click dispatches nothing — and shows the reason as its tooltip.
+function tileBtn(fig, kind, ico, label, service, extra, ui, disabledReason) {
+  const disabled = !!disabledReason;
+  return Skeletons.Box.Y({
+    className: `${fig}__detail-tile ${fig}__detail-tile--${kind}`,
+    bubble: 0,
+    ...(disabled
+      ? { dataset: { disabled: 1 }, attrOpt: { title: disabledReason } }
+      : { service, uiHandler: [ui], ...extra }),
+    kids: [
+      Skeletons.Image.Svg({ className: `${fig}__detail-tile-ico`, ico }),
+      Skeletons.Note({ className: `${fig}__detail-tile-label`, content: label }),
+    ],
+  });
+}
+
+module.exports = { actionBtn, iconBtn, iconTextBtn, tileBtn };

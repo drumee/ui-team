@@ -1,5 +1,7 @@
 const { trackDeskCanvas } = require("libs/desk-canvas");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { startP2PCall } = require("libs/p2p-call");
+const { linkedDrumateId } = require("./skeleton/avatar");
 
 const idOf = (c) =>
   (c && (c.id || c.contact_id || c.drumate_id || c.entity_id || c.entity)) ||
@@ -229,6 +231,11 @@ class __address_book extends LetcBox {
         return this._block(trigger);
       case "unblock-contact":
         return this._unblock(trigger);
+
+      case "contact-inbox":
+        return this._openContactChat();
+      case "contact-call":
+        return this._callContact();
 
       case "edit-contact":
         return this._beginEdit();
@@ -654,6 +661,54 @@ class __address_book extends LetcBox {
     await this._loadContacts(this._contactsOption || "active");
     this._refreshList();
     this._refreshDetail();
+  }
+
+  // ─── Reach out (Inbox / Call) ───────────────────────────────────
+
+  // The selected contact as the peer chat_p2p.openPeer and window_connect
+  // expect, or null when it cannot be reached in Drumee: no linked account
+  // (saved by email only), blocked, or still an invitation. The detail tiles
+  // are already inert in those cases; this re-checks at click time.
+  _selectedPeer() {
+    const c = this.getSelectedContact();
+    if (!c) return null;
+    if (["received", "invitation", "sent"].includes(c.status)) return null;
+    if (c.is_blocked === 1 || c.status === "blocked") return null;
+    const entity_id = linkedDrumateId(c);
+    if (!entity_id) return null;
+    const firstname = (c.firstname || "").trim();
+    const lastname = (c.lastname || "").trim();
+    const display =
+      (firstname && lastname && firstname !== lastname
+        ? `${firstname} ${lastname}`
+        : firstname || lastname) ||
+      c.surname ||
+      c.email ||
+      entity_id;
+    return {
+      entity_id,
+      drumate_id: entity_id,
+      uid: entity_id,
+      firstname,
+      lastname,
+      display,
+      fullname: display,
+      online: c.online,
+    };
+  }
+
+  _openContactChat() {
+    const peer = this._selectedPeer();
+    const desk = window.Desk;
+    if (!peer || !desk || typeof desk.openPeerChat !== "function") return;
+    return desk.openPeerChat(peer);
+  }
+
+  // Voice call, same as the phone button in a chat header.
+  _callContact() {
+    const peer = this._selectedPeer();
+    if (!peer) return;
+    startP2PCall(peer, { video: 0 });
   }
 
   // ─── Edit form ──────────────────────────────────────────────────

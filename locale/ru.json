@@ -3090,5 +3090,8 @@
   "NOTI_FILTER_TITLE": "Фильтр уведомлений",
   "NOTI_FILTER_UNREAD": "Непрочитанные",
   "NOTI_FILTER_BOOKMARKED": "В закладках",
-  "NO_BOOKMARKED_NOTIFICATIONS": "Нет уведомлений в закладках"
+  "NO_BOOKMARKED_NOTIFICATIONS": "Нет уведомлений в закладках",
+  "CONTACT_NO_DRUMEE_ACCOUNT": "У этого контакта пока нет аккаунта Drumee",
+  "CONTACT_UNBLOCK_TO_REACH": "Разблокируйте этот контакт, чтобы писать или звонить",
+  "SEND_AN_EMAIL": "Отправить письмо"
 }

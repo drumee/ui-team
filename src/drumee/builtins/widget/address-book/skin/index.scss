@@ -627,6 +627,218 @@
     margin-top: 3px;
   }
 
+  // ── Detail view — Figma "Contact — Multi-Action" (node 775:139402) ──
+  // Scoped to `--view`: the edit form shares `__detail-panel`/`__detail-header`
+  // and keeps its own look. Two-class selectors also outrank the tablet
+  // rules below, so the view keeps the Figma scale at every width.
+  &__detail-panel--view {
+    padding: 16px;
+    gap: 16px;
+
+    .address-book__detail-header {
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-muted, rgba(0, 0, 0, 0.05));
+    }
+
+    .address-book__detail-name {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 600,
+        $line: 20px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+      font-weight: 600;
+    }
+
+    .address-book__detail-fields {
+      gap: 16px;
+    }
+
+    .address-book__field-row {
+      gap: 8px;
+    }
+
+    .address-book__field-label {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 400,
+        $line: 17px,
+        $color: var(--normal-fg-50, #64646c)
+      );
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .address-book__field-value {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 400,
+        $line: 17px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+      font-weight: 400;
+    }
+  }
+
+  &__field-head {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__field-ico {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50, #64646c);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  }
+
+  // Email value doubles as a mailto link.
+  &__field-value--link {
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // Avatar: the sidebar row's avatar, scaled to Figma's 72px / radius 18.
+  &__avatar-wrapper--detail {
+    width: 72px;
+    height: 72px;
+
+    .address-book__avatar,
+    .address-book__avatar.user-profile__ui {
+      border-radius: 18px;
+    }
+
+    .address-book__avatar.user-profile__ui {
+      .user-profile__main,
+      & > .user-profile__main {
+        border-radius: 18px !important;
+
+        img {
+          border-radius: 18px;
+        }
+      }
+
+      &[data-online="1"]:before,
+      &[data-online="2"]:before {
+        width: 14px;
+        height: 14px;
+        box-shadow: 0 0 0 3px var(--normal-bg);
+      }
+    }
+
+    .address-book__avatar-text,
+    .address-book__avatar .user-profile__initiales .note-content {
+      font-size: 26px;
+      line-height: 30px;
+    }
+  }
+
+  // Action grid: two tiles per row. `!important` overrides the Box.X default
+  // display:flex (same reason __detail-actions needs it).
+  &__detail-tiles {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: 100%;
+
+    // A lone trailing tile (odd count) spans the full row.
+    > .address-book__detail-tile:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+  }
+
+  // Icon above label, 62px tall, radius 12 (Figma tile).
+  &__detail-tile {
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    min-height: 62px;
+    padding: 8px 20px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      background 0.15s,
+      color 0.15s,
+      opacity 0.15s;
+
+    &--neutral {
+      color: var(--normal-fg-10, #0b0a21);
+      background: var(--normal-bg-80, #f2f2f7);
+
+      &:hover {
+        background: rgba(89, 80, 255, 0.1);
+      }
+    }
+
+    &--primary {
+      color: #fff;
+      background: var(--primary-purple-40, #5950ff);
+
+      &:hover {
+        background: var(--primary-purple-50, #433cc5);
+      }
+    }
+
+    &--danger {
+      color: #d64e49;
+      background: rgba(255, 105, 100, 0.15);
+
+      &:hover {
+        background: rgba(255, 105, 100, 0.25);
+      }
+    }
+
+    // No linked Drumee account / blocked: visible but inert.
+    &[data-disabled="1"] {
+      cursor: not-allowed;
+      opacity: 0.45;
+
+      &:hover {
+        background: var(--normal-bg-80, #f2f2f7);
+      }
+    }
+  }
+
+  &__detail-tile-ico {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: inherit;
+    pointer-events: none;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  }
+
+  &__detail-tile-label {
+    @include drumee.typo($size: 14px, $weight: 400, $line: 20px);
+    font-weight: 400;
+    color: inherit;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
   // Icon-only action buttons in the detail footer (Delete, Block/Unblock,
   // Edit, Restore, Refuse, Cancel-invite). Archive and Accept stay as text
   // buttons (&__btn).
