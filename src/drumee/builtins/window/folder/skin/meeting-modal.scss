@@ -113,6 +113,23 @@
       font: inherit;
       color: inherit;
     }
+
+    // skin/lib/input.scss styles `.entry-reminder__main input` at 16px/26px
+    // and, on focus, adds a 1px neutral border and re-sizes the placeholder to
+    // 16px/26px (0,2,2) — the "Title" label visibly grows. The grey container
+    // is the field here: keep the modal's 14px/20px and no border (0,3,x).
+    .entry-reminder__main input {
+      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: #0b0a21);
+
+      &::placeholder,
+      &:focus::placeholder {
+        @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--neutral-500));
+      }
+
+      &:focus {
+        border: none;
+      }
+    }
   }
 
   // ── Rich description editor (@ mention, / file, inline images) ────────────
