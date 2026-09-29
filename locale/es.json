@@ -3186,5 +3186,8 @@
   "SALES_MAIL_APP": "Abrir el correo de escritorio (Outlook, Apple Mail…)",
   "SALES_MAIL_COPY": "Copiar la dirección de correo",
   "X_SELECTED": "{0} seleccionado(s)",
-  "CLEAR_SELECTION": "Borrar la selección"
+  "CLEAR_SELECTION": "Borrar la selección",
+  "CONTACT_NO_DRUMEE_ACCOUNT": "Este contacto aún no tiene una cuenta de Drumee",
+  "CONTACT_UNBLOCK_TO_REACH": "Desbloquea este contacto para chatear o llamar",
+  "SEND_AN_EMAIL": "Enviar un correo electrónico"
 }
