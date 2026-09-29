@@ -1,3 +1,9 @@
+// Drawn at 85%, the compact dialog scale shared with the Settings page
+// (settings-main $page-scale) and settings-leave-confirm: `zoom` on __modal
+// shrinks the card and everything in it by one factor. Viewport-relative
+// sizes inside a zoomed box shrink too, so they are divided back out.
+$card-scale: 0.85;
+
 .settings-delete-account {
   $bg-modal: #f2f2f7;
   $ink-900: #0b0a21;
@@ -21,8 +27,9 @@
 
   // ── Modal card ────────────────────────────────────────────
   &__modal {
+    zoom: $card-scale;
     width: 520px;
-    max-width: calc(100vw - 32px);
+    max-width: calc((100vw - 32px) / #{$card-scale});
     background: $bg-modal;
     border-radius: 12px;
     overflow: hidden;
@@ -481,28 +488,30 @@
       pointer-events: none;
     }
 
+    // Cancel is the quiet, neutral way out; Continue carries the danger
+    // colour, since it is the step towards deleting the account.
     &--cancel {
       width: 137px;
       flex-shrink: 0;
       padding: 0 16px;
-      background: $danger;
+      background: $neutral-soft;
 
       @media (max-width: 560px) {
         width: 100%;
       }
 
       .settings-delete-account__btn-label {
-        color: var(--white, #fff);
+        color: $ink-900;
       }
     }
 
     &--continue {
       padding: 0 24px;
-      background: $neutral-soft;
+      background: $danger;
 
       .settings-delete-account__btn-label,
       .settings-delete-account__btn-arrow {
-        color: $ink-900;
+        color: var(--white, #fff);
       }
 
       &.step2[data-state="0"] {

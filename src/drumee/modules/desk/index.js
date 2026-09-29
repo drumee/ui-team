@@ -99,6 +99,31 @@ const RAIL_NAV_SERVICES = new Set([
   "rail-access",
 ]);
 
+// Services that take the user off the Settings screen: a workspace tab or
+// switch, Home, and the other full-canvas screens that share its slot. With
+// unsaved profile edits, _guardSettingsLeave asks first. The slide-outs
+// (Notifications, Contacts, Trash) are absent on purpose: they open OVER
+// Settings and leave it standing, edits included.
+const SETTINGS_LEAVE_SERVICES = new Set([
+  ...RAIL_NAV_SERVICES,
+  "rail-home",
+  "workspace-access",
+  "switch-workspace",
+  "switch-workspace-row",
+  "load-workspace",
+  "focus-folder-tab",
+  "guest-join-open-workspace",
+  "open-search-hit",
+  "toggle-inbox",
+  "toggle-chat",
+  "toggle-calendar",
+  "toggle-help",
+  "toggle-apps",
+  "upgrade-plan",
+  "open-org-view",
+  "new-department",
+]);
+
 // Longest a utility icon may spin. A hung chunk or request must leave the
 // cluster usable rather than locked for the rest of the session.
 const UTILITY_BUSY_MAX = 10000;
@@ -1792,6 +1817,43 @@ class desk_module extends LetcBox {
     }
 
     return null;
+  }
+
+  /**
+   * GUARD UNSAVED PROFILE EDITS. When `service` would take the user off a
+   * visible Settings screen whose General Profile card has unsaved edits,
+   * hold it and let Settings ask "Save changes / Discard" (settings_main
+   * confirmLeave). On save or discard the same event is dispatched again —
+   * the card is clean by then, so it passes straight through. On "stay" the
+   * rail row or topbar icon the click already lit is put back out, since
+   * the screen did not change.
+   *
+   * Not covered: links that navigate through location.hash (notification
+   * rows), which never pass through here, and logout. Reload / tab close is
+   * covered by Settings' own beforeunload prompt.
+   *
+   * @returns {Boolean} true when the event was held
+   */
+  _guardSettingsLeave(cmd, service, args) {
+    const name = service === _e.home ? "rail-home" : service;
+    if (!SETTINGS_LEAVE_SERVICES.has(name)) return false;
+    // The slot itself, not _currentScreenService(): that answers with a
+    // slide-out (Trash, Contacts…) open over Settings, and leaving from there
+    // hides Settings all the same.
+    const slot = this.getPart && this.getPart("settings-main-slot");
+    const settings = slot && slot.children && slot.children.last();
+    if (!settings || !settings.el || settings.el.dataset.anim === "out") return false;
+    if (!_.isFunction(settings.hasUnsavedProfile)) return false;
+    if (!settings.hasUnsavedProfile()) return false;
+    settings.confirmLeave().then((leave) => {
+      if (leave) return this.onUiEvent(cmd, args);
+      if (cmd && _.isFunction(cmd.mget) && cmd.mget("railRow")) {
+        this._railUnlight();
+      } else if (this._isUtilityBtn(cmd) && _.isFunction(cmd.setState)) {
+        cmd.setState(0);
+      }
+    });
+    return true;
   }
 
   /** Headless workspace pane currently mounted in Wm, or null. */
@@ -10198,6 +10260,10 @@ class desk_module extends LetcBox {
     if (pointerDragged || !window.Wm) {
       return;
     }
+    // Leaving Settings with unsaved profile edits: ask first, and replay this
+    // same event once the user has saved or discarded. Before everything
+    // else, so a cancelled leave has spun no icon and closed no panel.
+    if (this._guardSettingsLeave(cmd, service, args)) return;
     // A topbar utility icon: spin it and lock its siblings until its screen is
     // up. The inner call is this same method, told apart by _utilityInner.
     if (this._utilityInner !== cmd && this._isUtilityBtn(cmd)) {

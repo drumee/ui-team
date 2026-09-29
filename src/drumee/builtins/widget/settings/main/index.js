@@ -20,6 +20,16 @@ class settings_main extends LetcBox {
     // True while a picked avatar is being converted (HEIC) and/or uploaded.
     // The skeleton reads this via isAvatarProcessing() to show the spinner.
     this._avatarProcessing = false;
+    // Reload / tab close with unsaved profile edits: the browser's own
+    // "Leave site?" prompt (the only one a page may show there). In-app
+    // navigation asks through confirmLeave() instead — see desk_module
+    // _guardSettingsLeave.
+    this._onBeforeUnload = (e) => {
+      if (!this.hasUnsavedProfile()) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", this._onBeforeUnload);
   }
 
   /** Skeleton reads this to seed the avatar-frame's data-processing flag. */
@@ -81,8 +91,6 @@ class settings_main extends LetcBox {
     const signature = readCache.signature([links, gdrive, referral, Visitor.profile()]);
     if (!opt.force && signature === this._pageSignature) return;
     this._pageSignature = signature;
-    // New feed, new billing card: let the status line resolve itself again.
-    this._subStatusText = null;
     this.feed(require("./skeleton").default(this));
   }
 
@@ -210,7 +218,8 @@ class settings_main extends LetcBox {
    */
   async saveProfile() {
     // One save at a time: a second click mid-request would post again.
-    if (this._savingProfile) return;
+    // Resolves true once saved, false on failure (confirmLeave relies on it).
+    if (this._savingProfile) return false;
     this._savingProfile = true;
     try {
       return await this._saveProfile();
@@ -259,7 +268,7 @@ class settings_main extends LetcBox {
       // (USERNAME_TAKEN / USERNAME_INVALID) reject the whole save server-side.
       const message = res && res.error && LOCALE[res.error];
       this._flashSaveStatus(false, message);
-      return;
+      return false;
     }
     // Server returns the full updated profile object. Fall back to the
     // request payload if the response is an unexpected scalar/array so
@@ -274,6 +283,99 @@ class settings_main extends LetcBox {
     // confirmation on the freshly-rendered "save-status" part.
     this.feed(require("./skeleton").default(this));
     this._flashSaveStatus(true);
+    return true;
+  }
+
+  /**
+   * The General Profile values as the page last rendered them. The skeleton
+   * derives the fields from Visitor.profile() the same way, and every save
+   * re-renders from it, so this is the "nothing changed" state.
+   */
+  _profileBaseline() {
+    const profile = Visitor.profile() || {};
+    return {
+      display_name: [profile.firstname, profile.lastname].filter(Boolean).join(" "),
+      username: profile.username || "",
+      bio: profile.bio || "",
+    };
+  }
+
+  /**
+   * Does the General Profile card hold edits that Save Profile has not sent?
+   * Compared the way saveProfile sends them: name and username trimmed, bio
+   * as typed. False while a save is in flight (it will land either way) and
+   * before the card has rendered.
+   */
+  hasUnsavedProfile() {
+    if (!this.el || this._savingProfile) return false;
+    if (this.isDestroyed && this.isDestroyed()) return false;
+    const data = this.getData() || {};
+    if (typeof data.display_name !== "string") return false;
+    const base = this._profileBaseline();
+    const bio = typeof data.bio === "string" ? data.bio : base.bio;
+    return (
+      data.display_name.trim() !== base.display_name.trim() ||
+      String(data.username || "").trim() !== base.username.trim() ||
+      bio !== base.bio
+    );
+  }
+
+  /** Put the General Profile fields back to the saved values. */
+  discardProfileChanges() {
+    this.feed(require("./skeleton").default(this));
+  }
+
+  /**
+   * Ask whether to save or discard unsaved profile edits before the desk
+   * shows another screen. Resolves true when the user may leave (saved, or
+   * discarded), false to stay here (the X, Escape, a click outside the card,
+   * or a save that failed — its error shows in the save pill).
+   * @returns {Promise<Boolean>}
+   */
+  confirmLeave() {
+    if (this._leavePrompt) return this._leavePrompt;
+    this._leavePrompt = new Promise((resolve) => {
+      this._leaveResolve = resolve;
+      Kind.waitFor("settings_leave_confirm")
+        .then(() => this.ensurePart("overlay"))
+        .then((p) => p.feed({ kind: "settings_leave_confirm", uiHandler: [this] }))
+        .catch((e) => {
+          this.warn("settings_main: leave dialog failed", e);
+          resolve(false);
+        });
+    }).finally(() => {
+      this._leavePrompt = null;
+      this._leaveResolve = null;
+    });
+    return this._leavePrompt;
+  }
+
+  /**
+   * An answer from the leave dialog.
+   * @param {String} service  leave-confirm-save | -discard | -stay
+   * @param {LetcBox} dialog  the settings_leave_confirm that asked
+   */
+  async _answerLeave(service, dialog) {
+    const resolve = this._leaveResolve;
+    if (!resolve) return this.closeOverlay();
+    switch (service) {
+      case "leave-confirm-discard":
+        // Re-rendering resets the fields and takes the dialog down with it.
+        this.discardProfileChanges();
+        return resolve(true);
+      case "leave-confirm-save": {
+        if (dialog && _.isFunction(dialog.setBusy)) dialog.setBusy(true);
+        // A successful save re-renders the page, dialog included.
+        if (await this.saveProfile()) return resolve(true);
+        // Failed (e.g. username taken): stay, so the user can read the error
+        // in the save pill and fix the field.
+        await this.closeOverlay();
+        return resolve(false);
+      }
+      default:
+        await this.closeOverlay();
+        return resolve(false);
+    }
   }
 
   /**
@@ -300,6 +402,8 @@ class settings_main extends LetcBox {
   }
 
   onBeforeDestroy() {
+    window.removeEventListener("beforeunload", this._onBeforeUnload);
+    if (this._leaveResolve) this._leaveResolve(false);
     clearTimeout(this._saveStatusTimer);
     clearTimeout(this._toastTimer);
     if (super.onBeforeDestroy) super.onBeforeDestroy();
@@ -482,7 +586,42 @@ class settings_main extends LetcBox {
           ],
         })
       );
+      this._placeToast(part);
     });
+  }
+
+  /**
+   * Hang the toast from the topbar's utility icons (desk-module-topbar
+   * __utility-cluster): right edges aligned, TOAST_GAP below the cluster.
+   * Measured at each show, since where the cluster sits depends on the
+   * topbar's contents. Without a cluster on screen (the phone topbar has
+   * none) the slot keeps its CSS corner.
+   *
+   * The wanted spot is set, then the slot is measured and corrected by the
+   * difference: `position: fixed` is only viewport-relative when no
+   * ancestor is transformed, and this slot lives inside the desk's animated
+   * main slot, so the offsets cannot be trusted to be viewport pixels.
+   */
+  _placeToast(part) {
+    const TOAST_GAP = 8;
+    const slot = part && part.el;
+    if (!slot) return;
+    slot.style.top = "";
+    slot.style.right = "";
+    const cluster = document.querySelector(".desk-module-topbar__utility-cluster");
+    const c = cluster && cluster.getBoundingClientRect();
+    if (!c || !c.width || !c.height) return;
+    const want = { top: c.bottom + TOAST_GAP, right: c.right };
+    const style = getComputedStyle(slot);
+    const got = slot.getBoundingClientRect();
+    // A scaled ancestor scales these offsets too: rendered size over layout
+    // size is that scale, so the correction is divided by it.
+    const sx = slot.offsetWidth ? got.width / slot.offsetWidth : 1;
+    const sy = slot.offsetHeight ? got.height / slot.offsetHeight : 1;
+    const top = (parseFloat(style.top) || 0) + (want.top - got.top) / (sy || 1);
+    const right = (parseFloat(style.right) || 0) + (got.right - want.right) / (sx || 1);
+    slot.style.top = `${top}px`;
+    slot.style.right = `${right}px`;
   }
 
   _resetMfaState() {
@@ -714,60 +853,22 @@ class settings_main extends LetcBox {
   }
 
   /**
-   * Billing card status line: "Renews on …" / "Your subscription will be
-   * canceled on …" from payment.subscription_status (org-aware server-side).
-   * Fired by onPartReady("billing-sub-status") so the fetch only runs when the
-   * billing card is actually rendered.
+   * Spin `cmd` (a card button) while `run` opens its dialog — the dialog's
+   * code is a lazy chunk, so the first click can take a moment with no other
+   * sign it registered. A click while it spins is ignored, so a double click
+   * does not open the dialog twice. Skin: [data-loading="1"] on the
+   * __danger-export-btn / __danger-delete-btn buttons.
+   * @param {LetcBox} cmd
+   * @param {Function} run  returns a promise that settles once the dialog is up
    */
-  onPartReady(child, pn) {
-    if (pn === "billing-sub-status") {
-      // A Note re-renders on set() (ui-core text.set -> mould -> render), and
-      // every render of a sys_pn part fires onPartReady again. Setting the
-      // status line from here therefore re-enters this handler: without the
-      // guards below each pass fetched subscription_status and set the same
-      // text again, an unbounded loop at ~10 req/s that froze the whole tab
-      // for any subscriber who opened Settings (only subscribers reach the
-      // set — a caller with no subscription_id returns before it).
-      if (this._subStatusText != null && child.mget(_a.content) === this._subStatusText) return;
-      this._fillSubscriptionStatus(child);
-      return;
-    }
-    if (super.onPartReady) super.onPartReady(child, pn);
-  }
-
-  /**
-   * Resolve the status line ONCE per page feed (cached in _subStatusText,
-   * cleared by _refreshPage before it feeds) and write it only when the part
-   * does not already show it — the write itself re-renders the part and
-   * re-enters onPartReady, which is where the loop lived.
-   */
-  async _fillSubscriptionStatus(part) {
-    if (this._subStatusPending) return;
-    this._subStatusPending = true;
+  async _withButtonLoading(cmd, run) {
+    const el = cmd && cmd.el;
+    if (el && el.dataset.loading === "1") return;
+    if (el) el.dataset.loading = "1";
     try {
-      let text = this._subStatusText;
-      if (text == null) {
-        text = "";
-        const sub = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id });
-        if (sub && sub.subscription_id) {
-          const when = sub.period_end ? Dayjs(Number(sub.period_end) * 1000).format("MMM D, YYYY") : "";
-          if (when) {
-            const canceled = ["canceled", "unpaid", "incomplete_expired"].includes(sub.status);
-            text = canceled
-              ? (LOCALE.SUBSCRIPTION_CANCELS_ON || "Your subscription will be canceled on {0}").format(when)
-              : (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when);
-          }
-        }
-        this._subStatusText = text;
-      }
-      if (this.isDestroyed && this.isDestroyed()) return;
-      if (!part || !part.el || (part.isDestroyed && part.isDestroyed())) return;
-      if (!text || part.mget(_a.content) === text) return;
-      part.set({ content: text });
-    } catch (e) {
-      /* status line is cosmetic — leave empty on failure */
+      return await run();
     } finally {
-      this._subStatusPending = false;
+      if (el) el.dataset.loading = "0";
     }
   }
 
@@ -834,6 +935,11 @@ class settings_main extends LetcBox {
       case "save-profile":
         return this.saveProfile();
 
+      case "leave-confirm-save":
+      case "leave-confirm-discard":
+      case "leave-confirm-stay":
+        return this._answerLeave(service, cmd);
+
       case "set-theme":
         return this.setThemeMode(cmd && cmd.mget && cmd.mget("theme_mode"));
 
@@ -888,13 +994,13 @@ class settings_main extends LetcBox {
         return this.editPassword();
 
       case "export-data":
-        return this.exportData();
+        return this._withButtonLoading(cmd, () => this.exportData());
 
       case "export-data-cancel":
         return this.closeOverlay();
 
       case "delete-account":
-        return this.confirmDeleteAccount();
+        return this._withButtonLoading(cmd, () => this.confirmDeleteAccount());
 
       case "delete-account-confirm":
         return this.performDeleteAccount(args);
