@@ -71,6 +71,16 @@
     border-radius: 8px;
     color: var(--normal-fg, #0b0a21);
 
+    // ui-core renders a Note as .note > .note-content, so text-overflow on
+    // the outer box never applies (its content is a block child): every
+    // truncated line here was cut mid-word with no "…". The inner box takes
+    // the outer's nowrap / ellipsis and clips itself.
+    .note-content {
+      overflow: hidden;
+      text-overflow: inherit;
+      white-space: inherit;
+    }
+
     // The app font on every text in the panel — Notes and Entries otherwise
     // pick up their own family from the global typography.
     &,
@@ -347,20 +357,59 @@
       flex-wrap: wrap;
       gap: 8px;
     }
+    // Photos / Videos item: the clickable column (service, loading stamp,
+    // hover) holding the 61px picture box and the file name under it.
     &-tile {
+      width: 61px;
+      gap: 4px;
+      cursor: pointer;
+
+      // Hover: the picture fades a touch and gets a brand ring.
+      &:hover .window__chat-details-thumb {
+        opacity: 0.85;
+      }
+
+      &:hover .window__chat-details-thumb::after {
+        box-shadow: inset 0 0 0 2px var(--primary-40, #5950ff);
+      }
+
+      // Opening: dim the picture, spin in its centre, take no more clicks.
+      &[data-loading="1"] {
+        pointer-events: none;
+
+        .window__chat-details-thumb::before {
+          @include cd-spinner(20px);
+          top: calc(50% - 12px);
+          left: calc(50% - 12px);
+          z-index: 2;
+          border: 2px solid rgba(255, 255, 255, 0.4);
+          border-top-color: #fff;
+        }
+
+        .window__chat-details-thumb::after {
+          background: rgba(0, 0, 0, 0.3);
+        }
+      }
+    }
+
+    // The 61px picture: thumbnail (absolute), video badge at the bottom-left,
+    // and the ring / loading overlay.
+    &-thumb {
       position: relative;
       width: 61px;
       height: 61px;
+      flex-shrink: 0;
       border-radius: 8px;
       overflow: hidden;
-      cursor: pointer;
       justify-content: flex-end;
       padding: 4px;
+      box-sizing: border-box;
+      background: rgba(0, 0, 0, 0.05);
       transition: opacity 0.15s ease;
 
-      // Hover border (Photos / Videos). An overlay above the absolutely placed
-      // image — a box-shadow on the tile itself would paint under it — drawn
-      // as an inset ring so the grid never shifts, and click-through.
+      // Hover ring: an overlay above the absolutely placed image (a
+      // box-shadow on the box itself would paint under it), inset so the
+      // grid never shifts, click-through.
       &::after {
         content: "";
         position: absolute;
@@ -370,32 +419,18 @@
         transition: box-shadow 0.15s ease;
         pointer-events: none;
       }
+    }
 
-      &:hover {
-        opacity: 0.85;
-      }
-
-      &:hover::after {
-        box-shadow: inset 0 0 0 2px var(--primary-40, #5950ff);
-      }
-
-      // Opening: dim the picture, spin in its centre, take no more clicks.
-      &[data-loading="1"] {
-        pointer-events: none;
-
-        &::before {
-          @include cd-spinner(20px);
-          top: calc(50% - 12px);
-          left: calc(50% - 12px);
-          z-index: 2;
-          border: 2px solid rgba(255, 255, 255, 0.4);
-          border-top-color: #fff;
-        }
-
-        &::after {
-          background: rgba(0, 0, 0, 0.3);
-        }
-      }
+    // File name under the picture: one line, full name in the title tooltip.
+    &-tile-name {
+      width: 61px;
+      font-size: 11px;
+      line-height: 1.3;
+      color: var(--normal-fg-50, #65656c);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     &-tile-img {
       position: absolute;

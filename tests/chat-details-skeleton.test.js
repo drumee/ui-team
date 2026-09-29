@@ -233,3 +233,20 @@ test("video tiles always show the play badge; duration only when known", () => {
   const p = S.chatDetailsPage(ui, "photo", [{ nid: "i1", category: "image" }]);
   assert.equal(walk(p).filter((n) => /chat-details-duration(\s|$)/.test(n.className || "")).length, 0);
 });
+
+// Photos / Videos: the file name under each thumbnail. The tile stays the
+// clickable item; the picture lives in its -thumb box, the name below it.
+test("photo and video tiles show the file name under the thumbnail", () => {
+  for (const page of ["photo", "video"]) {
+    const t = S.chatDetailsPage(ui, page, [
+      { nid: "m1", category: page === "photo" ? "image" : "video", filename: "Holiday beach.jpg", ctime: dayjs().unix() },
+    ]);
+    const tile = walk(t).find((n) => n.service === "chat-details-open-media");
+    const [thumb, name] = tile.kids;
+    assert.equal(thumb.className, "window__chat-details-thumb", page);
+    assert.ok(walk(thumb).some((n) => n.type === "Image.Smart"), page);
+    assert.equal(name.className, "window__chat-details-tile-name", page);
+    assert.equal(name.content, "Holiday beach.jpg", page);
+    assert.equal(name.attrOpt.title, "Holiday beach.jpg", page); // full name on hover
+  }
+});

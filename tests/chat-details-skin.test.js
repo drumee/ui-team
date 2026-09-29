@@ -54,7 +54,12 @@ test("Figma geometry: card, action tiles, member avatar, media tiles, duration p
   assert.match(rule(".window-folder .window__chat-details-action-ico"), /width: 20px; height: 20px/);
   assert.match(rule(".window-folder .window__chat-details-action-label"), /font-size: 12px/);
   assert.match(rule(".window-folder .window__chat-details-avatar"), /width: 32px; height: 32px/);
-  assert.match(rule(".window-folder .window__chat-details-tile"), /width: 61px; height: 61px/);
+  // The picture box keeps the 61px square; the tile is its column with the name.
+  assert.match(rule(".window-folder .window__chat-details-thumb"), /width: 61px; height: 61px/);
+  assert.match(rule(".window-folder .window__chat-details-tile"), /width: 61px/);
+  const name = rule(".window-folder .window__chat-details-tile-name");
+  assert.match(name, /white-space: nowrap/);
+  assert.match(name, /text-overflow: ellipsis/);
   // Widened from Figma's 4px on request: tiles read as separate items.
   assert.match(rule(".window-folder .window__chat-details-grid"), /gap: 8px/);
   assert.match(rule(".window-folder .window__chat-details-duration"), /background: rgba\(20, 17, 35, 0\.4\)/);
@@ -79,7 +84,7 @@ test("count rows and every page item answer the pointer", () => {
   for (const item of ["count", "file", "link"]) {
     assert.match(rule(`.window-folder .window__chat-details-${item}:hover`), /background: rgba\(0, 0, 0, 0\.05\)/, item);
   }
-  assert.match(rule(".window-folder .window__chat-details-tile:hover"), /opacity: 0\.85/);
+  assert.match(rule(".window-folder .window__chat-details-tile:hover .window__chat-details-thumb"), /opacity: 0\.85/);
 });
 
 test("link and file thumbnails are compact, their glyph sized, not left to fill the box", () => {
@@ -104,12 +109,12 @@ test("file and link lists keep Figma's row rhythm with hover padding", () => {
 // absolutely placed image (a box-shadow on the tile itself would sit under it),
 // as an inset ring so the 61px grid never shifts, and click-through.
 test("photo and video tiles show a border on hover", () => {
-  const ring = rule(".window-folder .window__chat-details-tile::after");
+  const ring = rule(".window-folder .window__chat-details-thumb::after");
   assert.match(ring, /position: absolute/);
   assert.match(ring, /inset: 0/);
   assert.match(ring, /border-radius: 8px/);
   assert.match(ring, /pointer-events: none/);
-  assert.match(rule(".window-folder .window__chat-details-tile:hover::after"), /box-shadow: inset 0 0 0 2px var\(--primary-40, #5950ff\)/);
+  assert.match(rule(".window-folder .window__chat-details-tile:hover .window__chat-details-thumb::after"), /box-shadow: inset 0 0 0 2px var\(--primary-40, #5950ff\)/);
 });
 
 // Same painting as a chat attachment chip (widget/chat/skin/attachment.scss):
@@ -164,10 +169,10 @@ test("back and close are 18px", () => {
 // Loading state set by chat-details/controller openItem on the clicked item.
 test("a loading tile / file row / link row shows a spinning indicator and takes no clicks", () => {
   assert.match(css, /@keyframes chat-details-spin \{ to \{ transform: rotate\(360deg\); \} \}/);
-  const tile = rule('.window-folder .window__chat-details-tile[data-loading="1"]::before');
+  const tile = rule('.window-folder .window__chat-details-tile[data-loading="1"] .window__chat-details-thumb::before');
   assert.match(tile, /animation: chat-details-spin 0\.7s linear infinite/);
   assert.match(tile, /border-top-color: #fff/);
-  assert.match(rule('.window-folder .window__chat-details-tile[data-loading="1"]::after'), /background: rgba\(0, 0, 0, 0\.3\)/);
+  assert.match(rule('.window-folder .window__chat-details-tile[data-loading="1"] .window__chat-details-thumb::after'), /background: rgba\(0, 0, 0, 0\.3\)/);
   const row = rule('.window-folder .window__chat-details-file[data-loading="1"]::before, .window-folder .window__chat-details-link[data-loading="1"]::before');
   assert.match(row, /animation: chat-details-spin 0\.7s linear infinite/);
   assert.match(row, /border-top-color: var\(--primary-40, #5950ff\)/);
@@ -190,4 +195,15 @@ test("action tiles: spinner in place of the icon while working; meeting tile bra
   assert.match(joined, /pointer-events: none/);
   assert.match(joined, /background: var\(--primary-40, #5950ff\)/);
   assert.match(rule('.window-folder .window__chat-details-action--meeting[data-joined="1"] *'), /color: #fff; fill: #fff/);
+});
+
+// ui-core renders a Note as .note > .note-content: text-overflow on the outer
+// box never applies (its content is a block child), so every truncated line in
+// the panel — tile names, file / link rows, thread and member names — was cut
+// mid-word with no "…". The inner box inherits the ellipsis settings.
+test("truncated Note text ends in an ellipsis (inner .note-content)", () => {
+  const inner = rule(".window-folder .window__chat-details .note-content");
+  assert.match(inner, /overflow: hidden/);
+  assert.match(inner, /text-overflow: inherit/);
+  assert.match(inner, /white-space: inherit/);
 });

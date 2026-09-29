@@ -213,33 +213,43 @@ function mediaTile(ui, row) {
   const isVideo = row.category === "video";
   const dur = isVideo ? M.durationLabel(row.duration) : "";
   const url = M.thumbUrl(row, ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id), bootstrap());
+  const name = row.filename || "";
+  // The tile is the clickable item (service, loading stamp, hover); the
+  // picture lives in its -thumb box and the file name sits under it.
   return Skeletons.Box.Y({
     className: `${pfx}-tile`,
     service: "chat-details-open-media",
     nid: `${row.nid}`,
     filetype: row.category,
-    filename: row.filename || "",
+    filename: name,
     uiHandler: [ui],
     kidsOpt: { active: 0 },
     kids: [
-      Skeletons.Image.Smart({
-        className: `${pfx}-tile-img`,
-        low: url,
-        high: url,
+      Skeletons.Box.Y({
+        className: `${pfx}-thumb`,
+        kids: [
+          Skeletons.Image.Smart({
+            className: `${pfx}-tile-img`,
+            low: url,
+            high: url,
+          }),
+          // Every video carries the play badge (so it never reads as a photo);
+          // the duration text only when known — channel.media_list fills it in
+          // from the node's info.json.
+          isVideo
+            ? Skeletons.Box.X({
+                className: `${pfx}-duration`,
+                kids: [
+                  Skeletons.Image.Svg({ className: `${pfx}-duration-ico`, ico: "ph-play-fill" }),
+                  dur ? Skeletons.Note({ className: `${pfx}-duration-text`, content: dur }) : null,
+                ].filter(Boolean),
+              })
+            : null,
+        ].filter(Boolean),
       }),
-      // Every video carries the play badge (so it never reads as a photo);
-      // the duration text only when known — channel.media_list fills it in
-      // from the node's info.json.
-      isVideo
-        ? Skeletons.Box.X({
-            className: `${pfx}-duration`,
-            kids: [
-              Skeletons.Image.Svg({ className: `${pfx}-duration-ico`, ico: "ph-play-fill" }),
-              dur ? Skeletons.Note({ className: `${pfx}-duration-text`, content: dur }) : null,
-            ].filter(Boolean),
-          })
-        : null,
-    ].filter(Boolean),
+      // attrOpt → a real title attribute: the full name on hover.
+      Skeletons.Note({ className: `${pfx}-tile-name`, content: name, attrOpt: { title: name } }),
+    ],
   });
 }
 
