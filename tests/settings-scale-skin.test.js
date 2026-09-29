@@ -37,3 +37,12 @@ test("the change-email, change-password, export-data and delete-account cards ar
     assert.doesNotMatch(css, /calc\(100vw - 32px\)(?! \/)/, d);
   }
 });
+
+test("delete-account: Cancel is the neutral button, Continue the danger one", () => {
+  const css = compile("builtins/widget/settings/delete-account/skin/index.scss");
+  const cancel = css.match(/\.settings-delete-account__btn--cancel \{[^}]*\}/)[0];
+  const cont = css.match(/\.settings-delete-account__btn--continue \{[^}]*\}/)[0];
+  assert.doesNotMatch(cancel, /#d64e49|#f6504a/i);
+  assert.match(cont, /background: #/);
+  assert.notEqual(cancel.match(/background: [^;]+/)[0], cont.match(/background: [^;]+/)[0]);
+});

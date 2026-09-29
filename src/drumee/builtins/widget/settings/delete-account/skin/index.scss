@@ -488,28 +488,30 @@ $card-scale: 0.85;
       pointer-events: none;
     }
 
+    // Cancel is the quiet, neutral way out; Continue carries the danger
+    // colour, since it is the step towards deleting the account.
     &--cancel {
       width: 137px;
       flex-shrink: 0;
       padding: 0 16px;
-      background: $danger;
+      background: $neutral-soft;
 
       @media (max-width: 560px) {
         width: 100%;
       }
 
       .settings-delete-account__btn-label {
-        color: var(--white, #fff);
+        color: $ink-900;
       }
     }
 
     &--continue {
       padding: 0 24px;
-      background: $neutral-soft;
+      background: $danger;
 
       .settings-delete-account__btn-label,
       .settings-delete-account__btn-arrow {
-        color: $ink-900;
+        color: var(--white, #fff);
       }
 
       &.step2[data-state="0"] {
