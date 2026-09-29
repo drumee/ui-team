@@ -14,7 +14,7 @@ String.prototype.format = function (...a) {
   return String(this).replace(/\{(\d+)\}/g, (_, i) => a[i]);
 };
 
-const M = require("../src/drumee/builtins/window/folder/chat-details/model");
+const M = require("../src/drumee/builtins/widget/chat-details/model");
 
 test("count labels pluralise per page", () => {
   assert.equal(M.countLabel(752, "photo"), "752 photos");
@@ -82,4 +82,12 @@ test("thumbUrl: vignette for photos/videos, orig for vectors, keysel unless publ
   assert.equal(M.thumbUrl({ nid: "n3", category: "video" }, "h1", { endpoint: "/-/" }), "/-/file/vignette/n3/h1");
   assert.equal(M.thumbUrl({ nid: "n4", category: "image", area: "public" }, "h1", boot), "/-/file/vignette/n4/h1");
   assert.equal(M.thumbUrl({ category: "image" }, "h1", boot), "");
+});
+
+// A direct conversation's attachments live in their SENDER's wicket hub: the
+// tile must address the row's own hub, not the panel's.
+test("thumbUrl prefers the row's hub_id", () => {
+  const boot = { endpoint: "/-/", keysel: "" };
+  assert.equal(M.thumbUrl({ nid: "n1", hub_id: "hSender", category: "image" }, "hPanel", boot), "/-/file/vignette/n1/hSender");
+  assert.equal(M.thumbUrl({ nid: "n1", category: "image" }, "hPanel", boot), "/-/file/vignette/n1/hPanel");
 });

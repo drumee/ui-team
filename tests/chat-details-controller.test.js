@@ -33,7 +33,7 @@ global.SERVICE = {
   activity: { mute_state: "activity.mute_state", mute_set: "activity.mute_set" },
 };
 
-const C = require("../src/drumee/builtins/window/folder/chat-details/controller");
+const C = require("../src/drumee/builtins/widget/chat-details/engine");
 const Mute = require("../src/drumee/builtins/panel/activity/mute");
 
 const deferred = () => {

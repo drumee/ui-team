@@ -4,13 +4,20 @@
  * _showChatDetailsPage. Pure descriptors — every click is a `service` the
  * folder window's onUiEvent handles.
  */
-const M = require("../chat-details/model");
+const M = require("./model");
 // The glyph a chat attachment chip draws for a file (office types keep their
 // coloured raw icons) — one icon set for chat, task comments and this list.
-const { chipGlyph } = require("../../../../libs/file-meta");
+const { chipGlyph } = require("../../../libs/file-meta");
+
+// Class prefix of every element: the widget sets cdPrefix
+// ("widget-chat-details"); anything else (the folder window's own slot, the
+// tests' fakes) falls back to "<fig.group>__chat-details".
+function cdPfx(ui) {
+  return ui.cdPrefix || `${ui.fig.group}__chat-details`;
+}
 
 function header(ui, title, { back = false } = {}) {
-  const pfx = `${ui.fig.group}__chat-details`;
+  const pfx = cdPfx(ui);
   return Skeletons.Box.X({
     className: `${pfx}-header`,
     kids: [
@@ -39,7 +46,7 @@ function header(ui, title, { back = false } = {}) {
 }
 
 function actionTile(ui, service, ico, label, { modifier, dataset } = {}) {
-  const pfx = `${ui.fig.group}__chat-details`;
+  const pfx = cdPfx(ui);
   return Skeletons.Box.Y({
     className: modifier ? `${pfx}-action ${pfx}-action--${modifier}` : `${pfx}-action`,
     service,
@@ -78,7 +85,9 @@ function meetingTileState(ui) {
 }
 
 function meetingTile(ui) {
-  const st = meetingTileState(ui);
+  // A host can own the call state (the folder window's Meet start button);
+  // the widget asks it through chatDetailsMeetingState().
+  const st = ui.chatDetailsMeetingState ? ui.chatDetailsMeetingState() : meetingTileState(ui);
   if (st.hidden) return null;
   return actionTile(ui, "chat-details-meeting", "noti-video-camera", st.label, {
     modifier: "meeting",
@@ -87,7 +96,7 @@ function meetingTile(ui) {
 }
 
 function threadRows(ui, threads) {
-  const pfx = `${ui.fig.group}__chat-details`;
+  const pfx = cdPfx(ui);
   if (!threads || !threads.length) return null;
   return Skeletons.Box.Y({
     className: `${pfx}-threads`,
@@ -124,7 +133,7 @@ const COUNT_ICO = { photo: "ph-image", video: "ph-video", file: "ph-file", link:
 const STAT_KEY = { photo: "photos", video: "videos", file: "files", link: "links" };
 
 function countRows(ui, stats = {}) {
-  const pfx = `${ui.fig.group}__chat-details`;
+  const pfx = cdPfx(ui);
   return Skeletons.Box.Y({
     className: `${pfx}-counts`,
     kids: M.PAGES.map((page) =>
@@ -146,8 +155,8 @@ function countRows(ui, stats = {}) {
   });
 }
 
-function memberRows(ui, members) {
-  const pfx = `${ui.fig.group}__chat-details`;
+function memberRows(ui, members, participants = false) {
+  const pfx = cdPfx(ui);
   const list = M.uniqueMembers(members);
   return Skeletons.Box.Y({
     className: `${pfx}-members`,
@@ -158,7 +167,8 @@ function memberRows(ui, members) {
           Skeletons.Image.Svg({ className: `${pfx}-count-ico`, ico: "ph-users" }),
           Skeletons.Note({
             className: `${pfx}-section-label`,
-            content: LOCALE.CD_MEMBERS.format(list.length),
+            // Direct conversation: the two participants, not a member count.
+            content: participants ? LOCALE.CD_PARTICIPANTS : LOCALE.CD_MEMBERS.format(list.length),
           }),
         ],
       }),
@@ -259,15 +269,22 @@ function pageSkeleton(pfx, page) {
 }
 
 function chatDetailsOverview(ui, data = {}) {
-  const pfx = `${ui.fig.group}__chat-details`;
+  const pfx = cdPfx(ui);
+  // Which sections this conversation kind has (widget/chat-details/modes);
+  // everything when unspecified (the folder window's workspace chat).
+  const sec = { threads: 1, mute: 1, download: 1, meeting: 1, ...(data.sections || {}) };
   return [
     header(ui, LOCALE.CD_CHAT_DETAILS),
     Skeletons.Box.X({
       className: `${pfx}-actions`,
       kids: [
-        actionTile(ui, "chat-details-mute", "top-bell", data.muted ? LOCALE.CD_UNMUTE : LOCALE.MUTE),
-        meetingTile(ui),
-        actionTile(ui, "chat-details-download", "dl-download-simple", LOCALE.DOWNLOAD),
+        sec.mute
+          ? actionTile(ui, "chat-details-mute", "top-bell", data.muted ? LOCALE.CD_UNMUTE : LOCALE.MUTE)
+          : null,
+        sec.meeting ? meetingTile(ui) : null,
+        sec.download
+          ? actionTile(ui, "chat-details-download", "dl-download-simple", LOCALE.DOWNLOAD)
+          : null,
       ].filter(Boolean),
     }),
     // Header and actions are real from the first frame (they need no data);
@@ -275,25 +292,28 @@ function chatDetailsOverview(ui, data = {}) {
     ...(data.loading
       ? [overviewSkeleton(pfx)]
       : [
-          threadRows(ui, data.threads),
+          sec.threads ? threadRows(ui, data.threads) : null,
           countRows(ui, data.stats),
           Skeletons.Note({ className: `${pfx}-divider` }),
-          memberRows(ui, data.members),
+          memberRows(ui, data.members, !!data.participants),
         ]),
   ].filter(Boolean);
 }
 
 function mediaTile(ui, row) {
-  const pfx = `${ui.fig.group}__chat-details`;
+  const pfx = cdPfx(ui);
   const isVideo = row.category === "video";
   const dur = isVideo ? M.durationLabel(row.duration) : "";
-  const url = M.thumbUrl(row, ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id), bootstrap());
+  const fallbackHub = ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id);
+  const url = M.thumbUrl(row, fallbackHub, bootstrap());
   const name = row.filename || "";
   // The tile is the clickable item (service, loading stamp, hover); the
   // picture lives in its -thumb box and the file name sits under it.
   return Skeletons.Box.Y({
     className: `${pfx}-tile`,
     service: "chat-details-open-media",
+    // The hub the node lives in: a DM attachment sits in its sender's wicket.
+    hub_id: row.hub_id || fallbackHub || "",
     nid: `${row.nid}`,
     filetype: row.category,
     filename: name,
@@ -329,12 +349,13 @@ function mediaTile(ui, row) {
 }
 
 function fileRow(ui, row) {
-  const pfx = `${ui.fig.group}__chat-details`;
+  const pfx = cdPfx(ui);
   const ext = `${row.extension || ""}`.toLowerCase();
   return Skeletons.Box.X({
     className: `${pfx}-file`,
     service: "chat-details-open-media",
     nid: `${row.nid}`,
+    hub_id: row.hub_id || ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id) || "",
     filetype: row.category,
     filename: row.filename || "",
     uiHandler: [ui],
@@ -353,7 +374,7 @@ function fileRow(ui, row) {
 }
 
 function linkRow(ui, row) {
-  const pfx = `${ui.fig.group}__chat-details`;
+  const pfx = cdPfx(ui);
   const url = row.url || M.extractUrl(row.preview);
   return Skeletons.Box.X({
     className: `${pfx}-link`,
@@ -378,7 +399,7 @@ function linkRow(ui, row) {
 }
 
 function chatDetailsPage(ui, page, rows = [], { loading = false } = {}) {
-  const pfx = `${ui.fig.group}__chat-details`;
+  const pfx = cdPfx(ui);
   const head = header(ui, M.pageTitle(page), { back: true });
   if (loading) {
     return [head, pageSkeleton(pfx, page)];

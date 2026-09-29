@@ -33,7 +33,7 @@ Module._load = function (request, ...rest) {
   if (request === "media/template/map") return MAP;
   return _load.call(this, request, ...rest);
 };
-const S = require("../src/drumee/builtins/window/folder/skeleton/chat-details");
+const S = require("../src/drumee/builtins/widget/chat-details/skeleton");
 const ui = { fig: { group: "window", family: "window-folder" }, mget: (k) => ({ hub_id: "h1" })[k] };
 const walk = (n, out = []) => {
   if (Array.isArray(n)) { n.forEach((k) => walk(k, out)); return out; }

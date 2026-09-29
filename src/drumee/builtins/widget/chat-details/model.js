@@ -4,6 +4,9 @@
  * and tests/chat-details-model.test.js drives them directly.
  */
 const PAGES = ["photo", "video", "file", "link"];
+// Rows per media_list page (server: channel_media_list / p2p_media_list); a
+// shorter page means the list has ended.
+const PAGE_SIZE = { photo: 60, video: 60, file: 60, link: 30 };
 
 const COUNT_KEYS = {
   photo: ["CD_PHOTO", "CD_PHOTOS"],
@@ -73,7 +76,10 @@ function extractUrl(text) {
 // addressed like widget/chat/node-icon (file/<format>/<nid>/<hub_id>, keyed
 // for the session unless public). `boot` is bootstrap(), injected so this
 // stays pure.
-function thumbUrl(row = {}, hub_id, boot = {}) {
+function thumbUrl(row = {}, fallbackHubId, boot = {}) {
+  // A direct conversation's attachments live in their SENDER's wicket hub,
+  // so the row's own hub wins over the panel's.
+  const hub_id = row.hub_id || fallbackHubId;
   if (!row.nid || !hub_id) return "";
   const format = row.category === "vector" ? "orig" : "vignette";
   const url = `${boot.endpoint || ""}file/${format}/${row.nid}/${hub_id}`;
@@ -100,6 +106,7 @@ function generation() {
 
 module.exports = {
   PAGES,
+  PAGE_SIZE,
   countLabel,
   pageTitle,
   groupByMonth,

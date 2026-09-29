@@ -1,0 +1,648 @@
+// widget_chat_details — the Chat details panel (Figma 775:131699, pages
+// 775:132297..132300). Built by ./skeleton.js, driven by ./engine.js.
+// Every element class is "widget-chat-details-*" (cdPrefix); rules are rooted
+// at the widget's own element (.widget-chat-details__ui) so they keep the
+// two-class specificity they had inside .window-folder.
+@use "mixins/drumee";
+
+// Loading indicator for a clicked page item (chat-details/controller openItem
+// stamps data-loading="1" until the file / link has opened). Drawn here: the
+// ui-core spinner ships no CSS in this app.
+@keyframes chat-details-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@mixin cd-spinner($size) {
+  content: "";
+  position: absolute;
+  width: $size;
+  height: $size;
+  box-sizing: content-box;
+  border-radius: 50%;
+  animation: chat-details-spin 0.7s linear infinite;
+  pointer-events: none;
+}
+
+// Thin, quiet scrollbar for the lists that scroll inside the panel.
+@mixin cd-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+  }
+}
+
+.widget-chat-details__ui {
+  // Fills the host's slot (the folder window's chat column, the Inbox's side
+  // column).
+  flex: 1 1 0;
+  width: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 20px;
+  padding: 12px;
+  min-height: 0;
+  // The panel itself never scrolls: the thread list, the members list and a
+  // page's body each scroll on their own.
+  overflow: hidden;
+  background: var(--normal-bg, #fff);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  color: var(--normal-fg, #0b0a21);
+
+  // ui-core renders a Note as .note > .note-content, so text-overflow on
+  // the outer box never applies (its content is a block child): every
+  // truncated line here was cut mid-word with no "…". The inner box takes
+  // the outer's nowrap / ellipsis and clips itself.
+  .note-content {
+    overflow: hidden;
+    text-overflow: inherit;
+    white-space: inherit;
+  }
+
+  // The app font on every text in the panel — Notes and Entries otherwise
+  // pick up their own family from the global typography.
+  &,
+  & * {
+    font-family: var(--font-main);
+  }
+
+}
+
+.widget-chat-details__ui {
+  .widget-chat-details {
+    // Sticky so the back arrow stays reachable on a long Files / Links list.
+    // top: -12px cancels the panel's padding (sticky otherwise clamps inside
+    // it); the negative margins + matching padding let the header cover that
+    // strip, so rows never show above it while scrolling.
+    &-header {
+      position: sticky;
+      top: -12px;
+      z-index: 1;
+      height: 32px;
+      margin: -12px -12px -8px;
+      padding: 12px 12px 8px;
+      box-sizing: content-box;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      background: var(--normal-bg, #fff);
+    }
+    &-title-wrap {
+      align-items: center;
+      gap: 12px;
+    }
+    &-title {
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    // 18px, downsized from Figma's 24px on request.
+    &-back,
+    &-close {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      color: var(--normal-fg-50, #65656c);
+      fill: var(--normal-fg-50, #65656c);
+    }
+
+    &-actions {
+      gap: 8px;
+      flex-shrink: 0;
+
+      // Regular labels (Figma 775:132186): the tiles are clickable Boxes, and
+      // global button typography would otherwise bold them.
+      &,
+      & * {
+        font-weight: 400;
+      }
+    }
+    &-action {
+      flex: 1 0 0;
+      min-width: 0;
+      align-items: center;
+      gap: 2px;
+      // Downsized from Figma's 8px 20px / 12px radius on request.
+      padding: 6px 12px;
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.05);
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.08);
+      }
+    }
+    // "Meeting" tile — the Meet schedule's start button's two states
+    // (meeting-schedule.scss &__meeting-sched-start-btn), driven by the same
+    // folder flags (_setMeetingStartLoading / _applyMeetingTileState).
+    &-action--meeting {
+      // In the call: brand fill, white content, locked.
+      &[data-joined="1"] {
+        pointer-events: none;
+        background: var(--primary-40, #5950ff);
+
+        * {
+          color: #fff;
+          fill: #fff;
+        }
+      }
+    }
+    // Any action tile at work (Mute's round trip, Meeting's launch, the export
+    // dialog loading): a spinner takes the icon's slot; no second click.
+    &-action[data-loading="1"] {
+      pointer-events: none;
+
+      .widget-chat-details-action-ico {
+        display: none;
+      }
+
+      &::before {
+        @include cd-spinner(16px);
+        position: static;
+        border: 2px solid rgba(0, 0, 0, 0.15);
+        border-top-color: var(--primary-40, #5950ff);
+      }
+    }
+    &-action-ico {
+      width: 20px;
+      height: 20px;
+      fill: var(--normal-fg, #0b0a21);
+      color: var(--normal-fg, #0b0a21);
+    }
+    &-action-label {
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    &-section-label {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    &-threads {
+      // Fades in over the loading skeleton it replaces (mixins/drumee
+      // skeleton-content-in; reduced motion below).
+      animation: drumee-skeleton-content-in 0.2s ease-out backwards;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    // Rows scroll under the fixed "File Threads" label once there are more
+    // than ~5: a workspace with dozens of threaded files would otherwise push
+    // the counts and members far down the panel.
+    &-thread-list {
+      max-height: 108px; // ~3 rows
+      @include cd-scroll;
+    }
+    &-thread {
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 8px;
+      cursor: pointer;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+    &-thread-ico {
+      width: 20px;
+      height: 20px;
+      color: var(--primary-40, #5950ff);
+      fill: var(--primary-40, #5950ff);
+    }
+    &-thread-name {
+      flex: 1 1 0;
+      min-width: 0;
+      font-size: 14px;
+      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    &-badge {
+      height: 14px;
+      padding: 2px 4px;
+      min-width: 14px;
+      border-radius: 100px;
+      background: #d74e49;
+      color: #fff;
+      font-size: 8px;
+      line-height: 10px;
+      text-align: center;
+    }
+
+    &-counts {
+      // Fades in over the loading skeleton it replaces (mixins/drumee
+      // skeleton-content-in; reduced motion below).
+      animation: drumee-skeleton-content-in 0.2s ease-out backwards;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    &-count {
+      align-items: center;
+      gap: 20px;
+      cursor: pointer;
+      padding: 4px 8px;
+      margin: 0 -8px;
+      border-radius: 8px;
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+    &-count-ico {
+      width: 20px;
+      height: 20px;
+      fill: var(--normal-fg-50, #65656c);
+      color: var(--normal-fg-50, #65656c);
+    }
+    &-count-label {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    &-divider {
+      height: 1px;
+      flex-shrink: 0;
+      background: #e5e5ea;
+    }
+
+    // Members take whatever height is left and scroll inside it (the panel
+    // does not scroll, so no floor).
+    &-members {
+      // Fades in over the loading skeleton it replaces (mixins/drumee
+      // skeleton-content-in; reduced motion below).
+      animation: drumee-skeleton-content-in 0.2s ease-out backwards;
+      flex: 1 1 0;
+      min-height: 0;
+      gap: 12px;
+    }
+    &-members-head {
+      align-items: center;
+      gap: 8px;
+    }
+    &-members-list {
+      flex: 1 1 0;
+      min-height: 0;
+      gap: 12px;
+      @include cd-scroll;
+    }
+    &-member {
+      align-items: center;
+      gap: 12px;
+    }
+    &-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+    &-member-name {
+      font-size: 14px;
+      line-height: 1.2;
+    }
+    &-member-status {
+      font-size: 12px;
+      line-height: 1.4;
+      color: #65656c;
+
+      &[data-online="1"] {
+        color: var(--primary-40, #5950ff);
+      }
+    }
+
+    // ── Pages ──
+    // A page's content under the header: fills the panel and scrolls itself.
+    // 8px side gutter (cancelled by the negative margin) so the -8px hover
+    // backgrounds of file / link rows are not clipped by the scroller.
+    &-body {
+      // Fades in over the loading skeleton it replaces (mixins/drumee
+      // skeleton-content-in; reduced motion below).
+      animation: drumee-skeleton-content-in 0.2s ease-out backwards;
+      flex: 1 1 0;
+      min-height: 0;
+      gap: 12px;
+      margin: 0 -8px;
+      padding: 0 8px;
+      @include cd-scroll;
+      overflow-x: hidden;
+
+      // Hover rows carry 4px of vertical padding each: shrink the list gap by
+      // the same 8px so rows keep Figma's 12px rhythm.
+      &[data-page="file"],
+      &[data-page="link"] {
+        gap: 4px;
+      }
+    }
+    &-month {
+      gap: 12px;
+    }
+    &-month-label {
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    // Photos / Videos tile grid. 8px, wider than Figma's 4px, so each tile
+    // (and its hover ring) reads as a separate item.
+    &-grid {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    // Photos / Videos item: the clickable column (service, loading stamp,
+    // hover) holding the 61px picture box and the file name under it.
+    &-tile {
+      width: 61px;
+      gap: 4px;
+      cursor: pointer;
+
+      // Hover: the picture fades a touch and gets a brand ring.
+      &:hover .widget-chat-details-thumb {
+        opacity: 0.85;
+      }
+
+      &:hover .widget-chat-details-thumb::after {
+        box-shadow: inset 0 0 0 2px var(--primary-40, #5950ff);
+      }
+
+      // Opening: dim the picture, spin in its centre, take no more clicks.
+      &[data-loading="1"] {
+        pointer-events: none;
+
+        .widget-chat-details-thumb::before {
+          @include cd-spinner(20px);
+          top: calc(50% - 12px);
+          left: calc(50% - 12px);
+          z-index: 2;
+          border: 2px solid rgba(255, 255, 255, 0.4);
+          border-top-color: #fff;
+        }
+
+        .widget-chat-details-thumb::after {
+          background: rgba(0, 0, 0, 0.3);
+        }
+      }
+    }
+
+    // The 61px picture: thumbnail (absolute), video badge at the bottom-left,
+    // and the ring / loading overlay.
+    &-thumb {
+      position: relative;
+      width: 61px;
+      height: 61px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      justify-content: flex-end;
+      padding: 4px;
+      box-sizing: border-box;
+      background: rgba(0, 0, 0, 0.05);
+      transition: opacity 0.15s ease;
+
+      // Hover ring: an overlay above the absolutely placed image (a
+      // box-shadow on the box itself would paint under it), inset so the
+      // grid never shifts, click-through.
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 8px;
+        box-shadow: inset 0 0 0 2px transparent;
+        transition: box-shadow 0.15s ease;
+        pointer-events: none;
+      }
+    }
+
+    // File name under the picture: one line, full name in the title tooltip.
+    &-tile-name {
+      width: 61px;
+      font-size: 11px;
+      line-height: 1.3;
+      color: var(--normal-fg-50, #65656c);
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    &-tile-img {
+      position: absolute;
+      inset: 0;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+    &-duration {
+      position: relative;
+      align-self: flex-start;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      background: rgba(20, 17, 35, 0.4);
+      color: #fff;
+      font-size: 10px;
+      line-height: 1.4;
+    }
+    &-duration-ico {
+      width: 12px;
+      height: 12px;
+    }
+    &-file {
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 4px 8px;
+      margin: 0 -8px;
+      border-radius: 8px;
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+    &-file-ico {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.05);
+
+      svg {
+        width: 18px;
+        height: 18px;
+        // Painted like a chat attachment chip (widget/chat/skin/attachment.scss):
+        // single-colour glyphs take the text colour…
+        color: var(--normal-fg-10, #0b0a21);
+        fill: currentcolor;
+      }
+
+      // …and the office raw icons (their own blue / green / orange detail) get
+      // the page body whitened — it has no fill and would default to black.
+      &[data-ext="doc"],
+      &[data-ext="docx"],
+      &[data-ext="xls"],
+      &[data-ext="xlsx"],
+      &[data-ext="ppt"],
+      &[data-ext="pptx"] {
+        svg {
+          color: var(--white, #ffffff);
+          fill: var(--white, #ffffff);
+        }
+      }
+    }
+    &-file-name,
+    &-link-msg,
+    &-link-url {
+      min-width: 0;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    &-link {
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 4px 8px;
+      margin: 0 -8px;
+      border-radius: 8px;
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+    }
+    // Opening a file / link row: a small spinner at the row's end.
+    &-file[data-loading="1"],
+    &-link[data-loading="1"] {
+      position: relative;
+      pointer-events: none;
+      padding-right: 32px;
+
+      &::before {
+        @include cd-spinner(14px);
+        right: 12px;
+        top: calc(50% - 9px);
+        border: 2px solid rgba(89, 80, 255, 0.25);
+        border-top-color: var(--primary-40, #5950ff);
+      }
+    }
+    &-link-thumb {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.05);
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+    &-link-text {
+      flex: 1 1 0;
+      min-width: 0;
+      gap: 2px;
+    }
+    &-link-url {
+      color: var(--primary-40, #5950ff);
+    }
+    // ── Loading skeletons (skeleton/chat-details overviewSkeleton /
+    // pageSkeleton): grey blocks pulsing with the app's own keyframes
+    // (mixins/drumee), laid out like the content they stand for.
+    &-skeleton {
+      flex: 1 1 0;
+      min-height: 0;
+      overflow: hidden;
+      gap: 20px;
+
+      &:not([data-page="overview"]) {
+        gap: 12px;
+      }
+    }
+    &-sk-section {
+      gap: 12px;
+    }
+    &-sk-row {
+      align-items: center;
+      gap: 12px;
+    }
+    &-sk-lines {
+      flex: 1 1 0;
+      min-width: 0;
+      gap: 6px;
+    }
+    &-sk {
+      flex-shrink: 0;
+      border-radius: 4px;
+      background-color: var(--border-default, #e5e5ea);
+      animation: drumee-skeleton-pulse 1.2s ease-in-out infinite;
+
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
+      }
+    }
+    &-sk--bar {
+      height: 10px;
+    }
+    &-sk--month {
+      height: 12px;
+    }
+    @each $w in 25, 30, 35, 40, 45, 50, 60, 65, 70, 75, 80 {
+      &-sk--w#{$w} {
+        width: #{$w + "%"};
+      }
+    }
+    &-sk--icon {
+      width: 20px;
+      height: 20px;
+    }
+    &-sk--circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+    }
+    &-sk--square {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+    }
+    &-sk--thumb {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+    &-sk--tile {
+      width: 61px;
+      height: 61px;
+      border-radius: 8px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      &-threads,
+      &-counts,
+      &-members,
+      &-body {
+        animation: none;
+      }
+    }
+    &-empty {
+      color: #65656c;
+      font-size: 14px;
+      line-height: 1.4;
+    }  }
+}

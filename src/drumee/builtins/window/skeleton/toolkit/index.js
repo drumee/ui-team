@@ -5,7 +5,7 @@ const {
   chatDetailsPanel,
   headerMenuService,
   generalHeaderMenu,
-} = require("../../folder/skeleton/chat-details");
+} = require("../../../widget/chat-details/skeleton");
 
 const AREA_LABELS = {
   // Personal workspaces are personal-area folders at the home root.

@@ -15,9 +15,9 @@ const {
   showSeatLimitReached,
 } = require("libs/billing");
 const readCache = require("libs/read-cache");
-const ChatDetails = require("./chat-details/controller");
-const { meetingTileState } = require("./skeleton/chat-details");
-const { extractUrl } = require("./chat-details/model");
+const ChatDetails = require("../../widget/chat-details/engine");
+const { meetingTileState } = require("../../widget/chat-details/skeleton");
+const { extractUrl } = require("../../widget/chat-details/model");
 const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
   SECURE_SHARE_TAB,

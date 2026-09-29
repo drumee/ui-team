@@ -1,9 +1,11 @@
 /**
- * Chat details panel behaviour (Figma 775:131699), for the folder window.
- *
- * The window only delegates here (window/folder/index.js _openChatDetails …),
- * so the whole panel can be driven against a fake window in
- * tests/chat-details-controller.test.js.
+ * Chat details panel behaviour (Figma 775:131699): the engine behind
+ * widget_chat_details (./index.js), which passes itself as `win`. It needs
+ * only a small surface — mget, fetchService, the panel it feeds
+ * (win.chatDetailsPanel() or the "chat-details" part), the access gate and,
+ * for workspace mode, the thread list — so it is driven against fakes in
+ * tests/chat-details-controller.test.js and tests/chat-details-widget.test.js.
+ * What it asks for per conversation kind comes from ./modes.
  *
  * Shown IN PLACE of the team chat: `data-details="open"` on the split body
  * (skin/chat-details.scss) hides .window__chat-panel and reveals the
@@ -19,11 +21,16 @@ const {
   chatDetailsOverview,
   chatDetailsPage,
   meetingTileState,
-} = require("../skeleton/chat-details");
-const Mute = require("../../../panel/activity/mute");
+} = require("./skeleton");
+const Mute = require("../../panel/activity/mute");
+const { modeOf } = require("./modes");
 
 function hubId(win) {
-  return win.mget(_a.actual_hub_id) || win.mget(_a.hub_id);
+  return modeOf(win).hub(win);
+}
+
+function panelOf(win) {
+  return win.chatDetailsPanel ? win.chatDetailsPanel() : win.ensurePart("chat-details");
 }
 
 function gen(win) {
@@ -33,10 +40,6 @@ function gen(win) {
 
 function alive(part) {
   return !!(part && part.el && !(part.isDestroyed && part.isDestroyed()));
-}
-
-function service(name) {
-  return (SERVICE.channel && SERVICE.channel[name]) || `channel.${name}`;
 }
 
 function rowsOf(res) {
@@ -53,18 +56,22 @@ function open(win) {
   if (!win._privilegeGrantsChat(win.mget(_a.privilege))) return Promise.resolve();
   if (win._closeThreadMenu) win._closeThreadMenu();
   const token = gen(win).next();
+  const mode = modeOf(win);
+  const { sections, participants } = mode;
   const hub_id = hubId(win);
-  return win.ensurePart("chat-details").then((panel) => {
+  const muted = () => (sections.mute ? Mute.isPopupMuted({ hub_id }) : false);
+  win.__cdList = null;
+  return panelOf(win).then((panel) => {
     if (!alive(panel) || !gen(win).isCurrent(token)) return;
     win._chatDetailsPart = panel;
     panel.el.dataset.page = "overview";
     // Loading skeleton first (real header + actions, placeholder sections).
-    panel.feed(chatDetailsOverview(win, { loading: true, muted: Mute.isPopupMuted({ hub_id }) }));
+    panel.feed(chatDetailsOverview(win, { loading: true, muted: muted(), sections, participants }));
     setOpen(win, "open");
     return Promise.all([
-      win.fetchService({ service: service("details"), hub_id }, { async: 1 }).catch(() => ({})),
-      win._fetchThreadList(),
-      Mute.loadMuteState(win),
+      win.fetchService(mode.details(win), { async: 1 }).catch(() => ({})),
+      sections.threads ? win._fetchThreadList() : Promise.resolve([]),
+      sections.mute ? Mute.loadMuteState(win) : null,
     ]).then(([details, threads]) => {
       if (!gen(win).isCurrent(token) || !alive(panel)) return;
       const d = details || {};
@@ -72,7 +79,9 @@ function open(win) {
         stats: d.stats || {},
         threads: threads || [],
         members: d.members || [],
-        muted: Mute.isPopupMuted({ hub_id }),
+        muted: muted(),
+        sections,
+        participants,
       };
       panel.feed(chatDetailsOverview(win, win.__cdOverview));
     });
@@ -86,10 +95,22 @@ function toTop(panel) {
   panel.el.scrollTop = 0;
 }
 
+// The page body scrolls itself (the panel does not); arm load-more on it
+// after every feed, since a feed replaces it.
+function armBodyScroll(win, panel) {
+  const pfx = win.cdPrefix || `${win.fig && win.fig.group}__chat-details`;
+  const body = panel.el && panel.el.querySelector && panel.el.querySelector(`.${pfx}-body`);
+  if (!body || body.__cdScrollArmed) return body || null;
+  body.__cdScrollArmed = 1;
+  body.addEventListener("scroll", () => onBodyScroll(win, body), { passive: true });
+  return body;
+}
+
 function showPage(win, page) {
   const panel = win._chatDetailsPart;
   if (!alive(panel)) return Promise.resolve();
   const token = gen(win).next();
+  win.__cdList = null;
   toTop(panel);
   if (!M.PAGES.includes(page)) {
     panel.el.dataset.page = "overview";
@@ -102,19 +123,68 @@ function showPage(win, page) {
   panel.el.dataset.page = page;
   panel.feed(chatDetailsPage(win, page, [], { loading: true }));
   return win
-    .fetchService({ service: service("media_list"), hub_id: hubId(win), kind: page, page: 1 }, { async: 1 })
+    .fetchService(modeOf(win).mediaList(win, page, 1), { async: 1 })
     .catch(() => [])
     .then((res) => {
       if (!gen(win).isCurrent(token) || !alive(panel)) return;
-      panel.feed(chatDetailsPage(win, page, rowsOf(res)));
+      const rows = rowsOf(res);
+      win.__cdList = {
+        kind: page,
+        page: 1,
+        rows,
+        done: rows.length < (M.PAGE_SIZE[page] || 60),
+        loading: false,
+        token,
+      };
+      panel.feed(chatDetailsPage(win, page, rows));
       toTop(panel);
+      armBodyScroll(win, panel);
     });
+}
+
+/**
+ * Next page of the open Photos / Videos / Files / Links list. A count can be
+ * in the hundreds while one page holds 60 (links 30); without this the page
+ * silently stopped at the first batch. Ignored while one is in flight or once
+ * a short page has ended the list; a page that lands after the user left
+ * (generation bumped, list replaced) never paints.
+ */
+function loadMore(win) {
+  const panel = win._chatDetailsPart;
+  const list = win.__cdList;
+  if (!alive(panel) || !list || list.done || list.loading) return Promise.resolve();
+  if (!gen(win).isCurrent(list.token)) return Promise.resolve();
+  list.loading = true;
+  const next = list.page + 1;
+  return win
+    .fetchService(modeOf(win).mediaList(win, list.kind, next), { async: 1 })
+    .catch(() => [])
+    .then((res) => {
+      if (win.__cdList !== list || !gen(win).isCurrent(list.token) || !alive(panel)) return;
+      const more = rowsOf(res);
+      list.loading = false;
+      list.page = next;
+      list.rows = list.rows.concat(more);
+      list.done = more.length < (M.PAGE_SIZE[list.kind] || 60);
+      const before = armBodyScroll(win, panel);
+      const top = before ? before.scrollTop : 0;
+      panel.feed(chatDetailsPage(win, list.kind, list.rows));
+      const body = armBodyScroll(win, panel);
+      if (body) body.scrollTop = top;
+    });
+}
+
+// Load more once the body is scrolled to within 200px of its end.
+function onBodyScroll(win, body) {
+  if (!body) return;
+  if (body.scrollTop + body.clientHeight >= body.scrollHeight - 200) loadMore(win);
 }
 
 function close(win) {
   // Invalidate anything in flight, then drop the content so a hidden panel
   // holds no media tiles while the chat is on screen.
   gen(win).next();
+  win.__cdList = null;
   setOpen(win, "closed");
   const panel = win._chatDetailsPart;
   if (alive(panel)) {
@@ -202,4 +272,14 @@ function startMeeting(win, desk = typeof Desk !== "undefined" ? Desk : undefined
   return !!launched;
 }
 
-module.exports = { open, close, showPage, toggleMute, setOpen, openItem, startMeeting };
+module.exports = {
+  open,
+  close,
+  showPage,
+  loadMore,
+  onBodyScroll,
+  toggleMute,
+  setOpen,
+  openItem,
+  startMeeting,
+};
