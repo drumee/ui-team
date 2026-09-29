@@ -22,12 +22,16 @@ global._K = { permission: { download: 4 } };
 global.window = {};
 global.LetcBox = class {};
 global.bootstrap = () => ({ endpoint: "/-/", keysel: "ks" });
+global.KIND = { profile: "profile" };
+String.prototype.format = function (...a) { return String(this).replace(/\{(\d+)\}/g, (_, i) => a[i]); };
 global.SERVICE = { channel: { file_thread_list_by_folder: "channel.file_thread_list_by_folder" } };
 const _load = Module._load;
 Module._load = function (r, ...a) {
   if (r === "libs/support") return { supportAvatar: () => ({ type: "support" }), isSupportEntity: (id) => id === "support" };
   if (r === "media/grid/template/folder") return () => "<svg/>";
   if (r === "libs/chat-preview") return {};
+  if (/chat-details\/skin$/.test(r) || r === "./skin") return {};
+  if (r === "media/template/map") return require("../src/drumee/builtins/media/template/map");
   if (r === "libs/items-ready") return { armItemsReady() {}, markItemsReady() {} };
   return _load.call(this, r, ...a);
 };
@@ -101,7 +105,7 @@ test("open / close: feeds the slot, stamps data-details, the ⋮ shows open; nar
   assert.equal(inbox.parts["chat-details"].fed.at(-1).host, inbox);
   assert.equal(inbox.el.dataset.details, "open");
   assert.equal(inbox.el.dataset.mview, "details");
-  H.close(inbox);
+  await H.close(inbox);
   assert.equal(inbox.el.dataset.details, "closed");
   assert.equal(inbox.el.dataset.mview, "chat");
   assert.equal(inbox.parts["chat-details"].fed.at(-1), "clear");
@@ -137,7 +141,7 @@ test("actions: meeting calls, download opens the export overlay, open-media open
   assert.equal(inbox.parts["wrapper-chat-overlay"].el.dataset.state, "open");
   await H.hostAction(inbox, "open-media", { nid: "n1", hub_id: "h1", filetype: "document" }, deps);
   assert.deepEqual(opened, [{ nid: "n1", hub_id: "h1", filetype: "document" }]);
-  H.hostAction(inbox, "close", {}, deps);
+  await H.hostAction(inbox, "close", {}, deps);
   assert.equal(inbox.el.dataset.details, "closed");
 });
 
@@ -204,6 +208,86 @@ test("inbox: switching scope tab closes Chat details", async () => {
   assert.equal(inbox.activePeer.entity_id, "h1");
 });
 
+// ── loading placeholder + show / close animation ─────────────────────────
+const deferred = () => { let resolve; const promise = new Promise((r) => (resolve = r)); return { promise, resolve }; };
+const hasCls = (n, c) => (n.className || "").split(/\s+/).includes(c);
+
+// widget_chat_details is a lazy kind: until its chunk lands the column would
+// be blank. The slot shows the widget's own loading overview (a card, its ✕
+// live) at once, then the widget, which opens on the same skeleton.
+test("open: a loading card at once, the widget when its kind is ready", async () => {
+  const inbox = fakeInbox();
+  const kind = deferred();
+  const opening = H.open(inbox, { Kind: { waitFor: () => kind.promise } });
+  await new Promise((r) => setImmediate(r));
+  const slot = inbox.parts["chat-details"];
+  assert.equal(slot.fed.length, 1);
+  const card = slot.fed[0];
+  assert.ok(hasCls(card, "widget-chat-details__ui"), "the placeholder is the widget's card");
+  assert.ok(walk(card).some((n) => hasCls(n, "widget-chat-details-skeleton")), "skeleton rows");
+  const x = walk(card).find((n) => n.service === "close-chat-details");
+  assert.equal(x.uiHandler[0], inbox, "its ✕ reaches the Inbox");
+  // A direct chat's placeholder shows only the tiles a direct chat has.
+  assert.deepEqual(walk(card).filter((n) => /^chat-details-(mute|meeting|download)$/.test(n.service)).map((n) => n.service), ["chat-details-meeting"]);
+  assert.equal(inbox.el.dataset.details, "open");
+  kind.resolve();
+  await opening;
+  assert.equal(slot.fed.at(-1).kind, "widget_chat_details");
+});
+
+test("a widget chunk landing after the panel closed never feeds it", async () => {
+  const inbox = fakeInbox();
+  const kind = deferred();
+  const opening = H.open(inbox, { Kind: { waitFor: () => kind.promise } });
+  await new Promise((r) => setImmediate(r));
+  H.onConversationChange(inbox);
+  kind.resolve();
+  await opening;
+  assert.ok(!inbox.parts["chat-details"].fed.some((k) => k && k.kind === "widget_chat_details"));
+});
+
+test("close slides out first: data-details=closing, then closed and emptied", async () => {
+  const inbox = fakeInbox();
+  await H.open(inbox);
+  const slot = inbox.parts["chat-details"];
+  const closing = H.close(inbox);
+  assert.equal(inbox.el.dataset.details, "closing");
+  assert.equal(inbox.el.dataset.mview, "details", "the pane stays while it animates");
+  assert.notEqual(slot.fed.at(-1), "clear");
+  await closing;
+  assert.equal(inbox.el.dataset.details, "closed");
+  assert.equal(inbox.el.dataset.mview, "chat");
+  assert.equal(slot.fed.at(-1), "clear");
+});
+
+test("switching conversation closes at once (no animation)", async () => {
+  const inbox = fakeInbox();
+  await H.open(inbox);
+  H.onConversationChange(inbox);
+  assert.equal(inbox.el.dataset.details, "closed");
+  assert.equal(inbox.parts["chat-details"].fed.at(-1), "clear");
+});
+
+test("the ⋮ during the slide-out reopens; the pending close never lands", async () => {
+  const inbox = fakeInbox();
+  await H.open(inbox);
+  const closing = H.close(inbox);
+  await H.toggle(inbox);
+  assert.equal(inbox.el.dataset.details, "open");
+  await closing;
+  await new Promise((r) => setTimeout(r, 300));
+  assert.equal(inbox.el.dataset.details, "open");
+  assert.equal(inbox.parts["chat-details"].fed.at(-1).kind, "widget_chat_details");
+});
+
+test("inbox: the placeholder's ✕ (close-chat-details) closes the panel", async () => {
+  const Inbox = require("../src/drumee/builtins/widget/chat-p2p");
+  const inbox = fakeInbox();
+  await H.open(inbox);
+  await Inbox.prototype.onUiEvent.call(inbox, { get: () => undefined }, { service: "close-chat-details" });
+  assert.equal(inbox.el.dataset.details, "closed");
+});
+
 // ── skin ──────────────────────────────────────────────────────────────────
 const SRC = path.join(__dirname, "..", "src/drumee");
 const css = sass
@@ -239,4 +323,20 @@ test("skin: Inbox panes are separate cards with a gap between them", () => {
   assert.doesNotMatch(rule('.chat-p2p__ui[data-details=open] .chat-p2p__chat-details'), /border-left/);
   // Narrow screens keep the card edges (no one-sided resets).
   assert.doesNotMatch(css, /@media \(max-width: 1024px\) \{[^@]*\.chat-p2p__(chat-area|sidebar) \{[^}]*border-(left|right): none/);
+});
+
+test("skin: white ground under the cards", () => {
+  assert.match(rule(".chat-p2p__main"), /background-color: var\(--normal-bg-elevated, #fff\)/);
+});
+
+test("skin: details slide in on open, slide out while closing, still under reduced motion", () => {
+  assert.match(rule(".chat-p2p__ui[data-details=open] .chat-p2p__chat-details"), /animation: chat-p2p-details-in /);
+  const out = rule(".chat-p2p__ui[data-details=closing] .chat-p2p__chat-details");
+  assert.match(out, /display: flex !important/);
+  assert.match(out, /width: clamp\(320px, 28vw, 400px\)/);
+  assert.match(out, /animation: chat-p2p-details-out /);
+  assert.match(out, /pointer-events: none/);
+  assert.match(css, /@keyframes chat-p2p-details-in/);
+  assert.match(css, /@keyframes chat-p2p-details-out/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[^@]*\.chat-p2p__chat-details \{ animation: none/);
 });

@@ -1907,6 +1907,11 @@ class __chat_p2p extends LetcBox {
       case "toggle-chat-details":
         return ChatDetailsHost.toggle(this);
 
+      // The ✕ of the loading card shown until widget_chat_details is ready
+      // (the widget itself routes its ✕ through chatDetailsAction).
+      case "close-chat-details":
+        return ChatDetailsHost.close(this);
+
       case "close-export":
         // The Chat details export dialog closed itself in the overlay.
         return this.onUiEvent(trigger, { service: "close-overlay" });

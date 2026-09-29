@@ -47,22 +47,85 @@ function setButton(inbox, open) {
   if (btn && btn.el) btn.el.dataset.open = open ? "1" : "0";
 }
 
-function open(inbox) {
+// The slide-out (skin: chat-p2p-details-out) — the slot is emptied after it.
+const CLOSE_MS = 180;
+
+function reducedMotion() {
+  try {
+    return !!(
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * What the slot shows while widget_chat_details (a lazy kind) loads: the
+ * widget's own loading overview on its card, with this conversation kind's
+ * tiles, so the widget — which opens on the same skeleton — swaps in without
+ * a jump. Only its ✕ does anything (the Inbox answers close-chat-details).
+ */
+function placeholder(inbox, mode) {
+  require("../chat-details/skin");
+  const { chatDetailsOverview } = require("../chat-details/skeleton");
+  const { MODES } = require("../chat-details/modes");
+  const ui = {
+    cdPrefix: "widget-chat-details",
+    fig: { group: "widget", family: "widget-chat-details" },
+    mget: () => undefined,
+  };
+  const kids = chatDetailsOverview(ui, { loading: true, sections: MODES[mode].sections });
+  const retarget = (n) => {
+    if (Array.isArray(n)) return n.forEach(retarget);
+    if (!n || typeof n !== "object") return;
+    if (Array.isArray(n.uiHandler)) n.uiHandler = n.uiHandler.map((h) => (h === ui ? inbox : h));
+    retarget(n.kids);
+  };
+  retarget(kids);
+  return Skeletons.Box.Y({
+    className: "widget-chat-details widget-chat-details__ui",
+    kids,
+  });
+}
+
+// Every open / close bumps it: a widget chunk or a slide-out timer that
+// belongs to an earlier one does nothing.
+function bump(inbox) {
+  inbox._cdToken = (inbox._cdToken || 0) + 1;
+  return inbox._cdToken;
+}
+
+function open(inbox, deps = {}) {
   const d = descriptor(inbox);
   if (!d) return Promise.resolve();
+  const Kind_ = deps.Kind !== undefined ? deps.Kind : typeof Kind !== "undefined" ? Kind : null;
+  // The ⋮ during a slide-out: drop it and open afresh.
+  if (inbox.el && inbox.el.dataset.details === "closing") finishClose(inbox);
+  const token = bump(inbox);
   return inbox.ensurePart(SLOT).then((slot) => {
-    if (!slot) return;
+    if (!slot || inbox._cdToken !== token) return;
     inbox._cdSlot = slot;
-    slot.feed({ ...d, host: inbox });
+    slot.feed(placeholder(inbox, d.mode));
     inbox.el.dataset.details = "open";
     // Narrow screens show one pane at a time (skin: ≤1024px); harmless wider.
     inbox.el.dataset.mview = "details";
     setButton(inbox, true);
+    const ready = Kind_ && typeof Kind_.waitFor === "function" ? Kind_.waitFor(d.kind) : null;
+    return Promise.resolve(ready)
+      .catch(() => null)
+      .then(() => {
+        if (inbox._cdToken !== token || inbox.el.dataset.details !== "open") return;
+        if (slot.isDestroyed && slot.isDestroyed()) return;
+        slot.feed({ ...d, host: inbox });
+      });
   });
 }
 
-function close(inbox) {
-  if (!inbox.el) return;
+function finishClose(inbox) {
+  bump(inbox);
   inbox.el.dataset.details = "closed";
   if (inbox.el.dataset.mview === "details") inbox.el.dataset.mview = "chat";
   // Emptying the slot destroys the widget: nothing in flight can paint.
@@ -71,13 +134,42 @@ function close(inbox) {
   setButton(inbox, false);
 }
 
+/**
+ * Close the panel. It slides out first (data-details="closing" keeps it laid
+ * out while skin/chat-p2p-details-out plays) unless `instant` — a
+ * conversation switch, leaving the Inbox — or the viewer asked for reduced
+ * motion.
+ * @returns {Promise} settles once the panel is gone
+ */
+function close(inbox, { instant = false } = {}) {
+  if (!inbox.el) return Promise.resolve();
+  const state = inbox.el.dataset.details;
+  if (state !== "open" && state !== "closing") return Promise.resolve();
+  if (instant || reducedMotion()) {
+    finishClose(inbox);
+    return Promise.resolve();
+  }
+  if (state === "closing") return inbox._cdClosing || Promise.resolve();
+  const token = bump(inbox);
+  inbox.el.dataset.details = "closing";
+  setButton(inbox, false);
+  inbox._cdClosing = new Promise((resolve) => {
+    setTimeout(() => {
+      if (inbox._cdToken === token && inbox.el.dataset.details === "closing") finishClose(inbox);
+      resolve();
+    }, CLOSE_MS);
+  });
+  return inbox._cdClosing;
+}
+
 function toggle(inbox) {
   return inbox.el && inbox.el.dataset.details === "open" ? close(inbox) : open(inbox);
 }
 
 // A different conversation (or none): the panel described the previous one.
 function onConversationChange(inbox) {
-  if (inbox.el && inbox.el.dataset.details === "open") close(inbox);
+  const st = inbox.el && inbox.el.dataset.details;
+  if (st === "open" || st === "closing") close(inbox, { instant: true });
 }
 
 /**
@@ -137,7 +229,8 @@ function hostAction(inbox, name, payload = {}, deps = {}) {
       // A workspace file thread lives in the workspace: land on its Chat tab
       // (the notification route — mounts the pane, leaves this section screen,
       // lights the rail) and scope that chat to the thread.
-      close(inbox);
+      // Leaving the Inbox: no slide-out to watch.
+      close(inbox, { instant: true });
       const hub_id = peer.entity_id;
       if (!Wm_ || !hub_id || !payload.file_nid) return;
       return Promise.resolve(Wm_.openNotificationLocation({ hub_id, activeTab: "chat" }))

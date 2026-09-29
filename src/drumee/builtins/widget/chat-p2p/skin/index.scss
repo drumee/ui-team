@@ -1,5 +1,16 @@
 @use "mixins/drumee";
 
+// Chat details column (the ⋮ panel), shared by its open and closing states.
+@mixin chat-details-column {
+  display: flex !important;
+  width: clamp(320px, 28vw, 400px);
+  flex-shrink: 0;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  // The card is widget_chat_details' own root; the slot draws nothing.
+}
+
 .chat-p2p {
   // FULL-CANVAS screen, per Figma 43:32209: the Inbox fills the whole centre
   // column (a 400px conversation list beside the active chat), it is not the
@@ -33,7 +44,8 @@
   }
 
   &__main {
-    background-color: transparent;
+    // White ground under the cards (and in their gutters).
+    background-color: var(--normal-bg-elevated, #fff);
     height: 100%;
     width: 100%;
     gap: 8px;
@@ -717,14 +729,24 @@
     display: none !important;
   }
 
+  // Open: slides in from the right. Closing (../chat-details-host close):
+  // stays laid out, click-through, while it slides back out; the host empties
+  // the slot after it.
   &__ui[data-details="open"] &__chat-details {
-    display: flex !important;
-    width: clamp(320px, 28vw, 400px);
-    flex-shrink: 0;
-    height: 100%;
-    min-width: 0;
-    overflow: hidden;
-    // The card is widget_chat_details' own root; the slot draws nothing.
+    @include chat-details-column;
+    animation: chat-p2p-details-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  &__ui[data-details="closing"] &__chat-details {
+    @include chat-details-column;
+    animation: chat-p2p-details-out 0.18s ease-in both;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__chat-details {
+      animation: none !important;
+    }
   }
 
   // ── Chat header ──────────────────────────────────────────────────
@@ -1218,9 +1240,32 @@
       display: none;
     }
 
-    &__ui[data-details="open"] &__chat-details {
+    &__ui[data-details="open"] &__chat-details,
+    &__ui[data-details="closing"] &__chat-details {
       width: 100%;
     }
+  }
+}
+
+@keyframes chat-p2p-details-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes chat-p2p-details-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(24px);
   }
 }
 
