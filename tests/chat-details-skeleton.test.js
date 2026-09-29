@@ -215,3 +215,21 @@ test("meeting tile: a viewer who cannot start gets no tile, unless there is one 
   assert.equal(S.meetingTileState(meetUi({ canUpload: false, active: true })).hidden, false);
   assert.ok(meetingTile(meetUi({ canUpload: false, active: true })));
 });
+
+// Videos: every tile carries the play badge so it never reads as a photo; the
+// duration text rides along only when known (server fills it from info.json).
+test("video tiles always show the play badge; duration only when known", () => {
+  const t = S.chatDetailsPage(ui, "video", [
+    { nid: "v1", category: "video", duration: 540, ctime: dayjs().unix() },
+    { nid: "v2", category: "video", duration: null, ctime: dayjs().unix() },
+  ]);
+  const tiles = walk(t).filter((n) => n.service === "chat-details-open-media");
+  const badge = (tile) => walk(tile).find((n) => /chat-details-duration(\s|$)/.test(n.className || ""));
+  assert.ok(badge(tiles[0]) && badge(tiles[1]));
+  assert.ok(walk(badge(tiles[0])).some((n) => n.content === "9:00"));
+  assert.ok(walk(badge(tiles[1])).some((n) => n.ico === "ph-play-fill"));
+  assert.equal(walk(badge(tiles[1])).filter((n) => n.type === "Note").length, 0);
+  // photos stay badge-free
+  const p = S.chatDetailsPage(ui, "photo", [{ nid: "i1", category: "image" }]);
+  assert.equal(walk(p).filter((n) => /chat-details-duration(\s|$)/.test(n.className || "")).length, 0);
+});

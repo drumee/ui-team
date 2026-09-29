@@ -210,7 +210,8 @@ function chatDetailsOverview(ui, data = {}) {
 
 function mediaTile(ui, row) {
   const pfx = `${ui.fig.group}__chat-details`;
-  const dur = row.category === "video" ? M.durationLabel(row.duration) : "";
+  const isVideo = row.category === "video";
+  const dur = isVideo ? M.durationLabel(row.duration) : "";
   const url = M.thumbUrl(row, ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id), bootstrap());
   return Skeletons.Box.Y({
     className: `${pfx}-tile`,
@@ -226,13 +227,16 @@ function mediaTile(ui, row) {
         low: url,
         high: url,
       }),
-      dur
+      // Every video carries the play badge (so it never reads as a photo);
+      // the duration text only when known — channel.media_list fills it in
+      // from the node's info.json.
+      isVideo
         ? Skeletons.Box.X({
             className: `${pfx}-duration`,
             kids: [
               Skeletons.Image.Svg({ className: `${pfx}-duration-ico`, ico: "ph-play-fill" }),
-              Skeletons.Note({ className: `${pfx}-duration-text`, content: dur }),
-            ],
+              dur ? Skeletons.Note({ className: `${pfx}-duration-text`, content: dur }) : null,
+            ].filter(Boolean),
           })
         : null,
     ].filter(Boolean),
