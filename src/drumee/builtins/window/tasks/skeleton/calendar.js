@@ -17,7 +17,7 @@
 // due_date is a calendar DATE with no time, so an hour grid would be 24 empty
 // rows; week and day stay columns of full cards, which is also how the Personal
 // Calendar treats tasks (its all-day strip, never an hour).
-const { priorityMeta, statusMeta, subtaskBadge } = require("./helpers");
+const { priorityMeta, statusMeta, subtaskBadge, mayCreateTask } = require("./helpers");
 const { stripMarkers } = require("../mention-markers");
 
 const ymd = (d) => d.format("YYYY-MM-DD");
@@ -264,6 +264,8 @@ module.exports = function (ui) {
     if (mode !== "month") {
       return Skeletons.Box.Y({
         className: `${pfx}__cal-day-body`,
+        // Inert: the space around the cards belongs to the square's click.
+        active: 0,
         kids: list.map(card),
       });
     }
@@ -283,6 +285,8 @@ module.exports = function (ui) {
     }
     return Skeletons.Box.Y({
       className: `${pfx}__cal-day-body`,
+      // Inert: the space around the chips belongs to the square's click.
+      active: 0,
       // A scrolled cell with a transparent-at-rest bar looks exactly like a
       // truncated one; the skeleton already knows which cells overflow (it is
       // the "+N" comparison), so it says so and the skin inks the bar.
@@ -296,8 +300,14 @@ module.exports = function (ui) {
   // row (the header names the date), and a head row kept for the "+" alone was
   // a 38px empty band above every column's first card. The Personal Calendar
   // likewise makes its week/day header the day's add target.
+  // Creating is gated the way the board's "+ New task" is (mayCreateTask): a
+  // view or chat member is refused task.create server-side, so offering them
+  // the form — from the "+" or from a square — is a dead end. The calendar's
+  // "+" used to be offered to everyone.
+  const mayCreate = mayCreateTask(ui);
+
   const addBtn = (k) =>
-    Skeletons.Box.X({
+    !mayCreate ? null : Skeletons.Box.X({
       className: `${pfx}__cal-day-add`,
       bubble: 0,
       service: "cal-add",
@@ -324,13 +334,29 @@ module.exports = function (ui) {
     // month boundary is carried by the dimmed outside-month dates, not by a
     // "Jun 1" abbreviation on the first.
     const numText = d.format("DD");
+    // The whole square adds a task due that day — the month cell and the
+    // week/day column alike, the way the Personal Calendar's squares do.
+    //
+    // Every CONTAINER inside it is inert (`active: 0`): ui-core binds a click
+    // to each widget left at the default and stops propagation before
+    // triggerHandlers, so an active head, date or card stack would take the
+    // click on its own area and the square would never hear it. What DOES
+    // something keeps its own service, and that same stopPropagation stops it
+    // from also firing the square: a chip or card opens its task, a × deletes,
+    // "+N" opens the Day view, and the "+" adds exactly as the square does.
+    const addable = mayCreate
+      ? { bubble: 0, service: "cal-add", uiHandler: [ui], calDay: k }
+      : {};
     return Skeletons.Box.Y({
       className: `${pfx}__cal-day`,
+      ...addable,
       // attrOpt, not dataset: these are the attributes the skin's today and
-      // outside-month rules key on at first paint.
+      // outside-month rules key on at first paint. data-add drives the
+      // pointer, so a square that cannot add does not offer one.
       attrOpt: {
         "data-today": k === todayKey ? "1" : "0",
         "data-outside": inMonth ? "0" : "1",
+        "data-add": mayCreate ? "1" : "0",
       },
       kids: [
         // Month only: week/day name the date — and carry the "+" — in the
@@ -338,15 +364,17 @@ module.exports = function (ui) {
         mode === "month"
           ? Skeletons.Box.X({
               className: `${pfx}__cal-day-head`,
+              active: 0,
               // The date where the Meet tab puts it (left), the hover "+"
               // on the right.
               kids: [
                 Skeletons.Note({
                   className: `${pfx}__cal-day-num`,
                   content: numText,
+                  active: 0,
                 }),
                 addBtn(k),
-              ],
+              ].filter(Boolean),
             })
           : null,
         dayBody(list, k),
@@ -395,7 +423,7 @@ module.exports = function (ui) {
                 ],
               }),
               addBtn(ymd(d)),
-            ],
+            ].filter(Boolean),
           }),
     ),
   });

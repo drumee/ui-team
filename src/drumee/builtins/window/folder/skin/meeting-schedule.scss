@@ -533,6 +533,14 @@
     }
   }
 
+  // A month square schedules a meeting that day (skeleton monthlyGrid) — for
+  // a viewer who may schedule; data-add is "0" otherwise. Pointer only, no
+  // hover wash: the cards sit inside the square, so a wash would light up
+  // under a hovered card that opens its meeting instead.
+  &__meeting-sched-mcell[data-add="1"] {
+    cursor: pointer;
+  }
+
   &__meeting-sched-mnum {
     flex-shrink: 0; // stays put when the day cell scrolls
     @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #0b0a21);

@@ -5651,6 +5651,15 @@ $theme-colors: (
     gap: 2px;
   }
 
+  // The whole square adds a task (skeleton/calendar.js dayCell) — for a viewer
+  // who may create; data-add is "0" otherwise, so no false pointer. The
+  // pointer plus the "+" revealed on hover is the cue. There is deliberately no
+  // hover wash: the chips and cards sit INSIDE the square, so it would light
+  // up under a hovered task and promise "click adds" over one that opens.
+  &__cal-day[data-add="1"] {
+    cursor: pointer;
+  }
+
   // Today is the DATE in brand ink, in every view — the Meet tab's cue, here
   // in the month cell and on the week/day column header (below). The month
   // cell used to take a brand wash instead.
