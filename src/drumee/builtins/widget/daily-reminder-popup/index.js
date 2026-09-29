@@ -9,9 +9,9 @@
  * per device, which is a deliberate choice — a two-device user seeing it twice
  * is acceptable and it costs no schema.
  *
- * [Open my calendar] and the calendar row open the Personal Calendar on
- * TODAY, in DAY view — the card reports on today, so the screen it opens shows today rather than the month
- * grid the rail opens. It was deliberately inert until 2026-09-07 because that
+ * [Open my calendar] and the calendar row open the Personal Calendar in
+ * MONTH view on the current month (Lexis, 2026-09-29 — it was DAY view from
+ * 2026-09-14). It was deliberately inert until 2026-09-07 because that
  * screen did not exist yet; it does now, so the button dispatches the desk's
  * own `toggle-calendar` — the exact service the left rail, the topbar utility
  * cluster and the phone's go-to grid already fire, with the view named in the
@@ -225,13 +225,15 @@ class __daily_reminder_popup extends LetcBox {
         // `cmd` — which matters because _close() above may already have
         // destroyed this widget and the button inside it.
         //
-        // `calendarView: "day"` — the card is a report on TODAY, so its button
-        // lands on today in DAY view rather than on the month grid the rail
-        // opens (Lexis, 2026-09-14). The desk owns the whole of that: it
-        // passes the view as a launch option AND re-states it on an instance
-        // that was only revealed. See desk `_openCalendar`.
+        // `calendarView: "month"` — the button lands on the month grid of the
+        // current month (Lexis, 2026-09-29; DAY view before that). Named
+        // rather than omitted so a calendar left on week/day view, or on
+        // another month, still comes back to this month's grid. The desk owns
+        // the whole of that: it passes the view as a launch option AND
+        // re-states it on an instance that was only revealed. See desk
+        // `_openCalendar`.
         if (window.Desk && _.isFunction(Desk.onUiEvent)) {
-          Desk.onUiEvent(cmd, { service: "toggle-calendar", calendarView: "day" });
+          Desk.onUiEvent(cmd, { service: "toggle-calendar", calendarView: "month" });
         }
         return;
       }

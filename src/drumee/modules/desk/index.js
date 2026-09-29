@@ -9687,7 +9687,7 @@ class desk_module extends LetcBox {
    *
    * @param {String} [view] "month" | "week" | "day". When given, the screen
    *   opens on TODAY in that view instead of wherever it was last left — the
-   *   Daily Reminder card asks for "day", because the card is about today.
+   *   Daily Reminder card asks for "month".
    *   Every other entry point omits it and keeps the existing behaviour
    *   exactly: no options, so the keep-alive reveal still applies.
    */
@@ -10660,7 +10660,7 @@ class desk_module extends LetcBox {
         // Most callers — the rail, the topbar cluster, the phone go-to grid,
         // the reload-restore — want the screen as the user left it, so they
         // name no view and the keep-alive reveal is unchanged. The Daily
-        // Reminder card names one: `day`, because the card is about today.
+        // Reminder card names one: `month`.
         return this._openCalendar(args.calendarView);
       }
 
