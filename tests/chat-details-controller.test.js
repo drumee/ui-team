@@ -35,6 +35,7 @@ global.SERVICE = {
 
 const C = require("../src/drumee/builtins/widget/chat-details/engine");
 const Mute = require("../src/drumee/builtins/panel/activity/mute");
+const Host = require("../src/drumee/builtins/window/folder/chat-details-host");
 
 const deferred = () => {
   let resolve;
@@ -289,7 +290,7 @@ const desk = () => ({ lit: [], _railHighlight(tab) { this.lit.push(tab); } });
 test("startMeeting: launches and lights the rail's Meet row", () => {
   const w = meetWin();
   const d = desk();
-  assert.equal(C.startMeeting(w, d), true);
+  assert.equal(Host.startMeeting(w, d), true);
   assert.equal(w.launches, 1);
   assert.deepEqual(d.lit, ["meeting"]);
 });
@@ -297,24 +298,24 @@ test("startMeeting: launches and lights the rail's Meet row", () => {
 test("startMeeting: a refused launch (another call up) leaves the rail alone", () => {
   const w = meetWin({ launched: undefined });
   const d = desk();
-  C.startMeeting(w, d);
+  Host.startMeeting(w, d);
   assert.deepEqual(d.lit, []);
 });
 
 test("startMeeting: a floating folder window never touches the desk rail", () => {
   const d = desk();
-  C.startMeeting(meetWin({ headless: 0 }), d);
+  Host.startMeeting(meetWin({ headless: 0 }), d);
   assert.deepEqual(d.lit, []);
 });
 
 test("startMeeting: already joined → nothing launches, nothing lights", () => {
   const w = meetWin({ joined: true });
   const d = desk();
-  assert.equal(C.startMeeting(w, d), false);
+  assert.equal(Host.startMeeting(w, d), false);
   assert.equal(w.launches, 0);
   assert.deepEqual(d.lit, []);
 });
 
 test("startMeeting: no desk (DMZ / share) is fine", () => {
-  assert.equal(C.startMeeting(meetWin(), undefined), true);
+  assert.equal(Host.startMeeting(meetWin(), undefined), true);
 });

@@ -234,3 +234,16 @@ test("scrolling the page body near its end loads more; anywhere else does not", 
   w.onBodyScroll(body);
   assert.equal(w.pending.filter((p) => p.args.page === 2).length, 1);
 });
+
+// onDomRefresh can fire again after the widget feeds itself: it must start
+// the panel once, not re-open (and refetch) on every refresh.
+test("the widget opens once however often the DOM refreshes", async () => {
+  const w = widget({ mode: "direct", peer_id: "peer" });
+  w.onDomRefresh();
+  await flush();
+  w.pending[0].resolve({ stats: {}, members: [] });
+  await flush();
+  w.onDomRefresh(); // e.g. after the engine's own feed
+  await flush();
+  assert.equal(w.requests.filter((r) => r.service === "chat.p2p_details").length, 1);
+});

@@ -40,7 +40,11 @@ class __widget_chat_details extends LetcBox {
     this.declareHandlers();
   }
 
+  // Once: the engine feeds this widget, and a refresh after that must not
+  // re-open (and refetch) the panel.
   onDomRefresh() {
+    if (this._cdStarted) return;
+    this._cdStarted = 1;
     this.open();
   }
 

@@ -15,9 +15,7 @@ const {
   showSeatLimitReached,
 } = require("libs/billing");
 const readCache = require("libs/read-cache");
-const ChatDetails = require("../../widget/chat-details/engine");
-const { meetingTileState } = require("../../widget/chat-details/skeleton");
-const { extractUrl } = require("../../widget/chat-details/model");
+const CDHost = require("./chat-details-host");
 const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
   SECURE_SHARE_TAB,
@@ -1472,6 +1470,11 @@ class __window_folder extends mfsInteract {
       this.__chatUnread = child;
       this._paintChatUnread();
     }
+    if (pn === "chat-details-widget") {
+      // widget_chat_details fed by ./chat-details-host openDetails.
+      this.__cdWidget = child;
+      return;
+    }
     if (pn === "folder-view") {
       this.__folderView = child;
       // Restore the user's persisted Files-tab split ratio (default 2:1).
@@ -2412,66 +2415,11 @@ class __window_folder extends mfsInteract {
       case "close-chat-search":
         return this._closeChatSearch();
 
-      // ── Chat details panel (Figma 775:131699) — chat-details/controller ──
+      // ── Chat details panel (Figma 775:131699): widget_chat_details in the
+      // "chat-details" slot; its own clicks go to the widget, which calls
+      // back through chatDetailsAction (./chat-details-host).
       case "open-chat-details":
         return this._openChatDetails();
-
-      case "close-chat-details":
-        return this._closeChatDetails();
-
-      case "chat-details-back":
-        return ChatDetails.showPage(this, "overview");
-
-      case "chat-details-page":
-        return ChatDetails.showPage(this, cmd && cmd.mget && cmd.mget("page"));
-
-      case "chat-details-mute":
-        // Spinner on the tile for the mute_set round trip.
-        return ChatDetails.openItem(this, cmd, () => ChatDetails.toggleMute(this));
-
-      case "chat-details-meeting":
-        // Same as the Meet schedule's start button (service "start-meeting"):
-        // start this room's call, or join the live one (locked once joined),
-        // and light the desk rail's Meet row like a rail click would.
-        return ChatDetails.startMeeting(this);
-
-      case "chat-details-download":
-        // Spinner on the tile until the export dialog's chunk has loaded.
-        return ChatDetails.openItem(this, cmd, () => this._openChatExportModal());
-
-      case "chat-details-thread": {
-        // Same as the thread dropdown's file row: scope the chat, in place,
-        // to that file's thread — back on the chat, not the details.
-        const fileNid = cmd && cmd.mget && cmd.mget("file_nid");
-        this._closeChatDetails();
-        if (!fileNid) return;
-        return this.scopeChatToFile(fileNid, cmd.mget("filename") || "");
-      }
-
-      case "chat-details-open-media": {
-        const nid = cmd && cmd.mget && cmd.mget("nid");
-        if (!nid) return;
-        // Spinner on the clicked tile / row until the player is up.
-        return ChatDetails.openItem(this, cmd, () =>
-          this.openFileLocation({
-            nid: `${nid}`,
-            hub_id: this.mget(_a.actual_hub_id) || this.mget(_a.hub_id),
-            pid: this.mget(_a.nid),
-            area: this.mget(_a.area),
-            filetype: cmd.mget("filetype") || undefined,
-          }),
-        );
-      }
-
-      case "chat-details-open-link": {
-        // Re-extracted, never trusted as given: only an http(s) URL opens.
-        const url = extractUrl(cmd && cmd.mget && cmd.mget("url"));
-        if (!url) return;
-        // Same loading feedback as the other pages (brief: the tab opens at once).
-        return ChatDetails.openItem(this, cmd, () => {
-          window.open(url, "_blank", "noopener,noreferrer");
-        });
-      }
 
       // ── Team-chat header thread-switch dropdown (Figma 2216-170337) ──
       case "open-thread-menu":
@@ -4299,30 +4247,15 @@ class __window_folder extends mfsInteract {
         this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`));
     if (el) el.dataset.loading = on ? "1" : "0";
     // The Chat details "Meeting" tile launches the same call: spin it too.
-    const tile = this._chatDetailsMeetingTile();
-    if (tile) tile.dataset.loading = on ? "1" : "0";
+    const w = this.__cdWidget;
+    if (w && !(w.isDestroyed && w.isDestroyed())) w.setMeetingLoading(on);
   }
 
-  // Chat details "Meeting" tile, when the panel is showing its overview.
-  _chatDetailsMeetingTile() {
-    return (
-      (this.el &&
-        this.el.querySelector(`.${this.fig.group}__chat-details-action--meeting`)) ||
-      null
-    );
-  }
-
-  // Refresh the Chat details "Meeting" tile in place (label + locked state),
-  // from the same flags the schedule's start button reads.
+  // Refresh the Chat details "Meeting" tile in place (label + locked state);
+  // the widget reads the state back through chatDetailsMeetingState.
   _applyMeetingTileState() {
-    const tile = this._chatDetailsMeetingTile();
-    if (!tile) return;
-    const st = meetingTileState(this);
-    tile.dataset.joined = st.joined ? "1" : "0";
-    const label =
-      tile.querySelector(`.${this.fig.group}__chat-details-action-label .note-content`) ||
-      tile.querySelector(`.${this.fig.group}__chat-details-action-label`);
-    if (label) label.textContent = st.label;
+    const w = this.__cdWidget;
+    if (w && !(w.isDestroyed && w.isDestroyed())) w.refreshMeetingState();
   }
 
   // Is a standalone meeting window currently live? Meetings are a global Wm
@@ -5556,14 +5489,27 @@ class __window_folder extends mfsInteract {
   }
 
   // ── Chat details panel (Figma 775:131699) ─────────────────────────────
-  // Behaviour lives in ./chat-details/controller (tested against a fake
-  // window); these are the entry points the rest of the window calls.
+  // The panel is widget_chat_details; this window is its host
+  // (./chat-details-host, tested against a fake window).
   _openChatDetails() {
-    return ChatDetails.open(this);
+    return CDHost.openDetails(this);
   }
 
   _closeChatDetails() {
-    return ChatDetails.close(this);
+    return CDHost.closeDetails(this);
+  }
+
+  // widget_chat_details host contract
+  chatDetailsAction(name, payload) {
+    return CDHost.hostAction(this, name, payload);
+  }
+
+  chatDetailsThreads() {
+    return CDHost.threads(this);
+  }
+
+  chatDetailsMeetingState() {
+    return CDHost.meetingState(this);
   }
 
   _closeThreadMenu() {
