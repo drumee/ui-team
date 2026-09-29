@@ -17,8 +17,8 @@
 // Do NOT set display:flex / flex-direction here — Box.* components set them.
 
 // ── Fix #1: viewport-level overlay (fixed, z-index 99997) ───────────────────
-// Skeletons.Wrapper.Y("chat-export") is appended
-// to the folder window via this.append() so Marionette owns the lifecycle.
+// Skeletons.Wrapper.Y("chat-export") is a slot the folder window skeleton
+// builds (window/folder/chat-export-overlay), fed on open, emptied on close.
 // position:fixed + inset:0 escapes the window's overflow/clip and covers the
 // full viewport. z-index 99997 sits below the topbar (99999) and invite-popup
 // (99998) but above all window content. The wrapper itself IS the backdrop;
@@ -35,6 +35,12 @@
   align-items: center;
   justify-content: center;
   animation: _chat-export-backdrop-in 0.15s ease;
+
+  // Always mounted now: never displayed (so never covers the viewport or takes
+  // clicks) unless the Wrapper says open, whatever state it rendered with.
+  &:not([data-state="open"]) {
+    display: none !important;
+  }
 
   // Show when data-state=open (Wrapper toggles this).
   &[data-state="open"] {

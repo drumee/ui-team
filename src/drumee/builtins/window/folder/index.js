@@ -16,6 +16,7 @@ const {
 } = require("libs/billing");
 const readCache = require("libs/read-cache");
 const CDHost = require("./chat-details-host");
+const ChatExportOverlay = require("./chat-export-overlay");
 const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
   SECURE_SHARE_TAB,
@@ -2811,8 +2812,8 @@ class __window_folder extends mfsInteract {
    * Root cause: wrapper-dialog is `position:absolute; top:132px` INSIDE the
    * window container (window.scss ~line 183), so a 530px-tall card is clipped.
    *
-   * Fix: use a dedicated `wrapper-chat-export` Wrapper appended via `this.append()`
-   * (so Marionette owns the lifecycle), with CSS `position:fixed; inset:0`
+   * Fix: use a dedicated `wrapper-chat-export` Wrapper — a slot the window
+   * skeleton builds (./chat-export-overlay), with CSS `position:fixed; inset:0`
    * (class `widget-chat-export__viewport-backdrop`) applied via `data-chat-export`.
    * A backdrop overlay closes on click-outside. Does NOT touch `wrapper-dialog` so
    * create-folder / rename-folder dialogs are completely unaffected.
@@ -2829,39 +2830,21 @@ class __window_folder extends mfsInteract {
       this.mget(_a.filename) || this.model.get("hub_name") || this.mget(_a.name);
     const folderColor = this._chatExportFolderColor(folderName);
 
-    // Append a dedicated Wrapper to this window so Marionette owns its lifecycle.
-    // The wrapper's __bhv_wrapper behavior auto-sets data-state="open" when it
-    // receives children, and "closed" when empty. We feed immediately after
-    // ensurePart resolves, so it will open automatically.
-    this.append(
-      Skeletons.Wrapper.Y({
-        className: "widget-chat-export__viewport-backdrop",
-        name: "chat-export",
-      }),
-    );
-
+    // Into the window's own "chat-export" slot (./chat-export-overlay) —
+    // never this.append(): a collection update on the window re-attaches
+    // every child and reloads the file grid, the chat and the thread rail.
+    // The wrapper's behavior sets data-state="open" once it has a child.
     // Returns once the dialog's lazy chunk is in (Chat details' Download tile
     // spins until then); other callers ignore the value.
-    return this.ensurePart("wrapper-chat-export").then((wrapper) => {
-      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
-      this._chatExportWrapper = wrapper;
-
-      this._wireChatExportBackdrop(wrapper);
-
-      // Feed the export widget into the centering container.
-      wrapper.feed({
-        kind: "widget_chat_export",
-        hub_id: this.mget(_a.hub_id),
-        nid: this.mget(_a.nid),
-        name: folderName,
-        // Folder access level (private/share/public/dmz) → drives the icon
-        // colour in the modal, matching the hub icon shown outside.
-        area: this.mget(_a.area),
-        uiHandler: [this],
-      });
-      if (typeof Kind !== "undefined" && Kind && _.isFunction(Kind.waitFor)) {
-        return Kind.waitFor("widget_chat_export");
-      }
+    return ChatExportOverlay.mount(this, {
+      kind: "widget_chat_export",
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      name: folderName,
+      // Folder access level (private/share/public/dmz) → drives the icon
+      // colour in the modal, matching the hub icon shown outside.
+      area: this.mget(_a.area),
+      uiHandler: [this],
     });
   }
 
@@ -2888,31 +2871,18 @@ class __window_folder extends mfsInteract {
       (cmd && _.isFunction(cmd.fullname) && cmd.fullname()) ||
       "";
 
-    this.append(
-      Skeletons.Wrapper.Y({
-        className: "widget-chat-export__viewport-backdrop",
-        name: "chat-export",
-      }),
-    );
-
-    this.ensurePart("wrapper-chat-export").then((wrapper) => {
-      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
-      this._chatExportWrapper = wrapper;
-
-      this._wireChatExportBackdrop(wrapper);
-
-      wrapper.feed({
-        kind: "widget_chat_export",
-        hub_id: this.mget(_a.hub_id),
-        nid: this.mget(_a.nid),
-        // File-scope mode: render the file card + hide the scope picker; the
-        // widget matches file_nid → file_thread_id against export_scope.
-        file_scope: 1,
-        file_nid: `${fileNid}`,
-        filename,
-        area: this.mget(_a.area),
-        uiHandler: [this],
-      });
+    // Same slot as the folder-wide export (./chat-export-overlay).
+    ChatExportOverlay.mount(this, {
+      kind: "widget_chat_export",
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      // File-scope mode: render the file card + hide the scope picker; the
+      // widget matches file_nid → file_thread_id against export_scope.
+      file_scope: 1,
+      file_nid: `${fileNid}`,
+      filename,
+      area: this.mget(_a.area),
+      uiHandler: [this],
     });
   }
 
@@ -2956,15 +2926,10 @@ class __window_folder extends mfsInteract {
   /**
    * Tears down the viewport-level chat-export overlay wrapper + its child widget.
    */
+  // Empty the slot — never goodbye()/suppress() it: that takes the wrapper
+  // out of the window's collection and reloads the window's panels.
   _closeChatExportOverlay() {
-    if (this._chatExportWrapper) {
-      if (_.isFunction(this._chatExportWrapper.goodbye)) {
-        this._chatExportWrapper.goodbye();
-      } else if (_.isFunction(this._chatExportWrapper.suppress)) {
-        this._chatExportWrapper.suppress();
-      }
-      this._chatExportWrapper = null;
-    }
+    ChatExportOverlay.unmount(this);
   }
 
   openCreateFolderDialog() {
