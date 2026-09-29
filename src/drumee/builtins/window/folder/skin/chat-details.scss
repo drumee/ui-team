@@ -201,6 +201,9 @@
       line-height: 1.4;
     }
     &-threads {
+      // Fades in over the loading skeleton it replaces (mixins/drumee
+      // skeleton-content-in; reduced motion below).
+      animation: drumee-skeleton-content-in 0.2s ease-out backwards;
       gap: 4px;
       flex-shrink: 0;
     }
@@ -250,6 +253,9 @@
     }
 
     &-counts {
+      // Fades in over the loading skeleton it replaces (mixins/drumee
+      // skeleton-content-in; reduced motion below).
+      animation: drumee-skeleton-content-in 0.2s ease-out backwards;
       gap: 12px;
       flex-shrink: 0;
     }
@@ -286,6 +292,9 @@
     // Members take whatever height is left and scroll inside it (the panel
     // does not scroll, so no floor).
     &-members {
+      // Fades in over the loading skeleton it replaces (mixins/drumee
+      // skeleton-content-in; reduced motion below).
+      animation: drumee-skeleton-content-in 0.2s ease-out backwards;
       flex: 1 1 0;
       min-height: 0;
       gap: 12px;
@@ -329,6 +338,9 @@
     // 8px side gutter (cancelled by the negative margin) so the -8px hover
     // backgrounds of file / link rows are not clipped by the scroller.
     &-body {
+      // Fades in over the loading skeleton it replaces (mixins/drumee
+      // skeleton-content-in; reduced motion below).
+      animation: drumee-skeleton-content-in 0.2s ease-out backwards;
       flex: 1 1 0;
       min-height: 0;
       gap: 12px;
@@ -562,6 +574,84 @@
     }
     &-link-url {
       color: var(--primary-40, #5950ff);
+    }
+    // ── Loading skeletons (skeleton/chat-details overviewSkeleton /
+    // pageSkeleton): grey blocks pulsing with the app's own keyframes
+    // (mixins/drumee), laid out like the content they stand for.
+    &-skeleton {
+      flex: 1 1 0;
+      min-height: 0;
+      overflow: hidden;
+      gap: 20px;
+
+      &:not([data-page="overview"]) {
+        gap: 12px;
+      }
+    }
+    &-sk-section {
+      gap: 12px;
+    }
+    &-sk-row {
+      align-items: center;
+      gap: 12px;
+    }
+    &-sk-lines {
+      flex: 1 1 0;
+      min-width: 0;
+      gap: 6px;
+    }
+    &-sk {
+      flex-shrink: 0;
+      border-radius: 4px;
+      background-color: var(--border-default, #e5e5ea);
+      animation: drumee-skeleton-pulse 1.2s ease-in-out infinite;
+
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
+      }
+    }
+    &-sk--bar {
+      height: 10px;
+    }
+    &-sk--month {
+      height: 12px;
+    }
+    @each $w in 25, 30, 35, 40, 45, 50, 60, 65, 70, 75, 80 {
+      &-sk--w#{$w} {
+        width: #{$w + "%"};
+      }
+    }
+    &-sk--icon {
+      width: 20px;
+      height: 20px;
+    }
+    &-sk--circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+    }
+    &-sk--square {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+    }
+    &-sk--thumb {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+    }
+    &-sk--tile {
+      width: 61px;
+      height: 61px;
+      border-radius: 8px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      &-threads,
+      &-counts,
+      &-members,
+      &-body {
+        animation: none;
+      }
     }
     &-empty {
       color: #65656c;

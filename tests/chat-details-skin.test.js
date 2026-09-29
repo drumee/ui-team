@@ -207,3 +207,18 @@ test("truncated Note text ends in an ellipsis (inner .note-content)", () => {
   assert.match(inner, /text-overflow: inherit/);
   assert.match(inner, /white-space: inherit/);
 });
+
+// Loading skeletons: grey blocks pulsing with the app's own keyframes
+// (mixins/drumee drumee-skeleton-pulse), still for reduced motion; real
+// sections fade in over them (drumee-skeleton-content-in).
+test("skeleton blocks pulse like the rest of the app, real content fades in", () => {
+  const block = rule(".window-folder .window__chat-details-sk");
+  assert.match(block, /background-color: var\(--border-default, #e5e5ea\)/);
+  assert.match(block, /animation: drumee-skeleton-pulse 1\.2s ease-in-out infinite/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{ \.window-folder \.window__chat-details-sk \{ animation: none; \} \}/);
+  assert.match(rule(".window-folder .window__chat-details-sk--circle"), /border-radius: 50%/);
+  assert.match(rule(".window-folder .window__chat-details-sk--tile"), /width: 61px; height: 61px/);
+  for (const sec of ["threads", "counts", "members", "body"]) {
+    assert.match(rule(`.window-folder .window__chat-details-${sec}`), /animation: drumee-skeleton-content-in 0\.2s ease-out backwards/, sec);
+  }
+});

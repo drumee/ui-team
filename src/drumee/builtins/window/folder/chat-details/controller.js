@@ -58,14 +58,8 @@ function open(win) {
     if (!alive(panel) || !gen(win).isCurrent(token)) return;
     win._chatDetailsPart = panel;
     panel.el.dataset.page = "overview";
-    panel.feed(
-      chatDetailsOverview(win, {
-        stats: {},
-        threads: [],
-        members: [],
-        muted: Mute.isPopupMuted({ hub_id }),
-      }),
-    );
+    // Loading skeleton first (real header + actions, placeholder sections).
+    panel.feed(chatDetailsOverview(win, { loading: true, muted: Mute.isPopupMuted({ hub_id }) }));
     setOpen(win, "open");
     return Promise.all([
       win.fetchService({ service: service("details"), hub_id }, { async: 1 }).catch(() => ({})),

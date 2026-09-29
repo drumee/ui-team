@@ -189,6 +189,75 @@ function memberRows(ui, members) {
   });
 }
 
+// ── Loading skeletons ──────────────────────────────────────────────────────
+// Grey placeholder shapes (skin: -sk, pulsing like the rest of the app) laid
+// out like the content they stand for, so nothing reads as real data — the
+// empty overview used to show "0 photos" and no members until the fetch
+// landed. Plain boxes; CSS gives each block its shape.
+function sk(pfx, ...mods) {
+  return Skeletons.Box.X({
+    className: [`${pfx}-sk`, ...mods.map((m) => `${pfx}-sk--${m}`)].join(" "),
+  });
+}
+
+function skRow(pfx, kind, lead, bars) {
+  return Skeletons.Box.X({
+    className: `${pfx}-sk-row ${pfx}-sk--${kind}`,
+    kids: [
+      sk(pfx, lead),
+      Skeletons.Box.Y({
+        className: `${pfx}-sk-lines`,
+        kids: bars.map((w) => sk(pfx, "bar", w)),
+      }),
+    ],
+  });
+}
+
+function overviewSkeleton(pfx) {
+  return Skeletons.Box.Y({
+    className: `${pfx}-skeleton`,
+    dataset: { page: "overview" },
+    kids: [
+      // File Threads: label + rows
+      Skeletons.Box.Y({
+        className: `${pfx}-sk-section`,
+        kids: [sk(pfx, "bar", "w30"), ...["w60", "w45", "w70"].map((w) => skRow(pfx, "thread", "icon", [w]))],
+      }),
+      // The four counts
+      Skeletons.Box.Y({
+        className: `${pfx}-sk-section`,
+        kids: ["w30", "w25", "w25", "w40"].map((w) => skRow(pfx, "count", "icon", [w])),
+      }),
+      Skeletons.Note({ className: `${pfx}-divider` }),
+      // Members: header + rows (avatar, name over status)
+      Skeletons.Box.Y({
+        className: `${pfx}-sk-section`,
+        kids: [
+          sk(pfx, "bar", "w25"),
+          ...["w40", "w50", "w35", "w45", "w30"].map((w) => skRow(pfx, "member", "circle", [w, "w25"])),
+        ],
+      }),
+    ],
+  });
+}
+
+function pageSkeleton(pfx, page) {
+  let kids;
+  if (page === "photo") {
+    kids = [Skeletons.Box.X({ className: `${pfx}-grid`, kids: Array.from({ length: 14 }, () => sk(pfx, "tile")) })];
+  } else if (page === "video") {
+    kids = [
+      sk(pfx, "bar", "w25", "month"),
+      Skeletons.Box.X({ className: `${pfx}-grid`, kids: Array.from({ length: 7 }, () => sk(pfx, "tile")) }),
+    ];
+  } else if (page === "file") {
+    kids = ["w60", "w45", "w70", "w50", "w65", "w40"].map((w) => skRow(pfx, "file", "square", [w]));
+  } else {
+    kids = ["w80", "w70", "w75", "w65"].map((w) => skRow(pfx, "link", "thumb", [w, "w50"]));
+  }
+  return Skeletons.Box.Y({ className: `${pfx}-skeleton`, dataset: { page }, kids });
+}
+
 function chatDetailsOverview(ui, data = {}) {
   const pfx = `${ui.fig.group}__chat-details`;
   return [
@@ -201,10 +270,16 @@ function chatDetailsOverview(ui, data = {}) {
         actionTile(ui, "chat-details-download", "dl-download-simple", LOCALE.DOWNLOAD),
       ].filter(Boolean),
     }),
-    threadRows(ui, data.threads),
-    countRows(ui, data.stats),
-    Skeletons.Note({ className: `${pfx}-divider` }),
-    memberRows(ui, data.members),
+    // Header and actions are real from the first frame (they need no data);
+    // the rest is a placeholder until the details fetch lands.
+    ...(data.loading
+      ? [overviewSkeleton(pfx)]
+      : [
+          threadRows(ui, data.threads),
+          countRows(ui, data.stats),
+          Skeletons.Note({ className: `${pfx}-divider` }),
+          memberRows(ui, data.members),
+        ]),
   ].filter(Boolean);
 }
 
@@ -306,7 +381,7 @@ function chatDetailsPage(ui, page, rows = [], { loading = false } = {}) {
   const pfx = `${ui.fig.group}__chat-details`;
   const head = header(ui, M.pageTitle(page), { back: true });
   if (loading) {
-    return [head, Skeletons.Box.Y({ className: `${pfx}-loading` })];
+    return [head, pageSkeleton(pfx, page)];
   }
   if (!rows.length) {
     return [head, Skeletons.Note({ className: `${pfx}-empty`, content: LOCALE.CD_NOTHING_YET })];

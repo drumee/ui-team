@@ -250,3 +250,42 @@ test("photo and video tiles show the file name under the thumbnail", () => {
     assert.equal(name.attrOpt.title, "Holiday beach.jpg", page); // full name on hover
   }
 });
+
+// ── Loading skeletons ────────────────────────────────────────────────────
+const sk = (tree) => walk(tree).filter((n) => /(^|\s)window__chat-details-sk(\s|$)/.test(n.className || ""));
+const hasClass = (n, c) => (n.className || "").split(/\s+/).includes(`window__chat-details-${c}`);
+
+test("overview while loading: real header + actions, placeholder threads / counts / members", () => {
+  const t = S.chatDetailsOverview(ui, { loading: true });
+  assert.equal(byService(t, "close-chat-details").length, 1);
+  assert.deepEqual(
+    ["chat-details-mute", "chat-details-meeting", "chat-details-download"].map((s) => byService(t, s).length),
+    [1, 1, 1],
+  );
+  // nothing that pretends to be data
+  assert.equal(byService(t, "chat-details-page").length, 0);
+  assert.equal(byService(t, "chat-details-thread").length, 0);
+  assert.ok(!texts(t).some((x) => /photos|members/.test(`${x}`)));
+  const box = walk(t).find((n) => hasClass(n, "skeleton"));
+  assert.ok(box, "missing overview skeleton");
+  assert.equal(walk(box).filter((n) => hasClass(n, "sk--count")).length, 4);
+  assert.ok(walk(box).filter((n) => hasClass(n, "sk--member")).length >= 4);
+  assert.ok(walk(box).filter((n) => hasClass(n, "sk--thread")).length >= 2);
+});
+
+test("each page while loading draws its own placeholder layout", () => {
+  const load = (page) => S.chatDetailsPage(ui, page, [], { loading: true });
+  for (const page of ["photo", "video", "file", "link"]) {
+    const t = load(page);
+    assert.equal(byService(t, "chat-details-back").length, 1, page);
+    assert.equal(byService(t, "chat-details-open-media").length + byService(t, "chat-details-open-link").length, 0, page);
+    const body = walk(t).find((n) => hasClass(n, "skeleton"));
+    assert.ok(body, `no skeleton for ${page}`);
+    assert.equal(body.dataset.page, page);
+  }
+  assert.ok(walk(load("photo")).filter((n) => hasClass(n, "sk--tile")).length >= 14);
+  assert.ok(walk(load("video")).filter((n) => hasClass(n, "sk--tile")).length >= 7);
+  assert.ok(walk(load("video")).some((n) => hasClass(n, "sk--month")));
+  assert.ok(walk(load("file")).filter((n) => hasClass(n, "sk--file")).length >= 5);
+  assert.ok(walk(load("link")).filter((n) => hasClass(n, "sk--link")).length >= 4);
+});

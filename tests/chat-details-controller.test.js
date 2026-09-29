@@ -105,6 +105,9 @@ test("open: stamps the split body, paints at once, then fills from one details c
   assert.equal(w.panel.el.dataset.page, "overview");
   assert.equal(w.threadMenuClosed, 1);
   assert.equal(w.panel.fed.length, 1);
+  // First paint is the loading skeleton, never "0 photos" / no members.
+  assert.ok(walk(w.panel.fed[0]).some((n) => /window__chat-details-skeleton/.test(n.className || "")));
+  assert.ok(!texts(w.panel.fed[0]).some((x) => /photos/.test(`${x}`)));
   const call = w.pending.find((p) => p.args.service === "channel.details");
   assert.deepEqual(call.args, { service: "channel.details", hub_id: "h1" });
   call.resolve({ stats: { photos: 3, videos: 0, files: 1, links: 2 }, members: [{ id: "a", fullname: "Ann", online: 1 }] });
