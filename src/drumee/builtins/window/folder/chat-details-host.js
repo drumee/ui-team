@@ -50,6 +50,17 @@ function closeDetails(win) {
   win.__cdWidget = null;
 }
 
+// The header ⋮. On the Chat tab the chat stays beside the panel, so the ⋮
+// can be clicked again: then it closes.
+function toggleDetails(win) {
+  const v = win.__folderView;
+  if (alive(v) && v.el.dataset.details === "open") {
+    closeDetails(win);
+    return Promise.resolve();
+  }
+  return openDetails(win);
+}
+
 /**
  * "Meeting" tile: start / join this room's call — the Meet schedule start
  * button's launch — and light the desk rail's Meet row the way a rail click
@@ -110,4 +121,4 @@ function meetingState(win) {
   return meetingTileState(win);
 }
 
-module.exports = { openDetails, closeDetails, hostAction, startMeeting, threads, meetingState };
+module.exports = { openDetails, closeDetails, toggleDetails, hostAction, startMeeting, threads, meetingState };

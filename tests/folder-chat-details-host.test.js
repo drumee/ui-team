@@ -95,3 +95,18 @@ test("threads and meeting state come from the window", async () => {
   assert.deepEqual(await H.threads(w), [{ file_nid: "f1" }]);
   assert.deepEqual(H.meetingState(w), { label: en.MEETING, joined: false, hidden: false });
 });
+
+// On the Chat tab the chat stays in view beside the details, so its ⋮ stays
+// clickable: a second click closes the panel instead of re-feeding it.
+test("toggle: the ⋮ opens details, a second click closes them", async () => {
+  const w = fakeWindow();
+  await H.toggleDetails(w);
+  assert.equal(w.view.el.dataset.details, "open");
+  const fed = w.panel.fed.length;
+  await H.toggleDetails(w);
+  assert.equal(w.view.el.dataset.details, "closed");
+  assert.deepEqual(w.panel.fed.at(-1), []);
+  assert.equal(w.panel.fed.length, fed + 1);
+  await H.toggleDetails(w);
+  assert.equal(w.view.el.dataset.details, "open");
+});

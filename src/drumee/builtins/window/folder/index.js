@@ -5492,7 +5492,7 @@ class __window_folder extends mfsInteract {
   // The panel is widget_chat_details; this window is its host
   // (./chat-details-host, tested against a fake window).
   _openChatDetails() {
-    return CDHost.openDetails(this);
+    return CDHost.toggleDetails(this);
   }
 
   _closeChatDetails() {

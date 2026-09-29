@@ -22,18 +22,40 @@
     }
   }
 
-  // Chat tab: the ⋮ in the "# General" header opens Chat details in the
-  // general chat's column; the thread rail (and an open file-thread panel)
-  // stay beside it.
+  // Chat tab: the ⋮ in the "# General" header opens Chat details as a third
+  // column — thread rail | chat | details — so the conversation stays in
+  // view. Same width as the docked file-thread panel.
   &__split-body[data-view="chat"][data-details="open"] {
-    > .window__chat-panel {
-      display: none !important;
-    }
+    grid-template-columns:
+      clamp(240px, 22vw, 300px) minmax(0, 1fr) clamp(320px, 26vw, 380px);
+
     > .window__chat-details {
       display: flex !important;
       margin: 0 !important;
       min-width: 0 !important;
       width: auto !important;
+      border-left: 1px solid var(--border-muted, #e5e5ea);
+    }
+
+    // A file thread open too: keep three columns; its panel waits behind
+    // the details and comes back when they close.
+    &[data-thread="open"] {
+      grid-template-columns:
+        clamp(240px, 22vw, 300px) minmax(0, 1fr) clamp(320px, 26vw, 380px);
+
+      > .window__file-thread-panel {
+        display: none !important;
+      }
+    }
+  }
+
+  // Compact (≤700px): one column, no room beside the chat — details takes
+  // the chat's place, as on the Files view.
+  @container window-folder-w (max-width: 700px) {
+    &__split-body[data-view="chat"][data-details="open"] {
+      > .window__chat-panel {
+        display: none !important;
+      }
     }
   }
 

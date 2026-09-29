@@ -231,12 +231,39 @@ test("skeleton blocks pulse like the rest of the app, real content fades in", ()
   }
 });
 
-// Chat tab: the ⋮ in the "# General" header opens Chat details in the
-// general chat's column (the thread rail and a file-thread panel stay).
-test("on the Chat tab, details swaps into the chat column too", () => {
-  const open = '.window-folder__split-body[data-view=chat][data-details=open]';
-  assert.match(rule(`${open} > .window__chat-panel`), /display: none !important/);
-  assert.match(rule(`${open} > .window__chat-details`), /display: flex !important/);
+// Chat tab: the ⋮ in the "# General" header opens Chat details as a third
+// column — thread rail | chat | details — with the chat still in view. Only
+// a compact window (≤700px, one column) swaps details in for the chat.
+const DETAILS_COL = "clamp(320px, 26vw, 380px)";
+const RAIL_COL = "clamp(240px, 22vw, 300px)";
+// Whether the rule at `idx` sits inside an `@container window-folder-w
+// (max-width: 700px)` block (brace depth from that block's opening).
+const inCompact = (src, idx) => {
+  const head = "@container window-folder-w (max-width: 700px) {";
+  const start = src.lastIndexOf(head, idx);
+  if (start < 0) return false;
+  let depth = 0;
+  for (let i = start + head.length - 1; i < idx; i++) {
+    if (src[i] === "{") depth++;
+    else if (src[i] === "}") depth--;
+    if (depth === 0) return false;
+  }
+  return true;
+};
+test("on the Chat tab, details opens as a third column beside rail and chat", () => {
+  const open = ".window-folder__split-body[data-view=chat][data-details=open]";
+  const cols = new RegExp(`grid-template-columns: ${RAIL_COL.replace(/[()]/g, "\\$&")} minmax\\(0, 1fr\\) ${DETAILS_COL.replace(/[()]/g, "\\$&")}`);
+  assert.match(ruleIn(folderCss, open), cols);
+  assert.match(ruleIn(folderCss, `${open} > .window__chat-details`), /display: flex !important/);
+  // With a file thread open too: still three columns, the thread panel waits.
+  assert.match(ruleIn(folderCss, `${open}[data-thread=open]`), cols);
+  assert.match(ruleIn(folderCss, `${open}[data-thread=open] > .window__file-thread-panel`), /display: none !important/);
+  // The chat is hidden only in the compact single column.
+  const hide = `${open} > .window__chat-panel { display: none !important; }`;
+  const at = folderCss.indexOf(hide);
+  assert.ok(at >= 0, "compact swap rule missing");
+  assert.ok(inCompact(folderCss, at), "the chat must stay visible on a desktop Chat tab");
+  assert.equal(folderCss.indexOf(hide, at + 1), -1, "no other rule hides the chat");
 });
 
 // A fed widget gets no data-flow (neither host passes `flow`), so the
