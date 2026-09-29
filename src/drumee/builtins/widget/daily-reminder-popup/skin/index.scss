@@ -304,30 +304,68 @@ $primary-hover: var(--primary-purple-60, #4642a9);
   }
 }
 
-// Phone: stack the stat tiles.
+// Phone: the same card, compacted to fit the screen. Spacing and the hero's
+// scale only — no copy, colour or type size changes.
 //
-// 🚨 The selector needs the card AND `[data-flow]`: the framework's
+// 🚨 Box selectors need the card AND `[data-flow]`: the framework's
 // `.drumee-box[data-flow="x"]` (container.scss) sets `flex-direction: row`
-// at 0,2,0, so the bare `__stats` class (0,1,0) lost and the tiles stayed in
-// one row on phones — their labels spilled out of the tiles.
+// at 0,2,0 and beats a bare BEM class (0,1,0).
 //
-// Stacked, the card is ~640px tall, which some phones do not have: cap it and
-// let it scroll, or the centred card is clipped top and bottom. Inert while it
-// fits.
+// The three tiles keep their desktop row; inside each tile the icon moves
+// above the number, which is what lets the labels fit ~95px tiles instead of
+// spilling out of them. Stacking the tiles instead made the card fill the
+// whole phone screen.
 @media (max-width: 480px) {
   .daily-reminder-popup__card {
+    padding: 16px;
+    gap: 12px;
+    // Short phones: scroll rather than clip the centred card top and
+    // bottom. Inert while it fits.
     max-height: calc(100vh - 32px);
     max-height: calc(100dvh - 32px);
     overflow-y: auto;
   }
 
-  .daily-reminder-popup__card .daily-reminder-popup__stats[data-flow] {
-    flex-direction: column;
+  // Scaled as one piece so the confetti keeps its place around the art; the
+  // negative margins give back the 24px the scale frees.
+  .daily-reminder-popup__hero-wrap {
+    flex: 0 0 auto;
+    margin: -12px 0;
+    transform: scale(0.75);
   }
 
-  // Two buttons share ~270px here, and "Open my calendar" (longer still in
-  // fr/ru/km) wraps — past the fixed 44px, out of the button. Grow with the
-  // text instead; a one-line label still measures exactly 44px.
+  .daily-reminder-popup__stats {
+    gap: 8px;
+  }
+
+  .daily-reminder-popup__card .daily-reminder-popup__stat[data-flow] {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .daily-reminder-popup__stat-tile {
+    width: 32px;
+    height: 32px;
+  }
+
+  // A single long word (ru "непрочитанных") breaks rather than overflows.
+  .daily-reminder-popup__stat-text {
+    max-width: 100%;
+  }
+
+  .daily-reminder-popup__stat-label {
+    overflow-wrap: anywhere;
+  }
+
+  .daily-reminder-popup__calrow {
+    padding: 10px 12px;
+  }
+
+  // "Open my calendar" (longer still in fr/ru/km) can wrap at this width —
+  // grow with the text instead of spilling out of the fixed 44px. A one-line
+  // label still measures exactly 44px.
   .daily-reminder-popup__btn {
     height: auto;
     min-height: 44px;
