@@ -462,6 +462,8 @@ class __chat_p2p extends LetcBox {
    * receive their messages) but hold their read-acks — see widget_chat park().
    */
   _showPane(scope) {
+    // The panel described the conversation being parked.
+    ChatDetailsHost.onConversationChange(this);
     Object.keys(this._panes).forEach((k) => {
       const pane = this._panes[k];
       if (!pane || !pane.widget) return;

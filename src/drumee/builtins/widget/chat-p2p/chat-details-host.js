@@ -80,6 +80,24 @@ function onConversationChange(inbox) {
   if (inbox.el && inbox.el.dataset.details === "open") close(inbox);
 }
 
+/**
+ * The part of a media view the Inbox lightbox reads (previewMedia →
+ * _renderLightbox), for a Chat details row that has no view: addressed the
+ * way ui-core's actualNode addresses a file.
+ */
+function lightboxMedia({ nid, hub_id, filetype, filename }) {
+  const attrs = { nid, hub_id, filetype, filename: filename || "" };
+  return {
+    mget: (k) => attrs[k],
+    fullname: () => attrs.filename,
+    actualNode(format = _a.orig) {
+      const { endpoint = "", keysel } = (typeof bootstrap === "function" && bootstrap()) || {};
+      const url = `${endpoint}file/${format}/${nid}/${hub_id}`;
+      return { nid, hub_id, url: keysel ? `${url}?keysel=${keysel}` : url };
+    },
+  };
+}
+
 // widget_chat_details → host.chatDetailsAction(name, payload)
 function hostAction(inbox, name, payload = {}, deps = {}) {
   const Wm_ = deps.Wm !== undefined ? deps.Wm : typeof Wm !== "undefined" ? Wm : null;
@@ -102,6 +120,9 @@ function hostAction(inbox, name, payload = {}, deps = {}) {
           return inbox.ensurePart("wrapper-chat-overlay");
         })
         .then((wrapper) => {
+          // close-overlay leaves data-state=closed, which the global
+          // [data-state="closed"] rule hides: a second export would be blank.
+          wrapper.el.dataset.state = _a.open;
           wrapper.feed({
             kind: "widget_chat_export",
             hub_id: peer.entity_id,
@@ -128,6 +149,17 @@ function hostAction(inbox, name, payload = {}, deps = {}) {
         });
     }
     case "open-media": {
+      // The Inbox covers every window-manager layer, so a viewer Wm launches
+      // would open invisibly behind it (see Wm.openContent). Pictures and
+      // videos use the Inbox's own lightbox; anything else leaves the Inbox.
+      if (
+        (payload.filetype === _a.image || payload.filetype === _a.video) &&
+        typeof inbox.previewMedia === "function"
+      ) {
+        return inbox.previewMedia(lightboxMedia(payload));
+      }
+      const Desk_ = deps.Desk !== undefined ? deps.Desk : typeof Desk !== "undefined" ? Desk : null;
+      if (Desk_ && typeof Desk_.closeSectionScreen === "function") Desk_.closeSectionScreen();
       const openMedia = deps.openMedia || require("libs/open-media").openMedia;
       return openMedia(payload, { fetchService: inbox.fetchService });
     }

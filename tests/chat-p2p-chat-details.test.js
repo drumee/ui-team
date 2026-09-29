@@ -20,11 +20,15 @@ global._ = require("underscore");
 global._a = new Proxy({}, { get: (t, k) => k });
 global._K = { permission: { download: 4 } };
 global.window = {};
+global.LetcBox = class {};
+global.bootstrap = () => ({ endpoint: "/-/", keysel: "ks" });
 global.SERVICE = { channel: { file_thread_list_by_folder: "channel.file_thread_list_by_folder" } };
 const _load = Module._load;
 Module._load = function (r, ...a) {
   if (r === "libs/support") return { supportAvatar: () => ({ type: "support" }), isSupportEntity: (id) => id === "support" };
   if (r === "media/grid/template/folder") return () => "<svg/>";
+  if (r === "libs/chat-preview") return {};
+  if (r === "libs/items-ready") return { armItemsReady() {}, markItemsReady() {} };
   return _load.call(this, r, ...a);
 };
 
@@ -128,8 +132,11 @@ test("actions: meeting calls, download opens the export overlay, open-media open
   assert.equal(exp.hub_id, "h1");
   assert.equal(exp.nid, "home1");
   assert.equal(exp.uiHandler[0], inbox);
-  await H.hostAction(inbox, "open-media", { nid: "n1", hub_id: "h1", filetype: "image" }, deps);
-  assert.deepEqual(opened, [{ nid: "n1", hub_id: "h1", filetype: "image" }]);
+  // A dialog closed before carries data-state=closed, which the global
+  // [data-state="closed"] rule hides: the open path must clear it.
+  assert.equal(inbox.parts["wrapper-chat-overlay"].el.dataset.state, "open");
+  await H.hostAction(inbox, "open-media", { nid: "n1", hub_id: "h1", filetype: "document" }, deps);
+  assert.deepEqual(opened, [{ nid: "n1", hub_id: "h1", filetype: "document" }]);
   H.hostAction(inbox, "close", {}, deps);
   assert.equal(inbox.el.dataset.details, "closed");
 });
@@ -153,6 +160,48 @@ test("threads come from the workspace home folder", async () => {
   const rows = await H.threads(inbox);
   assert.deepEqual(rows, [{ file_nid: "f1" }]);
   assert.deepEqual(inbox.calls.at(-1)[1], { service: "channel.file_thread_list_by_folder", hub_id: "h1", folder_nid: "home1", page: 1 });
+});
+
+// The Inbox covers every window-manager layer: a viewer Wm launches opens
+// invisibly behind it. Pictures and videos go to the Inbox's own lightbox;
+// anything else leaves the Inbox first.
+test("open-media in the Inbox: image/video → the Inbox lightbox; other files leave the Inbox first", async () => {
+  const inbox = fakeInbox({ type: "share", peer: { entity_id: "h1", nid: "home1" } });
+  const shown = [];
+  inbox.previewMedia = (m) => shown.push(m);
+  const order = [];
+  const deps = {
+    openMedia: async (p) => order.push(["open", p.nid]),
+    Desk: { closeSectionScreen: () => order.push(["leave"]) },
+  };
+  await H.hostAction(inbox, "open-media", { nid: "p1", hub_id: "hS", filetype: "image", filename: "a.png" }, deps);
+  assert.equal(shown.length, 1);
+  assert.equal(shown[0].mget("filetype"), "image");
+  assert.equal(shown[0].actualNode("slide").url, "/-/file/slide/p1/hS?keysel=ks");
+  assert.equal(shown[0].actualNode("orig").url, "/-/file/orig/p1/hS?keysel=ks");
+  assert.equal(shown[0].fullname(), "a.png");
+  await H.hostAction(inbox, "open-media", { nid: "v1", hub_id: "hS", filetype: "video" }, deps);
+  assert.equal(shown.length, 2);
+  assert.deepEqual(order, []);
+  await H.hostAction(inbox, "open-media", { nid: "d1", hub_id: "hS", filetype: "document" }, deps);
+  assert.deepEqual(order, [["leave"], ["open", "d1"]]);
+});
+
+// Switching the Direct / Workspace tab puts the other tab's parked
+// conversation back (_showPane) without going through openChat: the panel
+// described the previous one, and its buttons would act on the new one.
+test("inbox: switching scope tab closes Chat details", async () => {
+  const Inbox = require("../src/drumee/builtins/widget/chat-p2p");
+  const inbox = fakeInbox();
+  await H.open(inbox);
+  Object.assign(inbox, {
+    _panes: { workspace: { peer: { entity_id: "h1" }, type: "share", widget: {}, contact: null } },
+    fig: inboxUi.fig, _lists: {}, _listKey: (k) => k, _markSelected() {},
+  });
+  inbox.parts["chat-header"] = { el: { dataset: {} }, clear() {}, feed() {} };
+  Inbox.prototype._showPane.call(inbox, "workspace");
+  assert.equal(inbox.el.dataset.details, "closed");
+  assert.equal(inbox.activePeer.entity_id, "h1");
 });
 
 // ── skin ──────────────────────────────────────────────────────────────────
