@@ -238,7 +238,6 @@ function overviewSkeleton(pfx) {
         className: `${pfx}-sk-section`,
         kids: ["w30", "w25", "w25", "w40"].map((w) => skRow(pfx, "count", "icon", [w])),
       }),
-      Skeletons.Note({ className: `${pfx}-divider` }),
       // Members: header + rows (avatar, name over status)
       Skeletons.Box.Y({
         className: `${pfx}-sk-section`,
@@ -294,7 +293,6 @@ function chatDetailsOverview(ui, data = {}) {
       : [
           sec.threads ? threadRows(ui, data.threads) : null,
           countRows(ui, data.stats),
-          Skeletons.Note({ className: `${pfx}-divider` }),
           memberRows(ui, data.members, !!data.participants),
         ]),
   ].filter(Boolean);

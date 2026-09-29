@@ -297,3 +297,10 @@ test("# General header carries the ⋮ only where it opens Chat details", () => 
   assert.equal(S.generalHeaderMenu(win({ token: "tk" })), false);
   assert.equal(S.generalHeaderMenu(win({}, "window-sharebox")), false);
 });
+
+test("the overview has no divider (loaded or loading)", () => {
+  for (const data of [{ stats: {}, members: [] }, { loading: true }]) {
+    const t = S.chatDetailsOverview(ui, data);
+    assert.ok(!JSON.stringify(t).includes("-divider"));
+  }
+});

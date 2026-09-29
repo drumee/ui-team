@@ -237,3 +237,17 @@ test("on the Chat tab, details swaps into the chat column too", () => {
   assert.match(rule(`${open} > .window__chat-panel`), /display: none !important/);
   assert.match(rule(`${open} > .window__chat-details`), /display: flex !important/);
 });
+
+// A fed widget gets no data-flow (neither host passes `flow`), so the
+// framework's [data-flow=y] flex never applies to its root: the root must be
+// a flex column by itself, or the section gaps vanish, the tiles are clipped
+// and the members list (flex-basis 0) collapses to nothing.
+test("the widget root is a flex column by itself (no data-flow on a fed widget)", () => {
+  const root = rule(".widget-chat-details__ui");
+  assert.match(root, /display: flex/);
+  assert.match(root, /flex-direction: column/);
+});
+
+test("no divider between the counts and the members", () => {
+  assert.doesNotMatch(css, /widget-chat-details-divider/);
+});

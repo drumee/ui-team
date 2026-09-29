@@ -46,6 +46,9 @@
   flex: 1 1 0;
   width: 100%;
   box-sizing: border-box;
+  // A fed widget carries no data-flow (hosts pass no `flow`), so the
+  // framework's [data-flow=y] flex never reaches this root: be one here.
+  display: flex;
   flex-direction: column;
   gap: 20px;
   padding: 12px;
@@ -268,12 +271,6 @@
     &-count-label {
       font-size: 14px;
       line-height: 1.4;
-    }
-
-    &-divider {
-      height: 1px;
-      flex-shrink: 0;
-      background: #e5e5ea;
     }
 
     // Members take whatever height is left and scroll inside it (the panel
