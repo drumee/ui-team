@@ -1,3 +1,4 @@
+const ChatDetailsHost = require("./chat-details-host");
 const { supportContactId, isSupportEntity } = require("libs/support");
 // Preview text for a row's last message — shared with chat_contact_item's
 // skeleton so the line reads the same on load and on a live push.
@@ -697,6 +698,7 @@ class __chat_p2p extends LetcBox {
    * is no longer looking at.
    */
   _clearConversation() {
+    ChatDetailsHost.onConversationChange(this);
     this.activePeer = null;
     this.activePeerType = null;
     this.chatWidget = null;
@@ -1268,6 +1270,8 @@ class __chat_p2p extends LetcBox {
    */
   async openChat(contact) {
     if (!contact || !contact.mget) return;
+    // The panel described the previous conversation.
+    ChatDetailsHost.onConversationChange(this);
 
     if (_.isFunction(contact.resetNotification)) {
       contact.resetNotification();
@@ -1876,6 +1880,15 @@ class __chat_p2p extends LetcBox {
     tryOpen();
   }
 
+  // widget_chat_details host contract (./chat-details-host)
+  chatDetailsAction(name, payload) {
+    return ChatDetailsHost.hostAction(this, name, payload);
+  }
+
+  chatDetailsThreads() {
+    return ChatDetailsHost.threads(this);
+  }
+
   /**
    * @param {View} trigger
    * @param {Object} args
@@ -1887,6 +1900,14 @@ class __chat_p2p extends LetcBox {
     switch (service) {
       case "load-conversation":
         return this.openChat(trigger);
+
+      // ── Chat details (widget_chat_details, ./chat-details-host) ──
+      case "toggle-chat-details":
+        return ChatDetailsHost.toggle(this);
+
+      case "close-export":
+        // The Chat details export dialog closed itself in the overlay.
+        return this.onUiEvent(trigger, { service: "close-overlay" });
 
       case "video-call":
         return this._startCall(true);

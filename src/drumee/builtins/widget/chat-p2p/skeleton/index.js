@@ -340,9 +340,17 @@ module.exports = function (ui) {
     name: "lightbox",
   });
 
+  // Chat details (widget_chat_details) for the open conversation, fed by
+  // ./chat-details-host when the header's ⋮ is pressed. Hidden until then.
+  const chatDetails = Skeletons.Box.Y({
+    className: `${fig}__chat-details`,
+    sys_pn: "chat-details",
+    partHandler: ui,
+  });
+
   return Skeletons.Box.X({
     className: `${fig}__main`,
     debug: __filename,
-    kids: [sidebar, chatArea, overlayWrapper, lightbox],
+    kids: [sidebar, chatArea, chatDetails, overlayWrapper, lightbox],
   });
 };
