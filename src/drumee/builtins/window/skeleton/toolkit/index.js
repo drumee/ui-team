@@ -4,6 +4,7 @@ const { menuRow, createRows } = require("./new-menu-rows");
 const {
   chatDetailsPanel,
   headerMenuService,
+  generalHeaderMenu,
 } = require("../../folder/skeleton/chat-details");
 
 const AREA_LABELS = {
@@ -733,8 +734,9 @@ export function chatHeaderBar(ui, opt = {}) {
     ],
   });
 
-  // Full Chat-tab middle header (Figma 2331-46821): the docked rail already is
-  // the thread switcher, so the 3-dot is dropped and the title reads "# General".
+  // Full Chat-tab middle header (Figma 2331-46821): the title reads "# General".
+  // The docked rail is the thread switcher, so the ⋮ is here only where it
+  // opens Chat details (generalHeaderMenu) — same button as the Files tab's.
   if (opt.general) {
     return [
       Skeletons.Note({
@@ -743,7 +745,18 @@ export function chatHeaderBar(ui, opt = {}) {
       }),
       Skeletons.Box.X({
         className: `${grp}__chat-header-actions`,
-        kids: [searchBtn],
+        kids: [
+          generalHeaderMenu(ui)
+            ? Skeletons.Button.Svg({
+                className: `${grp}__chat-header-btn`,
+                ico: "apps-dots-vertical",
+                service: "open-chat-details",
+                uiHandler: [ui],
+                partHandler: ui,
+              })
+            : null,
+          searchBtn,
+        ].filter(Boolean),
       }),
     ];
   }

@@ -447,7 +447,18 @@ function headerMenuService(ui) {
     : "open-thread-menu";
 }
 
+/**
+ * Does the Chat tab's "# General" header get the ⋮? Only where the ⋮ opens
+ * Chat details (a workspace folder window). There the rail already switches
+ * threads, so on a share-token window — whose ⋮ would be the thread menu —
+ * the header stays search-only, as before.
+ */
+function generalHeaderMenu(ui) {
+  return headerMenuService(ui) === "open-chat-details";
+}
+
 module.exports = {
+  generalHeaderMenu,
   chatDetailsOverview,
   chatDetailsPage,
   chatDetailsPanel,

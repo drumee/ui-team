@@ -289,3 +289,11 @@ test("each page while loading draws its own placeholder layout", () => {
   assert.ok(walk(load("file")).filter((n) => hasClass(n, "sk--file")).length >= 5);
   assert.ok(walk(load("link")).filter((n) => hasClass(n, "sk--link")).length >= 4);
 });
+
+// Chat tab "# General" header: gets the ⋮ (Chat details) on a workspace
+// window; a share-token window keeps its old search-only header there.
+test("# General header carries the ⋮ only where it opens Chat details", () => {
+  assert.equal(S.generalHeaderMenu(win({})), true);
+  assert.equal(S.generalHeaderMenu(win({ token: "tk" })), false);
+  assert.equal(S.generalHeaderMenu(win({}, "window-sharebox")), false);
+});

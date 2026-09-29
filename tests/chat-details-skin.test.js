@@ -222,3 +222,11 @@ test("skeleton blocks pulse like the rest of the app, real content fades in", ()
     assert.match(rule(`.window-folder .window__chat-details-${sec}`), /animation: drumee-skeleton-content-in 0\.2s ease-out backwards/, sec);
   }
 });
+
+// Chat tab: the ⋮ in the "# General" header opens Chat details in the
+// general chat's column (the thread rail and a file-thread panel stay).
+test("on the Chat tab, details swaps into the chat column too", () => {
+  const open = '.window-folder__split-body[data-view=chat][data-details=open]';
+  assert.match(rule(`${open} > .window__chat-panel`), /display: none !important/);
+  assert.match(rule(`${open} > .window__chat-details`), /display: flex !important/);
+});
