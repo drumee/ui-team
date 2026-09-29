@@ -1,3 +1,11 @@
+// The page is drawn at 85% of the design's size, the same compact scale as the
+// dialogs (media/form, folder create-folder, migrate-gdrive: `zoom: 0.85`).
+// `zoom` goes on the CONTENT — the header row and each card row — never on
+// __ui: __ui also holds the fixed __overlay backdrop and the __toast-slot, and
+// a zoomed ancestor would shrink the backdrop and shift every dialog. __ui's
+// own padding and gap are scaled by hand to match.
+$page-scale: 0.85;
+
 .settings-main {
   // Color tokens used throughout
   $purple-deep: #433cc5; // Save Profile button + Edit-avatar pencil bg
@@ -19,11 +27,11 @@
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: var(--spacer-6);
+    padding: calc(var(--spacer-6) * #{$page-scale});
     background: var(--white);
     display: flex;
     flex-direction: column;
-    gap: var(--spacer-6);
+    gap: calc(var(--spacer-6) * #{$page-scale});
     font-family: "Geist", system-ui, sans-serif;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -64,6 +72,12 @@
   }
 
   // ── Row layout (two flex rows, asymmetric) ────────────────
+  // Content rows carry the page scale (see $page-scale at the top).
+  &__header-row,
+  &__row {
+    zoom: $page-scale;
+  }
+
   &__row {
     width: 100%;
     gap: var(--spacer-6);
@@ -997,7 +1011,7 @@
   // widths (≤ 1024). Stack rows; keep header on one line and avatar/
   // fields side-by-side since there's still enough horizontal room.
   &__ui[data-device="tablet"] {
-    padding: var(--spacer-5);
+    padding: calc(var(--spacer-5) * #{$page-scale});
   }
 
   &__row[data-device="tablet"] {
@@ -1019,8 +1033,8 @@
   // whether the data-device attribute is set.
   @media (max-width: 1024px) {
     &__ui {
-      padding: var(--spacer-5);
-      gap: var(--spacer-5);
+      padding: calc(var(--spacer-5) * #{$page-scale});
+      gap: calc(var(--spacer-5) * #{$page-scale});
     }
 
     &__row {

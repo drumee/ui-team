@@ -2,6 +2,12 @@
 // Mounted into settings_main's __overlay slot, which provides the
 // backdrop dim + blur.
 
+// Drawn at 85%, the compact dialog scale shared with the Settings page
+// (settings-main $page-scale) and settings-leave-confirm: `zoom` on __modal
+// shrinks the card and everything in it by one factor. Viewport-relative
+// sizes inside a zoomed box shrink too, so they are divided back out.
+$card-scale: 0.85;
+
 .settings-change-password {
   $modal-bg: #f2f2f7; // Grey/20
   $title-color: #0b0a21; // Primary/100
@@ -25,6 +31,7 @@
 
   // ── Modal shell ─────────────────────────────────────────────
   &__modal {
+    zoom: $card-scale;
     background: $modal-bg;
     border-radius: 12px;
     box-shadow: $shadow;
@@ -40,7 +47,7 @@
     }
 
     @media (max-width: 560px) {
-      width: calc(100vw - 32px) !important;
+      width: calc((100vw - 32px) / #{$card-scale}) !important;
       max-width: 520px;
     }
   }
