@@ -1,10 +1,6 @@
 // Contact avatar + Drumee-account helpers, shared by the sidebar list
 // (contact-list.js) and the detail panel (contact-detail.js).
 
-// Same helper UserProfile uses for its auto_color, so the initials chip we
-// draw for account-less contacts picks the identical color.
-const { colorFromName } = require("@drumee/ui-essentials");
-
 const looksLikeEmail = (s) => typeof s === "string" && s.includes("@");
 
 // Drumee uid the avatar picture is fetched with (Visitor.avatar). Contacts
@@ -44,7 +40,7 @@ function initialsOf(fn, ln, name) {
 // Contacts with no drumee account get the initials chip drawn here instead
 // of an id-less UserProfile: Visitor.avatar() falls back to the *current*
 // user's id, so a widget without an id would show our own face on every
-// address-only contact. Same shape/colors either way.
+// address-only contact. Same shape/colors either way (skin/index.scss).
 //
 // `variant` adds a `__avatar-wrapper--<variant>` modifier so a surface can
 // resize the same avatar without duplicating its rules.
@@ -71,9 +67,10 @@ function contactAvatar(ui, c, name, variant) {
     inner = Skeletons.UserProfile(opt);
   } else {
     const text = initialsOf(fn, ln, name);
+    // Tint comes from the skin (Figma initials chip), the same one the
+    // UserProfile branch is restyled to — no per-name color.
     inner = Skeletons.Box.Y({
       className: `${fig}__avatar`,
-      styleOpt: { background: colorFromName(text || "??") },
       kids: [
         Skeletons.Note({
           className: `${fig}__avatar-text`,

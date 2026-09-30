@@ -3088,5 +3088,8 @@
   "NO_BOOKMARKED_NOTIFICATIONS": "No hay notificaciones guardadas",
   "CONTACT_NO_DRUMEE_ACCOUNT": "Este contacto aún no tiene una cuenta de Drumee",
   "CONTACT_UNBLOCK_TO_REACH": "Desbloquea este contacto para chatear o llamar",
-  "SEND_AN_EMAIL": "Enviar un correo electrónico"
+  "SEND_AN_EMAIL": "Enviar un correo electrónico",
+  "CONTACT_EMAIL_ADDRESS": "Correo electrónico",
+  "PHONE_NUMBER": "Número de teléfono",
+  "CONTACT_NOTE_PLACEHOLDER": "Anota lo importante sobre esta persona, como su zona horaria, horario en línea o plazos."
 }

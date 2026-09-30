@@ -1134,6 +1134,19 @@ class __address_book extends LetcBox {
     );
     const name = root?.value?.trim();
     if (!name) return;
+    // The edit form lists only the contact's own tags, so typing the name of
+    // one that already exists is how it gets assigned — reuse it rather than
+    // creating a duplicate.
+    const existing = this._editing
+      ? this._tags.find((t) => (t.name || "").toLowerCase() === name.toLowerCase())
+      : null;
+    if (existing) {
+      if (!this._editTags.includes(existing.tag_id)) {
+        this._editTags = [...this._editTags, existing.tag_id];
+      }
+      if (root) root.value = "";
+      return this._refreshDetail();
+    }
     try {
       const tag = await this.postService({
         service: SERVICE.tagcontact.add,

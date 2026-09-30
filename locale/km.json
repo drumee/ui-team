@@ -3087,5 +3087,8 @@
   "NO_BOOKMARKED_NOTIFICATIONS": "គ្មានការជូនដំណឹងដែលបានរក្សាទុក",
   "CONTACT_NO_DRUMEE_ACCOUNT": "ទំនាក់ទំនងនេះមិនទាន់មានគណនី Drumee នៅឡើយទេ",
   "CONTACT_UNBLOCK_TO_REACH": "ដោះការទប់ស្កាត់ទំនាក់ទំនងនេះ ដើម្បីជជែក ឬហៅទូរសព្ទ",
-  "SEND_AN_EMAIL": "ផ្ញើអ៊ីមែល"
+  "SEND_AN_EMAIL": "ផ្ញើអ៊ីមែល",
+  "CONTACT_EMAIL_ADDRESS": "អាសយដ្ឋានអ៊ីមែល",
+  "PHONE_NUMBER": "លេខទូរស័ព្ទ",
+  "CONTACT_NOTE_PLACEHOLDER": "កត់ត្រាអ្វីដែលសំខាន់អំពីមនុស្សនេះ ដូចជាតំបន់ម៉ោង ម៉ោងអនឡាញ ឬកាលកំណត់។"
 }

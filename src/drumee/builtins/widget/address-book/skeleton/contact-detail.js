@@ -46,11 +46,9 @@ module.exports = function (ui, contact) {
     return contact.fullname || contact.surname || senderEmail || "—";
   })();
 
-  const initials = (fullName.trim()[0] || "?").toUpperCase();
-
   // ── Edit mode ─────────────────────────────────────────────────────
   if (editing && !isReceivedInvite && !isSentInvite) {
-    return require("./contact-edit")(ui, contact, { fullName, initials, contactId, editError });
+    return require("./contact-edit")(ui, contact, { fullName, contactId, editError });
   }
 
   // ── View mode ─────────────────────────────────────────────────────
@@ -94,21 +92,11 @@ module.exports = function (ui, contact) {
     .map((e) => ({ ...e, email: (e?.email || e || "").toString() }))
     .filter((e) => looksLikeEmail(e.email));
 
+  // Default first; Figma shows plain addresses with no "Default" marker.
   const emailEntries = validEmails.length
-    ? validEmails.map((e) =>
-        Skeletons.Box.X({
-          className: `${fig}__field-multi`,
-          kids: [
-            emailLink(e.email),
-            e.is_default === 1
-              ? Skeletons.Note({
-                  className: `${fig}__field-tag`,
-                  content: LOCALE.DEFAULT,
-                })
-              : null,
-          ].filter(Boolean),
-        })
-      )
+    ? [...validEmails]
+        .sort((a, b) => (b.is_default === 1) - (a.is_default === 1))
+        .map((e) => emailLink(e.email))
     : (senderEmail
         ? [emailLink(senderEmail)]
         : []);
