@@ -975,6 +975,12 @@ export function chatPanel(ui) {
     isFolderChat && !(Number(ui.mget(_a.privilege)) & _K.permission.download)
       ? 1
       : 0;
+  // Files-tab topic UI (Figma 869:189953): the topic strip under the header
+  // and the File threads bar. Workspace folder window only (a share token
+  // window and the other surfaces have no topics); fed by window/folder/
+  // topics.js (paintStrip) and ./file-threads-bar.js; hidden by SCSS where
+  // the Chat-tab rail already shows both.
+  const topicSurfaces = isFolderChat && !ui.mget(_a.token);
   return Skeletons.Box.Y({
     className: `${grp}__chat-panel`,
     sys_pn: "chat-panel",
@@ -984,6 +990,12 @@ export function chatPanel(ui) {
         : {},
     kids: [
       header,
+      topicSurfaces
+        ? Skeletons.Box.X({ className: `${grp}__topic-strip`, sys_pn: "topic-strip", partHandler: ui })
+        : null,
+      topicSurfaces
+        ? Skeletons.Box.Y({ className: `${grp}__ft-bar`, sys_pn: "ft-bar", partHandler: ui, dataset: { open: "0" } })
+        : null,
       // File-thread info card slot (Figma 2216-165656) — the in-place (Files
       // tab) file-thread view pins the same card the side panel shows. Empty +
       // hidden until the folder window feeds it on file scope; stays empty for

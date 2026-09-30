@@ -1,0 +1,190 @@
+@use "mixins/drumee";
+
+// Files-tab chat topics (Figma 869:189953 / 869:191968): the topic strip
+// under "Team Chat" and the File threads bar + dropdown. Parts built by
+// window/skeleton/toolkit chatPanel, fed by window/folder/topics.js and
+// window/folder/file-threads-bar.js.
+.window-folder {
+  // Only where the Chat-tab rail is not: hidden on the wide Chat tab (the
+  // rail lists topics and file threads), back on the compact one.
+  &__split-body[data-view="chat"] .window__topic-strip,
+  &__split-body[data-view="chat"] .window__ft-bar {
+    display: none;
+  }
+
+  @container window-folder-w (max-width: 700px) {
+    &__split-body[data-view="chat"] .window__topic-strip,
+    &__split-body[data-view="chat"] .window__ft-bar {
+      display: flex;
+    }
+  }
+
+  // A member without chat access sees neither (same gate as the rail).
+  .window__chat-panel[data-chat_gated="1"] .window__topic-strip,
+  .window__chat-panel[data-chat_gated="1"] .window__ft-bar {
+    display: none !important;
+  }
+
+  // ── Topic strip ────────────────────────────────────────────────────
+  .window__topic-strip {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    font-family: var(--font-main);
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .window__topic-tab {
+    flex: 0 0 auto;
+    height: 35.04px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    cursor: pointer;
+    color: #65656c;
+    border-bottom: 3px solid transparent;
+
+    &:hover {
+      color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  .window__topic-tab[data-active="1"] {
+    color: #5950ff;
+    border-bottom: 3px solid #5950ff;
+  }
+
+  .window__topic-tab--create {
+    border-radius: 26px;
+  }
+
+  .window__topic-tab-name {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 14px, $line: 1.2, $weight: 600, $color: currentColor);
+  }
+
+  .window__topic-tab-emoji {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  // ── File threads bar ───────────────────────────────────────────────
+  .window__ft-bar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-family: var(--font-main);
+  }
+
+  .window__ft-bar-card {
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
+    cursor: pointer;
+  }
+
+  .window__ft-bar-left {
+    align-items: center;
+    gap: 8px;
+  }
+
+  .window__ft-bar-badge {
+    width: 24px;
+    height: 24px;
+    box-sizing: border-box;
+    padding: 4px;
+    border-radius: 6px;
+    background: rgba(89, 80, 255, 0.1);
+  }
+
+  .window__ft-bar-clip {
+    width: 16px;
+    height: 16px;
+    fill: #5950ff;
+    color: #5950ff;
+  }
+
+  .window__ft-bar-label {
+    @include drumee.typo($size: 14px, $line: 1.2, $weight: 600, $color: #5950ff);
+  }
+
+  .window__ft-bar-ico {
+    width: 20px;
+    height: 20px;
+    padding: 2px;
+    fill: var(--normal-fg-10, #0b0a21);
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  .window__ft-list {
+    position: absolute;
+    top: calc(100% - 4px);
+    left: 12px;
+    right: 12px;
+    z-index: 20;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .window__ft-row {
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--hover-bg-40);
+    }
+
+    &.is-active {
+      background-color: rgba(89, 80, 255, 0.1);
+    }
+  }
+
+  .window__ft-row-ico {
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    fill: #5950ff;
+    color: #5950ff;
+  }
+
+  .window__ft-row-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: var(--normal-fg-10, #0b0a21));
+  }
+
+  .window__ft-empty {
+    padding: 8px;
+    @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: #65656c);
+  }
+}
