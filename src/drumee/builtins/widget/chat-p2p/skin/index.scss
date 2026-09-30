@@ -1,4 +1,5 @@
 @use "mixins/drumee";
+@use "builtins/window/folder/skin/topic-surfaces";
 
 // Chat details column (the ⋮ panel), shared by its open and closing states.
 @mixin chat-details-column {
@@ -725,6 +726,17 @@
   // A little room between the column's left edge and the conversation.
   &__chat-area .widget-chat__body {
     padding-left: 6px;
+  }
+
+  // Workspace chat: the folder's topic strip + File threads bar above the
+  // conversation (../workspace-topics feeds them and stamps data-topics).
+  &__chat-area {
+    @include topic-surfaces.parts;
+  }
+
+  &__chat-area:not([data-topics="1"]) .window__topic-strip,
+  &__chat-area:not([data-topics="1"]) .window__ft-bar {
+    display: none;
   }
 
   // ── Chat details (widget_chat_details, ../chat-details-host) ─────
