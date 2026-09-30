@@ -305,6 +305,7 @@ function mediaTile(ui, row) {
   const fallbackHub = ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id);
   const url = M.thumbUrl(row, fallbackHub, bootstrap());
   const name = row.filename || "";
+  const date = M.rowDate(row.ctime);
   // The tile is the clickable item (service, loading stamp, hover); the
   // picture lives in its -thumb box and the file name sits under it.
   return Skeletons.Box.Y({
@@ -342,7 +343,9 @@ function mediaTile(ui, row) {
       }),
       // attrOpt → a real title attribute: the full name on hover.
       Skeletons.Note({ className: `${pfx}-tile-name`, content: name, attrOpt: { title: name } }),
-    ],
+      // The date, a tooltip above the picture on hover (skin).
+      date ? Skeletons.Note({ className: `${pfx}-tile-date`, content: date }) : null,
+    ].filter(Boolean),
   });
 }
 

@@ -308,3 +308,14 @@ test("file and link rows: the date keeps its width at the end, 12px from the con
   // The name takes the room, so the date sits at the row's end.
   assert.match(rule(".widget-chat-details__ui .widget-chat-details-file-name"), /flex: 1 1 auto/);
 });
+
+// Hovering a Photos / Videos tile shows its date above the picture.
+test("tile date tooltip: hidden, above the tile, click-through; shown on hover", () => {
+  assert.match(rule(".widget-chat-details__ui .widget-chat-details-tile"), /position: relative/);
+  const tip = rule(".widget-chat-details__ui .widget-chat-details-tile-date");
+  assert.match(tip, /position: absolute/);
+  assert.match(tip, /opacity: 0/);
+  assert.match(tip, /pointer-events: none/);
+  assert.match(tip, /white-space: nowrap/);
+  assert.match(rule(".widget-chat-details__ui .widget-chat-details-tile:hover .widget-chat-details-tile-date"), /opacity: 1/);
+});

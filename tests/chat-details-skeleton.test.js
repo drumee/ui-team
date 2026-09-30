@@ -360,3 +360,13 @@ test("file and link rows end with their date", () => {
   assert.match(linkRow.kids.at(-1).className, /chat-details-link-date/);
   assert.equal(linkRow.kids.at(-1).content, dayjs.unix(ct).format("MMM D"));
 });
+
+// Photos / Videos tiles carry their date for the hover tooltip.
+test("media tiles carry a date tooltip; none without a time", () => {
+  const ct = dayjs().date(3).hour(10).unix();
+  const t = S.chatDetailsPage(ui, "photo", [{ nid: "p1", category: "image", filename: "a.png", ctime: ct }, { nid: "p2", category: "image", filename: "b.png" }]);
+  const tiles = walk(t).filter((n) => /chat-details-tile(\s|$)/.test(n.className || ""));
+  const tip = (tile) => walk(tile).find((n) => /chat-details-tile-date/.test(n.className || ""));
+  assert.equal(tip(tiles[0]).content, dayjs.unix(ct).format("MMM D"));
+  assert.equal(tip(tiles[1]), undefined);
+});
