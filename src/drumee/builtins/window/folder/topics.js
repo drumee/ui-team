@@ -6,8 +6,8 @@
  * channel.topic_list / topic_create; a message carries metadata._topic_id).
  * The thread menu / rail shows them under "Topics" (skeleton/thread-menu);
  * picking one scopes the chat widget (widget_chat.setScopedTopic):
- * "general" (default — without topic messages) or a topic id. There is no
- * "All" row; a legacy "all" in state reads as General.
+ * "all" (default — the Files-tab strip's All tab), "general" or a topic id.
+ * The Chat-tab rail has no All row (it highlights # General for "all").
  *
  * Plain functions of the window (`win`), tested with a fake
  * (tests/folder-topics.test.js); window/folder/index.js delegates. The New
@@ -60,9 +60,14 @@ function fetchTopics(win) {
     .catch(() => win._topics || []);
 }
 
-/** The folder chat's topic scope: "general" (default) or a topic id. */
+/**
+ * The folder chat's topic scope: "all" (default — the Files-tab strip's All
+ * tab, Figma 869:189953), "general" or a topic id. The Chat-tab rail has no
+ * All row: its builder highlights # General for "all", and entering the wide
+ * Chat tab moves "all" to "general" (onChatTabEnter).
+ */
 function current(win) {
-  return win._topicId && win._topicId !== "all" ? `${win._topicId}` : "general";
+  return win._topicId ? `${win._topicId}` : "all";
 }
 
 /** threadMenu options for the Topics section. */
@@ -77,27 +82,56 @@ function menuOpts(win) {
 /** The chat header title for the current topic scope. */
 function headerTitle(win) {
   const id = current(win);
-  if (id === "general") return `# ${LOCALE.GENERAL || "General"}`;
+  if (id === "general" || id === "all") return `# ${LOCALE.GENERAL || "General"}`;
   const t = (win._topics || []).find((x) => `${x.id}` === id);
   return t ? `# ${t.emoji ? `${t.emoji} ` : ""}${t.name}` : `# ${LOCALE.GENERAL || "General"}`;
 }
 
-/** Scope the folder chat to "general" (null) | a topic id. */
+/** Scope the folder chat to "all" | "general" (null) | a topic id. */
 function scopeChatToTopic(win, topicId) {
-  const next = topicId && topicId !== "all" ? `${topicId}` : "general";
+  const next = topicId ? `${topicId}` : "general";
   // A file thread in place is its own conversation: leave it first.
   if (win._scopedFileNid) win.scopeChatToFile(null);
   win._topicId = next;
   // Opening a topic reads it (server-side mark read): clear its cached badge.
-  if (next !== "general" && Array.isArray(win._topics)) {
+  if (next !== "general" && next !== "all" && Array.isArray(win._topics)) {
     win._topics = win._topics.map((t) => (`${t.id}` === next ? { ...t, unread: 0 } : t));
   }
   const wide = win.activeTab === _a.chat && !(win._isCompactChat && win._isCompactChat());
   win._updateChatHeader(null, "", wide);
   win._setThreadRailActive("");
+  paintStrip(win);
   return win.ensurePart("folder-chat").then((chat) => {
     if (chat && typeof chat.setScopedTopic === "function") chat.setScopedTopic(next);
   });
+}
+
+/**
+ * Feed the Files-tab topic strip (the chat panel's "topic-strip" part) from
+ * the current topics + scope. Empty for a member without chat access or a
+ * share-token window (no topics there).
+ */
+function paintStrip(win) {
+  return win.ensurePart("topic-strip").then((part) => {
+    if (!alive(part)) return;
+    if (!canChat(win) || win.mget(_a.token)) {
+      part.feed([]);
+      return;
+    }
+    const { topics, canCreateTopic } = menuOpts(win);
+    part.feed(require("./skeleton/topic-strip")(win, { topics, topicId: current(win), canCreateTopic }));
+  });
+}
+
+/** Fetch the folder's topics, then paint the strip. */
+function refreshStrip(win) {
+  return fetchTopics(win).then(() => paintStrip(win));
+}
+
+/** Entering the wide Chat tab: its rail has no All row — show # General. */
+function onChatTabEnter(win) {
+  if (current(win) !== "all") return Promise.resolve();
+  return scopeChatToTopic(win, "general");
 }
 
 function openTopicDialog(win) {
@@ -150,12 +184,13 @@ function createTopic(win, { name, emoji } = {}) {
     .catch(() => ({ ok: false, status: "ERROR" }));
 }
 
-/** Folder navigation: another folder's topics — back to # General. */
+/** Folder navigation: another folder's topics — back to All. */
 function onFolderChange(win) {
   win._topics = [];
-  win._topicId = "general";
+  win._topicId = "all";
+  paintStrip(win);
   return win.ensurePart("folder-chat").then((chat) => {
-    if (chat && typeof chat.setScopedTopic === "function") chat.setScopedTopic("general");
+    if (chat && typeof chat.setScopedTopic === "function") chat.setScopedTopic("all");
   });
 }
 
@@ -169,4 +204,7 @@ module.exports = {
   closeTopicDialog,
   createTopic,
   onFolderChange,
+  paintStrip,
+  refreshStrip,
+  onChatTabEnter,
 };

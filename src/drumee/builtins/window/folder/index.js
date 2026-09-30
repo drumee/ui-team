@@ -18,6 +18,7 @@ const readCache = require("libs/read-cache");
 const CDHost = require("./chat-details-host");
 const ChatExportOverlay = require("./chat-export-overlay");
 const Topics = require("./topics");
+const FTBar = require("./file-threads-bar");
 const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
   SECURE_SHARE_TAB,
@@ -757,6 +758,8 @@ class __window_folder extends mfsInteract {
 
 
   onBeforeDestroy(opt) {
+    // The File threads dropdown's document listeners go with the window.
+    FTBar.unbind(this);
     clearGrouped(this);
     RADIO_BROADCAST.off("workspace-unread", this._onWorkspaceUnread);
     if (this._folderGridSortTimer) {
@@ -1453,6 +1456,9 @@ class __window_folder extends mfsInteract {
   }
 
   onPartReady(child, pn) {
+    // Files-tab chat topics (Figma 869:189953): paint once the parts exist.
+    if (pn === "topic-strip") Topics.refreshStrip(this);
+    if (pn === "ft-bar") FTBar.paint(this);
     // Neither of these returns: window/core's onPartReady tail wires
     // `child.onChildBubble` on every part it sees, and the control these two
     // replace (the old zoom trigger) went through it. Fall through so the
@@ -2442,6 +2448,13 @@ class __window_folder extends mfsInteract {
       case "topic-new":
         return Topics.openTopicDialog(this);
 
+      // Files-tab strip: All tab (the whole chat) and the File threads bar.
+      case "topic-tab-all":
+        return Topics.scopeChatToTopic(this, "all");
+
+      case "ft-bar-toggle":
+        return FTBar.toggle(this);
+
       case "topic-menu-topic": {
         this._closeThreadMenu();
         const topicId = cmd && cmd.mget && cmd.mget("topic_id");
@@ -2457,6 +2470,7 @@ class __window_folder extends mfsInteract {
         // The skeleton always sets `filename` on the row model.
         const fileLabel = (cmd && cmd.mget && cmd.mget("filename")) || "";
         this._closeThreadMenu();
+        FTBar.close(this);
         return this.scopeChatToFile(fileNid, fileLabel);
       }
 
@@ -4576,11 +4590,10 @@ class __window_folder extends mfsInteract {
       bar.el.dataset.scope = fileNid ? "file" : general ? "general" : "folder";
       // Stamp the active file so a slow hydrate can't paint into a re-scoped header.
       bar.el.dataset.ftNid = fileNid ? `${fileNid}` : "";
-      // Folder chat topic in the title (./topics headerTitle): always on the
-      // wide Chat tab ("# General" by default), on the Files tab only for a
-      // topic — General is the default there, which keeps "Team Chat".
-      const topicScoped = this._topicId && !["all", "general"].includes(`${this._topicId}`);
-      const title = !fileNid && (general || topicScoped) ? Topics.headerTitle(this) : "";
+      // Folder chat topic in the title (./topics headerTitle) on the wide
+      // Chat tab only; the Files tab keeps "Team Chat" — its topic strip
+      // shows the scope (Figma 869:189953).
+      const title = !fileNid && general ? Topics.headerTitle(this) : "";
       bar.feed(
         chatHeaderBar(this, {
           fileNid: fileNid || "",
@@ -5266,6 +5279,9 @@ class __window_folder extends mfsInteract {
         chat.setScopedFolderNid(this.mget(_a.nid));
     });
     this._updateChatHeader(null, "", true);
+    // The rail has no All row: show # General; the Files-tab bar is hidden.
+    Topics.onChatTabEnter(this);
+    FTBar.close(this);
     this._populateThreadRail();
   }
 
@@ -5777,8 +5793,11 @@ class __window_folder extends mfsInteract {
       this._closeFileThreadPanel();
     }
     if (this._scopedFileNid) this.scopeChatToFile(null);
-    // Topics belong to a folder: another folder starts on All.
+    // Topics belong to a folder: another folder starts on All; its topics
+    // and file threads replace the strip's and the bar's.
     Topics.onFolderChange(this);
+    Topics.refreshStrip(this);
+    FTBar.onFolderChange(this);
     this.scopeChatToFolder(this.mget(_a.nid));
     // The rail lists the *current* folder's threads — refetch on navigation,
     // but only while the Chat tab is showing it (else it repopulates on entry).
