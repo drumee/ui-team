@@ -2,10 +2,11 @@
 
 // Armin Grotesk's line box is bottom-heavy (ascent 13 / descent 6 at 14px),
 // so a 20px line centred on an icon puts the cap-height ink 1.5px above the
-// icon's centre. A 3px top margin on a flex-centred label moves it down by
-// half that (1.5px). Used where a label sits beside an icon.
+// icon's centre. Nudge the label down by that much; relative offset, so the
+// button keeps its size (a margin would grow an auto-height button).
 @mixin optical-center {
-  margin-top: 3px;
+  position: relative;
+  top: 1.5px;
 }
 
 .address-book {
