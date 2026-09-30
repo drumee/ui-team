@@ -7,10 +7,14 @@
  *               (the download bit), as the folder window's chat is.
  *   direct    — a 1:1 conversation: chat.p2p_details / chat.p2p_media_list
  *               for the peer, on the viewer's own hub (Visitor.id — what
- *               widget_chat sends for a private room). No file threads, no
- *               per-peer mute, no DM export (yet); the members section lists
+ *               widget_chat sends for a private room). No file threads;
+ *               Mute is per PERSON (activity.mute_peer_set) and Download is
+ *               the DM export (chat.p2p_export); the members section lists
  *               the two participants. Always open to the participant.
+ *
+ * `mute` — { isMuted(w), set(w, muted) → {ok} }: what the Mute tile acts on.
  */
+const Mute = require("../../panel/activity/mute");
 function svc(mod, name) {
   return (
     (typeof SERVICE !== "undefined" && SERVICE[mod] && SERVICE[mod][name]) ||
@@ -27,6 +31,10 @@ const MODES = {
     participants: 0,
     gate: (priv) => !!(Number(priv) & _K.permission.download),
     hub: hubOf,
+    mute: {
+      isMuted: (w) => Mute.isPopupMuted({ hub_id: hubOf(w) }),
+      set: (w, muted) => Mute.setMute(w, hubOf(w), muted),
+    },
     details: (w) => ({ service: svc("channel", "details"), hub_id: hubOf(w) }),
     mediaList: (w, kind, page) => ({
       service: svc("channel", "media_list"),
@@ -36,10 +44,15 @@ const MODES = {
     }),
   },
   direct: {
-    sections: { threads: 0, mute: 0, download: 0, meeting: 1 },
+    sections: { threads: 0, mute: 1, download: 1, meeting: 1 },
     participants: 1,
     gate: () => true,
     hub: () => viewerHub(),
+    // Per person: activity.mute_peer_set (panel/activity/mute).
+    mute: {
+      isMuted: (w) => Mute.isPeerMuted(w.mget("peer_id")),
+      set: (w, muted) => Mute.setPeerMute(w, w.mget("peer_id"), muted),
+    },
     details: (w) => ({
       service: svc("chat", "p2p_details"),
       peer_id: w.mget("peer_id"),

@@ -21,10 +21,6 @@ const { chatDetailsOverview, chatDetailsPage } = require("./skeleton");
 const Mute = require("../../panel/activity/mute");
 const { modeOf } = require("./modes");
 
-function hubId(win) {
-  return modeOf(win).hub(win);
-}
-
 function panelOf(win) {
   return win.chatDetailsPanel ? win.chatDetailsPanel() : win.ensurePart("chat-details");
 }
@@ -54,8 +50,7 @@ function open(win) {
   const token = gen(win).next();
   const mode = modeOf(win);
   const { sections, participants } = mode;
-  const hub_id = hubId(win);
-  const muted = () => (sections.mute ? Mute.isPopupMuted({ hub_id }) : false);
+  const muted = () => (sections.mute ? mode.mute.isMuted(win) : false);
   win.__cdList = null;
   return panelOf(win).then((panel) => {
     if (!alive(panel) || !gen(win).isCurrent(token)) return;
@@ -190,12 +185,13 @@ function close(win) {
 }
 
 async function toggleMute(win) {
-  const hub_id = hubId(win);
-  const { ok } = await Mute.setMute(win, hub_id, !Mute.isPopupMuted({ hub_id }));
-  // Repaint only from what the server confirmed (setMute folds the response
-  // into the cache), never from what we asked for.
+  // What Mute acts on is the mode's: the workspace, or the person (modes).
+  const m = modeOf(win).mute;
+  const { ok } = await m.set(win, !m.isMuted(win));
+  // Repaint only from what the server confirmed (the setter folds the
+  // response into the cache), never from what we asked for.
   if (!ok || !win.__cdOverview) return;
-  win.__cdOverview.muted = Mute.isPopupMuted({ hub_id });
+  win.__cdOverview.muted = m.isMuted(win);
   const panel = win._chatDetailsPart;
   if (alive(panel) && panel.el.dataset.page === "overview") {
     panel.feed(chatDetailsOverview(win, win.__cdOverview));

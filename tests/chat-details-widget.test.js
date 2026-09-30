@@ -30,7 +30,7 @@ global.Visitor = { id: "me0000000000000a" };
 global.SERVICE = {
   channel: { details: "channel.details", media_list: "channel.media_list" },
   chat: { p2p_details: "chat.p2p_details", p2p_media_list: "chat.p2p_media_list" },
-  activity: { mute_state: "activity.mute_state", mute_set: "activity.mute_set" },
+  activity: { mute_state: "activity.mute_state", mute_set: "activity.mute_set", mute_peer_set: "activity.mute_peer_set" },
 };
 global.LetcBox = class {};
 const MAP = require("../src/drumee/builtins/media/template/map");
@@ -95,7 +95,7 @@ const cmd = (attrs) => ({ el: { dataset: {} }, mget: (k) => attrs[k] });
 
 test.beforeEach(() => Mute.resetMuteState());
 
-test("direct: asks chat.p2p_details for the peer; no threads, mute or download; participants", async () => {
+test("direct: asks chat.p2p_details for the peer; no threads; mute, call and download; participants", async () => {
   const w = widget({ mode: "direct", peer_id: "peer" });
   const o = w.open();
   await flush();
@@ -105,12 +105,12 @@ test("direct: asks chat.p2p_details for the peer; no threads, mute or download; 
   await o;
   const t = w.fed.at(-1);
   assert.equal(byService(t, "chat-details-thread").length, 0);
-  assert.equal(byService(t, "chat-details-mute").length, 0);
-  assert.equal(byService(t, "chat-details-download").length, 0);
+  assert.equal(byService(t, "chat-details-mute").length, 1);
+  assert.equal(byService(t, "chat-details-download").length, 1);
   assert.equal(byService(t, "chat-details-meeting").length, 1);
   assert.ok(texts(t).includes(en.CD_PARTICIPANTS));
   assert.ok(texts(t).includes("2 photos"));
-  assert.ok(!w.requests.some((r) => r.service === "activity.mute_state"));
+  assert.ok(w.requests.some((r) => r.service === "activity.mute_state"));
 });
 
 test("workspace: asks channel.details for the hub, threads come from the host", async () => {
@@ -246,4 +246,31 @@ test("the widget opens once however often the DOM refreshes", async () => {
   w.onDomRefresh(); // e.g. after the engine's own feed
   await flush();
   assert.equal(w.requests.filter((r) => r.service === "chat.p2p_details").length, 1);
+});
+
+test("direct: Mute mutes the PERSON (mute_peer_set), not a workspace", async () => {
+  const w = widget({ mode: "direct", peer_id: "peer" });
+  const posted = [];
+  w.postService = async (svc, p) => (posted.push([svc, p]), { status: "ok", global: 0, hubs: [], peers: ["peer"] });
+  const o = w.open();
+  await flush();
+  w.pending.find((p) => p.args.service === "chat.p2p_details").resolve({ stats: {}, members: [] });
+  await o;
+  await w.onUiEvent(cmd({}), { service: "chat-details-mute" });
+  await new Promise((r) => setTimeout(r, 400)); // openItem minMs
+  assert.deepEqual(posted[0], ["activity.mute_peer_set", { hub_id: "me0000000000000a", peer_id: "peer", muted: 1 }]);
+  assert.ok(texts(w.fed.at(-1)).includes(en.CD_UNMUTE));
+});
+
+test("workspace: Mute still mutes the workspace (mute_set)", async () => {
+  const w = widget({ mode: "workspace", hub_id: "h1", privilege: 7 });
+  const posted = [];
+  w.postService = async (svc, p) => (posted.push([svc, p]), { status: "ok", global: 0, hubs: ["h1"], peers: [] });
+  const o = w.open();
+  await flush();
+  w.pending[0].resolve({ stats: {}, members: [] });
+  await o;
+  await w.onUiEvent(cmd({}), { service: "chat-details-mute" });
+  await new Promise((r) => setTimeout(r, 400));
+  assert.deepEqual(posted[0], ["activity.mute_set", { hub_id: "h1", muted: 1 }]);
 });

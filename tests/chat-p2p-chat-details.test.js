@@ -228,7 +228,7 @@ test("open: a loading card at once, the widget when its kind is ready", async ()
   const x = walk(card).find((n) => n.service === "close-chat-details");
   assert.equal(x.uiHandler[0], inbox, "its ✕ reaches the Inbox");
   // A direct chat's placeholder shows only the tiles a direct chat has.
-  assert.deepEqual(walk(card).filter((n) => /^chat-details-(mute|meeting|download)$/.test(n.service)).map((n) => n.service), ["chat-details-meeting"]);
+  assert.deepEqual(walk(card).filter((n) => /^chat-details-(mute|meeting|download)$/.test(n.service)).map((n) => n.service), ["chat-details-mute", "chat-details-meeting", "chat-details-download"]);
   assert.equal(inbox.el.dataset.details, "open");
   kind.resolve();
   await opening;
