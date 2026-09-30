@@ -127,17 +127,19 @@ module.exports = function threadMenu(ui, opt = {}) {
     ].filter(Boolean),
   });
 
+  // Rows sit in their own __rows box so, in the rail, the heading stays put
+  // and the rows scroll (skin: the two list sections split the height).
   const kids = [
     Skeletons.Box.Y({
-      className: `${pfx}__section`,
-      kids: [sectionHead, generalRow, ...topicRows],
+      className: `${pfx}__section ${pfx}__section--topics`,
+      kids: [sectionHead, Skeletons.Box.Y({ className: `${pfx}__rows`, kids: [generalRow, ...topicRows] })],
     }),
   ];
 
   if (fileRows.length) {
     kids.push(
       Skeletons.Box.Y({
-        className: `${pfx}__section`,
+        className: `${pfx}__section ${pfx}__section--threads`,
         kids: [
           divider(),
           sectionLabel(LOCALE.FILE_THREADS || "File Threads"),

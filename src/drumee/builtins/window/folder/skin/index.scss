@@ -5348,6 +5348,23 @@ html[data-theme="dark"] {
     box-shadow: none;
   }
 
+  // Rail: Topics and File Threads split the height equally; each keeps its
+  // heading and scrolls its own rows (the rail itself no longer scrolls).
+  .window__thread-menu__card--rail > .window__thread-menu__section--topics,
+  .window__thread-menu__card--rail > .window__thread-menu__section--threads {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .window__thread-menu__card--rail > .window__thread-menu__section--topics > .window__thread-menu__rows,
+  .window__thread-menu__card--rail > .window__thread-menu__section--threads > .window__thread-menu__rows {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+  }
+
   // Download Chat history sits at the very bottom of the rail (Figma).
   .window__thread-menu__card--rail > .window__thread-menu__section:last-child {
     margin-top: auto;
