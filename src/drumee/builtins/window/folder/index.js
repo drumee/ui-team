@@ -17,6 +17,7 @@ const {
 const readCache = require("libs/read-cache");
 const CDHost = require("./chat-details-host");
 const ChatExportOverlay = require("./chat-export-overlay");
+const Topics = require("./topics");
 const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
   SECURE_SHARE_TAB,
@@ -2428,10 +2429,29 @@ class __window_folder extends mfsInteract {
 
       case "thread-menu-general":
         // "# General" → leave the file thread for the team chat, IN PLACE
-        // (no tab switch).
+        // (no tab switch). The Topics row also scopes the chat to General
+        // (no topic messages); the file-thread header's back keeps the scope.
         this._closeThreadMenu();
         this.scopeChatToFile(null);
+        if (cmd && cmd.mget && cmd.mget("topic_scope") === "general") {
+          Topics.scopeChatToTopic(this, "general");
+        }
         return this.scopeChatToFolder(this.mget(_a.nid));
+
+      // ── Folder chat topics (./topics, Figma 867:185782) ──
+      case "topic-new":
+        return Topics.openTopicDialog(this);
+
+      case "topic-menu-all":
+        this._closeThreadMenu();
+        return Topics.scopeChatToTopic(this, "all");
+
+      case "topic-menu-topic": {
+        this._closeThreadMenu();
+        const topicId = cmd && cmd.mget && cmd.mget("topic_id");
+        if (!topicId) return;
+        return Topics.scopeChatToTopic(this, topicId);
+      }
 
       case "thread-menu-file": {
         // A file row → scope the (already-visible) chat to that file's thread
@@ -4556,11 +4576,17 @@ class __window_folder extends mfsInteract {
       bar.el.dataset.scope = fileNid ? "file" : general ? "general" : "folder";
       // Stamp the active file so a slow hydrate can't paint into a re-scoped header.
       bar.el.dataset.ftNid = fileNid ? `${fileNid}` : "";
+      // Folder chat topic in the title (./topics headerTitle): always on the
+      // wide Chat tab ("Team Chat" for All), on the Files tab only once a
+      // topic or General is picked.
+      const topicScoped = this._topicId && this._topicId !== "all";
+      const title = !fileNid && (general || topicScoped) ? Topics.headerTitle(this) : "";
       bar.feed(
         chatHeaderBar(this, {
           fileNid: fileNid || "",
           label: label || "",
           general: !!general && !fileNid,
+          title,
         }),
       );
       if (fileNid) this._hydrateChatHeaderFile(bar, `${fileNid}`);
@@ -5305,7 +5331,7 @@ class __window_folder extends mfsInteract {
         if (generation !== this._ftThreadRequestGeneration()) return;
         if (!menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
         menu.feed(
-          require("./skeleton/thread-menu")(this, { items, scopedNid }),
+          require("./skeleton/thread-menu")(this, { items, scopedNid, ...Topics.menuOpts(this) }),
         );
         menu.el.dataset.open = "1";
         this._bindThreadMenuOutside(menu);
@@ -5314,7 +5340,9 @@ class __window_folder extends mfsInteract {
       this.ensurePart("folder-chat").then((chat) => {
         const scopedNid = chat && chat.scopedFileNid ? chat.scopedFileNid : "";
         // Fetch failure → still open with General + Download (no file rows).
-        this._fetchThreadList().then((items) => render(items, scopedNid));
+        Promise.all([this._fetchThreadList(), Topics.fetchTopics(this)]).then(([items]) =>
+          render(items, scopedNid),
+        );
       });
     });
   }
@@ -5390,6 +5418,7 @@ class __window_folder extends mfsInteract {
               items,
               scopedNid,
               variant: "rail",
+              ...Topics.menuOpts(this),
             }),
           );
         };
@@ -5413,13 +5442,15 @@ class __window_folder extends mfsInteract {
             painted = readCache.signature(known);
           }
         }
-        return this._fetchThreadList().then((items) => {
+        const topicsBefore = readCache.signature(Topics.menuOpts(this).topics);
+        return Promise.all([this._fetchThreadList(), Topics.fetchTopics(this)]).then(([items]) => {
           if (this.isDestroyed && this.isDestroyed()) return;
           if (!rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
           // Folder changed mid-fetch → discard this stale response.
           if (`${this.mget(_a.nid)}` !== folderNid) return;
           if (generation !== this._ftThreadRequestGeneration()) return;
-          if (painted !== null && painted === readCache.signature(items)) return;
+          const topicsSame = topicsBefore === readCache.signature(Topics.menuOpts(this).topics);
+          if (painted !== null && painted === readCache.signature(items) && topicsSame) return;
           paint(items);
         });
       });
@@ -5439,6 +5470,7 @@ class __window_folder extends mfsInteract {
         items: this._threadRailItems,
         scopedNid: scopedNid || "",
         variant: "rail",
+        ...Topics.menuOpts(this),
       }),
     );
   }
@@ -5446,7 +5478,9 @@ class __window_folder extends mfsInteract {
   // True when `rail` already shows exactly (items, scopedNid) — the caller can
   // skip its feed. Otherwise records the new signature and answers false.
   _sameThreadRailPaint(rail, items, scopedNid) {
-    const sig = readCache.signature({ items, scopedNid: scopedNid || "" });
+    // Topics (list + scope) are part of what the rail shows.
+    const { topics, topicId, canCreateTopic } = Topics.menuOpts(this);
+    const sig = readCache.signature({ items, scopedNid: scopedNid || "", topics, topicId, canCreateTopic });
     const hasRows = !!(rail.children && rail.children.length);
     if (hasRows && rail._threadRailSig === sig) return true;
     rail._threadRailSig = sig;
@@ -5462,6 +5496,15 @@ class __window_folder extends mfsInteract {
 
   _closeChatDetails() {
     return CDHost.closeDetails(this);
+  }
+
+  // widget_topic_create host contract (./topics)
+  topicCreate(args) {
+    return Topics.createTopic(this, args);
+  }
+
+  topicDialogClose() {
+    return Topics.closeTopicDialog(this);
   }
 
   // widget_chat_details host contract
@@ -5734,6 +5777,8 @@ class __window_folder extends mfsInteract {
       this._closeFileThreadPanel();
     }
     if (this._scopedFileNid) this.scopeChatToFile(null);
+    // Topics belong to a folder: another folder starts on All.
+    Topics.onFolderChange(this);
     this.scopeChatToFolder(this.mget(_a.nid));
     // The rail lists the *current* folder's threads — refetch on navigation,
     // but only while the Chat tab is showing it (else it repopulates on entry).

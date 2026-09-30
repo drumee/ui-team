@@ -741,7 +741,8 @@ export function chatHeaderBar(ui, opt = {}) {
     return [
       Skeletons.Note({
         className: `${grp}__chat-header-title`,
-        content: `# ${LOCALE.GENERAL || "General"}`,
+        // opt.title: the folder chat topic scope (window/folder/topics).
+        content: opt.title || `# ${LOCALE.GENERAL || "General"}`,
       }),
       Skeletons.Box.X({
         className: `${grp}__chat-header-actions`,
@@ -802,7 +803,7 @@ export function chatHeaderBar(ui, opt = {}) {
   return [
     Skeletons.Note({
       className: `${grp}__chat-header-title`,
-      content: getChatLabel(ui),
+      content: opt.title || getChatLabel(ui),
     }),
     // Unread count of the workspace team chat, next to its title. Filled by
     // the folder window (_paintChatUnread) from the same per-workspace counts

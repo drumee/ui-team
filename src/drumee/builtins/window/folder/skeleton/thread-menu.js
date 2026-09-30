@@ -68,6 +68,9 @@ module.exports = function threadMenu(ui, opt = {}) {
   const generalRow = Skeletons.Box.X({
     className: `${pfx}__row${topicActive("general")}`,
     service: "thread-menu-general",
+    // Marks the Topics row (the file-thread header's back button fires the
+    // same service but must keep the current topic scope).
+    topic_scope: "general",
     uiHandler: [ui],
     kidsOpt: { active: 0 },
     kids: [
