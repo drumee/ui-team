@@ -26,4 +26,26 @@
   }
 
   @include topic-surfaces.parts;
+
+  // The chat panel is a size container, so the strip can respond to the
+  // panel's own width (the Files view's side column is 300–380px, even in a
+  // wide window).
+  .window__chat-panel {
+    container: window-chat-panel / inline-size;
+  }
+
+  // A narrow panel: "+ Topic" goes to its own line under the carousel instead
+  // of squeezing the tabs.
+  @container window-chat-panel (max-width: 420px) {
+    .window__topic-strip {
+      flex-wrap: wrap;
+      row-gap: 6px;
+    }
+
+    .window__topic-strip .window__topic-tab--create {
+      flex: 1 0 100%;
+      margin-left: 0;
+      justify-content: center;
+    }
+  }
 }

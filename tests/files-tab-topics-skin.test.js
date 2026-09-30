@@ -145,3 +145,17 @@ test("strip padding is 6px 12px", () => {
 test("page: the tabs are centred in the room the page has", () => {
   assert.match(rule(".window-folder .window__topic-page"), /justify-content: center/);
 });
+
+// A narrow chat panel (the Files view's side column) puts "+ Topic" on its
+// own line under the carousel instead of squeezing the tabs.
+test("responsive: the chat panel is a container; ≤420px the create button wraps to its own line", () => {
+  assert.match(css, /(^|\})\s*\.window-folder \.window__chat-panel \{[^}]*container: window-chat-panel ?\/ ?inline-size/);
+  const m = css.match(/@container window-chat-panel \(max-width: 420px\) \{(.*?\})\s*\}/);
+  assert.ok(m, "missing @container window-chat-panel (max-width: 420px)");
+  const q = m[1];
+  assert.match(q, /\.window-folder \.window__topic-strip \{[^}]*flex-wrap: wrap/);
+  const create = q.match(/\.window-folder \.window__topic-strip \.window__topic-tab--create \{([^}]*)\}/);
+  assert.ok(create, "create button rule in the query");
+  assert.match(create[1], /flex: 1 0 100%/);
+  assert.match(create[1], /margin-left: 0/);
+});
