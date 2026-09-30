@@ -29,7 +29,24 @@ test("skin: the Inbox chat area styles the strip and bar exactly as the folder d
 
 test("skin: hidden in the Inbox unless the chat area is stamped data-topics=1", () => {
   const inbox = compile("builtins/widget/chat-p2p/skin/index.scss");
-  assert.match(inbox, /\.chat-p2p__chat-area:not\(\[data-topics="?1"?\]\) \.window__topic-strip, \.chat-p2p__chat-area:not\(\[data-topics="?1"?\]\) \.window__ft-bar \{ display: none; \}/);
+  assert.match(inbox, /\.chat-p2p__chat-area:not\(\[data-topics="?1"?\]\) \.chat-p2p__topic-row \{ display: none; \}/);
+});
+
+test("skin: strip and File threads bar share one row — the strip takes the room, the bar its own width", () => {
+  const inbox = compile("builtins/widget/chat-p2p/skin/index.scss");
+  const row = ruleIn(inbox, ".chat-p2p__chat-area .chat-p2p__topic-row");
+  assert.match(row, /display: flex/);
+  assert.match(row, /flex-direction: row/);
+  assert.match(row, /align-items: center/);
+  const strip = ruleIn(inbox, ".chat-p2p__chat-area .chat-p2p__topic-row .window__topic-strip");
+  assert.match(strip, /flex: 1 1 auto/);
+  assert.match(strip, /min-width: 0/);
+  const bar = ruleIn(inbox, ".chat-p2p__chat-area .chat-p2p__topic-row .window__ft-bar");
+  assert.match(bar, /flex: 0 0 auto/);
+  // The dropdown hangs from the bar's right edge, wider than the bar.
+  const list = ruleIn(inbox, ".chat-p2p__chat-area .chat-p2p__topic-row .window__ft-list");
+  assert.match(list, /left: auto/);
+  assert.match(list, /width: 280px/);
 });
 
 // ── Skeleton ──
@@ -44,7 +61,7 @@ global.Preset = { List: { Orange_e: {} } };
 global.Desk = { isSupportContact: () => false };
 const walk = (n, out = []) => { if (Array.isArray(n)) { n.forEach((k) => walk(k, out)); return out; } if (!n || typeof n !== "object") return out; out.push(n); (n.kids || []).forEach((k) => walk(k, out)); return out; };
 
-test("skeleton: chat area = header · topic strip · ft bar · chat panel; the dialog slot is always there", () => {
+test("skeleton: chat area = header · [topic strip | ft bar] row · chat panel; the dialog slot is always there", () => {
   const Module = require("node:module");
   const load = Module._load;
   Module._load = function (r, ...a) { if (r === "./chat-header") return () => ({ kind: "header" }); return load.call(this, r, ...a); };
@@ -56,11 +73,14 @@ test("skeleton: chat area = header · topic strip · ft bar · chat panel; the d
   const area = all.find((n) => n.sys_pn === "chat-area");
   assert.ok(area, "chat-area part");
   assert.equal(area.dataset.topics, "0");
-  assert.deepEqual(area.kids.map((k) => k.sys_pn), ["chat-header", "topic-strip", "ft-bar", "chat-panel"]);
-  assert.equal(area.kids[1].className, "window__topic-strip");
-  assert.equal(area.kids[2].className, "window__ft-bar");
-  assert.equal(area.kids[2].dataset.open, "0");
-  assert.equal(area.kids[1].partHandler, ui);
+  assert.deepEqual(area.kids.map((k) => k.sys_pn || k.className), ["chat-header", "chat-p2p__topic-row", "chat-panel"]);
+  const row = area.kids[1];
+  assert.equal(row.type, "Box.X");
+  assert.deepEqual(row.kids.map((k) => k.sys_pn), ["topic-strip", "ft-bar"]);
+  assert.equal(row.kids[0].className, "window__topic-strip");
+  assert.equal(row.kids[1].className, "window__ft-bar");
+  assert.equal(row.kids[1].dataset.open, "0");
+  assert.equal(row.kids[0].partHandler, ui);
   const slot = all.find((n) => n.name === "topic-dialog");
   assert.equal(slot.className, "widget-topic-create__viewport-backdrop");
   assert.equal(slot.partHandler, ui);

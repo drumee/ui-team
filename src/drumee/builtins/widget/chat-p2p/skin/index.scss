@@ -734,9 +734,51 @@
     @include topic-surfaces.parts;
   }
 
-  &__chat-area:not([data-topics="1"]) .window__topic-strip,
-  &__chat-area:not([data-topics="1"]) .window__ft-bar {
+  &__chat-area:not([data-topics="1"]) &__topic-row {
     display: none;
+  }
+
+  // Strip and File threads bar on one row: the strip's carousel takes the
+  // room (its "+ Topic" still at its end), the bar sits after it at its own
+  // width, slimmed to the chips' height.
+  &__chat-area &__topic-row {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+    min-width: 0;
+  }
+
+  &__chat-area &__topic-row .window__topic-strip {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__chat-area &__topic-row .window__ft-bar {
+    flex: 0 0 auto;
+    padding: 6px 12px 6px 0;
+  }
+
+  &__chat-area &__topic-row .window__ft-bar-card {
+    height: 30px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    gap: 8px;
+    border-radius: 8px;
+  }
+
+  &__chat-area &__topic-row .window__ft-bar-badge {
+    width: 20px;
+    height: 20px;
+    padding: 2px;
+  }
+
+  // The dropdown hangs from the bar's right edge, wider than the bar.
+  &__chat-area &__topic-row .window__ft-list {
+    left: auto;
+    right: 12px;
+    width: 280px;
+    max-width: calc(100vw - 32px);
   }
 
   // ── Chat details (widget_chat_details, ../chat-details-host) ─────

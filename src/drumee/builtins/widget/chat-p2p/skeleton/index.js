@@ -330,13 +330,19 @@ module.exports = function (ui) {
     partHandler: ui,
     dataset: { open: "0" },
   });
+  // Both on one row under the header: the strip takes the room, the bar
+  // its own width at the end.
+  const topicRow = Skeletons.Box.X({
+    className: `${fig}__topic-row`,
+    kids: [topicStrip, ftBar],
+  });
 
   const chatArea = Skeletons.Box.Y({
     className: `${fig}__chat-area`,
     sys_pn: "chat-area",
     partHandler: ui,
     dataset: { topics: "0" },
-    kids: [chatHeader, topicStrip, ftBar, chatPanel],
+    kids: [chatHeader, topicRow, chatPanel],
   });
 
   // New Topic dialog (widget_topic_create): always-present, empty-until-open
