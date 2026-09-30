@@ -4,8 +4,7 @@
  * from channel.file_thread_list_by_folder.
  *
  *   Topics                          [+] → service "topic-new" (New Topic dialog)
- *     All                               → service "topic-menu-all" (whole folder chat)
- *     # General                         → service "thread-menu-general" (no topic)
+ *     # General                         → service "thread-menu-general" (no topic; default)
  *     😀 <topic>  [unread?]             → service "topic-menu-topic" (that topic)
  *   File Threads
  *     📎 <filename>  [unread?]           → service "thread-menu-file" (file chat)
@@ -25,8 +24,8 @@
  *
  * @param {Object} ui folder window
  * Topics (Figma 867:185782 / 869:187685): `topics` are channel.topic_list
- * rows; `topicId` is the chat's topic scope ("all" default, "general", or a
- * topic id). A file scope (scopedNid) leaves no Topics row active. The "+"
+ * rows; `topicId` is the chat's topic scope ("general" default, or a topic
+ * id; a legacy "all" reads as General). A file scope (scopedNid) leaves no Topics row active. The "+"
  * shows only with `canCreateTopic` (chat access).
  *
  * @param {Object} ui folder window
@@ -51,18 +50,9 @@ module.exports = function threadMenu(ui, opt = {}) {
   const divider = () => Skeletons.Note({ className: `${pfx}__divider` });
 
   const topics = Array.isArray(opt.topics) ? opt.topics : [];
-  const topicId = opt.topicId ? `${opt.topicId}` : "all";
+  const topicId = opt.topicId && opt.topicId !== "all" ? `${opt.topicId}` : "general";
   // Nothing in Topics is active while a file thread is the scope.
   const topicActive = (id) => (scopedNid === "" && topicId === id ? " is-active" : "");
-
-  // Topics → All (the whole folder chat, topics included).
-  const allRow = Skeletons.Box.X({
-    className: `${pfx}__row${topicActive("all")}`,
-    service: "topic-menu-all",
-    uiHandler: [ui],
-    kidsOpt: { active: 0 },
-    kids: [Skeletons.Note({ className: `${pfx}__row-name`, content: LOCALE.ALL || "All" })],
-  });
 
   // Topics → # General (the folder chat without topic messages).
   const generalRow = Skeletons.Box.X({
@@ -140,7 +130,7 @@ module.exports = function threadMenu(ui, opt = {}) {
   const kids = [
     Skeletons.Box.Y({
       className: `${pfx}__section`,
-      kids: [sectionHead, allRow, generalRow, ...topicRows],
+      kids: [sectionHead, generalRow, ...topicRows],
     }),
   ];
 

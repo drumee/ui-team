@@ -2442,10 +2442,6 @@ class __window_folder extends mfsInteract {
       case "topic-new":
         return Topics.openTopicDialog(this);
 
-      case "topic-menu-all":
-        this._closeThreadMenu();
-        return Topics.scopeChatToTopic(this, "all");
-
       case "topic-menu-topic": {
         this._closeThreadMenu();
         const topicId = cmd && cmd.mget && cmd.mget("topic_id");
@@ -4581,9 +4577,9 @@ class __window_folder extends mfsInteract {
       // Stamp the active file so a slow hydrate can't paint into a re-scoped header.
       bar.el.dataset.ftNid = fileNid ? `${fileNid}` : "";
       // Folder chat topic in the title (./topics headerTitle): always on the
-      // wide Chat tab ("Team Chat" for All), on the Files tab only once a
-      // topic or General is picked.
-      const topicScoped = this._topicId && this._topicId !== "all";
+      // wide Chat tab ("# General" by default), on the Files tab only for a
+      // topic — General is the default there, which keeps "Team Chat".
+      const topicScoped = this._topicId && !["all", "general"].includes(`${this._topicId}`);
       const title = !fileNid && (general || topicScoped) ? Topics.headerTitle(this) : "";
       bar.feed(
         chatHeaderBar(this, {

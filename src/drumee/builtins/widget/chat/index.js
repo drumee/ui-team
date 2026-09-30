@@ -169,6 +169,8 @@ class __widget_chat extends LetcBox {
         ? `${this.mget("scoped_file_nid")}`
         : "";
       this.scopedFileLabel = this.mget("scoped_file_label") || "";
+      // Folder chat topic scope at mount (the folder window passes "general").
+      this.scopedTopicId = this._initialTopic();
       this.fileThreadId = "";
       this.fileThreadInfoLoaded = false;
       // storage_key override keeps a coexisting second instance's messenger
@@ -2308,6 +2310,11 @@ class __widget_chat extends LetcBox {
         });
       }
     });
+  }
+
+  /** Topic scope at mount: the descriptor's scoped_topic, else "all". */
+  _initialTopic() {
+    return (this.mget && this.mget("scoped_topic")) || "all";
   }
 
   /** channel.post payload + the topic, when the scope is a topic id. */

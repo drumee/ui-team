@@ -136,3 +136,21 @@ test("reading inside a topic acknowledges with topic_id and does not clear the w
   assert.equal(a.posted[0].topic_id, undefined);
   assert.equal(a.announced, 1);
 });
+
+test("mounts on general when the descriptor says so; a chat mounted without scoped_topic stays all", () => {
+  const w = Object.create(Chat.prototype);
+  const attrs = { scoped_topic: "general" };
+  w.mget = (k) => attrs[k];
+  assert.equal(w._initialTopic(), "general");
+  const inbox = Object.create(Chat.prototype);
+  inbox.mget = () => undefined;
+  assert.equal(inbox._initialTopic(), "all");
+});
+
+test("the folder chat descriptor opens on # General (scoped_topic)", () => {
+  const src = require("node:fs").readFileSync(path.join(__dirname, "..", "src/drumee/builtins/window/skeleton/toolkit/index.js"), "utf8");
+  const i = src.indexOf('sys_pn: "folder-chat"');
+  assert.ok(i > 0);
+  const block = src.slice(src.lastIndexOf("{", i), src.indexOf("};", i));
+  assert.match(block, /scoped_topic: "general"/);
+});

@@ -20,36 +20,32 @@ const rowsOf = (t) => walk(t).filter((n) => hasCls(n, "window__thread-menu__row"
 const text = (n) => walk(n).filter((k) => k.type === "Note").map((k) => k.content).join(" ");
 const TOPICS = [{ id: "t1", name: "Design", emoji: "😀", unread: 3 }, { id: "t2", name: "Budget", emoji: "💰", unread: 0 }];
 
-test("Topics section: label + '+', All / # General / topics in order", () => {
-  const t = threadMenu(ui, { topics: TOPICS, topicId: "all", canCreateTopic: 1 });
+test("Topics section: label + '+', # General then topics — no All row", () => {
+  const t = threadMenu(ui, { topics: TOPICS, topicId: "general", canCreateTopic: 1 });
   const first = t.kids[0];
   assert.ok(walk(first).some((n) => n.type === "Note" && n.content === en.TOPICS), "labelled Topics");
   assert.ok(!walk(t).some((n) => n.content === en.THIS_FOLDER), "no This Folder label");
-  const plus = walk(first).find((n) => n.service === "topic-new");
-  assert.ok(plus, "+ present");
+  assert.ok(walk(first).find((n) => n.service === "topic-new"), "+ present");
   const rows = rowsOf(first);
-  assert.deepEqual(rows.map((r) => r.service), ["topic-menu-all", "thread-menu-general", "topic-menu-topic", "topic-menu-topic"]);
-  assert.equal(text(rows[0]), en.ALL);
-  assert.equal(text(rows[1]), `# ${en.GENERAL}`);
-  assert.match(text(rows[2]), /😀/);
-  assert.match(text(rows[2]), /Design/);
-  assert.equal(rows[2].topic_id, "t1");
-  assert.equal(rows[2].topic_name, "Design");
-  assert.ok(walk(rows[2]).some((n) => hasCls(n, "window__thread-menu__row-emoji") && n.content === "😀"));
+  assert.deepEqual(rows.map((r) => r.service), ["thread-menu-general", "topic-menu-topic", "topic-menu-topic"]);
+  assert.ok(!walk(t).some((n) => n.service === "topic-menu-all"));
+  assert.ok(!walk(first).some((n) => n.type === "Note" && n.content === en.ALL));
+  assert.equal(text(rows[0]), `# ${en.GENERAL}`);
+  assert.equal(rows[0].topic_scope, "general");
+  assert.match(text(rows[1]), /😀/);
+  assert.equal(rows[1].topic_id, "t1");
+  assert.ok(walk(rows[1]).some((n) => hasCls(n, "window__thread-menu__row-emoji") && n.content === "😀"));
 });
 
-test("only the current scope is active; badges only on topics with unread", () => {
-  const all = rowsOf(threadMenu(ui, { topics: TOPICS, topicId: "all", canCreateTopic: 1 }).kids[0]);
-  assert.deepEqual(all.map((r) => /is-active/.test(r.className)), [true, false, false, false]);
-  const badge = (r) => walk(r).filter((n) => hasCls(n, "window__thread-menu__badge")).map((n) => n.content);
-  assert.deepEqual(all.map(badge), [[], [], ["3"], []]);
-  const t1 = rowsOf(threadMenu(ui, { topics: TOPICS, topicId: "t1" }).kids[0]);
-  assert.deepEqual(t1.map((r) => /is-active/.test(r.className)), [false, false, true, false]);
-  const gen = rowsOf(threadMenu(ui, { topics: TOPICS, topicId: "general" }).kids[0]);
-  assert.deepEqual(gen.map((r) => /is-active/.test(r.className)), [false, true, false, false]);
-  // Default (no topicId) = All.
+test("General active by default; a topic moves it; legacy all reads as General; badges only on topics", () => {
   const def = rowsOf(threadMenu(ui, { topics: TOPICS }).kids[0]);
-  assert.equal(/is-active/.test(def[0].className), true);
+  assert.deepEqual(def.map((r) => /is-active/.test(r.className)), [true, false, false]);
+  const badge = (r) => walk(r).filter((n) => hasCls(n, "window__thread-menu__badge")).map((n) => n.content);
+  assert.deepEqual(def.map(badge), [[], ["3"], []]);
+  const t1 = rowsOf(threadMenu(ui, { topics: TOPICS, topicId: "t1" }).kids[0]);
+  assert.deepEqual(t1.map((r) => /is-active/.test(r.className)), [false, true, false]);
+  const legacy = rowsOf(threadMenu(ui, { topics: TOPICS, topicId: "all" }).kids[0]);
+  assert.deepEqual(legacy.map((r) => /is-active/.test(r.className)), [true, false, false]);
 });
 
 test("a file scope leaves no Topics row active; no '+' without chat access", () => {
