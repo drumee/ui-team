@@ -93,3 +93,46 @@ test("setScopedTopic restarts the list once per change", async () => {
   assert.equal(w.scopedTopicId, "all");
   assert.equal(w.restarted.length, 2);
 });
+
+// Review: the desk team chat is one conversation for the whole workspace
+// (scopedNid ""), so a topic's list must still name the folder the topic
+// belongs to — the post folder — or the server answers [].
+test("workspace team chat: a topic list names the post folder", () => {
+  const w = chat("t1");
+  w.getScopedNid = () => "";
+  w.getPostNid = () => "fA";
+  const api = w.getCurrentApi();
+  assert.equal(api.topic_id, "t1");
+  assert.equal(api.nid, "fA");
+  const all = chat("all");
+  all.getScopedNid = () => "";
+  all.getPostNid = () => "fA";
+  assert.equal(all.getCurrentApi().nid, undefined, "All / General keep the whole workspace chat");
+});
+
+// Review: reads go through channel.acknowledge (read on interaction); in a
+// topic it must carry topic_id and must not announce the workspace chat read.
+test("reading inside a topic acknowledges with topic_id and does not clear the workspace pill", () => {
+  const mk = (topic) => {
+    const w = chat(topic);
+    w.posted = [];
+    w.announced = 0;
+    Object.assign(w, {
+      el: { dataset: {} },
+      __list: { children: { last: () => ({ model: { toJSON: () => ({ message_id: "m9" }) } }) } },
+      postService: (p) => w.posted.push(p),
+      _clearUnreadRows() {},
+      _announceChatRead() { w.announced++; },
+    });
+    return w;
+  };
+  const t = mk("t1");
+  t.markConversationRead();
+  assert.equal(t.posted[0].topic_id, "t1");
+  assert.equal(t.posted[0].message_id, "m9");
+  assert.equal(t.announced, 0);
+  const a = mk("all");
+  a.markConversationRead();
+  assert.equal(a.posted[0].topic_id, undefined);
+  assert.equal(a.announced, 1);
+});

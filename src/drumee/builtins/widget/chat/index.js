@@ -527,11 +527,16 @@ class __widget_chat extends LetcBox {
       postData.message_id = data.message_id;
       if (area === _a.ticket) postData.ticket_id = data.ticket_id;
     }
+    // Inside a folder chat topic: the server moves only that topic's cursor,
+    // so the workspace chat is not read — do not announce it (rail pill).
+    const topic = this.scopedTopicId || "all";
+    const inTopic = !isPrivate && topic !== "all" && topic !== "general";
+    if (inTopic) postData.topic_id = topic;
     this._lastReadAt = now;
     this._readDebt = false;
     this.postService(postData);
     this._clearUnreadRows();
-    this._announceChatRead();
+    if (!inTopic) this._announceChatRead();
   }
 
   /**
@@ -2270,6 +2275,12 @@ class __widget_chat extends LetcBox {
     // topic; "all" (default) = the whole folder chat, as before topics.
     const topic = this.scopedTopicId || "all";
     if (topic !== "all") api.topic_id = topic;
+    // A topic belongs to one folder; the workspace team chat reads the whole
+    // hub (no scopedNid), so name the folder the topic lives in — the post
+    // folder — or the server cannot check the topic and answers [].
+    if (topic !== "all" && topic !== "general" && !api.nid && this.getPostNid()) {
+      api.nid = this.getPostNid();
+    }
     return api;
   }
 
