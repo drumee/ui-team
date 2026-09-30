@@ -5199,13 +5199,43 @@ html[data-theme="dark"] {
     gap: 4px;
   }
 
+  // Section labels — "Topics", "File Threads" (Figma 867:185782: 14/1.2,
+  // Primary/100).
   .window__thread-menu__section-label {
     @include drumee.typo(
-      $size: 12px,
-      $line: 1.4,
+      $size: 14px,
+      $line: 1.2,
       $weight: 400,
-      $color: var(--normal-fg-50, #65656c)
+      $color: var(--normal-fg-10, #0b0a21)
     );
+  }
+
+  // "Topics" + its "+" (New Topic dialog).
+  .window__thread-menu__section-head {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .window__thread-menu__add {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    fill: var(--normal-fg-10, #0b0a21);
+    color: var(--normal-fg-10, #0b0a21);
+
+    &:hover {
+      background-color: var(--hover-bg-40);
+    }
+  }
+
+  // A topic's emoji, before its name.
+  .window__thread-menu__row-emoji {
+    flex: 0 0 auto;
+    font-size: 14px;
+    line-height: 1;
   }
 
   .window__thread-menu__divider {
