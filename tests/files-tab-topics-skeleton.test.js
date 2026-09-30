@@ -60,7 +60,7 @@ test("strip: the scope marks its tab; the create button is the primary style wit
   assert.deepEqual(p.page.kids.map((k) => k.dataset.active), ["0", "1", "0"]);
   assert.match(p.create.className, /window-button__label-button primary/);
   assert.ok(walk(p.create).some((n) => n.ico === "ph-plus"));
-  assert.equal(text(p.create), en.CREATE_TOPIC);
+  assert.equal(text(p.create), en.TOPIC);
   assert.equal(parts(topicStrip(ui, { topics: MANY })).create, undefined, "no create without chat access");
   // A legacy "all" scope reads as #General.
   assert.equal(parts(topicStrip(ui, { topics: MANY, topicId: "all" })).page.kids[0].dataset.active, "1");

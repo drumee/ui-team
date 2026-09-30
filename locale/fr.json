@@ -3368,5 +3368,6 @@
   "TOPIC_EXISTS": "A topic with this name already exists",
   "CREATE_TOPIC": "Create topic",
   "FILE_THREADS_BAR": "File threads",
-  "NO_FILE_THREADS": "No file threads yet"
+  "NO_FILE_THREADS": "No file threads yet",
+  "TOPIC": "Topic"
 }

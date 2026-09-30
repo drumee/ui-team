@@ -103,3 +103,15 @@ test("carousel: tabs in a page shrink and ellipsize, never clip", () => {
 test("carousel: the #General tab never shrinks", () => {
   assert.match(rule(".window-folder .window__topic-page .window__topic-tab--general"), /flex-shrink: 0/);
 });
+
+// The picked tab shows its whole name; the other tabs of the page give way.
+test("carousel: the active tab keeps its full name, the others shrink", () => {
+  const a = rule('.window-folder .window__topic-page .window__topic-tab[data-active="1"]');
+  assert.match(a, /flex-shrink: 0/);
+  const n = rule('.window-folder .window__topic-page .window__topic-tab[data-active="1"] .window__topic-tab-name');
+  assert.match(n, /max-width: none/);
+  assert.match(n, /overflow: visible/);
+  const inner = rule('.window-folder .window__topic-page .window__topic-tab[data-active="1"] .window__topic-tab-name .note-content');
+  assert.match(inner, /overflow: visible/);
+  assert.match(inner, /text-overflow: clip/);
+});

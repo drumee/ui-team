@@ -84,7 +84,7 @@ function topicStrip(ui, opt = {}) {
         kidsOpt: { active: 0 },
         kids: [
           Skeletons.Image.Svg({ className: `${pfx}-create-ico`, ico: "ph-plus" }),
-          Skeletons.Note({ className: `${pfx}-create-label`, content: LOCALE.CREATE_TOPIC || "Create topic" }),
+          Skeletons.Note({ className: `${pfx}-create-label`, content: LOCALE.TOPIC || "Topic" }),
         ],
       }),
     );

@@ -70,6 +70,22 @@
     white-space: nowrap;
   }
 
+  // The picked tab shows its whole name; the other tabs of the page shrink
+  // and ellipsize around it.
+  .window__topic-page .window__topic-tab[data-active="1"] {
+    flex-shrink: 0;
+  }
+
+  .window__topic-page .window__topic-tab[data-active="1"] .window__topic-tab-name {
+    max-width: none;
+    overflow: visible;
+  }
+
+  .window__topic-page .window__topic-tab[data-active="1"] .window__topic-tab-name .note-content {
+    overflow: visible;
+    text-overflow: clip;
+  }
+
   // ui-core renders a Note as .note > .note-content: ellipsize the inner one.
   .window__topic-page .window__topic-tab-name .note-content {
     overflow: hidden;
