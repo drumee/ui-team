@@ -76,7 +76,10 @@ module.exports = function (ui, contacts) {
     return Skeletons.Box.X({
       className: `${fig}__contact-item`,
       dataset: {
-        contactKey: key,
+        // Kebab key: the framework writes `data-${k}` verbatim, and
+        // `_updateSelectionDom` reads `data-contact-key` (a camelCase key
+        // lands as `data-contactkey`, so a click never highlighted the row).
+        "contact-key": key,
         selected: selectedKey === key ? 1 : 0,
         status,
       },
