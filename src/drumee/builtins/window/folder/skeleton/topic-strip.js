@@ -15,7 +15,9 @@
  *
  * `group` overrides the class family (the Inbox builds the window__ strip).
  *
- * @param {{ topics?: Array, topicId?: string, canCreateTopic?: any, page?: number, slide?: string, group?: string }} opt
+ * `pageSize` overrides PAGE_SIZE (the Inbox pages by 4).
+ *
+ * @param {{ topics?: Array, topicId?: string, canCreateTopic?: any, page?: number, pageSize?: number, slide?: string, group?: string }} opt
  * @returns {Array} kids of the strip
  */
 const PAGE_SIZE = 3;
@@ -25,11 +27,11 @@ function entries(topics) {
   return [{ general: true }, ...(Array.isArray(topics) ? topics : [])];
 }
 
-/** The page that shows `topicId` ("general" / a topic id); 0 when absent. */
-function pageOf(topics, topicId) {
+/** The page (of `size` tabs) that shows `topicId` ("general" / a topic id); 0 when absent. */
+function pageOf(topics, topicId, size = PAGE_SIZE) {
   const id = topicId && topicId !== "all" ? `${topicId}` : "general";
   const i = entries(topics).findIndex((e) => (e.general ? id === "general" : `${e.id}` === id));
-  return i < 0 ? 0 : Math.floor(i / PAGE_SIZE);
+  return i < 0 ? 0 : Math.floor(i / (Number(size) || PAGE_SIZE));
 }
 
 function topicStrip(ui, opt = {}) {
@@ -38,7 +40,8 @@ function topicStrip(ui, opt = {}) {
   const pfx = `${grp}__topic`;
   const topicId = opt.topicId && opt.topicId !== "all" ? `${opt.topicId}` : "general";
   const all = entries(opt.topics);
-  const pages = Math.max(1, Math.ceil(all.length / PAGE_SIZE));
+  const size = Math.max(1, Number(opt.pageSize) || PAGE_SIZE);
+  const pages = Math.max(1, Math.ceil(all.length / size));
   const page = Math.min(Math.max(0, Number(opt.page) || 0), pages - 1);
 
   const tab = (attrs, kids, active) =>
@@ -52,7 +55,7 @@ function topicStrip(ui, opt = {}) {
     });
   const label = (content) => Skeletons.Note({ className: `${pfx}-tab-name`, content });
 
-  const tabs = all.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE).map((e) =>
+  const tabs = all.slice(page * size, page * size + size).map((e) =>
     e.general
       ? // Same service as the rail's # General row (topic_scope marks the pick).
         tab(

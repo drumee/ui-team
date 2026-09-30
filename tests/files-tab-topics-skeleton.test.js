@@ -114,3 +114,15 @@ test("group option: an Inbox (chat-p2p) host builds the window__ classes, handle
   assert.match(b, /window__thread-menu__badge/);
   assert.doesNotMatch(b, /chat-p2p__ft/);
 });
+
+test("pageSize: a host may page by another size (the Inbox: 4); pageOf follows it", () => {
+  const p0 = parts(topicStrip(ui, { topics: MANY, pageSize: 4 }));
+  assert.deepEqual(tabsOf(p0.page), ["thread-menu-general", "t1", "t2", "t3"]);
+  const p1 = parts(topicStrip(ui, { topics: MANY, pageSize: 4, page: 1 }));
+  assert.deepEqual(tabsOf(p1.page), ["t4", "t5"]);
+  assert.equal(p1.next.dataset.disabled, "1");
+  assert.equal(topicStrip.pageOf(MANY, "t3", 4), 0);
+  assert.equal(topicStrip.pageOf(MANY, "t4", 4), 1);
+  // The default stays 3.
+  assert.equal(topicStrip.pageOf(MANY, "t3"), 1);
+});

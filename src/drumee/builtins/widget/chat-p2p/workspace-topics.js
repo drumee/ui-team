@@ -19,6 +19,8 @@ const fileThreadsBar = require("../../window/folder/skeleton/file-threads-bar");
 const { withMockTopics } = require("../../window/folder/topics-mock");
 
 const GROUP = "window";
+// Tabs per carousel page here (the folder's Files tab keeps 3).
+const PAGE_SIZE = 4;
 
 function svc(name) {
   return (typeof SERVICE !== "undefined" && SERVICE.channel && SERVICE.channel[name]) || `channel.${name}`;
@@ -105,7 +107,7 @@ function paint(win, { bar: barOnly = false } = {}) {
       s.slide = null;
       if (!barOnly && alive(strip)) {
         strip.feed(
-          topicStrip(win, { group: GROUP, topics: s.topics, topicId: s.topicId, canCreateTopic: 1, page: s.page, slide }),
+          topicStrip(win, { group: GROUP, topics: s.topics, topicId: s.topicId, canCreateTopic: 1, page: s.page, pageSize: PAGE_SIZE, slide }),
         );
       }
       if (alive(bar)) {
@@ -134,7 +136,7 @@ function refresh(win) {
       if (rows) {
         // ⚠️ UI-test mock topics (window/folder/topics-mock) — remove before release.
         s.topics = withMockTopics(rows);
-        s.page = topicStrip.pageOf(s.topics, s.topicId);
+        s.page = topicStrip.pageOf(s.topics, s.topicId, PAGE_SIZE);
       }
       // Left for another conversation meanwhile: its own sync paints it.
       if (pane(win) !== p) return undefined;
@@ -168,7 +170,7 @@ function scopeTopic(win, topicId) {
   s.topicId = next;
   // Opening a topic reads it (server-side): clear its cached badge.
   if (next !== "general") s.topics = s.topics.map((t) => (`${t.id}` === next ? { ...t, unread: 0 } : t));
-  const page = topicStrip.pageOf(s.topics, next);
+  const page = topicStrip.pageOf(s.topics, next, PAGE_SIZE);
   if (page !== s.page) s.slide = page > s.page ? "next" : "prev";
   s.page = page;
   s.ftOpen = false;
@@ -181,7 +183,7 @@ function stripPage(win, delta) {
   const p = pane(win);
   if (!p) return Promise.resolve();
   const s = state(p);
-  const last = Math.max(0, Math.ceil((1 + s.topics.length) / topicStrip.PAGE_SIZE) - 1);
+  const last = Math.max(0, Math.ceil((1 + s.topics.length) / PAGE_SIZE) - 1);
   const was = s.page || 0;
   s.page = Math.min(Math.max(0, was + delta), last);
   if (s.page !== was) s.slide = s.page > was ? "next" : "prev";

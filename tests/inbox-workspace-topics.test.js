@@ -305,3 +305,14 @@ test("a newly opened workspace paints # General (bar closed) at once, before its
   await pending;
   assert.match(classes(lastFeed(win, "topic-strip")), /window__topic-page/);
 });
+
+test("the Inbox pages the strip by 4", async () => {
+  const win = fakeInbox({ topics: [...TOPICS, { id: "t5", name: "E" }] });
+  await WT.sync(win);
+  const ids = () => stripPage_(lastFeed(win, "topic-strip")).kids.map((k) => k.topic_id || k.service);
+  assert.deepEqual(ids(), ["thread-menu-general", "t1", "t2", "t3"]);
+  await WT.stripPage(win, +1);
+  assert.deepEqual(ids(), ["t4", "t5"]);
+  await WT.scopeTopic(win, "t3");
+  assert.deepEqual(ids(), ["thread-menu-general", "t1", "t2", "t3"]);
+});
