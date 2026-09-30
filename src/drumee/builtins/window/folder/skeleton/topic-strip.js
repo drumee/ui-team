@@ -10,7 +10,10 @@
  * #General).
  *
  * @param {Object} ui folder window
- * @param {{ topics?: Array, topicId?: string, canCreateTopic?: any, page?: number }} opt
+ * `slide` ("next" | "prev") stamps the page so the skin slides it in from
+ * that side (a page change only; topics.js decides).
+ *
+ * @param {{ topics?: Array, topicId?: string, canCreateTopic?: any, page?: number, slide?: string }} opt
  * @returns {Array} kids of the strip
  */
 const PAGE_SIZE = 3;
@@ -72,7 +75,11 @@ function topicStrip(ui, opt = {}) {
 
   const kids = [
     arrow("topic-strip-prev", "caret-left", page <= 0),
-    Skeletons.Box.X({ className: `${pfx}-page`, kids: tabs }),
+    Skeletons.Box.X({
+      className: `${pfx}-page`,
+      dataset: { slide: opt.slide === "next" || opt.slide === "prev" ? opt.slide : "none" },
+      kids: tabs,
+    }),
     arrow("topic-strip-next", "caret-right", page >= pages - 1),
   ];
   if (opt.canCreateTopic) {

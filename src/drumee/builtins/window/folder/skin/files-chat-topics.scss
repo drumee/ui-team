@@ -55,7 +55,23 @@
   .window__topic-page .window__topic-tab {
     flex: 0 1 auto;
     min-width: 0;
-    padding: 8px 12px;
+    padding: 4px 12px;
+  }
+
+  // A page change slides the new page in from the side it came from
+  // (data-slide, stamped once by window/folder/topics.js).
+  .window__topic-page[data-slide="next"] {
+    animation: topic-page-next 0.22s ease-out both;
+  }
+
+  .window__topic-page[data-slide="prev"] {
+    animation: topic-page-prev 0.22s ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .window__topic-page {
+      animation: none !important;
+    }
   }
 
   // #General is short and always there: it keeps its width, topics give way.
@@ -114,25 +130,30 @@
     pointer-events: none;
   }
 
+  // Tabs are chips: pill-shaped, lightly filled; the active one is tinted.
   .window__topic-tab {
     flex: 0 0 auto;
-    height: 35.04px;
+    height: 28px;
     box-sizing: border-box;
     align-items: center;
     gap: 6px;
-    padding: 8px 18px;
+    padding: 4px 12px;
+    border: 0;
+    border-radius: 16px;
+    background-color: rgba(0, 0, 0, 0.05);
     cursor: pointer;
     color: #65656c;
-    border-bottom: 3px solid transparent;
+    transition: background-color 0.15s ease, color 0.15s ease;
 
     &:hover {
       color: var(--normal-fg-10, #0b0a21);
+      background-color: rgba(0, 0, 0, 0.08);
     }
   }
 
   .window__topic-tab[data-active="1"] {
     color: #5950ff;
-    border-bottom: 3px solid #5950ff;
+    background-color: rgba(89, 80, 255, 0.1);
   }
 
   // "Create topic" at the far end, styled like the folder toolbar's "+ New"
@@ -291,5 +312,27 @@
   .window__ft-empty {
     padding: 8px;
     @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: #65656c);
+  }
+}
+
+@keyframes topic-page-next {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes topic-page-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

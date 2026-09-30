@@ -24,9 +24,11 @@ test("strip: one scrolling row; active tab brand + 3px underline; long names ell
   assert.match(s, /display: flex/);
   assert.match(s, /gap: 4px/);
   assert.match(s, /flex-wrap: nowrap/);
+  // Chips (no underline): the active one is brand-tinted.
   const a = rule('.window-folder .window__topic-tab[data-active="1"]');
   assert.match(a, /color: #5950ff/);
-  assert.match(a, /border-bottom: 3px solid #5950ff/);
+  assert.match(a, /background-color: rgba\(89, 80, 255, 0\.1\)/);
+  assert.doesNotMatch(a, /border-bottom/);
   const n = rule(".window-folder .window__topic-tab-name");
   assert.match(n, /max-width: 160px/);
   assert.match(n, /text-overflow: ellipsis/);
@@ -87,7 +89,7 @@ test("carousel: tabs in a page shrink and ellipsize, never clip", () => {
   const t = rule(".window-folder .window__topic-page .window__topic-tab");
   assert.match(t, /flex: 0 1 auto/);
   assert.match(t, /min-width: 0/);
-  assert.match(t, /padding: 8px 12px/);
+  assert.match(t, /padding: 4px 12px/); // the chip's padding
   const n = rule(".window-folder .window__topic-page .window__topic-tab-name");
   assert.match(n, /min-width: 0/);
   assert.match(n, /text-overflow: ellipsis/);
@@ -114,4 +116,24 @@ test("carousel: the active tab keeps its full name, the others shrink", () => {
   const inner = rule('.window-folder .window__topic-page .window__topic-tab[data-active="1"] .window__topic-tab-name .note-content');
   assert.match(inner, /overflow: visible/);
   assert.match(inner, /text-overflow: clip/);
+});
+
+// Tabs are chips: pill-shaped, lightly filled, no underline.
+test("tabs are chips", () => {
+  const c = rule(".window-folder .window__topic-tab");
+  assert.match(c, /border-radius: 16px/);
+  assert.match(c, /height: 28px/);
+  assert.match(c, /padding: 4px 12px/);
+  assert.match(c, /background-color: rgba\(0, 0, 0, 0\.05\)/);
+  assert.match(c, /border: 0/);
+  assert.match(rule(".window-folder .window__topic-page .window__topic-tab"), /padding: 4px 12px/);
+});
+
+// Changing page slides the new one in from the side it came from.
+test("carousel: the new page slides in (next from the right, back from the left); none under reduced motion", () => {
+  assert.match(rule(".window-folder .window__topic-page[data-slide=next]"), /animation: topic-page-next /);
+  assert.match(rule(".window-folder .window__topic-page[data-slide=prev]"), /animation: topic-page-prev /);
+  assert.match(css, /@keyframes topic-page-next \{ from \{ opacity: 0; transform: translateX\(24px\); \}/);
+  assert.match(css, /@keyframes topic-page-prev \{ from \{ opacity: 0; transform: translateX\(-24px\); \}/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[^@]*\.window__topic-page \{ animation: none/);
 });

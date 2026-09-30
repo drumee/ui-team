@@ -97,8 +97,12 @@ function scopeChatToTopic(win, topicId) {
   const wide = win.activeTab === _a.chat && !(win._isCompactChat && win._isCompactChat());
   win._updateChatHeader(null, "", wide);
   win._setThreadRailActive("");
-  // The strip's carousel shows the page with the picked tab.
-  win._topicPage = require("./skeleton/topic-strip").pageOf(win._topics, next);
+  // The strip's carousel shows the page with the picked tab (sliding in
+  // from its side when that is another page).
+  const page = require("./skeleton/topic-strip").pageOf(win._topics, next);
+  const was = win._topicPage || 0;
+  if (page !== was) win._topicSlide = page > was ? "next" : "prev";
+  win._topicPage = page;
   paintStrip(win);
   return win.ensurePart("folder-chat").then((chat) => {
     if (chat && typeof chat.setScopedTopic === "function") chat.setScopedTopic(next);
@@ -118,12 +122,16 @@ function paintStrip(win) {
       return;
     }
     const { topics, canCreateTopic } = menuOpts(win);
+    // The slide plays once, for the page change that asked for it.
+    const slide = win._topicSlide || "none";
+    win._topicSlide = null;
     part.feed(
       require("./skeleton/topic-strip")(win, {
         topics,
         topicId: current(win),
         canCreateTopic,
         page: win._topicPage || 0,
+        slide,
       }),
     );
   });
@@ -134,7 +142,9 @@ function stripPage(win, delta) {
   const { PAGE_SIZE } = require("./skeleton/topic-strip");
   const count = 1 + (Array.isArray(win._topics) ? win._topics.length : 0);
   const last = Math.max(0, Math.ceil(count / PAGE_SIZE) - 1);
-  win._topicPage = Math.min(Math.max(0, (win._topicPage || 0) + delta), last);
+  const was = win._topicPage || 0;
+  win._topicPage = Math.min(Math.max(0, was + delta), last);
+  if (win._topicPage !== was) win._topicSlide = win._topicPage > was ? "next" : "prev";
   return paintStrip(win);
 }
 

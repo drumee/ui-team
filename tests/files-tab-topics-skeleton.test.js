@@ -91,3 +91,9 @@ test("bar: closed = the bar only; open = the thread rows with real unread; activ
   const empty = fileThreadsBar(ui, { items: [], open: true });
   assert.ok(walk(empty).some((n) => n.content === en.NO_FILE_THREADS));
 });
+
+test("page slide stamp: none by default, next / prev when asked", () => {
+  assert.equal(parts(topicStrip(ui, { topics: MANY })).page.dataset.slide, "none");
+  assert.equal(parts(topicStrip(ui, { topics: MANY, page: 1, slide: "next" })).page.dataset.slide, "next");
+  assert.equal(parts(topicStrip(ui, { topics: MANY, slide: "prev" })).page.dataset.slide, "prev");
+});

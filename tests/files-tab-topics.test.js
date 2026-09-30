@@ -164,3 +164,25 @@ test("carousel: next / back move the page; picking a topic shows its page; folde
   await T.refreshStrip(w);
   assert.deepEqual(ids(), ["thread-menu-general", "t1", "t2"]);
 });
+
+// The slide plays once per page change: the arrows and a jump to another
+// page stamp a direction; any other repaint does not animate.
+test("carousel slide: next / back and a page jump animate once; other repaints do not", async () => {
+  const w = fakeWindow();
+  w.fetchService = async () => ["a", "b", "c", "d", "e"].map((x, i) => ({ id: `t${i + 1}`, name: x, emoji: "😀" }));
+  await T.refreshStrip(w);
+  const slide = () => pageOfStrip(w.parts["topic-strip"].fed.at(-1)).dataset.slide;
+  assert.equal(slide(), "none");
+  await T.stripPage(w, +1);
+  assert.equal(slide(), "next");
+  await T.paintStrip(w);
+  assert.equal(slide(), "none", "a plain repaint does not replay the slide");
+  await T.stripPage(w, -1);
+  assert.equal(slide(), "prev");
+  await T.stripPage(w, -1); // already first: no page change
+  assert.equal(slide(), "none");
+  await T.scopeChatToTopic(w, "t4"); // on page 2
+  assert.equal(slide(), "next");
+  await T.scopeChatToTopic(w, "t5"); // same page
+  assert.equal(slide(), "none");
+});
