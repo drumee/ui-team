@@ -137,3 +137,23 @@ test("no strip / bar content for a chat-gated viewer or a token window", async (
     assert.deepEqual(w.parts["ft-bar"].fed.at(-1), []);
   }
 });
+
+// Self-review: the Chat tab maps All → # General on entry because its rail
+// has no All row. That was the tab's choice, not the user's: coming back to
+// Files restores All (a topic or General the user picked is kept).
+test("back on the Files tab, an automatic All → General is undone; a user pick is kept", async () => {
+  const w = fakeWindow({ tab: "chat" });
+  await T.onChatTabEnter(w);
+  assert.equal(w.chat.scopedTopicId, "general");
+  w.activeTab = "files";
+  await T.onFilesTabEnter(w);
+  assert.equal(w.chat.scopedTopicId, "all");
+  assert.deepEqual(active(w.parts["topic-strip"].fed.at(-1)), ["topic-tab-all"]);
+  // The user picked General on the Chat tab: kept.
+  const u = fakeWindow({ tab: "chat" });
+  await T.onChatTabEnter(u);
+  await T.scopeChatToTopic(u, "general");
+  u.activeTab = "files";
+  await T.onFilesTabEnter(u);
+  assert.equal(u.chat.scopedTopicId, "general");
+});

@@ -5290,6 +5290,8 @@ class __window_folder extends mfsInteract {
   _exitChatTabLayout() {
     this._closeFileThreadPanel();
     this._updateChatHeader(null, "", false);
+    // The Files strip has All: undo the Chat tab's automatic All → General.
+    Topics.onFilesTabEnter(this);
   }
 
   // Tell the team chat which folder we moved into.

@@ -90,6 +90,8 @@ function headerTitle(win) {
 /** Scope the folder chat to "all" | "general" (null) | a topic id. */
 function scopeChatToTopic(win, topicId) {
   const next = topicId ? `${topicId}` : "general";
+  // Any pick replaces an automatic All → General (onChatTabEnter).
+  win._topicAutoGeneral = false;
   // A file thread in place is its own conversation: leave it first.
   if (win._scopedFileNid) win.scopeChatToFile(null);
   win._topicId = next;
@@ -131,7 +133,16 @@ function refreshStrip(win) {
 /** Entering the wide Chat tab: its rail has no All row — show # General. */
 function onChatTabEnter(win) {
   if (current(win) !== "all") return Promise.resolve();
-  return scopeChatToTopic(win, "general");
+  return scopeChatToTopic(win, "general").then(() => {
+    // The tab's choice, not the user's: undone back on Files.
+    win._topicAutoGeneral = true;
+  });
+}
+
+/** Back on the Files tab: undo an automatic All → General; else repaint. */
+function onFilesTabEnter(win) {
+  if (win._topicAutoGeneral) return scopeChatToTopic(win, "all");
+  return paintStrip(win);
 }
 
 function openTopicDialog(win) {
@@ -207,4 +218,5 @@ module.exports = {
   paintStrip,
   refreshStrip,
   onChatTabEnter,
+  onFilesTabEnter,
 };
