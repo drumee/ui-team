@@ -137,3 +137,7 @@ test("carousel: the new page slides in (next from the right, back from the left)
   assert.match(css, /@keyframes topic-page-prev \{ from \{ opacity: 0; transform: translateX\(-24px\); \}/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[^@]*\.window__topic-page \{ animation: none/);
 });
+
+test("strip padding is 6px 12px", () => {
+  assert.match(rule(".window-folder .window__topic-strip"), /padding: 6px 12px;/);
+});
