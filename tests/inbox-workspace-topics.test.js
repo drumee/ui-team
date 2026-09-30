@@ -305,28 +305,3 @@ test("a newly opened workspace paints # General (bar closed) at once, before its
   await pending;
   assert.match(classes(lastFeed(win, "topic-strip")), /window__topic-page/);
 });
-
-// ── Carousel fills its width (window/folder/topic-fit) ──
-test("carousel: the strip is fitted to its width; next moves by what fitted", async () => {
-  const win = fakeInbox({ topics: [...TOPICS, { id: "t5", name: "E" }] });
-  const widths = [80, 50, 50, 50, 50, 50];
-  const tabs = widths.map((wd) => ({ dataset: {}, offsetWidth: wd }));
-  const page = { className: "window__topic-page", dataset: {}, children: tabs, clientWidth: 250 };
-  const el = { dataset: {}, contains: () => false, querySelector: () => page, querySelectorAll: () => [{ dataset: {} }, { dataset: {} }] };
-  win.parts["topic-strip"] = { pn: "topic-strip", el, fed: [], feed(k) { this.fed.push(k); } };
-  global.requestAnimationFrame = (f) => f();
-  try {
-    await WT.sync(win);
-    const s = win._panes.workspace.topicState;
-    assert.equal(s.count, 4, "4 fit, not 3");
-    assert.deepEqual(tabs.map((t) => t.dataset.fit), ["1", "1", "1", "1", "0", "0"]);
-    await WT.stripPage(win, +1);
-    assert.equal(stripPage_(lastFeed(win, "topic-strip")).dataset.slide, "next");
-    // The last page takes tabs back to stay full: t2 · t3 · t4 · t5.
-    assert.equal(s.start, 2);
-    await WT.stripPage(win, -1);
-    assert.equal(s.start, 0);
-  } finally {
-    delete global.requestAnimationFrame;
-  }
-});

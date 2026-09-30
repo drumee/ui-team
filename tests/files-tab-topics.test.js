@@ -53,11 +53,7 @@ function fakeWindow({ canChat = true, tab = "files", token = "", threads = [{ fi
   };
 }
 // The strip is a carousel: its tabs sit inside the __topic-page box.
-// Only the tabs on the page (the rest are data-fit="0", see ../topic-fit).
-const pageOfStrip = (kids) => {
-  const page = kids.find((k) => /__topic-page\b/.test(k.className || "")) || { kids: [] };
-  return { ...page, kids: page.kids.filter((k) => !k.dataset || k.dataset.fit !== "0") };
-};
+const pageOfStrip = (kids) => kids.find((k) => /__topic-page\b/.test(k.className || "")) || { kids: [] };
 const services = (kids) => pageOfStrip(kids).kids.map((k) => k.service).concat(kids.filter((k) => k.service === "topic-new").map((k) => k.service));
 const active = (kids) => pageOfStrip(kids).kids.filter((k) => k.dataset && k.dataset.active === "1").map((k) => k.service + (k.topic_id ? `:${k.topic_id}` : ""));
 
@@ -185,35 +181,8 @@ test("carousel slide: next / back and a page jump animate once; other repaints d
   assert.equal(slide(), "prev");
   await T.stripPage(w, -1); // already first: no page change
   assert.equal(slide(), "none");
-  await T.scopeChatToTopic(w, "t4"); // off the page: it becomes the last tab
+  await T.scopeChatToTopic(w, "t4"); // on page 2
   assert.equal(slide(), "next");
-  await T.scopeChatToTopic(w, "t3"); // on the page (t2 · t3 · t4)
+  await T.scopeChatToTopic(w, "t5"); // same page
   assert.equal(slide(), "none");
-});
-
-// The page is as full as the width allows (../topic-fit): a measured page of
-// 4 makes "next" start at the 5th tab.
-test("carousel: next moves by what fitted on screen, not a fixed 3", async () => {
-  const w = fakeWindow();
-  w.fetchService = async () => ["a", "b", "c", "d", "e"].map((x, i) => ({ id: `t${i + 1}`, name: x, emoji: "😀" }));
-  const widths = [80, 50, 50, 50, 50, 50];
-  const tabs = widths.map((wd) => ({ dataset: {}, offsetWidth: wd }));
-  const page = { className: "window__topic-page", dataset: {}, children: tabs, clientWidth: 250 };
-  const el = { dataset: {}, querySelector: () => page, querySelectorAll: () => [{ dataset: {} }, { dataset: {} }] };
-  w.parts["topic-strip"] = { pn: "topic-strip", el, fed: [], feed(k) { this.fed.push(k); } };
-  global.requestAnimationFrame = (f) => f();
-  try {
-    await T.refreshStrip(w);
-    // 80 + 4 + 50 + 4 + 50 + 4 + 50 = 242 ≤ 250 → 4 on the page.
-    assert.equal(w._topicCount, 4);
-    await T.stripPage(w, +1);
-    // Fed from the 5th tab…
-    const fed = w.parts["topic-strip"].fed.at(-1);
-    assert.deepEqual(pageOfStrip(fed).kids.map((k) => k.topic_id || k.service), ["t4", "t5"]);
-    // …then, the last page, it takes tabs back to stay full: t2 · t3 · t4 · t5.
-    assert.equal(w._topicStart, 2);
-    assert.deepEqual(tabs.map((t) => t.dataset.fit), ["0", "0", "1", "1", "1", "1"]);
-  } finally {
-    delete global.requestAnimationFrame;
-  }
 });

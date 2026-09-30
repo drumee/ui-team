@@ -14,7 +14,7 @@
     align-items: center;
     gap: 4px;
     padding: 6px 12px;
-    // A carousel (as many tabs as fit, ../topic-fit), not a scroller.
+    // A carousel (topic-strip.js pages 3 tabs), not a scroller.
     overflow: hidden;
     font-family: var(--font-main);
   }
@@ -36,17 +36,6 @@
     flex: 0 1 auto;
     min-width: 0;
     padding: 4px 12px;
-  }
-
-  // The page holds every tab; ../topic-fit shows as many as fit from its
-  // start and hides the rest. While it measures, no tab shrinks, so it reads
-  // natural widths.
-  .window__topic-page .window__topic-tab[data-fit="0"] {
-    display: none;
-  }
-
-  .window__topic-page[data-measuring="1"] .window__topic-tab {
-    flex-shrink: 0;
   }
 
   // A page change slides the new page in from the side it came from
