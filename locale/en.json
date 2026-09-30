@@ -3419,5 +3419,8 @@
   "CLEAR_SELECTION": "Clear selection",
   "CONTACT_NO_DRUMEE_ACCOUNT": "This contact doesn't have a Drumee account yet",
   "CONTACT_UNBLOCK_TO_REACH": "Unblock this contact to chat or call",
-  "SEND_AN_EMAIL": "Send an email"
+  "SEND_AN_EMAIL": "Send an email",
+  "CONTACT_EMAIL_ADDRESS": "Email address",
+  "PHONE_NUMBER": "Phone number",
+  "CONTACT_NOTE_PLACEHOLDER": "Note anything important for this person, such as their time zone, online hours or deadlines."
 }

@@ -3420,5 +3420,8 @@
   "CLEAR_SELECTION": "Effacer la sélection",
   "CONTACT_NO_DRUMEE_ACCOUNT": "Ce contact n'a pas encore de compte Drumee",
   "CONTACT_UNBLOCK_TO_REACH": "Débloquez ce contact pour discuter ou appeler",
-  "SEND_AN_EMAIL": "Envoyer un e-mail"
+  "SEND_AN_EMAIL": "Envoyer un e-mail",
+  "CONTACT_EMAIL_ADDRESS": "Adresse e-mail",
+  "PHONE_NUMBER": "Numéro de téléphone",
+  "CONTACT_NOTE_PLACEHOLDER": "Notez tout ce qui compte pour cette personne : fuseau horaire, heures de connexion, échéances…"
 }

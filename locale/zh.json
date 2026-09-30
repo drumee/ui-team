@@ -3188,5 +3188,8 @@
   "CLEAR_SELECTION": "清除选择",
   "CONTACT_NO_DRUMEE_ACCOUNT": "该联系人还没有 Drumee 账户",
   "CONTACT_UNBLOCK_TO_REACH": "解除屏蔽该联系人后才能聊天或通话",
-  "SEND_AN_EMAIL": "发送电子邮件"
+  "SEND_AN_EMAIL": "发送电子邮件",
+  "CONTACT_EMAIL_ADDRESS": "电子邮件地址",
+  "PHONE_NUMBER": "电话号码",
+  "CONTACT_NOTE_PLACEHOLDER": "记录关于此人的重要信息，例如时区、在线时间或截止日期。"
 }
