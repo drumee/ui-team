@@ -152,5 +152,9 @@ test("the folder chat descriptor opens on # General (scoped_topic)", () => {
   const i = src.indexOf('sys_pn: "folder-chat"');
   assert.ok(i > 0);
   const block = src.slice(src.lastIndexOf("{", i), src.indexOf("};", i));
-  assert.match(block, /scoped_topic: "general"/);
+  // Only the folder window has a Topics picker: shares, team and website
+  // windows (and the DMZ sharebox) reach this descriptor too and must keep
+  // the whole chat ("all"), or topic messages vanish with no way to them.
+  assert.match(block, /ui\.fig\.family === "window-folder"[^\n]*scoped_topic: "general"/);
+  assert.doesNotMatch(block, /^\s*scoped_topic: "general",$/m);
 });

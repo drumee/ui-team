@@ -881,8 +881,10 @@ export function chatPanel(ui) {
     // it, or a reply — never by being mounted (or autofocused) beside the
     // file grid.
     read_on_interaction: 1,
-    // Topics: the folder chat opens on # General (window/folder/topics).
-    scoped_topic: "general",
+    // Topics: the folder window's chat opens on # General (window/folder/
+    // topics). Only it has a Topics picker — shares, team and website windows
+    // and the DMZ sharebox build this descriptor too and keep the whole chat.
+    ...(ui.fig.family === "window-folder" ? { scoped_topic: "general" } : {}),
   };
 
   // Two scopes, and the difference is who is reading.
