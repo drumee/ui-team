@@ -297,3 +297,14 @@ test("Chat tab: columns are separate cards with a gap between them", () => {
   assert.match(root, /border-radius: 8px/);
   assert.doesNotMatch(ruleIn(folderCss, ".window-folder__split-body[data-view=chat][data-details=open] > .window__chat-details"), /border/);
 });
+
+// The date sits at the row's end, apart from the name / text.
+test("file and link rows: the date keeps its width at the end, 12px from the content", () => {
+  // One rule for both (file-date, link-date): the list's last selector.
+  const d = rule(".widget-chat-details__ui .widget-chat-details-link-date");
+  assert.match(d, /flex-shrink: 0/);
+  assert.match(d, /margin-left: 12px/);
+  assert.match(css, /\.widget-chat-details__ui \.widget-chat-details-file-date, \.widget-chat-details__ui \.widget-chat-details-link-date \{/);
+  // The name takes the room, so the date sits at the row's end.
+  assert.match(rule(".widget-chat-details__ui .widget-chat-details-file-name"), /flex: 1 1 auto/);
+});

@@ -510,6 +510,20 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    // The name takes the row's room, so the date sits at its end.
+    &-file-name {
+      flex: 1 1 auto;
+    }
+    // Files / Links: the row's date at its end, apart from the content.
+    &-file-date,
+    &-link-date {
+      flex-shrink: 0;
+      margin-left: 12px;
+      font-size: 11px;
+      line-height: 1.4;
+      white-space: nowrap;
+      color: var(--tertiary-grey-80, #65656c);
+    }
     &-link {
       align-items: center;
       gap: 8px;

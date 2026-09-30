@@ -367,6 +367,7 @@ function fileRow(ui, row) {
         kids: [Skeletons.Image.Svg({ ico: chipGlyph({ extension: ext }) })],
       }),
       Skeletons.Note({ className: `${pfx}-file-name`, content: row.filename || "" }),
+      Skeletons.Note({ className: `${pfx}-file-date`, content: M.rowDate(row.ctime) }),
     ],
   });
 }
@@ -392,6 +393,7 @@ function linkRow(ui, row) {
           Skeletons.Note({ className: `${pfx}-link-url`, content: url }),
         ],
       }),
+      Skeletons.Note({ className: `${pfx}-link-date`, content: M.rowDate(row.ctime) }),
     ],
   });
 }

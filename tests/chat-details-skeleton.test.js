@@ -346,3 +346,17 @@ test("the meeting tile takes its glyph from the host's meeting state", () => {
   assert.deepEqual(icos(tile(host)), ["telephone_handset"]);
   assert.ok(walk(tile(host)).some((n) => n.content === "Call"));
 });
+
+// Files / Links rows end with the row's date, after the name / text.
+test("file and link rows end with their date", () => {
+  const ct = dayjs().date(3).hour(10).unix();
+  const f = S.chatDetailsPage(ui, "file", [{ nid: "f1", filename: "Q2.pdf", extension: "pdf", category: "document", ctime: ct }]);
+  const fileRow = walk(f).find((n) => /chat-details-file(\s|$)/.test(n.className || ""));
+  const fk = fileRow.kids.map((k) => k.className);
+  assert.match(fk.at(-1), /chat-details-file-date/);
+  assert.equal(fileRow.kids.at(-1).content, dayjs.unix(ct).format("MMM D"));
+  const l = S.chatDetailsPage(ui, "link", [{ message_id: "m1", preview: "see x", url: "https://x.io", ctime: ct }]);
+  const linkRow = walk(l).find((n) => /chat-details-link(\s|$)/.test(n.className || ""));
+  assert.match(linkRow.kids.at(-1).className, /chat-details-link-date/);
+  assert.equal(linkRow.kids.at(-1).content, dayjs.unix(ct).format("MMM D"));
+});

@@ -30,6 +30,14 @@ function pageTitle(page) {
   }[page] || "";
 }
 
+/** A Files / Links row's date: "Sep 20", "Dec 11, 2025" in another year; "" without a time. */
+function rowDate(ctime, now = Dayjs()) {
+  const t = Number(ctime) || 0;
+  if (!t) return "";
+  const d = Dayjs.unix(t);
+  return d.year() === now.year() ? d.format("MMM D") : d.format("MMM D, YYYY");
+}
+
 function groupByMonth(rows, now = Dayjs()) {
   const groups = [];
   const byKey = new Map();
@@ -110,6 +118,7 @@ module.exports = {
   countLabel,
   pageTitle,
   groupByMonth,
+  rowDate,
   lastSeenLabel,
   durationLabel,
   extractUrl,

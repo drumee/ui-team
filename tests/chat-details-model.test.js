@@ -91,3 +91,11 @@ test("thumbUrl prefers the row's hub_id", () => {
   assert.equal(M.thumbUrl({ nid: "n1", hub_id: "hSender", category: "image" }, "hPanel", boot), "/-/file/vignette/n1/hSender");
   assert.equal(M.thumbUrl({ nid: "n1", category: "image" }, "hPanel", boot), "/-/file/vignette/n1/hPanel");
 });
+
+test("row date: day + short month, the year only when it differs; none without a time", () => {
+  const now = dayjs("2026-09-27T12:00:00");
+  assert.equal(M.rowDate(dayjs("2026-09-20T09:00:00").unix(), now), "Sep 20");
+  assert.equal(M.rowDate(dayjs("2025-12-11T09:00:00").unix(), now), "Dec 11, 2025");
+  assert.equal(M.rowDate(0, now), "");
+  assert.equal(M.rowDate(undefined, now), "");
+});
