@@ -26,6 +26,8 @@
     flex: 1 1 auto;
     min-width: 0;
     align-items: center;
+    // The tabs sit in the middle of the room between the arrows.
+    justify-content: center;
     gap: 4px;
     overflow: hidden;
   }

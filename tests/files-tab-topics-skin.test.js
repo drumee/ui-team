@@ -141,3 +141,7 @@ test("carousel: the new page slides in (next from the right, back from the left)
 test("strip padding is 6px 12px", () => {
   assert.match(rule(".window-folder .window__topic-strip"), /padding: 6px 12px;/);
 });
+
+test("page: the tabs are centred in the room the page has", () => {
+  assert.match(rule(".window-folder .window__topic-page"), /justify-content: center/);
+});
