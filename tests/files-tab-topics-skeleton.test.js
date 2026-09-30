@@ -26,7 +26,10 @@ const parts = (kids) => ({
   page: kids.find((k) => /__topic-page\b/.test(k.className || "")),
   create: kids.find((k) => k.service === "topic-new"),
 });
-const tabsOf = (page) => page.kids.map((k) => (k.topic_id ? k.topic_id : k.service));
+// The page holds every tab; the ones off the page are stamped data-fit="0"
+// (window/folder/topic-fit measures how many fit on screen).
+const onPage = (page) => page.kids.filter((k) => k.dataset.fit !== "0");
+const tabsOf = (page) => onPage(page).map((k) => (k.topic_id ? k.topic_id : k.service));
 
 test("strip: back · 3 tabs · next · Create topic; page 0 starts with #General", () => {
   const kids = topicStrip(ui, { topics: MANY, canCreateTopic: 1 });
@@ -42,13 +45,20 @@ test("strip: back · 3 tabs · next · Create topic; page 0 starts with #General
   assert.ok(!kids.some((k) => k.service === "topic-tab-all"));
 });
 
-test("strip: pages of 3; the last page may be short; the arrows disable at the ends", () => {
-  const p1 = parts(topicStrip(ui, { topics: MANY, page: 1 }));
+test("strip: every tab is on the page, `count` from `start` shown (3 until measured); arrows at the ends", () => {
+  const all = parts(topicStrip(ui, { topics: MANY }));
+  assert.equal(all.page.kids.length, 6, "all tabs rendered, for measuring");
+  assert.deepEqual(all.page.kids.map((k) => k.dataset.fit), ["1", "1", "1", "0", "0", "0"]);
+  const p1 = parts(topicStrip(ui, { topics: MANY, start: 3 }));
   assert.deepEqual(tabsOf(p1.page), ["t3", "t4", "t5"]);
   assert.equal(p1.prev.dataset.disabled, "0");
   assert.equal(p1.next.dataset.disabled, "1");
+  // A measured page: 4 from #General.
+  const p4 = parts(topicStrip(ui, { topics: MANY, start: 0, count: 4 }));
+  assert.deepEqual(tabsOf(p4.page), ["thread-menu-general", "t1", "t2", "t3"]);
+  assert.equal(p4.next.dataset.disabled, "0");
   // Out of range clamps to the last page.
-  assert.deepEqual(tabsOf(parts(topicStrip(ui, { topics: MANY, page: 9 })).page), ["t3", "t4", "t5"]);
+  assert.deepEqual(tabsOf(parts(topicStrip(ui, { topics: MANY, start: 9 })).page), ["t3", "t4", "t5"]);
   // One page: both arrows disabled.
   const one = parts(topicStrip(ui, { topics: MANY.slice(0, 1) }));
   assert.equal(one.prev.dataset.disabled, "1");
@@ -56,8 +66,8 @@ test("strip: pages of 3; the last page may be short; the arrows disable at the e
 });
 
 test("strip: the scope marks its tab; the create button is the primary style with a plus", () => {
-  const p = parts(topicStrip(ui, { topics: MANY, topicId: "t4", page: 1, canCreateTopic: 1 }));
-  assert.deepEqual(p.page.kids.map((k) => k.dataset.active), ["0", "1", "0"]);
+  const p = parts(topicStrip(ui, { topics: MANY, topicId: "t4", start: 3, canCreateTopic: 1 }));
+  assert.deepEqual(onPage(p.page).map((k) => k.dataset.active), ["0", "1", "0"]);
   assert.match(p.create.className, /window-button__label-button primary/);
   assert.ok(walk(p.create).some((n) => n.ico === "ph-plus"));
   assert.equal(text(p.create), en.TOPIC);
@@ -66,11 +76,17 @@ test("strip: the scope marks its tab; the create button is the primary style wit
   assert.equal(parts(topicStrip(ui, { topics: MANY, topicId: "all" })).page.kids[0].dataset.active, "1");
 });
 
-test("pageOf: the page that shows a scope", () => {
-  assert.equal(topicStrip.pageOf(MANY, "general"), 0);
-  assert.equal(topicStrip.pageOf(MANY, "t2"), 0);
-  assert.equal(topicStrip.pageOf(MANY, "t3"), 1);
-  assert.equal(topicStrip.pageOf(MANY, "gone"), 0);
+test("startFor: the page start that shows a scope — unchanged when it is on the page", () => {
+  assert.equal(topicStrip.startFor(MANY, "general", 0, 3), 0);
+  assert.equal(topicStrip.startFor(MANY, "t2", 0, 3), 0);
+  // Forward: the scope becomes the page's last tab.
+  assert.equal(topicStrip.startFor(MANY, "t5", 0, 3), 3);
+  assert.equal(topicStrip.startFor(MANY, "t4", 0, 4), 1);
+  // Back: the scope becomes the page's first tab.
+  assert.equal(topicStrip.startFor(MANY, "t1", 3, 3), 1);
+  assert.equal(topicStrip.startFor(MANY, "gone", 2, 3), 2);
+  assert.equal(topicStrip.indexOf(MANY, "t3"), 3);
+  assert.equal(topicStrip.indexOf(MANY, "all"), 0);
 });
 
 test("bar: closed = the bar only; open = the thread rows with real unread; active row", () => {

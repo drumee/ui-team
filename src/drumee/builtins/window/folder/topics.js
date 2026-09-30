@@ -98,11 +98,15 @@ function scopeChatToTopic(win, topicId) {
   win._updateChatHeader(null, "", wide);
   win._setThreadRailActive("");
   // The strip's carousel shows the page with the picked tab (sliding in
-  // from its side when that is another page).
-  const page = require("./skeleton/topic-strip").pageOf(win._topics, next);
-  const was = win._topicPage || 0;
-  if (page !== was) win._topicSlide = page > was ? "next" : "prev";
-  win._topicPage = page;
+  // from its side when that is another page); the fit keeps it on screen.
+  const Strip = require("./skeleton/topic-strip");
+  const was = win._topicStart || 0;
+  const start = Strip.startFor(win._topics, next, was, win._topicCount || Strip.PAGE_SIZE);
+  if (start !== was) {
+    win._topicSlide = start > was ? "next" : "prev";
+    win._topicKeep = Strip.indexOf(win._topics, next);
+  }
+  win._topicStart = start;
   paintStrip(win);
   return win.ensurePart("folder-chat").then((chat) => {
     if (chat && typeof chat.setScopedTopic === "function") chat.setScopedTopic(next);
@@ -130,22 +134,49 @@ function paintStrip(win) {
         topics,
         topicId: current(win),
         canCreateTopic,
-        page: win._topicPage || 0,
+        start: win._topicStart || 0,
+        count: win._topicCount,
         slide,
       }),
+    );
+    // As many tabs as the width holds (./topic-fit): measured once laid out,
+    // again on resize; the picked tab stays on the page after a jump.
+    require("./topic-fit").attach(
+      part,
+      () => {
+        const keep = win._topicKeep;
+        win._topicKeep = null;
+        return { start: win._topicStart || 0, keep };
+      },
+      (r) => {
+        win._topicStart = r.start;
+        win._topicCount = r.count;
+      },
     );
   });
 }
 
-/** Carousel: move the strip one page back (-1) or forward (+1), clamped. */
+/**
+ * Carousel: one page back (-1) or forward (+1). Forward starts after the
+ * tabs that fitted; back starts where the fullest page before ends (measured
+ * by ./topic-fit — PAGE_SIZE tabs back without a DOM).
+ */
 function stripPage(win, delta) {
   const { PAGE_SIZE } = require("./skeleton/topic-strip");
-  const count = 1 + (Array.isArray(win._topics) ? win._topics.length : 0);
-  const last = Math.max(0, Math.ceil(count / PAGE_SIZE) - 1);
-  const was = win._topicPage || 0;
-  win._topicPage = Math.min(Math.max(0, was + delta), last);
-  if (win._topicPage !== was) win._topicSlide = win._topicPage > was ? "next" : "prev";
-  return paintStrip(win);
+  const total = 1 + (Array.isArray(win._topics) ? win._topics.length : 0);
+  const count = win._topicCount || PAGE_SIZE;
+  const was = win._topicStart || 0;
+  return win.ensurePart("topic-strip").then((part) => {
+    let start = was;
+    if (delta > 0 && was + count < total) start = was + count;
+    if (delta < 0 && was > 0) {
+      const back = require("./topic-fit").prevStart(part && part.el, was);
+      start = back == null ? Math.max(0, was - count) : back;
+    }
+    win._topicStart = start;
+    if (start !== was) win._topicSlide = start > was ? "next" : "prev";
+    return paintStrip(win);
+  });
 }
 
 /** Fetch the folder's topics, then paint the strip. */
@@ -217,7 +248,7 @@ function createTopic(win, { name, emoji } = {}) {
 function onFolderChange(win) {
   win._topics = [];
   win._topicId = "general";
-  win._topicPage = 0;
+  win._topicStart = 0;
   paintStrip(win);
   return win.ensurePart("folder-chat").then((chat) => {
     if (chat && typeof chat.setScopedTopic === "function") chat.setScopedTopic("general");

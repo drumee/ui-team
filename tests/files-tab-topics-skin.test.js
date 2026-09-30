@@ -141,3 +141,9 @@ test("carousel: the new page slides in (next from the right, back from the left)
 test("strip padding is 6px 12px", () => {
   assert.match(rule(".window-folder .window__topic-strip"), /padding: 6px 12px;/);
 });
+
+// ../topic-fit: tabs off the page are hidden; while it measures, none shrinks.
+test("carousel fit: data-fit=0 tabs are hidden; measuring tabs keep their natural width", () => {
+  assert.match(rule('.window-folder .window__topic-page .window__topic-tab[data-fit="0"]'), /display: none/);
+  assert.match(rule('.window-folder .window__topic-page[data-measuring="1"] .window__topic-tab'), /flex-shrink: 0/);
+});
