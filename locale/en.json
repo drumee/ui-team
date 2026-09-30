@@ -3359,5 +3359,10 @@
   "CD_UNMUTE": "Unmute",
   "CD_VIDEO": "{0} video",
   "CD_VIDEOS": "{0} videos",
-  "CD_PARTICIPANTS": "Participants"
+  "CD_PARTICIPANTS": "Participants",
+  "TOPICS": "Topics",
+  "NEW_TOPIC": "New Topic",
+  "TOPIC_NAME_PLACEHOLDER": "Topic Name...",
+  "CHOOSE_TOPIC_ICON": "Choose the topic icon",
+  "TOPIC_EXISTS": "A topic with this name already exists"
 }

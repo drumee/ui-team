@@ -3131,5 +3131,10 @@
   "CD_UNMUTE": "Reactivar sonido",
   "CD_VIDEO": "{0} vídeo",
   "CD_VIDEOS": "{0} vídeos",
-  "CD_PARTICIPANTS": "Participantes"
+  "CD_PARTICIPANTS": "Participantes",
+  "TOPICS": "Topics",
+  "NEW_TOPIC": "New Topic",
+  "TOPIC_NAME_PLACEHOLDER": "Topic Name...",
+  "CHOOSE_TOPIC_ICON": "Choose the topic icon",
+  "TOPIC_EXISTS": "A topic with this name already exists"
 }

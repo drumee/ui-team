@@ -3130,5 +3130,10 @@
   "CD_UNMUTE": "取消静音",
   "CD_VIDEO": "{0} 个视频",
   "CD_VIDEOS": "{0} 个视频",
-  "CD_PARTICIPANTS": "参与者"
+  "CD_PARTICIPANTS": "参与者",
+  "TOPICS": "Topics",
+  "NEW_TOPIC": "New Topic",
+  "TOPIC_NAME_PLACEHOLDER": "Topic Name...",
+  "CHOOSE_TOPIC_ICON": "Choose the topic icon",
+  "TOPIC_EXISTS": "A topic with this name already exists"
 }

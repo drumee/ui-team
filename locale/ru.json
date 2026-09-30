@@ -3136,5 +3136,10 @@
   "CD_UNMUTE": "Включить звук",
   "CD_VIDEO": "Видео: {0}",
   "CD_VIDEOS": "Видео: {0}",
-  "CD_PARTICIPANTS": "Участники"
+  "CD_PARTICIPANTS": "Участники",
+  "TOPICS": "Topics",
+  "NEW_TOPIC": "New Topic",
+  "TOPIC_NAME_PLACEHOLDER": "Topic Name...",
+  "CHOOSE_TOPIC_ICON": "Choose the topic icon",
+  "TOPIC_EXISTS": "A topic with this name already exists"
 }
