@@ -447,6 +447,20 @@ test("Inbox conversations attach from the device only", async () => {
   assert.equal(mounted.find((w) => w.opt.type === "share").opt.no_workspace_attach, 1);
 });
 
+test("a workspace conversation mounts scoped like the folder team chat; a DM does not", async () => {
+  const f = await landedOnDirect();
+  assert.equal(mounted[0].opt.scope, undefined);
+  assert.equal(mounted[0].opt.scoped_topic, undefined);
+  await f.ui._setRoomScope("workspace");
+  await settle();
+  f.ws.load(WORKSPACES);
+  await settle();
+  const share = mounted.find((w) => w.opt.type === "share");
+  assert.equal(share.opt.scope, "workspace");
+  assert.equal(share.opt.scoped_topic, "general");
+  assert.equal(share.opt.nid, "home-WS1");
+});
+
 // ── In-Inbox image / video viewer ────────────────────────────────────
 STUBS["./skeleton/lightbox"] = (ui, m) => ({ kind: "lightbox", ...m });
 

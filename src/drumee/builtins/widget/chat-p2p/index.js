@@ -1729,6 +1729,14 @@ class __chat_p2p extends LetcBox {
       // menu.
       no_workspace_attach: 1,
     };
+    // A workspace conversation is that workspace's team chat, scoped like the
+    // folder window's (window/skeleton/toolkit chatPanel): posts land in the
+    // root folder (nid) and the list opens on # General — topics are picked
+    // from the strip above it (./workspace-topics).
+    if (type === _a.share) {
+      widget_chat.scope = "workspace";
+      widget_chat.scoped_topic = "general";
+    }
     // The same media.home widget_chat would otherwise refetch as it mounts —
     // for the SAME hub: its hubId is Visitor.id for a private room (what the
     // default branch fetched) and hub_id for a share room. A copy, since the

@@ -315,9 +315,36 @@ module.exports = function (ui) {
     // ]
   });
 
+  // Workspace chat: the folder's topic strip and File threads bar
+  // (window/folder/skeleton/topic-strip + file-threads-bar, same window__
+  // classes and styles), fed by ../workspace-topics. Hidden by the skin
+  // unless the area is stamped data-topics="1" (a workspace conversation).
+  const topicStrip = Skeletons.Box.X({
+    className: "window__topic-strip",
+    sys_pn: "topic-strip",
+    partHandler: ui,
+  });
+  const ftBar = Skeletons.Box.Y({
+    className: "window__ft-bar",
+    sys_pn: "ft-bar",
+    partHandler: ui,
+    dataset: { open: "0" },
+  });
+
   const chatArea = Skeletons.Box.Y({
     className: `${fig}__chat-area`,
-    kids: [chatHeader, chatPanel],
+    sys_pn: "chat-area",
+    partHandler: ui,
+    dataset: { topics: "0" },
+    kids: [chatHeader, topicStrip, ftBar, chatPanel],
+  });
+
+  // New Topic dialog (widget_topic_create): always-present, empty-until-open
+  // backdrop, as the folder window's (window/folder/topics.js slot).
+  const topicDialog = Skeletons.Wrapper.Y({
+    className: "widget-topic-create__viewport-backdrop",
+    name: "topic-dialog",
+    partHandler: ui,
   });
 
   // Forward overlay — mirrors window_bigchat overlay structure so that
@@ -351,6 +378,6 @@ module.exports = function (ui) {
   return Skeletons.Box.X({
     className: `${fig}__main`,
     debug: __filename,
-    kids: [sidebar, chatArea, chatDetails, overlayWrapper, lightbox],
+    kids: [sidebar, chatArea, chatDetails, overlayWrapper, lightbox, topicDialog],
   });
 };
