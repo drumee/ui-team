@@ -311,6 +311,7 @@ class __editor_blocknote extends __player {
       unsaved: LOCALE.UNSAVED_CHANGES,
       readonly: LOCALE.NOTE_UNREADABLE,
       converting: LOCALE.NOTE_UPGRADES_ON_SAVE,
+      exporting: LOCALE.NOTE_EXPORTING,
     };
     if (!this.ensurePart) return;
     this.ensurePart("save-status")
@@ -336,6 +337,154 @@ class __editor_blocknote extends __player {
   }
 
   /**
+   * The folder the note lives in — where it is saved, and where its exports
+   * are written next to it.
+   * @returns {{target: Object, pid: String, hub_id: String}|null}
+   */
+  _saveTarget() {
+    let target = this.lastActiveWindow || Wm.getActiveWindow();
+    if (this.media && this.media.logicalParent) {
+      target = this.media.logicalParent;
+    }
+    if (!target) return null;
+    return {
+      target,
+      pid: target.mget(_a.nid) || Visitor.get(_a.home_id),
+      hub_id: target.mget(_a.hub_id) || Visitor.get(_a.id),
+    };
+  }
+
+  /**
+   * The note's name as it is saved.
+   *
+   * An untitled note reuses the name the server gave it on the first save.
+   * The server de-duplicates a NEW node ("Untitled(1)") but renames an
+   * existing one to exactly what it is sent — and media has a UNIQUE key on
+   * (parent_id, user_filename, extension), so re-sending "Untitled" for the
+   * second untitled note in a folder would make every later save fail.
+   * @returns {String}
+   */
+  _noteName() {
+    return (
+      this.mget(_a.filename) ||
+      (this.media && this.media.mget(_a.filename)) ||
+      this._assignedName ||
+      LOCALE.UNTITLED
+    );
+  }
+
+  /**
+   * Export the note (Lexis, 2026-09-29). Each export is BOTH written into the
+   * note's folder in Drumee and downloaded to the device.
+   *
+   * - html / md / csv are built in the browser. Someone who cannot write to
+   *   the folder still gets the download; the copy in Drumee is skipped.
+   * - pdf / docx are made by the server (media.save `convert_to`, LibreOffice)
+   *   and so always land in the folder first; the download is that file.
+   * - print hands the page to the browser, whose print dialog also offers
+   *   "Save as PDF" — the way to a PDF for someone who cannot write here.
+   *
+   * An export never overwrites anything: it is a new file, and the server
+   * suffixes the name if one is taken ("Plan(1).pdf").
+   *
+   * @param {String} format  html | pdf | docx | md | csv | print
+   */
+  async exportNote(format) {
+    if (!this._state || !this._state.exportAs || this._exporting) return;
+    this._exporting = 1;
+    try {
+      const x = await this._state.exporter();
+      const name = this._noteName();
+
+      if (format === "print") {
+        const body = await this._state.exportAs("print");
+        if (body == null) return;
+        const { default: printJS } = await import(/* webpackChunkName: "print-js" */ "print-js");
+        printJS({ printable: body, type: "raw-html", style: x.printStyle() });
+        return;
+      }
+
+      const fmt = x.FORMATS[format];
+      if (!fmt) return;
+      const dest = this._exportTarget();
+      if (fmt.server && !dest) {
+        Wm.alert(LOCALE.NOTE_EXPORT_NEEDS_EDIT);
+        return;
+      }
+
+      const data = await this._state.exportAs(fmt.server ? "html" : format, name);
+      if (data == null) return;
+      let files = [{ name, content: data }];
+      if (format === "csv") {
+        if (!data.length) {
+          Wm.alert(LOCALE.NOTE_NO_TABLE);
+          return;
+        }
+        files = data.map((content, i) => ({ name: i ? `${name}-${i + 1}` : name, content }));
+      }
+
+      this._setStatus("exporting");
+      for (const f of files) {
+        const filename = `${f.name}.${fmt.ext}`;
+        const saved = dest ? await this._saveExport(dest, filename, fmt, f.content) : null;
+        if (fmt.server) {
+          const { svc, keysel } = bootstrap();
+          const ksel = keysel ? `&keysel=${keysel}` : "";
+          await this.fetchFile({
+            url: `${svc}media.orig?nid=${saved.nid}&hub_id=${saved.hub_id || dest.hub_id}${ksel}`,
+            download: saved.filename ? `${saved.filename}.${fmt.ext}` : filename,
+          });
+        } else {
+          this.getBlob(new Blob([f.content], { type: `${fmt.mime};charset=utf-8` }), filename);
+        }
+      }
+      this._setStatus(this._changed ? "unsaved" : "saved");
+    } catch (e) {
+      this.warn("editor_blocknote: export failed", e);
+      this._setStatus(this._changed ? "unsaved" : "saved");
+      Wm.alert(LOCALE.NOTE_EXPORT_FAILED);
+    } finally {
+      this._exporting = 0;
+    }
+  }
+
+  /**
+   * Where an export is written, or null when this user cannot write there —
+   * then an export is download-only.
+   * @returns {{target: Object, pid: String, hub_id: String}|null}
+   */
+  _exportTarget() {
+    const dest = this._saveTarget();
+    if (!dest) return null;
+    const { target } = dest;
+    if (_.isFunction(target.canUpload) && !target.canUpload()) return null;
+    return dest;
+  }
+
+  /**
+   * Write one export file next to the note and show it in the folder.
+   * @returns {Promise<Object>} the new node; throws when the server refuses
+   */
+  async _saveExport(dest, filename, fmt, content) {
+    const opt = {
+      service: SERVICE.media.save,
+      hub_id: dest.hub_id,
+      // No `id`: always a NEW file, never a replace.
+      nid: dest.pid,
+      pid: dest.pid,
+      position: 999999,
+      filename,
+      filetype: fmt.filetype,
+      content,
+    };
+    if (fmt.server) opt.convert_to = fmt.ext;
+    const data = await this.postService(opt, { async: 1 });
+    if (!data || !data.nid) throw new Error(`media.save returned no node for ${filename}`);
+    this._reflectInTarget(dest.target, data, { adopt: false });
+    return data;
+  }
+
+  /**
    * Write the note back through media.save, the same text path the existing
    * note and markdown editors use.
    *
@@ -357,25 +506,11 @@ class __editor_blocknote extends __player {
       this._timer = null;
     }
 
-    let target = this.lastActiveWindow || Wm.getActiveWindow();
-    if (this.media && this.media.logicalParent) {
-      target = this.media.logicalParent;
-    }
-    if (!target) return;
-
-    const pid = target.mget(_a.nid) || Visitor.get(_a.home_id);
-    const hub_id = target.mget(_a.hub_id) || Visitor.get(_a.id);
+    const dest = this._saveTarget();
+    if (!dest) return;
+    const { target, pid, hub_id } = dest;
     const nid = this.mget(_a.nid);
-    // An untitled note reuses the name the server gave it on the first save.
-    // The server de-duplicates a NEW node ("Untitled(1)") but renames an
-    // existing one to exactly what it is sent — and media has a UNIQUE key on
-    // (parent_id, user_filename, extension), so re-sending "Untitled" for the
-    // second untitled note in a folder would make every later save fail.
-    let filename =
-      this.mget(_a.filename) ||
-      (this.media && this.media.mget(_a.filename)) ||
-      this._assignedName ||
-      LOCALE.UNTITLED;
+    const filename = this._noteName();
 
     this._saving = 1;
     this._setStatus("saving");
@@ -435,29 +570,30 @@ class __editor_blocknote extends __player {
    * @param {View} target
    * @param {Object} data the saved node
    */
-  _reflectInTarget(target, data) {
+  _reflectInTarget(target, data, { adopt = true } = {}) {
     if (!target || !_.isFunction(target.getItemsByAttr)) return;
     let [file] = target.getItemsByAttr(_a.nid, data.nid);
     if (!file) {
       if (!_.isFunction(target.insertMedia)) return;
       const item = {
         kind: target._getKind(),
-        metatype: _a.note,
         logicalParent: target,
         pid: target.getCurrentNid(),
         hub_id: target.mget(_a.hub_id),
         ...data,
       };
+      // An export is its own file type; only the note itself is a note.
+      if (adopt) item.metatype = _a.note;
       delete item.replace;
       target.insertMedia(item);
       [file] = target.getItemsByAttr(_a.nid, data.nid);
-      if (file) this.media = file;
+      if (file && adopt) this.media = file;
       return;
     }
     if (_.isFunction(file.restart)) {
       file.mset(data);
       file.restart("media:modified");
-      this.media = file;
+      if (adopt) this.media = file;
     }
   }
 
@@ -496,6 +632,13 @@ class __editor_blocknote extends __player {
       case "toggle-rail": {
         if (!this._state || !this._state.toggleRail) break;
         this._reflectRailState(this._state.toggleRail());
+        break;
+      }
+
+      // The Export menu — see skeleton/topbar.
+      case "export-note": {
+        const format = cmd && cmd.mget && cmd.mget("format");
+        if (format) this.exportNote(format);
         break;
       }
 

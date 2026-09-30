@@ -433,6 +433,69 @@ $note-gutter: 54px;
         height: 18px;
       }
     }
+
+    // The Export menu opens under its button and is anchored on the RIGHT, for
+    // the same reason as the tooltips: the button sits in the top-right corner.
+    &__export {
+      position: relative;
+      overflow: visible;
+
+      .menu-items,
+      .menu-topic-items {
+        right: 0;
+        left: auto;
+      }
+    }
+
+    &__export-items {
+      min-width: 220px;
+      padding: 6px;
+      margin-top: 6px;
+      background-color: var(--default-bg);
+      border: 1px solid var(--neutral-300);
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-popup);
+      z-index: 2000;
+    }
+
+    &__export-item {
+      align-items: center;
+      gap: 10px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--normal-fg-10);
+
+      &:hover {
+        background-color: var(--default-bg-hover);
+        color: var(--neutral-900);
+      }
+    }
+
+    &__export-icon {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      pointer-events: none;
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    &__export-name {
+      white-space: nowrap;
+      pointer-events: none;
+      @include drumee.typo($line: 16px, $size: 13px, $color: inherit);
+    }
+
+    &__export-separator {
+      height: 1px;
+      margin: 4px 6px;
+      background-color: var(--neutral-300);
+    }
   }
 }
 

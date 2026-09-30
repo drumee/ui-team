@@ -605,6 +605,23 @@ test("markdown is NEVER written back", () => {
   }
 });
 
+test("an export is always a NEW file — it can never overwrite the note", () => {
+  // Export writes .md / .html / .pdf … next to the note. That is the ONE place
+  // markdown is produced, and it must stay a separate node: media.save
+  // replaces whatever `id` it is given, so an export that sent the note's id
+  // would write the lossy markdown over the note itself.
+  const src = readFileSync(
+    resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"),
+    "utf8"
+  );
+  const m = src.match(/async _saveExport\([^)]*\) \{([\s\S]*?)\n  \}/);
+  assert.ok(m, "_saveExport exists");
+  const body = m[1].replace(/\/\/.*$/gm, "");
+  assert.ok(/nid: dest\.pid/.test(body), "an export is addressed to the FOLDER");
+  assert.ok(!/\bid\s*:/.test(body), "an export never sends an `id` (that would be a replace)");
+  assert.ok(!/this\.mget\(_a\.nid\)/.test(body), "an export never uses the note's nid");
+});
+
 test("the editor saves the NEW extension, which is what converts the node", () => {
   // media.save renames in place for the same nid, so writing `<name>.dnote`
   // against an existing markdown node converts it: one node, same id, the name

@@ -2,6 +2,54 @@
 //  Notion-style Note topbar — title, autosave status, save,
 //  then the shared window controls.
 // ===========================================================
+/**
+ * The Export menu. Every row runs `export-note` with its format; see
+ * exportNote() in ../index.js for what each one does.
+ * @param {Object} ui
+ * @param {String} pfx
+ */
+function exportMenu(ui, pfx) {
+  const row = (format, ico, content) =>
+    Skeletons.Box.X({
+      className: `${pfx}__export-item`,
+      service: "export-note",
+      format,
+      uiHandler: [ui],
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Button.Svg({ ico, className: `${pfx}__export-icon` }),
+        Skeletons.Note({ className: `${pfx}__export-name`, content }),
+      ],
+    });
+
+  return {
+    kind: KIND.menu.topic,
+    className: `${pfx}__export`,
+    flow: _a.y,
+    direction: _a.down,
+    axis: _a.y,
+    opening: _e.click,
+    persistence: _a.none,
+    trigger: Skeletons.Button.Svg({
+      ico: "ph-export",
+      className: `${pfx}__icon export`,
+      tooltips: LOCALE.NOTE_EXPORT,
+    }),
+    items: Skeletons.Box.Y({
+      className: `${pfx}__export-items`,
+      kids: [
+        row("pdf", "ph-file-pdf", LOCALE.EXPORT_AS_PDF),
+        row("docx", "ph-file-doc", LOCALE.EXPORT_AS_DOCX),
+        row("html", "ph-file-html", LOCALE.EXPORT_AS_HTML),
+        row("md", "ph-file-md", LOCALE.EXPORT_AS_MARKDOWN),
+        row("csv", "ph-file-csv", LOCALE.EXPORT_AS_CSV),
+        Skeletons.Box.X({ className: `${pfx}__export-separator` }),
+        row("print", "ph-printer", LOCALE.PRINT),
+      ],
+    }),
+  };
+}
+
 module.exports = function (ui) {
   const figname = "topbar";
   const pfx = `${ui.fig.family}-${figname}`;
@@ -60,6 +108,7 @@ module.exports = function (ui) {
             tooltips: LOCALE.NOTE_TOOLBAR,
             uiHandler: [ui],
           }),
+          exportMenu(ui, pfx),
           Skeletons.Button.Svg({
             ico: "floppy",
             service: _e.save,

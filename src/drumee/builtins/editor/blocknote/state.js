@@ -388,6 +388,31 @@ class __blocknote_state extends DrumeeMFS {
   }
 
   /**
+   * The export module (./export), fetched as its own chunk on first use.
+   * @returns {Promise<Object>}
+   */
+  async exporter() {
+    const m = await import(/* webpackChunkName: "note-export" */ "./export");
+    return m.default || m;
+  }
+
+  /**
+   * The note rendered for export. The converters live in ./export, a chunk of
+   * its own that is only fetched the first time someone exports.
+   *
+   * @param {String} format  html | print | md | csv  (pdf / docx are the
+   *   server's job — they are made from the html)
+   * @param {String} title
+   * @returns {Promise<String|Array<String>|null>} null when there is no
+   *   editor to read (load failed); csv resolves to one string per table
+   */
+  async exportAs(format, title) {
+    if (this._loadFailed || !this._editor) return null;
+    const x = await this.exporter();
+    return x.render(format, this._editor, title);
+  }
+
+  /**
    *
    */
   onBeforeDestroy() {
