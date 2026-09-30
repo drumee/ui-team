@@ -440,8 +440,9 @@ $note-gutter: 54px;
       position: relative;
       overflow: visible;
 
-      .menu-items,
-      .menu-topic-items {
+      // menu_topic positions its (absolute) wrapper from the LEFT of the
+      // trigger, which runs the list off the window here.
+      .menu-topic-items__wrapper {
         right: 0;
         left: auto;
       }
