@@ -143,6 +143,15 @@
     align-items: center;
   }
 
+  // Direct mode: the person's avatar, the folder icon box's footprint.
+  &__peer-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
   &__folder-icon-box {
     width: 32px;
     height: 32px;

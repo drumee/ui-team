@@ -58,6 +58,15 @@ class __widget_chat_export extends LetcBox {
       this._folderSel = "none";
       this._threadSel = [];
     }
+
+    // Direct mode (the Inbox's Chat details, a 1:1 conversation): the export
+    // is the whole DM (chat.p2p_export*), on the viewer's own hub; no folder
+    // or thread scope exists.
+    this._direct = this.mget("mode") === "direct";
+    if (this._direct) {
+      this._folderSel = "none";
+      this._threadSel = "none";
+    }
   }
 
   onBeforeDestroy() {
@@ -100,7 +109,9 @@ class __widget_chat_export extends LetcBox {
       // nid = the folder this modal was opened in — the backend scopes the
       // export (message count, file threads, sections) to its subtree.
       const nid = this.mget(_a.nid) || null;
-      const data = await this.fetchService(SERVICE.channel.export_scope, { hub_id, nid });
+      const data = this._direct
+        ? await this.fetchService(SERVICE.chat.p2p_export_scope, { hub_id, peer_id: this.mget("peer_id") })
+        : await this.fetchService(SERVICE.channel.export_scope, { hub_id, nid });
       const { hub = {}, folders = [], file_threads = [] } = data || {};
       this._hubName = hub.name || "";
       this._messageCount = hub.message_count || 0;
@@ -313,21 +324,32 @@ class __widget_chat_export extends LetcBox {
     // Two independent scope axes. Arrays are JSON-stringified so they survive
     // the POST as a scalar param the backend re-parses (parseSel handles both).
     const encSel = (sel) => (Array.isArray(sel) ? JSON.stringify(sel) : sel);
-    const payload = {
-      hub_id,
-      // Subtree root — must match the nid sent to export_scope so the export
-      // covers exactly what the modal showed.
-      nid: this.mget(_a.nid) || null,
-      format: this._format,
-      folder_sel: encSel(this._folderSel), // 'all' | JSON array of folder nids | 'none'
-      thread_sel: encSel(this._threadSel), // 'all' | JSON array of thread ids | 'none'
-      start_date: this._dateEnabled ? this._startDate : null,
-      end_date: this._dateEnabled ? this._endDate : null,
-    };
+    // A direct conversation has no folders or threads: just the DM, its
+    // format and an optional date window (chat.p2p_export).
+    const payload = this._direct
+      ? {
+          hub_id,
+          peer_id: this.mget("peer_id"),
+          format: this._format,
+          start_date: this._dateEnabled ? this._startDate : null,
+          end_date: this._dateEnabled ? this._endDate : null,
+        }
+      : {
+          hub_id,
+          // Subtree root — must match the nid sent to export_scope so the export
+          // covers exactly what the modal showed.
+          nid: this.mget(_a.nid) || null,
+          format: this._format,
+          folder_sel: encSel(this._folderSel), // 'all' | JSON array of folder nids | 'none'
+          thread_sel: encSel(this._threadSel), // 'all' | JSON array of thread ids | 'none'
+          start_date: this._dateEnabled ? this._startDate : null,
+          end_date: this._dateEnabled ? this._endDate : null,
+        };
+    const service = this._direct ? SERVICE.chat.p2p_export : SERVICE.channel.export;
 
     let data;
     try {
-      data = await this.postService(SERVICE.channel.export, payload);
+      data = await this.postService(service, payload);
     } catch (e) {
       this.warn("chat-export: export request failed", e);
       this._showProgressError(LOCALE.AN_ERROR_OCCURRED);

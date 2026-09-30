@@ -368,3 +368,17 @@ test("inbox: chatDetailsMeetingState answers the widget with the call tile", () 
   assert.equal(st.ico, "telephone_handset");
   assert.equal(st.label, en.CALL);
 });
+
+test("Inbox Download on a direct chat opens the DIRECT export dialog", async () => {
+  global.Visitor = { id: "me0000000000000a" };
+  const inbox = fakeInbox(); // privateRoom, peer u2 "Ann"
+  await H.open(inbox);
+  await H.hostAction(inbox, "download", {}, { Kind: { waitFor: async () => {} } });
+  const exp = inbox.parts["wrapper-chat-overlay"].fed.at(-1);
+  assert.equal(exp.kind, "widget_chat_export");
+  assert.equal(exp.mode, "direct");
+  assert.equal(exp.peer_id, "u2");
+  assert.equal(exp.hub_id, "me0000000000000a");
+  assert.equal(exp.name, "Ann");
+  assert.equal(exp.uiHandler[0], inbox);
+});

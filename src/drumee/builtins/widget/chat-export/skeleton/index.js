@@ -29,14 +29,16 @@ module.exports = {
     // File-scope mode (single file's thread): show the file card and hide the
     // scope picker — the scope is fixed to this file's thread.
     const fileScope = !!ui._fileScope;
+    // Direct mode (a 1:1 conversation): the person's card, no scope picker.
+    const direct = !!ui._direct;
 
     return Skeletons.Box.Y({
       className: `${pfx}__card`,
       kids: [
         _header(pfx, ui),
-        fileScope ? _fileCard(pfx, ui) : _folderCard(pfx, ui),
+        direct ? _peerCard(pfx, ui) : fileScope ? _fileCard(pfx, ui) : _folderCard(pfx, ui),
         _formatSection(pfx, ui),
-        fileScope ? null : _scopeSection(pfx, ui),
+        fileScope || direct ? null : _scopeSection(pfx, ui),
         _dateRangeSection(pfx, ui),
         _footer(pfx, ui),
         _downloadButton(pfx, ui),
@@ -165,6 +167,46 @@ function _folderCard(pfx, ui) {
         ],
       }),
       // Fix #2: "Open thread →" link removed per user request.
+    ],
+  });
+}
+
+// ------------------------------------------------------------------ peer card
+// Direct mode: the person this conversation is with — avatar, name, count.
+// Reuses the __folder-* layout classes, like the file card.
+function _peerCard(pfx, ui) {
+  const name = ui._hubName || ui.mget(_a.name) || "";
+  const count = ui._messageCount || 0;
+  return Skeletons.Box.X({
+    className: `${pfx}__folder-card ${pfx}__peer-card`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__folder-left`,
+        kids: [
+          {
+            kind: KIND.profile,
+            className: `${pfx}__peer-avatar`,
+            id: ui.mget("peer_id"),
+            fullname: name,
+            active: 0,
+          },
+          Skeletons.Box.Y({
+            className: `${pfx}__folder-info`,
+            kids: [
+              Skeletons.Note({ className: `${pfx}__folder-name`, content: name }),
+              Skeletons.Box.X({
+                className: `${pfx}__folder-meta`,
+                kids: [
+                  Skeletons.Note({
+                    className: `${pfx}__folder-meta-text`,
+                    content: `${count} ${LOCALE.MESSAGES}`,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
     ],
   });
 }
@@ -575,6 +617,23 @@ function _dateInput(pfx, ui, which) {
 // ------------------------------------------------------------------ footer
 
 function _footer(pfx, ui) {
+  // A DM has no folder / thread sections, and chat.p2p_export names the file
+  // after the person — sanitised exactly as the server does.
+  if (ui._direct) {
+    const name = ui._hubName || ui.mget(_a.name) || "";
+    const base =
+      name.replace(/[^0-9a-zA-Z_.-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "chat-export";
+    return Skeletons.Box.Y({
+      className: `${pfx}__footer`,
+      kids: [
+        Skeletons.Note({ className: `${pfx}__footer-divider` }),
+        Skeletons.Note({
+          className: `${pfx}__footer-filename-hint`,
+          content: `${base}.(pdf|json)`,
+        }),
+      ],
+    });
+  }
   return Skeletons.Box.Y({
     className: `${pfx}__footer`,
     kids: [

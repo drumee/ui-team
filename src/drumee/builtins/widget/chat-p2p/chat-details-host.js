@@ -217,14 +217,28 @@ function hostAction(inbox, name, payload = {}, deps = {}) {
           // close-overlay leaves data-state=closed, which the global
           // [data-state="closed"] rule hides: a second export would be blank.
           wrapper.el.dataset.state = _a.open;
-          wrapper.feed({
-            kind: "widget_chat_export",
-            hub_id: peer.entity_id,
-            nid: peer.nid,
-            name: peer.display || peer.fullname || peer.name || "",
-            area: peer.area,
-            uiHandler: [inbox],
-          });
+          // A direct chat exports the DM (widget_chat_export mode "direct",
+          // chat.p2p_export on the viewer's own hub); a workspace its chat.
+          const direct = inbox.activePeerType === _a.privateRoom;
+          wrapper.feed(
+            direct
+              ? {
+                  kind: "widget_chat_export",
+                  mode: "direct",
+                  peer_id: peer.drumate_id || peer.entity_id,
+                  hub_id: (typeof Visitor !== "undefined" && Visitor.id) || "",
+                  name: peer.fullname || peer.display || peer.name || "",
+                  uiHandler: [inbox],
+                }
+              : {
+                  kind: "widget_chat_export",
+                  hub_id: peer.entity_id,
+                  nid: peer.nid,
+                  name: peer.display || peer.fullname || peer.name || "",
+                  area: peer.area,
+                  uiHandler: [inbox],
+                },
+          );
           return Kind_ && Kind_.waitFor ? Kind_.waitFor("widget_chat_export") : null;
         });
     case "thread": {
