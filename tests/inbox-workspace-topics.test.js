@@ -32,21 +32,23 @@ test("skin: hidden in the Inbox unless the chat area is stamped data-topics=1", 
   assert.match(inbox, /\.chat-p2p__chat-area:not\(\[data-topics="?1"?\]\) \.chat-p2p__topic-row \{ display: none; \}/);
 });
 
-test("skin: strip and File threads bar share one row — the strip takes the room, the bar its own width", () => {
+test("skin: strip and File threads bar share one row at equal widths", () => {
   const inbox = compile("builtins/widget/chat-p2p/skin/index.scss");
   const row = ruleIn(inbox, ".chat-p2p__chat-area .chat-p2p__topic-row");
   assert.match(row, /display: flex/);
   assert.match(row, /flex-direction: row/);
   assert.match(row, /align-items: center/);
   const strip = ruleIn(inbox, ".chat-p2p__chat-area .chat-p2p__topic-row .window__topic-strip");
-  assert.match(strip, /flex: 1 1 auto/);
-  assert.match(strip, /min-width: 0/);
   const bar = ruleIn(inbox, ".chat-p2p__chat-area .chat-p2p__topic-row .window__ft-bar");
-  assert.match(bar, /flex: 0 0 auto/);
-  // The dropdown hangs from the bar's right edge, wider than the bar.
+  for (const r of [strip, bar]) {
+    assert.match(r, /flex: 1 1 0/);
+    assert.match(r, /min-width: 0/);
+  }
+  // The dropdown spans the bar (no fixed width of its own).
   const list = ruleIn(inbox, ".chat-p2p__chat-area .chat-p2p__topic-row .window__ft-list");
-  assert.match(list, /left: auto/);
-  assert.match(list, /width: 280px/);
+  assert.match(list, /left: 0/);
+  assert.match(list, /right: 12px/);
+  assert.doesNotMatch(list, /width:/);
 });
 
 // ── Skeleton ──
