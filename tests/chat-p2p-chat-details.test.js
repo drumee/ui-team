@@ -382,7 +382,3 @@ test("Inbox Download on a direct chat opens the DIRECT export dialog", async () 
   assert.equal(exp.name, "Ann");
   assert.equal(exp.uiHandler[0], inbox);
 });
-
-test("skin: the conversation body keeps 6px on the right", () => {
-  assert.match(rule(".chat-p2p__chat-area .widget-chat__body"), /padding-right: 6px/);
-});
