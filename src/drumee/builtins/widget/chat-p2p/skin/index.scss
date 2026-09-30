@@ -722,6 +722,11 @@
     overflow: hidden;
   }
 
+  // A little room between the column's left edge and the conversation.
+  &__chat-area .widget-chat__body {
+    padding-left: 6px;
+  }
+
   // ── Chat details (widget_chat_details, ../chat-details-host) ─────
   // A side column after the chat area, shown only while the header's ⋮
   // has it open (data-details on __ui). The widget brings its own skin.
