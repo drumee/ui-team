@@ -76,6 +76,8 @@ function placeholder(inbox, mode) {
     cdPrefix: "widget-chat-details",
     fig: { group: "widget", family: "widget-chat-details" },
     mget: () => undefined,
+    // The same tile the widget gets from the Inbox (a call).
+    chatDetailsMeetingState: () => meetingState(inbox),
   };
   const kids = chatDetailsOverview(ui, { loading: true, sections: MODES[mode].sections });
   const retarget = (n) => {
@@ -259,6 +261,15 @@ function hostAction(inbox, name, payload = {}, deps = {}) {
   }
 }
 
+/**
+ * The meeting tile, as the Inbox shows it: a call (the header's own call
+ * button — window_connect for a contact, window_meeting for a workspace —
+ * which is what the tile starts, via hostAction "meeting").
+ */
+function meetingState() {
+  return { label: LOCALE.CALL, ico: "telephone_handset", joined: false, hidden: false };
+}
+
 function threads(inbox) {
   const peer = inbox.activePeer || {};
   const service =
@@ -271,4 +282,4 @@ function threads(inbox) {
     .catch(() => []);
 }
 
-module.exports = { descriptor, open, close, toggle, onConversationChange, hostAction, threads };
+module.exports = { descriptor, open, close, toggle, onConversationChange, hostAction, threads, meetingState };

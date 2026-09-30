@@ -335,3 +335,14 @@ test("every page's loading placeholder starts with a month label bar", () => {
     assert.ok(walk(t).some((n) => hasClass(n, "sk--month")), page);
   }
 });
+
+// A host may name the meeting tile's glyph (the Inbox: a call); without one it
+// stays the video camera (the folder window's Meeting).
+test("the meeting tile takes its glyph from the host's meeting state", () => {
+  const tile = (u) => walk(S.chatDetailsOverview(u, { stats: {}, members: [] })).find((n) => n.service === "chat-details-meeting");
+  const icos = (t) => walk(t).filter((n) => n.ico).map((n) => n.ico);
+  assert.deepEqual(icos(tile(ui)), ["noti-video-camera"]);
+  const host = { ...ui, chatDetailsMeetingState: () => ({ label: "Call", ico: "telephone_handset", joined: false }) };
+  assert.deepEqual(icos(tile(host)), ["telephone_handset"]);
+  assert.ok(walk(tile(host)).some((n) => n.content === "Call"));
+});

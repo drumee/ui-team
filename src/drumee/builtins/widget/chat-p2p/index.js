@@ -1891,6 +1891,10 @@ class __chat_p2p extends LetcBox {
     return ChatDetailsHost.threads(this);
   }
 
+  chatDetailsMeetingState() {
+    return ChatDetailsHost.meetingState(this);
+  }
+
   /**
    * @param {View} trigger
    * @param {Object} args

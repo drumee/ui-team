@@ -86,10 +86,11 @@ function meetingTileState(ui) {
 
 function meetingTile(ui) {
   // A host can own the call state (the folder window's Meet start button);
-  // the widget asks it through chatDetailsMeetingState().
+  // the widget asks it through chatDetailsMeetingState(). The host may also
+  // name the glyph (the Inbox: a call, telephone_handset).
   const st = ui.chatDetailsMeetingState ? ui.chatDetailsMeetingState() : meetingTileState(ui);
   if (st.hidden) return null;
-  return actionTile(ui, "chat-details-meeting", "noti-video-camera", st.label, {
+  return actionTile(ui, "chat-details-meeting", st.ico || "noti-video-camera", st.label, {
     modifier: "meeting",
     dataset: { joined: st.joined ? 1 : 0 },
   });

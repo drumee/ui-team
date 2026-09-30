@@ -340,3 +340,31 @@ test("skin: details slide in on open, slide out while closing, still under reduc
   assert.match(css, /@keyframes chat-p2p-details-out/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[^@]*\.chat-p2p__chat-details \{ animation: none/);
 });
+
+// Inbox: the meeting tile is a call — telephone_handset + "Call" — in the
+// widget (host.chatDetailsMeetingState) and in the loading card alike.
+const meetingTileOf = (tree) => walk(tree).find((n) => n.service === "chat-details-meeting");
+const tileIco = (tile) => walk(tile).filter((n) => n.ico).map((n) => n.ico);
+const tileText = (tile) => walk(tile).filter((n) => n.type === "Note").map((n) => n.content);
+
+test("Inbox: the meeting tile reads Call with the telephone handset", async () => {
+  const st = H.meetingState(fakeInbox());
+  assert.equal(st.label, en.CALL);
+  assert.equal(st.ico, "telephone_handset");
+  assert.equal(st.joined, false);
+  const inbox = fakeInbox();
+  const kind = deferred();
+  H.open(inbox, { Kind: { waitFor: () => kind.promise } });
+  await new Promise((r) => setImmediate(r));
+  const tile = meetingTileOf(inbox.parts["chat-details"].fed[0]);
+  assert.deepEqual(tileIco(tile), ["telephone_handset"]);
+  assert.ok(tileText(tile).includes(en.CALL));
+  kind.resolve();
+});
+
+test("inbox: chatDetailsMeetingState answers the widget with the call tile", () => {
+  const Inbox = require("../src/drumee/builtins/widget/chat-p2p");
+  const st = Inbox.prototype.chatDetailsMeetingState.call(fakeInbox());
+  assert.equal(st.ico, "telephone_handset");
+  assert.equal(st.label, en.CALL);
+});
