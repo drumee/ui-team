@@ -59,3 +59,10 @@ test("chatPanel mounts topic-strip and ft-bar for the workspace folder window on
   const before = src.slice(src.lastIndexOf("const topicSurfaces", i), i);
   assert.match(before, /const topicSurfaces = isFolderChat && !ui\.mget\(_a\.token\)/);
 });
+
+// Tabs on the left, "+ Create topic" pushed to the right end of the strip
+// (still one scrolling row when the topics overflow).
+test("strip: the create button sits at the far end, the tabs stay together", () => {
+  assert.match(rule(".window-folder .window__topic-tab--create"), /margin-left: auto/);
+  assert.doesNotMatch(rule(".window-folder .window__topic-strip"), /justify-content: space-between/);
+});

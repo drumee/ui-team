@@ -65,7 +65,9 @@
     border-bottom: 3px solid #5950ff;
   }
 
+  // Tabs stay together on the left; "+ Create topic" takes the far end.
   .window__topic-tab--create {
+    margin-left: auto;
     border-radius: 26px;
   }
 
