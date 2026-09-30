@@ -2448,6 +2448,13 @@ class __window_folder extends mfsInteract {
       case "topic-new":
         return Topics.openTopicDialog(this);
 
+      // Files-tab topic carousel: back / next page.
+      case "topic-strip-prev":
+        return Topics.stripPage(this, -1);
+
+      case "topic-strip-next":
+        return Topics.stripPage(this, +1);
+
       // Files-tab File threads bar.
       case "ft-bar-toggle":
         return FTBar.toggle(this);

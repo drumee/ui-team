@@ -55,8 +55,9 @@ function fetchTopics(win) {
       const rows = Array.isArray(res) ? res : (res && (res.data || res.rows)) || [];
       // A slow answer for a folder we already left is dropped.
       if (`${win.mget(_a.nid)}` !== folder_nid) return win._topics || [];
-      win._topics = rows;
-      return rows;
+      // ⚠️ UI-test mock topics (./topics-mock, MOCK_TOPICS) — remove before release.
+      win._topics = require("./topics-mock").withMockTopics(rows);
+      return win._topics;
     })
     .catch(() => win._topics || []);
 }
@@ -96,6 +97,8 @@ function scopeChatToTopic(win, topicId) {
   const wide = win.activeTab === _a.chat && !(win._isCompactChat && win._isCompactChat());
   win._updateChatHeader(null, "", wide);
   win._setThreadRailActive("");
+  // The strip's carousel shows the page with the picked tab.
+  win._topicPage = require("./skeleton/topic-strip").pageOf(win._topics, next);
   paintStrip(win);
   return win.ensurePart("folder-chat").then((chat) => {
     if (chat && typeof chat.setScopedTopic === "function") chat.setScopedTopic(next);
@@ -115,8 +118,24 @@ function paintStrip(win) {
       return;
     }
     const { topics, canCreateTopic } = menuOpts(win);
-    part.feed(require("./skeleton/topic-strip")(win, { topics, topicId: current(win), canCreateTopic }));
+    part.feed(
+      require("./skeleton/topic-strip")(win, {
+        topics,
+        topicId: current(win),
+        canCreateTopic,
+        page: win._topicPage || 0,
+      }),
+    );
   });
+}
+
+/** Carousel: move the strip one page back (-1) or forward (+1), clamped. */
+function stripPage(win, delta) {
+  const { PAGE_SIZE } = require("./skeleton/topic-strip");
+  const count = 1 + (Array.isArray(win._topics) ? win._topics.length : 0);
+  const last = Math.max(0, Math.ceil(count / PAGE_SIZE) - 1);
+  win._topicPage = Math.min(Math.max(0, (win._topicPage || 0) + delta), last);
+  return paintStrip(win);
 }
 
 /** Fetch the folder's topics, then paint the strip. */
@@ -188,6 +207,7 @@ function createTopic(win, { name, emoji } = {}) {
 function onFolderChange(win) {
   win._topics = [];
   win._topicId = "general";
+  win._topicPage = 0;
   paintStrip(win);
   return win.ensurePart("folder-chat").then((chat) => {
     if (chat && typeof chat.setScopedTopic === "function") chat.setScopedTopic("general");
@@ -208,4 +228,5 @@ module.exports = {
   refreshStrip,
   onChatTabEnter,
   onFilesTabEnter,
+  stripPage,
 };

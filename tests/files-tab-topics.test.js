@@ -19,6 +19,12 @@ global.document = {
   removeEventListener: (t, f) => listeners[t] && listeners[t].delete(f),
 };
 const fire = (t, e) => [...(listeners[t] || [])].forEach((f) => f(e));
+// The UI-test mock topics are off here: these tests pin the real list.
+const _loadMockOff = require("node:module")._load;
+require("node:module")._load = function (r, ...a) {
+  if (r === "./topics-mock") return { withMockTopics: (rows) => rows };
+  return _loadMockOff.call(this, r, ...a);
+};
 const T = require("../src/drumee/builtins/window/folder/topics");
 const FT = require("../src/drumee/builtins/window/folder/file-threads-bar");
 const flush = () => new Promise((r) => setImmediate(r));
@@ -46,8 +52,10 @@ function fakeWindow({ canChat = true, tab = "files", token = "", threads = [{ fi
     scopeChatToFile(n, l) { calls.push(["file", n, l]); this._scopedFileNid = n ? `${n}` : ""; },
   };
 }
-const services = (kids) => kids.map((k) => k.service);
-const active = (kids) => kids.filter((k) => k.dataset && k.dataset.active === "1").map((k) => k.service + (k.topic_id ? `:${k.topic_id}` : ""));
+// The strip is a carousel: its tabs sit inside the __topic-page box.
+const pageOfStrip = (kids) => kids.find((k) => /__topic-page\b/.test(k.className || "")) || { kids: [] };
+const services = (kids) => pageOfStrip(kids).kids.map((k) => k.service).concat(kids.filter((k) => k.service === "topic-new").map((k) => k.service));
+const active = (kids) => pageOfStrip(kids).kids.filter((k) => k.dataset && k.dataset.active === "1").map((k) => k.service + (k.topic_id ? `:${k.topic_id}` : ""));
 
 test("files tab: the strip paints #General active with the folder's topics; tabs scope the chat and the rail", async () => {
   const w = fakeWindow();
@@ -134,4 +142,25 @@ test("no strip / bar content for a chat-gated viewer or a token window", async (
     assert.deepEqual(w.parts["topic-strip"].fed.at(-1), []);
     assert.deepEqual(w.parts["ft-bar"].fed.at(-1), []);
   }
+});
+
+// Carousel: the page follows the scope, the arrows move it, a folder change
+// goes back to the first page.
+test("carousel: next / back move the page; picking a topic shows its page; folder change → page 0", async () => {
+  const w = fakeWindow();
+  w.fetchService = async () => ["a", "b", "c", "d", "e"].map((x, i) => ({ id: `t${i + 1}`, name: x, emoji: "😀" }));
+  await T.refreshStrip(w);
+  const ids = () => pageOfStrip(w.parts["topic-strip"].fed.at(-1)).kids.map((k) => k.topic_id || k.service);
+  assert.deepEqual(ids(), ["thread-menu-general", "t1", "t2"]);
+  await T.stripPage(w, +1);
+  assert.deepEqual(ids(), ["t3", "t4", "t5"]);
+  await T.stripPage(w, +1); // already last
+  assert.deepEqual(ids(), ["t3", "t4", "t5"]);
+  await T.stripPage(w, -1);
+  assert.deepEqual(ids(), ["thread-menu-general", "t1", "t2"]);
+  await T.scopeChatToTopic(w, "t5");
+  assert.deepEqual(ids(), ["t3", "t4", "t5"]);
+  await T.onFolderChange(w);
+  await T.refreshStrip(w);
+  assert.deepEqual(ids(), ["thread-menu-general", "t1", "t2"]);
 });

@@ -34,14 +34,68 @@
     align-items: center;
     gap: 4px;
     padding: 0 12px 4px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
+    // A carousel (topic-strip.js pages 3 tabs), not a scroller.
+    overflow: hidden;
     font-family: var(--font-main);
+  }
 
-    &::-webkit-scrollbar {
-      display: none;
+  // The page of tabs between the back / next buttons.
+  .window__topic-page {
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  // Three tabs + the arrows + "Create topic" share the side chat's width:
+  // tabs shrink and their names ellipsize instead of clipping mid-word.
+  .window__topic-page .window__topic-tab {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 8px 12px;
+  }
+
+  // #General is short and always there: it keeps its width, topics give way.
+  .window__topic-page .window__topic-tab--general {
+    flex-shrink: 0;
+  }
+
+  .window__topic-page .window__topic-tab-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // ui-core renders a Note as .note > .note-content: ellipsize the inner one.
+  .window__topic-page .window__topic-tab-name .note-content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .window__topic-arrow {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+    padding: 4px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--normal-fg-10, #0b0a21);
+    fill: currentColor;
+
+    &:hover {
+      background-color: var(--hover-bg-40);
     }
+  }
+
+  .window__topic-arrow[data-disabled="1"] {
+    opacity: 0.3;
+    pointer-events: none;
   }
 
   .window__topic-tab {
@@ -65,10 +119,43 @@
     border-bottom: 3px solid #5950ff;
   }
 
-  // Tabs stay together on the left; "+ Create topic" takes the far end.
-  .window__topic-tab--create {
+  // "Create topic" at the far end, styled like the folder toolbar's "+ New"
+  // (window-button__label-button primary, folder skin __new-ctrl). Scoped to
+  // the strip to beat the base tab and the generic .primary.
+  .window__topic-strip .window__topic-tab--create {
     margin-left: auto;
-    border-radius: 26px;
+    flex: 0 0 auto;
+    height: 30px;
+    min-height: 30px;
+    padding: 0 14px;
+    gap: 6px;
+    border: 0;
+    border-radius: 8px;
+    background-color: var(--primary-40);
+    color: var(--white);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .window__topic-strip .window__topic-tab--create:hover {
+    background-color: var(--primary-50);
+  }
+
+  .window__topic-strip .window__topic-tab--create:active {
+    background-color: #9d98e6;
+  }
+
+  .window__topic-create-ico {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    fill: currentColor;
+    color: currentColor;
+  }
+
+  .window__topic-create-label {
+    @include drumee.typo($size: 14px, $line: 16px, $weight: 500, $color: var(--white));
   }
 
   .window__topic-tab-name {

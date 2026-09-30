@@ -23,7 +23,6 @@ test("strip: one scrolling row; active tab brand + 3px underline; long names ell
   const s = rule(".window-folder .window__topic-strip");
   assert.match(s, /display: flex/);
   assert.match(s, /gap: 4px/);
-  assert.match(s, /overflow-x: auto/);
   assert.match(s, /flex-wrap: nowrap/);
   const a = rule('.window-folder .window__topic-tab[data-active="1"]');
   assert.match(a, /color: #5950ff/);
@@ -62,7 +61,45 @@ test("chatPanel mounts topic-strip and ft-bar for the workspace folder window on
 
 // Tabs on the left, "+ Create topic" pushed to the right end of the strip
 // (still one scrolling row when the topics overflow).
-test("strip: the create button sits at the far end, the tabs stay together", () => {
-  assert.match(rule(".window-folder .window__topic-tab--create"), /margin-left: auto/);
-  assert.doesNotMatch(rule(".window-folder .window__topic-strip"), /justify-content: space-between/);
+test("strip: the create button sits at the far end, styled like the '+ New' primary button", () => {
+  const c = rule(".window-folder .window__topic-strip .window__topic-tab--create");
+  assert.match(c, /margin-left: auto/);
+  assert.match(c, /background-color: var\(--primary-40\)/);
+  assert.match(c, /border-radius: 8px/);
+  assert.match(c, /height: 30px/);
+  assert.match(c, /color: var\(--white\)/);
+  assert.match(rule(".window-folder .window__topic-strip .window__topic-tab--create:hover"), /background-color: var\(--primary-50\)/);
+});
+
+test("carousel: a page of tabs between two arrow buttons; disabled arrows are dimmed and inert", () => {
+  assert.match(rule(".window-folder .window__topic-page"), /overflow: hidden/);
+  const arrow = rule(".window-folder .window__topic-arrow");
+  assert.match(arrow, /width: 24px/);
+  assert.match(arrow, /cursor: pointer/);
+  const off = rule('.window-folder .window__topic-arrow[data-disabled="1"]');
+  assert.match(off, /opacity: 0\.3/);
+  assert.match(off, /pointer-events: none/);
+});
+
+// Three tabs + the arrows + "Create topic" must fit the side chat: a tab in
+// the page shrinks and its name ellipsizes instead of being clipped mid-word.
+test("carousel: tabs in a page shrink and ellipsize, never clip", () => {
+  const t = rule(".window-folder .window__topic-page .window__topic-tab");
+  assert.match(t, /flex: 0 1 auto/);
+  assert.match(t, /min-width: 0/);
+  assert.match(t, /padding: 8px 12px/);
+  const n = rule(".window-folder .window__topic-page .window__topic-tab-name");
+  assert.match(n, /min-width: 0/);
+  assert.match(n, /text-overflow: ellipsis/);
+  // ui-core renders a Note as .note > .note-content: the dots belong there.
+  const inner = rule(".window-folder .window__topic-page .window__topic-tab-name .note-content");
+  assert.match(inner, /text-overflow: ellipsis/);
+  assert.match(inner, /overflow: hidden/);
+  // The page takes the room between the arrows (tabs are not squeezed early).
+  assert.match(rule(".window-folder .window__topic-page"), /flex: 1 1 auto/);
+});
+
+// #General is short and always there: it keeps its full width, topics give way.
+test("carousel: the #General tab never shrinks", () => {
+  assert.match(rule(".window-folder .window__topic-page .window__topic-tab--general"), /flex-shrink: 0/);
 });

@@ -19,6 +19,12 @@ Module._load = function (r, ...a) {
   if (r === "./topbar") return () => node("topbar")();
   return _load.call(this, r, ...a);
 };
+// The UI-test mock topics are off here: these tests pin the real list.
+const _loadMockOff = require("node:module")._load;
+require("node:module")._load = function (r, ...a) {
+  if (r === "./topics-mock") return { withMockTopics: (rows) => rows };
+  return _loadMockOff.call(this, r, ...a);
+};
 const T = require("../src/drumee/builtins/window/folder/topics");
 const grid = require("../src/drumee/builtins/window/folder/skeleton");
 const flush = () => new Promise((r) => setImmediate(r));

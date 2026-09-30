@@ -16,26 +16,61 @@ const text = (n) => walk(n).filter((k) => k.type === "Note").map((k) => k.conten
 const ui = { fig: { group: "window", family: "window-folder" } };
 const TOPICS = [{ id: "t1", name: "Topic name", emoji: "😀", unread: 90 }];
 
-test("strip: #General · topic · + Create topic — no All tab; #General active by default", () => {
-  const kids = topicStrip(ui, { topics: TOPICS, canCreateTopic: 1 });
-  assert.deepEqual(kids.map((k) => k.service), ["thread-menu-general", "topic-menu-topic", "topic-new"]);
+// The strip is a carousel: #General + topics, 3 per page, between a back and
+// a next button; the create button (styled like the "+ New" primary button)
+// stays at the far end.
+const MANY = ["a", "b", "c", "d", "e"].map((x, i) => ({ id: `t${i + 1}`, name: `Topic ${x}`, emoji: "😀" }));
+const parts = (kids) => ({
+  prev: kids.find((k) => k.service === "topic-strip-prev"),
+  next: kids.find((k) => k.service === "topic-strip-next"),
+  page: kids.find((k) => /__topic-page\b/.test(k.className || "")),
+  create: kids.find((k) => k.service === "topic-new"),
+});
+const tabsOf = (page) => page.kids.map((k) => (k.topic_id ? k.topic_id : k.service));
+
+test("strip: back · 3 tabs · next · Create topic; page 0 starts with #General", () => {
+  const kids = topicStrip(ui, { topics: MANY, canCreateTopic: 1 });
+  assert.deepEqual(kids.map((k) => k.service || "page"), ["topic-strip-prev", "page", "topic-strip-next", "topic-new"]);
+  const p = parts(kids);
+  assert.deepEqual(tabsOf(p.page), ["thread-menu-general", "t1", "t2"]);
+  assert.equal(p.page.kids[0].dataset.active, "1");
+  assert.match(p.page.kids[0].className, /__topic-tab--general/);
+  assert.equal(p.prev.dataset.disabled, "1");
+  assert.equal(p.next.dataset.disabled, "0");
+  assert.equal(p.prev.ico, "caret-left");
+  assert.equal(p.next.ico, "caret-right");
   assert.ok(!kids.some((k) => k.service === "topic-tab-all"));
-  assert.deepEqual(kids.map((k) => k.dataset && k.dataset.active), ["1", "0", undefined]);
-  assert.equal(text(kids[0]), `#${en.GENERAL}`);
-  assert.match(text(kids[1]), /😀/);
-  assert.match(text(kids[1]), /Topic name/);
-  assert.equal(kids[0].topic_scope, "general");
-  assert.equal(kids[1].topic_id, "t1");
-  assert.equal(text(kids[2]), `+ ${en.CREATE_TOPIC}`);
-  // A legacy "all" scope reads as #General.
-  assert.equal(topicStrip(ui, { topics: TOPICS, topicId: "all" })[0].dataset.active, "1");
 });
 
-test("strip: the scope moves the active tab; no + without chat access", () => {
-  const t = topicStrip(ui, { topics: TOPICS, topicId: "t1" });
-  assert.deepEqual(t.filter((k) => k.dataset).map((k) => k.dataset.active), ["0", "1"]);
-  assert.ok(!t.some((k) => k.service === "topic-new"));
-  assert.equal(topicStrip(ui, { topics: TOPICS, topicId: "general" })[0].dataset.active, "1");
+test("strip: pages of 3; the last page may be short; the arrows disable at the ends", () => {
+  const p1 = parts(topicStrip(ui, { topics: MANY, page: 1 }));
+  assert.deepEqual(tabsOf(p1.page), ["t3", "t4", "t5"]);
+  assert.equal(p1.prev.dataset.disabled, "0");
+  assert.equal(p1.next.dataset.disabled, "1");
+  // Out of range clamps to the last page.
+  assert.deepEqual(tabsOf(parts(topicStrip(ui, { topics: MANY, page: 9 })).page), ["t3", "t4", "t5"]);
+  // One page: both arrows disabled.
+  const one = parts(topicStrip(ui, { topics: MANY.slice(0, 1) }));
+  assert.equal(one.prev.dataset.disabled, "1");
+  assert.equal(one.next.dataset.disabled, "1");
+});
+
+test("strip: the scope marks its tab; the create button is the primary style with a plus", () => {
+  const p = parts(topicStrip(ui, { topics: MANY, topicId: "t4", page: 1, canCreateTopic: 1 }));
+  assert.deepEqual(p.page.kids.map((k) => k.dataset.active), ["0", "1", "0"]);
+  assert.match(p.create.className, /window-button__label-button primary/);
+  assert.ok(walk(p.create).some((n) => n.ico === "ph-plus"));
+  assert.equal(text(p.create), en.CREATE_TOPIC);
+  assert.equal(parts(topicStrip(ui, { topics: MANY })).create, undefined, "no create without chat access");
+  // A legacy "all" scope reads as #General.
+  assert.equal(parts(topicStrip(ui, { topics: MANY, topicId: "all" })).page.kids[0].dataset.active, "1");
+});
+
+test("pageOf: the page that shows a scope", () => {
+  assert.equal(topicStrip.pageOf(MANY, "general"), 0);
+  assert.equal(topicStrip.pageOf(MANY, "t2"), 0);
+  assert.equal(topicStrip.pageOf(MANY, "t3"), 1);
+  assert.equal(topicStrip.pageOf(MANY, "gone"), 0);
 });
 
 test("bar: closed = the bar only; open = the thread rows with real unread; active row", () => {
