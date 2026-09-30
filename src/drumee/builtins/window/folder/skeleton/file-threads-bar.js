@@ -6,11 +6,13 @@
  * the chat panel's "ft-bar" part by window/folder/file-threads-bar.js.
  *
  * @param {Object} ui folder window
- * @param {{ items?: Array, open?: boolean, scopedNid?: string }} opt
+ * @param {{ items?: Array, open?: boolean, scopedNid?: string, group?: string }} opt
  * @returns {Array} kids of the ft-bar part
  */
 module.exports = function fileThreadsBar(ui, opt = {}) {
-  const pfx = `${ui.fig.group}__ft`;
+  // `group`: the class family — the Inbox builds the folder's window__ bar.
+  const grp = opt.group || ui.fig.group;
+  const pfx = `${grp}__ft`;
   const items = Array.isArray(opt.items) ? opt.items : [];
   const open = !!opt.open;
   const scopedNid = opt.scopedNid ? `${opt.scopedNid}` : "";
@@ -18,7 +20,7 @@ module.exports = function fileThreadsBar(ui, opt = {}) {
   // Real unread only (the list proc has no unread column → no badge).
   const badge = (n) =>
     n != null && Number(n) > 0
-      ? Skeletons.Note({ className: `${ui.fig.group}__thread-menu__badge`, content: `${n}` })
+      ? Skeletons.Note({ className: `${grp}__thread-menu__badge`, content: `${n}` })
       : null;
 
   const bar = Skeletons.Box.X({

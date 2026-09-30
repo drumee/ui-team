@@ -13,7 +13,9 @@
  * `slide` ("next" | "prev") stamps the page so the skin slides it in from
  * that side (a page change only; topics.js decides).
  *
- * @param {{ topics?: Array, topicId?: string, canCreateTopic?: any, page?: number, slide?: string }} opt
+ * `group` overrides the class family (the Inbox builds the window__ strip).
+ *
+ * @param {{ topics?: Array, topicId?: string, canCreateTopic?: any, page?: number, slide?: string, group?: string }} opt
  * @returns {Array} kids of the strip
  */
 const PAGE_SIZE = 3;
@@ -31,7 +33,8 @@ function pageOf(topics, topicId) {
 }
 
 function topicStrip(ui, opt = {}) {
-  const grp = ui.fig.group;
+  // `group`: the class family — the Inbox builds the folder's window__ strip.
+  const grp = opt.group || ui.fig.group;
   const pfx = `${grp}__topic`;
   const topicId = opt.topicId && opt.topicId !== "all" ? `${opt.topicId}` : "general";
   const all = entries(opt.topics);

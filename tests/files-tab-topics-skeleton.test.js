@@ -97,3 +97,20 @@ test("page slide stamp: none by default, next / prev when asked", () => {
   assert.equal(parts(topicStrip(ui, { topics: MANY, page: 1, slide: "next" })).page.dataset.slide, "next");
   assert.equal(parts(topicStrip(ui, { topics: MANY, slide: "prev" })).page.dataset.slide, "prev");
 });
+
+test("group option: an Inbox (chat-p2p) host builds the window__ classes, handler stays the host", () => {
+  const host = { fig: { group: "chat-p2p", family: "chat-p2p" } };
+  const strip = topicStrip(host, { group: "window", topics: [{ id: "t1", name: "A" }], canCreateTopic: 1 });
+  const classes = JSON.stringify(strip);
+  assert.match(classes, /window__topic-page/);
+  assert.match(classes, /window__topic-tab--create window-button__label-button primary/);
+  assert.doesNotMatch(classes, /chat-p2p__topic/);
+  const create = strip.find((k) => k.service === "topic-new");
+  assert.equal(create.uiHandler[0], host);
+  const bar = fileThreadsBar(host, { group: "window", open: true, items: [{ file_nid: "f1", filename: "Q2", unread: 2 }] });
+  const b = JSON.stringify(bar);
+  assert.match(b, /window__ft-bar-card/);
+  assert.match(b, /window__ft-row/);
+  assert.match(b, /window__thread-menu__badge/);
+  assert.doesNotMatch(b, /chat-p2p__ft/);
+});
