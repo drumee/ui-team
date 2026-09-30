@@ -252,3 +252,34 @@ test("create refused → {ok:false, status} and the scope is unchanged", async (
   assert.deepEqual(await WT.createTopic(win, { name: "A", emoji: "🎨" }), { ok: false, status: "TOPIC_EXISTS" });
   assert.equal(win._panes.workspace.widget.scopedTopicId, "general");
 });
+
+// ── Final review fixes ──
+test("closing the bar repaints only the bar: a strip tab pressed while the dropdown is open keeps its DOM", async () => {
+  const win = fakeInbox();
+  await WT.sync(win);
+  await WT.toggleBar(win);
+  const strips = win.parts["topic-strip"].fed.length;
+  await WT.closeBar(win);
+  await WT.toggleBar(win);
+  await WT.pickFile(win, "f1", "Q2");
+  assert.equal(win.parts["topic-strip"].fed.length, strips, "strip not re-fed by bar open / close / pick");
+  assert.equal(win.parts["ft-bar"].el.dataset.open, "0");
+});
+
+test("a newly opened workspace paints # General (bar closed) at once, before its topics arrive", async () => {
+  let release;
+  const win = fakeInbox();
+  await WT.sync(win);
+  await WT.scopeTopic(win, "t2");
+  await WT.toggleBar(win);
+  win.fetchService = (name, p) => (win.calls.push([name, p]), new Promise((r) => (release = () => r(TOPICS))));
+  win._panes.workspace = { type: "share", peer: { entity_id: "H2", nid: "home-H2" }, widget: chatWidget() };
+  const pending = WT.sync(win);
+  await flush();
+  assert.deepEqual(activeTab(lastFeed(win, "topic-strip")), ["thread-menu-general"], "the old workspace's topic is gone");
+  assert.equal(win.parts["ft-bar"].el.dataset.open, "0");
+  assert.equal(win.parts["chat-area"].el.dataset.topics, "1");
+  release();
+  await pending;
+  assert.match(classes(lastFeed(win, "topic-strip")), /window__topic-page/);
+});

@@ -77,8 +77,13 @@ function bind(win, bar) {
   win._wtBarListeners = { down, key };
 }
 
-/** Feed the strip + bar for the pane on screen (or empty them). */
-function paint(win) {
+/**
+ * Feed the strip + bar for the pane on screen (or empty them). `bar: true`
+ * repaints the bar alone: opening / closing the dropdown must not re-feed the
+ * strip, or a tab pressed while it is open loses its click (the outside
+ * pointerdown closes the bar before the click lands on the pressed node).
+ */
+function paint(win, { bar: barOnly = false } = {}) {
   const p = pane(win);
   return Promise.all([win.ensurePart("chat-area"), win.ensurePart("topic-strip"), win.ensurePart("ft-bar")]).then(
     ([area, strip, bar]) => {
@@ -98,7 +103,7 @@ function paint(win) {
       // The slide plays once, for the page change that asked for it.
       const slide = s.slide || "none";
       s.slide = null;
-      if (alive(strip)) {
+      if (!barOnly && alive(strip)) {
         strip.feed(
           topicStrip(win, { group: GROUP, topics: s.topics, topicId: s.topicId, canCreateTopic: 1, page: s.page, slide }),
         );
@@ -141,8 +146,11 @@ function refresh(win) {
 function sync(win) {
   const p = pane(win);
   if (p && !p.topicState) {
+    // A new workspace: # General, page 0, bar closed on screen at once — not
+    // the previous workspace's strip until its topics arrive.
+    // The fetch starts alongside; its paint comes after this one.
     state(p);
-    return refresh(win);
+    return Promise.all([paint(win), refresh(win)]).then(() => undefined);
   }
   if (p) state(p).ftOpen = false;
   return paint(win);
@@ -196,7 +204,7 @@ function toggleBar(win) {
       if (pane(win) !== p) return undefined;
       s.ftItems = items;
       s.ftOpen = true;
-      return paint(win);
+      return paint(win, { bar: true });
     });
 }
 
@@ -204,7 +212,7 @@ function closeBar(win) {
   const p = pane(win);
   if (p) state(p).ftOpen = false;
   unbind(win);
-  return paint(win);
+  return paint(win, { bar: true });
 }
 
 /** A dropdown row: the conversation shows that file's thread in place. */
@@ -215,7 +223,7 @@ function pickFile(win, fileNid, filename) {
   // widget_chat's own scope chip (filename + ✕) is the way back; the strip
   // keeps the topic the chat returns to.
   if (typeof p.widget.setScopedFileNid === "function") p.widget.setScopedFileNid(`${fileNid}`, filename || "");
-  return paint(win);
+  return paint(win, { bar: true });
 }
 
 function openDialog(win) {
