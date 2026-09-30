@@ -1,4 +1,5 @@
 const ChatDetailsHost = require("./chat-details-host");
+const WorkspaceTopics = require("./workspace-topics");
 const { supportContactId, isSupportEntity } = require("libs/support");
 // Preview text for a row's last message — shared with chat_contact_item's
 // skeleton so the line reads the same on load and on a live push.
@@ -139,6 +140,7 @@ class __chat_p2p extends LetcBox {
     document.removeEventListener("keydown", this._onLightboxKey, true);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off(_e.peerData, this._onPeerData);
+    WorkspaceTopics.detach(this);
   }
 
   _onPeerData(data) {
@@ -487,6 +489,8 @@ class __chat_p2p extends LetcBox {
       header.clear();
       header.feed(require("./skeleton/chat-header")(this, pane ? pane.contact : null));
     });
+    // Workspace chat's topic strip + File threads bar follow the pane on screen.
+    WorkspaceTopics.sync(this);
   }
 
   _isPanePainted(pane) {
@@ -1796,6 +1800,7 @@ class __chat_p2p extends LetcBox {
     } else if (widget && _.isFunction(widget.park)) {
       widget.park();
     }
+    if (scope === this._scopeKey()) WorkspaceTopics.sync(this);
   }
 
   /**
@@ -1891,6 +1896,15 @@ class __chat_p2p extends LetcBox {
   }
 
   // widget_chat_details host contract (./chat-details-host)
+  // widget_topic_create host contract (./workspace-topics)
+  topicCreate(args) {
+    return WorkspaceTopics.createTopic(this, args);
+  }
+
+  topicDialogClose() {
+    return WorkspaceTopics.closeDialog(this);
+  }
+
   chatDetailsAction(name, payload) {
     return ChatDetailsHost.hostAction(this, name, payload);
   }
@@ -1923,6 +1937,34 @@ class __chat_p2p extends LetcBox {
       // (the widget itself routes its ✕ through chatDetailsAction).
       case "close-chat-details":
         return ChatDetailsHost.close(this);
+
+      // ── Workspace chat topic strip + File threads bar (./workspace-topics) ──
+      case "thread-menu-general":
+        return WorkspaceTopics.scopeTopic(this, "general");
+
+      case "topic-menu-topic": {
+        const topicId = trigger.mget && trigger.mget("topic_id");
+        return topicId ? WorkspaceTopics.scopeTopic(this, topicId) : undefined;
+      }
+
+      case "topic-strip-prev":
+        return WorkspaceTopics.stripPage(this, -1);
+
+      case "topic-strip-next":
+        return WorkspaceTopics.stripPage(this, +1);
+
+      case "topic-new":
+        return WorkspaceTopics.openDialog(this);
+
+      case "ft-bar-toggle":
+        return WorkspaceTopics.toggleBar(this);
+
+      case "thread-menu-file":
+        return WorkspaceTopics.pickFile(
+          this,
+          trigger.mget && trigger.mget("file_nid"),
+          (trigger.mget && trigger.mget("filename")) || "",
+        );
 
       case "close-export":
         // The Chat details export dialog closed itself in the overlay.

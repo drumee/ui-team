@@ -599,3 +599,48 @@ test("contact rows are never filtered by the workspace rule", async () => {
   await settle();
   assert.equal(f.direct.rows.length, 2);
 });
+
+// ── Workspace chat topic strip + File threads bar (./workspace-topics) ──
+// The strip / bar skeletons build descriptors only: plain objects will do.
+const skNode = (type) => (opt = {}) => ({ type, ...opt });
+global.Skeletons = global.Skeletons || { Box: { X: skNode("Box.X"), Y: skNode("Box.Y") }, Note: skNode("Note"), Image: { Svg: skNode("Image.Svg") }, Button: { Svg: skNode("Button.Svg") } };
+function withTopicParts(f) {
+  const mk = () => ({ el: el(), fed: [], feed(k) { this.fed.push(k); }, isDestroyed: () => false });
+  ["chat-area", "topic-strip", "ft-bar"].forEach((pn) => (f.ui._parts[pn] = mk()));
+  f.ui.fig.group = "chat-p2p";
+  return f;
+}
+
+test("Workspace chat stamps the chat area and paints the strip; Direct unstamps it; no refetch on the way back", async () => {
+  const f = withTopicParts(await landedOnDirect());
+  assert.notEqual(f.ui._parts["chat-area"].el.dataset.topics, "1");
+  await f.ui._setRoomScope("workspace");
+  await settle();
+  f.ws.load(WORKSPACES);
+  await settle();
+  assert.equal(f.ui._parts["chat-area"].el.dataset.topics, "1");
+  assert.equal(f.calls.filter((c) => c.svc === "channel.topic_list").length, 1);
+  assert.equal(f.calls.find((c) => c.svc === "channel.topic_list").folder_nid, "home-WS1");
+  await f.ui._setRoomScope("direct");
+  await settle();
+  assert.equal(f.ui._parts["chat-area"].el.dataset.topics, "0");
+  await f.ui._setRoomScope("workspace");
+  await settle();
+  assert.equal(f.ui._parts["chat-area"].el.dataset.topics, "1");
+  assert.equal(f.calls.filter((c) => c.svc === "channel.topic_list").length, 1);
+});
+
+test("strip / bar services reach the workspace conversation", async () => {
+  const f = withTopicParts(await landedOnDirect());
+  await f.ui._setRoomScope("workspace");
+  await settle();
+  f.ws.load(WORKSPACES);
+  await settle();
+  const w = f.ui._panes.workspace.widget;
+  const scoped = [];
+  w.setScopedTopic = (t) => scoped.push(t);
+  const ev = (service, attrs = {}) => f.ui.onUiEvent({ get: () => service, mget: (k) => attrs[k], service }, {});
+  await ev("topic-menu-topic", { topic_id: "mocktopic01" });
+  await ev("thread-menu-general", { topic_scope: "general" });
+  assert.deepEqual(scoped, ["mocktopic01", "general"]);
+});

@@ -200,7 +200,7 @@ test("inbox: switching scope tab closes Chat details", async () => {
   await H.open(inbox);
   Object.assign(inbox, {
     _panes: { workspace: { peer: { entity_id: "h1" }, type: "share", widget: {}, contact: null } },
-    fig: inboxUi.fig, _lists: {}, _listKey: (k) => k, _markSelected() {},
+    fig: inboxUi.fig, _lists: {}, _listKey: (k) => k, _markSelected() {}, _scopeKey: () => "workspace",
   });
   inbox.parts["chat-header"] = { el: { dataset: {} }, clear() {}, feed() {} };
   Inbox.prototype._showPane.call(inbox, "workspace");
