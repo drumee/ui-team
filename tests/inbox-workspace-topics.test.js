@@ -318,3 +318,54 @@ test("no mock topics: a workspace without topics shows # General alone", async (
   assert.deepEqual(win._panes.workspace.topicState.topics, []);
   assert.deepEqual(stripPage_(lastFeed(win, "topic-strip")).kids.map((k) => k.service), ["thread-menu-general"]);
 });
+
+// ── Workspace chat bubbles: the folder team chat's fills (Inbox) ──
+// The block a selector list starting with `sel` declares.
+const blockOf = (css, sel) => {
+  const m = css.match(new RegExp("(?:^|\\}\\s*)" + esc(sel) + "[^{]*\\{([^}]*)\\}"));
+  assert.ok(m, `missing ${sel}`);
+  return m[1];
+};
+
+test("skin: a workspace conversation's bubbles use the folder chat's fills", () => {
+  const inbox = compile("builtins/widget/chat-p2p/skin/index.scss");
+  const WS = ".chat-p2p__chat-area:where([data-area])";
+  assert.match(blockOf(inbox, `${WS} .widget-chatItem__conversation-content.me`), /background: var\(--chat-bubble-private\)/);
+  assert.match(blockOf(inbox, `${WS}[data-area=share] .widget-chatItem__conversation-content.me`), /background: var\(--chat-bubble-share\)/);
+  assert.match(blockOf(inbox, `${WS}[data-area=public] .widget-chatItem__conversation-content.me`), /background: var\(--chat-bubble-public\)/);
+  assert.match(blockOf(inbox, `${WS}[data-area=personal] .widget-chatItem__conversation-content.me`), /background: var\(--chat-bubble-personal\)/);
+  assert.match(blockOf(inbox, `${WS} .widget-chatItem__conversation-content.other`), /background: var\(--normal-bg-elevated\)/);
+  // Dark text on the light own bubble, as in the folder.
+  assert.match(blockOf(inbox, `${WS} .widget-chatItem__conversation-content.me`), /color: var\(--primary-purple-100\)/);
+  // A Direct conversation (no data-area) keeps the Inbox's own bubbles.
+  assert.doesNotMatch(inbox, /(^|\}\s*)\.chat-p2p__chat-area \.widget-chatItem__conversation-content\.me/);
+});
+
+test("skin: the folder's own bubble rules are unchanged by the shared mixin", () => {
+  const folder = compile("builtins/window/folder/skin/index.scss");
+  assert.match(blockOf(folder, ".window-folder .widget-chatItem__conversation-content.me"), /background: var\(--chat-bubble-private\)/);
+  assert.match(blockOf(folder, ".window-folder .window__chat-panel[data-area=share] .widget-chatItem__conversation-content.me"), /background: var\(--chat-bubble-share\)/);
+});
+
+test("paint stamps the workspace's area on the chat area; Direct takes it off", async () => {
+  const win = fakeInbox();
+  win._workspaceMeta = (hub) => (hub === "H1" ? { area: "public" } : null);
+  await WT.sync(win);
+  assert.equal(win.parts["chat-area"].el.dataset.area, "public");
+  win._scope = "direct";
+  await WT.sync(win);
+  assert.equal("area" in win.parts["chat-area"].el.dataset, false);
+});
+
+test("an unknown workspace area still stamps the area (the default own-bubble fill)", async () => {
+  const win = fakeInbox();
+  await WT.sync(win);
+  assert.equal(win.parts["chat-area"].el.dataset.area, "");
+});
+
+test("the area falls back to the conversation's row when the desk index has not loaded", async () => {
+  const win = fakeInbox();
+  win._panes.workspace.peer.area = "share";
+  await WT.sync(win);
+  assert.equal(win.parts["chat-area"].el.dataset.area, "share");
+});

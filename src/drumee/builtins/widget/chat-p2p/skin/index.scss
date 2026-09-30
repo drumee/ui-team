@@ -1,5 +1,6 @@
 @use "mixins/drumee";
 @use "builtins/window/folder/skin/topic-surfaces";
+@use "builtins/window/folder/skin/chat-bubbles";
 
 // Chat details column (the ⋮ panel), shared by its open and closing states.
 @mixin chat-details-column {
@@ -1375,3 +1376,13 @@ html[data-theme="dark"] .chat-p2p {
     transform: none;
   }
 }
+
+// Workspace chat: a workspace conversation's bubbles are the folder team
+// chat's — the own bubble a light tint of the workspace's area colour, the
+// others' an elevated card. ../workspace-topics stamps data-area on the chat
+// area for a workspace only; a Direct conversation keeps the Inbox's bubbles.
+// :where() keeps the scope's weight at one class, as the folder's.
+@include chat-bubbles.bubbles(
+  $panel: ".chat-p2p__chat-area:where([data-area])",
+  $scope: ".chat-p2p__chat-area:where([data-area])"
+);

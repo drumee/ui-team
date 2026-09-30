@@ -55,6 +55,12 @@ function where(p) {
   };
 }
 
+/** The workspace's area (desk index, else the row's), "" when unknown. */
+function areaOf(win, p) {
+  const meta = typeof win._workspaceMeta === "function" ? win._workspaceMeta(p.peer.entity_id) : null;
+  return (meta && meta.area) || p.peer.area || "";
+}
+
 function unbind(win) {
   const l = win._wtBarListeners;
   if (!l || typeof document === "undefined") return;
@@ -90,7 +96,13 @@ function paint(win, { bar: barOnly = false } = {}) {
     ([area, strip, bar]) => {
       // Superseded while the parts resolved: the newer call paints.
       if (pane(win) !== p) return;
-      if (area && area.el) area.el.dataset.topics = p ? "1" : "0";
+      if (area && area.el) {
+        area.el.dataset.topics = p ? "1" : "0";
+        // The workspace's area paints its bubbles like the folder team chat
+        // (skin: chat-bubbles); off a workspace the Inbox's own bubbles.
+        if (p) area.el.dataset.area = areaOf(win, p);
+        else delete area.el.dataset.area;
+      }
       if (!p) {
         unbind(win);
         if (alive(strip)) strip.feed([]);
