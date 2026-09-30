@@ -28,7 +28,7 @@ function fakeWindow({ canChat = true, tab = "files", token = "", threads = [{ fi
   const calls = [];
   const parts = {};
   const mk = (pn) => (parts[pn] = parts[pn] || { pn, el: { dataset: {}, contains: (x) => x === "inside" }, fed: [], feed(k) { this.fed.push(k); } });
-  const chat = { scopedTopicId: "all", setScopedTopic(t) { calls.push(["topic", t]); this.scopedTopicId = t; } };
+  const chat = { scopedTopicId: "general", setScopedTopic(t) { calls.push(["topic", t]); this.scopedTopicId = t; } };
   return {
     calls, parts, chat,
     fig: { group: "window", family: "window-folder" },
@@ -49,34 +49,32 @@ function fakeWindow({ canChat = true, tab = "files", token = "", threads = [{ fi
 const services = (kids) => kids.map((k) => k.service);
 const active = (kids) => kids.filter((k) => k.dataset && k.dataset.active === "1").map((k) => k.service + (k.topic_id ? `:${k.topic_id}` : ""));
 
-test("files tab: the strip paints All active with the folder's topics; tabs scope the chat and the rail", async () => {
+test("files tab: the strip paints #General active with the folder's topics; tabs scope the chat and the rail", async () => {
   const w = fakeWindow();
   await T.refreshStrip(w);
   const strip = w.parts["topic-strip"].fed.at(-1);
-  assert.deepEqual(services(strip), ["topic-tab-all", "thread-menu-general", "topic-menu-topic", "topic-new"]);
-  assert.deepEqual(active(strip), ["topic-tab-all"]);
+  assert.deepEqual(services(strip), ["thread-menu-general", "topic-menu-topic", "topic-new"]);
+  assert.deepEqual(active(strip), ["thread-menu-general"]);
   await T.scopeChatToTopic(w, "t1");
   assert.deepEqual(active(w.parts["topic-strip"].fed.at(-1)), ["topic-menu-topic:t1"]);
   assert.equal(w.chat.scopedTopicId, "t1");
   assert.ok(w.calls.some((c) => c[0] === "railActive"));
-  await T.scopeChatToTopic(w, "all");
-  assert.equal(w.chat.scopedTopicId, "all");
-  assert.deepEqual(active(w.parts["topic-strip"].fed.at(-1)), ["topic-tab-all"]);
   await T.scopeChatToTopic(w, "general");
   assert.deepEqual(active(w.parts["topic-strip"].fed.at(-1)), ["thread-menu-general"]);
   // The Files-tab header keeps "Team Chat": the strip shows the scope.
   assert.deepEqual(w.calls.filter((c) => c[0] === "header").at(-1), ["header", null, "", false]);
 });
 
-test("entering the Chat tab maps all → general; a topic or General is kept", async () => {
-  const w = fakeWindow({ tab: "chat" });
+test("no All anywhere: a legacy all scope reads as #General; tab switches keep the scope", async () => {
+  const w = fakeWindow();
+  w._topicId = "all";
+  assert.equal(T.menuOpts(w).topicId, "general");
+  await T.scopeChatToTopic(w, "t1");
+  w.calls.length = 0;
   await T.onChatTabEnter(w);
-  assert.equal(w.chat.scopedTopicId, "general");
-  const t = fakeWindow({ tab: "chat" });
-  await T.scopeChatToTopic(t, "t1");
-  t.calls.length = 0;
-  await T.onChatTabEnter(t);
-  assert.ok(!t.calls.some((c) => c[0] === "topic"));
+  await T.onFilesTabEnter(w);
+  assert.ok(!w.calls.some((c) => c[0] === "topic"), "switching tabs never re-scopes");
+  assert.equal(w.chat.scopedTopicId, "t1");
 });
 
 test("+ Create topic: after create the strip shows the new topic active", async () => {
@@ -117,15 +115,15 @@ test("the bar closes on outside click and on Escape, not on a click inside", asy
   assert.equal((listeners.pointerdown || new Set()).size, 0, "listeners removed");
 });
 
-test("folder change repaints the strip (scope back to All) and closes the bar", async () => {
+test("folder change repaints the strip (scope back to #General) and closes the bar", async () => {
   const w = fakeWindow();
   await T.refreshStrip(w);
   await T.scopeChatToTopic(w, "t1");
   await FT.toggle(w);
   await T.onFolderChange(w);
   await FT.onFolderChange(w);
-  assert.equal(w.chat.scopedTopicId, "all");
-  assert.deepEqual(active(w.parts["topic-strip"].fed.at(-1)), ["topic-tab-all"]);
+  assert.equal(w.chat.scopedTopicId, "general");
+  assert.deepEqual(active(w.parts["topic-strip"].fed.at(-1)), ["thread-menu-general"]);
   assert.equal(w.parts["ft-bar"].el.dataset.open, "0");
 });
 
@@ -136,24 +134,4 @@ test("no strip / bar content for a chat-gated viewer or a token window", async (
     assert.deepEqual(w.parts["topic-strip"].fed.at(-1), []);
     assert.deepEqual(w.parts["ft-bar"].fed.at(-1), []);
   }
-});
-
-// Self-review: the Chat tab maps All → # General on entry because its rail
-// has no All row. That was the tab's choice, not the user's: coming back to
-// Files restores All (a topic or General the user picked is kept).
-test("back on the Files tab, an automatic All → General is undone; a user pick is kept", async () => {
-  const w = fakeWindow({ tab: "chat" });
-  await T.onChatTabEnter(w);
-  assert.equal(w.chat.scopedTopicId, "general");
-  w.activeTab = "files";
-  await T.onFilesTabEnter(w);
-  assert.equal(w.chat.scopedTopicId, "all");
-  assert.deepEqual(active(w.parts["topic-strip"].fed.at(-1)), ["topic-tab-all"]);
-  // The user picked General on the Chat tab: kept.
-  const u = fakeWindow({ tab: "chat" });
-  await T.onChatTabEnter(u);
-  await T.scopeChatToTopic(u, "general");
-  u.activeTab = "files";
-  await T.onFilesTabEnter(u);
-  assert.equal(u.chat.scopedTopicId, "general");
 });

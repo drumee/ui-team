@@ -53,7 +53,7 @@ test("fetch passes hub/folder; skipped without chat access", async () => {
   const rows = await T.fetchTopics(w);
   assert.deepEqual(w.calls[0], ["fetch", { service: "channel.topic_list", hub_id: "hA", folder_nid: "fA" }]);
   assert.equal(rows[0].id, "t1");
-  assert.deepEqual(T.menuOpts(w), { topics: rows, topicId: "all", canCreateTopic: true });
+  assert.deepEqual(T.menuOpts(w), { topics: rows, topicId: "general", canCreateTopic: true });
   const g = fakeWindow({ canChat: false });
   assert.deepEqual(await T.fetchTopics(g), []);
   assert.equal(g.calls.length, 0);
@@ -91,7 +91,7 @@ test("create TOPIC_EXISTS → {ok:false} and no scope change", async () => {
   const r = await T.createTopic(w, { name: "Design", emoji: "😀" });
   assert.deepEqual(r, { ok: false, status: "TOPIC_EXISTS" });
   assert.ok(!w.calls.some((c) => c[0] === "topic"));
-  assert.equal(T.menuOpts(w).topicId, "all");
+  assert.equal(T.menuOpts(w).topicId, "general");
 });
 
 test("scoping: a topic, # General; the header title follows; a file scope is dropped first", async () => {
@@ -109,22 +109,22 @@ test("scoping: a topic, # General; the header title follows; a file scope is dro
   assert.equal(w.chat.scopedTopicId, "general");
   // "all" (the Files-tab All tab) is a real scope; the Chat-tab title reads
   // # General for it (the rail has no All row).
-  w._topicId = "all";
-  assert.equal(T.menuOpts(w).topicId, "all");
+  w._topicId = "all"; // a scope left from before All went away
+  assert.equal(T.menuOpts(w).topicId, "general");
   assert.equal(T.headerTitle(w), `# ${en.GENERAL}`);
   const f = fakeWindow({ tab: "files" });
   await T.scopeChatToTopic(f, "general");
   assert.deepEqual(f.calls.filter((c) => c[0] === "header").at(-1), ["header", null, "", false]);
 });
 
-test("folder change → all, and the topics are forgotten", async () => {
+test("folder change → general, and the topics are forgotten", async () => {
   const w = fakeWindow();
   await T.fetchTopics(w);
   await T.scopeChatToTopic(w, "t1");
   await T.onFolderChange(w);
-  assert.equal(T.menuOpts(w).topicId, "all");
+  assert.equal(T.menuOpts(w).topicId, "general");
   assert.deepEqual(T.menuOpts(w).topics, []);
-  assert.equal(w.chat.scopedTopicId, "all");
+  assert.equal(w.chat.scopedTopicId, "general");
 });
 
 test("the folder skeleton builds the topic-dialog slot in both shapes", () => {

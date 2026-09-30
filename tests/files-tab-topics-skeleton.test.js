@@ -16,24 +16,26 @@ const text = (n) => walk(n).filter((k) => k.type === "Note").map((k) => k.conten
 const ui = { fig: { group: "window", family: "window-folder" } };
 const TOPICS = [{ id: "t1", name: "Topic name", emoji: "😀", unread: 90 }];
 
-test("strip: All · #General · topic · + Create topic, All active by default", () => {
+test("strip: #General · topic · + Create topic — no All tab; #General active by default", () => {
   const kids = topicStrip(ui, { topics: TOPICS, canCreateTopic: 1 });
-  assert.deepEqual(kids.map((k) => k.service), ["topic-tab-all", "thread-menu-general", "topic-menu-topic", "topic-new"]);
-  assert.deepEqual(kids.map((k) => k.dataset && k.dataset.active), ["1", "0", "0", undefined]);
-  assert.equal(text(kids[0]), en.ALL);
-  assert.equal(text(kids[1]), `#${en.GENERAL}`);
-  assert.match(text(kids[2]), /😀/);
-  assert.match(text(kids[2]), /Topic name/);
-  assert.equal(kids[1].topic_scope, "general");
-  assert.equal(kids[2].topic_id, "t1");
-  assert.equal(text(kids[3]), `+ ${en.CREATE_TOPIC}`);
+  assert.deepEqual(kids.map((k) => k.service), ["thread-menu-general", "topic-menu-topic", "topic-new"]);
+  assert.ok(!kids.some((k) => k.service === "topic-tab-all"));
+  assert.deepEqual(kids.map((k) => k.dataset && k.dataset.active), ["1", "0", undefined]);
+  assert.equal(text(kids[0]), `#${en.GENERAL}`);
+  assert.match(text(kids[1]), /😀/);
+  assert.match(text(kids[1]), /Topic name/);
+  assert.equal(kids[0].topic_scope, "general");
+  assert.equal(kids[1].topic_id, "t1");
+  assert.equal(text(kids[2]), `+ ${en.CREATE_TOPIC}`);
+  // A legacy "all" scope reads as #General.
+  assert.equal(topicStrip(ui, { topics: TOPICS, topicId: "all" })[0].dataset.active, "1");
 });
 
 test("strip: the scope moves the active tab; no + without chat access", () => {
   const t = topicStrip(ui, { topics: TOPICS, topicId: "t1" });
-  assert.deepEqual(t.filter((k) => k.dataset).map((k) => k.dataset.active), ["0", "0", "1"]);
+  assert.deepEqual(t.filter((k) => k.dataset).map((k) => k.dataset.active), ["0", "1"]);
   assert.ok(!t.some((k) => k.service === "topic-new"));
-  assert.equal(topicStrip(ui, { topics: TOPICS, topicId: "general" })[1].dataset.active, "1");
+  assert.equal(topicStrip(ui, { topics: TOPICS, topicId: "general" })[0].dataset.active, "1");
 });
 
 test("bar: closed = the bar only; open = the thread rows with real unread; active row", () => {

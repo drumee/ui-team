@@ -1,9 +1,9 @@
 /**
- * Files-tab chat topic strip (Figma 869:189953 / 869:191968): the tabs under
- * the "Team Chat" header — All · #General · one per topic · + Create topic.
+ * Files-tab chat topic strip (Figma 869:191968): the tabs under the "Team
+ * Chat" header — #General · one per topic · + Create topic (no All tab).
  * Fed into the chat panel's "topic-strip" part by window/folder/topics.js
- * (paintStrip); shares its scope with the Chat-tab rail (`topicId`: "all",
- * "general" or a topic id).
+ * (paintStrip); shares its scope with the Chat-tab rail (`topicId`:
+ * "general" or a topic id; a legacy "all" reads as #General).
  *
  * @param {Object} ui folder window
  * @param {{ topics?: Array, topicId?: string, canCreateTopic?: any }} opt
@@ -12,7 +12,7 @@
 module.exports = function topicStrip(ui, opt = {}) {
   const pfx = `${ui.fig.group}__topic`;
   const topics = Array.isArray(opt.topics) ? opt.topics : [];
-  const topicId = opt.topicId ? `${opt.topicId}` : "all";
+  const topicId = opt.topicId && opt.topicId !== "all" ? `${opt.topicId}` : "general";
 
   const tab = (attrs, kids, active) =>
     Skeletons.Box.X({
@@ -26,7 +26,6 @@ module.exports = function topicStrip(ui, opt = {}) {
   const label = (content) => Skeletons.Note({ className: `${pfx}-tab-name`, content });
 
   const kids = [
-    tab({ service: "topic-tab-all" }, [label(LOCALE.ALL || "All")], topicId === "all"),
     // Same service as the rail's # General row (topic_scope marks the pick).
     tab(
       { service: "thread-menu-general", topic_scope: "general" },

@@ -2448,10 +2448,7 @@ class __window_folder extends mfsInteract {
       case "topic-new":
         return Topics.openTopicDialog(this);
 
-      // Files-tab strip: All tab (the whole chat) and the File threads bar.
-      case "topic-tab-all":
-        return Topics.scopeChatToTopic(this, "all");
-
+      // Files-tab File threads bar.
       case "ft-bar-toggle":
         return FTBar.toggle(this);
 
@@ -5279,7 +5276,7 @@ class __window_folder extends mfsInteract {
         chat.setScopedFolderNid(this.mget(_a.nid));
     });
     this._updateChatHeader(null, "", true);
-    // The rail has no All row: show # General; the Files-tab bar is hidden.
+    // The Files-tab bar is hidden on the wide Chat tab.
     Topics.onChatTabEnter(this);
     FTBar.close(this);
     this._populateThreadRail();
@@ -5290,7 +5287,7 @@ class __window_folder extends mfsInteract {
   _exitChatTabLayout() {
     this._closeFileThreadPanel();
     this._updateChatHeader(null, "", false);
-    // The Files strip has All: undo the Chat tab's automatic All → General.
+    // Repaint the Files strip for the current topic scope.
     Topics.onFilesTabEnter(this);
   }
 
@@ -5795,7 +5792,7 @@ class __window_folder extends mfsInteract {
       this._closeFileThreadPanel();
     }
     if (this._scopedFileNid) this.scopeChatToFile(null);
-    // Topics belong to a folder: another folder starts on All; its topics
+    // Topics belong to a folder: another folder starts on # General; its topics
     // and file threads replace the strip's and the bar's.
     Topics.onFolderChange(this);
     Topics.refreshStrip(this);
