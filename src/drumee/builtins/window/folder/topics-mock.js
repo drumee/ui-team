@@ -1,8 +1,9 @@
 /**
  * ⚠️ UI-TEST MOCK — mock folder chat topics appended to the real list so the
- * Files-tab topic carousel (3 per page) can be seen paging. Remove before
- * release: set MOCK_TOPICS to false (or delete this file and its one call in
- * ./topics.js fetchTopics).
+ * Files-tab topic carousel (3 per page) — and the Inbox's Workspace chat
+ * strip — can be seen paging. Remove before
+ * release: set MOCK_TOPICS to false (or delete this file and its two calls:
+ * ./topics.js fetchTopics and widget/chat-p2p/workspace-topics.js refresh).
  *
  * The ids pass the server's topic_id pattern but exist nowhere: picking a
  * mock topic lists nothing and posting into one is refused (INVALID_TOPIC).

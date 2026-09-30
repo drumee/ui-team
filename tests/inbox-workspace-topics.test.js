@@ -65,3 +65,190 @@ test("skeleton: chat area = header · topic strip · ft bar · chat panel; the d
   assert.equal(slot.className, "widget-topic-create__viewport-backdrop");
   assert.equal(slot.partHandler, ui);
 });
+
+// ── Module (fake Inbox) ──
+global.SERVICE = { channel: { topic_list: "channel.topic_list", topic_create: "channel.topic_create", file_thread_list_by_folder: "channel.file_thread_list_by_folder" } };
+const listeners = {};
+global.document = {
+  addEventListener: (t, f) => ((listeners[t] = listeners[t] || new Set()).add(f)),
+  removeEventListener: (t, f) => listeners[t] && listeners[t].delete(f),
+};
+const fire = (t, e) => [...(listeners[t] || [])].forEach((f) => f(e));
+const flush = () => new Promise((r) => setImmediate(r));
+{
+  const Module = require("node:module");
+  const load = Module._load;
+  Module._load = function (r, ...a) { if (/topics-mock$/.test(r)) return { withMockTopics: (rows) => rows }; return load.call(this, r, ...a); };
+}
+const WT = require("../src/drumee/builtins/widget/chat-p2p/workspace-topics");
+const TOPICS = [{ id: "t1", name: "A", emoji: "🎨" }, { id: "t2", name: "B" }, { id: "t3", name: "C" }, { id: "t4", name: "D" }];
+
+function chatWidget() {
+  return {
+    calls: [], scopedTopicId: "general", scopedFileNid: "",
+    isDestroyed: () => false,
+    setScopedTopic(t) { this.calls.push(["topic", t]); this.scopedTopicId = t; },
+    setScopedFileNid(n, l) { this.calls.push(["file", n, l]); this.scopedFileNid = n ? `${n}` : ""; },
+  };
+}
+function fakeInbox({ scope = "workspace", topics = TOPICS, threads = [{ file_nid: "f1", filename: "Q2" }] } = {}) {
+  const calls = [];
+  const parts = {};
+  const mk = (pn) => (parts[pn] = parts[pn] || { pn, el: { dataset: {}, contains: (x) => x === "inside" }, fed: [], feed(k) { this.fed.push(k); }, clear() { this.fed.push("cleared"); } });
+  return {
+    calls, parts, _scope: scope,
+    fig: { family: "chat-p2p", group: "chat-p2p" },
+    _panes: { workspace: { type: "share", peer: { entity_id: "H1", nid: "home-H1" }, widget: chatWidget() } },
+    _scopeKey() { return this._scope; },
+    ensurePart: (pn) => Promise.resolve(mk(pn)),
+    fetchService: async (name, p) => { calls.push([name, p]); return name === "channel.topic_list" ? topics : threads; },
+    postService: async (name, p) => (calls.push([name, p]), { id: "t9", name: p.name, emoji: p.emoji }),
+  };
+}
+// Class names of a fed tree (the descriptors hold the fake Inbox: no JSON).
+const classes = (kids) => walk(kids).map((n) => n.className || "").join(" | ");
+const lastFeed = (win, pn) => { const f = win.parts[pn].fed; return f[f.length - 1]; };
+const stripPage_ = (kids) => kids.find((k) => /__topic-page\b/.test(k.className || "")) || { kids: [] };
+const activeTab = (kids) => stripPage_(kids).kids.filter((k) => k.dataset.active === "1").map((k) => k.topic_id || k.service);
+
+test("sync on a new workspace pane fetches that hub's root-folder topics and paints #General active", async () => {
+  const win = fakeInbox();
+  await WT.sync(win);
+  assert.deepEqual(win.calls[0], ["channel.topic_list", { hub_id: "H1", folder_nid: "home-H1" }]);
+  assert.equal(win.parts["chat-area"].el.dataset.topics, "1");
+  const strip = lastFeed(win, "topic-strip");
+  assert.deepEqual(activeTab(strip), ["thread-menu-general"]);
+  assert.match(classes(strip), /window__topic-tab--create/);
+  assert.equal(win.parts["ft-bar"].el.dataset.open, "0");
+  // Re-sync of the same pane (tab switched back): no refetch.
+  await WT.sync(win);
+  assert.equal(win.calls.filter((c) => c[0] === "channel.topic_list").length, 1);
+});
+
+test("Direct scope (or no workspace pane): strip and bar are emptied and the area unstamped", async () => {
+  const win = fakeInbox({ scope: "direct" });
+  await WT.sync(win);
+  assert.equal(win.calls.length, 0);
+  assert.equal(win.parts["chat-area"].el.dataset.topics, "0");
+  assert.deepEqual(lastFeed(win, "topic-strip"), []);
+  assert.deepEqual(lastFeed(win, "ft-bar"), []);
+});
+
+test("a topic tab scopes the widget; # General scopes back; a file scope is left first", async () => {
+  const win = fakeInbox();
+  await WT.sync(win);
+  const w = win._panes.workspace.widget;
+  w.scopedFileNid = "f1";
+  await WT.scopeTopic(win, "t2");
+  assert.deepEqual(w.calls, [["file", null, null], ["topic", "t2"]]);
+  assert.deepEqual(activeTab(lastFeed(win, "topic-strip")), ["t2"]);
+  await WT.scopeTopic(win, "all");
+  assert.equal(w.scopedTopicId, "general");
+});
+
+test("carousel: next/back clamp and slide once; picking a topic on page 2 jumps there", async () => {
+  const win = fakeInbox();
+  await WT.sync(win);
+  await WT.stripPage(win, +1);
+  assert.equal(stripPage_(lastFeed(win, "topic-strip")).dataset.slide, "next");
+  await WT.stripPage(win, +1); // last page already (5 entries / 3)
+  assert.equal(stripPage_(lastFeed(win, "topic-strip")).dataset.slide, "none");
+  await WT.stripPage(win, -1);
+  assert.equal(stripPage_(lastFeed(win, "topic-strip")).dataset.slide, "prev");
+  await WT.scopeTopic(win, "t4");
+  assert.equal(stripPage_(lastFeed(win, "topic-strip")).dataset.slide, "next");
+  assert.deepEqual(activeTab(lastFeed(win, "topic-strip")), ["t4"]);
+});
+
+test("state lives on the pane: a new workspace pane starts over; a slow answer for the old one paints nothing", async () => {
+  let release;
+  const win = fakeInbox();
+  await WT.sync(win);
+  await WT.scopeTopic(win, "t4");
+  const old = win._panes.workspace;
+  win.fetchService = (name, p) => (win.calls.push([name, p]), new Promise((r) => (release = () => r(TOPICS))));
+  win._panes.workspace = { type: "share", peer: { entity_id: "H2", nid: "home-H2" }, widget: chatWidget() };
+  const pending = WT.sync(win);
+  // Old pane replaced meanwhile by a third one.
+  win._panes.workspace = { type: "share", peer: { entity_id: "H3", nid: "home-H3" }, widget: chatWidget(), topicState: { topics: [], topicId: "general", page: 0, ftOpen: false, ftItems: [] } };
+  const feeds = win.parts["topic-strip"].fed.length;
+  release();
+  await pending;
+  await flush();
+  assert.equal(old.topicState.topicId, "t4");
+  assert.equal(win.parts["topic-strip"].fed.length, feeds, "no paint for the replaced pane");
+});
+
+test("file threads bar: toggle fetches the root folder's threads and opens; a row scopes the widget and closes", async () => {
+  const win = fakeInbox();
+  await WT.sync(win);
+  await WT.toggleBar(win);
+  assert.deepEqual(win.calls.at(-1), ["channel.file_thread_list_by_folder", { hub_id: "H1", folder_nid: "home-H1", page: 1 }]);
+  assert.equal(win.parts["ft-bar"].el.dataset.open, "1");
+  assert.match(classes(lastFeed(win, "ft-bar")), /window__ft-row/);
+  await WT.pickFile(win, "f1", "Q2");
+  const w = win._panes.workspace.widget;
+  assert.deepEqual(w.calls.at(-1), ["file", "f1", "Q2"]);
+  assert.equal(win.parts["ft-bar"].el.dataset.open, "0");
+  // Reopened: the scoped file's row is highlighted.
+  await WT.toggleBar(win);
+  assert.match(classes(lastFeed(win, "ft-bar")), /window__ft-row is-active/);
+});
+
+test("the bar closes on outside pointerdown and Escape (not inside); detach removes the listeners", async () => {
+  const win = fakeInbox();
+  await WT.sync(win);
+  await WT.toggleBar(win);
+  fire("pointerdown", { target: "inside" });
+  await flush();
+  assert.equal(win.parts["ft-bar"].el.dataset.open, "1");
+  fire("pointerdown", { target: "outside" });
+  await flush();
+  assert.equal(win.parts["ft-bar"].el.dataset.open, "0");
+  await WT.toggleBar(win);
+  fire("keydown", { key: "Escape" });
+  await flush();
+  assert.equal(win.parts["ft-bar"].el.dataset.open, "0");
+  await WT.toggleBar(win);
+  WT.detach(win);
+  assert.equal((listeners.pointerdown || new Set()).size, 0);
+  assert.equal((listeners.keydown || new Set()).size, 0);
+});
+
+test("leaving for Direct closes the bar and drops its listeners", async () => {
+  const win = fakeInbox();
+  await WT.sync(win);
+  await WT.toggleBar(win);
+  win._scope = "direct";
+  await WT.sync(win);
+  assert.equal((listeners.pointerdown || new Set()).size, 0);
+  win._scope = "workspace";
+  await WT.sync(win);
+  assert.equal(win.parts["ft-bar"].el.dataset.open, "0");
+});
+
+test("+ Topic opens the dialog in its slot with this workspace; create scopes the chat to the new topic", async () => {
+  const win = fakeInbox();
+  await WT.sync(win);
+  await WT.openDialog(win);
+  const fed = lastFeed(win, "wrapper-topic-dialog");
+  assert.equal(fed.kind, "widget_topic_create");
+  assert.equal(fed.hub_id, "H1");
+  assert.equal(fed.folder_nid, "home-H1");
+  assert.equal(fed.host, win);
+  const res = await WT.createTopic(win, { name: "Design", emoji: "🔥" });
+  assert.equal(res.ok, true);
+  assert.deepEqual(win.calls.at(-1), ["channel.topic_create", { hub_id: "H1", folder_nid: "home-H1", name: "Design", emoji: "🔥" }]);
+  assert.equal(win._panes.workspace.widget.scopedTopicId, "t9");
+  assert.deepEqual(activeTab(lastFeed(win, "topic-strip")), ["t9"]);
+  WT.closeDialog(win);
+  assert.equal(lastFeed(win, "wrapper-topic-dialog"), "cleared");
+});
+
+test("create refused → {ok:false, status} and the scope is unchanged", async () => {
+  const win = fakeInbox();
+  await WT.sync(win);
+  win.postService = async () => ({ status: "TOPIC_EXISTS" });
+  assert.deepEqual(await WT.createTopic(win, { name: "A", emoji: "🎨" }), { ok: false, status: "TOPIC_EXISTS" });
+  assert.equal(win._panes.workspace.widget.scopedTopicId, "general");
+});
