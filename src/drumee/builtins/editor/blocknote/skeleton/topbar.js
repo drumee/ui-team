@@ -24,7 +24,7 @@ module.exports = function (ui) {
             uiHandler: ui,
             partHandler: ui,
             className: _a.name,
-            content: filename,
+            content: filename || LOCALE.UNTITLED,
             active: 0,
           }),
           Skeletons.Note({

@@ -58,10 +58,9 @@ class __editor_blocknote extends __player {
         pid: Visitor.get(_a.home_id),
         privilege: _K.privilege.owner,
       });
-      const now = Dayjs().format("DD-MMM-YYYY HH:mm");
-      this.model.atLeast({
-        filename: LOCALE.NOTE_ON_DATE_X.format(now).replace(/\//g, "-"),
-      });
+      // No name is filled in for the user (Lexis, 2026-09-29): the title
+      // starts empty under its "Untitled" placeholder, and saveContent()
+      // falls back to "Untitled" until something is typed there.
     }
 
     // FULL-FRAME (Duy, 2026-09-16): the editor is DOCKED to the workspace, not
@@ -367,8 +366,16 @@ class __editor_blocknote extends __player {
     const pid = target.mget(_a.nid) || Visitor.get(_a.home_id);
     const hub_id = target.mget(_a.hub_id) || Visitor.get(_a.id);
     const nid = this.mget(_a.nid);
-    let filename = this.mget(_a.filename);
-    if (!filename && this.media) filename = this.media.mget(_a.filename);
+    // An untitled note reuses the name the server gave it on the first save.
+    // The server de-duplicates a NEW node ("Untitled(1)") but renames an
+    // existing one to exactly what it is sent — and media has a UNIQUE key on
+    // (parent_id, user_filename, extension), so re-sending "Untitled" for the
+    // second untitled note in a folder would make every later save fail.
+    let filename =
+      this.mget(_a.filename) ||
+      (this.media && this.media.mget(_a.filename)) ||
+      this._assignedName ||
+      LOCALE.UNTITLED;
 
     this._saving = 1;
     this._setStatus("saving");
@@ -397,6 +404,12 @@ class __editor_blocknote extends __player {
         // Adopt the node so every later save REPLACES this file instead of
         // creating another one.
         this.mset({ nid: data.nid, id: data.nid });
+        if (!this.mget(_a.filename)) {
+          const assigned =
+            data.user_filename ||
+            `${data.filename || ""}`.replace(new RegExp(`\\.${EXT}$`), "");
+          if (assigned) this._assignedName = assigned;
+        }
         this._changed = 0;
         this._setStatus("saved");
         this._reflectInTarget(target, data);
