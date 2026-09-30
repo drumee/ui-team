@@ -640,7 +640,7 @@ test("strip / bar services reach the workspace conversation", async () => {
   const scoped = [];
   w.setScopedTopic = (t) => scoped.push(t);
   const ev = (service, attrs = {}) => f.ui.onUiEvent({ get: () => service, mget: (k) => attrs[k], service }, {});
-  await ev("topic-menu-topic", { topic_id: "mocktopic01" });
+  await ev("topic-menu-topic", { topic_id: "t1" });
   await ev("thread-menu-general", { topic_scope: "general" });
-  assert.deepEqual(scoped, ["mocktopic01", "general"]);
+  assert.deepEqual(scoped, ["t1", "general"]);
 });

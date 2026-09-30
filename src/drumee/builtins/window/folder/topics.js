@@ -55,8 +55,7 @@ function fetchTopics(win) {
       const rows = Array.isArray(res) ? res : (res && (res.data || res.rows)) || [];
       // A slow answer for a folder we already left is dropped.
       if (`${win.mget(_a.nid)}` !== folder_nid) return win._topics || [];
-      // ⚠️ UI-test mock topics (./topics-mock, MOCK_TOPICS) — remove before release.
-      win._topics = require("./topics-mock").withMockTopics(rows);
+      win._topics = rows;
       return win._topics;
     })
     .catch(() => win._topics || []);

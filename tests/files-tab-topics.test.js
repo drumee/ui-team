@@ -19,12 +19,6 @@ global.document = {
   removeEventListener: (t, f) => listeners[t] && listeners[t].delete(f),
 };
 const fire = (t, e) => [...(listeners[t] || [])].forEach((f) => f(e));
-// The UI-test mock topics are off here: these tests pin the real list.
-const _loadMockOff = require("node:module")._load;
-require("node:module")._load = function (r, ...a) {
-  if (r === "./topics-mock") return { withMockTopics: (rows) => rows };
-  return _loadMockOff.call(this, r, ...a);
-};
 const T = require("../src/drumee/builtins/window/folder/topics");
 const FT = require("../src/drumee/builtins/window/folder/file-threads-bar");
 const flush = () => new Promise((r) => setImmediate(r));
@@ -185,4 +179,12 @@ test("carousel slide: next / back and a page jump animate once; other repaints d
   assert.equal(slide(), "next");
   await T.scopeChatToTopic(w, "t5"); // same page
   assert.equal(slide(), "none");
+});
+
+test("no mock topics: a folder without topics shows # General alone", async () => {
+  const w = fakeWindow();
+  w.fetchService = async () => [];
+  await T.refreshStrip(w);
+  assert.deepEqual(w._topics, []);
+  assert.deepEqual(services(w.parts["topic-strip"].fed.at(-1)), ["thread-menu-general", "topic-new"]);
 });

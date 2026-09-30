@@ -97,11 +97,6 @@ global.document = {
 };
 const fire = (t, e) => [...(listeners[t] || [])].forEach((f) => f(e));
 const flush = () => new Promise((r) => setImmediate(r));
-{
-  const Module = require("node:module");
-  const load = Module._load;
-  Module._load = function (r, ...a) { if (/topics-mock$/.test(r)) return { withMockTopics: (rows) => rows }; return load.call(this, r, ...a); };
-}
 const WT = require("../src/drumee/builtins/widget/chat-p2p/workspace-topics");
 const TOPICS = [{ id: "t1", name: "A", emoji: "🎨" }, { id: "t2", name: "B" }, { id: "t3", name: "C" }, { id: "t4", name: "D" }];
 
@@ -315,4 +310,11 @@ test("the Inbox pages the strip by 4", async () => {
   assert.deepEqual(ids(), ["t4", "t5"]);
   await WT.scopeTopic(win, "t3");
   assert.deepEqual(ids(), ["thread-menu-general", "t1", "t2", "t3"]);
+});
+
+test("no mock topics: a workspace without topics shows # General alone", async () => {
+  const win = fakeInbox({ topics: [] });
+  await WT.sync(win);
+  assert.deepEqual(win._panes.workspace.topicState.topics, []);
+  assert.deepEqual(stripPage_(lastFeed(win, "topic-strip")).kids.map((k) => k.service), ["thread-menu-general"]);
 });

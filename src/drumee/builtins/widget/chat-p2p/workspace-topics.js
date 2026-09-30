@@ -16,7 +16,6 @@
  */
 const topicStrip = require("../../window/folder/skeleton/topic-strip");
 const fileThreadsBar = require("../../window/folder/skeleton/file-threads-bar");
-const { withMockTopics } = require("../../window/folder/topics-mock");
 
 const GROUP = "window";
 // Tabs per carousel page here (the folder's Files tab keeps 3).
@@ -134,8 +133,7 @@ function refresh(win) {
     .catch(() => null)
     .then((rows) => {
       if (rows) {
-        // ⚠️ UI-test mock topics (window/folder/topics-mock) — remove before release.
-        s.topics = withMockTopics(rows);
+        s.topics = rows;
         s.page = topicStrip.pageOf(s.topics, s.topicId, PAGE_SIZE);
       }
       // Left for another conversation meanwhile: its own sync paints it.
