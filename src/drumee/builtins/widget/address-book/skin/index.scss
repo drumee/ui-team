@@ -1,5 +1,13 @@
 @use "mixins/drumee";
 
+// Armin Grotesk's line box is bottom-heavy (ascent 13 / descent 6 at 14px),
+// so a 20px line centred on an icon puts the cap-height ink 1.5px above the
+// icon's centre. A 3px top margin on a flex-centred label moves it down by
+// half that (1.5px). Used where a label sits beside an icon.
+@mixin optical-center {
+  margin-top: 3px;
+}
+
 .address-book {
   &__ui {
     width: 720px;
@@ -104,6 +112,7 @@
     font-weight: 600;
     white-space: nowrap;
     pointer-events: none;
+    @include optical-center;
   }
 
   // Segmented filter bar: grey track, the active segment filled purple.
@@ -582,6 +591,7 @@
     color: inherit;
     pointer-events: none;
     white-space: nowrap;
+    @include optical-center;
   }
 
   // ── Detail view — Figma "Contact — Multi-Action" (node 775:139402) ──
@@ -701,6 +711,59 @@
 
     .address-book__new-tag-input .address-book__modal-input input {
       height: 38px;
+    }
+
+    // Country code: the box is the bordered field, the "+" sits inside it
+    // before a borderless digits-only input.
+    .address-book__areacode {
+      width: 70px;
+      height: 42px;
+      flex-shrink: 0;
+      align-items: center;
+      padding: 0 12px;
+      box-sizing: border-box;
+      border: 1px solid var(--border-muted, rgba(0, 0, 0, 0.05));
+      border-radius: 12px;
+      background: var(--normal-bg, #fff);
+      transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+
+      &:focus-within {
+        border-color: var(--primary-purple-40, #5950ff);
+        box-shadow: 0 0 0 3px rgba(89, 80, 255, 0.15);
+      }
+
+      // Greyed with the placeholder so an empty field reads "+00".
+      &:has(input:placeholder-shown) .address-book__areacode-plus {
+        color: var(--normal-fg-20, #65656c);
+      }
+
+      .address-book__modal-input input {
+        height: 40px;
+        min-height: 0;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+      }
+    }
+
+    .address-book__areacode-plus {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 400,
+        $line: 17px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+      flex-shrink: 0;
+      pointer-events: none;
+    }
+
+    .address-book__areacode-input {
+      flex: 1 1 auto;
+      min-width: 0;
     }
   }
 
@@ -1149,12 +1212,6 @@
     padding: 8px 12px;
     background: rgba(89, 80, 255, 0.1);
     border-radius: 6px;
-  }
-
-  &__modal-input--narrow {
-    width: 70px;
-    max-width: 70px;
-    flex-shrink: 0;
   }
 
   // ── Buttons (shared) ──────────────────────────────────────────────

@@ -1,5 +1,6 @@
 const { tileBtn } = require("./action-buttons");
 const { contactAvatar, linkedDrumateId } = require("./avatar");
+const { formatAreacode } = require("../areacode");
 
 module.exports = function (ui, contact) {
   const fig = ui.fig.family;
@@ -104,7 +105,7 @@ module.exports = function (ui, contact) {
   const phoneEntries = phones.map((p) =>
     Skeletons.Note({
       className: `${fig}__field-value`,
-      content: `${p.areacode || ""} ${p.phone || ""}`.trim(),
+      content: `${formatAreacode(p.areacode)} ${p.phone || ""}`.trim(),
     })
   );
 
