@@ -1,5 +1,6 @@
 const { iconTextBtn } = require("./action-buttons");
 const { contactAvatar } = require("./avatar");
+const { areacodeDigits } = require("../areacode");
 
 // Edit form — Figma "Contact — Multi-Action" (node 775:149791).
 // `_readEditFields` (index.js) reads the values back through the
@@ -102,13 +103,24 @@ module.exports = function (ui, contact, ctx) {
       className: `${fig}__edit-row`,
       dataset: { "row-kind": "phone", category: p.category || "priv" },
       kids: [
-        Skeletons.Entry({
-          className: `${fig}__modal-input ${fig}__modal-input--narrow`,
-          formItem: `areacode_${idx}`,
-          value: p.areacode || "",
-          placeholder: "+00",
-          require: "any",
-          bubble: 0,
+        // Country code: a fixed "+" in front of a digits-only field, so
+        // typing "84" reads "+84" (onPartReady "ab-areacode" filters the
+        // input; _readEditFields stores "+84").
+        Skeletons.Box.X({
+          className: `${fig}__areacode`,
+          kids: [
+            Skeletons.Note({ className: `${fig}__areacode-plus`, content: "+" }),
+            Skeletons.Entry({
+              className: `${fig}__modal-input ${fig}__areacode-input`,
+              formItem: `areacode_${idx}`,
+              value: areacodeDigits(p.areacode),
+              placeholder: "00",
+              require: "any",
+              bubble: 0,
+              sys_pn: "ab-areacode",
+              partHandler: ui,
+            }),
+          ],
         }),
         Skeletons.Entry({
           className: `${fig}__modal-input`,

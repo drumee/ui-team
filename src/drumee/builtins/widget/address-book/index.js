@@ -2,6 +2,7 @@ const { trackDeskCanvas } = require("libs/desk-canvas");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { startP2PCall } = require("libs/p2p-call");
 const { linkedDrumateId } = require("./skeleton/avatar");
+const { areacodeDigits, formatAreacode } = require("./areacode");
 
 const idOf = (c) =>
   (c && (c.id || c.contact_id || c.drumate_id || c.entity_id || c.entity)) ||
@@ -822,7 +823,8 @@ class __address_book extends LetcBox {
     ).map((row) => {
       const inputs = row.querySelectorAll("input");
       return {
-        areacode: inputs[0]?.value?.trim() || "",
+        // The field holds digits only; the "+" is drawn beside it.
+        areacode: formatAreacode(inputs[0]?.value),
         phone: inputs[1]?.value?.trim() || "",
         category: row.dataset.category || "priv",
       };
@@ -1450,6 +1452,22 @@ class __address_book extends LetcBox {
   onPartReady(child, pn) {
     if (pn === "ab-fileselector") {
       child.el.onchange = (e) => this._onImportFilePicked(e);
+      return;
+    }
+    if (pn === "ab-areacode") {
+      // Digits only: the "+" is fixed beside the field, so a typed or pasted
+      // "+84" / "84 " is reduced to "84" as it comes in.
+      const bind = () => {
+        const input = child.el.querySelector("input");
+        if (!input) return;
+        input.setAttribute("inputmode", "numeric");
+        input.addEventListener("input", () => {
+          const digits = areacodeDigits(input.value);
+          if (digits !== input.value) input.value = digits;
+        });
+      };
+      if (child.waitElement) child.waitElement(child.el, bind);
+      else bind();
       return;
     }
     if (pn === "ab-search") {
