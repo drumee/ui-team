@@ -3364,5 +3364,8 @@
   "NEW_TOPIC": "New Topic",
   "TOPIC_NAME_PLACEHOLDER": "Topic Name...",
   "CHOOSE_TOPIC_ICON": "Choose the topic icon",
-  "TOPIC_EXISTS": "A topic with this name already exists"
+  "TOPIC_EXISTS": "A topic with this name already exists",
+  "CREATE_TOPIC": "Create topic",
+  "FILE_THREADS_BAR": "File threads",
+  "NO_FILE_THREADS": "No file threads yet"
 }
