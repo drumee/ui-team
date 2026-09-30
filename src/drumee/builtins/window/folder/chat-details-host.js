@@ -50,6 +50,14 @@ function closeDetails(win) {
   win.__cdWidget = null;
 }
 
+// A file thread opens in the Chat tab's third column — where the details sit
+// (skin/chat-details.scss hides the thread panel behind them). The thread the
+// user just picked wins: close the details.
+function onFileThreadOpen(win) {
+  const v = win.__folderView;
+  if (alive(v) && v.el.dataset.details === "open") closeDetails(win);
+}
+
 // The header ⋮. On the Chat tab the chat stays beside the panel, so the ⋮
 // can be clicked again: then it closes.
 function toggleDetails(win) {
@@ -121,4 +129,4 @@ function meetingState(win) {
   return meetingTileState(win);
 }
 
-module.exports = { openDetails, closeDetails, toggleDetails, hostAction, startMeeting, threads, meetingState };
+module.exports = { openDetails, closeDetails, toggleDetails, onFileThreadOpen, hostAction, startMeeting, threads, meetingState };

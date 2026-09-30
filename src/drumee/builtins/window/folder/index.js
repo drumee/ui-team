@@ -4537,7 +4537,11 @@ class __window_folder extends mfsInteract {
     // opts.replyData (optional): a captured reply quote to restore in the thread
     // composer (reply-in-thread from a file message).
     if (this.activeTab === _a.chat && !this._isCompactChat()) {
-      if (fileNid) return this._openFileThreadPanel(fileNid, fileLabel, opts.replyData);
+      if (fileNid) {
+        // The thread panel takes the third column — Chat details give way.
+        CDHost.onFileThreadOpen(this);
+        return this._openFileThreadPanel(fileNid, fileLabel, opts.replyData);
+      }
       return this._closeFileThreadPanel();
     }
     // ── Files-tab in-place scoping ──

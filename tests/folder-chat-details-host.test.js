@@ -110,3 +110,18 @@ test("toggle: the ⋮ opens details, a second click closes them", async () => {
   await H.toggleDetails(w);
   assert.equal(w.view.el.dataset.details, "open");
 });
+
+// Chat tab with details open (rail | chat | details): a File Threads row
+// opens the file-thread panel in that third column — details give way, or
+// the panel opens hidden behind them.
+test("opening a file thread closes Chat details; nothing happens when they are closed", async () => {
+  const w = fakeWindow();
+  await H.openDetails(w);
+  assert.equal(w.view.el.dataset.details, "open");
+  H.onFileThreadOpen(w);
+  assert.equal(w.view.el.dataset.details, "closed");
+  assert.deepEqual(w.panel.fed.at(-1), []);
+  const n = w.panel.fed.length;
+  H.onFileThreadOpen(w);
+  assert.equal(w.panel.fed.length, n, "closed details are left alone");
+});
