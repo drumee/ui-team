@@ -202,6 +202,9 @@
 
     input {
       width: 100%;
+      height: 17px;
+      // A global input rule sets min-height: 20px.
+      min-height: 0;
       padding: 0;
       border: none;
       outline: none;
@@ -962,13 +965,15 @@
     border-radius: 6px;
     cursor: pointer;
     color: var(--normal-fg-50, #65656c);
+    // Opaque so the detail pane's content scrolls under it cleanly.
+    background: var(--normal-bg, #fff);
     transition:
       background 0.15s,
       color 0.15s;
     z-index: 2;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.06);
+      background: var(--normal-bg-90, #f2f2f7);
       color: var(--normal-fg-10, #0b0a21);
     }
 
