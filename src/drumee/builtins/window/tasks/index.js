@@ -1630,6 +1630,8 @@ class __tasks_panel extends LetcBox {
         });
 
       case "cancel-add":
+        // Leaving the form: its unfinished uploads have nowhere to be linked.
+        this._cancelUnfinishedUploads("create", this._createDefaults);
         this._creating = false;
         this._createDefaults = null;
         this._createSubtaskDraft = null;
@@ -3204,6 +3206,9 @@ class __tasks_panel extends LetcBox {
    *   See _dismissOverlay.
    */
   _closeDetailSilently(done) {
+    // Covers X, Cancel, a successful Update, a peer delete and walking back to
+    // the parent — every way this draft stops existing.
+    this._cancelUnfinishedUploads("detail", this._detailDraft);
     this._detailId = null;
     this._detailDraft = null;
     this._detailBase = null;
@@ -4376,6 +4381,8 @@ class __tasks_panel extends LetcBox {
     // editor renders chips from it. Seed mention_uids from the existing markers
     // so the Update diff can tell which mentions are newly added.
     const seededMentions = task ? uidsFromText(task.description || "") : [];
+    // Switching task without closing first (a child row, the parent crumb).
+    this._cancelUnfinishedUploads("detail", this._detailDraft);
     this._detailDraft = task
       ? {
           title: task.title || "",

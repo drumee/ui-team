@@ -177,3 +177,18 @@ test("no upload window → files fall back to commit-time upload", async () => {
   assert.equal(pfA.status, "queued");
   assert.equal(pfA.nid, undefined);
 });
+
+test("discarding a form cancels its in-flight uploads first", () => {
+  const closeBody = sliceFunction(SRC, "_closeDetailSilently(done)");
+  const cancelAt = closeBody.indexOf('_cancelUnfinishedUploads("detail", this._detailDraft)');
+  assert.ok(cancelAt > -1, "_closeDetailSilently does not cancel");
+  assert.ok(cancelAt < closeBody.indexOf("this._detailDraft = null"), "cancels after the draft is gone");
+
+  const openBody = sliceFunction(SRC, "_openDetail(id)");
+  const openCancel = openBody.indexOf('_cancelUnfinishedUploads("detail", this._detailDraft)');
+  assert.ok(openCancel > -1 && openCancel < openBody.indexOf("this._detailDraft = task"), "_openDetail does not cancel the previous draft");
+
+  const caseAt = SRC.indexOf('case "cancel-add":');
+  const caseBody = SRC.slice(caseAt, SRC.indexOf("this._createDefaults = null", caseAt));
+  assert.match(caseBody, /_cancelUnfinishedUploads\("create", this\._createDefaults\)/);
+});
