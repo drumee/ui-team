@@ -652,10 +652,43 @@
        the bar stays one row and the feed keeps its position. */
     overflow-x: auto;
     scrollbar-width: none;
+    // Anchor of the loading line below.
+    position: relative;
 
     &::-webkit-scrollbar {
       display: none;
     }
+
+    // Loading line under the pills while a tab / filter switch waits for its
+    // rows (data-feed-loading, set by the panel at the click). Out of flow, so
+    // nothing moves when it shows; under the bar, not in the feed, because the
+    // first card covers the feed's top edge on mobile (padding-top 0).
+    &::after {
+      content: "";
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 0;
+      height: 2px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #5950ff, #5950ff) no-repeat, rgba(89, 80, 255, 0.12);
+      background-size: 30% 100%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+    }
+  }
+
+  &__ui[data-feed-loading="1"] &__tabbar::after {
+    opacity: 1;
+    animation: panel-activity-feed-loading 1s ease-in-out infinite;
+  }
+
+  // The rows still shown belong to the tab just left: dimmed while the new ones
+  // load. The fade is on the way in only — the new rows land at full opacity.
+  &__ui[data-feed-loading="1"] &__list .smart-container {
+    opacity: 0.55;
+    transition: opacity 0.15s;
   }
 
   &__tab {
@@ -1432,6 +1465,22 @@ html[data-theme="dark"] {
     &__actions { flex-wrap: wrap; }
     &__scope { flex-basis: 100%; }
     &__result { gap: 16px; }
+  }
+}
+
+@keyframes panel-activity-feed-loading {
+  from {
+    background-position: -45% 0;
+  }
+  to {
+    background-position: 145% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-activity__ui[data-feed-loading="1"] .panel-activity__tabbar::after {
+    animation: none;
+    background-size: 100% 100%;
   }
 }
 
