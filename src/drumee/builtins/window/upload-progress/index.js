@@ -2,6 +2,9 @@ const { filesize, dataTransfer } = require("@drumee/ui-essentials");
 const __window_core = require("../core");
 const { hasWriteBit } = require("window/live-privilege");
 const { roleFromPrivilege } = require("builtins/skeleton/toolkit/permission");
+const {
+  warningRows, warningCopy, countUnfinished, withoutEntries,
+} = require("./warning-model");
 
 // Cap the number of per-entry rows rendered in the bundle progress list. A
 // dropped folder can hold tens of thousands of files; rendering one DOM row each
@@ -17,6 +20,10 @@ const ROLE_NOTICE_MS = 5000;
 // itself: just enough for the last frame (100%, check icon) to paint. Only a
 // batch that ended well leaves on its own; errors and cancels wait for the user.
 const AUTO_DISMISS_MS = 300;
+// After the "still uploading" card goes because its uploads finished, the list
+// it was standing in for stays this long before the usual auto-close: the user
+// was looking at the card, not at the uploads landing.
+const WARNING_SETTLED_DISMISS_MS = 5000;
 
 /**
  * @class __window_upload_progress
@@ -74,6 +81,12 @@ class __window_upload_progress extends __window_core {
     this._renderAggregateThrottled = _.throttle(
       () => this._renderAggregate(), 150, { leading: true, trailing: true }
     );
+    // Warning rows tick with the bytes; patch them in place (no re-feed, so a
+    // click on a button is never lost to a rebuild mid-press).
+    this._renderWarningThrottled = _.throttle(
+      () => this._patchWarning(), 250, { leading: true, trailing: true }
+    );
+    this._warning = null; // { items, action, resolve, prevPhase } while the card is up
 
     this._isExpanded = true;
     this._autoMinimizeTimer = null; // auto-dismiss once uploads settle (see _maybeArmAutoMinimize)
@@ -1372,7 +1385,12 @@ class __window_upload_progress extends __window_core {
    * happened — including the Retry button an errored row offers. A batch that
    * ended badly waits for the user to dismiss it.
    */
-  _maybeArmAutoMinimize() {
+  _maybeArmAutoMinimize(delay = AUTO_DISMISS_MS) {
+    // The card is a question the user has not answered yet.
+    if (this._warning) {
+      this._cancelAutoMinimize();
+      return;
+    }
     if (!this._isUploadSettled() || !this._hasTrackedUploads()) {
       this._cancelAutoMinimize();
       return;
@@ -1386,7 +1404,7 @@ class __window_upload_progress extends __window_core {
       this._autoMinimizeTimer = null;
       if (this.isDestroyed && this.isDestroyed()) return;
       if (this._isUploadSettled() && !this._hasUnhappyEntry()) this.goodbye();
-    }, AUTO_DISMISS_MS);
+    }, delay);
   }
 
   /**
@@ -1421,6 +1439,9 @@ class __window_upload_progress extends __window_core {
 
   onBeforeDestroy() {
     this._cancelAutoMinimize();
+    // Never leave a confirmUnfinished caller waiting: its form stays locked
+    // until this resolves. Going away answers "keep" — nothing is dropped.
+    if (this._warning) this._resolveWarning("keep");
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -1951,6 +1972,16 @@ class __window_upload_progress extends __window_core {
     // a different caller cannot retarget a job already running.
     if (this._pendingOnFileDone) job._onFileDone = this._pendingOnFileDone;
     if (this._pendingOnDone) job._onDone = this._pendingOnDone;
+    // A caller that owns individual files (the task form) needs the job itself
+    // to cancel one entry later. Handed over BEFORE pump(), so the caller holds
+    // it before the first event can fire.
+    if (typeof this._pendingOnJob === "function") {
+      try {
+        this._pendingOnJob(job);
+      } catch (err) {
+        this.warn("[upload-progress] onJob threw", err);
+      }
+    }
     // Snapshot the privilege the viewer holds in this hub RIGHT NOW, while the
     // upload is being accepted — so it is by definition the level that allowed
     // it. A later demotion notice needs this to say what the user came FROM;
@@ -1999,7 +2030,7 @@ class __window_upload_progress extends __window_core {
       // inheriting assumptions that do not hold there.
       if (typeof job._onFileDone === "function") {
         try {
-          job._onFileDone(ev && ev.data, ev && ev.parent);
+          job._onFileDone(ev && ev.data, ev && ev.parent, ev && ev.entry);
         } catch (err) {
           this.warn("[upload-progress] onFileDone threw", err);
         }
@@ -2055,8 +2086,10 @@ class __window_upload_progress extends __window_core {
   }
 
   _switchToProgress() {
-    const root = this.el.querySelector(`.${this.fig.family}__container`) || this.el;
-    if (root && root.dataset) root.dataset.phase = "progress";
+    // A batch that starts while the warning card is up must not take the card
+    // down: the progress phase is where the card RETURNS to once answered.
+    if (this._warning) this._warning.prevPhase = "progress";
+    else this._setPhase("progress");
     this._renderAggregate();
     this._renderProgressList();
   }
@@ -2308,6 +2341,124 @@ class __window_upload_progress extends __window_core {
     }).catch(() => {});
   }
 
+  _setPhase(phase) {
+    this._phase = phase;
+    if (!this.el) return;
+    // On the window element as well: its height is pinned by a
+    // `__ui[data-expanded]` rule with !important, so only the skin can release
+    // it for the warning card (an inline style loses to !important).
+    if (this.el.dataset) this.el.dataset.phase = phase;
+    const root = this.el.querySelector(`.${this.fig.family}__container`);
+    if (root && root.dataset) root.dataset.phase = phase;
+  }
+
+  /**
+   * Ask about uploads a caller is waiting on (see confirmUnfinished).
+   * @param {Array<{entry, job}>} items
+   * @param {"create"|"update"} action
+   * @returns {Promise<"keep"|"skip">}
+   */
+  _showWarning(items, action) {
+    // One question at a time: a second ask supersedes the first, which keeps
+    // its files.
+    if (this._warning) this._resolveWarning("keep");
+    return new Promise((resolve) => {
+      this._warning = { items, action, resolve, prevPhase: this._phase || "progress" };
+      for (const it of items) {
+        if (it.job && it.job.on) {
+          this.listenTo(it.job, "progress file-done error paused resumed", this._renderWarningThrottled);
+        }
+      }
+      this._cancelAutoMinimize();
+      if (!this._isExpanded) this.toggleExpand();
+      // The skin sizes the window to the card in this phase (see _setPhase).
+      this._setPhase("warning");
+      if (this.raise) this.raise();
+      this._renderWarning();
+    });
+  }
+
+  _warningModel() {
+    const w = this._warning;
+    return {
+      rows: warningRows(w.items, LOCALE),
+      copy: warningCopy(w.action, countUnfinished(w.items), LOCALE),
+    };
+  }
+
+  _renderWarning() {
+    if (!this._warning || (this.isDestroyed && this.isDestroyed())) return;
+    const kids = require("./skeleton/warning").build(this, this._warningModel());
+    this.ensurePart("warning").then((p) => {
+      if (p && !(p.isDestroyed && p.isDestroyed())) p.feed(kids);
+    });
+  }
+
+  _patchWarning() {
+    if (!this._warning || !this.el) return;
+    // Everything landed (or failed, which falls back to upload-at-commit): the
+    // question is moot, so the card goes. "keep" drops nothing and leaves the
+    // form open — the next Create goes straight through.
+    if (countUnfinished(this._warning.items) === 0) {
+      return this._resolveWarning("keep", { stay: true });
+    }
+    const pfx = this.fig.family;
+    const { rows, copy } = this._warningModel();
+    for (const r of rows) {
+      // ids are "be_<n>", safe in a selector.
+      const el = this.el.querySelector(`.${pfx}__warning-row[data-id="${r.id}"]`);
+      if (!el) continue;
+      el.dataset.state = r.state;
+      const st = el.querySelector(`.${pfx}__warning-status`);
+      if (st) st.textContent = r.statusText;
+      const ring = el.querySelector(`.${pfx}__warning-ring`);
+      if (ring) ring.style.setProperty("--pct", `${r.pct}`);
+    }
+    const body = this.el.querySelector(`.${pfx}__warning-body`);
+    if (body) body.textContent = copy.body;
+    const skip = this.el.querySelector(`.${pfx}__warning-skip`);
+    if (skip) skip.textContent = copy.skip;
+  }
+
+  /**
+   * Answer the open question exactly once.
+   * @param {"keep"|"skip"} choice
+   * @param {object} [opt]
+   * @param {boolean} [opt.stay] the uploads finished while the card was up:
+   *   return to the upload list and hold it WARNING_SETTLED_DISMISS_MS before
+   *   the usual auto-close, so the user sees the files land rather than the
+   *   window vanishing
+   */
+  _resolveWarning(choice, opt = {}) {
+    const w = this._warning;
+    if (!w) return;
+    this._warning = null;
+    for (const it of w.items) {
+      if (it.job) this.stopListening(it.job, null, this._renderWarningThrottled);
+    }
+    // Drop BEFORE resolving, so the caller sees the entries already canceled
+    // when it recomputes what is still unfinished.
+    if (choice === "skip") __window_upload_progress.dropEntries(w.items);
+    if (!(this.isDestroyed && this.isDestroyed())) {
+      this._setPhase(w.prevPhase);
+      // Opened only to ask: nothing of its own to show afterwards.
+      if (!(this._jobs || []).length && !(this._uploadItems || []).length) {
+        this.goodbye();
+      } else {
+        this._renderAggregate();
+        this._renderProgressList();
+        if (opt.stay) {
+          // Replace any timer already queued with the longer one.
+          this._cancelAutoMinimize();
+          this._maybeArmAutoMinimize(WARNING_SETTLED_DISMISS_MS);
+        } else {
+          this._maybeArmAutoMinimize();
+        }
+      }
+    }
+    w.resolve(choice);
+  }
+
   _onBundleDone(canceled, job) {
     this._renderAggregate();
     this._renderProgressList();
@@ -2337,6 +2488,19 @@ class __window_upload_progress extends __window_core {
       // button still fired the stale "cancel-all" service.
       if (p.mset) p.mset(_a.service, "close");
     });
+    this._maybeArmAutoMinimize();
+  }
+
+  /**
+   * Take top-level rows out of the progress list after a caller dropped them
+   * (dropEntries). Without this a dropped file sits in the list as "canceled",
+   * which also counts as an unhappy batch and blocks auto-dismiss.
+   * @param {Array} entries BundleEntry roots, by identity
+   */
+  _removeRoots(entries) {
+    this._bundle = withoutEntries(this._bundle, entries);
+    this._renderAggregate();
+    this._renderProgressList();
     this._maybeArmAutoMinimize();
   }
 
@@ -2449,7 +2613,14 @@ class __window_upload_progress extends __window_core {
         // Close window immediately without triggering any UI refresh
         // This prevents any re-render that might cause completed items to show cancel button
         // Do NOT call _refreshUI() or _refreshFooter() before closing
+        if (this._warning) this._resolveWarning("keep");
         return this.goodbye();
+
+      case "warning-keep":
+        return this._resolveWarning("keep");
+
+      case "warning-skip":
+        return this._resolveWarning("skip");
 
       case "toggle-expand":
         return this.toggleExpand();
@@ -2606,6 +2777,58 @@ __window_upload_progress.dismissForQuota = function () {
   }
 };
 
+/**
+ * Cancel individual entries a caller owns, and take their rows away.
+ *
+ * Works with or without an open window: a bundle job belongs to the
+ * media/bundle/manager singleton and outlives this popup, so the cancel goes
+ * through the job. Only rows that were actually cancelled are pruned — an
+ * entry that finished meanwhile stays, and stays listed as done.
+ *
+ * @param {Array<{entry: object, job: object}>} items
+ * @returns {Array} the entries that were cancelled
+ */
+__window_upload_progress.dropEntries = function (items) {
+  const dropped = [];
+  for (const it of items || []) {
+    if (!it || !it.entry) continue;
+    if (it.job && typeof it.job.cancelEntry === "function") {
+      if (it.job.cancelEntry(it.entry)) dropped.push(it.entry);
+    } else if (["queued", "creating", "uploading", "paused"].includes(it.entry.status)) {
+      // Not handed to a job yet (runBundle is still waiting for the window):
+      // marked here, the job skips it and runBundle leaves it out of the batch.
+      it.entry.status = "canceled";
+      it.entry.cancelReason = "dropped";
+      dropped.push(it.entry);
+    }
+  }
+  if (!dropped.length || typeof window === "undefined" || !window.Wm) return dropped;
+  const open = window.Wm.getItemsByKind && window.Wm.getItemsByKind("window_upload_progress");
+  for (const w of open || []) {
+    if (w && !w.isDestroyed() && w._removeRoots) w._removeRoots(dropped);
+  }
+  return dropped;
+};
+
+/**
+ * Ask the user what to do about uploads a form is waiting on, in this window.
+ *
+ * @param {object} opt
+ * @param {Array<{entry: object, job: object}>} opt.items unfinished BundleEntries + their jobs
+ * @param {"create"|"update"} opt.action picks the copy
+ * @returns {Promise<"keep"|"skip">} "skip" = the window has dropped the
+ *   still-unfinished items; "keep" = nothing changed (also the answer when no
+ *   window could be shown — never drop files the user was not asked about)
+ */
+__window_upload_progress.confirmUnfinished = function ({ items, action } = {}) {
+  const live = (items || []).filter((it) => it && it.entry);
+  if (!live.length) return Promise.resolve("skip");
+  return __window_upload_progress.getOrCreate().then((win) => {
+    if (!win) return "keep";
+    return win._showWarning(live, action === "update" ? "update" : "create");
+  });
+};
+
 // Cache promise to prevent multiple window creation (singleton pattern)
 let _pendingPromise = null;
 
@@ -2727,11 +2950,13 @@ __window_upload_progress.openStaging = function(targetWindow) {
  * @param {string} hub_id       destination hub id
  * @param {Object} [targetWindow] folder window to refresh on completion
  * @param {Object} [opt]
- * @param {Function} [opt.onFileDone] called with (node, parentNid) as each file
+ * @param {Function} [opt.onFileDone] called with (node, parentNid, entry) as each file
  *   lands, for callers that are not a folder grid (see the file-done hook).
  * @param {Function} [opt.onDone] called with ({canceled}) when the batch ends,
  *   however it ends — a caller that disables UI while uploading needs the
  *   release to be unconditional.
+ * @param {Function} [opt.onJob] called with the BundleJob before it starts,
+ *   for a caller that may later cancel one of its entries (job.cancelEntry).
  * @returns {Promise<__window_upload_progress|null>}
  */
 __window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWindow, opt) {
@@ -2741,18 +2966,21 @@ __window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWind
     win._targetWindow = targetWindow || win._targetWindow;
     // Merge into the visible bundle list (do not replace — user may drop more
     // files while a prior batch is still uploading).
-    const batch = roots;
+    // A caller may have dropped some while the window was being created.
+    const batch = roots.filter((r) => r && r.status !== "canceled");
+    if (!batch.length) return null;
     for (const r of batch) win._mergeEntry(win._bundle, r);
     win._replaceExisting = false;
-    win._phase = "progress";
-    const root = win.el && win.el.querySelector(`.${win.fig.family}__container`);
-    if (root && root.dataset) root.dataset.phase = "progress";
+    // _enqueueBundle → _switchToProgress sets the phase (and leaves an open
+    // warning card where it is).
     if (win.raise) win.raise();
     win._pendingOnFileDone = opt && opt.onFileDone;
     win._pendingOnDone = opt && opt.onDone;
+    win._pendingOnJob = opt && opt.onJob;
     win._enqueueBundle(batch, destNid, hub_id);
     win._pendingOnFileDone = null;
     win._pendingOnDone = null;
+    win._pendingOnJob = null;
     return win;
   });
 };
