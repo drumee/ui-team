@@ -1,16 +1,21 @@
 /**
  * Upgrade-nudge popup skeleton — the Figma "Upgrade Trigger" card, three
- * faces (storage / seats / age) on one 398px sheet: warning badge, centered
+ * faces (storage / seats / age) on one 398px sheet: badge, centered
  * headline, family-specific meter, "Upgrade to X and get:" benefit list,
  * full-width brand CTA, "Not now".
  *
- * Copy for the Business route follows the Drumee 2.0 Figma (file
- * 3LDZYKjL7uHpXHdXKwAXxZ, node 1110:3754 — "trigger" = seats at 9/10,
- * "storage 70%"); the Team and Pro routes keep the content-doc copy the
- * designer has not redrawn. LOCALE keys first, the Figma strings as
- * fallbacks, exactly the over-limit-popup arrangement, so the words can
- * change without a deploy. A `**run**` inside a lead line renders bold
- * (Figma: "You're using **70 GB of 100 GB.**").
+ * Copy follows the Drumee 2.0 Figma section 1110:3754 (file
+ * 3LDZYKjL7uHpXHdXKwAXxZ), which has two layers:
+ *   - the desk mock-ups on the left draw the Team → Business route with the
+ *     new copy ("storage 70%" #1110:4519, "storage 90%" #1110:4816, seats
+ *     #1110:3810, duration "Ready for more room?" #1110:4474);
+ *   - the "Popup-system" cards on the right draw every route (Free → Pro,
+ *     Pro → Team, Team → Business) × threshold with the content-doc copy.
+ * Every route takes the mock-up copy (the user's call: "làm giống cái
+ * mới"); the cards only contribute the per-plan benefit rows for Pro/Team.
+ * LOCALE keys first, the Figma strings as fallbacks, exactly the
+ * over-limit-popup arrangement, so the words can change without a deploy.
+ * A `**run**` inside a lead line renders bold.
  */
 const { canUpgradePlan } = require("libs/billing");
 const { filesize } = require("@drumee/ui-essentials");
@@ -39,6 +44,14 @@ function benefitRows(target, family) {
         [LOCALE.UN_B_PRO_MEETINGS || "Unlimited meetings", LOCALE.UN_B_PRO_MEETINGS_SUB || "no more time limits on calls"],
       ];
     case "business": {
+      if (family === "age") {
+        // Figma #1110:4474 "Ready for more room?" — Business plan gives you:
+        return [
+          [LOCALE.UN_B_BIZ_WS || "Multiple workspaces", LOCALE.UN_B_BIZ_WS_SUB || "Separate spaces per client or department"],
+          [LOCALE.UN_B_BIZ_HISTORY || "1 year version history", LOCALE.UN_B_BIZ_HISTORY_SUB || "Up from 30 days on Team"],
+          [LOCALE.UN_B_BIZ_API || "API access + SSO/SAML", LOCALE.UN_B_BIZ_API_SUB || "Wire Drumee into what you already run"],
+        ];
+      }
       if (seats) {
         return [
           [LOCALE.UN_B_BIZ_MEMBERS || "Unlimited members", LOCALE.UN_B_BIZ_MEMBERS_SEATS_SUB || "Invite without checking a counter"],
@@ -93,7 +106,8 @@ function meter(fig, labelLeft, labelRight, pct, danger) {
 
 /**
  * Family-specific headline, lead and meter; a face may also bring its own CTA
- * label and opt out of the benefits heading (`benefitsTitle: false`).
+ * label and its own benefits heading (`benefitsTitle`: a string, or false
+ * for none).
  */
 function face(fig, n) {
   const danger = /_(90)$/.test(n.trigger || "");
@@ -103,9 +117,8 @@ function face(fig, n) {
       const cap = ~~n.seat_limit || 1;
       const used = ~~n.seats_used;
       const left = cap - used;
-      // Figma 2.0 seats card, the same shape for every route: "almost out of
-      // seats", the seats left, what the next tier does about the cap, the
-      // generic CTA, no benefits heading. Only line 2 depends on the tier.
+      // Mock-up #1110:3810: the seats LEFT, what the next tier does about the
+      // cap, no benefits heading, the generic CTA. Only line 2 is per tier.
       const line1 = left > 0
         ? (left === 1
           ? (LOCALE.UN_SEATS_LEFT_ONE || "Only 1 seat left.")
@@ -130,20 +143,16 @@ function face(fig, n) {
       };
     }
     case "age": {
-      const duration = n.trigger === "age_30d"
-        ? (LOCALE.UN_DURATION_MONTH || "a month")
-        : (LOCALE.UN_DURATION_2W || "2 weeks");
+      // Mock-up #1110:4474 "Ready for more room?" — no duration in the
+      // headline, "<Plan> plan gives you:" over the per-plan rows. (The
+      // mock-up's CTA reads "Upgrade to Team" although it sells Business: a
+      // typo in the design, the CTA here names the plan being sold.)
       return {
         danger: false,
-        title: (LOCALE.UN_TITLE_AGE || "You've been enjoying Drumee for {0}").format(duration),
-        lead: target === "business"
-          ? (LOCALE.UN_LEAD_AGE_BIZ ||
-            "Your organization has been active and growing. Ready to scale without limits?")
-          : target === "team"
-            ? (LOCALE.UN_LEAD_AGE_TEAM ||
-              "Your team has been active and growing. Ready to bring more people in?")
-            : (LOCALE.UN_LEAD_AGE_PRO || "Ready to unlock more room to grow?"),
+        title: LOCALE.UN_TITLE_AGE || "Ready for more room?",
+        lead: LOCALE.UN_LEAD_AGE || "Your workspace is growing.\nGive it the space it needs.",
         meterBox: null,
+        benefitsTitle: (LOCALE.UN_BENEFITS_TITLE_AGE || "{0} plan gives you:").format(planLabel(target)),
       };
     }
     case "storage":
@@ -152,10 +161,11 @@ function face(fig, n) {
       const limit = filesize(n.disk_limit || 0, { round: 0 });
       return {
         danger,
-        // Drumee 2.0 draws ONE storage card for every threshold — the content
-        // doc's 90% "thriving / almost there" variant is gone; only the badge
-        // and the meter turn red. Numbers in bold: the `**` run, see leadLine().
-        title: LOCALE.UN_TITLE_STORAGE || "Your workspace is growing",
+        // Mock-up "storage 90%" #1110:4816 retitles the card at the red
+        // threshold. Same lead everywhere, numbers in bold (leadLine()).
+        title: danger
+          ? (LOCALE.UN_TITLE_STORAGE_90 || "You're almost out of space")
+          : (LOCALE.UN_TITLE_STORAGE || "Your workspace is growing"),
         lead: (LOCALE.UN_LEAD_STORAGE ||
           "You're using **{0} of {1}.**\nNeed more room for your files and team?")
           .format(used, limit),
@@ -234,7 +244,9 @@ module.exports = function (ui) {
       kids: [
         ...(f.benefitsTitle === false ? [] : [Skeletons.Note({
           className: `${fig}__benefits-title`,
-          content: (LOCALE.UN_BENEFITS_TITLE || "Upgrade to {0} and get:").format(planLabel(target)),
+          content: typeof f.benefitsTitle === "string"
+            ? f.benefitsTitle
+            : (LOCALE.UN_BENEFITS_TITLE || "Upgrade to {0} and get:").format(planLabel(target)),
         })]),
         ...benefitRows(target, n.family).map(([title, sub]) =>
           Skeletons.Box.X({
