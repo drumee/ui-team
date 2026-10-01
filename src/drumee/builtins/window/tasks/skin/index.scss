@@ -6465,61 +6465,83 @@ $theme-colors: (
     );
   }
 
-  // ── List view ───────────────────────────────────── (Figma 2081:44709)
-  // `__list` is the single scroll container: the sticky header and the rows
-  // live in the SAME scrolling box, so the scrollbar narrows both equally and
-  // every column stays aligned under its header.
+  // ── List view ─────────────────────── (Figma "Task List Inline Edit" 741:92816)
+  // `__list-wrap` holds the scroller, the footer and the ONE floating editor
+  // (`__list-pop`), which sits outside the scroller so it is never clipped by
+  // it; index.js places it under its cell (_positionListPop). `__list` is the
+  // single scroll container, both axes: the sticky header and the rows live in
+  // the SAME box, so every column stays aligned under its header.
+  //
+  // Grid (Figma): Task 400 · eight columns of 172, rows and header 48 high,
+  // every cell padded 8 with a #E5E5EA hairline.
+  &__list-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    background: var(--normal-bg-elevated, #fff);
+  }
+
   &__list {
     flex: 1 1 auto;
     min-height: 0;
-    overflow-y: auto;
-    background: var(--normal-bg-elevated, #fff);
+    overflow: auto;
+    margin: 12px 12px 0;
+    // Figma scroll bar: 8px, Overlay/light track, Primary/20 thumb.
+    scrollbar-width: thin;
+    scrollbar-color: #b1adff rgba(0, 0, 0, 0.05);
   }
 
   &__list-head,
   &__list-row {
-    align-items: center;
-    gap: 12px;
-    padding: 0 12px;
+    flex: 0 0 48px;
+    height: 48px;
+    min-width: 1776px;
+    align-items: stretch;
     box-sizing: border-box;
 
-    // Column widths — kept identical between header and rows for alignment.
-    // Figma metrics: priority 141 · status 149 · due 175 · assignee 107;
-    // Task grows from 320 and Linked-files takes the remaining slack.
-    & > *:nth-child(1) {
-      flex: 1 1 240px; // task (checkbox + title)
+    & > * {
+      flex: 0 0 172px;
+      width: 172px;
       min-width: 0;
+      padding: 8px;
+      align-items: center;
+      box-sizing: border-box;
+      border-right: 1px solid #e5e5ea;
+      border-bottom: 1px solid #e5e5ea;
+      overflow: hidden;
     }
-    & > *:nth-child(2) {
-      flex: 0 0 141px; // priority
-    }
-    & > *:nth-child(3) {
-      flex: 0 0 149px; // status
-    }
-    & > *:nth-child(4) {
-      flex: 0 0 175px; // due date
-    }
-    & > *:nth-child(5) {
-      flex: 2 1 0; // linked files — grows faster than task to claim the slack
-      min-width: 0;
-    }
-    & > *:nth-child(6) {
-      flex: 0 0 107px; // assignee
+    // The Task column absorbs any width the window has beyond the grid, and
+    // stays pinned while the other columns scroll under it.
+    & > *:first-child {
+      flex: 1 0 400px;
+      width: auto;
+      border-left: 1px solid #e5e5ea;
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      background: var(--normal-bg-elevated, #fff);
     }
   }
 
   &__list-head {
     position: sticky;
     top: 0;
-    z-index: 1;
-    flex: 0 0 56px;
-    height: 56px;
+    z-index: 2;
     background: var(--normal-bg-elevated, #fff);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    & > * {
+      border-top: 1px solid #e5e5ea;
+      background: var(--normal-bg-elevated, #fff);
+    }
+  }
+
+  &__list-th-task {
+    gap: 10px;
   }
 
   &__list-th {
-    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #0b0a21);
+    @include drumee.typo($size: 12px, $weight: 600, $line: 14px, $color: #0b0a21);
+    font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -6532,63 +6554,155 @@ $theme-colors: (
     }
   }
 
-  // &__list-th-assignee {
-  //   text-align: center;
-  // }
-
-  // "Task" header aligns over the row titles, which are offset by the
-  // checkbox (16px) + gap (10px) in the first cell.
-  &__list-head > *:first-child {
-    padding-left: 26px;
-  }
-
   &__list-body {
     flex: 0 0 auto; // scrolling is owned by `__list`, not the body
   }
 
   &__list-row {
-    flex: 0 0 56px;
-    height: 56px;
     cursor: pointer;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: 8px;
-    transition: background 0.12s;
 
-    &:first-child {
-      border-top: 0;
+    &[data-selected="1"] > * {
+      background-color: rgba(89, 80, 255, 0.1);
     }
-    &:hover {
-      background: rgba(0, 0, 0, 0.03);
+    // The pinned Task cell is opaque; the tint is layered on top of it.
+    &[data-selected="1"] > *:first-child {
+      background-image: linear-gradient(rgba(89, 80, 255, 0.1), rgba(89, 80, 255, 0.1));
+      background-color: var(--normal-bg-elevated, #fff);
+    }
+    &:hover > * {
+      background-color: rgba(0, 0, 0, 0.02);
+    }
+    &:hover > *:first-child {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.02));
     }
   }
 
   &__list-cell {
-    align-items: center;
+    gap: 8px;
     min-width: 0;
     box-sizing: border-box;
+
+    // Click-to-edit affordance — only where the viewer may edit. A viewer
+    // without write rights gets no hover response at all (not a disabled look).
+    &[data-editable="1"]:hover,
+    &[data-open="1"] {
+      box-shadow: inset 0 0 0 1px rgba(89, 80, 255, 0.35);
+    }
   }
 
-  // Task cell — chevron + checkbox + title
+  // Task cell — checkbox + chevron + title + hover actions.
   &__list-title-cell {
     gap: 10px;
   }
 
-  // Expand/collapse control for a task with children. Fixed width so the
-  // inert `data-empty` spacer on a childless or child row reserves exactly the
-  // same column and every checkbox stays on one vertical line.
-  &__list-chevron {
-    flex: 0 0 10px;
-    width: 10px;
-    text-align: center;
-    cursor: pointer;
-    user-select: none;
-    transition: transform 0.15s ease;
-    @include drumee.typo(
-      $size: 16px,
-      $line: 16px,
-      $color: var(--normal-fg-40, #84848c)
-    );
+  &__list-title-cell[data-sub="1"] {
+    padding-left: 34px;
+  }
 
+  &__list-title-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+    align-self: stretch;
+    border-radius: 6px;
+
+    &[data-editable="1"] {
+      cursor: text;
+    }
+    &[data-editable="1"]:hover {
+      background: rgba(89, 80, 255, 0.06);
+    }
+  }
+
+  &__list-title {
+    min-width: 0;
+    @include drumee.typo($size: 14px, $weight: 600, $line: 17px, $color: #0b0a21);
+    font-weight: 600;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+  &__list-row[data-done="1"] &__list-title {
+    color: #84848c;
+    text-decoration: line-through;
+  }
+  &__list-row[data-sub="1"] &__list-title {
+    font-weight: 500;
+  }
+
+  &__list-subcount {
+    flex: 0 0 auto;
+    padding: 0 6px;
+    border-radius: 100px;
+    background: rgba(0, 0, 0, 0.05);
+    @include drumee.typo($size: 11px, $weight: 500, $line: 16px, $color: #65656c);
+
+    &[data-complete="1"] {
+      background: #dff5e7;
+      color: #1b8f52;
+    }
+  }
+
+  // Select checkbox (Figma 16×16, Overlay/dark border, Primary/50 when ticked).
+  &__list-check {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+
+    svg {
+      width: 10px !important;
+      height: 10px !important;
+      opacity: 0;
+      fill: #fff;
+      color: #fff;
+    }
+    &[data-checked="1"] {
+      background: #433cc5;
+      border-color: #433cc5;
+      svg {
+        opacity: 1;
+      }
+    }
+    &[data-checked="mixed"]::after {
+      content: "";
+      width: 8px;
+      height: 2px;
+      border-radius: 1px;
+      background: #433cc5;
+    }
+    &[data-disabled="1"] {
+      cursor: default;
+      opacity: 0.5;
+    }
+  }
+
+  // Expand/collapse for a task with children. Fixed width so the inert
+  // `data-empty` spacer reserves exactly the same column.
+  &__list-chevron {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    transition: transform 0.15s ease;
+
+    svg {
+      width: 16px !important;
+      height: 16px !important;
+      fill: #65656c;
+      color: #65656c;
+    }
     &[data-open="1"] {
       transform: rotate(90deg);
     }
@@ -6598,55 +6712,84 @@ $theme-colors: (
     }
   }
 
-  &__list-check {
+  // Hover actions: "open" appears on hover, the ＋ (Create subtask) always
+  // shows, per Figma.
+  &__list-row-acts {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__list-row-act {
     flex: 0 0 16px;
     width: 16px;
     height: 16px;
-    border: 1px solid #84848c;
-    border-radius: 3px;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     cursor: pointer;
+    position: relative;
+    overflow: visible;
+    opacity: 0;
+    transition: opacity 0.12s;
 
     svg {
-      width: 10px;
-      height: 10px;
-      opacity: 0;
-      fill: #fff;
+      width: 16px !important;
+      height: 16px !important;
+      fill: #65656c;
+      color: #65656c;
     }
-    &[data-done="1"] {
-      background: var(--accent, #5950ff);
-      border-color: var(--accent, #5950ff);
-      svg {
-        opacity: 1;
-      }
+    &:hover svg {
+      fill: #0b0a21;
+      color: #0b0a21;
+    }
+    // The Figma tooltip hangs BELOW the ＋ (Primary/100, radius 2, 14px).
+    .tasks-panel__tip {
+      top: calc(100% + 6px);
+      bottom: auto;
+      padding: 6px 12px;
+      border-radius: 2px;
+      background: #0b0a21;
+      @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #fff);
     }
   }
+  &__list-row-add {
+    opacity: 1;
+  }
+  // The ＋ tooltip hangs below the pinned Task cell: let it out, and lift the
+  // hovered row's cell over the next row's (also sticky, same z-index).
+  &__list-row > &__list-title-cell {
+    overflow: visible;
+  }
+  &__list-row:hover > &__list-title-cell {
+    z-index: 3;
+  }
+  &__list-row:hover &__list-row-act {
+    opacity: 1;
+  }
 
-  &__list-title {
-    @include drumee.typo($size: 12px, $weight: 600, $line: 18px, $color: #0b0a21);
-    overflow: hidden;
-    text-overflow: ellipsis;
+  // Shared pill label.
+  &__list-pill-label {
     white-space: nowrap;
   }
-  &__list-row[data-done="1"] &__list-title {
-    color: #84848c;
-    text-decoration: line-through;
+
+  &__list-caret {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+
+    svg {
+      width: 14px !important;
+      height: 14px !important;
+    }
   }
 
-  // Priority cell — filled solid pill (outline when unset)
+  // Priority — filled pill (32 high, 2 16, radius 100); outline when unset.
   &__list-priority {
-    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    height: 24px;
+    gap: 4px;
+    height: 32px;
     padding: 2px 16px;
     border-radius: 100px;
     box-sizing: border-box;
-    white-space: nowrap;
-    @include drumee.typo($size: 12px, $weight: 500, $line: 20px, $color: #fff);
+    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #fff);
 
     &[data-priority="low"] {
       background: #54b684;
@@ -6667,18 +6810,22 @@ $theme-colors: (
     }
   }
 
-  // Status cell — tinted pill + colored dot + dark label. Tint keyed on
-  // data-theme (see $theme-tints); the dot is inline from the column colour.
+  // Status — tinted pill (24 high, 2 12, radius 16) + 8px dot.
   &__list-status {
     align-items: center;
     gap: 8px;
     height: 24px;
-    padding: 4px 12px;
+    padding: 2px 12px;
     border-radius: 16px;
     box-sizing: border-box;
-    white-space: nowrap;
-    @include drumee.typo($size: 12px, $weight: 500, $line: 16px, $color: #0b0a21);
+    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
     @include theme-tint(rgba(0, 0, 0, 0.05));
+
+    &[data-empty="1"] {
+      gap: 4px;
+      background: transparent;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
   }
 
   &__list-status-dot {
@@ -6689,40 +6836,68 @@ $theme-colors: (
     background: #aeaeb2;
   }
 
-  // Due cell — overlay pill
-  &__list-due {
+  // Start / due — Overlay/light pill; outline + calendar glyph when unset.
+  &__list-date {
     align-items: center;
-    height: 24px;
+    gap: 4px;
+    height: 32px;
     padding: 2px 12px;
     border-radius: 100px;
     background: rgba(0, 0, 0, 0.05);
     box-sizing: border-box;
     white-space: nowrap;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 20px, $color: #34343a);
+    @include drumee.typo($size: 14px, $weight: 400, $line: 32px, $color: #34343a);
 
     &[data-overdue="1"] {
       color: #d74e49;
       font-weight: 600;
     }
+    &[data-empty="1"] {
+      background: transparent;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      color: #0b0a21;
+      line-height: 17px;
+    }
   }
 
-  // Linked-files cell — paperclip chips
+  &__list-date-ico {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+
+    svg {
+      width: 14px !important;
+      height: 14px !important;
+      fill: #34343a;
+      color: #34343a;
+    }
+  }
+
+  &__list-desc {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Linked files — paperclip chips (Overlay/light, radius 4, 4 8).
   &__list-files-cell {
     gap: 4px;
-    overflow: hidden;
   }
 
   &__list-file {
+    flex: 0 1 auto;
+    min-width: 0;
     align-items: center;
     gap: 4px;
     padding: 4px 8px;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.05);
-    // Shrink the filename chip (so its name ellipsizes) and keep the "+N" chip
-    // at its natural size — the count must survive however long the name is.
-    flex: 0 1 auto;
-    min-width: 0;
-    max-width: 100%;
     box-sizing: border-box;
   }
 
@@ -6730,89 +6905,598 @@ $theme-colors: (
     flex: 0 0 14px;
     width: 14px;
     height: 14px;
-  }
 
-  &__list-file-name {
-    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  &__list-file-more {
-    flex: 0 0 auto;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #65656c);
-  }
-
-  // Assignee cell — overlapping avatars / unassigned badge
-  &__list-assignee-cell {
-    overflow: visible;
-  }
-
-  &__list-avatars {
-    align-items: center;
-  }
-
-  &__list-avatar {
-    flex: 0 0 32px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 2px solid #fff;
-    box-sizing: border-box;
-    margin-left: -8px;
-
-    &:first-child {
-      margin-left: 0;
+    svg {
+      width: 14px !important;
+      height: 14px !important;
+      fill: #0b0a21;
+      color: #0b0a21;
     }
   }
 
-  &__list-avatar-more {
-    flex: 0 0 32px;
-    width: 32px;
-    height: 32px;
-    margin-left: -8px;
-    border-radius: 200px;
-    border: 2px solid #fff;
-    background: #e4e3ff;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #433cc5);
+  &__list-file-name {
+    min-width: 0;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 
-  &__list-unassigned {
-    align-items: center;
-    gap: 4px;
-  }
-
-  &__list-unassigned-badge {
-    flex: 0 0 24px;
-    width: 24px;
-    height: 24px;
-    border-radius: 200px;
+  &__list-file-more,
+  &__list-person-more {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border-radius: 4px;
     background: rgba(0, 0, 0, 0.05);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
   }
 
-  &__list-unassigned-ico {
+  // Assignee / reporter chips (Primary/40 @ 10%, radius 4, 4 8, gap 8).
+  &__list-assignees-cell,
+  &__list-reporter-cell {
+    gap: 8px;
+  }
+
+  &__list-person {
+    flex: 0 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(89, 80, 255, 0.1);
+    box-sizing: border-box;
+  }
+
+  &__list-person-avatar {
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    overflow: hidden;
+    font-size: 8px;
+  }
+
+  &__list-person-name {
+    min-width: 0;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #433cc5);
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__list-person-x {
+    flex: 0 0 14px;
     width: 14px;
     height: 14px;
-  }
+    cursor: pointer;
 
-  &__list-unassigned-label {
-    white-space: nowrap;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #65656c);
+    svg {
+      width: 9px !important;
+      height: 9px !important;
+      margin: 2.5px;
+      fill: #65656c;
+      color: #65656c;
+    }
+    &:hover svg {
+      fill: #d74e49;
+      color: #d74e49;
+    }
   }
 
   &__list-empty {
     padding: 24px 12px;
     text-align: center;
     @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #84848c);
+  }
+
+  // Footer — "Remove selected" + "N of M ⟳" (Figma 867:104812).
+  &__list-foot {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 12px;
+  }
+
+  &__list-remove {
+    flex: 0 0 auto;
+    padding: 12px 20px;
+    border-radius: 12px;
+    background: rgba(246, 81, 75, 0.1);
+    cursor: pointer;
+    @include drumee.typo($size: 14px, $weight: 600, $line: 17px, $color: #d74e49);
+    font-weight: 600;
+
+    &:hover {
+      background: rgba(246, 81, 75, 0.16);
+    }
+  }
+
+  &__list-count {
+    flex: 1 1 auto;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__list-count-text {
+    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+  }
+
+  &__list-reload {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+
+    svg {
+      width: 16px !important;
+      height: 16px !important;
+      fill: #0b0a21;
+      color: #0b0a21;
+    }
+    &[data-loading="1"] {
+      animation: tasks-list-spin 0.8s linear infinite;
+      pointer-events: none;
+    }
+  }
+
+  // ── The floating editor ────────────────────────────────────────────────
+  // Popovers: white, radius 12, padding 12, gap 8, Light-mode shadow
+  // 0 1 11 rgba(0,0,0,.13). Hidden until placed so it never flashes at 0,0.
+  &__list-pop {
+    position: absolute;
+    z-index: 20;
+    top: 0;
+    left: 0;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    box-sizing: border-box;
+    visibility: hidden;
+
+    &[data-placed="1"] {
+      visibility: visible;
+      animation: tasks-list-pop-in 0.12s ease-out;
+    }
+
+    &[data-kind="priority"],
+    &[data-kind="status"] {
+      width: 149px;
+      gap: 0;
+    }
+    &[data-kind="start_date"],
+    &[data-kind="due_date"] {
+      width: 277px;
+    }
+    &[data-kind="files"] {
+      width: 240px;
+    }
+    &[data-kind="assignees"],
+    &[data-kind="reporter"] {
+      width: 227px;
+    }
+    // Text editors are the cell itself, outlined in Primary/40.
+    &[data-kind="title"],
+    &[data-kind="description"] {
+      padding: 8px 12px;
+      border: 1px solid #5950ff;
+      border-radius: 8px;
+      box-shadow: none;
+      gap: 4px;
+    }
+  }
+
+  &__list-pop-title {
+    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+  }
+
+  &__list-pop-text {
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__list-pop-input {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input,
+    textarea {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      resize: none;
+      caret-color: #0b0a21;
+      @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+    }
+  }
+  &__list-pop[data-kind="title"] &__list-pop-input input {
+    font-weight: 600;
+    height: 30px;
+  }
+  &__list-pop[data-kind="description"] &__list-pop-input textarea {
+    height: 34px;
+  }
+
+  &__list-pop-btns {
+    flex: 0 0 auto;
+    gap: 8px;
+  }
+
+  &__list-pop-btn {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    padding: 7px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: #fff;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15), 0 7px 10px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+    cursor: pointer;
+
+    svg {
+      width: 18px !important;
+      height: 18px !important;
+      fill: #0b0a21;
+      color: #0b0a21;
+    }
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  &__list-pop-error {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #d74e49);
+  }
+
+  // Priority / status menu rows (8 padding, radius 8, 12px dot).
+  &__list-pop-item {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover,
+    &[data-selected="1"] {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    &[data-hidden="1"] {
+      display: none !important;
+    }
+  }
+
+  &__list-pop-dot {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  &__list-pop-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Search bar (Overlay/light, radius 12, 8 12).
+  &__list-pop-search {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &__list-pop-search-ico {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+
+    svg {
+      width: 16px !important;
+      height: 16px !important;
+      fill: #84848c;
+      color: #84848c;
+    }
+  }
+
+  &__list-pop-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      padding: 0;
+      background: transparent;
+      @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+
+      &::placeholder {
+        color: #84848c;
+      }
+    }
+  }
+
+  &__list-pop-list {
+    flex: 0 1 auto;
+    max-height: 196px;
+    overflow-y: auto;
+    gap: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: #847eff rgba(0, 0, 0, 0.05);
+  }
+
+  &__list-pop-empty {
+    padding: 8px 4px;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #84848c);
+  }
+
+  &__list-pop-member {
+    padding: 4px;
+  }
+
+  &__list-pop-avatar {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  &__list-pop-tick {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    visibility: hidden;
+
+    svg {
+      width: 14px !important;
+      height: 14px !important;
+      fill: #5950ff;
+      color: #5950ff;
+    }
+  }
+  &__list-pop-member[data-selected="1"] &__list-pop-tick {
+    visibility: visible;
+  }
+
+  // Link-files rows: paperclip, name, checkbox (Primary/50 when linked).
+  &__list-pop-file {
+    padding: 4px;
+    gap: 4px;
+
+    &[data-selected="1"] {
+      background: transparent;
+    }
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
+  &__list-pop-file &__list-pop-label {
+    color: #65656c;
+  }
+
+  &__list-pop-file-ico {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+
+    svg {
+      width: 16px !important;
+      height: 16px !important;
+      margin: 2px;
+      fill: #65656c;
+      color: #65656c;
+    }
+  }
+
+  &__list-pop-box {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    box-sizing: border-box;
+    position: relative;
+
+    &[data-checked="1"] {
+      background: #433cc5;
+      border-color: #433cc5;
+
+      &::after {
+        content: "";
+        position: absolute;
+        left: 4.5px;
+        top: 1.5px;
+        width: 4px;
+        height: 8px;
+        border: solid #fff;
+        border-width: 0 1.5px 1.5px 0;
+        transform: rotate(45deg);
+      }
+    }
+  }
+
+  // Date popover — label, typed field, month grid, Cancel / Done.
+  &__list-date-field {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.05);
+
+    .tasks-panel__list-date-ico svg {
+      width: 12px !important;
+      height: 12px !important;
+      fill: #65656c;
+      color: #65656c;
+    }
+  }
+
+  &__list-date-input {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      padding: 0;
+      background: transparent;
+      caret-color: #433cc5;
+      @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+    }
+  }
+
+  &__list-cal-head {
+    flex: 0 0 48px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__list-cal-nav {
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
+    padding: 9px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+    cursor: pointer;
+
+    svg {
+      width: 12px !important;
+      height: 12px !important;
+      fill: #65656c;
+      color: #65656c;
+    }
+    &:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  &__list-cal-month {
+    @include drumee.typo($size: 14px, $weight: 600, $line: 17px, $color: #433cc5);
+    font-weight: 600;
+  }
+
+  &__list-cal-wds {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    padding-top: 6px;
+  }
+
+  &__list-cal-week {
+    flex: 0 0 36px;
+    justify-content: space-between;
+  }
+
+  &__list-cal-wd,
+  &__list-cal-day {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 36px, $color: #84848c);
+  }
+
+  &__list-cal-day {
+    cursor: pointer;
+    border: 0.75px solid transparent;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    &[data-today="1"] {
+      color: #0b0a21;
+      font-weight: 600;
+    }
+    &[data-selected="1"] {
+      background: rgba(89, 80, 255, 0.1);
+      border-color: #5950ff;
+      color: #5950ff;
+      font-weight: 600;
+    }
+    &[data-empty="1"] {
+      cursor: default;
+      background: transparent;
+    }
+  }
+
+  &__list-cal-foot {
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  &__list-cal-cancel,
+  &__list-cal-done {
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 12px;
+    align-items: center;
+    cursor: pointer;
+    @include drumee.typo($size: 12px, $weight: 600, $line: 36px, $color: #65656c);
+    font-weight: 600;
+  }
+
+  &__list-cal-cancel {
+    background: rgba(0, 0, 0, 0.05);
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  &__list-cal-done {
+    gap: 9px;
+    background: #5950ff;
+    color: #fff;
+
+    &:hover {
+      background: #433cc5;
+    }
+  }
+
+  &__list-cal-done-ico {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+
+    svg {
+      width: 18px !important;
+      height: 18px !important;
+      fill: #fff;
+      color: #fff;
+    }
   }
 
   // ── Summary view ──────────────────────────────────────────────
@@ -8343,6 +9027,35 @@ $theme-colors: (
 }
 
 html[data-theme="dark"] .tasks-panel {
+  // List inline edit: the grid hairlines, pinned column and floating editor
+  // are literal light values in the main rules.
+  &__list-head > *,
+  &__list-row > * {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+  &__list-head > *,
+  &__list-head > *:first-child,
+  &__list-row > *:first-child {
+    background-color: var(--normal-bg-100, #1b1f22);
+  }
+  &__list-th,
+  &__list-title,
+  &__list-desc,
+  &__list-count-text,
+  &__list-pop-title,
+  &__list-pop-label,
+  &__list-pop-input input,
+  &__list-pop-input textarea {
+    color: var(--normal-fg-90, #f2f2f7);
+  }
+  &__list-pop,
+  &__list-pop-btn {
+    background: var(--normal-bg-100, #1b1f22);
+  }
+  &__list-pop {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+
   // Subtasks: the tokens carry themselves, but the three literals in the light
   // rules (the all-done green and the checkbox fill) burn out on a dark ground.
   &__task-subcount,
@@ -8749,31 +9462,44 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
   }
 }
 
-// List — drop the space-hungry Linked-files column and let the pill columns
-// shrink to their content so the essentials fit without a horizontal scroll.
-.tasks-panel__list[data-mobile="1"] {
+// List — keep the table scrolling sideways, just narrower columns, so the
+// essentials fit a phone without dropping any of the edit targets.
+.tasks-panel__list-wrap[data-mobile="1"] {
+  .tasks-panel__list {
+    margin: 8px 8px 0;
+  }
   .tasks-panel__list-head,
   .tasks-panel__list-row {
-    gap: 8px;
-    padding: 0 8px;
+    min-width: 1340px;
+
+    & > * {
+      flex-basis: 140px;
+      width: 140px;
+    }
+    & > *:first-child {
+      flex: 1 0 220px;
+      width: auto;
+    }
   }
-  .tasks-panel__list-head > *:nth-child(1),
-  .tasks-panel__list-row > *:nth-child(1) {
-    flex: 1 1 100px; // task title
+  .tasks-panel__list-foot {
+    padding: 12px 8px;
   }
-  .tasks-panel__list-head > *:nth-child(2),
-  .tasks-panel__list-head > *:nth-child(3),
-  .tasks-panel__list-head > *:nth-child(4),
-  .tasks-panel__list-head > *:nth-child(6),
-  .tasks-panel__list-row > *:nth-child(2),
-  .tasks-panel__list-row > *:nth-child(3),
-  .tasks-panel__list-row > *:nth-child(4),
-  .tasks-panel__list-row > *:nth-child(6) {
-    flex: 0 0 auto; // priority · status · due · assignee
+}
+
+@keyframes tasks-list-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
   }
-  .tasks-panel__list-head > *:nth-child(5),
-  .tasks-panel__list-row > *:nth-child(5) {
-    display: none; // linked files — hidden on phones
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes tasks-list-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
