@@ -6988,8 +6988,11 @@ class __tasks_panel extends LetcBox {
     if (!pf || !settleEagerFile(pf, node, this._hubId)) return;
     // The draft may be gone (form closed) — the cards are then gone with it.
     if (this._draftForKey(scopeKey) !== draft) return;
-    this._setPendingStatus(scopeKey, pf, "queued");
-    this._patchPendingName(pf, pf.extension ? `${pf.filename}.${pf.extension}` : pf.filename);
+    // Rebuild the strip, not just the card's data-status: the spinner is its
+    // own element, only built into a card made while "uploading", and that
+    // card also has no nid to open. Flipping the attribute left it spinning
+    // until the next file re-rendered the strip.
+    this._refreshPendingList(scopeKey);
     this._refreshFileSearchDropdown(scopeKey);
   }
 

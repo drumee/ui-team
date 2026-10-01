@@ -139,7 +139,8 @@ function startHarness(runBundleResult) {
     _draftForKey(k) { return k === "create" ? this._createDefaults : null; },
     _attachmentNid: async () => "task-folder",
     _setPendingStatus: (k, f, s) => { f.status = s; statuses.push(s); },
-    _refreshPendingList() {},
+    refreshed: [],
+    _refreshPendingList(k) { this.refreshed.push(k); },
     _patchPendingName() {},
     _refreshFileSearchDropdown() {},
     _onEagerFileDone: make("_onEagerFileDone(scopeKey, draft, entry, node)"),
@@ -253,4 +254,28 @@ test("every other way a draft disappears cancels its uploads", () => {
   reseed('case "add-task":');
   reseed('case "cal-add": {');
   reseed("  openTaskWithFiles(nodes) {");
+});
+
+test("a landed file's card is rebuilt, not just re-flagged (no stuck spinner)", async () => {
+  // The spinner is its own element, only built into a card made while
+  // "uploading"; flipping data-status leaves it spinning (and the card has no
+  // nid to open) until something else re-renders the strip.
+  const h = startHarness((opt) => { opt.onJob({}); return {}; });
+  await h.start.call(h.p, "create");
+  const pfA = h.draft.pending_files[0];
+  h.p.refreshed.length = 0;
+  h.runs[0].opt.onFileDone({ nid: "n5", filename: "a", ext: "zip" }, "task-folder", pfA.bundleEntry);
+  assert.deepEqual(h.p.refreshed, ["create"]);
+  assert.equal(pfA.status, "queued");
+  assert.equal(pfA.nid, "n5");
+});
+
+test("no strip re-render for a draft that is gone", async () => {
+  const h = startHarness((opt) => { opt.onJob({}); return {}; });
+  await h.start.call(h.p, "create");
+  const pfA = h.draft.pending_files[0];
+  h.p._createDefaults = null; // modal closed meanwhile
+  h.p.refreshed.length = 0;
+  h.runs[0].opt.onFileDone({ nid: "n5" }, "task-folder", pfA.bundleEntry);
+  assert.deepEqual(h.p.refreshed, []);
 });
