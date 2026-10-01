@@ -61,6 +61,14 @@ $cell: 36px;
     width: 280px;
   }
 
+  // Opened ABOVE its field (flatpickr tags that `arrowBottom`): flatpickr
+  // places the card at -(height) using the SUM OF ITS CHILDREN's heights, which
+  // leaves out this card's 6px+6px padding and the footer's 6px margin-top — so
+  // the card sat 18px down over the field it belongs to. Pull it back up.
+  &.arrowBottom:not(.inline) {
+    margin-top: -18px;
+  }
+
   // No popup pointer in the design
   &::before,
   &::after {
