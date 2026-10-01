@@ -5057,9 +5057,10 @@ $theme-colors: (
     &:hover {
       background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
     }
+    // Brand primary, the same pair as the Filter pill's active state.
     &[data-active="1"] {
-      color: var(--accent, #fa8540);
-      background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
+      color: var(--col-primary-40, #5950ff);
+      background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
     }
 
     // Not on this plan. Receded, but deliberately NOT `cursor: not-allowed`
@@ -5162,7 +5163,7 @@ $theme-colors: (
     padding: 5px 12px;
     border-radius: 6px;
     cursor: pointer;
-    background: var(--accent, #fa8540);
+    background: var(--col-primary-40, #5950ff);
     @include drumee.typo($size: 13px, $weight: 600, $line: 18px, $color: #fff);
 
     &:hover {
