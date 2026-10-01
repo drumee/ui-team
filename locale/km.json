@@ -3105,5 +3105,7 @@
   "TASK_TOAST_ASSIGNED_ONE": "បានចាត់តាំងសមាជិក 1 នាក់ទៅ \"{task}\"",
   "TASK_TOAST_ASSIGNEES": "បានកែអ្នកទទួលខុសត្រូវនៃ \"{task}\"",
   "TASK_TOAST_FILES": "បានភ្ជាប់ឯកសារទៅ \"{task}\"",
-  "TASK_TOAST_UNLINKED": "បានដកឯកសារចេញពី \"{task}\""
+  "TASK_TOAST_UNLINKED": "បានដកឯកសារចេញពី \"{task}\"",
+  "MIGRATE_GDRIVE_SUMMARY_EXISTING": "{0} already existed, skipped.",
+  "MIGRATE_GDRIVE_CANCEL_TOO_LATE": "The migration had already finished before it could be cancelled."
 }

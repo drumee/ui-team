@@ -224,3 +224,50 @@ test("a late answer from an older poll cannot undo a finished job", async () => 
   assert.equal(run.snapshot().state, "done");
   assert.equal(timers.active(), 0);
 });
+
+test("cancel pressed but the job finished first → done, flagged cancelLate", async () => {
+  let status = "running";
+  const { run, timers } = make({
+    "google_drive.get_status": () => ({ status, processed_files: 1, total_files: 1 }),
+    "google_drive.cancel": { ok: true, terminal: true, state: "completed" },
+  });
+  run.attach(5);
+  await flush();
+  await run.cancel();
+  assert.equal(run.snapshot().cancelRequested, 1);
+  status = "done";
+  await timers.fire();
+  const s = run.snapshot();
+  assert.equal(s.state, "done");
+  assert.equal(s.cancelLate, 1);
+  assert.equal(s.cancelRequested, 0);
+  // A new job starts clean.
+  status = "running";
+  run.attach(6);
+  await flush();
+  assert.equal(run.snapshot().cancelLate, 0);
+  run.dispose();
+});
+
+test("an honoured cancel ends 'cancelled', not cancelLate; no cancel → no flag", async () => {
+  let status = "running";
+  const a = make({
+    "google_drive.get_status": () => ({ status }),
+    "google_drive.cancel": { ok: true, sentinel: true },
+  });
+  a.run.attach(7);
+  await flush();
+  await a.run.cancel();
+  status = "cancelled";
+  await a.timers.fire();
+  assert.equal(a.run.snapshot().state, "cancelled");
+  assert.equal(a.run.snapshot().cancelLate, 0);
+  a.run.dispose();
+
+  const b = make({ "google_drive.get_status": { status: "done", processed_files: 2, total_files: 2 } });
+  b.run.attach(8);
+  await flush();
+  assert.equal(b.run.snapshot().state, "done");
+  assert.equal(b.run.snapshot().cancelLate, 0);
+  b.run.dispose();
+});

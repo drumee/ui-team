@@ -109,6 +109,18 @@ test("in-progress: bar by bytes; cancel has no service; requested → disabled",
   assert.equal(find(t2, "live-cancel")[0].attrOpt["data-disabled"], 1);
 });
 
+test("done: files skipped as already existing are not called imported; a late cancel says so", () => {
+  const job = { job_id: 1, status: "done", processed_files: 1, skipped_existing: 1, total_folders: 0, errors: [] };
+  const t = live(ui, snap({ state: "done", job, cancelLate: 1 }), dest, {});
+  const line = find(t, "live-summary")[0].content;
+  assert.ok(line.startsWith("Imported 0 files"), line);
+  assert.ok(line.includes("1 already existed, skipped."), line);
+  const status = find(t, "live-status").map((n) => n.content);
+  assert.deepEqual(status, [en.MIGRATE_GDRIVE_CANCEL_TOO_LATE]);
+  // Without the flag there is no such line.
+  assert.equal(find(live(ui, snap({ state: "done", job }), dest, {}), "live-status").length, 0);
+});
+
 test("done: summary and the two actions", () => {
   const job = { job_id: 1, status: "done", processed_files: 3, total_folders: 1, errors: [{ code: "SHORTCUT_SKIPPED" }] };
   const t = live(ui, snap({ state: "done", job }), dest, {});

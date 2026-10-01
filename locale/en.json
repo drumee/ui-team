@@ -3334,5 +3334,7 @@
   "UPLOAD_WAITING": "Waiting...",
   "UPLOAD_PAUSED_SHORT": "Paused",
   "UPLOAD_DONE_SHORT": "Uploaded",
-  "UPLOAD_FAILED_SHORT": "Failed"
+  "UPLOAD_FAILED_SHORT": "Failed",
+  "MIGRATE_GDRIVE_SUMMARY_EXISTING": "{0} already existed, skipped.",
+  "MIGRATE_GDRIVE_CANCEL_TOO_LATE": "The migration had already finished before it could be cancelled."
 }

@@ -589,16 +589,23 @@ module.exports = function (ui) {
     const accessRevoked = isFailed && snap.failed_reason === 'ACCESS_REVOKED';
     // Summary per Figma 1645:86388/86966: base sentence + errors fragment,
     // the fragment turning red when > 0.
+    const { skipped, failures, processed, existing } = summaryOf(snap);
+    // Files left alone because the destination already had them are not
+    // "imported" — counted as such, a re-run of the same file said "Imported
+    // 1 files" while nothing new appeared in the folder.
+    const summaryExisting = existing
+      ? (LOCALE.MIGRATE_GDRIVE_SUMMARY_EXISTING || '{0} already existed, skipped.').replace('{0}', existing)
+      : '';
     const summaryBase = (LOCALE.MIGRATE_GDRIVE_SUMMARY_BASE || 'Imported {0} files in {1} folders.')
-      .replace('{0}', snap.processed_files || 0)
-      .replace('{1}', snap.total_folders || 0);
+      .replace('{0}', processed)
+      .replace('{1}', snap.total_folders || 0)
+      + (summaryExisting ? ` ${summaryExisting}` : '');
     // Not every entry in `errors` is a failure. The importer reports skipped
     // items through the same channel — a Drive SHORTCUT is deliberately not
     // followed, and a real run of a shared folder produced 30 of them against
     // 140 imported files. Counting those as "30 errors" told the user their
     // migration was broken when nothing was lost, so the two are separated and
     // only genuine failures are coloured as errors.
-    const { skipped, failures } = summaryOf(snap);
     const summaryErr = failures.length
       ? (LOCALE.MIGRATE_GDRIVE_SUMMARY_ERRORS || '{0} errors.').replace('{0}', failures.length)
       : (skipped.length
@@ -676,6 +683,12 @@ module.exports = function (ui) {
           hero('apps-check-circle', `${pfx}__hero--success`,
             LOCALE.MIGRATION_DONE_TITLE || 'Migration complete!',
             LOCALE.MIGRATE_GDRIVE_DONE_HINT),
+          // Cancel was pressed, but the job had already finished.
+          ui._cancelLate ? Skeletons.Note({
+            className: `${pfx}__summary ${pfx}__cancel-late`,
+            content: LOCALE.MIGRATE_GDRIVE_CANCEL_TOO_LATE
+              || 'The migration had already finished before it could be cancelled.',
+          }) : null,
           Skeletons.Box.Y({
             className: `${pfx}__dest-block`,
             kids: [

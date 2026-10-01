@@ -3111,5 +3111,7 @@
   "TASK_TOAST_ASSIGNED_ONE": "назначил(а) 1 участника на «{task}»",
   "TASK_TOAST_ASSIGNEES": "изменил(а) исполнителей «{task}»",
   "TASK_TOAST_FILES": "привязал(а) файлы к «{task}»",
-  "TASK_TOAST_UNLINKED": "отвязал(а) файл от «{task}»"
+  "TASK_TOAST_UNLINKED": "отвязал(а) файл от «{task}»",
+  "MIGRATE_GDRIVE_SUMMARY_EXISTING": "Уже существовали, пропущено: {0}.",
+  "MIGRATE_GDRIVE_CANCEL_TOO_LATE": "Миграция завершилась раньше, чем её удалось отменить."
 }

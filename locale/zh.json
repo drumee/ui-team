@@ -3105,5 +3105,7 @@
   "TASK_TOAST_ASSIGNED_ONE": "为“{task}”分配了 1 名成员",
   "TASK_TOAST_ASSIGNEES": "更新了“{task}”的负责人",
   "TASK_TOAST_FILES": "为“{task}”关联了文件",
-  "TASK_TOAST_UNLINKED": "从“{task}”移除了一个文件"
+  "TASK_TOAST_UNLINKED": "从“{task}”移除了一个文件",
+  "MIGRATE_GDRIVE_SUMMARY_EXISTING": "{0} 个已存在，已跳过。",
+  "MIGRATE_GDRIVE_CANCEL_TOO_LATE": "迁移在取消生效前已经完成。"
 }
