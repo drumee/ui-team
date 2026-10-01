@@ -64,3 +64,97 @@ test("file-done hands the entry to the caller's onFileDone", () => {
   const body = sliceFunction(SRC, "_attachJob(job)");
   assert.match(body, /job\._onFileDone\(ev && ev\.data, ev && ev\.parent, ev && ev\.entry\)/);
 });
+
+const resolveWarning = () => {
+  const dropped = [];
+  const fn = new Function("__window_upload_progress",
+    `return ${sliceFunction(SRC, "_resolveWarning(choice)")}`,
+  )({ dropEntries: (items) => dropped.push(...items) });
+  return { fn, dropped };
+};
+
+function warnWin(over = {}) {
+  const calls = [];
+  return {
+    calls,
+    size: { height: 280 },
+    el: { style: { height: "auto" } },
+    _jobs: [{}], _uploadItems: [],
+    isDestroyed: () => false,
+    stopListening: () => calls.push("stop"),
+    _setPhase: (p) => calls.push(`phase:${p}`),
+    _renderAggregate() {}, _renderProgressList() {},
+    _maybeArmAutoMinimize: () => calls.push("arm"),
+    goodbye: () => calls.push("goodbye"),
+    _renderWarningThrottled() {},
+    ...over,
+  };
+}
+
+test("_resolveWarning: skip drops the items, restores the phase, resolves once", () => {
+  const { fn, dropped } = resolveWarning();
+  const got = [];
+  const item = { entry: { id: "a" }, job: {} };
+  const win = warnWin({ _warning: { items: [item], prevPhase: "progress", resolve: (c) => got.push(c) } });
+  fn.call(win, "skip");
+  fn.call(win, "keep"); // second call is a no-op
+  assert.deepEqual(got, ["skip"]);
+  assert.deepEqual(dropped, [item]);
+  assert.equal(win.el.style.height, "280px");
+  assert.ok(win.calls.includes("phase:progress"));
+});
+
+test("_resolveWarning: keep drops nothing", () => {
+  const { fn, dropped } = resolveWarning();
+  const got = [];
+  const win = warnWin({ _warning: { items: [{ entry: {}, job: {} }], prevPhase: "progress", resolve: (c) => got.push(c) } });
+  fn.call(win, "keep");
+  assert.deepEqual(got, ["keep"]);
+  assert.deepEqual(dropped, []);
+});
+
+test("_resolveWarning: a window opened only for the warning closes itself", () => {
+  const { fn } = resolveWarning();
+  const win = warnWin({ _jobs: [], _uploadItems: [], _warning: { items: [], prevPhase: "progress", resolve() {} } });
+  fn.call(win, "keep");
+  assert.ok(win.calls.includes("goodbye"));
+});
+
+test("onBeforeDestroy and auto-dismiss respect an open warning", () => {
+  assert.match(sliceFunction(SRC, "onBeforeDestroy()"), /_resolveWarning\("keep"\)/);
+  assert.match(sliceFunction(SRC, "_maybeArmAutoMinimize()"), /if \(this\._warning\)/);
+});
+
+test("a new batch while the card is up does not flip the phase away", () => {
+  const sw = new Function(`return ${sliceFunction(SRC, "_switchToProgress()")}`)();
+  const calls = [];
+  const win = {
+    _warning: { prevPhase: "staging" },
+    _setPhase: (p) => calls.push(p),
+    _renderAggregate() {}, _renderProgressList() {},
+  };
+  sw.call(win);
+  assert.deepEqual(calls, []);
+  assert.equal(win._warning.prevPhase, "progress");
+  win._warning = null;
+  sw.call(win);
+  assert.deepEqual(calls, ["progress"]);
+  const start = SRC.indexOf("__window_upload_progress.runBundle = function");
+  const runBundle = SRC.slice(start, SRC.indexOf("\n};\n", start));
+  assert.doesNotMatch(runBundle, /root\.dataset\.phase = "progress"/);
+});
+
+test("confirmUnfinished: empty → skip, no window → keep", async () => {
+  const start = SRC.indexOf("__window_upload_progress.confirmUnfinished = function");
+  assert.ok(start > -1, "confirmUnfinished not found");
+  const end = SRC.indexOf("\n};\n", start);
+  const make = (win) => new Function("__window_upload_progress",
+    SRC.slice(start, end + 3).replace("__window_upload_progress.confirmUnfinished =", "return"),
+  )({ getOrCreate: () => Promise.resolve(win) });
+  assert.equal(await make(null)({ items: [] }), "skip");
+  assert.equal(await make(null)({ items: [{ entry: {}, job: {} }] }), "keep");
+  const seen = [];
+  const win = { _showWarning: (items, action) => (seen.push(action), Promise.resolve("skip")) };
+  assert.equal(await make(win)({ items: [{ entry: {}, job: {} }], action: "update" }), "skip");
+  assert.deepEqual(seen, ["update"]);
+});

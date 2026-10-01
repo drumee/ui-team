@@ -588,6 +588,151 @@
   &__container[data-phase="staging"]  &__aggregate { display: none; }
   &__container[data-phase="staging"]  &__file-list  { display: none; }
 
+  // ── Warning phase ("Some files are still uploading") ──────────────────────
+  // Hides are (0,3,0) on purpose: `.drumee-widget[data-flow]{display:flex}` is
+  // (0,2,0) and beats a single-class display:none on any Box/Note.
+  &__container:not([data-phase="warning"]) &__warning { display: none; }
+  &__container[data-phase="warning"] &__header,
+  &__container[data-phase="warning"] &__staging,
+  &__container[data-phase="warning"] &__body,
+  &__container[data-phase="warning"] &__footer { display: none; }
+
+  &__warning {
+    position: relative;
+    flex-direction: column;
+    gap: 12px;
+    padding: 24px 20px 20px;
+  }
+
+  &__warning-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+  }
+
+  &__warning-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--default-text-error);
+    border: 2px solid var(--default-text-error);
+    background: color-mix(in srgb, var(--default-text-error) 12%, transparent);
+  }
+
+  &__warning-title {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  &__warning-body {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--normal-fg-20);
+  }
+
+  &__warning-list {
+    gap: 8px;
+    max-height: 168px;
+    overflow-y: auto;
+  }
+
+  &__warning-row {
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-default);
+    border-radius: 10px;
+  }
+
+  &__warning-ext {
+    flex: none;
+    width: 28px;
+    height: 34px;
+    border-radius: 4px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 4px;
+    font-size: 8px;
+    font-weight: 700;
+    color: var(--white, #fff);
+    background: var(--normal-fg-20);
+  }
+
+  &__warning-meta {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__warning-name {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__warning-status {
+    font-size: 12px;
+    color: var(--normal-fg-20);
+  }
+
+  &__warning-row[data-state="failed"] &__warning-status { color: var(--default-text-error); }
+
+  // Determinate ring off --pct (0..100), drawn with a conic gradient and
+  // hollowed by a radial mask.
+  &__warning-ring {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: conic-gradient(
+      var(--primary-40) calc(var(--pct, 0) * 1%),
+      var(--normal-fg-10) 0
+    );
+    mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
+  }
+
+  &__warning-row[data-state="done"] &__warning-ring { background: var(--green-400); }
+
+  &__warning-actions {
+    gap: 12px;
+    margin-top: 4px;
+  }
+
+  &__warning-keep,
+  &__warning-skip {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  &__warning-keep {
+    border: 1px solid var(--border-default);
+    &:hover { background: var(--hover-bg-40); }
+  }
+
+  &__warning-skip {
+    color: var(--white, #fff);
+    background: var(--primary-40);
+    &:hover { filter: brightness(1.08); }
+  }
+
   // Staging action bar
   &__staging-actions {
     gap: 8px;
