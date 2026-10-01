@@ -2,6 +2,9 @@ const { filesize, dataTransfer } = require("@drumee/ui-essentials");
 const __window_core = require("../core");
 const { hasWriteBit } = require("window/live-privilege");
 const { roleFromPrivilege } = require("builtins/skeleton/toolkit/permission");
+const {
+  warningRows, warningCopy, countUnfinished, withoutEntries,
+} = require("./warning-model");
 
 // Cap the number of per-entry rows rendered in the bundle progress list. A
 // dropped folder can hold tens of thousands of files; rendering one DOM row each
@@ -1951,6 +1954,16 @@ class __window_upload_progress extends __window_core {
     // a different caller cannot retarget a job already running.
     if (this._pendingOnFileDone) job._onFileDone = this._pendingOnFileDone;
     if (this._pendingOnDone) job._onDone = this._pendingOnDone;
+    // A caller that owns individual files (the task form) needs the job itself
+    // to cancel one entry later. Handed over BEFORE pump(), so the caller holds
+    // it before the first event can fire.
+    if (typeof this._pendingOnJob === "function") {
+      try {
+        this._pendingOnJob(job);
+      } catch (err) {
+        this.warn("[upload-progress] onJob threw", err);
+      }
+    }
     // Snapshot the privilege the viewer holds in this hub RIGHT NOW, while the
     // upload is being accepted — so it is by definition the level that allowed
     // it. A later demotion notice needs this to say what the user came FROM;
@@ -1999,7 +2012,7 @@ class __window_upload_progress extends __window_core {
       // inheriting assumptions that do not hold there.
       if (typeof job._onFileDone === "function") {
         try {
-          job._onFileDone(ev && ev.data, ev && ev.parent);
+          job._onFileDone(ev && ev.data, ev && ev.parent, ev && ev.entry);
         } catch (err) {
           this.warn("[upload-progress] onFileDone threw", err);
         }
@@ -2340,6 +2353,19 @@ class __window_upload_progress extends __window_core {
     this._maybeArmAutoMinimize();
   }
 
+  /**
+   * Take top-level rows out of the progress list after a caller dropped them
+   * (dropEntries). Without this a dropped file sits in the list as "canceled",
+   * which also counts as an unhappy batch and blocks auto-dismiss.
+   * @param {Array} entries BundleEntry roots, by identity
+   */
+  _removeRoots(entries) {
+    this._bundle = withoutEntries(this._bundle, entries);
+    this._renderAggregate();
+    this._renderProgressList();
+    this._maybeArmAutoMinimize();
+  }
+
   _removeFromBundle(id) {
     const prune = (list) => {
       const i = list.findIndex((e) => e.id === id);
@@ -2606,6 +2632,31 @@ __window_upload_progress.dismissForQuota = function () {
   }
 };
 
+/**
+ * Cancel individual entries a caller owns, and take their rows away.
+ *
+ * Works with or without an open window: a bundle job belongs to the
+ * media/bundle/manager singleton and outlives this popup, so the cancel goes
+ * through the job. Only rows that were actually cancelled are pruned — an
+ * entry that finished meanwhile stays, and stays listed as done.
+ *
+ * @param {Array<{entry: object, job: object}>} items
+ * @returns {Array} the entries that were cancelled
+ */
+__window_upload_progress.dropEntries = function (items) {
+  const dropped = [];
+  for (const it of items || []) {
+    if (!it || !it.job || typeof it.job.cancelEntry !== "function") continue;
+    if (it.job.cancelEntry(it.entry)) dropped.push(it.entry);
+  }
+  if (!dropped.length || typeof window === "undefined" || !window.Wm) return dropped;
+  const open = window.Wm.getItemsByKind && window.Wm.getItemsByKind("window_upload_progress");
+  for (const w of open || []) {
+    if (w && !w.isDestroyed() && w._removeRoots) w._removeRoots(dropped);
+  }
+  return dropped;
+};
+
 // Cache promise to prevent multiple window creation (singleton pattern)
 let _pendingPromise = null;
 
@@ -2727,11 +2778,13 @@ __window_upload_progress.openStaging = function(targetWindow) {
  * @param {string} hub_id       destination hub id
  * @param {Object} [targetWindow] folder window to refresh on completion
  * @param {Object} [opt]
- * @param {Function} [opt.onFileDone] called with (node, parentNid) as each file
+ * @param {Function} [opt.onFileDone] called with (node, parentNid, entry) as each file
  *   lands, for callers that are not a folder grid (see the file-done hook).
  * @param {Function} [opt.onDone] called with ({canceled}) when the batch ends,
  *   however it ends — a caller that disables UI while uploading needs the
  *   release to be unconditional.
+ * @param {Function} [opt.onJob] called with the BundleJob before it starts,
+ *   for a caller that may later cancel one of its entries (job.cancelEntry).
  * @returns {Promise<__window_upload_progress|null>}
  */
 __window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWindow, opt) {
@@ -2750,9 +2803,11 @@ __window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWind
     if (win.raise) win.raise();
     win._pendingOnFileDone = opt && opt.onFileDone;
     win._pendingOnDone = opt && opt.onDone;
+    win._pendingOnJob = opt && opt.onJob;
     win._enqueueBundle(batch, destNid, hub_id);
     win._pendingOnFileDone = null;
     win._pendingOnDone = null;
+    win._pendingOnJob = null;
     return win;
   });
 };
