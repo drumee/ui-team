@@ -20,6 +20,10 @@ const ROLE_NOTICE_MS = 5000;
 // itself: just enough for the last frame (100%, check icon) to paint. Only a
 // batch that ended well leaves on its own; errors and cancels wait for the user.
 const AUTO_DISMISS_MS = 300;
+// After the "still uploading" card goes because its uploads finished, the list
+// it was standing in for stays this long before the usual auto-close: the user
+// was looking at the card, not at the uploads landing.
+const WARNING_SETTLED_DISMISS_MS = 5000;
 
 /**
  * @class __window_upload_progress
@@ -1381,7 +1385,7 @@ class __window_upload_progress extends __window_core {
    * happened — including the Retry button an errored row offers. A batch that
    * ended badly waits for the user to dismiss it.
    */
-  _maybeArmAutoMinimize() {
+  _maybeArmAutoMinimize(delay = AUTO_DISMISS_MS) {
     // The card is a question the user has not answered yet.
     if (this._warning) {
       this._cancelAutoMinimize();
@@ -1400,7 +1404,7 @@ class __window_upload_progress extends __window_core {
       this._autoMinimizeTimer = null;
       if (this.isDestroyed && this.isDestroyed()) return;
       if (this._isUploadSettled() && !this._hasUnhappyEntry()) this.goodbye();
-    }, AUTO_DISMISS_MS);
+    }, delay);
   }
 
   /**
@@ -2395,7 +2399,9 @@ class __window_upload_progress extends __window_core {
     // Everything landed (or failed, which falls back to upload-at-commit): the
     // question is moot, so the card goes. "keep" drops nothing and leaves the
     // form open — the next Create goes straight through.
-    if (countUnfinished(this._warning.items) === 0) return this._resolveWarning("keep");
+    if (countUnfinished(this._warning.items) === 0) {
+      return this._resolveWarning("keep", { stay: true });
+    }
     const pfx = this.fig.family;
     const { rows, copy } = this._warningModel();
     for (const r of rows) {
@@ -2417,8 +2423,13 @@ class __window_upload_progress extends __window_core {
   /**
    * Answer the open question exactly once.
    * @param {"keep"|"skip"} choice
+   * @param {object} [opt]
+   * @param {boolean} [opt.stay] the uploads finished while the card was up:
+   *   return to the upload list and hold it WARNING_SETTLED_DISMISS_MS before
+   *   the usual auto-close, so the user sees the files land rather than the
+   *   window vanishing
    */
-  _resolveWarning(choice) {
+  _resolveWarning(choice, opt = {}) {
     const w = this._warning;
     if (!w) return;
     this._warning = null;
@@ -2436,7 +2447,13 @@ class __window_upload_progress extends __window_core {
       } else {
         this._renderAggregate();
         this._renderProgressList();
-        this._maybeArmAutoMinimize();
+        if (opt.stay) {
+          // Replace any timer already queued with the longer one.
+          this._cancelAutoMinimize();
+          this._maybeArmAutoMinimize(WARNING_SETTLED_DISMISS_MS);
+        } else {
+          this._maybeArmAutoMinimize();
+        }
       }
     }
     w.resolve(choice);

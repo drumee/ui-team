@@ -67,9 +67,11 @@ test("file-done hands the entry to the caller's onFileDone", () => {
 
 const resolveWarning = () => {
   const dropped = [];
-  const fn = new Function("__window_upload_progress",
-    `return ${sliceFunction(SRC, "_resolveWarning(choice)")}`,
-  )({ dropEntries: (items) => dropped.push(...items) });
+  // The real constant, read from the source, so the test pins the value.
+  const settled = Number(SRC.match(/const WARNING_SETTLED_DISMISS_MS = (\d+);/)[1]);
+  const fn = new Function("__window_upload_progress", "WARNING_SETTLED_DISMISS_MS",
+    `return ${sliceFunction(SRC, "_resolveWarning(choice, opt = {})")}`,
+  )({ dropEntries: (items) => dropped.push(...items) }, settled);
   return { fn, dropped };
 };
 
@@ -115,7 +117,7 @@ test("_setPhase stamps the window element too (the skin sizes __ui off it)", () 
 
 test("no inline height juggling: an inline style cannot beat the skin's !important", () => {
   assert.doesNotMatch(sliceFunction(SRC, "_showWarning(items, action)"), /style\.height/);
-  assert.doesNotMatch(sliceFunction(SRC, "_resolveWarning(choice)"), /style\.height/);
+  assert.doesNotMatch(sliceFunction(SRC, "_resolveWarning(choice, opt = {})"), /style\.height/);
 });
 
 test("_resolveWarning: keep drops nothing", () => {
@@ -136,7 +138,7 @@ test("_resolveWarning: a window opened only for the warning closes itself", () =
 
 test("onBeforeDestroy and auto-dismiss respect an open warning", () => {
   assert.match(sliceFunction(SRC, "onBeforeDestroy()"), /_resolveWarning\("keep"\)/);
-  assert.match(sliceFunction(SRC, "_maybeArmAutoMinimize()"), /if \(this\._warning\)/);
+  assert.match(sliceFunction(SRC, "_maybeArmAutoMinimize(delay = AUTO_DISMISS_MS)"), /if \(this\._warning\)/);
 });
 
 test("a new batch while the card is up does not flip the phase away", () => {
@@ -232,16 +234,51 @@ test("the card goes away by itself once nothing is left uploading", () => {
     _warningModel() {
       return { rows: model.warningRows(this._warning.items), copy: model.warningCopy("create", model.countUnfinished(this._warning.items)) };
     },
-    _resolveWarning: (c) => answered.push(c),
+    _resolveWarning: (c, opt) => answered.push(opt && opt.stay ? `${c}+stay` : c),
   });
   patch.call(win("uploading"));
   assert.deepEqual(answered, []);
   // Landed: "keep" — nothing to drop, the form stays open; pressing Create
   // again now goes straight through with the file attached.
   patch.call(win("done"));
-  assert.deepEqual(answered, ["keep"]);
+  assert.deepEqual(answered, ["keep+stay"]);
   // Failed counts too: it falls back to upload-at-commit, so there is nothing
   // left to wait for here either.
   patch.call(win("error"));
-  assert.deepEqual(answered, ["keep", "keep"]);
+  assert.deepEqual(answered, ["keep+stay", "keep+stay"]);
+});
+
+test("finished while the card was up: back to the upload list for 5s, then the usual auto-close", () => {
+  const { fn } = resolveWarning();
+  const got = [];
+  const win = warnWin({
+    _cancelAutoMinimize() { this.calls.push("cancel-auto"); },
+    _maybeArmAutoMinimize(delay) { this.calls.push(`arm:${delay}`); },
+    _warning: { items: [{ entry: {}, job: {} }], prevPhase: "progress", resolve: (c) => got.push(c) },
+  });
+  fn.call(win, "keep", { stay: true });
+  assert.deepEqual(got, ["keep"]);
+  assert.ok(win.calls.includes("phase:progress"));
+  // The usual 300ms would close the window before the user saw the list the
+  // card was standing in for; any timer already queued is replaced.
+  const cancelAt = win.calls.indexOf("cancel-auto");
+  const armAt = win.calls.indexOf("arm:5000");
+  assert.ok(cancelAt > -1 && armAt > cancelAt, win.calls.join(","));
+  assert.ok(!win.calls.includes("goodbye"));
+});
+
+test("auto-close honours the delay it is armed with", () => {
+  const arm = new Function("AUTO_DISMISS_MS", "setTimeout",
+    `return ${sliceFunction(SRC, "_maybeArmAutoMinimize(delay = AUTO_DISMISS_MS)")}`,
+  )(300, (f, ms) => { delays.push(ms); return 1; });
+  const delays = [];
+  const win = {
+    _warning: null, _autoMinimizeTimer: null,
+    _isUploadSettled: () => true, _hasTrackedUploads: () => true, _hasUnhappyEntry: () => false,
+    _cancelAutoMinimize() {},
+  };
+  arm.call(win, 5000);
+  win._autoMinimizeTimer = null;
+  arm.call(win);
+  assert.deepEqual(delays, [5000, 300]);
 });
