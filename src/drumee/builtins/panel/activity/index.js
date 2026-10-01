@@ -225,6 +225,7 @@ class __panel_activity extends LetcBox {
       child.on(_e.error, () => {
         this._feedSwap = null;
         this._dropFeedRest();
+        this._setFeedLoading(false);
       });
       // ui-core List.Smart maps a fetched page through prepare() right before
       // adding it; pagination still reads the full page in handleResponse.
@@ -367,6 +368,8 @@ class __panel_activity extends LetcBox {
   _noteFeedPage(list, rows) {
     try {
       if (!_.isArray(rows) || (list && (list._curPage || 1) > 1)) return;
+      // Same task as the cleanSet that draws them: no frame shows them dimmed.
+      this._setFeedLoading(false);
       this._feedSig = this._feedSignature(rows);
       if (!this._feedSwap) return;
       this._feedSwap = null;
@@ -383,11 +386,20 @@ class __panel_activity extends LetcBox {
   // the old rows still in the list — clear them (the list's empty view shows).
   _noteFeedEnd(list) {
     if (!list || (list._curPage || 1) > 1) return;
+    this._setFeedLoading(false);
     if (this._feedSig == null) this._feedSig = this._feedSignature([]);
     if (!this._feedSwap) return;
     this._feedSwap = null;
     this._dropFeedRest();
     if (list.collection && list.collection.length) list.collection.reset();
+  }
+
+  // A tab / filter switch waits ~0.3–0.8 s for get_feed while the rows of the
+  // tab just left stay up; the skin dims them and runs a line under the tab
+  // bar. Set at the click, not after a delay: a switch that shows nothing for
+  // half a second reads as lag. Background refreshes never set it.
+  _setFeedLoading(on) {
+    if (this.el && this.el.dataset) this.el.dataset.feedLoading = on ? '1' : '0';
   }
 
   // get_feed sends ~117 rows as page 1 here, and each row is ~10 ui-core
@@ -456,12 +468,15 @@ class __panel_activity extends LetcBox {
   }
 
   /**
-   * restart() without emptying the list first. `quiet` (a background refresh)
-   * never shows the spinner; a tab / filter switch shows it only past 1.5 s,
-   * so a slow network still says something is coming.
+   * restart() without emptying the list first, and without ui-core's spinner:
+   * the old rows stay up, and a tab / filter switch has its own loading line
+   * (_setFeedLoading).
    */
-  _swapFeed(list, { quiet = false } = {}) {
-    if (!list || list.isDestroyed()) return;
+  _swapFeed(list) {
+    if (!list || list.isDestroyed()) {
+      this._setFeedLoading(false);
+      return;
+    }
     // Before restart()'s own eod flush, which must not settle this swap.
     this._feedSwap = null;
     this._dropFeedRest();
@@ -469,13 +484,13 @@ class __panel_activity extends LetcBox {
     this._feedGen = (this._feedGen || 0) + 1;
     this._feedSig = null;
     this._feedSwap = { gen: this._feedGen };
-    const saved = { spinner: list.mget(_a.spinner), spinnerWait: list.mget('spinnerWait') };
-    list.model.set(quiet ? { spinner: false } : { spinnerWait: 1500 }, { silent: true });
+    const spinner = list.mget(_a.spinner);
+    list.model.set({ spinner: false }, { silent: true });
     try {
       list.start(0);
     } finally {
-      // The spinner options are read synchronously inside start() → fetch().
-      list.model.set(saved, { silent: true });
+      // Read synchronously inside start() → fetch().
+      list.model.set({ spinner }, { silent: true });
     }
   }
 
@@ -512,7 +527,7 @@ class __panel_activity extends LetcBox {
         return;
       }
     }
-    this._swapFeed(list, { quiet: true });
+    this._swapFeed(list);
   }
 
   // Rows kept by _refreshFeed still print the "… ago" of when they were built.
@@ -1634,6 +1649,7 @@ class __panel_activity extends LetcBox {
    */
   _setTab(bucket) {
     this._filter = bucket || DEFAULT_BUCKET;
+    this._setFeedLoading(true);
     this.updatePriorityListUnified(this._mergedRows || []);
     this.ensurePart(_a.list).then((list) => this._swapFeed(list));
   }
@@ -1681,6 +1697,7 @@ class __panel_activity extends LetcBox {
     this._viewFilter = next;
     if (this.el && this.el.dataset) this.el.dataset.viewFilter = next || 'none';
     this._unreadsOnly = (next === 'unread' || next === 'all') ? 1 : 0;
+    this._setFeedLoading(true);
     return this.ensurePart(_a.list).then((list) => this._swapFeed(list));
   }
 
