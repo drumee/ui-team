@@ -13,7 +13,16 @@ function isUnfinishedPf(pf) {
   return !!(pf && !pf.nid && pf.bundleEntry && UNFINISHED.has(pf.bundleEntry.status));
 }
 
+// Dropped from its bundle (the warning's "without", Cancel all, a ✕) but still
+// holding its File — the commit must not quietly upload it the old way.
+function isCanceledPf(pf) {
+  return !!(pf && !pf.nid && pf.bundleEntry && pf.bundleEntry.status === "canceled");
+}
+
 const unfinishedPending = (list) => (list || []).filter(isUnfinishedPf);
+const abandonedPending = (list) =>
+  (list || []).filter((pf) => isUnfinishedPf(pf) || isCanceledPf(pf));
+const committablePending = (list) => (list || []).filter((pf) => !isCanceledPf(pf));
 const withoutUnfinished = (list) => (list || []).filter((pf) => !isUnfinishedPf(pf));
 
 function pairEntries(pending, roots) {
@@ -64,5 +73,12 @@ function settleEagerBatch(pfs) {
 const itemsOf = (pfs) => (pfs || []).map((pf) => ({ entry: pf.bundleEntry, job: pf.bundleJob }));
 
 module.exports = {
-  unfinishedPending, withoutUnfinished, pairEntries, settleEagerFile, settleEagerBatch, itemsOf,
+  unfinishedPending,
+  withoutUnfinished,
+  abandonedPending,
+  committablePending,
+  pairEntries,
+  settleEagerFile,
+  settleEagerBatch,
+  itemsOf,
 };

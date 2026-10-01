@@ -41,12 +41,12 @@ const commitDetail = (Wm) =>
   new Function(
     "SERVICE", "Wm", "LOCALE", "snapshotTask", "planDetailCommit",
     "advanceBase", "settlePendingFiles", "rowOf", "ownedPatch",
-    "applyLabelOps", "longestList",
+    "applyLabelOps", "longestList", "committablePending",
     `${sliceMethod("_commitDetail")}\nreturn _commitDetail;`,
   )(
     SERVICE, Wm, LOCALE, helpers.snapshotTask, helpers.planDetailCommit,
     helpers.advanceBase, helpers.settlePendingFiles, liveSync.rowOf,
-    liveSync.ownedPatch, liveSync.applyLabelOps, liveSync.longestList,
+    liveSync.ownedPatch, liveSync.applyLabelOps, liveSync.longestList, require("../src/drumee/builtins/window/tasks/pending-uploads").committablePending,
   );
 
 // A successful answer for each service, shaped like the server's: the row

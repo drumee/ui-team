@@ -158,3 +158,35 @@ test("confirmUnfinished: empty → skip, no window → keep", async () => {
   assert.equal(await make(win)({ items: [{ entry: {}, job: {} }], action: "update" }), "skip");
   assert.deepEqual(seen, ["update"]);
 });
+
+const sliceStatic = (name) => {
+  const start = SRC.indexOf(`__window_upload_progress.${name} = function`);
+  assert.ok(start > -1, `${name} not found`);
+  const end = SRC.indexOf("\n};\n", start);
+  return SRC.slice(start, end + 3).replace(`__window_upload_progress.${name} =`, "return");
+};
+
+test("dropEntries cancels an entry whose job has not been created yet", () => {
+  const dropEntries = new Function("window", sliceStatic("dropEntries"))({});
+  const queued = { status: "queued" }, done = { status: "done" };
+  const out = dropEntries([{ entry: queued }, { entry: done }]);
+  assert.deepEqual(out, [queued]);
+  assert.equal(queued.status, "canceled");
+  assert.equal(done.status, "done");
+});
+
+test("runBundle leaves out roots canceled before it ran, and resolves null if none remain", async () => {
+  const enqueued = [];
+  const win = {
+    _bundle: [], fig: { family: "x" },
+    _mergeEntry(list, r) { list.push(r); },
+    _enqueueBundle: (batch) => enqueued.push(...batch),
+  };
+  const runBundle = new Function("__window_upload_progress", sliceStatic("runBundle"))(
+    { getOrCreate: () => Promise.resolve(win) });
+  const a = { id: "a", status: "queued" }, b = { id: "b", status: "canceled" };
+  assert.equal(await runBundle([a, b], "n1", "h1", null, {}), win);
+  assert.deepEqual(enqueued, [a]);
+  assert.deepEqual(win._bundle, [a]);
+  assert.equal(await runBundle([{ status: "canceled" }], "n1", "h1", null, {}), null);
+});

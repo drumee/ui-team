@@ -2768,8 +2768,16 @@ __window_upload_progress.dismissForQuota = function () {
 __window_upload_progress.dropEntries = function (items) {
   const dropped = [];
   for (const it of items || []) {
-    if (!it || !it.job || typeof it.job.cancelEntry !== "function") continue;
-    if (it.job.cancelEntry(it.entry)) dropped.push(it.entry);
+    if (!it || !it.entry) continue;
+    if (it.job && typeof it.job.cancelEntry === "function") {
+      if (it.job.cancelEntry(it.entry)) dropped.push(it.entry);
+    } else if (["queued", "creating", "uploading", "paused"].includes(it.entry.status)) {
+      // Not handed to a job yet (runBundle is still waiting for the window):
+      // marked here, the job skips it and runBundle leaves it out of the batch.
+      it.entry.status = "canceled";
+      it.entry.cancelReason = "dropped";
+      dropped.push(it.entry);
+    }
   }
   if (!dropped.length || typeof window === "undefined" || !window.Wm) return dropped;
   const open = window.Wm.getItemsByKind && window.Wm.getItemsByKind("window_upload_progress");
@@ -2935,7 +2943,9 @@ __window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWind
     win._targetWindow = targetWindow || win._targetWindow;
     // Merge into the visible bundle list (do not replace — user may drop more
     // files while a prior batch is still uploading).
-    const batch = roots;
+    // A caller may have dropped some while the window was being created.
+    const batch = roots.filter((r) => r && r.status !== "canceled");
+    if (!batch.length) return null;
     for (const r of batch) win._mergeEntry(win._bundle, r);
     win._replaceExisting = false;
     // _enqueueBundle → _switchToProgress sets the phase (and leaves an open

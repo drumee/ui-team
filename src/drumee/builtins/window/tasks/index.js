@@ -25,6 +25,8 @@ const {
 } = require("./mention-markers");
 const {
   unfinishedPending,
+  abandonedPending,
+  committablePending,
   pairEntries,
   settleEagerFile,
   settleEagerBatch,
@@ -386,6 +388,9 @@ class __tasks_panel extends LetcBox {
   }
 
   onBeforeDestroy() {
+    // The panel is going; uploads still on their way have no task to join.
+    this._cancelUnfinishedUploads("create", this._createDefaults);
+    this._cancelUnfinishedUploads("detail", this._detailDraft);
     this.unbindEvent(_a.live);
     this._unbindCalMenuDismiss();
     // Parts that never mounted leave their waiter behind (their promise simply
@@ -1591,6 +1596,8 @@ class __tasks_panel extends LetcBox {
         return this._onTaskInputChanged(args, trigger);
 
       case "add-task":
+        // A fresh draft replaces the old one: its uploads have no task to join.
+        this._cancelUnfinishedUploads("create", this._createDefaults);
         this._creating = true;
         this._createDefaults = {
           status: trigger.mget("taskColumn") || this.getDefaultStatus(),
@@ -2146,6 +2153,7 @@ class __tasks_panel extends LetcBox {
       case "cal-add": {
         // "+" on a day cell → open the create modal pre-dated to that day.
         const day = trigger.mget("calDay") || "";
+        this._cancelUnfinishedUploads("create", this._createDefaults);
         this._creating = true;
         this._createDefaults = {
           status: this.getDefaultStatus(),
@@ -3898,9 +3906,9 @@ class __tasks_panel extends LetcBox {
     this._setSubmitting(".tasks-panel__create-submit", true);
 
     const labels = Array.isArray(draft.labels) ? draft.labels.slice() : [];
-    const pendingFiles = Array.isArray(draft.pending_files)
-      ? draft.pending_files.slice()
-      : [];
+    // Not a file dropped from its bundle: it still holds its File, and the
+    // upload-at-commit fallback below would otherwise send it anyway.
+    const pendingFiles = committablePending(draft.pending_files);
     // A child left half-typed in the creator card counts as one the user meant
     // to create — fold it in before the snapshot, or pressing Create discards
     // it without a word.
@@ -4061,6 +4069,7 @@ class __tasks_panel extends LetcBox {
       // an empty child list until the next full reload.
       if (parentOfDoomed) this._syncSubtaskBadges(parentOfDoomed);
       if (gone.has(this._detailId)) {
+        this._cancelUnfinishedUploads("detail", this._detailDraft);
         closedDetail = true;
         this._detailId = null;
         this._detailDraft = null;
@@ -4239,9 +4248,9 @@ class __tasks_panel extends LetcBox {
     // Pending attachments — same flow as _commitTask: search-picked entries
     // already have nid; uploaded entries carry the File and need to land in
     // the folder body first.
-    const pendingFiles = Array.isArray(draft.pending_files)
-      ? draft.pending_files.slice()
-      : [];
+    // Not a file dropped from its bundle: it still holds its File, and the
+    // upload-at-commit fallback below would otherwise send it anyway.
+    const pendingFiles = committablePending(draft.pending_files);
     for (const pf of pendingFiles) {
       calls.push(
         (async () => {
@@ -6946,7 +6955,7 @@ class __tasks_panel extends LetcBox {
     if (!paired.length) return;
     paired.forEach((pf) => this._setPendingStatus(scopeKey, pf, "uploading"));
     const destNid = await this._attachmentNid();
-    const win = await UploadProgress.runBundle(
+    await UploadProgress.runBundle(
       paired.map((pf) => pf.bundleEntry),
       destNid,
       this._hubId,
@@ -6960,12 +6969,17 @@ class __tasks_panel extends LetcBox {
         onDone: () => this._onEagerBatchDone(scopeKey, draft, paired),
       },
     ).catch(() => null);
-    if (!win) {
-      // Never started: hand every file back to commit-time upload.
-      paired.forEach((pf) => {
-        if (pf.bundleEntry) pf.bundleEntry.status = "error";
+    // No window, or one that refused the batch before creating a job (client
+    // quota pre-check, no destination): nothing will ever report on these
+    // files, so hand them back to commit-time upload.
+    const orphaned = paired.filter(
+      (pf) => !pf.bundleJob && pf.bundleEntry && pf.bundleEntry.status !== "canceled",
+    );
+    if (orphaned.length) {
+      orphaned.forEach((pf) => {
+        pf.bundleEntry.status = "error";
       });
-      this._onEagerBatchDone(scopeKey, draft, paired);
+      this._onEagerBatchDone(scopeKey, draft, orphaned);
     }
   }
 
@@ -7023,7 +7037,10 @@ class __tasks_panel extends LetcBox {
    * @returns {number} how many were removed
    */
   _cancelUnfinishedUploads(scopeKey, draft) {
-    const doomed = unfinishedPending(draft && draft.pending_files);
+    // Canceled ones too: the warning's "without" has already dropped them from
+    // their bundle (dropEntries runs before confirmUnfinished resolves), so they
+    // no longer read as unfinished — but they are still in the draft.
+    const doomed = abandonedPending(draft && draft.pending_files);
     if (!doomed.length) return 0;
     require("window/upload-progress").dropEntries(itemsOf(doomed));
     for (const pf of doomed) {
@@ -7884,8 +7901,12 @@ class __tasks_panel extends LetcBox {
     if (this._commentSaving) return;
     const nid = trigger.mget("fileNid");
     const localKey = trigger.mget("localKey");
+    // A card still uploading: stop the upload too, or it lands in the task
+    // folder attached to nothing.
+    const abandoned = [];
     const keep = (f) => {
       const drop = localKey ? f.localKey === localKey : nid ? f.nid === nid : false;
+      if (drop && unfinishedPending([f]).length) abandoned.push(f);
       if (drop && f.previewUrl) {
         try {
           URL.revokeObjectURL(f.previewUrl);
@@ -7901,6 +7922,9 @@ class __tasks_panel extends LetcBox {
         draft.pending_files = draft.pending_files.filter(keep);
       }
       this._refreshPendingList(key);
+    }
+    if (abandoned.length) {
+      require("window/upload-progress").dropEntries(itemsOf(abandoned));
     }
     // "Linked" badges in the search dropdown depend on the pending set —
     // refresh both. Only one scope's part can be mounted at a time, so the
@@ -11160,6 +11184,7 @@ class __tasks_panel extends LetcBox {
   // They already live in the workspace, so attachExistingNodes stages them to
   // link by nid on Update — no re-upload.
   openTaskWithFiles(nodes) {
+    this._cancelUnfinishedUploads("create", this._createDefaults);
     this._creating = true;
     this._createDefaults = {
       status: this.getDefaultStatus(),
