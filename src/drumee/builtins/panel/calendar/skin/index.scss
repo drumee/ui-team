@@ -865,22 +865,57 @@
     font-weight: 500;
   }
 
+  // Hover delete (personal + writable chips only — skeleton/chip.js).
+  //
+  // Was a 16px box pinned at top:3px with an unsized sprite: on the 19px
+  // one-line chip it hung off the bottom edge, and it sat ON the title with
+  // nothing making room for it, so "11:00 tttt" ran under a full-size red ✕.
+  // Now: centred on the one-line chip (top-right on the tall hour block), a
+  // 10px glyph in a 16px target, and the chip gives up 22px on the right while
+  // it is hovered, so the title ellipsizes before the button instead of under
+  // it.
+  &__chip:has(> &__chip-remove):hover {
+    padding-right: 22px;
+  }
+
   &__chip-remove {
     position: absolute;
-    top: 3px;
+    top: 50%;
     right: 3px;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 16px;
     height: 16px;
     border-radius: 4px;
     cursor: pointer;
     opacity: 0;
     color: var(--normal-fg-20);
-    background: var(--normal-bg-elevated);
-    transition: opacity 0.12s ease-out;
+    background: transparent;
+    transition:
+      opacity 0.12s ease-out,
+      background 0.12s ease-out,
+      color 0.12s ease-out;
+
+    svg {
+      display: block;
+      width: 10px;
+      height: 10px;
+      fill: currentcolor;
+    }
 
     &:hover {
       color: var(--signal-error, #d74e49);
+      background: rgba(215, 78, 73, 0.12);
     }
+  }
+
+  // The hour block is a tall card: the button belongs in its top-right
+  // corner, beside the title line, not halfway down the block.
+  &__chip[data-compact="0"] > &__chip-remove {
+    top: 4px;
+    transform: none;
   }
 
   // ── hour canvas (week + day) ───────────────────────────────────────────────
@@ -1137,15 +1172,18 @@
   &__modal {
     // Same footprint as the meeting modal (a centred card, unlike the Task
     // tab's near-fullscreen sheet), so the two read as the same object.
-    width: min(480px, calc(100vw - 32px));
+    // Compact card (2026-10-01): every control below was taken down a step —
+    // 34px fields, 32px buttons, 18px heading — so the meeting form fits a
+    // laptop viewport without scrolling.
+    width: min(420px, calc(100vw - 32px));
     max-height: 88vh;
-    padding: 28px 32px;
-    gap: 18px;
+    padding: 20px 24px;
+    gap: 14px;
     box-sizing: border-box;
     overflow-y: auto;
     background: var(--normal-bg-elevated);
     border: 1px solid var(--border-muted);
-    border-radius: 16px;
+    border-radius: 12px;
     box-shadow:
       0 25px 50px -12px rgba(0, 0, 0, 0.25),
       0 1px 11px rgba(0, 0, 0, 0.13);
@@ -1153,8 +1191,18 @@
 
     // Two columns of fields + the invite block — the meeting modal's own width.
     &[data-form="meeting"] {
-      width: min(600px, calc(100vw - 32px));
+      width: min(520px, calc(100vw - 32px));
     }
+  }
+
+  // Sub-blocks of the invite block and the chip row are always rendered and
+  // toggled by attribute (index.js _syncInviteDom / _renderRecipients), so a
+  // click never re-feeds the modal. (0,3,0) on purpose: the base
+  // `.drumee-widget[data-flow=y] { display: flex }` is (0,2,0) and would win
+  // a two-part selector here by source order.
+  &__modal [data-sub][data-open="0"],
+  &__modal &__chips[data-count="0"] {
+    display: none;
   }
 
   @keyframes calendar-main-fade-in {
@@ -1187,15 +1235,15 @@
   &__modal-title {
     // 24px/600 in --normal-fg-800 (#34343a) — the heading both reference
     // modals use. This was 20px in --primary-purple-100, the odd one out.
-    @include drumee.typo($size: 24px, $line: 27px, $color: var(--normal-fg-800));
+    @include drumee.typo($size: 18px, $line: 24px, $color: var(--normal-fg-800));
     font-weight: 600;
   }
 
   &__modal-close {
     display: flex;
-    flex: 0 0 28px;
-    width: 28px;
-    height: 28px;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -1206,8 +1254,8 @@
     // The sprite svg is width/height 100%, so it needs a box — see __menu-ico.
     svg {
       display: block;
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       fill: currentcolor;
     }
 
@@ -1220,7 +1268,7 @@
   &__modal-body {
     flex: 1 1 auto;
     min-height: 0;
-    gap: 16px;
+    gap: 12px;
   }
 
   // Right-aligned action row under a hairline, as in the meeting modal. Buttons
@@ -1231,16 +1279,41 @@
     gap: 8px;
     align-items: center;
     justify-content: flex-end;
-    padding-top: 16px;
+    padding-top: 12px;
     border-top: 1px solid var(--border-muted);
   }
 
   &__field {
-    gap: 6px;
+    gap: 4px;
+  }
+
+  // ── required fields (index.js _validateRequired) ──────────────────────────
+  // Asterisk on the label; on a failed submit the field's border goes red and
+  // its error line appears. The line is always rendered and hidden by
+  // attribute — (0,3,0) so the base `.drumee-widget[data-flow]` display
+  // cannot bring it back.
+  &__field[data-required="1"] > &__field-label::after {
+    content: " *";
+    color: var(--signal-error, #d74e49);
+  }
+
+  &__field:not([data-error="1"]) > &__field-error {
+    display: none;
+  }
+
+  &__field[data-error="1"] {
+    .calendar-main__input,
+    .calendar-main__textarea {
+      border-color: var(--signal-error, #d74e49);
+    }
+  }
+
+  &__field-error {
+    @include drumee.typo($size: 11px, $line: 14px, $color: var(--signal-error, #d74e49));
   }
 
   &__field-label {
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-10));
     font-weight: 500;
   }
 
@@ -1262,31 +1335,201 @@
     textarea {
       width: 100%;
       box-sizing: border-box;
-      // 44px rows (12px padding on a 20px line) — the reference field height.
-      padding: 12px;
+      // 34px rows (8px padding on an 18px line).
+      padding: 8px 10px;
       border: 0;
       background: transparent;
       outline: none;
-      @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10));
+      @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-10));
       font-family: inherit;
     }
 
+    // Fixed height, scrolls inside: four lines, then the bar. Not resizable —
+    // a drag handle would fight the bar for the same corner.
+    //
+    // The bar follows the reference design: no visible track, a grey
+    // rounded thumb inset 2px inside a 10px gutter, and small grey arrow
+    // buttons at either end. ::-webkit-scrollbar only — Chrome lets
+    // scrollbar-width / -color override the pseudo-elements, so those are kept
+    // to engines without them (Firefox draws no arrows; it gets the colours).
+    //
+    // The field's wrapper holds the vertical padding and a 4px right gutter,
+    // so the bar sits inside the field instead of being clipped by its 8px
+    // corner radius.
     textarea {
-      resize: vertical;
-      min-height: 76px;
+      display: block;
+      resize: none;
+      height: 76px;
+      padding: 2px 6px 2px 10px;
+      overflow-x: hidden;
+      overflow-y: auto;
+
+      &::-webkit-scrollbar {
+        width: 10px;
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background-color: rgba(60, 60, 67, 0.3);
+        // Transparent border + padding-box clip = a 6px thumb inset in the
+        // 10px gutter, with fully rounded ends.
+        border: 2px solid transparent;
+        background-clip: padding-box;
+        border-radius: 999px;
+        cursor: pointer;
+
+        &:hover {
+          background-color: rgba(60, 60, 67, 0.45);
+        }
+      }
+
+      // One arrow per end (the "single-button" pair), drawn as a small
+      // triangle; the double-button pairs Chrome would also offer are hidden.
+      &::-webkit-scrollbar-button:single-button {
+        display: block;
+        height: 10px;
+        background-color: transparent;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 8px 8px;
+        cursor: pointer;
+      }
+
+      &::-webkit-scrollbar-button:single-button:vertical:decrement {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M5 3 L8 7 L2 7 Z' fill='%23a1a1a6'/></svg>");
+      }
+
+      &::-webkit-scrollbar-button:single-button:vertical:increment {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M2 3 L8 3 L5 7 Z' fill='%23a1a1a6'/></svg>");
+      }
+
+      &::-webkit-scrollbar-button:double-button {
+        display: none;
+      }
+
+      @supports not selector(::-webkit-scrollbar) {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(60, 60, 67, 0.3) transparent;
+      }
+    }
+  }
+
+  &__textarea {
+    padding: 6px 4px 6px 0;
+  }
+
+  // Password row — the sign-in form's PASSWORD row
+  // (welcome/signin skin: __entry-row / __entry-input / __entry-eye-toggle),
+  // sized and coloured as this modal's other fields: a 36px filled row with
+  // the input and the eye side by side, a focus ring on the ROW, and the
+  // EntryBox's inner wrappers turned into transparent pass-throughs.
+  &__password {
+    width: 100%;
+    // __input's height: 8px + 18px line + 8px, plus its 1px border each side.
+    height: 36px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    gap: 8px;
+    align-items: center;
+    overflow: hidden;
+    background: var(--overlay-bg-05);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    transition: border-color 0.2s;
+
+    &:focus-within {
+      border-color: var(--active-border);
+      background: var(--normal-bg);
+    }
+  }
+
+  &__password-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    background: transparent;
+
+    .entry-reminder__main,
+    .entry-reminder__component,
+    .entry-reminder__input-wrap,
+    .entry-box,
+    .entry-wrapper {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+      border: none;
+      background: transparent;
+      box-shadow: none;
+      align-items: center;
+    }
+
+    // Through .entry-reminder__main, not a bare `input`: skin/lib/input.scss
+    // gives `.entry-reminder__main input:focus` a 1px neutral border (0,2,1)
+    // and its own 16px type, and a bare `input` here lost to both — the
+    // focused field drew a second box inside the row. Focus is the ROW's
+    // border alone, exactly like the recipient field's __input.
+    .entry-reminder__main input,
+    .entry-reminder__main input:focus {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      padding: 0;
+      margin: 0;
+      border: none;
+      outline: none;
+      box-shadow: none;
+      background: transparent;
+      box-sizing: border-box;
+      @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-10));
+      font-family: inherit;
+
+      &::placeholder {
+        @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-50));
+      }
+    }
+  }
+
+  &__password-eye {
+    display: flex;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--normal-fg-50);
+    transition: color 0.2s;
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentcolor;
+    }
+
+    &:hover,
+    &[data-state="1"] {
+      color: var(--primary-40);
     }
   }
 
   // ── pills (status / priority) ─────────────────────────────────────────────
   &__pills {
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
   }
 
   &__pill {
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: 5px;
+    padding: 4px 10px;
     border-radius: 999px;
     border: 1px solid var(--border-default);
     cursor: pointer;
@@ -1309,36 +1552,36 @@
 
   &__pill-dot {
     flex: 0 0 auto;
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
   }
 
   &__pill-label {
-    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 11px, $line: 14px, $color: var(--normal-fg-20));
     white-space: nowrap;
   }
 
   // ── time pickers ──────────────────────────────────────────────────────────
   &__time-row {
     align-items: flex-start;
-    gap: 12px;
+    gap: 10px;
   }
 
   &__time-arrow {
-    @include drumee.typo($size: 16px, $line: 16px, $color: var(--normal-fg-50));
+    @include drumee.typo($size: 14px, $line: 14px, $color: var(--normal-fg-50));
     align-self: center;
-    padding-top: 18px;
+    padding-top: 14px;
   }
 
   &__time {
     align-items: flex-start;
-    gap: 6px;
+    gap: 4px;
   }
 
   &__time-part {
     gap: 2px;
-    width: 48px;
+    width: 40px;
   }
 
   &__time-input {
@@ -1353,13 +1596,13 @@
     input {
       width: 100%;
       box-sizing: border-box;
-      padding: 8px 6px;
+      padding: 6px 4px;
       border: 0;
       background: transparent;
       outline: none;
       text-align: center;
       font-variant-numeric: tabular-nums;
-      @include drumee.typo($size: 14px, $line: 18px, $color: var(--normal-fg));
+      @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
       font-family: inherit;
     }
   }
@@ -1370,8 +1613,8 @@
   }
 
   &__time-colon {
-    @include drumee.typo($size: 14px, $line: 18px, $color: var(--normal-fg-20));
-    padding-top: 8px;
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-20));
+    padding-top: 6px;
   }
 
   &__meridiem {
@@ -1379,12 +1622,12 @@
   }
 
   &__meridiem-item {
-    padding: 4px 10px;
+    padding: 2px 8px;
     border-radius: 6px;
     cursor: pointer;
     text-align: center;
     border: 1px solid transparent;
-    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 11px, $line: 14px, $color: var(--normal-fg-20));
 
     &[data-active="1"] {
       border-color: var(--radio-on-border);
@@ -1396,7 +1639,7 @@
 
   // ── invite block (mirrors the secure-share panel) ──────────────────────────
   &__invite {
-    gap: 10px;
+    gap: 8px;
   }
 
   &__invite-group {
@@ -1407,8 +1650,8 @@
 
   &__toggle-row {
     align-items: center;
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 8px 10px;
     cursor: pointer;
 
     &:hover {
@@ -1418,8 +1661,8 @@
 
   &__toggle-ico {
     flex: 0 0 auto;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     color: var(--normal-fg-20);
   }
 
@@ -1430,18 +1673,18 @@
   }
 
   &__toggle-label {
-    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg));
     font-weight: 500;
   }
 
   &__toggle-hint {
-    @include drumee.typo($size: 11px, $line: 15px, $color: var(--normal-fg-50));
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-50));
   }
 
   &__checkbox {
     flex: 0 0 auto;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 4px;
     border: 1px solid var(--border-strong);
     box-sizing: border-box;
@@ -1456,8 +1699,8 @@
       &::after {
         content: "";
         position: absolute;
-        left: 5px;
-        top: 2px;
+        left: 4px;
+        top: 1px;
         width: 5px;
         height: 9px;
         border-right: 2px solid var(--gray-white);
@@ -1468,27 +1711,27 @@
   }
 
   &__invite-sub {
-    padding: 0 12px 12px;
-    gap: 8px;
+    padding: 0 10px 10px;
+    gap: 6px;
     border-top: 1px solid var(--border-muted);
   }
 
   &__switch-row {
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding-top: 10px;
+    gap: 8px;
+    padding-top: 8px;
     cursor: pointer;
   }
 
   &__switch-label {
-    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 11px, $line: 14px, $color: var(--normal-fg-20));
   }
 
   &__switch {
     flex: 0 0 auto;
-    width: 34px;
-    height: 18px;
+    width: 30px;
+    height: 16px;
     border-radius: 999px;
     background: var(--normal-bg-40);
     position: relative;
@@ -1499,8 +1742,8 @@
       position: absolute;
       top: 2px;
       left: 2px;
-      width: 14px;
-      height: 14px;
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
       background: var(--gray-white);
       transition: transform 0.15s ease-out;
@@ -1510,13 +1753,13 @@
       background: var(--primary-40);
 
       &::after {
-        transform: translateX(16px);
+        transform: translateX(14px);
       }
     }
   }
 
   &__recipients {
-    gap: 8px;
+    gap: 6px;
   }
 
   &__chips {
@@ -1552,36 +1795,140 @@
     }
   }
 
+  // ── toast (index.js _showToast) ───────────────────────────────────────────
+  // Settings' toast (settings_main skin __toast-slot / __toast), on theme
+  // tokens so it follows dark mode the way Settings' dark block does.
+  //
+  // z-index: the meeting toast's band (upload-progress + 2 = 50004), NOT
+  // Settings' 30000. The open modal wrapper does not sit at the 20000 this
+  // file gives it: the global `[data-state="open"] { z-index:
+  // var(--z-index-context) !important }` (skin/lib/utils.scss) pins it to
+  // 50000, so a 30000 toast fired from the modal (Copy) painted under its
+  // blurred backdrop. Both share this screen's stacking context; 50004 wins.
+  &__toast-slot {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: calc(var(--z-index-upload-progress, 50002) + 2);
+    pointer-events: none;
+  }
+
+  &__toast {
+    align-items: center;
+    gap: 10px;
+    max-width: 360px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: var(--normal-bg-elevated);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    pointer-events: auto;
+    animation: calendar-main-toast-in 160ms ease-out;
+  }
+
+  &__toast-ico {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &__toast-text {
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-10));
+    font-weight: 600;
+  }
+
+  &__toast--success &__toast-ico svg {
+    fill: #54b684;
+
+    .icon-fill-blue,
+    .icon-fill-grey {
+      fill: #54b684;
+    }
+  }
+
+  &__toast--error &__toast-ico svg {
+    fill: #d64e49;
+
+    .icon-fill-blue,
+    .icon-fill-grey {
+      fill: #d64e49;
+    }
+  }
+
+  @keyframes calendar-main-toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   // ── invite link ready ─────────────────────────────────────────────────────
+  // Settings' referral row (settings_main skin: __inner + __referral-action):
+  // title over value on the left, a 32px ghost button on the right, 16px
+  // padding on an 8px-radius row. The row sits on this modal's own field
+  // ground (--overlay-bg-05) rather than Settings' white, which would vanish
+  // on the white card; colours are theme tokens so dark mode follows.
   &__link-row {
     align-items: center;
-    gap: 8px;
-    padding: 12px;
+    justify-content: space-between;
+    gap: var(--spacer-5, 16px);
+    padding: var(--spacer-5, 16px);
     border-radius: 8px;
     background: var(--overlay-bg-05);
-    cursor: pointer;
+  }
+
+  &__link-text-box {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  &__link-title {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-800));
+    font-weight: 600;
   }
 
   &__link-text {
-    flex: 1 1 auto;
-    min-width: 0;
-    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-50));
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   &__link-copy {
+    display: flex;
     flex: 0 0 auto;
-    width: 20px;
-    height: 20px;
+    min-width: 120px;
+    height: 32px;
+    padding: 0 var(--spacer-5, 16px);
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background: rgba(89, 80, 255, 0.1);
     cursor: pointer;
-    color: var(--primary-40);
+    user-select: none;
+    @include drumee.typo($size: 12px, $line: 16px, $color: #847dff);
+    font-weight: 600;
+
+    &:hover {
+      background: rgba(89, 80, 255, 0.18);
+    }
   }
 
   // ── buttons ───────────────────────────────────────────────────────────────
   // Geometry and variants copied from window-folder__meeting-modal-btn so the
-  // three dialogs' footers are interchangeable: 38px pills, the destructive
+  // three dialogs' footers are interchangeable (now 32px — the compact card),
+  // the destructive
   // action pushed left by its own margin, confirm actions right.
   &__button {
     flex: 0 0 auto;
@@ -1589,15 +1936,15 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    height: 38px;
-    padding: 0 14px;
+    height: 32px;
+    padding: 0 12px;
     border: 1px solid transparent;
     border-radius: 6px;
     text-align: center;
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
-    @include drumee.typo($size: 13px, $line: 18px, $color: var(--gray-white));
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--gray-white));
     font-weight: 600;
 
     &--primary {
@@ -1664,4 +2011,15 @@
       min-width: 640px;
     }
   }
+}
+
+// The modal's date picker card (skeleton/date-field.js placeCalendar). It lives
+// on <body>, outside .calendar-main, so it is styled at the root. flatpickr's
+// own 99999 already clears the modal (20000) and the lifted slot (20001); the
+// explicit value keeps that true if the vendor sheet ever changes. The dp-skin
+// "opened above" -18px correction is cancelled too — placeCalendar measures
+// the real card, padding included, so there is nothing to correct.
+.flatpickr-calendar.calendar-main__flatpickr {
+  z-index: 99999;
+  margin-top: 0;
 }

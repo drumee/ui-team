@@ -10,6 +10,7 @@
 // refused server-side for a personal-hub task, which is where it has to be
 // enforced; omitting the field here is the UI half only.
 const { STATUSES, PRIORITIES } = require("./helpers");
+const dateField = require("./date-field");
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -50,16 +51,29 @@ module.exports = function (ui) {
       ),
     });
 
-  const field = (labelKey, control) =>
+  // `required` names the draft key the field must fill. The field then
+  // carries data-field / data-required, and an error line that stays hidden
+  // until the controller stamps data-error on a failed submit
+  // (index.js _validateRequired).
+  const field = (labelKey, control, required) =>
     Skeletons.Box.Y({
       className: `${pfx}__field`,
+      attrOpt: required
+        ? { "data-field": required, "data-required": "1", "data-error": "0" }
+        : {},
       kids: [
         Skeletons.Note({
           className: `${pfx}__field-label`,
           content: LOCALE[labelKey],
         }),
         control,
-      ],
+        required
+          ? Skeletons.Note({
+              className: `${pfx}__field-error`,
+              content: LOCALE.REQUIRE_THIS_FIELD,
+            })
+          : null,
+      ].filter(Boolean),
     });
 
   return Skeletons.Box.Y({
@@ -112,6 +126,7 @@ module.exports = function (ui) {
               uiHandler: [ui],
               partHandler: ui,
             }),
+            "title",
           ),
 
           field(
@@ -131,28 +146,13 @@ module.exports = function (ui) {
               uiHandler: [ui],
               partHandler: ui,
             }),
+            "description",
           ),
 
-          field("DUE_DATE", {
-            kind: "date_picker",
-            className: `${pfx}__date-input`,
-            innerClass: `${pfx}__date-input-inner`,
-            name: "due_date",
-            placeholder: LOCALE.SELECT_DATE,
-            value: draft.due_date || "",
-            service: "cal-form-date",
-            uiHandler: [ui],
-            vendorOpt: {
-              dateFormat: "Y-m-d",
-              altInput: true,
-              altFormat: "d/m/Y",
-              // Spelled out so an unset due date stays unset — a picker that
-              // seeded itself with today would stamp every task with its
-              // creation date (the same trap the board documents).
-              defaultDate: draft.due_date || null,
-              appendTo: document.body,
-            },
-          }),
+          field(
+            "DUE_DATE",
+            dateField(ui, { name: "due_date", value: draft.due_date }),
+          ),
 
           field(
             "STATUS",
