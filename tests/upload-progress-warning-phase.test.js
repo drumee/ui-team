@@ -100,8 +100,22 @@ test("_resolveWarning: skip drops the items, restores the phase, resolves once",
   fn.call(win, "keep"); // second call is a no-op
   assert.deepEqual(got, ["skip"]);
   assert.deepEqual(dropped, [item]);
-  assert.equal(win.el.style.height, "280px");
   assert.ok(win.calls.includes("phase:progress"));
+});
+
+test("_setPhase stamps the window element too (the skin sizes __ui off it)", () => {
+  const setPhase = new Function(`return ${sliceFunction(SRC, "_setPhase(phase)")}`)();
+  const container = { dataset: {} };
+  const win = { fig: { family: "f" }, el: { dataset: {}, querySelector: () => container } };
+  setPhase.call(win, "warning");
+  assert.equal(win.el.dataset.phase, "warning");
+  assert.equal(container.dataset.phase, "warning");
+  assert.equal(win._phase, "warning");
+});
+
+test("no inline height juggling: an inline style cannot beat the skin's !important", () => {
+  assert.doesNotMatch(sliceFunction(SRC, "_showWarning(items, action)"), /style\.height/);
+  assert.doesNotMatch(sliceFunction(SRC, "_resolveWarning(choice)"), /style\.height/);
 });
 
 test("_resolveWarning: keep drops nothing", () => {

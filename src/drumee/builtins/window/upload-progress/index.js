@@ -2339,7 +2339,12 @@ class __window_upload_progress extends __window_core {
 
   _setPhase(phase) {
     this._phase = phase;
-    const root = this.el && this.el.querySelector(`.${this.fig.family}__container`);
+    if (!this.el) return;
+    // On the window element as well: its height is pinned by a
+    // `__ui[data-expanded]` rule with !important, so only the skin can release
+    // it for the warning card (an inline style loses to !important).
+    if (this.el.dataset) this.el.dataset.phase = phase;
+    const root = this.el.querySelector(`.${this.fig.family}__container`);
     if (root && root.dataset) root.dataset.phase = phase;
   }
 
@@ -2362,10 +2367,8 @@ class __window_upload_progress extends __window_core {
       }
       this._cancelAutoMinimize();
       if (!this._isExpanded) this.toggleExpand();
+      // The skin sizes the window to the card in this phase (see _setPhase).
       this._setPhase("warning");
-      // The card sizes to its rows; the progress phase's fixed 280px would clip
-      // a three-file list or leave a short one floating in empty space.
-      this.el.style.height = "auto";
       if (this.raise) this.raise();
       this._renderWarning();
     });
@@ -2422,7 +2425,6 @@ class __window_upload_progress extends __window_core {
     // when it recomputes what is still unfinished.
     if (choice === "skip") __window_upload_progress.dropEntries(w.items);
     if (!(this.isDestroyed && this.isDestroyed())) {
-      this.el.style.height = `${this.size.height}px`;
       this._setPhase(w.prevPhase);
       // Opened only to ask: nothing of its own to show afterwards.
       if (!(this._jobs || []).length && !(this._uploadItems || []).length) {
