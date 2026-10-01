@@ -5,6 +5,32 @@ const m = require("../src/drumee/builtins/window/upload-progress/warning-model")
 
 const e = (status, over = {}) => ({ id: `be_${status}`, name: "Brand Assets.zip", size: 200, status, ...over });
 
+test("percent: live for the current file, capped at 99", () => {
+  const cur = e("uploading");
+  const job = { _current: { entry: cur, loaded: 84 } };
+  assert.equal(m.entryPercent(cur, job), 42);
+  job._current.loaded = 200;
+  assert.equal(m.entryPercent(cur, job), 99);
+  assert.equal(m.entryPercent(e("queued"), job), 0);
+  assert.equal(m.entryPercent(e("done"), job), 100);
+  assert.equal(m.entryPercent(e("uploading", { size: 0 }), { _current: { entry: null } }), 0);
+});
+
+test("rows carry badge, state and status text", () => {
+  const cur = e("uploading");
+  const rows = m.warningRows([{ entry: cur, job: { _current: { entry: cur, loaded: 84 } } }], undefined);
+  assert.deepEqual(rows[0], {
+    id: "be_uploading", name: "Brand Assets.zip", ext: "ZIP",
+    pct: 42, state: "uploading", statusText: "Uploading... 42%",
+  });
+  const st = (s) => m.warningRows([{ entry: e(s), job: null }])[0];
+  assert.equal(st("queued").statusText, "Waiting...");
+  assert.equal(st("paused").statusText, "Paused");
+  assert.equal(st("done").statusText, "Uploaded");
+  assert.equal(st("error").state, "failed");
+  assert.equal(m.warningRows([{ entry: e("queued", { name: "README" }) }])[0].ext, "FILE");
+});
+
 test("copy: singular / plural / update / all-finished", () => {
   const one = m.warningCopy("create", 1);
   assert.equal(one.title, "Some files are still uploading");

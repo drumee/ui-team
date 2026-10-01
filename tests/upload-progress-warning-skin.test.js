@@ -1,7 +1,4 @@
-// The upload-progress "still uploading" warning: a banner ABOVE the upload
-// list, never a view that replaces it. The list stays visible the whole time,
-// so when the files land the banner goes and what is left is simply the upload
-// window, closing on its normal timing.
+// The upload-progress warning card: compact, never clipped, legible ring.
 //   node --test tests/upload-progress-warning-skin.test.js
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -20,87 +17,84 @@ const rule = (sel) => {
   assert.ok(m, `no rule for ${sel}`);
   return m[1];
 };
-const P = ".window-upload-progress";
 
-test("the upload list stays on screen under the banner", () => {
-  // Header, aggregate bar and file list are never hidden in the warning phase.
-  for (const part of ["header", "body"]) {
-    assert.doesNotMatch(
-      css,
-      new RegExp(`__container\\[data-phase=warning\\] \\${P}__${part}[ ,][^{]*\\{[^}]*display: none`),
-      part,
-    );
-  }
-  // Only the footer goes: its "Cancel all" would compete with the banner's two
-  // answers. Staging never applies here.
-  assert.match(rule(`${P}__container[data-phase=warning] ${P}__staging, ${P}__container[data-phase=warning] ${P}__footer`), /display: none/);
-});
-
-test("the window grows to fit banner + list, never below its 280px, and still collapses", () => {
-  // Only while expanded: collapsing during the warning must still work.
-  const r = rule(`${P}__ui[data-expanded="1"][data-phase=warning]`);
+test("the window lets go of its fixed 280px while the card is up", () => {
+  // data-expanded="1" pins height: 280px !important; the card is taller, and
+  // __ui has overflow: hidden, so the buttons were cut off.
+  const r = rule(".window-upload-progress__ui[data-expanded][data-phase=warning]");
   assert.match(r, /height: auto !important/);
+  // The expanded window's own 280px, as a floor, in the window's own box
+  // model — so the card can never come out a pixel off from the window.
   assert.match(r, /min-height: 280px !important/);
   assert.match(r, /display: flex/);
   assert.match(r, /flex-direction: column/);
-  assert.match(rule(`${P}__container[data-phase=warning]`), /flex: 1 1 auto/);
+  // Same footprint as the upload window it replaces: its own 360px width is
+  // kept (no override)…
+  assert.doesNotMatch(r, /width/);
 });
 
-test("the list keeps a bounded height under the banner", () => {
-  const b = rule(`${P}__container[data-phase=warning] ${P}__body`);
-  assert.match(b, /flex: 1 1 auto/);
-  assert.match(b, /max-height: 180px/);
+test("the card fills the window, buttons at the bottom", () => {
+  // The window is at least 280px; the container and the card stretch into it,
+  // and a longer file list grows all three.
+  assert.match(rule(".window-upload-progress__container[data-phase=warning]"), /flex: 1 1 auto/);
+  assert.match(rule(".window-upload-progress__warning"), /flex: 1 1 auto/);
+  assert.match(rule(".window-upload-progress__warning-actions"), /margin-top: auto/);
 });
 
-test("the banner takes its own height and sits between header and list", () => {
-  const w = rule(`${P}__warning`);
-  assert.match(w, /flex: none/);
-  assert.match(w, /border-bottom: 1px solid var\(--border-default\)/);
-  assert.doesNotMatch(w, /min-height/);
-});
-
-test("the banner is compact: inline icon + title, then body, then buttons", () => {
-  assert.match(rule(`${P}__warning-head`), /align-items: center/);
-  assert.match(rule(`${P}__warning-icon`), /width: 20px/);
-  assert.match(rule(`${P}__warning-title`), /font-size: 14px/);
-  assert.match(rule(`${P}__warning-body`), /font-size: 12px/);
-});
-
-test("its own per-file rows are gone (the upload list below shows the files)", () => {
-  for (const gone of ["__warning-list", "__warning-row", "__warning-ring", "__warning-ext"]) {
-    assert.doesNotMatch(css, new RegExp(`\\${P}${gone}\\b`), gone);
-  }
+test("the card is compact", () => {
+  assert.match(rule(".window-upload-progress__warning"), /padding: 16px/);
+  assert.match(rule(".window-upload-progress__warning-icon"), /width: 32px/);
+  assert.match(rule(".window-upload-progress__warning-title"), /font-size: 14px/);
+  assert.match(rule(".window-upload-progress__warning-body"), /font-size: 12px/);
 });
 
 test("button labels never spill out of the button", () => {
-  const b = rule(`${P}__warning-keep, ${P}__warning-skip`);
+  const b = rule(".window-upload-progress__warning-keep, .window-upload-progress__warning-skip");
   assert.match(b, /height: 32px/);
   assert.match(b, /font-size: 13px/);
   assert.match(b, /min-width: 0/);
   assert.match(b, /overflow: hidden/);
-  assert.match(b, /box-sizing: border-box/);
-  const inner = rule(`${P}__warning-keep .note-content, ${P}__warning-skip .note-content`);
+  // The text itself lives in Note's inner div; that is where it ellipsizes.
+  const inner = rule(".window-upload-progress__warning-keep .note-content, .window-upload-progress__warning-skip .note-content");
   assert.match(inner, /white-space: nowrap/);
   assert.match(inner, /text-overflow: ellipsis/);
+  // The 1px border of "Keep" made it 2px taller than "Create…" beside it.
+  assert.match(b, /box-sizing: border-box/);
 });
 
 test("buttons size to their labels and wrap rather than cut a label off", () => {
-  assert.match(rule(`${P}__warning-actions`), /flex-wrap: wrap/);
-  assert.match(rule(`${P}__warning-keep`), /flex: 1 0 auto/);
-  assert.match(rule(`${P}__warning-skip`), /flex: 1 1 auto/);
+  // Two equal halves of a 320px card cut "Create without this file" off, and
+  // "Update without these files" (or a longer translation) still does at any
+  // fixed split. Content-based widths + wrap: the long one takes its own line
+  // only when it has to.
+  assert.match(rule(".window-upload-progress__warning-actions"), /flex-wrap: wrap/);
+  assert.match(rule(".window-upload-progress__warning-keep"), /flex: 1 0 auto/);
+  assert.match(rule(".window-upload-progress__warning-skip"), /flex: 1 1 auto/);
+});
+
+test("the ring's track is a light tint, not the near-black foreground", () => {
+  const r = rule(".window-upload-progress__warning-ring");
+  assert.doesNotMatch(r, /--normal-fg-10/);
+  assert.match(r, /color-mix\(in srgb, var\(--primary-40\) 18%, transparent\)/);
+  assert.match(r, /width: 18px/);
 });
 
 test("button labels are centred, whatever box the Note's inner div gets", () => {
-  const b = rule(`${P}__warning-keep, ${P}__warning-skip`);
+  // Note renders its text in an inner div.note-content; text-align on the
+  // button alone left it at the start of a flex row.
+  const b = rule(".window-upload-progress__warning-keep, .window-upload-progress__warning-skip");
   assert.match(b, /display: flex/);
   assert.match(b, /align-items: center/);
   assert.match(b, /justify-content: center/);
-  assert.match(rule(`${P}__warning-keep .note-content, ${P}__warning-skip .note-content`), /text-align: center/);
+  const inner = rule(".window-upload-progress__warning-keep .note-content, .window-upload-progress__warning-skip .note-content");
+  assert.match(inner, /text-align: center/);
+  assert.match(inner, /text-overflow: ellipsis/);
+  assert.match(inner, /min-width: 0/);
 });
 
 test("the warning icon is the apps-warning glyph, tinted with the error colour", () => {
-  const r = rule(`${P}__warning-icon`);
+  const r = rule(".window-upload-progress__warning-icon");
   assert.match(r, /color: var\(--default-text-error\)/);
-  assert.doesNotMatch(r, /font-size/);
-  assert.match(rule(`${P}__warning-icon svg`), /fill: currentColor/);
+  assert.doesNotMatch(r, /font-size/); // no more text "!"
+  assert.match(rule(".window-upload-progress__warning-icon svg"), /fill: currentColor/);
 });

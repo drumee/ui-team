@@ -2,7 +2,9 @@ const { filesize, dataTransfer } = require("@drumee/ui-essentials");
 const __window_core = require("../core");
 const { hasWriteBit } = require("window/live-privilege");
 const { roleFromPrivilege } = require("builtins/skeleton/toolkit/permission");
-const { warningCopy, countUnfinished, withoutEntries } = require("./warning-model");
+const {
+  warningRows, warningCopy, countUnfinished, withoutEntries,
+} = require("./warning-model");
 
 // Cap the number of per-entry rows rendered in the bundle progress list. A
 // dropped folder can hold tens of thousands of files; rendering one DOM row each
@@ -2374,7 +2376,10 @@ class __window_upload_progress extends __window_core {
 
   _warningModel() {
     const w = this._warning;
-    return { copy: warningCopy(w.action, countUnfinished(w.items), LOCALE) };
+    return {
+      rows: warningRows(w.items, LOCALE),
+      copy: warningCopy(w.action, countUnfinished(w.items), LOCALE),
+    };
   }
 
   _renderWarning() {
@@ -2391,10 +2396,18 @@ class __window_upload_progress extends __window_core {
     // question is moot, so the card goes. "keep" drops nothing and leaves the
     // form open — the next Create goes straight through.
     if (countUnfinished(this._warning.items) === 0) return this._resolveWarning("keep");
-    // The files' own progress is the upload list below the banner; only the
-    // count in the copy changes here.
     const pfx = this.fig.family;
-    const { copy } = this._warningModel();
+    const { rows, copy } = this._warningModel();
+    for (const r of rows) {
+      // ids are "be_<n>", safe in a selector.
+      const el = this.el.querySelector(`.${pfx}__warning-row[data-id="${r.id}"]`);
+      if (!el) continue;
+      el.dataset.state = r.state;
+      const st = el.querySelector(`.${pfx}__warning-status`);
+      if (st) st.textContent = r.statusText;
+      const ring = el.querySelector(`.${pfx}__warning-ring`);
+      if (ring) ring.style.setProperty("--pct", `${r.pct}`);
+    }
     const body = this.el.querySelector(`.${pfx}__warning-body`);
     if (body) body.textContent = copy.body;
     const skip = this.el.querySelector(`.${pfx}__warning-skip`);

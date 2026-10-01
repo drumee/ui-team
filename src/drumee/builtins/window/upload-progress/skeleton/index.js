@@ -23,11 +23,10 @@ module.exports = function (ui) {
     },
     kids: [
       header,
-      // The "still uploading" banner sits above the list, never in place of it.
-      warning,
       staging,
       content,
       footer,
+      warning,
     ]
   });
 }

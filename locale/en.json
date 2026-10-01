@@ -3329,5 +3329,10 @@
   "CREATE_WITHOUT_FILE": "Create without this file",
   "CREATE_WITHOUT_FILES": "Create without these files",
   "UPDATE_WITHOUT_FILE": "Update without this file",
-  "UPDATE_WITHOUT_FILES": "Update without these files"
+  "UPDATE_WITHOUT_FILES": "Update without these files",
+  "UPLOADING_PERCENT": "Uploading... {0}%",
+  "UPLOAD_WAITING": "Waiting...",
+  "UPLOAD_PAUSED_SHORT": "Paused",
+  "UPLOAD_DONE_SHORT": "Uploaded",
+  "UPLOAD_FAILED_SHORT": "Failed"
 }
