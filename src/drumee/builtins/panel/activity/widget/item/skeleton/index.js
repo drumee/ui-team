@@ -1108,3 +1108,5 @@ module.exports = function (ui) {
     ].filter(Boolean),
   });
 };
+
+module.exports.timeAgo = timeAgo;
