@@ -68,7 +68,7 @@ test("file-done hands the entry to the caller's onFileDone", () => {
 const resolveWarning = () => {
   const dropped = [];
   const fn = new Function("__window_upload_progress",
-    `return ${sliceFunction(SRC, "_resolveWarning(choice)")}`,
+    `return ${sliceFunction(SRC, "_resolveWarning(choice, opt = {})")}`,
   )({ dropEntries: (items) => dropped.push(...items) });
   return { fn, dropped };
 };
@@ -115,7 +115,7 @@ test("_setPhase stamps the window element too (the skin sizes __ui off it)", () 
 
 test("no inline height juggling: an inline style cannot beat the skin's !important", () => {
   assert.doesNotMatch(sliceFunction(SRC, "_showWarning(items, action)"), /style\.height/);
-  assert.doesNotMatch(sliceFunction(SRC, "_resolveWarning(choice)"), /style\.height/);
+  assert.doesNotMatch(sliceFunction(SRC, "_resolveWarning(choice, opt = {})"), /style\.height/);
 });
 
 test("_resolveWarning: keep drops nothing", () => {
@@ -232,16 +232,33 @@ test("the card goes away by itself once nothing is left uploading", () => {
     _warningModel() {
       return { rows: model.warningRows(this._warning.items), copy: model.warningCopy("create", model.countUnfinished(this._warning.items)) };
     },
-    _resolveWarning: (c) => answered.push(c),
+    _resolveWarning: (c, opt) => answered.push(opt && opt.stay ? `${c}+stay` : c),
   });
   patch.call(win("uploading"));
   assert.deepEqual(answered, []);
   // Landed: "keep" — nothing to drop, the form stays open; pressing Create
   // again now goes straight through with the file attached.
   patch.call(win("done"));
-  assert.deepEqual(answered, ["keep"]);
+  assert.deepEqual(answered, ["keep+stay"]);
   // Failed counts too: it falls back to upload-at-commit, so there is nothing
   // left to wait for here either.
   patch.call(win("error"));
-  assert.deepEqual(answered, ["keep", "keep"]);
+  assert.deepEqual(answered, ["keep+stay", "keep+stay"]);
+});
+
+test("finished while the card was up: back to the upload list, and it stays open", () => {
+  const { fn } = resolveWarning();
+  const got = [];
+  const win = warnWin({
+    _cancelAutoMinimize() { this.calls.push("cancel-auto"); },
+    _warning: { items: [{ entry: {}, job: {} }], prevPhase: "progress", resolve: (c) => got.push(c) },
+  });
+  fn.call(win, "keep", { stay: true });
+  assert.deepEqual(got, ["keep"]);
+  assert.ok(win.calls.includes("phase:progress"));
+  // Auto-dismiss would close the window 300ms after the card left — the user
+  // would never see the list the card was standing in for.
+  assert.ok(!win.calls.includes("arm"), "auto-dismiss re-armed");
+  assert.ok(win.calls.includes("cancel-auto"));
+  assert.ok(!win.calls.includes("goodbye"));
 });

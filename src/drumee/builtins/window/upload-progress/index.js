@@ -2395,7 +2395,9 @@ class __window_upload_progress extends __window_core {
     // Everything landed (or failed, which falls back to upload-at-commit): the
     // question is moot, so the card goes. "keep" drops nothing and leaves the
     // form open — the next Create goes straight through.
-    if (countUnfinished(this._warning.items) === 0) return this._resolveWarning("keep");
+    if (countUnfinished(this._warning.items) === 0) {
+      return this._resolveWarning("keep", { stay: true });
+    }
     const pfx = this.fig.family;
     const { rows, copy } = this._warningModel();
     for (const r of rows) {
@@ -2417,8 +2419,12 @@ class __window_upload_progress extends __window_core {
   /**
    * Answer the open question exactly once.
    * @param {"keep"|"skip"} choice
+   * @param {object} [opt]
+   * @param {boolean} [opt.stay] the uploads finished while the card was up:
+   *   return to the upload list and keep it open (no auto-dismiss), so the user
+   *   sees the files the card was about land rather than the window vanishing
    */
-  _resolveWarning(choice) {
+  _resolveWarning(choice, opt = {}) {
     const w = this._warning;
     if (!w) return;
     this._warning = null;
@@ -2436,7 +2442,8 @@ class __window_upload_progress extends __window_core {
       } else {
         this._renderAggregate();
         this._renderProgressList();
-        this._maybeArmAutoMinimize();
+        if (opt.stay) this._cancelAutoMinimize();
+        else this._maybeArmAutoMinimize();
       }
     }
     w.resolve(choice);
