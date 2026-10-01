@@ -239,6 +239,7 @@ class __migrate_gdrive_popup extends LetcBox {
       this._jobSnap = snap.job;
       this._state = snap.state;
       this._cancelRequested = snap.cancelRequested;
+      this._cancelLate = snap.cancelLate;
       if (snap.state === 'in-progress') this._installCancelDelegate();
     }
     this._render();

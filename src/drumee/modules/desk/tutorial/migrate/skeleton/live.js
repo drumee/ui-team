@@ -170,7 +170,10 @@ module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
     const sm = summaryOf(job);
     const isDone = state === 'done';
     const line = (LOCALE.MIGRATE_GDRIVE_SUMMARY_BASE || 'Imported {0} files in {1} folders.')
-      .replace('{0}', sm.processed).replace('{1}', sm.folders);
+      .replace('{0}', sm.processed).replace('{1}', sm.folders)
+      + (sm.existing
+        ? ' ' + (LOCALE.MIGRATE_GDRIVE_SUMMARY_EXISTING || '{0} already existed, skipped.').replace('{0}', sm.existing)
+        : '');
     const extra = sm.failures.length
       ? (LOCALE.MIGRATE_GDRIVE_SUMMARY_ERRORS || '{0} errors.').replace('{0}', sm.failures.length)
       : sm.skipped.length
@@ -186,6 +189,9 @@ module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
       note('live-summary', extra ? `${line} ${extra}` : line,
         { dataset: { kind: sm.failures.length ? 'error' : 'ok' } }),
       reason ? note('live-status', reason, { dataset: { kind: 'error' } }) : null,
+      (isDone && snap.cancelLate) ? note('live-status',
+        LOCALE.MIGRATE_GDRIVE_CANCEL_TOO_LATE
+          || 'The migration had already finished before it could be cancelled.') : null,
       Skeletons.Box.X({
         className: `${pfx}__live-actions`,
         kids: [

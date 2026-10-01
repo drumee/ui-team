@@ -65,11 +65,20 @@ function progressOf(job = {}) {
   return { pct, done, total, bytesSeen, bytesTotal };
 }
 
-/** What a finished job did: counts, and its reported items split in two. */
+/**
+ * What a finished job did: counts, and its reported items split in two.
+ *
+ * `processed` is what was actually IMPORTED. The worker's processed_files also
+ * counts files it left alone because the destination already held one of that
+ * name (`skipped_existing`) — they move the bar, but nothing new was written,
+ * so "Imported 1 file" over a skip read as a file that never showed up.
+ */
 function summaryOf(job = {}) {
   const errors = job.errors || [];
+  const existing = job.skipped_existing || 0;
   return {
-    processed: job.processed_files || 0,
+    processed: Math.max(0, (job.processed_files || 0) - existing),
+    existing,
     folders: job.total_folders || 0,
     skipped: errors.filter((e) => SKIP_CODES.includes(e.code)),
     failures: errors.filter((e) => !SKIP_CODES.includes(e.code)),
@@ -125,6 +134,7 @@ function createSaImport(opt = {}) {
 
   const blank = (state, saEmail = null) => ({
     state, saEmail, folder: null, error: null, job: null, fileLog: [], cancelRequested: 0,
+    cancelLate: 0,
   });
 
   let s = blank('loading');
@@ -181,6 +191,11 @@ function createSaImport(opt = {}) {
     if (FINISHED.includes(r.status)) {
       stopPoll();
       s.state = r.status;
+      // Cancel was pressed but the job finished first (a small import is over
+      // in about a second, before the request lands). The result is a real
+      // "done", and the view says the cancel came too late instead of leaving
+      // the user to think it was ignored.
+      s.cancelLate = (r.status === 'done' && s.cancelRequested) ? 1 : 0;
       s.cancelRequested = 0;
       emit();
       if (finishedFor !== job_id) {
@@ -202,6 +217,7 @@ function createSaImport(opt = {}) {
     s.state = 'in-progress';
     s.fileLog = [];
     s.cancelRequested = 0;
+    s.cancelLate = 0;
     s.error = null;
     emit();
     tick();

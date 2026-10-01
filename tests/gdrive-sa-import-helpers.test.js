@@ -58,6 +58,15 @@ test("summaryOf separates skipped shortcuts from failures", () => {
   assert.equal(s.failures.length, 1);
 });
 
+test("summaryOf: files skipped as already existing are not counted as imported", () => {
+  const s = G.summaryOf({ processed_files: 3, skipped_existing: 2, total_folders: 1 });
+  assert.equal(s.processed, 1);
+  assert.equal(s.existing, 2);
+  // An older server sends no skipped_existing: the count is unchanged.
+  assert.equal(G.summaryOf({ processed_files: 4 }).processed, 4);
+  assert.equal(G.summaryOf({ processed_files: 4 }).existing, 0);
+});
+
 test("trackFileLog: new name flips the previous entry to done", () => {
   let log = G.trackFileLog([], { current_filename: "a.txt", status: "running" });
   log = G.trackFileLog(log, { current_filename: "b.txt", status: "running" });
