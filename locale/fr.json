@@ -3330,10 +3330,5 @@
   "CREATE_WITHOUT_FILE": "Créer sans ce fichier",
   "CREATE_WITHOUT_FILES": "Créer sans ces fichiers",
   "UPDATE_WITHOUT_FILE": "Mettre à jour sans ce fichier",
-  "UPDATE_WITHOUT_FILES": "Mettre à jour sans ces fichiers",
-  "UPLOADING_PERCENT": "Import... {0}%",
-  "UPLOAD_WAITING": "En attente...",
-  "UPLOAD_PAUSED_SHORT": "En pause",
-  "UPLOAD_DONE_SHORT": "Importé",
-  "UPLOAD_FAILED_SHORT": "Échec"
+  "UPDATE_WITHOUT_FILES": "Mettre à jour sans ces fichiers"
 }

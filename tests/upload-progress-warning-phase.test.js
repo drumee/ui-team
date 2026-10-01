@@ -205,32 +205,59 @@ test("runBundle leaves out roots canceled before it ran, and resolves null if no
   assert.equal(await runBundle([{ status: "canceled" }], "n1", "h1", null, {}), null);
 });
 
-test("the card's icon is Button.Svg apps-warning", () => {
+test("the banner: icon + title on one line, body, two buttons — no per-file rows", () => {
   const mk = (kind) => (o) => ({ kind, ...o });
   global.Skeletons = { Box: { X: mk("Box.X"), Y: mk("Box.Y") }, Note: mk("Note"), Button: { Svg: mk("Button.Svg") } };
   try {
     const { build } = require("../src/drumee/builtins/window/upload-progress/skeleton/warning");
-    const kids = build({ fig: { family: "f" } }, { copy: { title: "t", body: "b", keep: "k", skip: "s" }, rows: [] });
-    const icon = kids.find((k) => /__warning-icon\b/.test(k.className));
-    assert.equal(icon.kind, "Button.Svg");
-    assert.equal(icon.ico, "apps-warning");
-    assert.equal(icon.content, undefined);
+    const kids = build({ fig: { family: "f" } }, { copy: { title: "t", body: "b", keep: "k", skip: "s" } });
+    const names = kids.map((k) => k.className);
+    assert.deepEqual(names, ["f__warning-close", "f__warning-head", "f__warning-body", "f__warning-actions"]);
+    const head = kids[1];
+    assert.equal(head.kids[0].kind, "Button.Svg");
+    assert.equal(head.kids[0].ico, "apps-warning");
+    assert.equal(head.kids[1].className, "f__warning-title");
+    assert.equal(head.kids[1].content, "t");
   } finally {
     delete global.Skeletons;
   }
 });
 
+test("the banner slot sits right under the header, above the list", () => {
+  const order = [];
+  const mk = (kind) => (o) => ({ kind, ...o });
+  // Every Skeletons factory the window's parts call, as plain descriptors.
+  // Any factory, any depth (Skeletons.X, Skeletons.X.Y), returns its options.
+  const factory = (name) => new Proxy((o) => (name === "Box.Y" ? o : { kind: name, ...o }), {
+    get: (t, k) => factory(`${name}.${String(k)}`),
+  });
+  global.Skeletons = new Proxy({}, { get: (t, k) => factory(String(k)) });
+  global.LOCALE = {};
+  try {
+    const dir = "../src/drumee/builtins/window/upload-progress/skeleton";
+    const skeleton = require(`${dir}/index`);
+    const ui = { fig: { family: "f" }, _phase: "progress", getUploadItems: () => [] };
+    const root = skeleton(ui);
+    for (const k of root.kids) order.push(k.sys_pn || k.className);
+    const at = (x) => order.findIndex((n) => String(n).includes(x));
+    assert.ok(at("__header") < at("warning") && at("warning") < at("__body"), order.join(","));
+  } finally {
+    delete global.Skeletons;
+    delete global.LOCALE;
+  }
+});
+
 test("the card goes away by itself once nothing is left uploading", () => {
-  const patch = new Function("warningRows", "warningCopy", "countUnfinished", "LOCALE",
+  const patch = new Function("warningCopy", "countUnfinished", "LOCALE",
     `return ${sliceFunction(SRC, "_patchWarning()")}`,
-  )(model.warningRows, model.warningCopy, model.countUnfinished, {});
+  )(model.warningCopy, model.countUnfinished, {});
   const answered = [];
   const win = (status) => ({
     fig: { family: "f" },
     el: { querySelector: () => null },
     _warning: { items: [{ entry: { id: "be_1", status }, job: null }], action: "create" },
     _warningModel() {
-      return { rows: model.warningRows(this._warning.items), copy: model.warningCopy("create", model.countUnfinished(this._warning.items)) };
+      return { copy: model.warningCopy("create", model.countUnfinished(this._warning.items)) };
     },
     _resolveWarning: (c) => answered.push(c),
   });

@@ -589,21 +589,23 @@
   &__container[data-phase="staging"]  &__file-list  { display: none; }
 
   // ── Warning phase ("Some files are still uploading") ──────────────────────
+  // A banner ABOVE the upload list, never a view that replaces it: header,
+  // progress bar and file list stay on screen, so when the files land the
+  // banner goes and what is left is simply the upload window, closing on its
+  // normal timing. Only the footer goes ("Cancel all" would compete with the
+  // banner's two answers).
   // Hides are (0,3,0) on purpose: `.drumee-widget[data-flow]{display:flex}` is
   // (0,2,0) and beats a single-class display:none on any Box/Note.
   &__container:not([data-phase="warning"]) &__warning { display: none; }
-  &__container[data-phase="warning"] &__header,
   &__container[data-phase="warning"] &__staging,
-  &__container[data-phase="warning"] &__body,
   &__container[data-phase="warning"] &__footer { display: none; }
 
   // The window pins itself to 280px with `__ui[data-expanded="1"]{height:
-  // 280px !important}` and clips with overflow:hidden, which cut the card's
-  // buttons off. (0,3,0) + !important beats it; _setPhase stamps data-phase on
-  // the window element for this. Same footprint as the upload window: its own
-  // 360px width, and its 280px height kept as a floor (in the window's own box
-  // model) that a longer file list can grow past. Flex so the card fills it.
-  &__ui[data-expanded][data-phase="warning"] {
+  // 280px !important}` and clips with overflow:hidden; banner + list need more.
+  // (0,3,0) + !important beats it; _setPhase stamps data-phase on the window
+  // element for this. 280px stays the floor. Expanded only: collapsing during
+  // the warning keeps working.
+  &__ui[data-expanded="1"][data-phase="warning"] {
     height: auto !important;
     min-height: 280px !important;
     max-height: none !important;
@@ -615,12 +617,21 @@
     flex: 1 1 auto;
   }
 
+  // The list keeps a bounded height under the banner rather than pushing the
+  // window off the screen.
+  &__container[data-phase="warning"] &__body {
+    flex: 1 1 auto;
+    max-height: 180px;
+  }
+
   &__warning {
     position: relative;
-    flex: 1 1 auto;
+    flex: none;
     flex-direction: column;
     gap: 8px;
-    padding: 16px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-default);
+    background: color-mix(in srgb, var(--default-text-error) 5%, var(--normal-bg-90));
   }
 
   &__warning-close {
@@ -633,10 +644,16 @@
     color: var(--normal-fg-20);
   }
 
-  // apps-warning is a monochrome outline glyph: it takes the colour below.
+  &__warning-head {
+    align-items: center;
+    gap: 8px;
+    padding-right: 24px; // clear the close button
+  }
+
+  // apps-warning is a monochrome glyph: it takes the colour below.
   &__warning-icon {
-    width: 32px;
-    height: 32px;
+    width: 20px;
+    height: 20px;
     flex: none;
     display: flex;
     align-items: center;
@@ -663,78 +680,10 @@
     color: var(--normal-fg-20);
   }
 
-  &__warning-list {
-    gap: 6px;
-    max-height: 140px;
-    overflow-y: auto;
-  }
-
-  &__warning-row {
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border: 1px solid var(--border-default);
-    border-radius: 8px;
-  }
-
-  &__warning-ext {
-    flex: none;
-    width: 22px;
-    height: 28px;
-    border-radius: 3px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 3px;
-    font-size: 7px;
-    font-weight: 700;
-    color: var(--white, #fff);
-    background: var(--normal-fg-20);
-  }
-
-  &__warning-meta {
-    flex: 1;
-    min-width: 0;
-    gap: 1px;
-  }
-
-  &__warning-name {
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__warning-status {
-    font-size: 11px;
-    color: var(--normal-fg-20);
-  }
-
-  &__warning-row[data-state="failed"] &__warning-status { color: var(--default-text-error); }
-
-  // Determinate ring off --pct (0..100): accent arc on a light tint of the same
-  // accent (the foreground token rendered near-black), hollowed by a mask.
-  &__warning-ring {
-    flex: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: conic-gradient(
-      var(--primary-40) calc(var(--pct, 0) * 1%),
-      color-mix(in srgb, var(--primary-40) 18%, transparent) 0
-    );
-    mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2.5px));
-  }
-
-  &__warning-row[data-state="done"] &__warning-ring { background: var(--green-400); }
-
   &__warning-actions {
     flex-wrap: wrap;
     gap: 8px;
-    // Pinned to the bottom when the card is taller than its content.
-    margin-top: auto;
-    padding-top: 4px;
+    padding-top: 2px;
   }
 
   &__warning-keep,
@@ -764,12 +713,12 @@
   }
 
   // Both size to their labels and share what is left. When the two labels do
-  // not fit on one line ("Update without these files", longer translations) the
-  // row wraps instead of cutting one off; the ellipsis above is only the guard
-  // for a single label wider than the whole card.
+  // not fit on one line the row wraps instead of cutting one off; the ellipsis
+  // above is only the guard for a single label wider than the whole window.
   &__warning-keep {
     flex: 1 0 auto;
     border: 1px solid var(--border-default);
+    background: var(--normal-bg-90);
     &:hover { background: var(--hover-bg-40); }
   }
 

@@ -1,7 +1,7 @@
 /**
- * "Some files are still uploading" — the upload-progress window's warning
- * phase. The slot is always mounted (empty) so _renderWarning can feed it;
- * build() returns the card's kids for that feed.
+ * "Some files are still uploading" — a banner the upload-progress window shows
+ * above its own list while a form waits on those uploads. The slot is always
+ * mounted (empty) so _renderWarning can feed it; build() returns its kids.
  */
 function warning(ui) {
   return Skeletons.Box.Y({
@@ -13,41 +13,27 @@ function warning(ui) {
 
 /**
  * @param {*} ui the upload-progress window
- * @param {{copy: object, rows: Array}} model from warning-model.js
+ * @param {{copy: object}} model from warning-model.js
  */
-warning.build = function build(ui, { copy, rows }) {
+warning.build = function build(ui, { copy }) {
   const pfx = ui.fig.family;
-  const row = (r) =>
-    Skeletons.Box.X({
-      className: `${pfx}__warning-row`,
-      dataset: { id: r.id, state: r.state },
-      kids: [
-        Skeletons.Note({ className: `${pfx}__warning-ext`, content: r.ext }),
-        Skeletons.Box.Y({
-          className: `${pfx}__warning-meta`,
-          kids: [
-            Skeletons.Note({ className: `${pfx}__warning-name`, content: r.name }),
-            Skeletons.Note({ className: `${pfx}__warning-status`, content: r.statusText }),
-          ],
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__warning-ring`,
-          styleOpt: { "--pct": `${r.pct}` },
-        }),
-      ],
-    });
+  // A banner over the upload list: the files themselves are the rows below it.
   return [
-    // Closing the card is "keep uploading", never "drop the files".
+    // Closing the banner is "keep uploading", never "drop the files".
     Skeletons.Box.X({
       className: `${pfx}__warning-close`,
       service: "warning-keep",
       uiHandler: [ui],
       kids: [Skeletons.Button.Svg({ className: `${pfx}__warning-close-ico`, ico: "cross", active: 0 })],
     }),
-    Skeletons.Button.Svg({ className: `${pfx}__warning-icon`, ico: "apps-warning", active: 0 }),
-    Skeletons.Note({ className: `${pfx}__warning-title`, content: copy.title }),
+    Skeletons.Box.X({
+      className: `${pfx}__warning-head`,
+      kids: [
+        Skeletons.Button.Svg({ className: `${pfx}__warning-icon`, ico: "apps-warning", active: 0 }),
+        Skeletons.Note({ className: `${pfx}__warning-title`, content: copy.title }),
+      ],
+    }),
     Skeletons.Note({ className: `${pfx}__warning-body`, content: copy.body }),
-    Skeletons.Box.Y({ className: `${pfx}__warning-list`, kids: rows.map(row) }),
     Skeletons.Box.X({
       className: `${pfx}__warning-actions`,
       kids: [
