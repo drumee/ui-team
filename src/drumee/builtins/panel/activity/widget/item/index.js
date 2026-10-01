@@ -15,6 +15,7 @@
 // how these rows are built had to change. "#/desk/wm/open/" itself is untouched
 // and still serves mail, chat, share and compact deep links.
 const { isMeetingRollup, meetingDeepLink } = require('./meeting-link');
+const { timeAgo } = require('./skeleton');
 
 // What bookmark_add stores as a saved row's snapshot: the row as the server
 // sent it, minus what the list and the panel attach to the model (views and
@@ -353,6 +354,17 @@ class __activity_item extends LetcBox {
     if (parseInt(this.mget('is_saved'), 10) === 1 && !this.mget('pinned_view')) {
       this.el.dataset.twin = '1';
     }
+  }
+
+  /**
+   * The time line is relative ("5 minutes ago") and printed once, when the row
+   * is built. The panel calls this when it keeps its rows across a refresh.
+   */
+  refreshTime() {
+    const node = this.el && this.el.querySelector(`.${this.fig.family}__time`);
+    if (!node) return;
+    const text = node.querySelector('.note-content') || node;
+    text.textContent = timeAgo(this.mget('timestamp') || this.mget('ctime'));
   }
 
   /**
