@@ -114,6 +114,7 @@ function makePanel({ opened = TASK, now = opened, edit = {}, fail = () => false 
     getKnownAssignees: (t) => t.assignee_uids || [],
     _captureDetailDraft() {},
     _setSubmitting() {},
+    async _gateUnfinishedUploads() { return true; },
     _resetFileSearch() {},
     _render() {},
     _renderOverlays() {},

@@ -23,6 +23,13 @@ const {
   safeUrl,
   uidsFromText,
 } = require("./mention-markers");
+const {
+  unfinishedPending,
+  pairEntries,
+  settleEagerFile,
+  settleEagerBatch,
+  itemsOf,
+} = require("./pending-uploads");
 
 // How long an overlay is held on screen after its close is clicked, so its
 // exit animation can play. MUST MATCH the 0.14s the skin gives
@@ -3881,6 +3888,7 @@ class __tasks_panel extends LetcBox {
     const description = String(draft.description || "").trim();
 
     if (!title) return this._flagTitleMissing("create");
+    if (!(await this._gateUnfinishedUploads("create", draft))) return;
 
     this._setSubmitting(".tasks-panel__create-submit", true);
 
@@ -4171,6 +4179,7 @@ class __tasks_panel extends LetcBox {
     // planDetailCommit drops an empty title and saves everything else, so a
     // cleared title used to quietly snap back to the old one. Refuse instead.
     if (!String(draft.title || "").trim()) return this._flagTitleMissing("detail");
+    if (!(await this._gateUnfinishedUploads("detail", draft))) return;
 
     this._setSubmitting(".tasks-panel__detail-submit", true);
 
@@ -5596,7 +5605,8 @@ class __tasks_panel extends LetcBox {
     if (!draft) return;
 
     await this._stashPendingFiles(draft, files);
-    return this._refreshPendingList(scope);
+    this._refreshPendingList(scope);
+    return this._startEagerUploads(scope);
   }
 
   // True when the drag carries OS files (vs. an internal card-reorder drag).
@@ -6531,6 +6541,7 @@ class __tasks_panel extends LetcBox {
     if (!draft) return;
     await this._stashPendingFiles(draft, files);
     this._refreshPendingList(this._scopeKey(zone));
+    this._startEagerUploads(this._scopeKey(zone));
   }
 
   /**
@@ -6903,6 +6914,123 @@ class __tasks_panel extends LetcBox {
         ? { filename: encodeURI(fullName) }
         : {};
     return this._uploadAttachment(pf.file, "_commit", extra);
+  }
+
+  /**
+   * Start uploading create/detail attachments the moment they are added, through
+   * the upload-progress window (the route chat takes), instead of on
+   * Create/Update. Commit then only links the nid, and asks first if something
+   * is still on its way (_gateUnfinishedUploads).
+   *
+   * Anything this cannot start — no File, a name the bundle reader ignores, no
+   * window — keeps the old behaviour: _uploadPendingFile sends it on commit.
+   */
+  async _startEagerUploads(scopeKey) {
+    if (scopeKey !== "create" && scopeKey !== "detail") return;
+    const draft = this._draftForKey(scopeKey);
+    const fresh = ((draft && draft.pending_files) || []).filter(
+      (pf) => pf.file && !pf.nid && !pf.bundleEntry,
+    );
+    if (!fresh.length) return;
+    const Entry = require("media/bundle/entry");
+    const UploadProgress = require("window/upload-progress");
+    const roots = Entry.entriesFromFileList(fresh.map((pf) => pf.file));
+    const paired = pairEntries(fresh, roots);
+    if (!paired.length) return;
+    paired.forEach((pf) => this._setPendingStatus(scopeKey, pf, "uploading"));
+    const destNid = await this._attachmentNid();
+    const win = await UploadProgress.runBundle(
+      paired.map((pf) => pf.bundleEntry),
+      destNid,
+      this._hubId,
+      null,
+      {
+        onJob: (job) => paired.forEach((pf) => {
+          pf.bundleJob = job;
+        }),
+        onFileDone: (node, parent, entry) =>
+          this._onEagerFileDone(scopeKey, draft, entry, node),
+        onDone: () => this._onEagerBatchDone(scopeKey, draft, paired),
+      },
+    ).catch(() => null);
+    if (!win) {
+      // Never started: hand every file back to commit-time upload.
+      paired.forEach((pf) => {
+        if (pf.bundleEntry) pf.bundleEntry.status = "error";
+      });
+      this._onEagerBatchDone(scopeKey, draft, paired);
+    }
+  }
+
+  _onEagerFileDone(scopeKey, draft, entry, node) {
+    const pf = ((draft && draft.pending_files) || []).find((f) => f.bundleEntry === entry);
+    if (!pf || !settleEagerFile(pf, node, this._hubId)) return;
+    // The draft may be gone (form closed) — the cards are then gone with it.
+    if (this._draftForKey(scopeKey) !== draft) return;
+    this._setPendingStatus(scopeKey, pf, "queued");
+    this._patchPendingName(pf, pf.extension ? `${pf.filename}.${pf.extension}` : pf.filename);
+    this._refreshFileSearchDropdown(scopeKey);
+  }
+
+  _onEagerBatchDone(scopeKey, draft, pfs) {
+    const { fallback, dropped } = settleEagerBatch(pfs);
+    if (this._draftForKey(scopeKey) !== draft) return;
+    if (dropped.length && draft.pending_files) {
+      const gone = new Set(dropped);
+      draft.pending_files = draft.pending_files.filter((f) => !gone.has(f));
+    }
+    if (fallback.length || dropped.length) this._refreshPendingList(scopeKey);
+  }
+
+  /**
+   * Before Create/Update: ask about attachments that have not finished
+   * uploading. Resolves true when the commit may go ahead (nothing unfinished,
+   * or the user chose to go without them — they are cancelled and removed).
+   */
+  async _gateUnfinishedUploads(scopeKey, draft) {
+    const pending = unfinishedPending(draft && draft.pending_files);
+    if (!pending.length) return true;
+    // The card is non-modal; a second press must not stack a second question.
+    if (this._confirmingUploads) return false;
+    this._confirmingUploads = true;
+    let choice = "keep";
+    try {
+      choice = await require("window/upload-progress").confirmUnfinished({
+        items: itemsOf(pending),
+        action: scopeKey === "create" ? "create" : "update",
+      });
+    } finally {
+      this._confirmingUploads = false;
+    }
+    // The form moved on while the card was up (closed, another task opened).
+    if (this._draftForKey(scopeKey) !== draft) return false;
+    if (choice !== "skip") return false;
+    // Recomputed AFTER the await: a file that landed while the card was open is
+    // kept and linked, not thrown away.
+    this._cancelUnfinishedUploads(scopeKey, draft);
+    return true;
+  }
+
+  /**
+   * Cancel and remove this draft's attachments that are still uploading.
+   * @returns {number} how many were removed
+   */
+  _cancelUnfinishedUploads(scopeKey, draft) {
+    const doomed = unfinishedPending(draft && draft.pending_files);
+    if (!doomed.length) return 0;
+    require("window/upload-progress").dropEntries(itemsOf(doomed));
+    for (const pf of doomed) {
+      if (!pf.previewUrl) continue;
+      try {
+        URL.revokeObjectURL(pf.previewUrl);
+      } catch (_) {}
+    }
+    // By identity, not by status: dropEntries has just turned these to
+    // "canceled", so they no longer read as unfinished.
+    const gone = new Set(doomed);
+    draft.pending_files = draft.pending_files.filter((f) => !gone.has(f));
+    this._refreshPendingList(scopeKey);
+    return doomed.length;
   }
 
   /**
@@ -7734,6 +7862,8 @@ class __tasks_panel extends LetcBox {
           else draft.pending_files.push(real); // placeholder was removed meanwhile
         }
         this._refreshPendingList(key);
+        // Returns at once for row / comment keys, which upload their own way.
+        this._startEagerUploads(key);
       } catch (e) {
         this.warn && this.warn("cross-hub attach failed", e);
         this._setPendingStatus(key, placeholder, "error");

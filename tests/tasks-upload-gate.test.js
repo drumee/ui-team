@@ -1,0 +1,179 @@
+// tests/tasks-upload-gate.test.js
+//   node --test tests/tasks-upload-gate.test.js
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { sliceFunction } = require("./helpers/slice-method");
+const pu = require("../src/drumee/builtins/window/tasks/pending-uploads");
+
+const SRC = fs.readFileSync(
+  path.join(__dirname, "../src/drumee/builtins/window/tasks/index.js"), "utf8");
+
+function build(answer, { onAsk } = {}) {
+  const asked = [];
+  const UploadProgress = {
+    confirmUnfinished: async (opt) => {
+      asked.push(opt);
+      if (onAsk) onAsk(opt);
+      return answer;
+    },
+    dropEntries: (items) => items.filter((it) => it.job.cancelEntry(it.entry)).map((it) => it.entry),
+  };
+  const req = (m) => (m === "window/upload-progress" ? UploadProgress : null);
+  const make = (sig) => new Function("require", "unfinishedPending", "withoutUnfinished", "itemsOf",
+    `return ${sliceFunction(SRC, sig)}`)(req, pu.unfinishedPending, pu.withoutUnfinished, pu.itemsOf);
+  return {
+    asked,
+    gate: make("async _gateUnfinishedUploads(scopeKey, draft)"),
+    cancel: make("_cancelUnfinishedUploads(scopeKey, draft)"),
+  };
+}
+
+const job = { cancelEntry: (e) => e.status !== "done" && ((e.status = "canceled"), true) };
+const pf = (status, over = {}) => ({ bundleEntry: { id: status, status }, bundleJob: job, ...over });
+
+function panel(draft, fns) {
+  return {
+    _createDefaults: draft,
+    _detailDraft: null,
+    refreshed: [],
+    _draftForKey(k) { return k === "create" ? this._createDefaults : this._detailDraft; },
+    _refreshPendingList(k) { this.refreshed.push(k); },
+    _cancelUnfinishedUploads: fns.cancel,
+  };
+}
+
+test("nothing in flight → commit without asking", async () => {
+  const fns = build("keep");
+  const draft = { pending_files: [{ nid: "n1" }] };
+  assert.equal(await fns.gate.call(panel(draft, fns), "create", draft), true);
+  assert.equal(fns.asked.length, 0);
+});
+
+test("keep → no commit, nothing dropped", async () => {
+  const fns = build("keep");
+  const live = pf("uploading");
+  const draft = { pending_files: [live] };
+  assert.equal(await fns.gate.call(panel(draft, fns), "create", draft), false);
+  assert.equal(fns.asked[0].action, "create");
+  assert.equal(draft.pending_files.length, 1);
+});
+
+test("skip → unfinished leave the draft; one that finished during the ask stays", async () => {
+  const live = pf("uploading");
+  const landing = pf("queued");
+  const fns = build("skip", {
+    onAsk: () => { landing.bundleEntry.status = "done"; landing.nid = "n7"; },
+  });
+  const draft = { pending_files: [live, landing, { nid: "n1" }] };
+  const p = panel(draft, fns);
+  assert.equal(await fns.gate.call(p, "create", draft), true);
+  assert.deepEqual(draft.pending_files.map((f) => f.nid || f.bundleEntry.id), ["n7", "n1"]);
+  assert.equal(live.bundleEntry.status, "canceled");
+  assert.deepEqual(p.refreshed, ["create"]);
+});
+
+test("detail action is 'update'", async () => {
+  const fns = build("keep");
+  const draft = { pending_files: [pf("uploading")] };
+  const p = panel(null, fns);
+  p._detailDraft = draft;
+  await fns.gate.call(p, "detail", draft);
+  assert.equal(fns.asked[0].action, "update");
+});
+
+test("draft replaced while asking → no commit", async () => {
+  const draft = { pending_files: [pf("uploading")] };
+  let p;
+  const fns = build("skip", { onAsk: () => { p._createDefaults = { pending_files: [] }; } });
+  p = panel(draft, fns);
+  assert.equal(await fns.gate.call(p, "create", draft), false);
+});
+
+test("a second press while asking is refused", async () => {
+  const fns = build("keep");
+  const draft = { pending_files: [pf("uploading")] };
+  const p = panel(draft, fns);
+  p._confirmingUploads = true;
+  assert.equal(await fns.gate.call(p, "create", draft), false);
+  assert.equal(fns.asked.length, 0);
+});
+
+test("both commits run the gate before any network call", () => {
+  for (const sig of ["async _commitTask()", "async _commitDetail()"]) {
+    const body = sliceFunction(SRC, sig);
+    const gateAt = body.indexOf("_gateUnfinishedUploads(");
+    assert.ok(gateAt > -1, `${sig} has no gate`);
+    assert.ok(gateAt < body.indexOf("_setSubmitting("), `${sig} gates after locking`);
+  }
+});
+
+function startHarness(runBundleResult) {
+  const runs = [];
+  const UploadProgress = {
+    runBundle: async (roots, destNid, hubId, target, opt) => {
+      runs.push({ roots, destNid, hubId, opt });
+      return typeof runBundleResult === "function" ? runBundleResult(opt) : runBundleResult;
+    },
+  };
+  const Entry = {
+    entriesFromFileList: (files) =>
+      files.filter((f) => f.name !== ".DS_Store").map((f, i) => ({ id: `be_${i}`, source: f, status: "queued", name: f.name })),
+  };
+  const req = (m) => (m === "window/upload-progress" ? UploadProgress : m === "media/bundle/entry" ? Entry : null);
+  const deps = ["require", "pairEntries", "settleEagerFile", "settleEagerBatch"];
+  const make = (sig) => new Function(...deps, `return ${sliceFunction(SRC, sig)}`)(
+    req, pu.pairEntries, pu.settleEagerFile, pu.settleEagerBatch);
+  const fileA = { name: "a.zip" }, ds = { name: ".DS_Store" };
+  const draft = {
+    pending_files: [{ file: fileA, filename: "a", extension: "zip", status: "queued" }, { file: ds }, { nid: "n1" }],
+  };
+  const statuses = [];
+  const p = {
+    _hubId: "h1",
+    _createDefaults: draft,
+    _draftForKey(k) { return k === "create" ? this._createDefaults : null; },
+    _attachmentNid: async () => "task-folder",
+    _setPendingStatus: (k, f, s) => { f.status = s; statuses.push(s); },
+    _refreshPendingList() {},
+    _patchPendingName() {},
+    _refreshFileSearchDropdown() {},
+    _onEagerFileDone: make("_onEagerFileDone(scopeKey, draft, entry, node)"),
+    _onEagerBatchDone: make("_onEagerBatchDone(scopeKey, draft, pfs)"),
+  };
+  return { runs, draft, statuses, p, start: make("async _startEagerUploads(scopeKey)") };
+}
+
+test("_startEagerUploads sends paired files into the task folder and wires the callbacks", async () => {
+  const job = { id: "j" };
+  const h = startHarness((opt) => { opt.onJob(job); return {}; });
+  await h.start.call(h.p, "create");
+  assert.equal(h.runs.length, 1);
+  assert.equal(h.runs[0].destNid, "task-folder");
+  assert.equal(h.runs[0].roots.length, 1);
+  const pfA = h.draft.pending_files[0];
+  assert.equal(pfA.bundleJob, job);
+  assert.equal(pfA.status, "uploading");
+  // the server answers for that file
+  h.runs[0].opt.onFileDone({ nid: "n5", filename: "a (1)", ext: "zip" }, "task-folder", pfA.bundleEntry);
+  assert.equal(pfA.nid, "n5");
+  assert.equal(pfA.status, "queued");
+  // ignored file and already-linked file never went out
+  assert.equal(h.draft.pending_files[1].bundleEntry, undefined);
+});
+
+test("_startEagerUploads ignores comment scopes", async () => {
+  const h = startHarness({});
+  await h.start.call(h.p, "comment");
+  assert.equal(h.runs.length, 0);
+});
+
+test("no upload window → files fall back to commit-time upload", async () => {
+  const h = startHarness(null);
+  await h.start.call(h.p, "create");
+  const pfA = h.draft.pending_files[0];
+  assert.equal(pfA.bundleEntry, null);
+  assert.equal(pfA.status, "queued");
+  assert.equal(pfA.nid, undefined);
+});
