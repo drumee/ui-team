@@ -633,19 +633,22 @@
     color: var(--normal-fg-20);
   }
 
+  // apps-warning is a monochrome outline glyph: it takes the colour below.
   &__warning-icon {
     width: 32px;
     height: 32px;
-    border-radius: 50%;
+    flex: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
-    font-size: 15px;
-    line-height: 1;
     color: var(--default-text-error);
-    border: 1.5px solid var(--default-text-error);
-    background: color-mix(in srgb, var(--default-text-error) 12%, transparent);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      fill: currentColor;
+    }
   }
 
   &__warning-title {
@@ -743,12 +746,21 @@
     border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
-    line-height: 32px;
-    text-align: center;
-    white-space: nowrap;
+    // Note puts its text in an inner div.note-content, a flex child here —
+    // centre that box; text-align on the button alone never reached the text.
+    display: flex;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
-    text-overflow: ellipsis;
     cursor: pointer;
+
+    .note-content {
+      min-width: 0;
+      text-align: center;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
   // Both size to their labels and share what is left. When the two labels do

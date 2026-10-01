@@ -2392,6 +2392,10 @@ class __window_upload_progress extends __window_core {
 
   _patchWarning() {
     if (!this._warning || !this.el) return;
+    // Everything landed (or failed, which falls back to upload-at-commit): the
+    // question is moot, so the card goes. "keep" drops nothing and leaves the
+    // form open — the next Create goes straight through.
+    if (countUnfinished(this._warning.items) === 0) return this._resolveWarning("keep");
     const pfx = this.fig.family;
     const { rows, copy } = this._warningModel();
     for (const r of rows) {

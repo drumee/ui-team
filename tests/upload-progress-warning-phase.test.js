@@ -204,3 +204,44 @@ test("runBundle leaves out roots canceled before it ran, and resolves null if no
   assert.deepEqual(win._bundle, [a]);
   assert.equal(await runBundle([{ status: "canceled" }], "n1", "h1", null, {}), null);
 });
+
+test("the card's icon is Button.Svg apps-warning", () => {
+  const mk = (kind) => (o) => ({ kind, ...o });
+  global.Skeletons = { Box: { X: mk("Box.X"), Y: mk("Box.Y") }, Note: mk("Note"), Button: { Svg: mk("Button.Svg") } };
+  try {
+    const { build } = require("../src/drumee/builtins/window/upload-progress/skeleton/warning");
+    const kids = build({ fig: { family: "f" } }, { copy: { title: "t", body: "b", keep: "k", skip: "s" }, rows: [] });
+    const icon = kids.find((k) => /__warning-icon\b/.test(k.className));
+    assert.equal(icon.kind, "Button.Svg");
+    assert.equal(icon.ico, "apps-warning");
+    assert.equal(icon.content, undefined);
+  } finally {
+    delete global.Skeletons;
+  }
+});
+
+test("the card goes away by itself once nothing is left uploading", () => {
+  const patch = new Function("warningRows", "warningCopy", "countUnfinished", "LOCALE",
+    `return ${sliceFunction(SRC, "_patchWarning()")}`,
+  )(model.warningRows, model.warningCopy, model.countUnfinished, {});
+  const answered = [];
+  const win = (status) => ({
+    fig: { family: "f" },
+    el: { querySelector: () => null },
+    _warning: { items: [{ entry: { id: "be_1", status }, job: null }], action: "create" },
+    _warningModel() {
+      return { rows: model.warningRows(this._warning.items), copy: model.warningCopy("create", model.countUnfinished(this._warning.items)) };
+    },
+    _resolveWarning: (c) => answered.push(c),
+  });
+  patch.call(win("uploading"));
+  assert.deepEqual(answered, []);
+  // Landed: "keep" — nothing to drop, the form stays open; pressing Create
+  // again now goes straight through with the file attached.
+  patch.call(win("done"));
+  assert.deepEqual(answered, ["keep"]);
+  // Failed counts too: it falls back to upload-at-commit, so there is nothing
+  // left to wait for here either.
+  patch.call(win("error"));
+  assert.deepEqual(answered, ["keep", "keep"]);
+});

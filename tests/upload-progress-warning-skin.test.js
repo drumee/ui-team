@@ -52,9 +52,12 @@ test("button labels never spill out of the button", () => {
   const b = rule(".window-upload-progress__warning-keep, .window-upload-progress__warning-skip");
   assert.match(b, /height: 32px/);
   assert.match(b, /font-size: 13px/);
-  assert.match(b, /white-space: nowrap/);
-  assert.match(b, /text-overflow: ellipsis/);
   assert.match(b, /min-width: 0/);
+  assert.match(b, /overflow: hidden/);
+  // The text itself lives in Note's inner div; that is where it ellipsizes.
+  const inner = rule(".window-upload-progress__warning-keep .note-content, .window-upload-progress__warning-skip .note-content");
+  assert.match(inner, /white-space: nowrap/);
+  assert.match(inner, /text-overflow: ellipsis/);
   // The 1px border of "Keep" made it 2px taller than "Create…" beside it.
   assert.match(b, /box-sizing: border-box/);
 });
@@ -74,4 +77,24 @@ test("the ring's track is a light tint, not the near-black foreground", () => {
   assert.doesNotMatch(r, /--normal-fg-10/);
   assert.match(r, /color-mix\(in srgb, var\(--primary-40\) 18%, transparent\)/);
   assert.match(r, /width: 18px/);
+});
+
+test("button labels are centred, whatever box the Note's inner div gets", () => {
+  // Note renders its text in an inner div.note-content; text-align on the
+  // button alone left it at the start of a flex row.
+  const b = rule(".window-upload-progress__warning-keep, .window-upload-progress__warning-skip");
+  assert.match(b, /display: flex/);
+  assert.match(b, /align-items: center/);
+  assert.match(b, /justify-content: center/);
+  const inner = rule(".window-upload-progress__warning-keep .note-content, .window-upload-progress__warning-skip .note-content");
+  assert.match(inner, /text-align: center/);
+  assert.match(inner, /text-overflow: ellipsis/);
+  assert.match(inner, /min-width: 0/);
+});
+
+test("the warning icon is the apps-warning glyph, tinted with the error colour", () => {
+  const r = rule(".window-upload-progress__warning-icon");
+  assert.match(r, /color: var\(--default-text-error\)/);
+  assert.doesNotMatch(r, /font-size/); // no more text "!"
+  assert.match(rule(".window-upload-progress__warning-icon svg"), /fill: currentColor/);
 });

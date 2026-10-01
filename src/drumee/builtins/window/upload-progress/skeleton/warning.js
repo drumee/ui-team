@@ -44,7 +44,7 @@ warning.build = function build(ui, { copy, rows }) {
       uiHandler: [ui],
       kids: [Skeletons.Button.Svg({ className: `${pfx}__warning-close-ico`, ico: "cross", active: 0 })],
     }),
-    Skeletons.Note({ className: `${pfx}__warning-icon`, content: "!" }),
+    Skeletons.Button.Svg({ className: `${pfx}__warning-icon`, ico: "apps-warning", active: 0 }),
     Skeletons.Note({ className: `${pfx}__warning-title`, content: copy.title }),
     Skeletons.Note({ className: `${pfx}__warning-body`, content: copy.body }),
     Skeletons.Box.Y({ className: `${pfx}__warning-list`, kids: rows.map(row) }),
