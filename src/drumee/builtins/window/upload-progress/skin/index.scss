@@ -600,16 +600,24 @@
   // The window pins itself to 280px with `__ui[data-expanded="1"]{height:
   // 280px !important}` and clips with overflow:hidden, which cut the card's
   // buttons off. (0,3,0) + !important beats it; _setPhase stamps data-phase on
-  // the window element for this. The card is also narrower than the list view.
+  // the window element for this. Same footprint as the upload window: its own
+  // 360px width, and its 280px height kept as a floor (in the window's own box
+  // model) that a longer file list can grow past. Flex so the card fills it.
   &__ui[data-expanded][data-phase="warning"] {
     height: auto !important;
-    min-height: 0 !important;
+    min-height: 280px !important;
     max-height: none !important;
-    width: 320px !important;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__container[data-phase="warning"] {
+    flex: 1 1 auto;
   }
 
   &__warning {
     position: relative;
+    flex: 1 1 auto;
     flex-direction: column;
     gap: 8px;
     padding: 16px;
@@ -721,7 +729,9 @@
   &__warning-actions {
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 4px;
+    // Pinned to the bottom when the card is taller than its content.
+    margin-top: auto;
+    padding-top: 4px;
   }
 
   &__warning-keep,

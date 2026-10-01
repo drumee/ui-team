@@ -23,8 +23,22 @@ test("the window lets go of its fixed 280px while the card is up", () => {
   // __ui has overflow: hidden, so the buttons were cut off.
   const r = rule(".window-upload-progress__ui[data-expanded][data-phase=warning]");
   assert.match(r, /height: auto !important/);
-  assert.match(r, /min-height: 0 !important/);
-  assert.match(r, /width: 320px !important/);
+  // The expanded window's own 280px, as a floor, in the window's own box
+  // model — so the card can never come out a pixel off from the window.
+  assert.match(r, /min-height: 280px !important/);
+  assert.match(r, /display: flex/);
+  assert.match(r, /flex-direction: column/);
+  // Same footprint as the upload window it replaces: its own 360px width is
+  // kept (no override)…
+  assert.doesNotMatch(r, /width/);
+});
+
+test("the card fills the window, buttons at the bottom", () => {
+  // The window is at least 280px; the container and the card stretch into it,
+  // and a longer file list grows all three.
+  assert.match(rule(".window-upload-progress__container[data-phase=warning]"), /flex: 1 1 auto/);
+  assert.match(rule(".window-upload-progress__warning"), /flex: 1 1 auto/);
+  assert.match(rule(".window-upload-progress__warning-actions"), /margin-top: auto/);
 });
 
 test("the card is compact", () => {
