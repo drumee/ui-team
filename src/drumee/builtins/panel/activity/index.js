@@ -5,6 +5,10 @@ const CATEGORIES = {
   media: "mediaCount",
 }
 const WS_EVENT = "ws:event";
+// A feed page is drawn this many rows first, the rest FEED_CHUNK_ROWS per task
+// (see _firstRowsFirst).
+const FEED_FIRST_ROWS = 12;
+const FEED_CHUNK_ROWS = 10;
 // The tab set is declared once, in the tab bar skeleton, and imported here so
 // the panel and the bar can never disagree about which buckets exist.
 const { BUCKETS: TAB_BUCKETS, DEFAULT_BUCKET } = require('./skeleton/tabbar');
@@ -143,6 +147,7 @@ class __panel_activity extends LetcBox {
     // outlive the panel — along with its pending dismiss timer.
     killChatToast(this);
     if (this._untrackCanvas) this._untrackCanvas();
+    if (this._feedRestChannel) this._feedRestChannel.port1.close();
   }
 
   /**
@@ -217,7 +222,16 @@ class __panel_activity extends LetcBox {
       // stamp day headers into them): page 1's signature for _refreshFeed.
       child.on(_e.data, (rows) => this._noteFeedPage(child, rows));
       child.on(_e.eod, () => this._noteFeedEnd(child));
-      child.on(_e.error, () => { this._feedSwap = null; });
+      child.on(_e.error, () => {
+        this._feedSwap = null;
+        this._dropFeedRest();
+      });
+      // ui-core List.Smart maps a fetched page through prepare() right before
+      // adding it; pagination still reads the full page in handleResponse.
+      const prepare = child.prepare;
+      if (_.isFunction(prepare)) {
+        child.prepare = (data) => this._firstRowsFirst(child, prepare.call(child, data));
+      }
       // renderData() emits this with the page's raw rows just before mapping
       // them into item models — the one place the whole page is visible in
       // order, which is what day grouping needs.
@@ -372,7 +386,73 @@ class __panel_activity extends LetcBox {
     if (this._feedSig == null) this._feedSig = this._feedSignature([]);
     if (!this._feedSwap) return;
     this._feedSwap = null;
+    this._dropFeedRest();
     if (list.collection && list.collection.length) list.collection.reset();
+  }
+
+  // get_feed sends ~117 rows as page 1 here, and each row is ~10 ui-core
+  // widgets: ≈18 ms a row, 2.1 s for the page, all of it on the main thread
+  // before anything showed (measured on drumee.in, Task → All). The panel shows
+  // about eight rows, so draw FEED_FIRST_ROWS now and append the rest at the
+  // end, a chunk per task. A next page flushes what is left first, so the
+  // order never changes.
+  _firstRowsFirst(list, items) {
+    if (!_.isArray(items)) return items;
+    // Only a fetched page (renderData, still `_waiting`); a direct feed()
+    // (ui-core's server-error line) replaces the list whole.
+    if (!list._waiting) {
+      this._dropFeedRest();
+      return items;
+    }
+    if ((list._curPage || 1) > 1) {
+      this._flushFeedRest(list);
+      return items;
+    }
+    this._dropFeedRest();
+    if (items.length <= FEED_FIRST_ROWS) return items;
+    this._feedRest = items.slice(FEED_FIRST_ROWS);
+    this._scheduleFeedRest(list, this._feedRestGen);
+    return items.slice(0, FEED_FIRST_ROWS);
+  }
+
+  // One task per chunk, through a MessageChannel: the browser still paints and
+  // takes clicks between two chunks, and unlike setTimeout it is not throttled
+  // in a background tab (down to once a minute), which left the list half
+  // drawn on the way back to it.
+  _scheduleFeedRest(list, gen) {
+    if (!this._feedRestChannel) {
+      this._feedRestChannel = new MessageChannel();
+      this._feedRestChannel.port1.onmessage = (e) => this._feedRestTick(e.data);
+    }
+    this._feedRestList = list;
+    this._feedRestChannel.port2.postMessage(gen);
+  }
+
+  _feedRestTick(gen) {
+    const list = this._feedRestList;
+    if (gen !== this._feedRestGen || !list || list.isDestroyed()) return;
+    const chunk = this._feedRest.splice(0, FEED_CHUNK_ROWS);
+    if (chunk.length) this._appendFeedRows(list, chunk);
+    if (this._feedRest.length) this._scheduleFeedRest(list, gen);
+  }
+
+  _flushFeedRest(list) {
+    const rest = this._feedRest || [];
+    this._dropFeedRest();
+    if (rest.length && !list.isDestroyed()) this._appendFeedRows(list, rest);
+  }
+
+  // Rows not drawn yet belong to a page that is being replaced.
+  _dropFeedRest() {
+    this._feedRestGen = (this._feedRestGen || 0) + 1;
+    this._feedRest = [];
+  }
+
+  // _appendPage (our ui-core patch) attaches only the new rows; add() would
+  // re-attach every row already there.
+  _appendFeedRows(list, rows) {
+    if (_.isFunction(list._appendPage)) list._appendPage(rows);
+    else list.collection.add(rows);
   }
 
   /**
@@ -384,6 +464,7 @@ class __panel_activity extends LetcBox {
     if (!list || list.isDestroyed()) return;
     // Before restart()'s own eod flush, which must not settle this swap.
     this._feedSwap = null;
+    this._dropFeedRest();
     list.trigger(_e.eod);
     this._feedGen = (this._feedGen || 0) + 1;
     this._feedSig = null;
@@ -1299,6 +1380,8 @@ class __panel_activity extends LetcBox {
   _viewsWithKey(key) {
     const out = [];
     if (!key) return out;
+    // A row still waiting to be drawn would be built from its old state.
+    if (this.__list && this._feedRest && this._feedRest.length) this._flushFeedRest(this.__list);
     for (const part of [this.__saved, this.__list]) {
       if (!part || part.isDestroyed() || !part.children) continue;
       part.children.each((v) => {
