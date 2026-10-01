@@ -3319,5 +3319,21 @@
   "TASK_TOAST_ASSIGNED_ONE": "a assigné 1 membre à « {task} »",
   "TASK_TOAST_ASSIGNEES": "a modifié les responsables de « {task} »",
   "TASK_TOAST_FILES": "a lié des fichiers à « {task} »",
-  "TASK_TOAST_UNLINKED": "a retiré un fichier de « {task} »"
+  "TASK_TOAST_UNLINKED": "a retiré un fichier de « {task} »",
+  "UPLOADS_STILL_RUNNING": "Des fichiers sont encore en cours d'import",
+  "UPLOAD_UNFINISHED_ONE": "1 fichier n'a pas fini d'être importé.",
+  "UPLOAD_UNFINISHED_MANY": "{0} fichiers n'ont pas fini d'être importés.",
+  "UPLOAD_UNFINISHED_CREATE_HINT": "Si vous créez cette tâche maintenant, le ou les fichiers en cours d'import ne seront pas joints à la tâche.",
+  "UPLOAD_UNFINISHED_UPDATE_HINT": "Si vous mettez à jour cette tâche maintenant, le ou les fichiers en cours d'import ne seront pas joints à la tâche.",
+  "UPLOADS_NOW_FINISHED": "Tous les fichiers ont été importés.",
+  "KEEP_UPLOADING": "Continuer l'import",
+  "CREATE_WITHOUT_FILE": "Créer sans ce fichier",
+  "CREATE_WITHOUT_FILES": "Créer sans ces fichiers",
+  "UPDATE_WITHOUT_FILE": "Mettre à jour sans ce fichier",
+  "UPDATE_WITHOUT_FILES": "Mettre à jour sans ces fichiers",
+  "UPLOADING_PERCENT": "Import... {0}%",
+  "UPLOAD_WAITING": "En attente...",
+  "UPLOAD_PAUSED_SHORT": "En pause",
+  "UPLOAD_DONE_SHORT": "Importé",
+  "UPLOAD_FAILED_SHORT": "Échec"
 }

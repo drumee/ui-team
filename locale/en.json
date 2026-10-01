@@ -3318,5 +3318,21 @@
   "TASK_TOAST_ASSIGNED_ONE": "assigned 1 member to \"{task}\"",
   "TASK_TOAST_ASSIGNEES": "updated the assignees of \"{task}\"",
   "TASK_TOAST_FILES": "linked files to \"{task}\"",
-  "TASK_TOAST_UNLINKED": "removed a file from \"{task}\""
+  "TASK_TOAST_UNLINKED": "removed a file from \"{task}\"",
+  "UPLOADS_STILL_RUNNING": "Some files are still uploading",
+  "UPLOAD_UNFINISHED_ONE": "1 file hasn't finished uploading yet.",
+  "UPLOAD_UNFINISHED_MANY": "{0} files haven't finished uploading yet.",
+  "UPLOAD_UNFINISHED_CREATE_HINT": "If you create this task now, the uploading file(s) won't be attached to the task.",
+  "UPLOAD_UNFINISHED_UPDATE_HINT": "If you update this task now, the uploading file(s) won't be attached to the task.",
+  "UPLOADS_NOW_FINISHED": "All files have finished uploading.",
+  "KEEP_UPLOADING": "Keep uploading",
+  "CREATE_WITHOUT_FILE": "Create without this file",
+  "CREATE_WITHOUT_FILES": "Create without these files",
+  "UPDATE_WITHOUT_FILE": "Update without this file",
+  "UPDATE_WITHOUT_FILES": "Update without these files",
+  "UPLOADING_PERCENT": "Uploading... {0}%",
+  "UPLOAD_WAITING": "Waiting...",
+  "UPLOAD_PAUSED_SHORT": "Paused",
+  "UPLOAD_DONE_SHORT": "Uploaded",
+  "UPLOAD_FAILED_SHORT": "Failed"
 }
