@@ -28,6 +28,8 @@ const {
   DAY_START_HOUR,
 } = require("./skeleton/helpers");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { modalKids } = require("./skeleton");
+const { recipientChips } = require("./skeleton/meeting-form");
 
 const VIEW_KEYS = ["month", "week", "day"];
 const FILTER_KEYS = ["all", "task", "meeting"];
@@ -83,6 +85,10 @@ class __calendar_main extends LetcBox {
       clearTimeout(this._reloadTimer);
       this._reloadTimer = null;
     }
+    if (this._toastTimer) {
+      clearTimeout(this._toastTimer);
+      this._toastTimer = null;
+    }
   }
 
   /**
@@ -120,6 +126,12 @@ class __calendar_main extends LetcBox {
     // Only when something happened while parked (a push was deferred) or the
     // window on screen is old enough that a missed push is plausible.
     const stale = Date.now() - (this._loadedAt || 0) > PARKED_REFRESH_MS;
+    // A modal still open from before the screen was parked keeps its draft:
+    // the re-read waits for it to close (_closeForm), like a live push does.
+    if (this._form) {
+      this._dirty = this._dirty || stale;
+      return;
+    }
     if (!this._dirty && !stale) return;
     this._dirty = false;
     this._loadItems().then(() => {
@@ -366,6 +378,10 @@ class __calendar_main extends LetcBox {
     const keep = grid && key === this._gridKey ? grid.scrollTop : null;
     this._gridKey = key;
     this.feed(require("./skeleton")(this));
+    // The page feed rebuilds the toast slot empty — closing the invite-link
+    // card with "Done" reloads the page right after a Copy. Put a live toast
+    // back so it still gets its full 3.5s.
+    if (this._toast) this._renderToast();
     // The children are not laid out inside feed(), so the scroller has no
     // height to set scrollTop against until the frame settles.
     _.defer(() => {
@@ -390,7 +406,7 @@ class __calendar_main extends LetcBox {
    *     working hours when nothing is scheduled. Same rule, and the same
    *     default hour, as window/folder/index.js _scrollScheduleIntoView.
    *   range the SAME, page merely re-fed (a live push, a filter repaint, a
-   *     modal opening) → put the user back where they were. _render rebuilds
+   *     modal closing) → put the user back where they were. _render rebuilds
    *     the whole page, so without this every push threw the grid to midnight.
    *
    * Month doesn't scroll by hour and is left alone in the first case.
@@ -458,6 +474,7 @@ class __calendar_main extends LetcBox {
   }
 
   async _reload() {
+    this._dirty = false;
     await this._loadItems();
     this._render();
   }
@@ -470,7 +487,11 @@ class __calendar_main extends LetcBox {
    * the window several times for one user action.
    */
   _scheduleReload() {
-    if (this._parked) {
+    // While a modal is open a reload would re-feed the page and the modal with
+    // it — replaying its entrance, rebuilding the date picker and dropping
+    // whatever is typed but not yet absorbed. Parked the same way a hidden
+    // screen is; _closeForm runs it.
+    if (this._parked || this._form) {
       this._dirty = true;
       return;
     }
@@ -478,6 +499,11 @@ class __calendar_main extends LetcBox {
     this._reloadTimer = setTimeout(() => {
       this._reloadTimer = null;
       if (this.isDestroyed && this.isDestroyed()) return;
+      // The modal may have opened during the debounce.
+      if (this._form) {
+        this._dirty = true;
+        return;
+      }
       this._reload();
     }, 250);
   }
@@ -606,7 +632,7 @@ class __calendar_main extends LetcBox {
       };
     }
     this._pendingDay = null;
-    this._render();
+    this._renderModal();
   }
 
   _openMeetingForm() {
@@ -627,27 +653,190 @@ class __calendar_main extends LetcBox {
       },
     };
     this._pendingDay = null;
-    this._render();
+    this._renderModal();
   }
 
   _closeForm() {
     this._form = null;
-    this._render();
+    // Pushes that landed while the modal was open were held back
+    // (_scheduleReload); this is where they are owed.
+    // The modal goes first — the reload waits on the network.
+    this._renderModal();
+    if (this._dirty) return this._reload();
   }
 
   /**
-   * Re-paint after a click that changed the draft while the modal is open.
+   * Open, swap or close the modal by re-feeding ONLY its wrapper.
    *
-   * MUST be used instead of _render() by every in-form handler. _render()
-   * re-feeds the whole page from `draft`, and the free-text fields (title,
-   * description, the four time boxes, the password) only live in the DOM until
-   * _absorbFormText runs — so picking a status pill, flipping AM/PM or ticking
-   * a switch used to silently wipe whatever the user had typed above it.
-   * Absorbing first makes the re-render lossless.
+   * Opening used to call _render(), which rebuilt the header, toolbar and the
+   * whole grid underneath a dialog that covers them. The wrapper is a stable
+   * part of the page ("wrapper-cal-modal"), so it is fed on its own and its
+   * data-state — the desk's slot-lift hook — is stamped directly. Falls back
+   * to the full render if the part is missing, as _renderToolbar does.
    */
-  _renderForm() {
-    this._absorbFormText();
-    this._render();
+  _renderModal() {
+    const part = _.isFunction(this.getPart) ? this.getPart("wrapper-cal-modal") : null;
+    if (!part || (part.isDestroyed && part.isDestroyed()) || !part.el) {
+      return this._render();
+    }
+    part.el.setAttribute("data-state", this._form ? "open" : "closed");
+    part.feed(modalKids(this));
+  }
+
+  // ── in-place form updates ──────────────────────────────────────────────────
+  //
+  // A click inside the modal (a pill, AM/PM, a toggle, a recipient) changes the
+  // draft and then repaints ONLY the element it changed. Nothing in the modal
+  // is re-fed, so the card does not replay its entrance, the date picker is
+  // not rebuilt, and text the user is typing stays where it is — no absorb
+  // pass needed before a click any more, only before a commit.
+
+  _modalEl() {
+    return (this.el && this.el.querySelector(`.${this.fig.family}__modal`)) || null;
+  }
+
+  /** Light `key` in the option row the clicked element belongs to. */
+  _lightOption(cmd, rowSelector, itemSelector, key) {
+    const row = cmd.el && cmd.el.closest(rowSelector);
+    if (!row) return;
+    row.querySelectorAll(itemSelector).forEach((el) => {
+      el.setAttribute("data-active", el.getAttribute("data-key") === key ? "1" : "0");
+    });
+  }
+
+  /** Invite block: toggle rows, the restrict switch and the sub-blocks they reveal. */
+  _syncInviteDom() {
+    const root = this._modalEl();
+    if (!root || !this._form) return;
+    const pfx = this.fig.family;
+    const d = this._form.draft || {};
+    const flag = (on) => (on ? "1" : "0");
+    root.querySelectorAll("[data-toggle]").forEach((el) => {
+      const on = flag(d[el.getAttribute("data-toggle")]);
+      el.setAttribute("data-on", on);
+      const box = el.querySelector(`.${pfx}__checkbox`);
+      if (box) box.setAttribute("data-checked", on);
+      const sw = el.querySelector(`.${pfx}__switch`);
+      if (sw) sw.setAttribute("data-on", on);
+    });
+    root.querySelectorAll("[data-sub]").forEach((el) => {
+      el.setAttribute("data-open", flag(d[el.getAttribute("data-sub")]));
+    });
+  }
+
+  /**
+   * Required fields — the ones the skeleton marks `data-required`, so the
+   * form, not this method, decides what is required (task: title and
+   * description; meeting: title). Blank or whitespace-only fails.
+   *
+   * A failing field gets data-error="1", which shows its error line and reds
+   * its border; the first one takes the focus. Returns true when all pass.
+   * The flag comes off again as the user types (_clearFieldError).
+   */
+  _validateRequired(draft) {
+    const root = this._modalEl();
+    if (!root) return true;
+    let first = null;
+    root.querySelectorAll("[data-required='1'][data-field]").forEach((el) => {
+      const key = el.getAttribute("data-field");
+      const ok = String((draft && draft[key]) || "").trim() !== "";
+      el.setAttribute("data-error", ok ? "0" : "1");
+      if (!ok && !first) first = el;
+    });
+    if (!first) return true;
+    const input = first.querySelector("input, textarea");
+    if (input) input.focus();
+    this._bindFieldErrorClear(root);
+    return false;
+  }
+
+  /**
+   * One delegated `input` listener per modal element, bound on the first
+   * failed submit: a flagged field loses its error as soon as it holds text
+   * again. The modal element is replaced on every open, so the listener goes
+   * with it.
+   */
+  _bindFieldErrorClear(root) {
+    if (root.__calErrorClear) return;
+    root.__calErrorClear = (ev) => {
+      const t = ev.target;
+      const field = t && t.closest && t.closest("[data-required='1'][data-error='1']");
+      if (field && String(t.value || "").trim() !== "") {
+        field.setAttribute("data-error", "0");
+      }
+    };
+    root.addEventListener("input", root.__calErrorClear);
+  }
+
+  // ── toast ──────────────────────────────────────────────────────────────────
+  //
+  // Settings' toast (settings_main _showToast / _renderToast / _placeToast),
+  // same markup, timing and placement: a white card with a check (success) or
+  // warning (error) glyph, hung under the topbar's utility icons for 3.5s.
+
+  _showToast(message, kind = "success") {
+    this._toast = { message, kind };
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      this._toastTimer = null;
+      this._toast = null;
+      this._renderToast();
+    }, 3500);
+    this._renderToast();
+  }
+
+  _renderToast() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const part = _.isFunction(this.getPart) ? this.getPart("cal-toast") : null;
+    if (!part || !part.el) return;
+    if (!this._toast) return part.feed([]);
+    const pfx = this.fig.family;
+    const { message, kind } = this._toast;
+    const ico = kind === "error" ? "apps-warning" : "app-check";
+    part.feed(
+      Skeletons.Box.X({
+        className: `${pfx}__toast ${pfx}__toast--${kind}`,
+        kids: [
+          Skeletons.Image.Svg({ ico, className: `${pfx}__toast-ico` }),
+          Skeletons.Note({ className: `${pfx}__toast-text`, content: message }),
+        ],
+      }),
+    );
+    this._placeToast(part.el);
+  }
+
+  /**
+   * Right edge on the topbar's utility cluster, TOAST_GAP below it; without
+   * a cluster (phone topbar) the slot keeps its CSS corner. Set, measured and
+   * corrected by the difference, because this slot lives inside the desk's
+   * animated main slot and its `fixed` offsets are not viewport pixels —
+   * the reasoning settings_main _placeToast documents.
+   */
+  _placeToast(slot) {
+    const TOAST_GAP = 8;
+    slot.style.top = "";
+    slot.style.right = "";
+    const cluster = document.querySelector(".desk-module-topbar__utility-cluster");
+    const c = cluster && cluster.getBoundingClientRect();
+    if (!c || !c.width || !c.height) return;
+    const want = { top: c.bottom + TOAST_GAP, right: c.right };
+    const style = getComputedStyle(slot);
+    const got = slot.getBoundingClientRect();
+    const sx = slot.offsetWidth ? got.width / slot.offsetWidth : 1;
+    const sy = slot.offsetHeight ? got.height / slot.offsetHeight : 1;
+    const top = (parseFloat(style.top) || 0) + (want.top - got.top) / (sy || 1);
+    const right = (parseFloat(style.right) || 0) + (got.right - want.right) / (sx || 1);
+    slot.style.top = `${top}px`;
+    slot.style.right = `${right}px`;
+  }
+
+  /** Re-feed the recipient chip row alone. */
+  _renderRecipients() {
+    const list = (this._form && this._form.draft.recipients) || [];
+    const part = _.isFunction(this.getPart) ? this.getPart("form-recipient-chips") : null;
+    if (!part || !part.el) return;
+    part.feed(recipientChips(this, list));
+    part.el.setAttribute("data-count", String(list.length));
   }
 
   /**
@@ -720,8 +909,8 @@ class __calendar_main extends LetcBox {
 
   async _submitTask() {
     const draft = this._absorbFormText();
+    if (!this._validateRequired(draft)) return;
     const title = String(draft.title || "").trim();
-    if (!title) return;
 
     // The form is only cleared once the write comes back, so every trigger
     // that lands while the request is in flight would post again — a second
@@ -813,8 +1002,9 @@ class __calendar_main extends LetcBox {
 
   async _submitMeeting() {
     const draft = this._absorbFormText();
+    if (!this._validateRequired(draft)) return;
     const title = String(draft.title || "").trim();
-    if (!title || !draft.date) return;
+    if (!draft.date) return;
 
     // Same in-flight guard as _submitTask: room.book runs two round trips
     // before the modal is replaced, and a second trigger in that window
@@ -900,8 +1090,10 @@ class __calendar_main extends LetcBox {
 
     if (link) copyToClipboard(link);
     this._form = { kind: "invite-link", link: link || "" };
-    await this._loadItems();
-    this._render();
+    // The new meeting reaches the grid when this card closes (_closeForm),
+    // not underneath it — a reload now would re-feed the card it just opened.
+    this._dirty = true;
+    this._renderModal();
   }
 
   async _removeItem(cmd) {
@@ -1196,12 +1388,22 @@ class __calendar_main extends LetcBox {
       case "cal-form-status":
         if (!this._form) return;
         this._form.draft.status = cmd.mget("calStatus") || "todo";
-        return this._renderForm();
+        return this._lightOption(
+          cmd,
+          `.${this.fig.family}__pills`,
+          `.${this.fig.family}__pill`,
+          this._form.draft.status,
+        );
 
       case "cal-form-priority":
         if (!this._form) return;
         this._form.draft.priority = cmd.mget("calPriority") || "medium";
-        return this._renderForm();
+        return this._lightOption(
+          cmd,
+          `.${this.fig.family}__pills`,
+          `.${this.fig.family}__pill`,
+          this._form.draft.priority,
+        );
 
       case "cal-form-time":
         // Absorbed at commit from getData(); nothing to do per keystroke.
@@ -1213,7 +1415,12 @@ class __calendar_main extends LetcBox {
         const part = this._form.draft[which] || {};
         part.meridiem = cmd.mget("calMeridiem") === "PM" ? "PM" : "AM";
         this._form.draft[which] = part;
-        return this._renderForm();
+        return this._lightOption(
+          cmd,
+          `.${this.fig.family}__meridiem`,
+          `.${this.fig.family}__meridiem-item`,
+          part.meridiem,
+        );
       }
 
       case "cal-toggle-require-email": {
@@ -1224,18 +1431,34 @@ class __calendar_main extends LetcBox {
         if (!d.require_email) {
           d.restrict = false;
         }
-        return this._renderForm();
+        return this._syncInviteDom();
       }
 
       case "cal-toggle-restrict":
         if (!this._form) return;
         this._form.draft.restrict = !this._form.draft.restrict;
-        return this._renderForm();
+        return this._syncInviteDom();
+
+      // The sign-in form's eye toggle (welcome/signin index.js): flip the
+      // input between password and text, and swap the icon to match.
+      case "cal-toggle-password-visibility": {
+        const row = cmd.el && cmd.el.closest(`.${this.fig.family}__password`);
+        const input = row && row.querySelector("input");
+        if (!input) return;
+        const visible = input.type === "text";
+        input.type = visible ? "password" : "text";
+        const use = cmd.el.querySelector("svg use");
+        if (use) {
+          use.setAttribute("xlink:href", visible ? "#--icon-eye_closed" : "#--icon-eye");
+        }
+        cmd.el.dataset.state = visible ? "0" : "1";
+        return;
+      }
 
       case "cal-toggle-password":
         if (!this._form) return;
         this._form.draft.password_on = !this._form.draft.password_on;
-        return this._renderForm();
+        return this._syncInviteDom();
 
       case "cal-add-recipient": {
         if (!this._form) return;
@@ -1247,7 +1470,7 @@ class __calendar_main extends LetcBox {
         if (!list.includes(value)) list.push(value);
         this._form.draft.recipients = list;
         if (input) input.value = "";
-        return this._renderForm();
+        return this._renderRecipients();
       }
 
       case "cal-remove-recipient": {
@@ -1256,7 +1479,7 @@ class __calendar_main extends LetcBox {
         this._form.draft.recipients = (this._form.draft.recipients || []).filter(
           (e) => e !== email,
         );
-        return this._renderForm();
+        return this._renderRecipients();
       }
 
       // The title Entry carries `service: "cal-submit-task"` so Enter commits.
@@ -1285,7 +1508,7 @@ class __calendar_main extends LetcBox {
         const link = this._form && this._form.link;
         if (link) {
           copyToClipboard(link);
-          Wm.acknowledge && Wm.acknowledge(LOCALE.URL_COPIED);
+          this._showToast(LOCALE.URL_COPIED, "success");
         }
         return;
       }

@@ -25,6 +25,8 @@ function modalKids(ui) {
   return [];
 }
 
+// Exported so the controller can re-feed ONLY the modal slot on open/close
+// (index.js _renderModal) instead of rebuilding the page and grid around it.
 module.exports = function (ui) {
   const pfx = ui.fig.family;
   const view = ui.getView();
@@ -79,6 +81,15 @@ module.exports = function (ui) {
       // above the sidebar (10002) and the side panels (10001) so a modal
       // backdrop covers the whole viewport instead of stopping at the 231px
       // sidebar. Same convention settings_main's overlay uses.
+      // Transient toast slot (empty until _showToast feeds it) — Settings'
+      // `settings-toast` slot. Outside the modal wrapper so feeding the
+      // modal never clears it, and it stays up after the modal closes.
+      Skeletons.Box.Y({
+        className: `${pfx}__toast-slot`,
+        sys_pn: "cal-toast",
+        partHandler: ui,
+      }),
+
       Skeletons.Wrapper.Y({
         className: `${pfx}__modal-wrapper`,
         name: "cal-modal",
@@ -89,3 +100,5 @@ module.exports = function (ui) {
     ],
   });
 };
+
+module.exports.modalKids = modalKids;
