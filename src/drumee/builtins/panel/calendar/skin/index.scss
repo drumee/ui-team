@@ -2061,7 +2061,10 @@
     gap: 6px;
   }
 
-  &__files-list[data-count="0"] {
+  // Hide rules here must beat ui-core's `.drumee-widget[data-flow=…]
+  // { display: flex }` (0,2,0), which every widget root carries — at (0,1,0)
+  // or (0,2,0) they lose, and the part shows anyway.
+  &__files &__files-list[data-count="0"] {
     display: none;
   }
 
@@ -2069,7 +2072,6 @@
   &__files-overlay {
     position: absolute;
     inset: 0;
-    display: none;
     align-items: center;
     justify-content: center;
     border-radius: var(--cal-radius);
@@ -2081,6 +2083,10 @@
   &__files[data-drop-active="1"] {
     border-style: solid;
     border-color: var(--primary-40);
+  }
+
+  &__files:not([data-drop-active="1"]) &__files-overlay {
+    display: none;
   }
 
   &__files[data-drop-active="1"] &__files-overlay {
