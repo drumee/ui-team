@@ -11,6 +11,7 @@
 // enforced; omitting the field here is the UI half only.
 const { STATUSES, PRIORITIES } = require("./helpers");
 const dateField = require("./date-field");
+const attachments = require("./attachments");
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -99,82 +100,94 @@ module.exports = function (ui) {
         ],
       }),
 
-      Skeletons.Box.Y({
-        className: `${pfx}__modal-body`,
+      // Two columns (skin stacks them under 700px): what the task IS on the
+      // left, how it is tracked on the right.
+      Skeletons.Box.X({
+        className: `${pfx}__modal-body ${pfx}__modal-body--split`,
         kids: [
-          field(
-            "TITLE",
-            Skeletons.Entry({
-              className: `${pfx}__input`,
-              sys_pn: "form-title",
-              formItem: "title",
-              name: "title",
-              value: draft.title || "",
-              placeholder: LOCALE.TITLE,
-              require: "text",
-              // NO `interactive: 1` here. With mode:"commit" the base Entry
-              // still fires its own `service` on EVERY printable keyup when
-              // interactive is on (widgets/entry/input `_onKeyup` falls
-              // through to triggerHandlers with __inputStatus:"interactive").
-              // That turned each letter typed into the title into a
-              // `cal-submit-task`, so typing "abc" posted task.create three
-              // times and the user ended up with tasks "a", "ab" and "abc"
-              // without ever pressing Enter. Enter alone still commits.
-              preselect: 1,
-              mode: "commit",
-              service: "cal-submit-task",
-              uiHandler: [ui],
-              partHandler: ui,
-            }),
-            "title",
-          ),
+          Skeletons.Box.Y({
+            className: `${pfx}__modal-col ${pfx}__modal-col--main`,
+            kids: [
+              field(
+                "TITLE",
+                Skeletons.Entry({
+                  className: `${pfx}__input`,
+                  sys_pn: "form-title",
+                  formItem: "title",
+                  name: "title",
+                  value: draft.title || "",
+                  placeholder: LOCALE.TITLE,
+                  require: "text",
+                  // NO `interactive: 1` here. With mode:"commit" the base Entry
+                  // still fires its own `service` on EVERY printable keyup when
+                  // interactive is on (widgets/entry/input `_onKeyup` falls
+                  // through to triggerHandlers with __inputStatus:"interactive").
+                  // That turned each letter typed into the title into a
+                  // `cal-submit-task`, so typing "abc" posted task.create three
+                  // times and the user ended up with tasks "a", "ab" and "abc"
+                  // without ever pressing Enter. Enter alone still commits.
+                  preselect: 1,
+                  mode: "commit",
+                  service: "cal-submit-task",
+                  uiHandler: [ui],
+                  partHandler: ui,
+                }),
+                "title",
+              ),
 
-          field(
-            "DESCRIPTION",
-            Skeletons.Textarea({
-              className: `${pfx}__textarea`,
-              sys_pn: "form-description",
-              formItem: "description",
-              name: "description",
-              value: draft.description || "",
-              placeholder: LOCALE.TASK_NOTE_PLACEHOLDER,
-              require: "any",
-              rows: 3,
-              // Enter must make a newline in an agenda note, not submit.
-              ignoreEnter: true,
-              bubble: 0,
-              uiHandler: [ui],
-              partHandler: ui,
-            }),
-            "description",
-          ),
+              field(
+                "DESCRIPTION",
+                Skeletons.Textarea({
+                  className: `${pfx}__textarea`,
+                  sys_pn: "form-description",
+                  formItem: "description",
+                  name: "description",
+                  value: draft.description || "",
+                  placeholder: LOCALE.TASK_NOTE_PLACEHOLDER,
+                  require: "any",
+                  rows: 3,
+                  // Enter must make a newline in an agenda note, not submit.
+                  ignoreEnter: true,
+                  bubble: 0,
+                  uiHandler: [ui],
+                  partHandler: ui,
+                }),
+              ),
 
-          field(
-            "DUE_DATE",
-            dateField(ui, { name: "due_date", value: draft.due_date }),
-          ),
+              field("ATTACHMENTS", attachments(ui)),
+            ],
+          }),
+          Skeletons.Box.Y({
+            className: `${pfx}__modal-col ${pfx}__modal-col--side`,
+            kids: [
+              field(
+                "STATUS",
+                pillRow(
+                  `${pfx}__pills`,
+                  STATUSES,
+                  draft.status || "todo",
+                  "cal-form-status",
+                  "calStatus",
+                ),
+              ),
 
-          field(
-            "STATUS",
-            pillRow(
-              `${pfx}__pills`,
-              STATUSES,
-              draft.status || "todo",
-              "cal-form-status",
-              "calStatus",
-            ),
-          ),
+              field(
+                "PRIORITY",
+                pillRow(
+                  `${pfx}__pills`,
+                  PRIORITIES,
+                  draft.priority || "medium",
+                  "cal-form-priority",
+                  "calPriority",
+                ),
+              ),
 
-          field(
-            "PRIORITY",
-            pillRow(
-              `${pfx}__pills`,
-              PRIORITIES,
-              draft.priority || "medium",
-              "cal-form-priority",
-              "calPriority",
-            ),
-          ),
+              field(
+                "DUE_DATE",
+                dateField(ui, { name: "due_date", value: draft.due_date }),
+              ),
+            ],
+          }),
         ],
       }),
 

@@ -1193,6 +1193,32 @@
     &[data-form="meeting"] {
       width: min(520px, calc(100vw - 32px));
     }
+
+    // Task: two columns — Title/Description/Attachments | Status/Priority/Due.
+    &[data-form="task"] {
+      width: min(760px, calc(100vw - 32px));
+    }
+  }
+
+  // Scoped under the task modal for weight: the body is a Box.X, and
+  // `.drumee-widget[data-flow=x]` (0,2,0) would win over a single class.
+  &__modal[data-form="task"] &__modal-body--split {
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  &__modal[data-form="task"] &__modal-col {
+    gap: 12px;
+    min-width: 0;
+  }
+
+  &__modal[data-form="task"] &__modal-col--main {
+    flex: 1 1 0;
+  }
+
+  // Wide enough for the four status pills on two lines and a date field.
+  &__modal[data-form="task"] &__modal-col--side {
+    flex: 0 0 240px;
   }
 
   // Sub-blocks of the invite block and the chip row are always rendered and
@@ -1269,6 +1295,9 @@
     flex: 1 1 auto;
     min-height: 0;
     gap: 12px;
+    // The modal caps at 88vh and lets the body shrink; without its own scroll
+    // the overflow slid under the footer (Cancel/Create over Priority).
+    @include quiet-scroll;
   }
 
   // Right-aligned action row under a hairline, as in the meeting modal. Buttons
@@ -1988,6 +2017,16 @@
       padding: 16px 12px 0;
     }
 
+    // The task modal's two columns stack: details first, tracking under them.
+    &__modal[data-form="task"] &__modal-body--split {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    &__modal[data-form="task"] &__modal-col--side {
+      flex: 0 0 auto;
+    }
+
     &__title {
       @include drumee.typo($size: 22px, $line: 1.15em, $color: var(--primary-purple-100));
       font-weight: 600;
@@ -2022,4 +2061,146 @@
 .flatpickr-calendar.calendar-main__flatpickr {
   z-index: 99999;
   margin-top: 0;
+}
+
+// ── modal attachments (skeleton/attachments.js) ──────────────────────────────
+.calendar-main {
+  &__files {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: 1px dashed var(--border-default);
+    border-radius: var(--cal-radius);
+    padding: 10px 12px;
+  }
+
+  &__files-drop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  &__files-ico,
+  &__file-ico {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+
+  &__files-hint {
+    font-size: 13px;
+    opacity: 0.8;
+  }
+
+  &__files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    // About four and a half rows, so a fifth one visibly continues. The
+    // scrollbar stays drawn (not only on hover) — it is the only sign there
+    // is more. Room on the right keeps each ✕ clear of it.
+    max-height: 120px;
+    padding-right: 4px;
+    @include quiet-scroll($rest: var(--border-default));
+  }
+
+  // Hide rules here must beat ui-core's `.drumee-widget[data-flow=…]
+  // { display: flex }` (0,2,0), which every widget root carries — at (0,1,0)
+  // or (0,2,0) they lose, and the part shows anyway.
+  &__files &__files-list[data-count="0"] {
+    display: none;
+  }
+
+  // Shown only while a computer file is dragged over the zone.
+  &__files-overlay {
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--cal-radius);
+    background: rgba(255, 255, 255, 0.92);
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  &__files[data-drop-active="1"] {
+    border-style: solid;
+    border-color: var(--primary-40);
+  }
+
+  // Once something is attached, the list speaks for itself; a drop or a paste
+  // on the zone still adds more.
+  &__files[data-has-files="1"] &__files-drop {
+    display: none;
+  }
+
+  &__files:not([data-drop-active="1"]) &__files-overlay {
+    display: none;
+  }
+
+  &__files[data-drop-active="1"] &__files-overlay {
+    display: flex;
+  }
+
+  &__file {
+    display: flex;
+    // A row in the scrolling list overflows it; it never squashes to fit.
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 13px;
+  }
+
+  // The Word / Excel / PowerPoint glyphs draw their back page with no fill of
+  // its own, so it takes the icon's currentcolor — and must read white.
+  &__file[data-ico="raw-documents_word"] &__file-ico,
+  &__file[data-ico="raw-documents_excel"] &__file-ico,
+  &__file[data-ico="raw-documents_powerpoint"] &__file-ico {
+    color: white;
+  }
+
+  &__file-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__file-retry {
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  &__file-remove {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    flex: none;
+  }
+
+  &__file[data-status="error"] &__file-name {
+    color: var(--signal-error, #d74e49);
+  }
+
+  // ui-core's spinner ships no CSS; draw our own.
+  &__file[data-status="uploading"]::after {
+    content: "";
+    width: 12px;
+    height: 12px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: calendar-main-file-spin 0.8s linear infinite;
+    flex: none;
+  }
+}
+
+@keyframes calendar-main-file-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

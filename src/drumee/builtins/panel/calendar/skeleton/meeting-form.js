@@ -14,6 +14,7 @@
 // server rather than by this form.
 
 const dateField = require("./date-field");
+const attachments = require("./attachments");
 
 // 12-hour clock parts, matching the frames' Hour / Minute / AM-PM triplet.
 function timePicker(ui, which, value) {
@@ -370,6 +371,8 @@ module.exports = function (ui) {
               field("END_TIME", timePicker(ui, "end", draft.end)),
             ],
           }),
+
+          field("ATTACHMENTS", attachments(ui)),
 
           field("INVITE", inviteBlock),
         ],
