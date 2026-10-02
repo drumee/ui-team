@@ -680,9 +680,13 @@ module.exports = function (ui) {
       body = Skeletons.Box.Y({
         className: `${pfx}__body ${pfx}__body--result ${pfx}__body--done`,
         kids: [
+          // "Your files have been imported" is false when nothing new landed
+          // (all already there, or all failed); the summary below says why.
           hero('apps-check-circle', `${pfx}__hero--success`,
             LOCALE.MIGRATION_DONE_TITLE || 'Migration complete!',
-            LOCALE.MIGRATE_GDRIVE_DONE_HINT),
+            processed
+              ? LOCALE.MIGRATE_GDRIVE_DONE_HINT
+              : (LOCALE.MIGRATE_GDRIVE_DONE_HINT_NONE || 'No new files were imported.')),
           // Cancel was pressed, but the job had already finished.
           ui._cancelLate ? Skeletons.Note({
             className: `${pfx}__summary ${pfx}__cancel-late`,
