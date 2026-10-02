@@ -1468,6 +1468,54 @@ class desk_module extends LetcBox {
    * Mirrors _maybeOpenPromoAdminAfterClaim above, including standing down
    * _restoreInFlight so desk-state restore does not race the dialog.
    */
+  /**
+   * Redeem the invitation token carried by the email link (libs/hub-deep-link)
+   * and open the workspace, or decline it. Every outcome takes the loader
+   * down and says something: the old path left a spinner on the 403.
+   * @param {{hub_id:String, invite:String, action?:String, name?:String}} intent
+   */
+  async _answerInvitedWorkspace(intent) {
+    const accept = intent.action !== "decline";
+    let res = null;
+    try {
+      res = await this.postService(
+        accept ? "hub.accept_invite" : "hub.decline_invite",
+        { token: intent.invite },
+      );
+    } catch (e) {
+      this.warn && this.warn("[invite] answer failed", e && e.message);
+      res = null;
+    }
+    this._hideInvitedWorkspaceLoader();
+    const say = (msg) => {
+      if (window.Wm && Wm.alert) Wm.alert(msg);
+    };
+    if (!accept) {
+      return say(LOCALE.INVITE_DECLINED_NOTICE || "Invitation declined.");
+    }
+    const status = (res && res.status) || (res ? "" : "invalid");
+    if (status === "SEAT_LIMIT_REACHED") {
+      try {
+        const { canShowSeatLimitPopup } = require("libs/billing");
+        if (canShowSeatLimitPopup() && window.Wm && Wm.openQuotaExceeded) {
+          return Wm.openQuotaExceeded({ limit: "seat" });
+        }
+      } catch (e) { /* plain message below */ }
+      return say(LOCALE.INVITE_SEAT_LIMIT_INVITEE || LOCALE.INVITE_LINK_INVALID);
+    }
+    if (status === "OVER_LIMIT") {
+      return say(LOCALE.OL_TOAST_INVITE || LOCALE.INVITE_LINK_INVALID);
+    }
+    if (status || !res.hub_id) {
+      // invalid / expired / already_used / hub_not_found / not_authenticated
+      return say(LOCALE.INVITE_LINK_INVALID);
+    }
+    if (typeof RADIO_BROADCAST !== "undefined") {
+      RADIO_BROADCAST.trigger("workspace:refresh");
+    }
+    location.hash =
+      `#/desk/wm/reveal/?hub_id=${res.hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
+  }
   _maybeOfferInvitedWorkspace() {
     let intent = null;
     try {
@@ -1508,6 +1556,11 @@ class desk_module extends LetcBox {
       return this._hideInvitedWorkspaceLoader();
     }
     this._restoreInFlight = false;
+    // An invitation from the email link has to be ANSWERED before the
+    // workspace can open: nothing was granted when the mail went out, so
+    // opening on the hub_id alone meets a 403. No prompt here either - the
+    // person already pressed Accept (or Decline) in the email.
+    if (intent.invite) return this._answerInvitedWorkspace(intent);
     const workspace = (intent.name || "").trim();
     const message = workspace
       ? (LOCALE.GUEST_JOIN_OPEN_WORKSPACE_MSG || "You can now open the workspace you were invited to: %s").replace("%s", workspace)

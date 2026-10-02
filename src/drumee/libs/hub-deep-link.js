@@ -46,11 +46,23 @@ const AGE_LIMIT = 7 * 24 * 3600 * 1000;
  * is new and has no older reader. The name is copy for the prompt, so losing it
  * costs a nicer message and nothing else.
  *
+ * The invitation TOKEN rides on the localStorage copy too (2026-10). The
+ * email's Accept link carries `?invite=<token>&invite_action=accept`; the
+ * welcome module used to keep that token in memory only, and signing in
+ * reloads the document, so the desk came up with a hub_id and no token: it
+ * opened a workspace nobody had added the person to (403, endless spinner).
+ * With the token here, the desk answers the invitation first, then opens.
+ *
  * @param {String|Number} hub_id
  * @param {String} [name] workspace display name, for the prompt's message
+ * @param {Object} [extra]
+ * @param {String} [extra.invite] invitation token from the email link
+ * @param {String} [extra.action] "accept" (default) or "decline"
  */
-function arm(hub_id, name) {
+function arm(hub_id, name, extra = {}) {
   if (!hub_id) return;
+  const invite = extra && extra.invite ? String(extra.invite) : "";
+  const action = extra && extra.action ? String(extra.action) : "";
   try {
     sessionStorage.setItem(KEY, String(hub_id));
   } catch (e) {
@@ -61,6 +73,8 @@ function arm(hub_id, name) {
       hub_id: String(hub_id),
       name: name ? String(name) : "",
       ts: Date.now(),
+      invite,
+      action,
     }));
   } catch (e) {
     // The session copy above is the primary; losing the fallback only costs the
@@ -78,7 +92,12 @@ function _fallback() {
     if (!v || !v.hub_id) return null;
     // Undated (armed by an older build) is honoured; too old is not.
     if (v.ts && Date.now() - Number(v.ts) > AGE_LIMIT) return null;
-    return { hub_id: String(v.hub_id), name: v.name ? String(v.name) : "" };
+    return {
+      hub_id: String(v.hub_id),
+      name: v.name ? String(v.name) : "",
+      invite: v.invite ? String(v.invite) : "",
+      action: v.action ? String(v.action) : "",
+    };
   } catch (e) {
     // Unreadable or malformed JSON — treat as nothing armed.
     return null;
@@ -102,7 +121,13 @@ function peek() {
   if (s) {
     // Only lend the name to the SAME workspace — a leftover copy for another hub
     // must not label this one.
-    return { hub_id: String(s), name: (l && l.hub_id === String(s) && l.name) || "" };
+    const same = l && l.hub_id === String(s) ? l : null;
+    return {
+      hub_id: String(s),
+      name: (same && same.name) || "",
+      invite: (same && same.invite) || "",
+      action: (same && same.action) || "",
+    };
   }
   return l;
 }
