@@ -194,6 +194,34 @@ test("workspace scope: its own title, a workspace card, no org card or tree", ()
   assert.ok(pns.includes("email-input") && pns.includes("link-panel") && pns.includes("send-btn"));
 });
 
+test("workspace scope: a role pill beside the email field and a Permission row on the link tab", () => {
+  const t = skeleton(wsUi({ _roles: new Map([["h1", "admin"]]) }));
+  const line = cls(t, "email-line")[0];
+  assert.ok(cls(line, "email-field").length === 1, "the field keeps its anchor wrapper");
+  const pills = cls(t, "role-cell");
+  assert.equal(pills.length, 2, "one pill per tab");
+  assert.ok(pills.every((c) => c.dataset.size === "lg"));
+  const pns = walk(t).map((n) => n.sys_pn).filter(Boolean);
+  for (const key of ["ws-email", "ws-link"]) {
+    assert.ok(pns.includes(`role-label:${key}`) && pns.includes(`role-options:${key}`), key);
+  }
+  // Same hub on both, so a pick in one tab syncs the other.
+  assert.ok(cls(t, "role-options").every((o) => o.dataset.hub_id === "h1"));
+  assert.deepEqual(cls(t, "role-select-label").map((n) => n.content), ["Admin", "Admin"]);
+  const row = cls(t, "permission-row")[0];
+  assert.equal(cls(row, "field-label")[0].content, en.PERMISSION);
+  // The Permission row heads the link panel, above Link Expiration.
+  const panel = cls(t, "panel-link")[0];
+  assert.equal(panel.kids[0], row);
+});
+
+test("workspace pill defaults to Edit; org scope draws no tab pills", () => {
+  assert.deepEqual(cls(skeleton(wsUi()), "role-select-label").map((n) => n.content), ["Edit", "Edit"]);
+  const org = skeleton(ui());
+  assert.equal(cls(org, "role-cell").length, 0);
+  assert.equal(cls(org, "permission-row").length, 0);
+});
+
 test("workspace card: glyph, name, storage split into number + unit, members", () => {
   const kids = skeleton.wsCardKids(wsUi(), P);
   const all = walk(kids);

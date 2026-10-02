@@ -718,6 +718,40 @@ $tint: rgba(89, 80, 255, 0.1);
     white-space: nowrap;
   }
 
+  // Workspace scope's pill (Figma 1344:184456 / 785:75492: 105×42, radius 12,
+  // 14px label, caret pushed right), at the card's 440/520 scale like the
+  // rest of this skin. Its height is its own — no row to stretch to.
+  &__role-cell[data-size="lg"] {
+    align-self: auto;
+  }
+
+  &__role-cell[data-size="lg"] &__role-select {
+    height: 36px;
+    min-width: 88px;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 10px;
+    border-radius: 10px;
+  }
+
+  // Beside the email field (Figma 1344:184472): the field takes the width,
+  // the pill sits at the top so the chip row can wrap downward under nothing.
+  &__email-line {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  &__email-line > &__email-field {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  // Public link (Figma 785:75492): "Permission" left, pill right.
+  &__permission-row {
+    align-items: center;
+    justify-content: space-between;
+  }
+
   &__role-options {
     // `display: none` while closed, not visibility alone: these are
     // absolutely positioned inside __tree, which scrolls, and a merely
