@@ -11,6 +11,7 @@
 // enforced; omitting the field here is the UI half only.
 const { STATUSES, PRIORITIES } = require("./helpers");
 const dateField = require("./date-field");
+const attachments = require("./attachments");
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -148,6 +149,8 @@ module.exports = function (ui) {
             }),
             "description",
           ),
+
+          field("ATTACHMENTS", attachments(ui)),
 
           field(
             "DUE_DATE",

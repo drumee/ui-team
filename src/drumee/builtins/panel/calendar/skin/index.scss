@@ -2023,3 +2023,117 @@
   z-index: 99999;
   margin-top: 0;
 }
+
+// ── modal attachments (skeleton/attachments.js) ──────────────────────────────
+.calendar-main {
+  &__files {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: 1px dashed var(--border-default);
+    border-radius: var(--cal-radius);
+    padding: 10px 12px;
+  }
+
+  &__files-drop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+
+  &__files-ico,
+  &__file-ico {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+
+  &__files-hint {
+    font-size: 13px;
+    opacity: 0.8;
+  }
+
+  &__files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__files-list[data-count="0"] {
+    display: none;
+  }
+
+  // Shown only while a computer file is dragged over the zone.
+  &__files-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--cal-radius);
+    background: rgba(255, 255, 255, 0.92);
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  &__files[data-drop-active="1"] {
+    border-style: solid;
+    border-color: var(--primary-40);
+  }
+
+  &__files[data-drop-active="1"] &__files-overlay {
+    display: flex;
+  }
+
+  &__file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: 13px;
+  }
+
+  &__file-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__file-retry {
+    cursor: pointer;
+    text-decoration: underline;
+  }
+
+  &__file-remove {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    flex: none;
+  }
+
+  &__file[data-status="error"] &__file-name {
+    color: var(--signal-error, #d74e49);
+  }
+
+  // ui-core's spinner ships no CSS; draw our own.
+  &__file[data-status="uploading"]::after {
+    content: "";
+    width: 12px;
+    height: 12px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: calendar-main-file-spin 0.8s linear infinite;
+    flex: none;
+  }
+}
+
+@keyframes calendar-main-file-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
