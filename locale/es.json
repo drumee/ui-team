@@ -3112,5 +3112,6 @@
   "TASK_TOAST_FILES": "vinculó archivos a \"{task}\"",
   "TASK_TOAST_UNLINKED": "quitó un archivo de \"{task}\"",
   "MIGRATE_GDRIVE_SUMMARY_EXISTING": "{0} ya existían, omitidos.",
-  "MIGRATE_GDRIVE_CANCEL_TOO_LATE": "La migración ya había terminado antes de poder cancelarse."
+  "MIGRATE_GDRIVE_CANCEL_TOO_LATE": "La migración ya había terminado antes de poder cancelarse.",
+  "MIGRATE_GDRIVE_DONE_HINT_NONE": "No se importaron archivos nuevos."
 }
