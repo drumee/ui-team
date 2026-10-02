@@ -23,7 +23,8 @@
 // means every workspace. The server clears the per-workspace rows when a
 // global mute is written, so the two do not layer — but `isPopupMuted` treats
 // global as decisive rather than relying on that.
-const STATE = { loaded: 0, global: 0, hubs: new Set() };
+// `peers` holds the people whose DM popups are muted (activity.mute_peer_set).
+const STATE = { loaded: 0, global: 0, hubs: new Set(), peers: new Set() };
 
 /**
  * Fold a server payload into the cache. Shared by the initial load and by
@@ -33,6 +34,8 @@ function applyMuteState(d) {
   if (!d || typeof d !== 'object') return STATE;
   STATE.global = d.global ? 1 : 0;
   STATE.hubs = new Set((Array.isArray(d.hubs) ? d.hubs : []).map((h) => String(h)));
+  // An older server answers no `peers`: nobody is muted as a person.
+  STATE.peers = new Set((Array.isArray(d.peers) ? d.peers : []).map((p) => String(p)));
   STATE.loaded = 1;
   return STATE;
 }
@@ -49,6 +52,7 @@ function resetMuteState() {
   STATE.loaded = 0;
   STATE.global = 0;
   STATE.hubs = new Set();
+  STATE.peers = new Set();
   return STATE;
 }
 
@@ -83,14 +87,20 @@ async function loadMuteState(host) {
 /**
  * Should the popup for this push be suppressed?
  *
- * A workspace-less push (a p2p DM carries no workspace) can only be silenced
- * by a global mute — there is no per-workspace row that could match it.
+ * A workspace-less push (a p2p DM carries no workspace) is silenced by a
+ * global mute or by muting its author as a person (activity.mute_peer_set).
+ * A push that names a workspace follows the workspace mutes only.
  */
 function isPopupMuted(model = {}) {
   try {
     if (STATE.global) return true;
     const id = model.hub_id == null ? '' : String(model.hub_id);
-    return !!id && STATE.hubs.has(id);
+    if (id) return STATE.hubs.has(id);
+    // A hub-less push is a DM: its author can be muted as a person. A push
+    // that names a workspace is judged by workspace rules only, so muting a
+    // person never silences what they post in a shared workspace.
+    const who = model.author_id == null ? '' : String(model.author_id);
+    return !!who && STATE.peers.has(who);
   } catch (e) {
     return false;
   }
@@ -116,6 +126,34 @@ async function setMute(host, hub_id, muted = true) {
       hub_id: String(hub_id == null ? '' : hub_id),
       // 1/0 rather than true/false: these travel as form values, and the
       // server treats the STRINGS '0' and 'false' as unmute for that reason.
+      muted: muted ? 1 : 0,
+    });
+    const ok = !!d && d.status === 'ok';
+    if (ok) applyMuteState(d);
+    return { ok, data: d };
+  } catch (e) {
+    return { ok: false };
+  }
+}
+
+/** Whether DM popups from `peer_id` are muted (a global mute counts). */
+function isPeerMuted(peer_id) {
+  if (STATE.global) return true;
+  return !!peer_id && STATE.peers.has(String(peer_id));
+}
+
+/**
+ * Mute or unmute the DM popups from one person. Same contract as setMute:
+ * `{ ok }` only from a server "ok", cache folded from the answer itself.
+ * Sent on the viewer's own hub (the endpoint's ACL is hub-scoped).
+ */
+async function setPeerMute(host, peer_id, muted = true) {
+  const svc = muteService('mute_peer_set');
+  if (!svc || !host || !host.postService || !peer_id) return { ok: false };
+  try {
+    const d = await host.postService(svc, {
+      hub_id: (typeof Visitor !== 'undefined' && Visitor.id) || '',
+      peer_id: String(peer_id),
       muted: muted ? 1 : 0,
     });
     const ok = !!d && d.status === 'ok';
@@ -188,6 +226,8 @@ module.exports = {
   loadMuteState,
   isPopupMuted,
   setMute,
+  isPeerMuted,
+  setPeerMute,
   muteState,
   applyMuteState,
   resetMuteState,

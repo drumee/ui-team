@@ -1,0 +1,51 @@
+@use "./topic-surfaces";
+
+// Files-tab chat topics (Figma 869:189953 / 869:191968): the topic strip
+// under "Team Chat" and the File threads bar + dropdown. Parts built by
+// window/skeleton/toolkit chatPanel, fed by window/folder/topics.js and
+// window/folder/file-threads-bar.js.
+.window-folder {
+  // Only where the Chat-tab rail is not: hidden on the wide Chat tab (the
+  // rail lists topics and file threads), back on the compact one.
+  &__split-body[data-view="chat"] .window__topic-strip,
+  &__split-body[data-view="chat"] .window__ft-bar {
+    display: none;
+  }
+
+  @container window-folder-w (max-width: 700px) {
+    &__split-body[data-view="chat"] .window__topic-strip,
+    &__split-body[data-view="chat"] .window__ft-bar {
+      display: flex;
+    }
+  }
+
+  // A member without chat access sees neither (same gate as the rail).
+  .window__chat-panel[data-chat_gated="1"] .window__topic-strip,
+  .window__chat-panel[data-chat_gated="1"] .window__ft-bar {
+    display: none !important;
+  }
+
+  @include topic-surfaces.parts;
+
+  // The chat panel is a size container, so the strip can respond to the
+  // panel's own width (the Files view's side column is 300–380px, even in a
+  // wide window).
+  .window__chat-panel {
+    container: window-chat-panel / inline-size;
+  }
+
+  // A narrow panel: "+ Topic" goes to its own line under the carousel instead
+  // of squeezing the tabs.
+  @container window-chat-panel (max-width: 420px) {
+    .window__topic-strip {
+      flex-wrap: wrap;
+      row-gap: 6px;
+    }
+
+    .window__topic-strip .window__topic-tab--create {
+      flex: 1 0 100%;
+      margin-left: 0;
+      justify-content: center;
+    }
+  }
+}

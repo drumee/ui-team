@@ -1,3 +1,7 @@
+const { positionCalendar } = require("../calendar-position");
+// The desk sidebar's workspace art (folder shape + internal / external /
+// personal badge), so the dialog names the workspace type the same way.
+const workspaceArt = require("../../../media/grid/template/folder");
 /* ============================================================ *
  * Skeleton: chat-export modal
  * Figma node 2216-257014 — "Export chat history"
@@ -25,14 +29,16 @@ module.exports = {
     // File-scope mode (single file's thread): show the file card and hide the
     // scope picker — the scope is fixed to this file's thread.
     const fileScope = !!ui._fileScope;
+    // Direct mode (a 1:1 conversation): the person's card, no scope picker.
+    const direct = !!ui._direct;
 
     return Skeletons.Box.Y({
       className: `${pfx}__card`,
       kids: [
         _header(pfx, ui),
-        fileScope ? _fileCard(pfx, ui) : _folderCard(pfx, ui),
+        direct ? _peerCard(pfx, ui) : fileScope ? _fileCard(pfx, ui) : _folderCard(pfx, ui),
         _formatSection(pfx, ui),
-        fileScope ? null : _scopeSection(pfx, ui),
+        fileScope || direct ? null : _scopeSection(pfx, ui),
         _dateRangeSection(pfx, ui),
         _footer(pfx, ui),
         _downloadButton(pfx, ui),
@@ -86,9 +92,6 @@ function _folderCard(pfx, ui) {
   // Prefer the real folder name from the model (the folder the user opened);
   // backend hub.name may resolve to the hub_id hash until export_scope is fixed.
   const hubName = ui.mget(_a.name) || ui._hubName || LOCALE.LOADING || "…";
-  // #3: folder icon glyph coloured by access level via the fg-* class (reliable
-  // global hex); the box keeps its light tint so the icon is always visible.
-  const access = AREA_ACCESS[ui.mget(_a.area)] || "private";
   // #4: message count is hidden entirely when 0/unavailable (per user request).
   const msgCount = ui._messageCount || 0;
   // mtime is epoch SECONDS (INT) — use Dayjs.unix; Dayjs(seconds) treats it as
@@ -128,14 +131,22 @@ function _folderCard(pfx, ui) {
       Skeletons.Box.X({
         className: `${pfx}__folder-left`,
         kids: [
-          // Folder icon: glyph coloured by access level (#3, fg-* class), on the
-          // default light box so it's always visible.
+          // Workspace icon, as the desk sidebar draws it: folder shape tinted
+          // by the workspace type + its badge (internal = private, external =
+          // share/dmz, personal). isAttachment → no kebab in a dialog.
           Skeletons.Box.Y({
             className: `${pfx}__folder-icon-box`,
+            dataset: { area: ui.mget(_a.area) || "" },
             kids: [
-              Skeletons.Image.Svg({
-                ico: "apps-folder-card",
-                className: `${pfx}__folder-icon fg-${access}`,
+              Skeletons.Element({
+                className: `${pfx}__folder-art`,
+                content: workspaceArt({
+                  area: ui.mget(_a.area),
+                  filetype: _a.hub,
+                  role: "desk",
+                  isAttachment: 1,
+                  widgetId: _.uniqueId("chat-export-ws-"),
+                }),
               }),
             ],
           }),
@@ -156,6 +167,46 @@ function _folderCard(pfx, ui) {
         ],
       }),
       // Fix #2: "Open thread →" link removed per user request.
+    ],
+  });
+}
+
+// ------------------------------------------------------------------ peer card
+// Direct mode: the person this conversation is with — avatar, name, count.
+// Reuses the __folder-* layout classes, like the file card.
+function _peerCard(pfx, ui) {
+  const name = ui._hubName || ui.mget(_a.name) || "";
+  const count = ui._messageCount || 0;
+  return Skeletons.Box.X({
+    className: `${pfx}__folder-card ${pfx}__peer-card`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__folder-left`,
+        kids: [
+          {
+            kind: KIND.profile,
+            className: `${pfx}__peer-avatar`,
+            id: ui.mget("peer_id"),
+            fullname: name,
+            active: 0,
+          },
+          Skeletons.Box.Y({
+            className: `${pfx}__folder-info`,
+            kids: [
+              Skeletons.Note({ className: `${pfx}__folder-name`, content: name }),
+              Skeletons.Box.X({
+                className: `${pfx}__folder-meta`,
+                kids: [
+                  Skeletons.Note({
+                    className: `${pfx}__folder-meta-text`,
+                    content: `${count} ${LOCALE.MESSAGES}`,
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
     ],
   });
 }
@@ -254,7 +305,9 @@ function _formatCard(pfx, ui, fmt, active) {
   // Fix #6: Use Button.Label for the whole card so the entire card is a
   // proper interactive element (full-width tap area, reliable single-click).
   // The existing set-format service + uiHandler wire is preserved.
-  return Skeletons.Box.Y({
+  // One row: the icon (format-card-top) on the left, then a text column with
+  // the title and the subtitle, each on a single line.
+  return Skeletons.Box.X({
     className: `${pfx}__format-card${active ? " is-active" : ""}`,
     service: "set-format",
     format: fmt,
@@ -275,14 +328,19 @@ function _formatCard(pfx, ui, fmt, active) {
           }),
         ],
       }),
-      // Fix #3: weight 700 applied via __format-title--bold modifier class.
-      Skeletons.Note({
-        className: `${pfx}__format-title${active ? " is-active" : ""} ${pfx}__format-title--bold`,
-        content: title,
-      }),
-      Skeletons.Note({
-        className: `${pfx}__format-subtitle`,
-        content: subtitle,
+      Skeletons.Box.Y({
+        className: `${pfx}__format-text`,
+        kids: [
+          // Fix #3: weight 700 applied via __format-title--bold modifier class.
+          Skeletons.Note({
+            className: `${pfx}__format-title${active ? " is-active" : ""} ${pfx}__format-title--bold`,
+            content: title,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__format-subtitle`,
+            content: subtitle,
+          }),
+        ],
       }),
     ],
   });
@@ -441,13 +499,14 @@ function _scopeSection(pfx, ui) {
 
 /**
  * Renders a visual checkbox state indicator.
- * Fix #5: uses "chat-tick" (plain checkmark, no circle) instead of "app-check".
+ * Uses the app's checkmark glyph (editbox_checkmark — the invite popup's and
+ * the settings dialogs' tick), painted white on the purple box by the skin.
  */
 function _checkbox(pfx, checked) {
   return Skeletons.Box.Y({
     className: `${pfx}__checkbox${checked ? " is-checked" : ""}`,
     kids: checked
-      ? [Skeletons.Image.Svg({ ico: "chat-tick", className: `${pfx}__checkbox-ico` })]
+      ? [Skeletons.Image.Svg({ ico: "editbox_checkmark", className: `${pfx}__checkbox-ico` })]
       : [],
   });
 }
@@ -463,6 +522,13 @@ function _dateRangeSection(pfx, ui) {
     ? [
         Skeletons.Box.X({
           className: `${pfx}__date-row`,
+          // Loading until both lazy pickers have mounted: index.js
+          // onPartReady("date-row") → date-row-ready.js stamps data-ready="1".
+          // No `dataset` here on purpose: ui-core's onRender writes a model
+          // dataset AFTER onPartReady, which reset the stamp to "0" and left
+          // the row spinning. A missing stamp already reads as loading.
+          sys_pn: "date-row",
+          partHandler: ui,
           kids: [
             _dateInput(pfx, ui, "start"),
             Skeletons.Image.Svg({
@@ -505,10 +571,18 @@ function _dateRangeSection(pfx, ui) {
 }
 
 function _dateInput(pfx, ui, which) {
-  const pn = `date-${which}`;
-  // Native <input type=date>; the skin stretches its calendar-picker-indicator
-  // over the field so a click opens the OS picker every time. Change event is
-  // wired in onPartReady via sys_pn.
+  // The app's flatpickr date picker (widget/datepicker, same as the meeting
+  // modal) instead of a native <input type=date>: the Figma calendar with
+  // Cancel / Done. It posts "date-start-change" / "date-end-change", which
+  // index.js already handles by parsing cmd.mget("value").
+  //   dateFormat Y-m-d → the value _setStartDate / _setEndDate parse;
+  //   altInput d/m/Y  → what the user reads in the field;
+  //   appendTo body   → out of the scrolling card, so it is never clipped
+  //                     (flatpickr's open z-index 99999 clears the 99997
+  //                     backdrop).
+  // `value` re-seeds the chosen date whenever the section is re-rendered; an
+  // empty string starts with nothing picked (the widget's "unset" contract).
+  const ts = which === "start" ? ui._startDate : ui._endDate;
   return Skeletons.Box.X({
     className: `${pfx}__date-input-wrap`,
     kids: [
@@ -516,13 +590,26 @@ function _dateInput(pfx, ui, which) {
         ico: "calendar",
         className: `${pfx}__date-icon`,
       }),
-      Skeletons.Element({
-        tagName: "input",
-        className: `${pfx}__date-input`,
-        attrOpt: { type: "date", placeholder: "dd/mm/yyyy" },
-        sys_pn: pn,
-        partHandler: ui,
-      }),
+      {
+        kind: "date_picker",
+        className: `${pfx}__date-picker`,
+        innerClass: `${pfx}__date-input`,
+        name: `chat-export-date-${which}`,
+        placeholder: "dd/mm/yyyy",
+        value: ts ? Dayjs.unix(ts).format("YYYY-MM-DD") : "",
+        vendorOpt: {
+          dateFormat: "Y-m-d",
+          altInput: true,
+          altFormat: "d/m/Y",
+          appendTo: document.body,
+          // Viewport-coordinate, position:fixed placement anchored to this
+          // wrap (./calendar-position): flatpickr's own page-coordinate one
+          // drifted off the field and ran off-screen in the desk.
+          position: positionCalendar,
+        },
+        service: `date-${which}-change`,
+        uiHandler: [ui],
+      },
     ],
   });
 }
@@ -530,6 +617,23 @@ function _dateInput(pfx, ui, which) {
 // ------------------------------------------------------------------ footer
 
 function _footer(pfx, ui) {
+  // A DM has no folder / thread sections, and chat.p2p_export names the file
+  // after the person — sanitised exactly as the server does.
+  if (ui._direct) {
+    const name = ui._hubName || ui.mget(_a.name) || "";
+    const base =
+      name.replace(/[^0-9a-zA-Z_.-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80) || "chat-export";
+    return Skeletons.Box.Y({
+      className: `${pfx}__footer`,
+      kids: [
+        Skeletons.Note({ className: `${pfx}__footer-divider` }),
+        Skeletons.Note({
+          className: `${pfx}__footer-filename-hint`,
+          content: `${base}.(pdf|json)`,
+        }),
+      ],
+    });
+  }
   return Skeletons.Box.Y({
     className: `${pfx}__footer`,
     kids: [

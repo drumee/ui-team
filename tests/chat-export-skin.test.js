@@ -1,0 +1,137 @@
+// chat-export-skin.test.js — the chat export dialog (widget-chat-export),
+// opened from Chat details' Download tile and the file menu's "Download Chat
+// Threads". Pins the two requested changes: the header stays fixed while the
+// card scrolls, and every item is downsized (~80% of the original Figma sizes).
+//
+//   node --test tests/chat-export-skin.test.js
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const path = require("node:path");
+const sass = require("sass");
+
+const SRC = path.join(__dirname, "..", "src/drumee");
+const css = sass
+  .compile(path.join(SRC, "builtins/widget/chat-export/skin/index.scss"), {
+    loadPaths: [SRC, path.join(SRC, "skin")],
+    logger: sass.Logger.silent,
+  })
+  .css.replace(/\s+/g, " ");
+
+// Anchored at a rule start (after "}" or the top), so ".a .b {" never matches
+// inside a longer selector like ".x:not(...) .a .b {".
+const rule = (sel) => {
+  const m = css.match(new RegExp("(?:^|\\}\\s*)" + sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + " \\{([^}]*)\\}"));
+  assert.ok(m, `missing rule ${sel}`);
+  return m[1];
+};
+const P = ".widget-chat-export";
+
+test("header stays fixed at the top of the scrolling card", () => {
+  const card = rule(`${P}__card`);
+  assert.match(card, /overflow-y: auto/);
+  assert.match(card, /padding: 24px/);
+  const h = rule(`${P}__header`);
+  assert.match(h, /position: sticky/);
+  // -24px cancels the card padding: sticky otherwise clamps inside it and the
+  // scrolled content shows through the strip above the header.
+  assert.match(h, /top: -24px/);
+  assert.match(h, /z-index: 2/);
+  assert.match(h, /margin: -24px -24px -12px/);
+  assert.match(h, /padding: 24px 24px 12px/);
+  assert.match(h, /background: #ffffff/);
+  assert.match(h, /border-radius: 16px 16px 0 0/);
+});
+
+test("card and header are downsized", () => {
+  const card = rule(`${P}__card`);
+  assert.match(card, /width: 440px/);
+  assert.match(card, /border-radius: 16px/);
+  assert.match(card, /gap: 16px/);
+  assert.match(rule(`${P}__header-ico`), /width: 24px; height: 24px/);
+  assert.match(rule(`${P}__header-title`), /font-size: 18px;.*line-height: 24px/);
+  assert.match(rule(`${P}__header-close`), /width: 28px; height: 28px; padding: 7px/);
+});
+
+test("every item is downsized", () => {
+  assert.match(rule(`${P}__folder-icon-box`), /width: 32px; height: 32px/);
+  assert.match(rule(`${P}__folder-icon`), /width: 18px; height: 18px/);
+  assert.match(rule(`${P}__folder-name`), /font-size: 14px;.*line-height: 20px/);
+  assert.match(rule(`${P}__folder-meta-text`), /font-size: 12px;.*line-height: 16px/);
+  assert.match(rule(`${P}__section-label`), /font-size: 14px;.*line-height: 20px/);
+  assert.match(rule(`${P}__format-icon-box`), /width: 28px; height: 28px/);
+  assert.match(rule(`${P}__format-title`), /font-size: 14px;.*line-height: 20px/);
+  assert.match(rule(`${P}__format-subtitle`), /font-size: 12px;.*line-height: 16px/);
+  assert.match(rule(`${P}__scope-row`), /padding: 8px 12px/);
+  assert.match(rule(`${P}__checkbox`), /width: 16px; height: 16px/);
+  assert.match(rule(`${P}__scope-label`), /font-size: 13px;.*line-height: 18px/);
+  assert.match(rule(`${P}__date-switch`), /width: 34px; height: 18px/);
+  assert.match(rule(`${P}__date-input-wrap`), /padding: 6px 8px/);
+  assert.match(rule(`${P}__date-input-wrap ${P}__date-input`), /font-size: 13px;.*line-height: 18px/);
+  assert.match(rule(`${P}__footer-hint`), /font-size: 12px;.*line-height: 16px/);
+  assert.match(rule(`${P}__download-btn`), /padding: 10px 20px/);
+  assert.match(rule(`${P}__download-btn-label`), /font-size: 14px;.*line-height: 20px/);
+});
+
+// flatpickr picker inside the wrap (widget/datepicker): its field sits flush in
+// the wrap — the datepicker skin's own boxed input (.datepicker input: border,
+// 36px, padding) is overridden — and no native date-picker CSS is left.
+test("date fields are flatpickr pickers styled flush inside the wrap", () => {
+  const input = rule(`${P}__date-input-wrap ${P}__date-input`);
+  assert.match(input, /border: none/);
+  assert.match(input, /height: auto/);
+  assert.match(input, /padding: 0/);
+  assert.match(input, /background: transparent/);
+  assert.match(rule(`${P}__date-picker`), /flex: 1; min-width: 0/);
+  assert.doesNotMatch(css, /calendar-picker-indicator/);
+});
+
+// editbox_checkmark is a filled glyph: painted white through fill, sized to
+// the 16px box (the old chat-tick rule painted a stroke).
+test("checkbox tick is the white filled checkmark", () => {
+  const ico = rule(`${P}__checkbox-ico`);
+  assert.match(ico, /width: 10px; height: 10px/);
+  assert.match(ico, /color: #ffffff/);
+  assert.match(rule(`${P}__checkbox-ico svg`), /display: block; width: 100%; height: 100%; fill: currentColor/);
+  assert.doesNotMatch(ico, /stroke/);
+});
+
+// Date row loading state (until date-row-ready.js stamps data-ready="1"):
+// each field shows a spinner in place of its not-yet-mounted picker and
+// takes no clicks. Gated on the positive stamp, so it fails closed.
+test("date row shows a spinner per field until the pickers are ready", () => {
+  assert.match(css, /@keyframes _chat-export-spin/);
+  const wrap = rule(`${P}__date-row:not([data-ready="1"]) ${P}__date-input-wrap`);
+  assert.match(wrap, /pointer-events: none/);
+  assert.match(rule(`${P}__date-row:not([data-ready="1"]) ${P}__date-picker`), /visibility: hidden/);
+  const spin = rule(`${P}__date-row:not([data-ready="1"]) ${P}__date-input-wrap::after`);
+  assert.match(spin, /animation: _chat-export-spin 0\.7s linear infinite/);
+  assert.match(spin, /border-top-color: var\(--primary-purple-40\)/);
+});
+
+test("format card is a row; title and subtitle stay one line each", () => {
+  assert.match(rule(`${P}__format-card`), /align-items: center/);
+  assert.match(rule(`${P}__format-card`), /gap: 10px/);
+  const text = rule(`${P}__format-text`);
+  assert.match(text, /flex: 1 1 0/);
+  assert.match(text, /min-width: 0/);
+  for (const el of ["title", "subtitle"]) {
+    const r = rule(`${P}__format-${el}`);
+    assert.match(r, /white-space: nowrap/, el);
+    assert.match(r, /text-overflow: ellipsis/, el);
+  }
+});
+
+// Workspace art in the folder icon box, tinted like the desk sidebar
+// (workspace-item skin) — with hex fallbacks, as the overlay may not resolve
+// every theme variable.
+test("folder icon box tints the workspace art per type", () => {
+  const box = `${P}__folder-icon-box`;
+  assert.match(rule(`${box} .folder-shape`), /width: 22px; height: 18px/);
+  assert.match(rule(`${box} .folder-shape.private`), /fill: var\(--area-private, #eb6159\)/);
+  assert.match(rule(`${box} .folder-shape.share, ${box} .folder-shape.dmz`), /fill: var\(--area-share, #ffa8dc\)/);
+  assert.match(rule(`${box} .folder-shape.personal`), /fill: var\(--area-personal, #433cc5\)/);
+  assert.match(rule(`${box} .folder-shape.public`), /fill: var\(--area-public, #44b8ff\)/);
+  const badge = rule(`${box} .badge`);
+  assert.match(badge, /position: absolute/);
+  assert.match(badge, /width: 14px !important; height: 14px !important/);
+});

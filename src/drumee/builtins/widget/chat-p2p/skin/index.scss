@@ -1,4 +1,17 @@
 @use "mixins/drumee";
+@use "builtins/window/folder/skin/topic-surfaces";
+@use "builtins/window/folder/skin/chat-bubbles";
+
+// Chat details column (the ⋮ panel), shared by its open and closing states.
+@mixin chat-details-column {
+  display: flex !important;
+  width: clamp(320px, 28vw, 400px);
+  flex-shrink: 0;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  // The card is widget_chat_details' own root; the slot draws nothing.
+}
 
 .chat-p2p {
   // FULL-CANVAS screen, per Figma 43:32209: the Inbox fills the whole centre
@@ -15,13 +28,12 @@
     position: relative;
     width: 100%;
     height: 100%;
-    background-color: var(--normal-bg);
     overflow: hidden;
-    // The section outline the frame draws around the whole inbox panel
-    // (stroke #000 @5%, r=8) — the same treatment the workspace and chat
-    // cards carry, which this was missing entirely.
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: 8px;
+    // No outline of its own: the sidebar, the chat area and Chat details are
+    // each a card (stroke #000 @5%, r=8 — the workspace cards' treatment) on
+    // the canvas, with a gutter between them (&__main).
+    border: none;
+    background-color: transparent;
     box-sizing: border-box;
 
     // data-anim is still the DESK'S show/hide switch for this slot
@@ -34,9 +46,11 @@
   }
 
   &__main {
-    background-color: inherit;
+    // White ground under the cards (and in their gutters).
+    background-color: var(--normal-bg-elevated, #fff);
     height: 100%;
     width: 100%;
+    gap: 8px;
   }
 
   // ── Left sidebar ────────────────────────────────────────────────
@@ -45,9 +59,10 @@
   // and carries the #F2F2F7 ground (43:32209).
   &__sidebar {
     background-color: var(--normal-bg-elevated, #fff);
-    // 43:32209 strokes both panes at 5% black; the list column's right edge is
-    // the seam between them.
-    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    // A card (43:32209 strokes the panes at 5% black), apart from the chat.
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    box-sizing: border-box;
     flex-shrink: 0;
     height: 100%;
     overflow: hidden;
@@ -700,11 +715,97 @@
 
   &__chat-area {
     background-color: var(--normal-bg);
-    border-left: 1px solid var(--border-muted);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    box-sizing: border-box;
     flex: 1;
     height: 100%;
     min-width: 0;
     overflow: hidden;
+  }
+
+  // A little room between the column's left edge and the conversation.
+  &__chat-area .widget-chat__body {
+    padding-left: 6px;
+  }
+
+  // Workspace chat: the folder's topic strip + File threads bar above the
+  // conversation (../workspace-topics feeds them and stamps data-topics).
+  &__chat-area {
+    @include topic-surfaces.parts;
+  }
+
+  &__chat-area:not([data-topics="1"]) &__topic-row {
+    display: none;
+  }
+
+  // Strip and File threads bar on one row, half each: the carousel (its
+  // "+ Topic" at its end) on the left, the bar — slimmed to the chips'
+  // height — on the right.
+  &__chat-area &__topic-row {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+    min-width: 0;
+  }
+
+  &__chat-area &__topic-row .window__topic-strip {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  &__chat-area &__topic-row .window__ft-bar {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 12px 6px 0;
+  }
+
+  &__chat-area &__topic-row .window__ft-bar-card {
+    height: 30px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    gap: 8px;
+    border-radius: 8px;
+  }
+
+  &__chat-area &__topic-row .window__ft-bar-badge {
+    width: 20px;
+    height: 20px;
+    padding: 2px;
+  }
+
+  // The dropdown spans the bar.
+  &__chat-area &__topic-row .window__ft-list {
+    left: 0;
+    right: 12px;
+  }
+
+  // ── Chat details (widget_chat_details, ../chat-details-host) ─────
+  // A side column after the chat area, shown only while the header's ⋮
+  // has it open (data-details on __ui). The widget brings its own skin.
+  &__chat-details {
+    display: none !important;
+  }
+
+  // Open: slides in from the right. Closing (../chat-details-host close):
+  // stays laid out, click-through, while it slides back out; the host empties
+  // the slot after it.
+  &__ui[data-details="open"] &__chat-details {
+    @include chat-details-column;
+    animation: chat-p2p-details-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  &__ui[data-details="closing"] &__chat-details {
+    @include chat-details-column;
+    animation: chat-p2p-details-out 0.18s ease-in both;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__chat-details {
+      animation: none !important;
+    }
   }
 
   // ── Chat header ──────────────────────────────────────────────────
@@ -1157,12 +1258,10 @@
     }
 
     &__sidebar {
-      border-right: none;
       width: 100%;
     }
 
     &__chat-area {
-      border-left: none;
       width: 100%;
     }
 
@@ -1193,6 +1292,39 @@
     &__ui[data-mview="chat"] &__sidebar {
       display: none;
     }
+
+    // Chat details takes the whole pane; its close returns to the chat.
+    &__ui[data-mview="details"] &__chat-area,
+    &__ui[data-mview="details"] &__sidebar {
+      display: none;
+    }
+
+    &__ui[data-details="open"] &__chat-details,
+    &__ui[data-details="closing"] &__chat-details {
+      width: 100%;
+    }
+  }
+}
+
+@keyframes chat-p2p-details-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes chat-p2p-details-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(24px);
   }
 }
 
@@ -1244,3 +1376,13 @@ html[data-theme="dark"] .chat-p2p {
     transform: none;
   }
 }
+
+// Workspace chat: a workspace conversation's bubbles are the folder team
+// chat's — the own bubble a light tint of the workspace's area colour, the
+// others' an elevated card. ../workspace-topics stamps data-area on the chat
+// area for a workspace only; a Direct conversation keeps the Inbox's bubbles.
+// :where() keeps the scope's weight at one class, as the folder's.
+@include chat-bubbles.bubbles(
+  $panel: ".chat-p2p__chat-area:where([data-area])",
+  $scope: ".chat-p2p__chat-area:where([data-area])"
+);

@@ -480,6 +480,12 @@ module.exports = {
   widget_chat_export: function () {
     return import("./builtins/widget/chat-export");
   },
+  widget_topic_create: function () {
+    return import("./builtins/widget/topic-create");
+  },
+  widget_chat_details: function () {
+    return import("./builtins/widget/chat-details");
+  },
   widget_meeting: function () {
     return import("./builtins/widget/meeting");
   },

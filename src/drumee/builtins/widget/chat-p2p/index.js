@@ -1,3 +1,5 @@
+const ChatDetailsHost = require("./chat-details-host");
+const WorkspaceTopics = require("./workspace-topics");
 const { supportContactId, isSupportEntity } = require("libs/support");
 // Preview text for a row's last message — shared with chat_contact_item's
 // skeleton so the line reads the same on load and on a live push.
@@ -138,6 +140,7 @@ class __chat_p2p extends LetcBox {
     document.removeEventListener("keydown", this._onLightboxKey, true);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off(_e.peerData, this._onPeerData);
+    WorkspaceTopics.detach(this);
   }
 
   _onPeerData(data) {
@@ -461,6 +464,8 @@ class __chat_p2p extends LetcBox {
    * receive their messages) but hold their read-acks — see widget_chat park().
    */
   _showPane(scope) {
+    // The panel described the conversation being parked.
+    ChatDetailsHost.onConversationChange(this);
     Object.keys(this._panes).forEach((k) => {
       const pane = this._panes[k];
       if (!pane || !pane.widget) return;
@@ -484,6 +489,8 @@ class __chat_p2p extends LetcBox {
       header.clear();
       header.feed(require("./skeleton/chat-header")(this, pane ? pane.contact : null));
     });
+    // Workspace chat's topic strip + File threads bar follow the pane on screen.
+    WorkspaceTopics.sync(this);
   }
 
   _isPanePainted(pane) {
@@ -697,6 +704,7 @@ class __chat_p2p extends LetcBox {
    * is no longer looking at.
    */
   _clearConversation() {
+    ChatDetailsHost.onConversationChange(this);
     this.activePeer = null;
     this.activePeerType = null;
     this.chatWidget = null;
@@ -1268,6 +1276,8 @@ class __chat_p2p extends LetcBox {
    */
   async openChat(contact) {
     if (!contact || !contact.mget) return;
+    // The panel described the previous conversation.
+    ChatDetailsHost.onConversationChange(this);
 
     if (_.isFunction(contact.resetNotification)) {
       contact.resetNotification();
@@ -1723,6 +1733,14 @@ class __chat_p2p extends LetcBox {
       // menu.
       no_workspace_attach: 1,
     };
+    // A workspace conversation is that workspace's team chat, scoped like the
+    // folder window's (window/skeleton/toolkit chatPanel): posts land in the
+    // root folder (nid) and the list opens on # General — topics are picked
+    // from the strip above it (./workspace-topics).
+    if (type === _a.share) {
+      widget_chat.scope = "workspace";
+      widget_chat.scoped_topic = "general";
+    }
     // The same media.home widget_chat would otherwise refetch as it mounts —
     // for the SAME hub: its hubId is Visitor.id for a private room (what the
     // default branch fetched) and hub_id for a share room. A copy, since the
@@ -1782,6 +1800,7 @@ class __chat_p2p extends LetcBox {
     } else if (widget && _.isFunction(widget.park)) {
       widget.park();
     }
+    if (scope === this._scopeKey()) WorkspaceTopics.sync(this);
   }
 
   /**
@@ -1876,6 +1895,28 @@ class __chat_p2p extends LetcBox {
     tryOpen();
   }
 
+  // widget_chat_details host contract (./chat-details-host)
+  // widget_topic_create host contract (./workspace-topics)
+  topicCreate(args) {
+    return WorkspaceTopics.createTopic(this, args);
+  }
+
+  topicDialogClose() {
+    return WorkspaceTopics.closeDialog(this);
+  }
+
+  chatDetailsAction(name, payload) {
+    return ChatDetailsHost.hostAction(this, name, payload);
+  }
+
+  chatDetailsThreads() {
+    return ChatDetailsHost.threads(this);
+  }
+
+  chatDetailsMeetingState() {
+    return ChatDetailsHost.meetingState(this);
+  }
+
   /**
    * @param {View} trigger
    * @param {Object} args
@@ -1887,6 +1928,47 @@ class __chat_p2p extends LetcBox {
     switch (service) {
       case "load-conversation":
         return this.openChat(trigger);
+
+      // ── Chat details (widget_chat_details, ./chat-details-host) ──
+      case "toggle-chat-details":
+        return ChatDetailsHost.toggle(this);
+
+      // The ✕ of the loading card shown until widget_chat_details is ready
+      // (the widget itself routes its ✕ through chatDetailsAction).
+      case "close-chat-details":
+        return ChatDetailsHost.close(this);
+
+      // ── Workspace chat topic strip + File threads bar (./workspace-topics) ──
+      case "thread-menu-general":
+        return WorkspaceTopics.scopeTopic(this, "general");
+
+      case "topic-menu-topic": {
+        const topicId = trigger.mget && trigger.mget("topic_id");
+        return topicId ? WorkspaceTopics.scopeTopic(this, topicId) : undefined;
+      }
+
+      case "topic-strip-prev":
+        return WorkspaceTopics.stripPage(this, -1);
+
+      case "topic-strip-next":
+        return WorkspaceTopics.stripPage(this, +1);
+
+      case "topic-new":
+        return WorkspaceTopics.openDialog(this);
+
+      case "ft-bar-toggle":
+        return WorkspaceTopics.toggleBar(this);
+
+      case "thread-menu-file":
+        return WorkspaceTopics.pickFile(
+          this,
+          trigger.mget && trigger.mget("file_nid"),
+          (trigger.mget && trigger.mget("filename")) || "",
+        );
+
+      case "close-export":
+        // The Chat details export dialog closed itself in the overlay.
+        return this.onUiEvent(trigger, { service: "close-overlay" });
 
       case "video-call":
         return this._startCall(true);

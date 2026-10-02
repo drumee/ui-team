@@ -1,4 +1,6 @@
 const { dialog, tooltips, tabBar, splitBody } = require("../../skeleton/toolkit");
+const { slot: chatExportSlot } = require("../chat-export-overlay");
+const { slot: topicDialogSlot } = require("../topics");
 
 
 /**
@@ -26,7 +28,9 @@ const { dialog, tooltips, tabBar, splitBody } = require("../../skeleton/toolkit"
 function grid(ui) {
   const headless = !!ui.mget(_a.headless);
 
-  const body = [tooltips(ui), splitBody(ui), dialog(ui)];
+  // chatExportSlot: the Export chat overlay's home, built with the window so
+  // opening it never mutates the window's collection (../chat-export-overlay).
+  const body = [tooltips(ui), splitBody(ui), dialog(ui), chatExportSlot(ui), topicDialogSlot(ui)];
 
   if (headless) {
     return Skeletons.Box.Y({
@@ -64,6 +68,8 @@ function grid(ui) {
       tabBar(ui, { meeting: !ui.mget(_a.token) }),
       splitBody(ui),
       dialog(ui),
+      chatExportSlot(ui),
+      topicDialogSlot(ui),
     ],
   });
 }

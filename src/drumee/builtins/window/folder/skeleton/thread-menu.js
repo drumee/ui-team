@@ -3,8 +3,9 @@
  * Opened by the header 3-dot button; populated live by folder._toggleThreadMenu
  * from channel.file_thread_list_by_folder.
  *
- *   This Folder
- *     # General                         → service "thread-menu-general" (folder chat)
+ *   Topics                          [+] → service "topic-new" (New Topic dialog)
+ *     # General                         → service "thread-menu-general" (no topic; default)
+ *     😀 <topic>  [unread?]             → service "topic-menu-topic" (that topic)
  *   File Threads
  *     📎 <filename>  [unread?]           → service "thread-menu-file" (file chat)
  *   ──────────────
@@ -22,7 +23,14 @@
  *                 Download to the bottom. Rows, badges and is-active are shared.
  *
  * @param {Object} ui folder window
- * @param {{ items?: Array, scopedNid?: string, variant?: "rail" }} opt
+ * Topics (Figma 867:185782 / 869:187685): `topics` are channel.topic_list
+ * rows; `topicId` is the chat's topic scope ("general" default, or a topic
+ * id; a legacy "all" reads as General). A file scope (scopedNid) leaves no Topics row active. The "+"
+ * shows only with `canCreateTopic` (chat access).
+ *
+ * @param {Object} ui folder window
+ * @param {{ items?: Array, scopedNid?: string, variant?: "rail",
+ *           topics?: Array, topicId?: string, canCreateTopic?: any }} opt
  */
 module.exports = function threadMenu(ui, opt = {}) {
   const pfx = `${ui.fig.group}__thread-menu`;
@@ -41,10 +49,18 @@ module.exports = function threadMenu(ui, opt = {}) {
 
   const divider = () => Skeletons.Note({ className: `${pfx}__divider` });
 
-  // This Folder → # General (folder-wide chat). Active when nothing file-scoped.
+  const topics = Array.isArray(opt.topics) ? opt.topics : [];
+  const topicId = opt.topicId && opt.topicId !== "all" ? `${opt.topicId}` : "general";
+  // Nothing in Topics is active while a file thread is the scope.
+  const topicActive = (id) => (scopedNid === "" && topicId === id ? " is-active" : "");
+
+  // Topics → # General (the folder chat without topic messages).
   const generalRow = Skeletons.Box.X({
-    className: `${pfx}__row${scopedNid === "" ? " is-active" : ""}`,
+    className: `${pfx}__row${topicActive("general")}`,
     service: "thread-menu-general",
+    // Marks the Topics row (the file-thread header's back button fires the
+    // same service but must keep the current topic scope).
+    topic_scope: "general",
     uiHandler: [ui],
     kidsOpt: { active: 0 },
     kids: [
@@ -77,17 +93,53 @@ module.exports = function threadMenu(ui, opt = {}) {
     });
   });
 
+  // Topics → one row per topic: emoji + name + real unread.
+  const topicRows = topics.map((tp) => {
+    const id = `${tp.id || ""}`;
+    return Skeletons.Box.X({
+      className: `${pfx}__row${topicActive(id)}`,
+      service: "topic-menu-topic",
+      topic_id: id,
+      topic_name: tp.name || "",
+      topic_emoji: tp.emoji || "",
+      uiHandler: [ui],
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Note({ className: `${pfx}__row-emoji`, content: tp.emoji || "" }),
+        Skeletons.Note({ className: `${pfx}__row-name`, content: tp.name || "" }),
+        badge(tp.unread),
+      ].filter(Boolean),
+    });
+  });
+
+  const sectionHead = Skeletons.Box.X({
+    className: `${pfx}__section-head`,
+    kids: [
+      sectionLabel(LOCALE.TOPICS || "Topics"),
+      opt.canCreateTopic
+        ? Skeletons.Button.Svg({
+            className: `${pfx}__add`,
+            ico: "ph-plus",
+            service: "topic-new",
+            uiHandler: [ui],
+          })
+        : null,
+    ].filter(Boolean),
+  });
+
+  // Rows sit in their own __rows box so, in the rail, the heading stays put
+  // and the rows scroll (skin: the two list sections split the height).
   const kids = [
     Skeletons.Box.Y({
-      className: `${pfx}__section`,
-      kids: [sectionLabel(LOCALE.THIS_FOLDER || "This Folder"), generalRow],
+      className: `${pfx}__section ${pfx}__section--topics`,
+      kids: [sectionHead, Skeletons.Box.Y({ className: `${pfx}__rows`, kids: [generalRow, ...topicRows] })],
     }),
   ];
 
   if (fileRows.length) {
     kids.push(
       Skeletons.Box.Y({
-        className: `${pfx}__section`,
+        className: `${pfx}__section ${pfx}__section--threads`,
         kids: [
           divider(),
           sectionLabel(LOCALE.FILE_THREADS || "File Threads"),

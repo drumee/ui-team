@@ -315,9 +315,42 @@ module.exports = function (ui) {
     // ]
   });
 
+  // Workspace chat: the folder's topic strip and File threads bar
+  // (window/folder/skeleton/topic-strip + file-threads-bar, same window__
+  // classes and styles), fed by ../workspace-topics. Hidden by the skin
+  // unless the area is stamped data-topics="1" (a workspace conversation).
+  const topicStrip = Skeletons.Box.X({
+    className: "window__topic-strip",
+    sys_pn: "topic-strip",
+    partHandler: ui,
+  });
+  const ftBar = Skeletons.Box.Y({
+    className: "window__ft-bar",
+    sys_pn: "ft-bar",
+    partHandler: ui,
+    dataset: { open: "0" },
+  });
+  // Both on one row under the header: the strip takes the room, the bar
+  // its own width at the end.
+  const topicRow = Skeletons.Box.X({
+    className: `${fig}__topic-row`,
+    kids: [topicStrip, ftBar],
+  });
+
   const chatArea = Skeletons.Box.Y({
     className: `${fig}__chat-area`,
-    kids: [chatHeader, chatPanel],
+    sys_pn: "chat-area",
+    partHandler: ui,
+    dataset: { topics: "0" },
+    kids: [chatHeader, topicRow, chatPanel],
+  });
+
+  // New Topic dialog (widget_topic_create): always-present, empty-until-open
+  // backdrop, as the folder window's (window/folder/topics.js slot).
+  const topicDialog = Skeletons.Wrapper.Y({
+    className: "widget-topic-create__viewport-backdrop",
+    name: "topic-dialog",
+    partHandler: ui,
   });
 
   // Forward overlay — mirrors window_bigchat overlay structure so that
@@ -340,9 +373,17 @@ module.exports = function (ui) {
     name: "lightbox",
   });
 
+  // Chat details (widget_chat_details) for the open conversation, fed by
+  // ./chat-details-host when the header's ⋮ is pressed. Hidden until then.
+  const chatDetails = Skeletons.Box.Y({
+    className: `${fig}__chat-details`,
+    sys_pn: "chat-details",
+    partHandler: ui,
+  });
+
   return Skeletons.Box.X({
     className: `${fig}__main`,
     debug: __filename,
-    kids: [sidebar, chatArea, overlayWrapper, lightbox],
+    kids: [sidebar, chatArea, chatDetails, overlayWrapper, lightbox, topicDialog],
   });
 };

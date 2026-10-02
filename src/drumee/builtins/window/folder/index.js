@@ -15,6 +15,10 @@ const {
   showSeatLimitReached,
 } = require("libs/billing");
 const readCache = require("libs/read-cache");
+const CDHost = require("./chat-details-host");
+const ChatExportOverlay = require("./chat-export-overlay");
+const Topics = require("./topics");
+const FTBar = require("./file-threads-bar");
 const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
 const {
   SECURE_SHARE_TAB,
@@ -754,6 +758,8 @@ class __window_folder extends mfsInteract {
 
 
   onBeforeDestroy(opt) {
+    // The File threads dropdown's document listeners go with the window.
+    FTBar.unbind(this);
     clearGrouped(this);
     RADIO_BROADCAST.off("workspace-unread", this._onWorkspaceUnread);
     if (this._folderGridSortTimer) {
@@ -1450,6 +1456,9 @@ class __window_folder extends mfsInteract {
   }
 
   onPartReady(child, pn) {
+    // Files-tab chat topics (Figma 869:189953): paint once the parts exist.
+    if (pn === "topic-strip") Topics.refreshStrip(this);
+    if (pn === "ft-bar") FTBar.paint(this);
     // Neither of these returns: window/core's onPartReady tail wires
     // `child.onChildBubble` on every part it sees, and the control these two
     // replace (the old zoom trigger) went through it. Fall through so the
@@ -1468,6 +1477,11 @@ class __window_folder extends mfsInteract {
       // is repainted from the last counts each time it mounts.
       this.__chatUnread = child;
       this._paintChatUnread();
+    }
+    if (pn === "chat-details-widget") {
+      // widget_chat_details fed by ./chat-details-host openDetails.
+      this.__cdWidget = child;
+      return;
     }
     if (pn === "folder-view") {
       this.__folderView = child;
@@ -2409,16 +2423,48 @@ class __window_folder extends mfsInteract {
       case "close-chat-search":
         return this._closeChatSearch();
 
+      // ── Chat details panel (Figma 775:131699): widget_chat_details in the
+      // "chat-details" slot; its own clicks go to the widget, which calls
+      // back through chatDetailsAction (./chat-details-host).
+      case "open-chat-details":
+        return this._openChatDetails();
+
       // ── Team-chat header thread-switch dropdown (Figma 2216-170337) ──
       case "open-thread-menu":
         return this._toggleThreadMenu();
 
       case "thread-menu-general":
         // "# General" → leave the file thread for the team chat, IN PLACE
-        // (no tab switch).
+        // (no tab switch). The Topics row also scopes the chat to General
+        // (no topic messages); the file-thread header's back keeps the scope.
         this._closeThreadMenu();
         this.scopeChatToFile(null);
+        if (cmd && cmd.mget && cmd.mget("topic_scope") === "general") {
+          Topics.scopeChatToTopic(this, "general");
+        }
         return this.scopeChatToFolder(this.mget(_a.nid));
+
+      // ── Folder chat topics (./topics, Figma 867:185782) ──
+      case "topic-new":
+        return Topics.openTopicDialog(this);
+
+      // Files-tab topic carousel: back / next page.
+      case "topic-strip-prev":
+        return Topics.stripPage(this, -1);
+
+      case "topic-strip-next":
+        return Topics.stripPage(this, +1);
+
+      // Files-tab File threads bar.
+      case "ft-bar-toggle":
+        return FTBar.toggle(this);
+
+      case "topic-menu-topic": {
+        this._closeThreadMenu();
+        const topicId = cmd && cmd.mget && cmd.mget("topic_id");
+        if (!topicId) return;
+        return Topics.scopeChatToTopic(this, topicId);
+      }
 
       case "thread-menu-file": {
         // A file row → scope the (already-visible) chat to that file's thread
@@ -2428,6 +2474,7 @@ class __window_folder extends mfsInteract {
         // The skeleton always sets `filename` on the row model.
         const fileLabel = (cmd && cmd.mget && cmd.mget("filename")) || "";
         this._closeThreadMenu();
+        FTBar.close(this);
         return this.scopeChatToFile(fileNid, fileLabel);
       }
 
@@ -2799,8 +2846,8 @@ class __window_folder extends mfsInteract {
    * Root cause: wrapper-dialog is `position:absolute; top:132px` INSIDE the
    * window container (window.scss ~line 183), so a 530px-tall card is clipped.
    *
-   * Fix: use a dedicated `wrapper-chat-export` Wrapper appended via `this.append()`
-   * (so Marionette owns the lifecycle), with CSS `position:fixed; inset:0`
+   * Fix: use a dedicated `wrapper-chat-export` Wrapper — a slot the window
+   * skeleton builds (./chat-export-overlay), with CSS `position:fixed; inset:0`
    * (class `widget-chat-export__viewport-backdrop`) applied via `data-chat-export`.
    * A backdrop overlay closes on click-outside. Does NOT touch `wrapper-dialog` so
    * create-folder / rename-folder dialogs are completely unaffected.
@@ -2817,34 +2864,21 @@ class __window_folder extends mfsInteract {
       this.mget(_a.filename) || this.model.get("hub_name") || this.mget(_a.name);
     const folderColor = this._chatExportFolderColor(folderName);
 
-    // Append a dedicated Wrapper to this window so Marionette owns its lifecycle.
-    // The wrapper's __bhv_wrapper behavior auto-sets data-state="open" when it
-    // receives children, and "closed" when empty. We feed immediately after
-    // ensurePart resolves, so it will open automatically.
-    this.append(
-      Skeletons.Wrapper.Y({
-        className: "widget-chat-export__viewport-backdrop",
-        name: "chat-export",
-      }),
-    );
-
-    this.ensurePart("wrapper-chat-export").then((wrapper) => {
-      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
-      this._chatExportWrapper = wrapper;
-
-      this._wireChatExportBackdrop(wrapper);
-
-      // Feed the export widget into the centering container.
-      wrapper.feed({
-        kind: "widget_chat_export",
-        hub_id: this.mget(_a.hub_id),
-        nid: this.mget(_a.nid),
-        name: folderName,
-        // Folder access level (private/share/public/dmz) → drives the icon
-        // colour in the modal, matching the hub icon shown outside.
-        area: this.mget(_a.area),
-        uiHandler: [this],
-      });
+    // Into the window's own "chat-export" slot (./chat-export-overlay) —
+    // never this.append(): a collection update on the window re-attaches
+    // every child and reloads the file grid, the chat and the thread rail.
+    // The wrapper's behavior sets data-state="open" once it has a child.
+    // Returns once the dialog's lazy chunk is in (Chat details' Download tile
+    // spins until then); other callers ignore the value.
+    return ChatExportOverlay.mount(this, {
+      kind: "widget_chat_export",
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      name: folderName,
+      // Folder access level (private/share/public/dmz) → drives the icon
+      // colour in the modal, matching the hub icon shown outside.
+      area: this.mget(_a.area),
+      uiHandler: [this],
     });
   }
 
@@ -2871,31 +2905,18 @@ class __window_folder extends mfsInteract {
       (cmd && _.isFunction(cmd.fullname) && cmd.fullname()) ||
       "";
 
-    this.append(
-      Skeletons.Wrapper.Y({
-        className: "widget-chat-export__viewport-backdrop",
-        name: "chat-export",
-      }),
-    );
-
-    this.ensurePart("wrapper-chat-export").then((wrapper) => {
-      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
-      this._chatExportWrapper = wrapper;
-
-      this._wireChatExportBackdrop(wrapper);
-
-      wrapper.feed({
-        kind: "widget_chat_export",
-        hub_id: this.mget(_a.hub_id),
-        nid: this.mget(_a.nid),
-        // File-scope mode: render the file card + hide the scope picker; the
-        // widget matches file_nid → file_thread_id against export_scope.
-        file_scope: 1,
-        file_nid: `${fileNid}`,
-        filename,
-        area: this.mget(_a.area),
-        uiHandler: [this],
-      });
+    // Same slot as the folder-wide export (./chat-export-overlay).
+    ChatExportOverlay.mount(this, {
+      kind: "widget_chat_export",
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      // File-scope mode: render the file card + hide the scope picker; the
+      // widget matches file_nid → file_thread_id against export_scope.
+      file_scope: 1,
+      file_nid: `${fileNid}`,
+      filename,
+      area: this.mget(_a.area),
+      uiHandler: [this],
     });
   }
 
@@ -2939,15 +2960,10 @@ class __window_folder extends mfsInteract {
   /**
    * Tears down the viewport-level chat-export overlay wrapper + its child widget.
    */
+  // Empty the slot — never goodbye()/suppress() it: that takes the wrapper
+  // out of the window's collection and reloads the window's panels.
   _closeChatExportOverlay() {
-    if (this._chatExportWrapper) {
-      if (_.isFunction(this._chatExportWrapper.goodbye)) {
-        this._chatExportWrapper.goodbye();
-      } else if (_.isFunction(this._chatExportWrapper.suppress)) {
-        this._chatExportWrapper.suppress();
-      }
-      this._chatExportWrapper = null;
-    }
+    ChatExportOverlay.unmount(this);
   }
 
   openCreateFolderDialog() {
@@ -4229,6 +4245,16 @@ class __window_folder extends mfsInteract {
       (this.el &&
         this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`));
     if (el) el.dataset.loading = on ? "1" : "0";
+    // The Chat details "Meeting" tile launches the same call: spin it too.
+    const w = this.__cdWidget;
+    if (w && !(w.isDestroyed && w.isDestroyed())) w.setMeetingLoading(on);
+  }
+
+  // Refresh the Chat details "Meeting" tile in place (label + locked state);
+  // the widget reads the state back through chatDetailsMeetingState.
+  _applyMeetingTileState() {
+    const w = this.__cdWidget;
+    if (w && !(w.isDestroyed && w.isDestroyed())) w.refreshMeetingState();
   }
 
   // Is a standalone meeting window currently live? Meetings are a global Wm
@@ -4255,6 +4281,9 @@ class __window_folder extends mfsInteract {
   // same flags so an initial render is already correct. Only the "Joined" state
   // locks + paints the button ([data-joined="1"]); "Join Meeting" is clickable.
   _applyStartBtnState() {
+    // Before the early return: the tile is on screen even when the Meet tab
+    // (and so the schedule's button) was never opened.
+    this._applyMeetingTileState();
     const el =
       this.el &&
       this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`);
@@ -4522,7 +4551,11 @@ class __window_folder extends mfsInteract {
     // opts.replyData (optional): a captured reply quote to restore in the thread
     // composer (reply-in-thread from a file message).
     if (this.activeTab === _a.chat && !this._isCompactChat()) {
-      if (fileNid) return this._openFileThreadPanel(fileNid, fileLabel, opts.replyData);
+      if (fileNid) {
+        // The thread panel takes the third column — Chat details give way.
+        CDHost.onFileThreadOpen(this);
+        return this._openFileThreadPanel(fileNid, fileLabel, opts.replyData);
+      }
       return this._closeFileThreadPanel();
     }
     // ── Files-tab in-place scoping ──
@@ -4561,11 +4594,16 @@ class __window_folder extends mfsInteract {
       bar.el.dataset.scope = fileNid ? "file" : general ? "general" : "folder";
       // Stamp the active file so a slow hydrate can't paint into a re-scoped header.
       bar.el.dataset.ftNid = fileNid ? `${fileNid}` : "";
+      // Folder chat topic in the title (./topics headerTitle) on the wide
+      // Chat tab only; the Files tab keeps "Team Chat" — its topic strip
+      // shows the scope (Figma 869:189953).
+      const title = !fileNid && general ? Topics.headerTitle(this) : "";
       bar.feed(
         chatHeaderBar(this, {
           fileNid: fileNid || "",
           label: label || "",
           general: !!general && !fileNid,
+          title,
         }),
       );
       if (fileNid) this._hydrateChatHeaderFile(bar, `${fileNid}`);
@@ -5245,6 +5283,9 @@ class __window_folder extends mfsInteract {
         chat.setScopedFolderNid(this.mget(_a.nid));
     });
     this._updateChatHeader(null, "", true);
+    // The Files-tab bar is hidden on the wide Chat tab.
+    Topics.onChatTabEnter(this);
+    FTBar.close(this);
     this._populateThreadRail();
   }
 
@@ -5253,6 +5294,8 @@ class __window_folder extends mfsInteract {
   _exitChatTabLayout() {
     this._closeFileThreadPanel();
     this._updateChatHeader(null, "", false);
+    // Repaint the Files strip for the current topic scope.
+    Topics.onFilesTabEnter(this);
   }
 
   // Tell the team chat which folder we moved into.
@@ -5310,7 +5353,7 @@ class __window_folder extends mfsInteract {
         if (generation !== this._ftThreadRequestGeneration()) return;
         if (!menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
         menu.feed(
-          require("./skeleton/thread-menu")(this, { items, scopedNid }),
+          require("./skeleton/thread-menu")(this, { items, scopedNid, ...Topics.menuOpts(this) }),
         );
         menu.el.dataset.open = "1";
         this._bindThreadMenuOutside(menu);
@@ -5319,7 +5362,9 @@ class __window_folder extends mfsInteract {
       this.ensurePart("folder-chat").then((chat) => {
         const scopedNid = chat && chat.scopedFileNid ? chat.scopedFileNid : "";
         // Fetch failure → still open with General + Download (no file rows).
-        this._fetchThreadList().then((items) => render(items, scopedNid));
+        Promise.all([this._fetchThreadList(), Topics.fetchTopics(this)]).then(([items]) =>
+          render(items, scopedNid),
+        );
       });
     });
   }
@@ -5395,6 +5440,7 @@ class __window_folder extends mfsInteract {
               items,
               scopedNid,
               variant: "rail",
+              ...Topics.menuOpts(this),
             }),
           );
         };
@@ -5418,13 +5464,15 @@ class __window_folder extends mfsInteract {
             painted = readCache.signature(known);
           }
         }
-        return this._fetchThreadList().then((items) => {
+        const topicsBefore = readCache.signature(Topics.menuOpts(this).topics);
+        return Promise.all([this._fetchThreadList(), Topics.fetchTopics(this)]).then(([items]) => {
           if (this.isDestroyed && this.isDestroyed()) return;
           if (!rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
           // Folder changed mid-fetch → discard this stale response.
           if (`${this.mget(_a.nid)}` !== folderNid) return;
           if (generation !== this._ftThreadRequestGeneration()) return;
-          if (painted !== null && painted === readCache.signature(items)) return;
+          const topicsSame = topicsBefore === readCache.signature(Topics.menuOpts(this).topics);
+          if (painted !== null && painted === readCache.signature(items) && topicsSame) return;
           paint(items);
         });
       });
@@ -5444,6 +5492,7 @@ class __window_folder extends mfsInteract {
         items: this._threadRailItems,
         scopedNid: scopedNid || "",
         variant: "rail",
+        ...Topics.menuOpts(this),
       }),
     );
   }
@@ -5451,11 +5500,46 @@ class __window_folder extends mfsInteract {
   // True when `rail` already shows exactly (items, scopedNid) — the caller can
   // skip its feed. Otherwise records the new signature and answers false.
   _sameThreadRailPaint(rail, items, scopedNid) {
-    const sig = readCache.signature({ items, scopedNid: scopedNid || "" });
+    // Topics (list + scope) are part of what the rail shows.
+    const { topics, topicId, canCreateTopic } = Topics.menuOpts(this);
+    const sig = readCache.signature({ items, scopedNid: scopedNid || "", topics, topicId, canCreateTopic });
     const hasRows = !!(rail.children && rail.children.length);
     if (hasRows && rail._threadRailSig === sig) return true;
     rail._threadRailSig = sig;
     return false;
+  }
+
+  // ── Chat details panel (Figma 775:131699) ─────────────────────────────
+  // The panel is widget_chat_details; this window is its host
+  // (./chat-details-host, tested against a fake window).
+  _openChatDetails() {
+    return CDHost.toggleDetails(this);
+  }
+
+  _closeChatDetails() {
+    return CDHost.closeDetails(this);
+  }
+
+  // widget_topic_create host contract (./topics)
+  topicCreate(args) {
+    return Topics.createTopic(this, args);
+  }
+
+  topicDialogClose() {
+    return Topics.closeTopicDialog(this);
+  }
+
+  // widget_chat_details host contract
+  chatDetailsAction(name, payload) {
+    return CDHost.hostAction(this, name, payload);
+  }
+
+  chatDetailsThreads() {
+    return CDHost.threads(this);
+  }
+
+  chatDetailsMeetingState() {
+    return CDHost.meetingState(this);
   }
 
   _closeThreadMenu() {
@@ -5715,6 +5799,11 @@ class __window_folder extends mfsInteract {
       this._closeFileThreadPanel();
     }
     if (this._scopedFileNid) this.scopeChatToFile(null);
+    // Topics belong to a folder: another folder starts on # General; its topics
+    // and file threads replace the strip's and the bar's.
+    Topics.onFolderChange(this);
+    Topics.refreshStrip(this);
+    FTBar.onFolderChange(this);
     this.scopeChatToFolder(this.mget(_a.nid));
     // The rail lists the *current* folder's threads — refetch on navigation,
     // but only while the Chat tab is showing it (else it repopulates on entry).
@@ -5827,6 +5916,9 @@ class __window_folder extends mfsInteract {
     // after those writes — where it used to be, inside switchView — it forced
     // a synchronous style+layout flush of the window on every rail click.
     this._stashPanelScroll();
+    // Chat details stands in for the Files-view chat column only: any tab
+    // switch closes it, so coming back to Files shows the conversation.
+    this._closeChatDetails();
     const prevTab = this.activeTab;
     this.activeTab = tab;
     // Opening Task, Meet or Files clears that rail pill (panel_activity marks what is
@@ -6740,12 +6832,15 @@ class __window_folder extends mfsInteract {
     // The thread rail and the file-thread side panel are SIBLINGS of the chat
     // panel in the Chat-tab grid (their own columns), not descendants — gating
     // only .window__chat-panel left a downgraded member able to read the file
-    // thread list and, on opening one, its whole conversation. Flag all three.
+    // thread list and, on opening one, its whole conversation. Flag all of
+    // them, Chat details included (member list, media, links).
     this.$el
       .find(
-        ".window__chat-panel, .window__file-thread-panel, .window__thread-rail",
+        ".window__chat-panel, .window__chat-details, .window__file-thread-panel, .window__thread-rail",
       )
       .attr("data-chat_gated", gated);
+    // A live downgrade must not leave the details panel open on screen.
+    if (gated) this._closeChatDetails();
   }
 
   // Gate the merged "+ New" button (upload / create / gdrive-import) on BOTH

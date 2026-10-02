@@ -169,6 +169,8 @@ class __widget_chat extends LetcBox {
         ? `${this.mget("scoped_file_nid")}`
         : "";
       this.scopedFileLabel = this.mget("scoped_file_label") || "";
+      // Folder chat topic scope at mount (the folder window passes "general").
+      this.scopedTopicId = this._initialTopic();
       this.fileThreadId = "";
       this.fileThreadInfoLoaded = false;
       // storage_key override keeps a coexisting second instance's messenger
@@ -527,11 +529,16 @@ class __widget_chat extends LetcBox {
       postData.message_id = data.message_id;
       if (area === _a.ticket) postData.ticket_id = data.ticket_id;
     }
+    // Inside a folder chat topic: the server moves only that topic's cursor,
+    // so the workspace chat is not read — do not announce it (rail pill).
+    const topic = this.scopedTopicId || "all";
+    const inTopic = !isPrivate && topic !== "all" && topic !== "general";
+    if (inTopic) postData.topic_id = topic;
     this._lastReadAt = now;
     this._readDebt = false;
     this.postService(postData);
     this._clearUnreadRows();
-    this._announceChatRead();
+    if (!inTopic) this._announceChatRead();
   }
 
   /**
@@ -2266,7 +2273,68 @@ class __widget_chat extends LetcBox {
     if (this.getScopedNid()) {
       api.nid = this.getScopedNid();
     }
+    // Folder chat topic: "general" = without topic messages, an id = that
+    // topic; "all" (default) = the whole folder chat, as before topics.
+    const topic = this.scopedTopicId || "all";
+    if (topic !== "all") api.topic_id = topic;
+    // A topic belongs to one folder; the workspace team chat reads the whole
+    // hub (no scopedNid), so name the folder the topic lives in — the post
+    // folder — or the server cannot check the topic and answers [].
+    if (topic !== "all" && topic !== "general" && !api.nid && this.getPostNid()) {
+      api.nid = this.getPostNid();
+    }
     return api;
+  }
+
+  /**
+   * Scope the folder chat to a topic: "all" (null), "general", or a topic id
+   * (window/folder/topics.js). Restarts the list; remembers each scope's
+   * scroll position like setScopedFileNid.
+   */
+  setScopedTopic(topicId) {
+    const next = topicId ? `${topicId}` : "all";
+    const prev = this.scopedTopicId || "all";
+    if (prev === next) return;
+    this._topicScroll = this._topicScroll || {};
+    if (this.__list && this.__list.__container) {
+      this._topicScroll[prev] = this.__list.__container.scrollTop;
+    }
+    this.scopedTopicId = next;
+    this.ensurePart(_a.list).then((list) => {
+      if (!list || !_.isFunction(list.restart)) return;
+      list.restart();
+      const targetScroll = this._topicScroll && this._topicScroll[next];
+      if (typeof targetScroll === "number" && _.isFunction(list.once)) {
+        list.once(_e.ready, () => {
+          if (list.__container) list.__container.scrollTop = targetScroll;
+        });
+      }
+    });
+  }
+
+  /** Topic scope at mount: the descriptor's scoped_topic, else "all". */
+  _initialTopic() {
+    return (this.mget && this.mget("scoped_topic")) || "all";
+  }
+
+  /** channel.post payload + the topic, when the scope is a topic id. */
+  _withTopic(api) {
+    const topic = this.scopedTopicId || "all";
+    if (topic !== "all" && topic !== "general") api.topic_id = topic;
+    return api;
+  }
+
+  /** The topic a message belongs to (metadata._topic_id), "" when none. */
+  _messageTopicId(data = {}) {
+    let meta = data.metadata;
+    if (typeof meta === "string") {
+      try {
+        meta = JSON.parse(meta);
+      } catch (e) {
+        meta = {};
+      }
+    }
+    return `${(meta && meta._topic_id) || data._topic_id || ""}`;
   }
 
   // Un-freeze once the user navigates away from the SCOPE_GONE scope (e.g.
@@ -2586,6 +2654,17 @@ class __widget_chat extends LetcBox {
    */
   matchesScopedChannel(data = {}) {
     if (_.isArray(data)) data = data[0] || {};
+    if (!this._matchesScopedChannelBase(data)) return false;
+    // File-thread mode is its own conversation: topics do not apply.
+    if (this.scopedFileNid) return true;
+    const topic = this.scopedTopicId || "all";
+    if (topic === "all") return true;
+    const own = this._messageTopicId(data);
+    return topic === "general" ? !own : own === topic;
+  }
+
+  // The folder / file-thread rule, before topics (matchesScopedChannel).
+  _matchesScopedChannelBase(data = {}) {
     if (this.scopedFileNid) {
       // File-thread mode: a message belongs here only if it targets THIS thread.
       // The folder-visible root card (message_type file.thread) is broadcast on
@@ -2784,6 +2863,8 @@ class __widget_chat extends LetcBox {
         if (this.getPostNid()) {
           api.nid = this.getPostNid();
         }
+        // …and topic_id to a folder chat topic (metadata._topic_id).
+        this._withTopic(api);
         break;
 
       case _a.privateRoom:

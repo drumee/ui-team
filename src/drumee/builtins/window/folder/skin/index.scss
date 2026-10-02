@@ -1,6 +1,9 @@
 @use "mixins/drumee";
+@use "./chat-bubbles";
 @use "./meeting-schedule";
 @use "./meeting-modal";
+@use "./chat-details";
+@use "./files-chat-topics";
 
 // =====================================================================
 // Mobile presentation for the folder window's merged "+ New" control.
@@ -3603,222 +3606,8 @@
     padding: 2px;
   }
 
-  .widget-chatItem__conversation-content {
-    max-width: 320px;
-    padding: 12px;
-    @include drumee.typo(
-      $size: 13px,
-      $line: 1.4,
-      $weight: 400,
-      $color: var(--normal-fg-10)
-    );
-  }
-
-  // ── Own ("me") bubble — light area-tinted fill + pinned dark foreground ──────
-  // Every own bubble is a LIGHT tint of the folder AREA colour (--chat-bubble-*),
-  // fixed in both themes, so its text/links/mentions use theme-INDEPENDENT dark
-  // constants — the theme-aware --normal-fg-* / --white wash out on a fixed light
-  // fill in dark mode. Default fill = private (coral) tint; per-area fills below.
-  .widget-chatItem__conversation-content.me,
-  .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
-    background: var(--chat-bubble-private);
-    border-radius: 16px 0 16px 16px;
-    box-shadow: none;
-    color: var(--primary-purple-100);
-
-    .note-content,
-    .user-mention {
-      color: var(--primary-purple-100);
-    }
-
-    a {
-      color: var(--primary-purple-50);
-    }
-
-    .file-mention {
-      color: var(--primary-purple-100);
-      font-weight: 600;
-      text-decoration: underline;
-      // Underline tracks the (now fixed-dark) name colour via currentColor.
-      text-decoration-color: currentColor;
-    }
-  }
-
-  // Per-area own-bubble fill — light/fresh tint of each AREA colour (background
-  // only; the shared dark foreground above carries every area).
-  .window__chat-panel[data-area="personal"]
-    .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="personal"]
-    .widget-chatItem__conversation.me
-    .widget-chatItem__conversation-content {
-    background: var(--chat-bubble-personal);
-  }
-  .window__chat-panel[data-area="share"]
-    .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="share"]
-    .widget-chatItem__conversation.me
-    .widget-chatItem__conversation-content,
-  .window__chat-panel[data-area="dmz"]
-    .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="dmz"]
-    .widget-chatItem__conversation.me
-    .widget-chatItem__conversation-content {
-    background: var(--chat-bubble-share);
-  }
-  .window__chat-panel[data-area="public"]
-    .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="public"]
-    .widget-chatItem__conversation.me
-    .widget-chatItem__conversation-content {
-    background: var(--chat-bubble-public);
-  }
-
-  .widget-chatItem__conversation-content.other,
-  .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
-    background: var(--normal-bg-elevated);
-    border: 0;
-    border-radius: 0 16px 16px 16px;
-    box-shadow: none;
-    color: var(--normal-fg-10);
-
-    .file-mention,
-    .user-mention,
-    a {
-      color: #d65f59;
-    }
-  }
-
-  .window__chat-panel[data-area="personal"]
-    .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="personal"]
-    .widget-chatItem__conversation.other
-    .widget-chatItem__conversation-content {
-    .file-mention,
-    .user-mention,
-    a {
-      color: var(--area-personal);
-    }
-  }
-  .window__chat-panel[data-area="share"]
-    .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="share"]
-    .widget-chatItem__conversation.other
-    .widget-chatItem__conversation-content,
-  .window__chat-panel[data-area="dmz"]
-    .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="dmz"]
-    .widget-chatItem__conversation.other
-    .widget-chatItem__conversation-content {
-    .file-mention,
-    .user-mention,
-    a {
-      color: var(--area-share);
-    }
-  }
-  .window__chat-panel[data-area="public"]
-    .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="public"]
-    .widget-chatItem__conversation.other
-    .widget-chatItem__conversation-content {
-    .file-mention,
-    .user-mention,
-    a {
-      color: var(--area-public);
-    }
-  }
-
-  // ── Sender (me) bubble foreground ──────────────────────────────────────────
-  // Every own bubble is now a LIGHT area tint (--chat-bubble-*, set above),
-  // fixed in both themes, so ALL of its text / links / attachment card / reply
-  // quote must use theme-INDEPENDENT dark constants to stay legible — the
-  // chat-item / reply / card defaults use theme-aware --normal-fg-* / --white
-  // that turn light in dark mode and wash out on the fixed light fill.
-
-  // Keep the file card (direct child of the bubble) transparent so the bubble
-  // tint shows through instead of the dark --normal-bg-* media-grid panel (the
-  // "black file frame"). Scoped to the direct-child card so the reply-quote
-  // thumbnail tile keeps its own grey fill.
-  .window__chat-panel
-    .widget-chatItem__conversation-content.me
-    > .widget-chatItem__attachment-wrapper {
-    &,
-    .widget-chatItem__attachment-wrapper-list,
-    .smart-container,
-    .list-smart,
-    .list-smart__container,
-    .media-wrapper,
-    .media-wrapper__ui,
-    .media-grid,
-    .media-grid__ui,
-    .media-grid__container,
-    .media-grid__content {
-      background-color: transparent !important;
-    }
-  }
-
-  .window__chat-panel
-    .widget-chatItem__conversation-content.me {
-    color: var(--primary-purple-100);
-
-    // Links + mentions: dark indigo reads on the light bubble.
-    .file-mention,
-    .user-mention,
-    a {
-      color: var(--primary-purple-50);
-    }
-
-    // Attachment card: filename + "<size> · Show in folder".
-    .filename,
-    .media-grid__chatmeta,
-    .media-grid__filesize,
-    .media-grid__meta-sep {
-      color: var(--primary-purple-100) !important;
-    }
-    .media-grid__reveal {
-      color: var(--primary-purple-50) !important;
-    }
-
-    // Reply quote nested in the bubble: dark name + muted-dark preview. The Note
-    // renders its text in a child .note-content, so target that too — its global
-    // colour is theme-aware (light in dark mode) and won't inherit the parent.
-    .widget-chatItem-reply__note.name,
-    .widget-chatItem-reply__note.name .note-content {
-      color: var(--primary-purple-100);
-    }
-    .widget-chatItem-reply__note.conversation .note-content {
-      color: var(--tertiary-grey-80);
-    }
-  }
-
-  // Reply quote on a light "me" bubble (any area) — pin the quote text to
-  // dark constants regardless of whether the quote was moved INTO the bubble or
-  // left as a prepended sibling. Scoping to the quote root (not .conversation-
-  // content) makes this hold in both cases. The reply skin's theme-aware
-  // --normal-fg-* turn white in dark mode and wash out on the fixed light bubble;
-  // covers the new file name/extension lines the meta-row pins above miss.
-  // EVERY folder-window chat (the #General middle column AND the file-thread side
-  // panel) uses the same light "me" bubble, so the dark override must reach the
-  // nested quote in both — otherwise it falls back to the base chat-item
-  // white-on-indigo rule and renders white (see chat-item/skin#589). Scope to the
-  // folder-window root only (this whole file is already nested under .window-folder,
-  // so the bare selector compiles to `.window-folder .widget-chatItem-reply__main.me`):
-  // the panel's own wrapper classes (`__ft-panel-chat`, `__file-thread-panel`) do NOT
-  // end up as ancestors of the rendered quote, so scoping to them never matches —
-  // the folder-window root is the only reliable shared ancestor.
-  .widget-chatItem-reply__main.me {
-    .widget-chatItem-reply__note.name,
-    .widget-chatItem-reply__note.name .note-content,
-    .widget-chatItem-reply__note.filename,
-    .widget-chatItem-reply__note.filename .note-content {
-      color: var(--primary-purple-100) !important;
-    }
-
-    .widget-chatItem-reply__note.fileext,
-    .widget-chatItem-reply__note.fileext .note-content,
-    .widget-chatItem-reply__note.conversation .note-content {
-      color: var(--tertiary-grey-80) !important;
-    }
-  }
+  // Message bubbles (./chat-bubbles, shared with the Inbox's Workspace chat).
+  @include chat-bubbles.bubbles(".window__chat-panel");
 
   .widget-chatItem__name,
   .widget-chatItem__username-content,
@@ -3846,6 +3635,25 @@
       $weight: 400,
       $color: var(--normal-fg-50)
     );
+  }
+
+  // Chat tab: every column is its own card — the 43:23955 treatment the
+  // Files view already gives its two panels (r=8, 5%-black hairline) — with
+  // an 8px gutter between them: rail | chat | file thread | details. Both
+  // classes: beats the docked pane's 4px gutter ([data-headless] … (0,3,0)),
+  // which comes earlier in this file. The details card is widget_chat_details'
+  // own root, so its slot (chat-details.scss) draws none.
+  &__split-body.window__split-body[data-view="chat"] {
+    gap: 8px;
+
+    > .window__thread-rail,
+    > .window__chat-panel,
+    > .window__file-thread-panel {
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      // No overflow here: the rail must keep its own overflow-y:auto (a
+      // scrolling box clips to its radius anyway); the chat panel clips.
+    }
   }
 
   &__split-body[data-view="chat"] {
@@ -5179,13 +4987,43 @@ html[data-theme="dark"] {
     gap: 4px;
   }
 
+  // Section labels — "Topics", "File Threads" (Figma 867:185782: 14/1.2,
+  // Primary/100).
   .window__thread-menu__section-label {
     @include drumee.typo(
-      $size: 12px,
-      $line: 1.4,
+      $size: 14px,
+      $line: 1.2,
       $weight: 400,
-      $color: var(--normal-fg-50, #65656c)
+      $color: var(--normal-fg-10, #0b0a21)
     );
+  }
+
+  // "Topics" + its "+" (New Topic dialog).
+  .window__thread-menu__section-head {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .window__thread-menu__add {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    fill: var(--normal-fg-10, #0b0a21);
+    color: var(--normal-fg-10, #0b0a21);
+
+    &:hover {
+      background-color: var(--hover-bg-40);
+    }
+  }
+
+  // A topic's emoji, before its name.
+  .window__thread-menu__row-emoji {
+    flex: 0 0 auto;
+    font-size: 14px;
+    line-height: 1;
   }
 
   .window__thread-menu__divider {
@@ -5295,6 +5133,23 @@ html[data-theme="dark"] {
     border-radius: 0;
     background: transparent;
     box-shadow: none;
+  }
+
+  // Rail: Topics and File Threads split the height equally; each keeps its
+  // heading and scrolls its own rows (the rail itself no longer scrolls).
+  .window__thread-menu__card--rail > .window__thread-menu__section--topics,
+  .window__thread-menu__card--rail > .window__thread-menu__section--threads {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .window__thread-menu__card--rail > .window__thread-menu__section--topics > .window__thread-menu__rows,
+  .window__thread-menu__card--rail > .window__thread-menu__section--threads > .window__thread-menu__rows {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
   }
 
   // Download Chat history sits at the very bottom of the rail (Figma).

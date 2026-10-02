@@ -17,8 +17,8 @@
 // Do NOT set display:flex / flex-direction here — Box.* components set them.
 
 // ── Fix #1: viewport-level overlay (fixed, z-index 99997) ───────────────────
-// Skeletons.Wrapper.Y("chat-export") is appended
-// to the folder window via this.append() so Marionette owns the lifecycle.
+// Skeletons.Wrapper.Y("chat-export") is a slot the folder window skeleton
+// builds (window/folder/chat-export-overlay), fed on open, emptied on close.
 // position:fixed + inset:0 escapes the window's overflow/clip and covers the
 // full viewport. z-index 99997 sits below the topbar (99999) and invite-popup
 // (99998) but above all window content. The wrapper itself IS the backdrop;
@@ -35,6 +35,12 @@
   align-items: center;
   justify-content: center;
   animation: _chat-export-backdrop-in 0.15s ease;
+
+  // Always mounted now: never displayed (so never covers the viewport or takes
+  // clicks) unless the Wrapper says open, whatever state it rendered with.
+  &:not([data-state="open"]) {
+    display: none !important;
+  }
 
   // Show when data-state=open (Wrapper toggles this).
   &[data-state="open"] {
@@ -55,20 +61,35 @@
 .widget-chat-export {
 
   // ── modal card ──────────────────────────────────────────────
+  // Everything in the dialog is downsized to ~80% of the Figma sizes on
+  // request (card 530 → 440, padding 33 → 24, titles 24 → 18, body 16/14 →
+  // 14/12-13); tests/chat-export-skin.test.js pins them.
   &__card {
     background: #ffffff;
-    border-radius: 24px;
-    padding: 33px;
-    gap: 24px;
-    // Figma: inner content column is 464px; card = 464 + 33*2 padding = 530px.
-    width: 530px;
+    border-radius: 16px;
+    padding: 24px;
+    gap: 16px;
+    // Inner content column 392px; card = 392 + 24*2 padding = 440px.
+    width: 440px;
     max-height: 90vh;
     overflow-y: auto;
     box-shadow: 0 8px 40px var(--primary-purple-80-5, rgba(45, 42, 106, 0.37));
   }
 
   // ── header ──────────────────────────────────────────────────
+  // Fixed while the card scrolls. top: -24px cancels the card padding (sticky
+  // otherwise clamps inside it); the negative margins + matching padding let
+  // the white header cover that strip so scrolled content never shows above
+  // it, and the top radius follows the card's corners.
   &__header {
+    position: sticky;
+    top: -24px;
+    z-index: 2;
+    margin: -24px -24px -12px;
+    padding: 24px 24px 12px;
+    background: #ffffff;
+    border-radius: 16px 16px 0 0;
+    flex-shrink: 0;
     justify-content: space-between;
     align-items: center;
   }
@@ -79,24 +100,24 @@
   }
 
   &__header-ico {
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     color: var(--primary-purple-40);
   }
 
   &__header-title {
     @include drumee.typo(
       $color: #34343a,  // no token; nearest is --neutral-900 #222732 (too dark), used Figma value
-      $size: 24px,
+      $size: 18px,
       $weight: 600,
-      $line: 32px
+      $line: 24px
     );
   }
 
   &__header-close {
-    width: 32px;
-    height: 32px;
-    padding: 9px;
+    width: 28px;
+    height: 28px;
+    padding: 7px;
     border-radius: 8px;
     color: var(--neutral-700);
     cursor: pointer;
@@ -111,8 +132,8 @@
   // here but will never match (safe to leave for any stale DOM).
   &__folder-card {
     border: 1px solid var(--neutral-200);
-    border-radius: 12px;
-    padding: 12px;
+    border-radius: 10px;
+    padding: 10px;
     justify-content: space-between;
     align-items: center;
   }
@@ -122,21 +143,76 @@
     align-items: center;
   }
 
+  // Direct mode: the person's avatar, the folder icon box's footprint.
+  &__peer-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+
   &__folder-icon-box {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border-radius: 8px;
-    // Default tint (purple) — overridden inline via styleOpt when folder_color
-    // is available (Fix #2: real folder color from colorFromName).
-    background: rgba(89, 80, 255, 0.1);
+    // Neutral tile: the workspace art inside carries the type colour.
+    background: rgba(0, 0, 0, 0.05);
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+
+    // Workspace art (media/grid/template/folder), sized and tinted as the desk
+    // sidebar draws it (desk/workspace-item skin): folder shape by type,
+    // white badge at its bottom-left. Hex fallbacks: the overlay may not
+    // resolve every theme variable.
+    .media-grid__folder-art {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 18px;
+    }
+
+    .folder-shape {
+      width: 22px;
+      height: 18px;
+      fill: #885eff;
+
+      &.private {
+        fill: var(--area-private, #eb6159);
+      }
+
+      &.share,
+      &.dmz {
+        fill: var(--area-share, #ffa8dc);
+      }
+
+      &.personal {
+        fill: var(--area-personal, #433cc5);
+      }
+
+      &.public {
+        fill: var(--area-public, #44b8ff);
+      }
+    }
+
+    .badge {
+      position: absolute;
+      left: -3px;
+      bottom: -3px;
+      width: 14px !important;
+      height: 14px !important;
+      color: var(--grid-color-folder-badge, #ffffff);
+      fill: currentColor;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+    }
   }
 
   &__folder-icon {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     // Default — overridden inline when folder_color is available.
     color: var(--primary-purple-40);
   }
@@ -148,8 +224,8 @@
   &__folder-name {
     @include drumee.typo(
       $color: var(--primary-purple-100),
-      $size: 16px,
-      $line: 22px
+      $size: 14px,
+      $line: 20px
     );
   }
 
@@ -159,48 +235,50 @@
   }
 
   &__folder-meta-ico {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     color: var(--tertiary-grey-80);
   }
 
   &__folder-meta-text {
     @include drumee.typo(
       $color: var(--tertiary-grey-80),
-      $size: 14px,
-      $line: 20px
+      $size: 12px,
+      $line: 16px
     );
   }
 
   &__folder-meta-sep {
-    @include drumee.typo($color: var(--tertiary-grey-80), $size: 14px);
+    @include drumee.typo($color: var(--tertiary-grey-80), $size: 12px);
   }
 
   // ── sections ────────────────────────────────────────────────
   &__section {
-    gap: 10px;
+    gap: 8px;
   }
 
   &__section-label {
     @include drumee.typo(
       $color: var(--primary-purple-100),
-      $size: 16px,
+      $size: 14px,
       $weight: 600,
-      $line: 22px
+      $line: 20px
     );
   }
 
   // ── format cards ─────────────────────────────────────────────
   &__format-row {
-    gap: 12px;
+    gap: 8px;
   }
 
   &__format-card {
     flex: 1;
     border: 1.5px solid rgba(0, 0, 0, 0.05);
     border-radius: 8px;
-    padding: 12px;
-    gap: 6px;
+    padding: 10px;
+    // One row: icon | title over subtitle.
+    align-items: center;
+    gap: 10px;
     cursor: pointer;
     transition: border-color 0.15s;
 
@@ -216,11 +294,18 @@
   &__format-card-top {
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
+  }
+
+  &__format-text {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 2px;
   }
 
   &__format-icon-box {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 6px;
     background: var(--neutral-100);
     align-items: center;
@@ -233,8 +318,8 @@
   }
 
   &__format-icon {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     color: var(--neutral-600);
 
     .is-active & {
@@ -245,10 +330,13 @@
   &__format-title {
     @include drumee.typo(
       $color: var(--primary-purple-100),
-      $size: 16px,
+      $size: 14px,
       $weight: 600,
-      $line: 24px
+      $line: 20px
     );
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 
     &.is-active {
       color: var(--primary-purple-40);
@@ -263,17 +351,20 @@
   &__format-subtitle {
     @include drumee.typo(
       $color: var(--tertiary-grey-80),
-      $size: 14px,
-      $line: 20px
+      $size: 12px,
+      $line: 16px
     );
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   // ── scope list ───────────────────────────────────────────────
   &__scope-list {
     border: 1px solid var(--neutral-200);
-    border-radius: 12px;
+    border-radius: 10px;
     padding: 4px 0;
-    max-height: 220px;
+    max-height: 180px;
     overflow-y: auto;
   }
 
@@ -281,8 +372,8 @@
   // the entire row is the tap target. kidsOpt active:0 on child nodes ensures
   // clicks don't stop at an inner element before reaching the row handler.
   &__scope-row {
-    padding: 10px 14px;
-    gap: 10px;
+    padding: 8px 12px;
+    gap: 8px;
     align-items: center;
     cursor: pointer;
 
@@ -291,13 +382,13 @@
     }
 
     &--child {
-      padding-left: 40px; // ~26px indent from spec + 14px base
+      padding-left: 34px; // ~22px indent + 12px base
     }
   }
 
   &__checkbox {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 4px;
     border: 1.5px solid var(--neutral-400);
     flex-shrink: 0;
@@ -310,35 +401,40 @@
     }
   }
 
-  // Fix #5: chat-tick is a bare stroke-only tick (no circle background).
-  // The containing __checkbox box provides the purple square; the icon is
-  // just the white tick stroke on top.
+  // editbox_checkmark (a filled glyph, as in the invite popup): white on the
+  // purple __checkbox square.
   &__checkbox-ico {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
+    line-height: 0;
     color: #ffffff;
-    // chat-tick uses stroke, not fill — ensure currentColor flows through.
-    stroke: currentColor;
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
   }
 
   &__scope-label {
     @include drumee.typo(
       $color: var(--primary-purple-100),
-      $size: 14px,
-      $line: 20px
+      $size: 13px,
+      $line: 18px
     );
   }
 
   &__scope-thread-ico {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: var(--tertiary-grey-80);
     flex-shrink: 0;
   }
 
   &__scope-caret {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: var(--tertiary-grey-80);
     margin-left: auto;
     transition: transform 0.15s;
@@ -356,8 +452,8 @@
 
   &__date-switch {
     // Track + knob toggle (no Skeletons.Switch builder exists).
-    width: 40px;
-    height: 20px;
+    width: 34px;
+    height: 18px;
     flex-shrink: 0;
     padding: 2px;
     border-radius: 12px;
@@ -372,31 +468,57 @@
   }
 
   &__date-switch-knob {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: var(--white);
     transition: transform 0.15s ease;
   }
 
   &__date-switch[data-state="1"] &__date-switch-knob {
-    transform: translateX(20px);
+    transform: translateX(16px);
   }
 
   &__date-row {
-    gap: 8px;
+    gap: 6px;
     align-items: center;
   }
 
-  // Date input: the native calendar-picker-indicator is expanded to cover the
-  // whole input so clicking anywhere opens the OS date picker reliably on every
-  // click (no showPicker() JS, which only fired once).
+  // Loading until both flatpickr pickers have mounted (the lazy date_picker
+  // kind imports flatpickr on top): date-row-ready.js stamps data-ready="1".
+  // Gated on that positive stamp so it fails closed. Each field keeps its
+  // box and icon, hides the not-yet-mounted picker and spins at its end.
+  &__date-row:not([data-ready="1"]) &__date-input-wrap {
+    pointer-events: none;
+    min-height: 32px;
+
+    &::after {
+      content: "";
+      position: absolute;
+      right: 10px;
+      top: calc(50% - 8px);
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 2px solid var(--neutral-200);
+      border-top-color: var(--primary-purple-40);
+      animation: _chat-export-spin 0.7s linear infinite;
+    }
+  }
+
+  &__date-row:not([data-ready="1"]) &__date-picker {
+    visibility: hidden;
+  }
+
+  // Date field: a flatpickr picker (widget/datepicker, kind date_picker) sits
+  // in the wrap next to the calendar icon; clicking anywhere on the field
+  // opens the app's calendar (Cancel / Done).
   &__date-input-wrap {
     position: relative;
     flex: 1;
     border: 1px solid var(--neutral-300);
     border-radius: 8px;
-    padding: 8px 10px;
+    padding: 6px 8px;
     gap: 6px;
     align-items: center;
     cursor: pointer;
@@ -407,46 +529,40 @@
   }
 
   &__date-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: var(--tertiary-grey-80);
     flex-shrink: 0;
-    pointer-events: none; // decorative; the indicator overlay handles clicks
+    pointer-events: none; // decorative
   }
 
-  &__date-input {
-    position: relative;
+  // The picker widget's root fills the rest of the wrap.
+  &__date-picker {
+    flex: 1;
+    min-width: 0;
+  }
+
+  // The visible field (flatpickr's altInput carries innerClass). Two classes
+  // to beat the datepicker skin's own boxed input (.datepicker input: border,
+  // 36px height, padding) — here the wrap is the box.
+  &__date-input-wrap &__date-input {
     border: none;
     outline: none;
-    flex: 1;
+    height: auto;
+    padding: 0;
     width: 100%;
+    background: transparent;
     cursor: pointer;
     @include drumee.typo(
       $color: var(--primary-purple-100),
-      $size: 14px,
-      $line: 20px
+      $size: 13px,
+      $line: 18px
     );
-    background: transparent;
-
-    // Transparent indicator stretched over the input → clicking the field
-    // opens the native picker every time.
-    &::-webkit-calendar-picker-indicator {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      width: auto;
-      height: auto;
-      margin: 0;
-      opacity: 0;
-      cursor: pointer;
-    }
   }
 
   &__date-arrow {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     color: var(--neutral-500);
     flex-shrink: 0;
   }
@@ -466,16 +582,16 @@
   &__footer-hint {
     @include drumee.typo(
       $color: var(--tertiary-grey-80),
-      $size: 14px,
-      $line: 20px
+      $size: 12px,
+      $line: 16px
     );
   }
 
   &__footer-filename-hint {
     @include drumee.typo(
       $color: var(--primary-purple-40),
-      $size: 14px,
-      $line: 20px
+      $size: 12px,
+      $line: 16px
     );
   }
 
@@ -483,7 +599,7 @@
   &__download-btn {
     background: var(--primary-purple-50);  // #433cc5
     border-radius: 4px;
-    padding: 12px 24px;
+    padding: 10px 20px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -517,9 +633,9 @@
   &__download-btn-label {
     @include drumee.typo(
       $color: #ffffff,
-      $size: 16px,
+      $size: 14px,
       $weight: 600,
-      $line: 24px
+      $line: 20px
     );
   }
 
@@ -530,8 +646,8 @@
 
   // Indeterminate ring spinner shown left of "Generating".
   &__download-spinner {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     border-radius: 50%;
     border: 2px solid var(--neutral-300);
@@ -560,8 +676,8 @@
   &__progress-error {
     @include drumee.typo(
       $color: var(--red-600),
-      $size: 13px,
-      $line: 18px
+      $size: 12px,
+      $line: 16px
     );
     padding: 6px 0;
   }

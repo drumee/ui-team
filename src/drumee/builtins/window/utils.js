@@ -15,11 +15,7 @@ const {
 // window_sharebox / window_website. openFileLocation does not attach a media
 // node for these: those windows source their own `media`, and the fix below is
 // only about giving a file VIEWER the node it reads its content through.
-const CONTAINER_FILETYPES = [
-  _a.hub, _a.folder, "personal", "private", "share", "public",
-  // Not a file either — application maps it to window_contact.
-  _a.contact,
-];
+const { launchPlayer } = require("libs/open-media");
 
 const ViewMode = new Map();
 const DEFAULT = "default";
@@ -1668,42 +1664,12 @@ class __window_mfs extends DrumeeMFS {
     /** Open the player if applicable. A reveal (highlight) skips the player and
      *  falls through to open the parent folder, where the file is highlighted. */
     if (opt.kind && !node && !highlight) {
-      node = await this.fetchService(
-        {
-          service: SERVICE.media.attributes,
-          nid,
-          hub_id,
-        },
-        { async: 1 },
+      // Fetch the node, give the player a media to read its content through,
+      // launch — shared with openers that are not windows (libs/open-media).
+      return launchPlayer(
+        { opt, node, nid, hub_id, media },
+        { fetchService: this.fetchService, warn: this.warn && this.warn.bind(this) },
       );
-      if (!node || !node.nid) {
-        return Wm.alert(LOCALE.FILE_NOT_FOUND);
-      }
-      // Hand the window the media node it will read its CONTENT through.
-      //
-      // editor/note, editor/markdow and player/text all load their body with
-      // `if (this.media) url = this.media.actualNode().url` — no media, no url,
-      // no fetch, and the file opens BLANK. They normally get it by finding the
-      // grid tile (Wm.getItemsByAttr in their initialize), which only works when
-      // the containing folder happens to be on screen. Arriving from a deep link
-      // it is not, so this branch — the one that opens a file whose tile is not
-      // rendered — has always launched them empty.
-      //
-      // Built exactly the way wm's fetchMediaAttributes already builds it for the
-      // audio/video/image/document players, from the attributes just fetched.
-      // Containers are excluded: a folder / workspace window takes its own
-      // `media` and must keep behaving as it does today.
-      if (!opt.media && !CONTAINER_FILETYPES.includes(node.filetype)) {
-        try {
-          const k = await Kind.waitFor(_a.media);
-          opt.media = media || new k({ model: new Backbone.Model(node) });
-        } catch (e) {
-          // Never let this cost the open itself: without media the file still
-          // opens, just as blank as it did before.
-          if (this.warn) this.warn("[openFileLocation] could not build media", e);
-        }
-      }
-      return Wm.launch({ ...opt, ...node }, { explicit: 1 });
     }
 
     /** Open the parent folder if not player found */

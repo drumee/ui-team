@@ -1,6 +1,11 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const { isGrouped } = require("./file-group");
 const { menuRow, createRows } = require("./new-menu-rows");
+const {
+  chatDetailsPanel,
+  headerMenuService,
+  generalHeaderMenu,
+} = require("../../../widget/chat-details/skeleton");
 
 const AREA_LABELS = {
   // Personal workspaces are personal-area folders at the home root.
@@ -715,11 +720,13 @@ export function chatHeaderBar(ui, opt = {}) {
   const actions = Skeletons.Box.X({
     className: `${grp}__chat-header-actions`,
     kids: [
-      // 3-dot (Figma DotsThreeVertical) FIRST — opens the thread menu.
+      // 3-dot (Figma DotsThreeVertical) FIRST. On a workspace folder window it
+      // opens Chat details (Figma 775:131699), which carries the thread list
+      // and Download itself; elsewhere (share-token windows) the thread menu.
       Skeletons.Button.Svg({
         className: `${grp}__chat-header-btn`,
         ico: "apps-dots-vertical",
-        service: "open-thread-menu",
+        service: headerMenuService(ui),
         uiHandler: [ui],
         partHandler: ui,
       }),
@@ -727,17 +734,30 @@ export function chatHeaderBar(ui, opt = {}) {
     ],
   });
 
-  // Full Chat-tab middle header (Figma 2331-46821): the docked rail already is
-  // the thread switcher, so the 3-dot is dropped and the title reads "# General".
+  // Full Chat-tab middle header (Figma 2331-46821): the title reads "# General".
+  // The docked rail is the thread switcher, so the ⋮ is here only where it
+  // opens Chat details (generalHeaderMenu) — same button as the Files tab's.
   if (opt.general) {
     return [
       Skeletons.Note({
         className: `${grp}__chat-header-title`,
-        content: `# ${LOCALE.GENERAL || "General"}`,
+        // opt.title: the folder chat topic scope (window/folder/topics).
+        content: opt.title || `# ${LOCALE.GENERAL || "General"}`,
       }),
       Skeletons.Box.X({
         className: `${grp}__chat-header-actions`,
-        kids: [searchBtn],
+        kids: [
+          generalHeaderMenu(ui)
+            ? Skeletons.Button.Svg({
+                className: `${grp}__chat-header-btn`,
+                ico: "apps-dots-vertical",
+                service: "open-chat-details",
+                uiHandler: [ui],
+                partHandler: ui,
+              })
+            : null,
+          searchBtn,
+        ].filter(Boolean),
       }),
     ];
   }
@@ -783,7 +803,7 @@ export function chatHeaderBar(ui, opt = {}) {
   return [
     Skeletons.Note({
       className: `${grp}__chat-header-title`,
-      content: getChatLabel(ui),
+      content: opt.title || getChatLabel(ui),
     }),
     // Unread count of the workspace team chat, next to its title. Filled by
     // the folder window (_paintChatUnread) from the same per-workspace counts
@@ -861,6 +881,10 @@ export function chatPanel(ui) {
     // it, or a reply — never by being mounted (or autofocused) beside the
     // file grid.
     read_on_interaction: 1,
+    // Topics: the folder window's chat opens on # General (no All tab or row;
+    // window/folder/topics). Only it has topics — shares, team / website
+    // windows and the DMZ sharebox keep the whole chat ("all").
+    ...(ui.fig.family === "window-folder" ? { scoped_topic: "general" } : {}),
   };
 
   // Two scopes, and the difference is who is reading.
@@ -951,6 +975,12 @@ export function chatPanel(ui) {
     isFolderChat && !(Number(ui.mget(_a.privilege)) & _K.permission.download)
       ? 1
       : 0;
+  // Files-tab topic UI (Figma 869:189953): the topic strip under the header
+  // and the File threads bar. Workspace folder window only (a share token
+  // window and the other surfaces have no topics); fed by window/folder/
+  // topics.js (paintStrip) and ./file-threads-bar.js; hidden by SCSS where
+  // the Chat-tab rail already shows both.
+  const topicSurfaces = isFolderChat && !ui.mget(_a.token);
   return Skeletons.Box.Y({
     className: `${grp}__chat-panel`,
     sys_pn: "chat-panel",
@@ -960,6 +990,12 @@ export function chatPanel(ui) {
         : {},
     kids: [
       header,
+      topicSurfaces
+        ? Skeletons.Box.X({ className: `${grp}__topic-strip`, sys_pn: "topic-strip", partHandler: ui })
+        : null,
+      topicSurfaces
+        ? Skeletons.Box.Y({ className: `${grp}__ft-bar`, sys_pn: "ft-bar", partHandler: ui, dataset: { open: "0" } })
+        : null,
       // File-thread info card slot (Figma 2216-165656) — the in-place (Files
       // tab) file-thread view pins the same card the side panel shows. Empty +
       // hidden until the folder window feeds it on file scope; stays empty for
@@ -1493,6 +1529,9 @@ export function folderFilesView(ui) {
     filesSplitter(ui),
     threadRail(ui),
     chatPanel(ui),
+    // Chat details (Figma 775:131699): takes the chat panel's cell while the
+    // split body carries data-details="open" (folder/skin/chat-details.scss).
+    chatDetailsPanel(ui),
     fileThreadPanel(ui),
   ].filter(Boolean);
 }

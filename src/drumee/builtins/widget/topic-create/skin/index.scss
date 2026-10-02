@@ -1,0 +1,239 @@
+// New Topic dialog (Figma 867:186725).
+//
+// The viewport backdrop is the folder window's "topic-dialog" slot
+// (window/folder/topics.js slot): always mounted, so it is never displayed —
+// never covers the viewport or takes clicks — unless the Wrapper is open.
+.widget-topic-create__viewport-backdrop {
+  position: fixed !important;
+  inset: 0;
+  z-index: 99997;
+  background: var(--transparency-container-overlay, rgba(137, 146, 158, 0.4));
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+
+  &:not([data-state="open"]) {
+    display: none !important;
+  }
+
+  &[data-state="open"] {
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+.widget-topic-create__ui {
+  // A fed widget has no data-flow: be a flex column here.
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-main);
+}
+
+.widget-topic-create {
+  &__card {
+    width: 398px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    padding: 24px;
+    gap: 24px;
+    border-radius: 16px;
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow: 0 7px 5px rgba(0, 0, 0, 0.05), 0 40px 40px rgba(0, 0, 0, 0.15);
+    font-family: var(--font-main);
+  }
+
+  &__header {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__title {
+    font-size: 24px;
+    line-height: 1.1;
+    font-weight: 600;
+    color: #34343a;
+  }
+
+  &__close {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+    color: var(--normal-fg, #0b0a21);
+    fill: currentColor;
+  }
+
+  &__name-block {
+    gap: 6px;
+  }
+
+  &__name-row {
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__preview {
+    width: 34px;
+    flex-shrink: 0;
+    font-size: 28px;
+    line-height: 1;
+    text-align: center;
+  }
+
+  &__name {
+    flex: 1 1 0;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      font-family: var(--font-main);
+      font-size: 16px;
+      line-height: 1.2;
+      color: var(--normal-fg, #0b0a21);
+      background: transparent;
+      outline: none;
+
+      &::placeholder {
+        color: #65656c;
+      }
+      &:focus {
+        border-color: var(--primary-purple-50, #5950ff);
+      }
+    }
+  }
+
+  &__error {
+    display: none;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #d74e49;
+
+    &[data-state="1"] {
+      display: block;
+    }
+  }
+
+  &__icons {
+    gap: 12px;
+  }
+
+  &__icons-label {
+    font-size: 16px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__tabs {
+    justify-content: space-between;
+  }
+
+  &__tab {
+    height: 28px;
+    width: 28px;
+    padding: 2px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--normal-fg, #0b0a21);
+
+    &:hover,
+    &[data-active="1"] {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  &__tab-ico {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+  }
+
+  // Only on the search tab. A Box is never CSS :empty (ui-core keeps an
+  // empty-view child), so gate on the stamp the widget keeps current.
+  &__search-row:not([data-tab="search"]) {
+    display: none !important;
+  }
+
+  &__search {
+    flex: 1 1 0;
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 12px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      font-family: var(--font-main);
+      font-size: 14px;
+      outline: none;
+    }
+  }
+
+  // 9 columns, 6px gap; 3 visible rows, the rest scrolls.
+  &__grid {
+    display: grid !important;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    gap: 6px;
+    max-height: 112px;
+    overflow-y: auto;
+  }
+
+  &__emoji {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    line-height: 1;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    &[data-selected="1"] {
+      background: rgba(89, 80, 255, 0.1);
+    }
+  }
+
+  &__actions {
+    gap: 12px;
+  }
+
+  &__btn {
+    flex: 1 1 0;
+    height: 42px;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  &__btn-label {
+    font-size: 16px;
+    line-height: 1.2;
+    font-weight: 600;
+  }
+
+  &__btn--cancel {
+    background: #f2f2f7;
+    color: #0b0a21;
+  }
+
+  &__btn--create {
+    background: var(--primary-purple-50, #433cc5);
+    color: #fff;
+
+    &[data-disabled="1"],
+    &[data-busy="1"] {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+}

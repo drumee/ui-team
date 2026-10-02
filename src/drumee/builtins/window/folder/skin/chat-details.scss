@@ -1,0 +1,72 @@
+// Chat details slot in the folder window's split body. The panel itself is
+// widget_chat_details (builtins/widget/chat-details, its own skin); this file
+// only swaps the slot in for the chat column and gates it.
+.window-folder {
+  // Chat details (Figma 775:131699). The panel is a sibling of
+  // .window__chat-panel in the split body and takes the chat's grid cell
+  // while [data-details="open"]; hidden otherwise. !important on display
+  // because the framework's Box.Y default display:flex sits at (0,2,0)
+  // (see drumee-widget-flow-flex-beats-single-class).
+  &__split-body .window__chat-details {
+    display: none !important;
+  }
+  &__split-body[data-view="files"][data-details="open"] {
+    > .window__chat-panel {
+      display: none !important;
+    }
+    > .window__chat-details {
+      display: flex !important;
+      margin: 0 !important;
+      min-width: 0 !important;
+      width: auto !important;
+    }
+  }
+
+  // Chat tab: the ⋮ in the "# General" header opens Chat details as a third
+  // column — thread rail | chat | details — so the conversation stays in
+  // view. Same width as the docked file-thread panel.
+  &__split-body[data-view="chat"][data-details="open"] {
+    grid-template-columns:
+      clamp(240px, 22vw, 300px) minmax(0, 1fr) clamp(320px, 26vw, 380px);
+
+    > .window__chat-details {
+      display: flex !important;
+      margin: 0 !important;
+      min-width: 0 !important;
+      width: auto !important;
+    }
+
+    // A file thread open too: keep three columns; its panel waits behind
+    // the details and comes back when they close.
+    &[data-thread="open"] {
+      grid-template-columns:
+        clamp(240px, 22vw, 300px) minmax(0, 1fr) clamp(320px, 26vw, 380px);
+
+      > .window__file-thread-panel {
+        display: none !important;
+      }
+    }
+  }
+
+  // Compact (≤700px): one column, no room beside the chat — details takes
+  // the chat's place, as on the Files view.
+  @container window-folder-w (max-width: 700px) {
+    &__split-body[data-view="chat"][data-details="open"] {
+      > .window__chat-panel {
+        display: none !important;
+      }
+    }
+  }
+
+  // The slot the widget fills: a plain column, clipped; the widget carries
+  // the card look. A chat-gated viewer sees nothing inside it.
+  .window__chat-details {
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+
+    &[data-chat_gated="1"] > * {
+      display: none;
+    }
+  }
+}
