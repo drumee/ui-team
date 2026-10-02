@@ -31,6 +31,7 @@ const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { modalKids } = require("./skeleton");
 const { recipientChips } = require("./skeleton/meeting-form");
 const A = require("./attachments");
+const { rowOf } = require("../../window/tasks/live-sync");
 const { fileChips } = require("./skeleton/attachments");
 
 const VIEW_KEYS = ["month", "week", "day"];
@@ -647,6 +648,7 @@ class __calendar_main extends LetcBox {
     }
     this._pendingDay = null;
     this._renderModal();
+    if (row) this._loadLinkedFiles(this._form);
   }
 
   _openMeetingForm() {
@@ -1085,6 +1087,71 @@ class __calendar_main extends LetcBox {
     e.preventDefault();
     return this._stageFiles(files);
   }
+  /**
+   * Before a commit. A failed file must be retried or removed first — this
+   * modal has no commit-time upload. A file still on its way asks the
+   * upload-progress card (wait, or go without it). True = the commit may go.
+   */
+  async _gateFiles(form) {
+    const list = (form && form.draft.files) || [];
+    if (A.failedFiles(list).length) {
+      if (typeof Butler !== "undefined") Butler.say(LOCALE.CAL_FILES_FAILED);
+      return false;
+    }
+    const moving = A.unfinishedPending(list);
+    if (!moving.length) return true;
+    const choice = await require("window/upload-progress").confirmUnfinished({
+      items: A.itemsOf(moving),
+      action: form.kind === "meeting" || form.mode !== "edit" ? "create" : "update",
+    });
+    if (this._form !== form || choice !== "skip") return false;
+    // "skip" has already cancelled them in their bundle; take them off the list.
+    const gone = new Set(A.abandonedPending(form.draft.files));
+    form.draft.files = form.draft.files.filter((f) => !gone.has(f));
+    return true;
+  }
+
+  /** task.link_file per nid. postService never rejects: success = an array. Returns the failure count. */
+  async _linkTaskFiles(hub_id, task_id, nids) {
+    const svc = (SERVICE.task && SERVICE.task.link_file) || "task.link_file";
+    let failed = 0;
+    for (const file_nid of nids || []) {
+      const res = await this.postService({ service: svc, hub_id, task_id, file_nid });
+      if (!Array.isArray(res)) failed++;
+    }
+    return failed;
+  }
+
+  async _linkMeetingFiles(nid, nids) {
+    if (!nids || !nids.length) return true;
+    const res = await this.postService({
+      service: (SERVICE.room && SERVICE.room.link_files) || "room.link_files",
+      hub_id: this._personalHub,
+      nid,
+      file_nids: nids,
+    });
+    return !!(res && Array.isArray(res.attachments));
+  }
+
+  /** Edit mode: the task's current files, as removable chips. */
+  async _loadLinkedFiles(form) {
+    const row = form.row || {};
+    const rows = await this.fetchService({
+      service: (SERVICE.task && SERVICE.task.get_linked_files) || "task.get_linked_files",
+      hub_id: row.hub_id || this._personalHub,
+      task_id: row.id,
+    });
+    if (this._form !== form || !Array.isArray(rows)) return;
+    const linked = rows.map((f) => ({
+      nid: f.file_nid,
+      linked: 1,
+      status: "linked",
+      filename: f.filename || "",
+      extension: f.extension || f.ext || "",
+    }));
+    form.draft.files = [...linked, ...(form.draft.files || []).filter((f) => !f.linked)];
+    this._renderFiles();
+  }
 
   /**
    * Merge every formItem-bound input into the draft before a commit.
@@ -1157,6 +1224,7 @@ class __calendar_main extends LetcBox {
   async _submitTask() {
     const draft = this._absorbFormText();
     if (!this._validateRequired(draft)) return;
+    if (!(await this._gateFiles(this._form))) return;
     const title = String(draft.title || "").trim();
 
     // The form is only cleared once the write comes back, so every trigger
@@ -1180,13 +1248,14 @@ class __calendar_main extends LetcBox {
     const svcUpdate = (SERVICE.task && SERVICE.task.update) || "task.update";
     const svcStatus =
       (SERVICE.task && SERVICE.task.update_status) || "task.update_status";
+    let linkFailed = 0;
 
     if (!editing) {
       // Personal task: personal-hub scope, and no assignee_uids at all —
       // requirement §4 wants assignment refused, not hidden, and the server
       // rejects it for a personal hub. Sending an empty array would still be
       // sending the field.
-      await this.postService({
+      const created = rowOf(await this.postService({
         service: svcCreate,
         hub_id: this._personalHub,
         nid: this._personalNid,
@@ -1195,7 +1264,12 @@ class __calendar_main extends LetcBox {
         status: draft.status || "todo",
         priority: draft.priority || "medium",
         due_date: draft.due_date || null,
-      });
+      }));
+      if (!created) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+        return;
+      }
+      linkFailed = await this._linkTaskFiles(this._personalHub, created.id, A.nidsToLink(draft.files));
     } else {
       const row = form.row || {};
       // Addressed with the ROW's hub — never the personal hub. This is the
@@ -1218,7 +1292,12 @@ class __calendar_main extends LetcBox {
           status: draft.status || "todo",
         });
       }
+      linkFailed = await this._linkTaskFiles(hub_id, row.id, A.nidsToLink(draft.files));
     }
+
+    // The task exists either way; a file that would not link is said out loud
+    // rather than closing the modal on it silently.
+    if (linkFailed) this._showToast(LOCALE.CAL_FILES_NOT_ATTACHED, "error");
 
     this._form = null;
     await this._reload();
@@ -1252,6 +1331,7 @@ class __calendar_main extends LetcBox {
     if (!this._validateRequired(draft)) return;
     const title = String(draft.title || "").trim();
     if (!draft.date) return;
+    if (!(await this._gateFiles(this._form))) return;
 
     // Same in-flight guard as _submitTask: room.book runs two round trips
     // before the modal is replaced, and a second trigger in that window
@@ -1328,6 +1408,10 @@ class __calendar_main extends LetcBox {
       Wm.alert(LOCALE.ERROR_NETWORK);
       return;
     }
+
+    // Before public_link, which grants the link whatever is attached when it runs.
+    const linked = await this._linkMeetingFiles(nid, A.nidsToLink(draft.files));
+    if (!linked) this._showToast(LOCALE.CAL_FILES_NOT_ATTACHED, "error");
 
     // Link + optional password. public_link accepts `password` today.
     const linkPayload = { service: linkSvc, hub_id: this._personalHub, nid };
