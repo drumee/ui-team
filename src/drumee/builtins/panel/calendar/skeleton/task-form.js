@@ -147,7 +147,6 @@ module.exports = function (ui) {
               uiHandler: [ui],
               partHandler: ui,
             }),
-            "description",
           ),
 
           field("ATTACHMENTS", attachments(ui)),

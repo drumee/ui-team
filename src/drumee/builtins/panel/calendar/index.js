@@ -745,8 +745,8 @@ class __calendar_main extends LetcBox {
 
   /**
    * Required fields — the ones the skeleton marks `data-required`, so the
-   * form, not this method, decides what is required (task: title and
-   * description; meeting: title). Blank or whitespace-only fails.
+   * form, not this method, decides what is required (title, in both the task
+   * and the meeting form). Blank or whitespace-only fails.
    *
    * A failing field gets data-error="1", which shows its error line and reds
    * its border; the first one takes the focus. Returns true when all pass.

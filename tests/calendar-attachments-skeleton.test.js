@@ -64,3 +64,12 @@ test("new copy exists in every locale", () => {
     }
   }
 });
+
+test("only Title is required, in both modals", () => {
+  for (const [name, build, kind] of [["task", taskForm, "task"], ["meeting", meetingForm, "meeting"]]) {
+    const required = walk(build(ui({ kind, mode: "create", draft: {} })))
+      .filter((n) => n.attrOpt && n.attrOpt["data-required"] === "1")
+      .map((n) => n.attrOpt["data-field"]);
+    assert.deepEqual(required, ["title"], name);
+  }
+});
