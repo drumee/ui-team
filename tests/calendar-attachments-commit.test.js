@@ -93,9 +93,13 @@ test("meeting: link_files gets every uploaded nid", async () => {
 });
 
 test("edit mode loads the task's linked files as removable chips", async () => {
-  const { self } = harness({ answers: { "task.get_linked_files": [{ file_nid: "n1", filename: "a", extension: "pdf" }] } });
+  const { self, posted } = harness({ answers: { "task.get_linked_files": [{ file_nid: "n1", filename: "a", extension: "pdf" }] } });
   const form = { kind: "task", mode: "edit", row: { id: "t1", hub_id: "me" }, draft: { files: [] } };
   self._form = form;
   await self._loadLinkedFiles(form);
   assert.deepEqual(form.draft.files, [{ nid: "n1", linked: 1, status: "linked", filename: "a", extension: "pdf" }]);
+  // fetchService is a GET served from the HTTP cache: a reopen after a link
+  // or unlink must not be answered with the old list.
+  const get = posted.find((p) => p.service === "task.get_linked_files");
+  assert.equal(typeof get._ts, "number");
 });

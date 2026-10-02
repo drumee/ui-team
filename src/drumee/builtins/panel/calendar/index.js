@@ -969,7 +969,9 @@ class __calendar_main extends LetcBox {
         task_id: row.id,
         file_nid: pf.nid,
       });
-      if (!Array.isArray(res)) {
+      // unlink_file answers an object ({task_id, file_nid, ...}); postService
+      // never rejects, so a refusal is {error} and a transport failure undefined.
+      if (!res || res.error || String(res.file_nid) !== String(pf.nid)) {
         Wm.alert(LOCALE.ERROR_NETWORK);
         return;
       }
@@ -1140,6 +1142,9 @@ class __calendar_main extends LetcBox {
       service: (SERVICE.task && SERVICE.task.get_linked_files) || "task.get_linked_files",
       hub_id: row.hub_id || this._personalHub,
       task_id: row.id,
+      // A GET is served from the HTTP cache; a reopen right after a link or an
+      // unlink must not get the old list back.
+      _ts: Date.now(),
     });
     if (this._form !== form || !Array.isArray(rows)) return;
     const linked = rows.map((f) => ({

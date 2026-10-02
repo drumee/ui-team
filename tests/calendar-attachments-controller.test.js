@@ -14,7 +14,7 @@ const METHODS = [
   "_onDrop(e)", "_closeForm()",
 ];
 
-function harness({ runBundle } = {}) {
+function harness({ runBundle, answer } = {}) {
   const dropped = [];
   const said = [];
   const UploadProgress = {
@@ -34,12 +34,13 @@ function harness({ runBundle } = {}) {
     _renderFiles() { this.rendered = (this.rendered || 0) + 1; },
     _renderModal() {},
     _reload: async () => {},
-    postService: async (o) => { self.posted.push(o); return [o]; },
+    postService: async (o) => { self.posted.push(o); return answer ? answer(o) : [o]; },
     posted: [],
   };
   global.Butler = { say: (m) => said.push(m) };
   global.LOCALE = new Proxy({}, { get: (_t, k) => k });
   global.URL = { revokeObjectURL: () => {}, createObjectURL: () => "blob:x" };
+  global.Wm = { alert: (m) => said.push(m) };
   for (const sig of METHODS) {
     const fn = new Function("require", "A", "SERVICE", `return ${sliceFunction(SRC, sig)}`)(req, A, {});
     self[fn.name] = fn.bind(self);
@@ -103,12 +104,23 @@ test("remove: a staged file leaves the list; an uploading one is cancelled first
 });
 
 test("remove: a linked file in edit mode is unlinked on the server, on the row's hub", async () => {
-  const { self } = harness();
+  // task.unlink_file answers an OBJECT ({task_id, file_nid, ...}), not a list.
+  const { self, said } = harness({ answer: (o) => ({ task_id: o.task_id, file_nid: o.file_nid }) });
   self._form = { kind: "task", mode: "edit", row: { id: "t1", hub_id: "me" },
     draft: { files: [{ nid: "n9", linked: 1, status: "linked", filename: "x", extension: "" }] } };
   await self._removeFile("nid:n9");
   assert.deepEqual(self.posted.map((p) => [p.service, p.hub_id, p.task_id, p.file_nid]), [["task.unlink_file", "me", "t1", "n9"]]);
   assert.equal(self._form.draft.files.length, 0);
+  assert.deepEqual(said, []);
+});
+
+test("remove: a refused unlink keeps the chip and says so", async () => {
+  const { self, said } = harness({ answer: () => ({ error: "x", reason: "nope" }) });
+  self._form = { kind: "task", mode: "edit", row: { id: "t1", hub_id: "me" },
+    draft: { files: [{ nid: "n9", linked: 1, status: "linked", filename: "x", extension: "" }] } };
+  await self._removeFile("nid:n9");
+  assert.equal(self._form.draft.files.length, 1);
+  assert.deepEqual(said, ["ERROR_NETWORK"]);
 });
 
 test("retry re-queues an errored file and starts it again", async () => {
