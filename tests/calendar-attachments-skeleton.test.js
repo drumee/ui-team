@@ -98,3 +98,17 @@ test("each chip names its icon, so the skin can style per file type", () => {
   const list = [{ localKey: "l1", filename: "a", extension: "docx", status: "queued" }];
   assert.equal(block.fileChips(ui({}), list)[0].attrOpt["data-ico"], "raw-documents_word");
 });
+
+test("task modal (create and edit): Title/Description/Attachments left, Status/Priority/Due date right", () => {
+  for (const mode of ["create", "edit"]) {
+    const tree = taskForm(ui({ kind: "task", mode, draft: {} }));
+    const col = (side) => walk(tree).find((n) => String(n.className || "").includes(`calendar-main__modal-col--${side}`));
+    const labels = (side) => {
+      const c = col(side);
+      assert.ok(c, `${mode}: no ${side} column`);
+      return walk(c).filter((n) => n.className === "calendar-main__field-label").map((n) => n.content);
+    };
+    assert.deepEqual(labels("main"), [en.TITLE, en.DESCRIPTION, en.ATTACHMENTS], mode);
+    assert.deepEqual(labels("side"), [en.STATUS, en.PRIORITY, en.DUE_DATE], mode);
+  }
+});

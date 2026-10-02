@@ -1193,6 +1193,32 @@
     &[data-form="meeting"] {
       width: min(520px, calc(100vw - 32px));
     }
+
+    // Task: two columns — Title/Description/Attachments | Status/Priority/Due.
+    &[data-form="task"] {
+      width: min(760px, calc(100vw - 32px));
+    }
+  }
+
+  // Scoped under the task modal for weight: the body is a Box.X, and
+  // `.drumee-widget[data-flow=x]` (0,2,0) would win over a single class.
+  &__modal[data-form="task"] &__modal-body--split {
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  &__modal[data-form="task"] &__modal-col {
+    gap: 12px;
+    min-width: 0;
+  }
+
+  &__modal[data-form="task"] &__modal-col--main {
+    flex: 1 1 0;
+  }
+
+  // Wide enough for the four status pills on two lines and a date field.
+  &__modal[data-form="task"] &__modal-col--side {
+    flex: 0 0 240px;
   }
 
   // Sub-blocks of the invite block and the chip row are always rendered and
@@ -1989,6 +2015,16 @@
   @media (max-width: 700px) {
     &__page {
       padding: 16px 12px 0;
+    }
+
+    // The task modal's two columns stack: details first, tracking under them.
+    &__modal[data-form="task"] &__modal-body--split {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    &__modal[data-form="task"] &__modal-col--side {
+      flex: 0 0 auto;
     }
 
     &__title {

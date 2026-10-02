@@ -96,3 +96,16 @@ test("the attachment list caps its height and scrolls", () => {
 test("the modal body scrolls instead of sliding under the footer", () => {
   assert.match(ruleBody(".calendar-main__modal-body"), /overflow-y: auto/);
 });
+
+test("task modal is wide enough for two columns", () => {
+  const m = css.match(/\.calendar-main__modal\[data-form="?task"?\] \{[^}]*width: min\((\d+)px/);
+  assert.ok(m, "no task modal width");
+  assert.ok(Number(m[1]) >= 640, `task modal only ${m[1]}px`);
+});
+
+test("on a narrow screen the two columns stack, beating the data-flow row rule", () => {
+  const media = css.slice(css.indexOf("@media (max-width: 700px)"));
+  const m = media.match(/([^{}]*\.calendar-main__modal-body--split[^{]*)\{[^}]*flex-direction: column/);
+  assert.ok(m, "split body does not stack under 700px");
+  assert.ok(specificity(m[1].trim()) > FLOW, `${m[1].trim()} loses to data-flow`);
+});
