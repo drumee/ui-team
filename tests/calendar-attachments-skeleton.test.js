@@ -73,3 +73,23 @@ test("only Title is required, in both modals", () => {
     assert.deepEqual(required, ["title"], name);
   }
 });
+
+test("each chip shows its file type's icon", () => {
+  const list = [
+    { localKey: "l1", filename: "a", extension: "pdf", status: "queued", file: { name: "a.pdf", type: "application/pdf" } },
+    { nid: "n2", linked: 1, filename: "b", extension: "png", status: "linked", category: "image" },
+  ];
+  const icos = block.fileChips(ui({}), list).map(
+    (c) => walk(c).find((n) => n.className === "calendar-main__file-ico").ico,
+  );
+  assert.deepEqual(icos, ["raw-documents_pdf", "desktop_picture"]);
+});
+
+test("the zone says whether it holds files, so the drop row can step aside", () => {
+  const zone = (files) =>
+    walk(taskForm(ui({ kind: "task", mode: "create", draft: { files } }))).find(
+      (n) => n.attrOpt && n.attrOpt["data-drop-zone"] === "files",
+    );
+  assert.equal(zone([]).attrOpt["data-has-files"], "0");
+  assert.equal(zone([{ localKey: "l1", filename: "a", extension: "", status: "queued" }]).attrOpt["data-has-files"], "1");
+});

@@ -9,6 +9,7 @@
 // uploading · error · linked (edit mode: already on the task).
 // Relative require, not the `window/...` alias, so node can load it.
 const pending = require("../../window/tasks/pending-uploads");
+const extIcon = require("../../media/template/map");
 
 const MAX_FILES = 20;
 
@@ -49,6 +50,28 @@ const nidsToLink = (list) =>
 
 const failedFiles = (list) => (list || []).filter((pf) => pf && pf.status === "error");
 
+// Icon for a staged or linked file. A staged entry has its File (MIME type);
+// a linked one (edit mode) only the server's category and extension. Media go
+// by type, documents by the shared extension map — which answers an unknown
+// extension with the extension itself, so it is given the generic glyph as
+// its default instead.
+const GENERIC_ICON = "documents_different";
+const IMAGE_EXT = /^(png|jpe?g|gif|webp|bmp|svg|avif|heic|tiff?)$/;
+const VIDEO_EXT = /^(mp4|m4v|mov|webm|ogv|avi|mkv|3gp|mpe?g|wmv)$/;
+const AUDIO_EXT = /^(mp3|wav|ogg|oga|m4a|flac|aac|opus|wma)$/;
+
+function fileIcon(pf) {
+  const mime = String((pf && pf.file && pf.file.type) || "");
+  const cat = String((pf && (pf.category || pf.filetype)) || "");
+  const ext = String((pf && pf.extension) || "").toLowerCase();
+  if (/^image\//.test(mime) || cat === "image" || IMAGE_EXT.test(ext)) return "desktop_picture";
+  if (/^video\//.test(mime) || cat === "video" || VIDEO_EXT.test(ext)) return "desktop_videofile";
+  if (/^audio\//.test(mime) || cat === "audio" || cat === "music" || AUDIO_EXT.test(ext)) {
+    return "desktop_musicfile";
+  }
+  return ext ? extIcon(ext, GENERIC_ICON) : GENERIC_ICON;
+}
+
 function isFileDrag(e) {
   const types = e && e.dataTransfer && e.dataTransfer.types;
   return !!types && Array.from(types).includes("Files");
@@ -61,6 +84,7 @@ module.exports = {
   fileKey,
   nidsToLink,
   failedFiles,
+  fileIcon,
   isFileDrag,
   pairEntries: pending.pairEntries,
   settleEagerFile: pending.settleEagerFile,

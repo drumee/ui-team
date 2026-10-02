@@ -5,7 +5,7 @@
 // (index.js _installFileDrop). The chip list is its own part ("form-files") so
 // adding, finishing or removing a file re-feeds the chips alone — the modal
 // around them is never re-fed (see index.js "in-place form updates").
-const { fileKey } = require("../attachments");
+const { fileKey, fileIcon } = require("../attachments");
 
 function fileChips(ui, list) {
   const pfx = ui.fig.family;
@@ -16,7 +16,7 @@ function fileChips(ui, list) {
       className: `${pfx}__file`,
       attrOpt: { "data-key": key, "data-status": pf.status || "queued", title: name },
       kids: [
-        Skeletons.Image.Svg({ ico: "app-attachment", className: `${pfx}__file-ico` }),
+        Skeletons.Image.Svg({ ico: fileIcon(pf), className: `${pfx}__file-ico` }),
         Skeletons.Note({ className: `${pfx}__file-name`, content: name }),
         pf.status === "error"
           ? Skeletons.Note({
@@ -48,7 +48,9 @@ module.exports = function (ui) {
   const list = (form.draft && form.draft.files) || [];
   return Skeletons.Box.Y({
     className: `${pfx}__files`,
-    attrOpt: { "data-drop-zone": "files" },
+    // data-has-files hides the drop row once something is attached (skin);
+    // _renderFiles keeps it current without re-feeding the block.
+    attrOpt: { "data-drop-zone": "files", "data-has-files": list.length ? "1" : "0" },
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__files-drop`,

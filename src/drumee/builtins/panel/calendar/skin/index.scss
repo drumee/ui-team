@@ -2085,6 +2085,12 @@
     border-color: var(--primary-40);
   }
 
+  // Once something is attached, the list speaks for itself; a drop or a paste
+  // on the zone still adds more.
+  &__files[data-has-files="1"] &__files-drop {
+    display: none;
+  }
+
   &__files:not([data-drop-active="1"]) &__files-overlay {
     display: none;
   }

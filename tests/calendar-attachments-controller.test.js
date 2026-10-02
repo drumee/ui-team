@@ -151,3 +151,19 @@ test("drop outside the zone is refused and stopped (Review Focus 3)", () => {
   assert.deepEqual(said, ["WRONG_DROP_AREA"]);
   assert.equal(self._form.draft.files.length, 0);
 });
+
+test("_renderFiles re-feeds the chips and restamps the zone's file count", () => {
+  const fn = new Function("require", "A", "SERVICE", "fileChips", "_",
+    `return ${sliceFunction(SRC, "_renderFiles()")}`)(null, A, {}, (_ui, list) => list.map(() => ({})), { isFunction: (f) => typeof f === "function" });
+  const attrs = {}, zoneAttrs = {};
+  let fed = null;
+  const zone = { setAttribute: (k, v) => (zoneAttrs[k] = v) };
+  const part = { el: { setAttribute: (k, v) => (attrs[k] = v), closest: () => zone }, feed: (x) => (fed = x) };
+  const self = { fig: { family: "calendar-main" }, getPart: () => part, _form: { draft: { files: [{}, {}] } } };
+  fn.call(self);
+  assert.equal(fed.length, 2);
+  assert.deepEqual([attrs["data-count"], zoneAttrs["data-has-files"]], ["2", "1"]);
+  self._form.draft.files = [];
+  fn.call(self);
+  assert.equal(zoneAttrs["data-has-files"], "0");
+});

@@ -46,3 +46,20 @@ test("re-exports the Task tab's eager-upload helpers", () => {
     assert.equal(typeof a[k], "function", k);
   }
 });
+
+test("fileIcon: media by MIME or category, documents by extension, generic otherwise", () => {
+  const f = (name, type) => ({ file: { name, type }, ...a.splitFilename(name) });
+  assert.equal(a.fileIcon(f("p.png", "image/png")), "desktop_picture");
+  assert.equal(a.fileIcon(f("clip.mov", "video/quicktime")), "desktop_videofile");
+  assert.equal(a.fileIcon(f("song.mp3", "audio/mpeg")), "desktop_musicfile");
+  assert.equal(a.fileIcon(f("r.pdf", "application/pdf")), "raw-documents_pdf");
+  assert.equal(a.fileIcon(f("colors.docx", "")), "raw-documents_word");
+  assert.equal(a.fileIcon(f("b.XLSX", "")), "raw-documents_excel");
+  // The shared map answers an unknown extension with the extension itself,
+  // which is no icon at all.
+  assert.equal(a.fileIcon(f("a.zip", "application/zip")), "documents_different");
+  assert.equal(a.fileIcon(f("noext", "")), "documents_different");
+  // A linked file (edit mode) has no File, only the server's category/extension.
+  assert.equal(a.fileIcon({ nid: "n", linked: 1, filename: "x", extension: "jpg", category: "image" }), "desktop_picture");
+  assert.equal(a.fileIcon({ nid: "n", linked: 1, filename: "x", extension: "pptx", category: "document" }), "raw-documents_powerpoint");
+});

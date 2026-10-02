@@ -62,3 +62,9 @@ for (const part of ["calendar-main__files-overlay", "calendar-main__files-list"]
 test("the overlay only shows while a drag is over the zone", () => {
   assert.match(css, /\.calendar-main__files\[data-drop-active="1"\] \.calendar-main__files-overlay \{[^}]*display: flex/);
 });
+
+test("the drop row hides once the zone holds files, beating the data-flow rule", () => {
+  const sel = '.calendar-main__files[data-has-files="1"] .calendar-main__files-drop';
+  assert.ok(hideRules("calendar-main__files-drop").includes(sel), `missing ${sel}`);
+  assert.ok(specificity(sel) > FLOW);
+});

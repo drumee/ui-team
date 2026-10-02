@@ -899,6 +899,8 @@ class __calendar_main extends LetcBox {
     if (!part || !part.el) return;
     part.feed(fileChips(this, list));
     part.el.setAttribute("data-count", String(list.length));
+    const zone = part.el.closest && part.el.closest(`.${this.fig.family}__files`);
+    if (zone) zone.setAttribute("data-has-files", list.length ? "1" : "0");
   }
 
   async _startUploads(form) {
@@ -1153,6 +1155,7 @@ class __calendar_main extends LetcBox {
       status: "linked",
       filename: f.filename || "",
       extension: f.extension || f.ext || "",
+      category: f.category || "",
     }));
     form.draft.files = [...linked, ...(form.draft.files || []).filter((f) => !f.linked)];
     this._renderFiles();
