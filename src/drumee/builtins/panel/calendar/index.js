@@ -30,6 +30,8 @@ const {
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { modalKids } = require("./skeleton");
 const { recipientChips } = require("./skeleton/meeting-form");
+const A = require("./attachments");
+const { fileChips } = require("./skeleton/attachments");
 
 const VIEW_KEYS = ["month", "week", "day"];
 const FILTER_KEYS = ["all", "task", "meeting"];
@@ -81,6 +83,15 @@ class __calendar_main extends LetcBox {
     // The dropdown dismisser lives on `document`, so it outlives this widget
     // unless it is taken down here.
     this._unbindMenuDismiss();
+    this._cancelFormUploads(this._form);
+    if (this._dropHandlers && this.el) {
+      for (const [type, fn] of this._dropHandlers) this.el.removeEventListener(type, fn);
+      this._dropHandlers = null;
+    }
+    if (this._pasteHandler) {
+      document.removeEventListener("paste", this._pasteHandler);
+      this._pasteHandler = null;
+    }
     if (this._reloadTimer) {
       clearTimeout(this._reloadTimer);
       this._reloadTimer = null;
@@ -102,6 +113,7 @@ class __calendar_main extends LetcBox {
    * an aggregated read view has even less excuse to block on its data.
    */
   onDomRefresh() {
+    this._installFileDrop();
     this._render();
     this._loadItems().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
@@ -616,6 +628,7 @@ class __calendar_main extends LetcBox {
           due_date: row.due_date || "",
           status: row.status || "todo",
           priority: row.priority || "medium",
+          files: [],
         },
       };
     } else {
@@ -628,6 +641,7 @@ class __calendar_main extends LetcBox {
           due_date: this._pendingDay || "",
           status: "todo",
           priority: "medium",
+          files: [],
         },
       };
     }
@@ -650,6 +664,7 @@ class __calendar_main extends LetcBox {
         restrict: false,
         recipients: [],
         password_on: false,
+        files: [],
       },
     };
     this._pendingDay = null;
@@ -657,6 +672,8 @@ class __calendar_main extends LetcBox {
   }
 
   _closeForm() {
+    // Whatever is still uploading has no task or meeting to join any more.
+    this._cancelFormUploads(this._form);
     this._form = null;
     // Pushes that landed while the modal was open were held back
     // (_scheduleReload); this is where they are owed.
@@ -837,6 +854,236 @@ class __calendar_main extends LetcBox {
     if (!part || !part.el) return;
     part.feed(recipientChips(this, list));
     part.el.setAttribute("data-count", String(list.length));
+  }
+
+  // ── attachments ────────────────────────────────────────────────────────────
+  //
+  // Files upload the moment they are added (upload-progress window, the route
+  // the Task tab takes) into the personal hub's hidden task folder; the commit
+  // only links the nids (_linkTaskFiles / _linkMeetingFiles). Every callback
+  // checks it still belongs to the open form: the modal can close, or another
+  // open, while bytes are in flight.
+
+  /** The personal hub's /__chat__/__task__ (mfs_home.task_upload_id). */
+  async _attachmentNid() {
+    if (this._attachNid) return this._attachNid;
+    try {
+      const home = await this.fetchService({
+        service: (SERVICE.media && SERVICE.media.home) || "media.home",
+        hub_id: this._personalHub,
+      });
+      if (home && home.task_upload_id) this._attachNid = home.task_upload_id;
+    } catch (e) {
+      this.warn && this.warn("calendar: task folder lookup failed", e);
+    }
+    return this._attachNid || this._personalNid;
+  }
+
+  async _stageFiles(files) {
+    const form = this._form;
+    if (!form || !files || !files.length) return;
+    const draft = form.draft;
+    draft.files = draft.files || [];
+    const { overflow } = A.stageFiles(draft.files, files);
+    if (overflow.length && typeof Butler !== "undefined") Butler.say(LOCALE.CAL_FILES_LIMIT);
+    this._renderFiles();
+    return this._startUploads(form);
+  }
+
+  /** Re-feed the chip list alone (part "form-files"). */
+  _renderFiles() {
+    const list = (this._form && this._form.draft.files) || [];
+    const part = _.isFunction(this.getPart) ? this.getPart("form-files") : null;
+    if (!part || !part.el) return;
+    part.feed(fileChips(this, list));
+    part.el.setAttribute("data-count", String(list.length));
+  }
+
+  async _startUploads(form) {
+    const list = (form && form.draft.files) || [];
+    const fresh = list.filter((pf) => pf.file && !pf.nid && !pf.bundleEntry && pf.status === "queued");
+    if (!fresh.length) return;
+    const Entry = require("media/bundle/entry");
+    const UploadProgress = require("window/upload-progress");
+    const paired = A.pairEntries(fresh, Entry.entriesFromFileList(fresh.map((pf) => pf.file)));
+    if (!paired.length) return;
+    paired.forEach((pf) => (pf.status = "uploading"));
+    this._renderFiles();
+    const dest = await this._attachmentNid();
+    await UploadProgress.runBundle(
+      paired.map((pf) => pf.bundleEntry),
+      dest,
+      this._personalHub,
+      null,
+      {
+        onJob: (job) => paired.forEach((pf) => (pf.bundleJob = job)),
+        onFileDone: (node, _parent, entry) => this._onFileDone(form, entry, node),
+        onDone: () => this._onBatchDone(form, paired),
+      },
+    ).catch(() => null);
+    // No window, or it refused the batch before making a job: nothing will
+    // ever report on these.
+    const orphaned = paired.filter((pf) => !pf.bundleJob && pf.bundleEntry && pf.bundleEntry.status !== "canceled");
+    if (orphaned.length) {
+      orphaned.forEach((pf) => (pf.bundleEntry.status = "error"));
+      this._onBatchDone(form, orphaned);
+    }
+  }
+
+  _onFileDone(form, entry, node) {
+    const pf = ((form && form.draft.files) || []).find((f) => f.bundleEntry === entry);
+    if (!pf || !A.settleEagerFile(pf, node, this._personalHub)) return;
+    if (this._form !== form) return;
+    this._renderFiles();
+  }
+
+  _onBatchDone(form, pfs) {
+    // settleEagerBatch hands failures back for a commit-time retry; this
+    // modal has no commit-time upload, so a failure is an error chip with
+    // Retry, and a cancel leaves the list.
+    const { fallback, dropped } = A.settleEagerBatch(pfs);
+    fallback.forEach((pf) => (pf.status = "error"));
+    if (dropped.length) {
+      const gone = new Set(dropped);
+      form.draft.files = form.draft.files.filter((f) => !gone.has(f));
+    }
+    if (this._form !== form) return;
+    if (fallback.length || dropped.length) this._renderFiles();
+  }
+
+  async _removeFile(key) {
+    const form = this._form;
+    if (!form) return;
+    const list = form.draft.files || [];
+    const pf = list.find((f) => A.fileKey(f) === key);
+    if (!pf) return;
+    if (pf.linked) {
+      // Edit mode: the file is already on the task. Unlinked now, like the
+      // Task tab's ✕, addressed with the ROW's hub.
+      const row = form.row || {};
+      const res = await this.postService({
+        service: (SERVICE.task && SERVICE.task.unlink_file) || "task.unlink_file",
+        hub_id: row.hub_id || this._personalHub,
+        task_id: row.id,
+        file_nid: pf.nid,
+      });
+      if (!Array.isArray(res)) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+        return;
+      }
+    } else if (A.unfinishedPending([pf]).length) {
+      require("window/upload-progress").dropEntries(A.itemsOf([pf]));
+    }
+    if (pf.previewUrl) {
+      try {
+        URL.revokeObjectURL(pf.previewUrl);
+      } catch (_) {}
+    }
+    form.draft.files = (form.draft.files || []).filter((f) => f !== pf);
+    if (this._form === form) this._renderFiles();
+  }
+
+  _retryFile(key) {
+    const form = this._form;
+    const pf = form && (form.draft.files || []).find((f) => A.fileKey(f) === key);
+    if (!pf || pf.status !== "error" || !pf.file) return;
+    pf.bundleEntry = null;
+    pf.bundleJob = null;
+    pf.status = "queued";
+    this._startUploads(form);
+  }
+
+  _cancelFormUploads(form) {
+    const list = (form && form.draft && form.draft.files) || [];
+    const doomed = A.abandonedPending(list);
+    if (doomed.length) require("window/upload-progress").dropEntries(A.itemsOf(doomed));
+    for (const pf of list) {
+      if (!pf.previewUrl) continue;
+      try {
+        URL.revokeObjectURL(pf.previewUrl);
+      } catch (_) {}
+    }
+  }
+
+  /** Paperclip: a throwaway <input type=file multiple>. */
+  _pickFiles() {
+    const form = this._form;
+    if (!form) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.onchange = () => {
+      if (this._form === form) this._stageFiles(Array.from(input.files || []));
+    };
+    input.click();
+  }
+
+  /**
+   * Delegated on this.el, so it survives every modal re-feed. Only a COMPUTER
+   * file drag (dataTransfer type "Files") while a task/meeting modal is open is
+   * ours. Over the Attachments zone it is accepted; anywhere else in the modal
+   * it is refused out loud. Either way it is stopped here, because the desk's
+   * own drop handler would otherwise upload the file into the home folder.
+   */
+  _installFileDrop() {
+    if (!this.el || this._dropHandlers) return;
+    const pfx = this.fig.family;
+    const modalOpen = () => this._form && (this._form.kind === "task" || this._form.kind === "meeting");
+    const zoneOf = (t) => (t && t.closest ? t.closest(`.${pfx}__files[data-drop-zone="files"]`) : null);
+    const light = (zone) => {
+      if (this._litZone === zone) return;
+      if (this._litZone) this._litZone.setAttribute("data-drop-active", "0");
+      if (zone) zone.setAttribute("data-drop-active", "1");
+      this._litZone = zone || null;
+    };
+    const over = (e) => {
+      if (!modalOpen() || !A.isFileDrag(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const zone = zoneOf(e.target);
+      try {
+        e.dataTransfer.dropEffect = zone ? "copy" : "none";
+      } catch (_) {}
+      light(zone);
+    };
+    const leave = (e) => {
+      if (this._litZone && !this._litZone.contains(e.relatedTarget)) light(null);
+    };
+    const drop = (e) => {
+      light(null);
+      return this._onDrop(e);
+    };
+    this._dropHandlers = [["dragover", over], ["dragleave", leave], ["drop", drop]];
+    for (const [type, fn] of this._dropHandlers) this.el.addEventListener(type, fn);
+    this._pasteHandler = (e) => this._onPasteFiles(e);
+    document.addEventListener("paste", this._pasteHandler);
+  }
+
+  _onDrop(e) {
+    if (!this._form || !A.isFileDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pfx = this.fig.family;
+    const zone = e.target && e.target.closest ? e.target.closest(`.${pfx}__files[data-drop-zone="files"]`) : null;
+    if (!zone) {
+      if (typeof Butler !== "undefined") Butler.say(LOCALE.WRONG_DROP_AREA);
+      return;
+    }
+    return this._stageFiles(Array.from((e.dataTransfer && e.dataTransfer.files) || []));
+  }
+
+  /**
+   * Paste files (a screenshot, a file copied in the OS file manager) into the
+   * open modal. A paste into the title or description stays text.
+   */
+  _onPasteFiles(e) {
+    if (!this._form || (this._form.kind !== "task" && this._form.kind !== "meeting")) return;
+    const t = e && e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    const files = Array.from((e.clipboardData && e.clipboardData.files) || []);
+    if (!files.length) return;
+    e.preventDefault();
+    return this._stageFiles(files);
   }
 
   /**
@@ -1491,6 +1738,13 @@ class __calendar_main extends LetcBox {
       // interactive, and this keeps any status but an explicit commit out of
       // the write regardless. A click on the Create button carries no
       // __inputStatus at all, so it passes. Same guard as invite-popup.
+      case "cal-pick-files":
+        return this._pickFiles();
+      case "cal-file-remove":
+        return this._removeFile(cmd.mget("calFileKey"));
+      case "cal-file-retry":
+        return this._retryFile(cmd.mget("calFileKey"));
+
       case "cal-submit-task":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
           return;
