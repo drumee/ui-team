@@ -12,11 +12,13 @@ function fileChips(ui, list) {
   return (list || []).map((pf) => {
     const key = fileKey(pf);
     const name = pf.extension ? `${pf.filename}.${pf.extension}` : pf.filename;
+    const ico = fileIcon(pf);
     return Skeletons.Box.X({
       className: `${pfx}__file`,
-      attrOpt: { "data-key": key, "data-status": pf.status || "queued", title: name },
+      // data-ico: the skin styles some glyphs per type (the Office ones).
+      attrOpt: { "data-key": key, "data-status": pf.status || "queued", "data-ico": ico, title: name },
       kids: [
-        Skeletons.Image.Svg({ ico: fileIcon(pf), className: `${pfx}__file-ico` }),
+        Skeletons.Image.Svg({ ico, className: `${pfx}__file-ico` }),
         Skeletons.Note({ className: `${pfx}__file-name`, content: name }),
         pf.status === "error"
           ? Skeletons.Note({

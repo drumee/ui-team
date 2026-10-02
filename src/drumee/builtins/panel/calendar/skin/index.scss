@@ -2107,6 +2107,14 @@
     font-size: 13px;
   }
 
+  // The Word / Excel / PowerPoint glyphs draw their back page with no fill of
+  // its own, so it takes the icon's currentcolor — and must read white.
+  &__file[data-ico="raw-documents_word"] &__file-ico,
+  &__file[data-ico="raw-documents_excel"] &__file-ico,
+  &__file[data-ico="raw-documents_powerpoint"] &__file-ico {
+    color: white;
+  }
+
   &__file-name {
     flex: 1;
     min-width: 0;

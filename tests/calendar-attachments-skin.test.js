@@ -68,3 +68,13 @@ test("the drop row hides once the zone holds files, beating the data-flow rule",
   assert.ok(hideRules("calendar-main__files-drop").includes(sel), `missing ${sel}`);
   assert.ok(specificity(sel) > FLOW);
 });
+
+// The Office glyphs' back page has no fill of its own; it takes the icon's
+// currentcolor, and that page has to read white.
+for (const ico of ["raw-documents_word", "raw-documents_excel", "raw-documents_powerpoint"]) {
+  test(`${ico} renders white`, () => {
+    // Sass drops the quotes around a plain-identifier attribute value.
+    const re = new RegExp(`\\.calendar-main__file\\[data-ico="?${ico}"?\\] \\.calendar-main__file-ico[^{]*\\{[^}]*color: (white|#fff(fff)?)`);
+    assert.match(css, re);
+  });
+}

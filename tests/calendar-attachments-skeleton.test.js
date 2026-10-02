@@ -93,3 +93,8 @@ test("the zone says whether it holds files, so the drop row can step aside", () 
   assert.equal(zone([]).attrOpt["data-has-files"], "0");
   assert.equal(zone([{ localKey: "l1", filename: "a", extension: "", status: "queued" }]).attrOpt["data-has-files"], "1");
 });
+
+test("each chip names its icon, so the skin can style per file type", () => {
+  const list = [{ localKey: "l1", filename: "a", extension: "docx", status: "queued" }];
+  assert.equal(block.fileChips(ui({}), list)[0].attrOpt["data-ico"], "raw-documents_word");
+});
