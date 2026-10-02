@@ -78,3 +78,21 @@ for (const ico of ["raw-documents_word", "raw-documents_excel", "raw-documents_p
     assert.match(css, re);
   });
 }
+
+// Five attachments pushed the modal past its 88vh cap; the body (min-height:0,
+// no overflow) then slid under the footer and Cancel/Create covered Priority.
+const ruleBody = (sel) => {
+  const m = css.match(new RegExp("(?<=^|\\})\\s*" + sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + " \\{([^}]*)\\}"));
+  assert.ok(m, `missing rule ${sel}`);
+  return m[1];
+};
+
+test("the attachment list caps its height and scrolls", () => {
+  const b = ruleBody(".calendar-main__files-list");
+  assert.match(b, /max-height: \d+px/);
+  assert.match(b, /overflow-y: auto/);
+});
+
+test("the modal body scrolls instead of sliding under the footer", () => {
+  assert.match(ruleBody(".calendar-main__modal-body"), /overflow-y: auto/);
+});

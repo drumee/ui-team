@@ -1269,6 +1269,9 @@
     flex: 1 1 auto;
     min-height: 0;
     gap: 12px;
+    // The modal caps at 88vh and lets the body shrink; without its own scroll
+    // the overflow slid under the footer (Cancel/Create over Priority).
+    @include quiet-scroll;
   }
 
   // Right-aligned action row under a hairline, as in the meeting modal. Buttons
@@ -2059,6 +2062,12 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+    // About four and a half rows, so a fifth one visibly continues. The
+    // scrollbar stays drawn (not only on hover) — it is the only sign there
+    // is more. Room on the right keeps each ✕ clear of it.
+    max-height: 120px;
+    padding-right: 4px;
+    @include quiet-scroll($rest: var(--border-default));
   }
 
   // Hide rules here must beat ui-core's `.drumee-widget[data-flow=…]
@@ -2101,6 +2110,8 @@
 
   &__file {
     display: flex;
+    // A row in the scrolling list overflows it; it never squashes to fit.
+    flex-shrink: 0;
     align-items: center;
     gap: 8px;
     min-width: 0;
