@@ -237,7 +237,33 @@ class __dmz_meeting extends LetcBox {
       case "reload":
         location.reload();
         break;
+
+      case "dmz-open-attachment": {
+        const b = (typeof bootstrap === "function" && bootstrap()) || {};
+        const url = require("./skeleton/attachments").fileUrl(cmd.mget("fileNid"), cmd.mget("fileHub"), b);
+        window.open(url, "_blank", "noopener");
+        break;
+      }
     }
+  }
+
+  /**
+   * The meeting's attachments, under the Join button. Best effort: a link
+   * with nothing attached, an old server, or a refused password draws nothing.
+   */
+  async _loadAttachments() {
+    const token = this.mget(_a.token);
+    const svc = (SERVICE.dmz && SERVICE.dmz.meeting_files) || "dmz.meeting_files";
+    let data;
+    try {
+      data = await this.postService(svc, { token });
+    } catch (e) {
+      return;
+    }
+    if (!data || data.status !== "TICKET_OK" || !data.items || !data.items.length) return;
+    const slot = await this.ensurePart("meeting-attachments");
+    const tree = require("./skeleton/attachments")(this, data.items, data.hub_id);
+    if (slot && tree) slot.feed(tree);
   }
 
   /**
@@ -545,6 +571,7 @@ class __dmz_meeting extends LetcBox {
     setTimeout(() => {
       lobby.feed(require("./skeleton/lobby")(this, data));
       lobby.anim([1, { scale: 1, alpha: 1.0 }]);
+      this._loadAttachments();
     }, 1000);
     this.state = "before-start";
     this.sessionData = data;
