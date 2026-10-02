@@ -1,6 +1,6 @@
 
 const { captureUtm } = require('libs/campaign');
-const { arm: armHubDeepLink } = require('libs/hub-deep-link');
+const { arm: armHubDeepLink, clear: clearHubDeepLink } = require('libs/hub-deep-link');
 
 /**
  * Class representing the Welcome module.
@@ -71,7 +71,13 @@ class __welcome_router extends LetcBox {
       } catch (e) {
         _hubName = args.name || '';
       }
-      armHubDeepLink(args.hub_id, _hubName);
+      // The invitation token rides along (see libs/hub-deep-link): the login
+      // reload drops `this._inviteToken`, and without the token the desk would
+      // open a workspace the person was never added to.
+      armHubDeepLink(args.hub_id, _hubName, {
+        invite: args.invite || '',
+        action: args.invite_action || '',
+      });
     }
     this.route();
   }
@@ -357,21 +363,30 @@ class __welcome_router extends LetcBox {
    */
   async _redeemInviteThenEnter() {
     if (this._inviteToken) {
+      const token = this._inviteToken;
+      this._inviteToken = null;
+      let res = null;
       try {
-        const res = await this.postService('hub.accept_invite', {
-          token: this._inviteToken,
-        });
-        this._inviteToken = null;
-        if (res && res.hub_id) {
-          RADIO_BROADCAST.trigger("workspace:refresh");
-          location.hash = `${_K.module.desk}/wm/hub/?hub_id=${res.hub_id}`;
-          return;
-        }
+        res = await this.postService('hub.accept_invite', { token });
       } catch (e) {
-        this._inviteToken = null;
-        if (window.Wm && Wm.alert) {
-          Wm.alert(LOCALE.INVITE_LINK_INVALID);
-        }
+        res = null;
+      }
+      // Answered here: the desk must not answer it again from storage.
+      clearHubDeepLink();
+      const status = (res && res.status) || '';
+      if (res && res.hub_id && !status) {
+        RADIO_BROADCAST.trigger("workspace:refresh");
+        // The reveal route is what the desk itself uses to open a workspace
+        // (guest-join-open-workspace); `wm/hub/` was never a route.
+        location.hash =
+          `#/desk/wm/reveal/?hub_id=${res.hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
+        return;
+      }
+      if (window.Wm && Wm.alert) {
+        let msg = LOCALE.INVITE_LINK_INVALID;
+        if (status === 'SEAT_LIMIT_REACHED') msg = LOCALE.INVITE_SEAT_LIMIT_INVITEE || msg;
+        if (status === 'OVER_LIMIT') msg = LOCALE.OL_TOAST_INVITE || msg;
+        Wm.alert(msg);
       }
     }
     location.hash = _K.module.desk;

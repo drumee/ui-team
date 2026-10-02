@@ -642,6 +642,31 @@ class __window_manager extends push {
    *
    * @param {Object} args parsed hash args from the activity item
    */
+  /**
+   * Can this account read the workspace at all? Same probe the pane makes
+   * first (media.home), so a refusal here is the refusal the pane would meet.
+   * Network trouble answers true: the opener keeps its own error path.
+   * @param {String} hub_id
+   * @returns {Promise<Boolean>}
+   */
+  async _canEnterWorkspace(hub_id) {
+    let data = null;
+    try {
+      data = await this.fetchService(
+        { service: SERVICE.media.home, hub_id },
+        { async: 1 },
+      );
+    } catch (e) {
+      return true;
+    }
+    const denied =
+      !!data &&
+      (data.status == 403 ||
+        /^(PERMISSION_DENIED|FORBIDDEN|ACCESS_DENIED)$/i.test(String(data.error || "")));
+    if (!denied) return true;
+    this.alert(LOCALE.WORKSPACE_NO_ACCESS || LOCALE.WEAK_PRIVILEGE);
+    return false;
+  }
   async openNotificationLocation(args = {}) {
     const {
       hub_id,
@@ -682,6 +707,10 @@ class __window_manager extends push {
     // early return cannot be relied on here, because after a sub-folder
     // navigation _curWorkspace.nid is that sub-folder, not the root.
     if (!this._findWorkspaceWindow(hub_id)) {
+      // A link can name a workspace this account cannot enter (an invitation
+      // never answered, a membership since removed). The pane's own media.home
+      // would fail with 403 and nothing would tell the user: ask first.
+      if (!(await this._canEnterWorkspace(hub_id))) return;
       // nid 0, not the target: 0 is the server's "this hub's root" shortcut
       // (see _rootNid). The pane opens at the workspace root and the deep
       // target, if any, is navigated to below.
