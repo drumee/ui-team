@@ -756,26 +756,37 @@ class __invite_popup extends LetcBox {
     this._renderTree();
   }
 
-  _toggleRoleDropdown(hub_id) {
-    const opt = this._partRefs.roleOptions[hub_id];
+  /**
+   * @param {String} key  the pill's part key — the hub_id for a tree row,
+   *   "ws-email" / "ws-link" for the workspace-scope pills (skeleton rolePill)
+   */
+  _toggleRoleDropdown(key) {
+    const opt = this._partRefs.roleOptions[key];
     if (!opt) return;
     const open = opt.el.dataset.state === "1";
     Object.values(this._partRefs.roleOptions).forEach((o) => (o.el.dataset.state = 0));
     opt.el.dataset.state = open ? 0 : 1;
   }
 
+  /**
+   * One role per workspace, however many pills show it: workspace scope draws
+   * one per tab, so every menu and label stamped with this hub_id follows the
+   * pick — switching tabs never shows a stale role.
+   */
   _pickRole(hub_id, roleId) {
     if (!ROLES.find((r) => r.id === roleId)) return;
-    this._roles.set(String(hub_id), roleId);
-    const opts = this._partRefs.roleOptions[hub_id];
-    if (opts) {
+    hub_id = String(hub_id);
+    this._roles.set(hub_id, roleId);
+    const mine = (part) => part && part.el && part.el.dataset.hub_id === hub_id;
+    Object.values(this._partRefs.roleOptions).filter(mine).forEach((opts) => {
       opts.el
         .querySelectorAll(".invite-popup__role-option")
         .forEach((n) => (n.dataset.checked = n.dataset.id === roleId ? 1 : 0));
       opts.el.dataset.state = 0;
-    }
-    const label = this._partRefs.roleLabels[hub_id];
-    if (label) label.set({ content: summarizeRoles([roleId]) });
+    });
+    Object.values(this._partRefs.roleLabels).filter(mine).forEach((label) => {
+      label.set({ content: summarizeRoles([roleId]) });
+    });
   }
 
   /* ── Tabs + public link (UI only) ─────────────────────────── */
@@ -1039,7 +1050,7 @@ class __invite_popup extends LetcBox {
       }
 
       case "toggle-role":
-        return this._toggleRoleDropdown(this._get(cmd, "hub_id"));
+        return this._toggleRoleDropdown(this._get(cmd, "key") || this._get(cmd, "hub_id"));
 
       case "pick-role":
         return this._pickRole(this._get(cmd, "hub_id"), this._get(cmd, "id"));
