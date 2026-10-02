@@ -182,6 +182,47 @@ test("workspace scope: Send invites into that one workspace", async () => {
   assert.deepEqual(p.posted.filter(([s]) => s === "hub.invite").map(([, a]) => a.hub_id), ["h2"]);
 });
 
+// Figma 1344:184456 / 785:75492: a role pill on EACH tab, one role underneath.
+test("workspace scope: the two tab pills toggle apart, pick one role, and Send uses it", async () => {
+  const p = make(wsOpt);
+  await p._loadData();
+  const pill = () => {
+    const opts = [{ dataset: { id: "edit" } }, { dataset: { id: "admin" } }];
+    const box = part();
+    box.el.dataset = { hub_id: "h2", state: 0 };
+    box.el.querySelectorAll = () => opts;
+    box.opts = opts;
+    return box;
+  };
+  const label = () => Object.assign(part(), { el: { dataset: { hub_id: "h2" } }, set(o) { this.content = o.content; } });
+  const [mail, link] = [pill(), pill()];
+  const [mailLabel, linkLabel] = [label(), label()];
+  p.onPartReady(mail, "role-options:ws-email");
+  p.onPartReady(link, "role-options:ws-link");
+  p.onPartReady(mailLabel, "role-label:ws-email");
+  p.onPartReady(linkLabel, "role-label:ws-link");
+
+  p.onUiEvent(cmd("toggle-role", { hub_id: "h2", key: "ws-link" }));
+  assert.equal(link.el.dataset.state, 1, "the link tab's menu opens");
+  assert.equal(mail.el.dataset.state, 0, "the email tab's menu stays shut");
+
+  p._pickRole("h2", "admin");
+  assert.equal(p._roles.get("h2"), "admin");
+  for (const box of [mail, link]) {
+    assert.equal(box.el.dataset.state, 0);
+    assert.deepEqual(box.opts.map((o) => o.dataset.checked), [0, 1]);
+  }
+  assert.equal(mailLabel.content, "admin", "the other tab's pill follows");
+  assert.equal(linkLabel.content, "admin");
+
+  p._invitees = [{ email: "a@b.co" }];
+  p._closePopup = () => {};
+  p.posted = [];
+  await p._sendInvitation();
+  const sent = p.posted.filter(([s]) => s === "hub.invite").map(([, a]) => a);
+  assert.deepEqual(sent.map((a) => [a.hub_id, a.privilege]), [["h2", ADMIN]]);
+});
+
 test("workspace scope needs a real workspace: the personal home falls back to org scope", () => {
   const p = make({ ...wsOpt, hub_id: "me" });
   assert.equal(p._scope, "org");
