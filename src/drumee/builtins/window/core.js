@@ -1172,12 +1172,14 @@ class __window_core extends __utils {
       case "show-hidden-files":
         localStorage.setItem("showHidden", "yes");
         this.iconsList.model.unset("skip");
-        this.iconsList.restart();
+        // The window's restart, so a window that overrides it (the folder's
+        // search mode) gets to answer.
+        this.restart();
         break;
       case "hide-hidden-files":
         localStorage.removeItem("showHidden");
         this.iconsList.model.set({ skip: { filename: /^\./ } });
-        this.iconsList.restart();
+        this.restart();
         break;
       case "export-to-server":
       case "import-from-server":

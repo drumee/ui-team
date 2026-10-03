@@ -16,10 +16,34 @@ const method = (name) => {
   return src.slice(i, src.indexOf("\n  }\n", i));
 };
 
-test("getCurrentApi answers {} while searching, only for the dynamic (untyped) call", () => {
-  const m = method("getCurrentApi");
-  assert.match(m, /type == null && FilesSearch\.isSearching\(this\)\) return \{\}/);
-  assert.match(m, /super\.getCurrentApi\(type\)/);
+test("only the Files list's api goes empty while searching; getCurrentApi stays real", () => {
+  // core.js newDocument reads getCurrentApi() for nid/hub_id — an empty answer
+  // there created "+ New" documents with no target (final review #1).
+  assert.ok(!src.includes("\n  getCurrentApi("), "folder must not override getCurrentApi");
+  const m = method("getListApi");
+  assert.match(m, /FilesSearch\.isSearching\(this\)\) return \{\}/);
+  assert.match(m, /return this\.getCurrentApi\(\)/);
+  const read = (p) => fs.readFileSync(path.join(__dirname, "..", "src/drumee/builtins/window", p), "utf8");
+  for (const f of ["skeleton/toolkit/index.js", "skeleton/content/row/index.js"]) {
+    assert.match(read(f), /return ui\.getListApi \? ui\.getListApi\(\) : ui\.getCurrentApi\(\);/, f);
+  }
+});
+
+test("a drag-arrange among search hits never writes ranks (final review #2)", () => {
+  const m = method("syncOrder");
+  assert.match(m, /if \(FilesSearch\.isSearching\(this\)\) \{\s*this\._manualArrange = 0;\s*return;\s*\}/);
+  assert.match(m, /return super\.syncOrder\(cb\)/);
+});
+
+test("a window restart while searching re-runs the search, not a blank list (final review #4)", () => {
+  const m = method("restart");
+  assert.match(m, /if \(FilesSearch\.onLoadContent\(this\)\) return;/);
+  assert.match(m, /return super\.restart\(w, type\)/);
+  const core = fs.readFileSync(path.join(__dirname, "..", "src/drumee/builtins/window/core.js"), "utf8");
+  for (const c of ["show-hidden-files", "hide-hidden-files"]) {
+    const i = core.indexOf(`case "${c}":`);
+    assert.match(core.slice(i, core.indexOf("break;", i)), /this\.restart\(\);/, c);
+  }
 });
 
 test("loadContent defers to search, and begins the skeleton after restart", () => {

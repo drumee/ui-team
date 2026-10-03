@@ -91,7 +91,8 @@ const __media_skl_row = function (ui) {
     // crashes on this.actualNode(). Wrap it so getCurrentApi is invoked as a
     // method on `ui` (same pattern as gridFilesBrowser's working api).
     api: function () {
-      return ui.getCurrentApi();
+      // getListApi when the window has one (the folder: search mode).
+      return ui.getListApi ? ui.getListApi() : ui.getCurrentApi();
     },
   });
 

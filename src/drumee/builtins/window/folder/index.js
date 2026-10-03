@@ -1208,13 +1208,35 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  // The Files list's api (skeleton/toolkit gridFilesBrowser, content/row).
   // While the toolbar search is active the list shows its results, fed by
   // ./files-search; an empty api makes the list's own fetch (and its scroll
   // paging) a no-op so the folder listing cannot page back in underneath.
-  // Explicit-type callers (core.js) still get the real api.
-  getCurrentApi(type) {
-    if (type == null && FilesSearch.isSearching(this)) return {};
-    return super.getCurrentApi(type);
+  // Its own method, NOT a getCurrentApi override: other callers read
+  // getCurrentApi() for the folder's nid/hub_id (core.js newDocument), and an
+  // empty answer there created "+ New" documents with no target.
+  getListApi() {
+    if (FilesSearch.isSearching(this)) return {};
+    return this.getCurrentApi();
+  }
+
+  // Search hits come from many folders: a drag among them must not renumber
+  // ranks (media.reorder would write them onto files elsewhere) or mark this
+  // folder as hand-arranged.
+  syncOrder(cb) {
+    if (FilesSearch.isSearching(this)) {
+      this._manualArrange = 0;
+      return;
+    }
+    return super.syncOrder(cb);
+  }
+
+  // A restart (WS update for this folder, show/hide hidden files) while
+  // searching re-runs the search; restarting the list itself would fetch
+  // nothing (getListApi is {}) and leave the pane blank under the query.
+  restart(w, type) {
+    if (FilesSearch.onLoadContent(this)) return;
+    return super.restart(w, type);
   }
 
   /**

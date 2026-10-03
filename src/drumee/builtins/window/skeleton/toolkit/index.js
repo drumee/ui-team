@@ -562,7 +562,8 @@ export function gridFilesBrowser(ui) {
     // that `.no-content` styles.
     evArgs: Skeletons.Note(LOCALE.NO_FOLDERS_OR_FILES_YET, "no-content"),
     api: function (x) {
-      return ui.getCurrentApi();
+      // getListApi when the window has one (the folder: search mode).
+      return ui.getListApi ? ui.getListApi() : ui.getCurrentApi();
     },
   });
 
