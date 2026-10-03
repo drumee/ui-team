@@ -93,6 +93,11 @@ class __calendar_main extends LetcBox {
       document.removeEventListener("paste", this._pasteHandler);
       this._pasteHandler = null;
     }
+    if (this._timeFilter && this.el) {
+      this.el.removeEventListener("input", this._timeFilter);
+      this.el.removeEventListener("change", this._timeFilter);
+      this._timeFilter = null;
+    }
     if (this._reloadTimer) {
       clearTimeout(this._reloadTimer);
       this._reloadTimer = null;
@@ -115,6 +120,7 @@ class __calendar_main extends LetcBox {
    */
   onDomRefresh() {
     this._installFileDrop();
+    this._installTimeFilter();
     this._render();
     this._loadItems().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
@@ -1065,6 +1071,56 @@ class __calendar_main extends LetcBox {
     document.addEventListener("paste", this._pasteHandler);
   }
 
+  /**
+   * The meeting form's time boxes take digits only: hour 1-12, minute 00-59.
+   * Delegated on this.el like _installFileDrop, so it survives every modal
+   * re-feed.
+   *
+   * On `input`, a value that is not on its way to a legal one (13, 60, a
+   * letter) is refused and the box goes back to what it held before the key
+   * press. Partial values ("0", "1") are let through because they are
+   * keystrokes away from "09" or "12". On `change` (blur), an hour left at
+   * "0" or "00" can never become legal, so it goes back to the last complete
+   * hour the box held.
+   */
+  _installTimeFilter() {
+    if (!this.el || this._timeFilter) return;
+    const pfx = this.fig.family;
+    const RULES = {
+      hour: { partial: /^(0|1|0[1-9]|1[0-2]|[2-9])?$/, done: (n) => n >= 1 && n <= 12 },
+      minute: { partial: /^([0-5][0-9]?|[6-9])?$/, done: (n) => n >= 0 && n <= 59 },
+    };
+    this._timeFilter = (e) => {
+      const t = e.target;
+      if (!t || t.tagName !== "INPUT" || !t.closest(`.${pfx}__time-input`)) return;
+      const part = /_(hour|minute)$/.exec(t.name || "");
+      const rule = part && RULES[part[1]];
+      if (!rule) return;
+      const isDone = (v) => v !== "" && rule.done(parseInt(v, 10));
+      if (t.__calLast == null) t.__calLast = rule.partial.test(t.defaultValue) ? t.defaultValue : "";
+      if (t.__calGood == null) t.__calGood = isDone(t.defaultValue) ? t.defaultValue : "";
+
+      if (e.type === "input") {
+        const digits = String(t.value || "").replace(/\D/g, "").slice(0, 2);
+        if (!rule.partial.test(digits)) {
+          t.value = t.__calLast;
+          return;
+        }
+        if (t.value !== digits) t.value = digits;
+        t.__calLast = digits;
+        if (isDone(digits)) t.__calGood = digits;
+        return;
+      }
+
+      if (t.value !== "" && !isDone(t.value)) {
+        t.value = t.__calGood;
+        t.__calLast = t.__calGood;
+      }
+    };
+    this.el.addEventListener("input", this._timeFilter);
+    this.el.addEventListener("change", this._timeFilter);
+  }
+
   _onDrop(e) {
     if (!this._form || !A.isFileDrag(e)) return;
     e.preventDefault();
@@ -1184,19 +1240,13 @@ class __calendar_main extends LetcBox {
     });
 
     // start_hour / start_minute / end_hour / end_minute → draft.start / .end,
-    // leaving the meridiem the toggle already set (except for a 24h hour).
+    // leaving the meridiem the toggle already set. The boxes only accept
+    // 1-12 for the hour (_installTimeFilter), so there is no 24h hour to fold.
     ["start", "end"].forEach((which) => {
       const part = draft[which] || {};
       const hour = data[`${which}_hour`];
       const minute = data[`${which}_minute`];
       if (hour != null && `${hour}`.trim() !== "") part.hour = `${hour}`.trim();
-      // A 24-hour entry (13-23, e.g. "16" for 4 PM) is unambiguous: store it
-      // the 12h way (4 + PM) instead of letting _epochFor clamp it to 12.
-      const h = parseInt(part.hour, 10);
-      if (h >= 13 && h <= 23) {
-        part.hour = String(h - 12);
-        part.meridiem = "PM";
-      }
       if (minute != null && `${minute}`.trim() !== "") {
         part.minute = `${minute}`.trim();
       }

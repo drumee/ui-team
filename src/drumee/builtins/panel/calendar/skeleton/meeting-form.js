@@ -26,6 +26,10 @@ function timePicker(ui, which, value) {
   // purpose. It is also not optional: ui-core's entry widget falls back to
   // LOCALE.FORM_ENTRY when no placeholder is given, and a full sentence in a
   // two-character box is worse than nothing.
+  //
+  // Two characters at most; which digits may go in (hour 1-12, minute 00-59)
+  // is enforced as the user types by the controller (index.js
+  // _installTimeFilter), since the Entry template has no pattern attribute.
   const numberBox = (part, val, placeholderKey, hint) =>
     Skeletons.Box.Y({
       className: `${pfx}__time-part`,
@@ -36,6 +40,7 @@ function timePicker(ui, which, value) {
           name: `${which}_${part}`,
           value: val == null ? "" : String(val),
           placeholder: hint,
+          maxlength: 2,
           require: "any",
           bubble: 0,
           service: "cal-form-time",
@@ -328,53 +333,64 @@ module.exports = function (ui) {
         ],
       }),
 
-      Skeletons.Box.Y({
-        className: `${pfx}__modal-body`,
+      // Two columns, as in the task modal (skin stacks them under 700px):
+      // what and when on the left, the time and who on the right.
+      Skeletons.Box.X({
+        className: `${pfx}__modal-body ${pfx}__modal-body--split`,
         kids: [
-          field(
-            "TITLE",
-            Skeletons.Entry({
-              className: `${pfx}__input`,
-              sys_pn: "form-title",
-              formItem: "title",
-              name: "title",
-              value: draft.title || "",
-              placeholder: LOCALE.TITLE,
-              require: "text",
-              // Deliberately NOT interactive, and this Entry must never be
-              // given a `service`. An interactive Entry re-fires its own
-              // service on every printable keyup, which is how the task
-              // modal's title used to create a task per letter typed. Here
-              // there is no service to fire, so nothing books a room — the
-              // footer button is the only way in. Keep both halves true.
-              preselect: 1,
-              bubble: 0,
-              uiHandler: [ui],
-              partHandler: ui,
-            }),
-            "title",
-          ),
-
-          field(
-            "DATE",
-            dateField(ui, { name: "meeting_date", value: draft.date }),
-          ),
-
-          Skeletons.Box.X({
-            className: `${pfx}__time-row`,
+          Skeletons.Box.Y({
+            className: `${pfx}__modal-col ${pfx}__modal-col--main`,
             kids: [
-              field("ENTER_TIME", timePicker(ui, "start", draft.start)),
-              Skeletons.Note({
-                className: `${pfx}__time-arrow`,
-                content: "→",
-              }),
-              field("END_TIME", timePicker(ui, "end", draft.end)),
+              field(
+                "TITLE",
+                Skeletons.Entry({
+                  className: `${pfx}__input`,
+                  sys_pn: "form-title",
+                  formItem: "title",
+                  name: "title",
+                  value: draft.title || "",
+                  placeholder: LOCALE.TITLE,
+                  require: "text",
+                  // Deliberately NOT interactive, and this Entry must never be
+                  // given a `service`. An interactive Entry re-fires its own
+                  // service on every printable keyup, which is how the task
+                  // modal's title used to create a task per letter typed. Here
+                  // there is no service to fire, so nothing books a room — the
+                  // footer button is the only way in. Keep both halves true.
+                  preselect: 1,
+                  bubble: 0,
+                  uiHandler: [ui],
+                  partHandler: ui,
+                }),
+                "title",
+              ),
+
+              field(
+                "DATE",
+                dateField(ui, { name: "meeting_date", value: draft.date }),
+              ),
+
+              field("ATTACHMENTS", attachments(ui)),
             ],
           }),
+          Skeletons.Box.Y({
+            className: `${pfx}__modal-col ${pfx}__modal-col--side`,
+            kids: [
+              Skeletons.Box.X({
+                className: `${pfx}__time-row`,
+                kids: [
+                  field("START_TIME", timePicker(ui, "start", draft.start)),
+                  Skeletons.Note({
+                    className: `${pfx}__time-arrow`,
+                    content: "→",
+                  }),
+                  field("END_TIME", timePicker(ui, "end", draft.end)),
+                ],
+              }),
 
-          field("ATTACHMENTS", attachments(ui)),
-
-          field("INVITE", inviteBlock),
+              field("INVITE", inviteBlock),
+            ],
+          }),
         ],
       }),
 
