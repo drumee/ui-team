@@ -16,6 +16,7 @@ const {
 } = require("libs/billing");
 const readCache = require("libs/read-cache");
 const CDHost = require("./chat-details-host");
+const { iconsSkeleton, searchStatus } = require("../skeleton/toolkit/icons-skeleton");
 const ChatExportOverlay = require("./chat-export-overlay");
 const Topics = require("./topics");
 const FTBar = require("./file-threads-bar");
@@ -1937,12 +1938,15 @@ class __window_folder extends mfsInteract {
         content.feed([
           fileTypeFilterBar(this),
           require("../skeleton/content/row")(this),
+          searchStatus(this),
         ]);
         return;
       }
       content.feed([
         fileTypeFilterBar(this),
         gridFilesBrowser(this),
+        iconsSkeleton(this, "grid"),
+        searchStatus(this),
       ]);
     });
   }

@@ -99,10 +99,16 @@ const __media_skl_row = function (ui) {
     delete list.skip;
   }
 
+  // Folder windows only: its skin is the one that styles and gates the
+  // skeleton (folder/skin/icons-skeleton.scss); elsewhere it would paint raw.
+  const kids = [header, list];
+  if (ui.fig.family === "window-folder") {
+    kids.push(require("../../toolkit/icons-skeleton").iconsSkeleton(ui, "row"));
+  }
   return (a = Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.group}__content-main`,
-    kids: [header, list],
+    kids,
   }));
 };
 

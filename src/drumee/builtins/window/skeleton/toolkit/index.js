@@ -1,6 +1,7 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const { isGrouped } = require("./file-group");
 const { menuRow, createRows } = require("./new-menu-rows");
+const { iconsSkeleton, searchStatus } = require("./icons-skeleton");
 const {
   chatDetailsPanel,
   headerMenuService,
@@ -191,22 +192,23 @@ function fileNewControl(ui) {
 // the files of THAT workspace.
 //
 // So the box belongs to the window now:
-//   - the window answers the keystrokes (onUiEvent "ws-search-typed") and runs
-//     `media.search_all`, a scope=hub service: filenames, extensions and indexed
-//     content under this window's own hub_id, so nothing outside the workspace
-//     can match;
+//   - the window answers the keystrokes (onUiEvent "ws-search-typed" →
+//     folder/files-search.js) and shows the hits IN the Files list, not in a
+//     dropdown. It runs `media.search_all`, a scope=hub service: filenames,
+//     extensions and indexed content under this window's own hub_id, so
+//     nothing outside the workspace can match;
 //   - the part names are the window's own (`ws-search-*`). That also ends a
 //     latent collision: the desk claimed "search-box" / "search-suggestions" /
 //     "suggestions-list" for whichever copy mounted LAST, so with two workspace
-//     windows open, typing in one drove the other one's dropdown.
+//     windows open, typing in one drove the other one's results.
 //
 // Keystrokes arrive through the Entry's `watch` hook, which fires
 // onUiEvent("ws-search-typed", { value }) once the field is ready — the <input>
 // is built asynchronously (waitElement), so a listener wired at part-ready time
 // would run before it exists. Same hook the chat search bar above uses.
 //
-// The classes are unchanged (`…-topbar__search-*`), so the folder skin's pill +
-// dropdown (skin/index.scss, "Workspace toolbar search") still dresses it.
+// The classes are unchanged (`…-topbar__search-*`), so the folder skin's pill
+// (skin/index.scss, "Workspace toolbar search") still dresses it.
 function workspaceSearchBox(ui, pfx) {
   return Skeletons.Box.Y({
     className: `${pfx}__search-container`,
@@ -235,30 +237,15 @@ function workspaceSearchBox(ui, pfx) {
             interactive: 1,
             bubble: 0,
             watch: "ws-search-typed",
+            // A view switch rebuilds this toolbar mid-search; carry the query
+            // so the field still says what the list is showing.
+            value: ui._wsQuery || "",
             // Kept from the box this replaces: the Entry template interpolates
             // both straight into the tag, so unset they render
             // type="undefined" and autocomplete="undefined" — and the browser's
-            // autofill list then covers the result dropdown.
+            // autofill list then covers the Files list below.
             type: _a.text,
             autocomplete: _a.off,
-          }),
-        ],
-      }),
-      // Result dropdown. Hidden at data-state 0 by the skin; the window flips it
-      // through setState() as answers arrive. Rows are fed by the window rather
-      // than fetched by a List.Smart: the result set is one short page, and the
-      // window has to normalize the response first (a single hit comes back as a
-      // bare object, which list/index.js drops as "not an array").
-      Skeletons.Box.Y({
-        className: `${pfx}__search-suggestions`,
-        sys_pn: "ws-search-suggestions",
-        partHandler: ui,
-        state: 0,
-        kids: [
-          Skeletons.Box.Y({
-            className: `${pfx}__search-results`,
-            sys_pn: "ws-search-results",
-            partHandler: ui,
           }),
         ],
       }),
@@ -1237,6 +1224,8 @@ export function filesContainer(ui) {
     opt.kids = [
       fileTypeFilterBar(ui),
       gridFilesBrowser(ui),
+      iconsSkeleton(ui, "grid"),
+      searchStatus(ui),
     ];
   }
   return Skeletons.Box.Y(opt);
@@ -1253,7 +1242,9 @@ export function folderFilesRowContainer(ui) {
     // and loadContent() re-fetches via getCurrentApi(), which the row list's
     // `() => ui.getCurrentApi()` api already honors. content/row supplies the
     // column-title header + list below the bar.
-    kids: [fileTypeFilterBar(ui), require("../content/row")(ui)],
+    // The row skeleton lives inside content/row's __content-main, under the
+    // column header; only the search status sits here.
+    kids: [fileTypeFilterBar(ui), require("../content/row")(ui), searchStatus(ui)],
   });
 }
 
