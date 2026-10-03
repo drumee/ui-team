@@ -1,0 +1,145 @@
+// Files list skeleton + in-list search (folder window).
+//
+// folder/icons-loading.js stamps data-loading="1" on .window__files-panel
+// while the list's first page is in flight; folder/files-search.js stamps
+// data-search ("pending" | "results" | "empty") while a query is active. Both
+// are positive stamps on a non-lazy ancestor — never :empty (Notes and Boxes
+// always carry an inner node). !important on display: the framework's
+// `.drumee-widget[data-flow=…]{display:flex}` sits at (0,2,0).
+.window-folder .window__files-panel {
+  .window__icons-skeleton {
+    display: none !important;
+  }
+
+  &[data-loading="1"] .window__icons-skeleton {
+    display: block !important;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  // The real list (and ui-core's spinner inside it) steps aside while the
+  // skeleton stands in. display:none, not visibility: the list must not
+  // reserve the space the skeleton is taking.
+  &[data-loading="1"] .window__icons-list,
+  &[data-loading="1"] .window__content-row {
+    display: none !important;
+  }
+
+  // Search: the folder's own empty text ("No Folders or Files yet") is the
+  // wrong message for a query that missed.
+  &[data-search] .no-content {
+    display: none !important;
+  }
+
+  .window__search-status {
+    display: none !important;
+  }
+
+  &[data-search="empty"] .window__search-status {
+    display: block !important;
+    padding: 24px;
+    color: var(--normal-fg-20);
+    font-size: 13px;
+    text-align: center;
+  }
+
+  // Grid: same tracks as .window__icons-scroll, so tiles land where the
+  // cards will.
+  .window__icons-skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+    gap: var(--grid-gap);
+    padding: 24px;
+    align-content: start;
+  }
+
+  .window__icons-skeleton-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: var(--grid-cell-w);
+    max-width: 100%;
+    height: var(--grid-cell-h-file);
+  }
+
+  .window__icons-skeleton-card {
+    height: 119px;
+    border-radius: var(--grid-card-radius);
+  }
+
+  // Row: .media-row__ui is 42px.
+  .window__icons-skeleton-rows {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .window__icons-skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 42px;
+    padding: 0 12px;
+  }
+
+  .window__icons-skeleton-icon {
+    flex: 0 0 24px;
+    height: 24px;
+    border-radius: 6px;
+  }
+
+  .window__icons-skeleton-line {
+    height: 10px;
+    width: 80%;
+    border-radius: 5px;
+  }
+
+  .window__icons-skeleton-row .window__icons-skeleton-line {
+    flex: 0 1 40%;
+  }
+
+  .window__icons-skeleton-line--short {
+    width: 50%;
+  }
+
+  .window__icons-skeleton-row .window__icons-skeleton-line--short {
+    flex: 0 1 15%;
+  }
+
+  .window__icons-skeleton-card,
+  .window__icons-skeleton-icon,
+  .window__icons-skeleton-line {
+    background: var(--grid-card-bg);
+    animation: window-folder-icons-skeleton-pulse 1.4s ease-in-out infinite;
+  }
+}
+
+html[data-theme="dark"] .window-folder .window__files-panel {
+  .window__icons-skeleton-card,
+  .window__icons-skeleton-icon,
+  .window__icons-skeleton-line {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .window-folder .window__files-panel {
+    .window__icons-skeleton-card,
+    .window__icons-skeleton-icon,
+    .window__icons-skeleton-line {
+      animation: none;
+    }
+  }
+}
+
+// Namespaced: @keyframes is global.
+@keyframes window-folder-icons-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
