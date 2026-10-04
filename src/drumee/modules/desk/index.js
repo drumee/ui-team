@@ -1439,6 +1439,11 @@ class desk_module extends LetcBox {
         clearInterval(this._invitedLoaderTimer);
         this._invitedLoaderTimer = null;
         if (w.goodbye) w.goodbye();
+        setTimeout(() => {
+          try {
+            if (!(w.isDestroyed && w.isDestroyed()) && _.isFunction(w.destroy)) w.destroy();
+          } catch (e) { /* already gone */ }
+        }, 1500);
         return;
       }
       seen = true;
@@ -1466,6 +1471,15 @@ class desk_module extends LetcBox {
       this._invitedLoaderTimer = null;
     }
     if (w.goodbye) w.goodbye();
+    // goodbye() fades the toast out on an animation frame tween; in a
+    // background tab (frames throttled) the tween can stall and leave a
+    // half-transparent ghost over the workspace that just opened. Give the
+    // fade its time, then take the window down for certain.
+    setTimeout(() => {
+      try {
+        if (!(w.isDestroyed && w.isDestroyed()) && _.isFunction(w.destroy)) w.destroy();
+      } catch (e) { /* already gone */ }
+    }, 1500);
   }
 
   /**
