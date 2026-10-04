@@ -6573,7 +6573,10 @@ $theme-colors: (
     &:hover > * {
       background-color: rgba(0, 0, 0, 0.02);
     }
+    // Same for hover: the rule above would leave the pinned cell 98%
+    // transparent, so the columns scrolling under it showed through.
     &:hover > *:first-child {
+      background-color: var(--normal-bg-elevated, #fff);
       background-image: linear-gradient(rgba(0, 0, 0, 0.02), rgba(0, 0, 0, 0.02));
     }
   }
