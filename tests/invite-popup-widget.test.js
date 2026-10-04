@@ -17,6 +17,7 @@ const STUBS = {
     computePrivilege: (ids) => ({ view: 3, edit: 15, admin: 31 })[ids[0]] || 15,
     summarizeRoles: (ids) => ids[0],
     workspaceGlyph: () => "",
+    toastSlot: () => ({ toastSlot: true }),
     linkPanelKids: () => [],
     orgCardKids: () => [],
     wsCardKids: () => [],
@@ -29,8 +30,17 @@ const STUBS = {
     inOrganization: () => !!orgAnswer.organisation,
   },
   "media/grid/template/folder": () => "",
-  "@drumee/ui-essentials": { filesize: (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${n} B`) },
+  "@drumee/ui-essentials": {
+    filesize: (n) => (n >= 1e9 ? `${(n / 1e9).toFixed(1)} GB` : `${n} B`),
+    copyToClipboard: (v) => copied.push(v),
+  },
+  "libs/toast": {
+    showToast: (host, opt) => toasts.push(opt),
+    clearToast() {},
+  },
 };
+const copied = [];
+const toasts = [];
 const load = Module._load;
 Module._load = function (r, p, m) {
   return Object.prototype.hasOwnProperty.call(STUBS, r) ? STUBS[r] : load.call(this, r, p, m);
@@ -582,4 +592,19 @@ test("public link tab is local state only: no server call", async () => {
   assert.equal(p._link.url, "https://x/s/1");
   p.onUiEvent(cmd("revoke-link"));
   assert.equal(p._link.url, null);
+});
+
+test("link Copy: copies the URL and shows Settings' toast in the popup's slot", async () => {
+  const p = make();
+  const slot = part();
+  p.onPartReady(slot, "toast");
+  copied.length = toasts.length = 0;
+  p.onUiEvent(cmd("copy-link"));
+  assert.deepEqual([copied.length, toasts.length], [0, 0], "no link yet: nothing to copy");
+  p._setLink("https://x/s/1");
+  p.onUiEvent(cmd("copy-link"));
+  assert.deepEqual(copied, ["https://x/s/1"]);
+  assert.equal(toasts.length, 1);
+  assert.equal(toasts[0].part, slot);
+  assert.equal(toasts[0].message, "LINK_COPIED_CLIPBOARD");
 });

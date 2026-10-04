@@ -22,6 +22,12 @@
   to   { opacity: 0; transform: translateY(-6px) scale(0.97); }
 }
 
+// Settings' settings-toast-in.
+@keyframes invite-popup-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 
 // Drumee 2.0 (Figma 980:172148 and siblings). Colours are the design's own
 // tokens: Primary/100 #0b0a21, Grey/80 #65656c, Grey/70 #84848c, Grey/60
@@ -1005,6 +1011,67 @@ $tint: rgba(89, 80, 255, 0.1);
     }
   }
 
+  // ── Toast (link Copy, libs/toast) ───────────────────────────────────────
+  // Settings' toast (settings_main skin __toast-slot / __toast), same card,
+  // glyph colours and entrance. libs/toast re-places the slot under the
+  // topbar's utility icons; top/right here are only its fallback corner.
+  // Inside __ui's own stacking context, which already sits over the desk.
+  &__toast-slot {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 100001;
+    pointer-events: none;
+  }
+
+  &__toast {
+    align-items: center;
+    gap: 10px;
+    max-width: 360px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    pointer-events: auto;
+    animation: invite-popup-toast-in 160ms ease-out;
+  }
+
+  &__toast-ico {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &__toast-text {
+    font: 600 13px/18px $font;
+    color: $ink;
+    white-space: nowrap;
+  }
+
+  &__toast--success &__toast-ico svg {
+    fill: #54b684;
+
+    .icon-fill-blue,
+    .icon-fill-grey {
+      fill: #54b684;
+    }
+  }
+
+  &__toast--error &__toast-ico svg {
+    fill: #d64e49;
+
+    .icon-fill-blue,
+    .icon-fill-grey {
+      fill: #d64e49;
+    }
+  }
+
   &__revoke {
     flex: none;
     align-items: center;
@@ -1090,6 +1157,7 @@ $tint: rgba(89, 80, 255, 0.1);
 @media (prefers-reduced-motion: reduce) {
   .invite-popup__ui,
   .invite-popup__ui[data-closing="1"],
+  .invite-popup__toast,
   .invite-popup__suggestions[data-loading="1"]::before {
     animation: none;
   }
