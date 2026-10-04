@@ -49,10 +49,26 @@ test("strip: pages of 3; the last page may be short; the arrows disable at the e
   assert.equal(p1.next.dataset.disabled, "1");
   // Out of range clamps to the last page.
   assert.deepEqual(tabsOf(parts(topicStrip(ui, { topics: MANY, page: 9 })).page), ["t3", "t4", "t5"]);
-  // One page: both arrows disabled.
-  const one = parts(topicStrip(ui, { topics: MANY.slice(0, 1) }));
-  assert.equal(one.prev.dataset.disabled, "1");
-  assert.equal(one.next.dataset.disabled, "1");
+});
+
+test("strip: a single page draws no arrows; two pages draw both", () => {
+  const one = topicStrip(ui, { topics: MANY.slice(0, 1), canCreateTopic: 1 });
+  assert.deepEqual(one.map((k) => k.service || "page"), ["page", "topic-new"]);
+  // #General + 2 topics fills page 0 exactly: still one page, still no arrows.
+  assert.deepEqual(topicStrip(ui, { topics: MANY.slice(0, 2) }).map((k) => k.service || "page"), ["page"]);
+  // One more tab spills onto a second page.
+  const two = parts(topicStrip(ui, { topics: MANY.slice(0, 3) }));
+  assert.ok(two.prev && two.next);
+});
+
+test("strip: a full page (3 tabs) is stamped data-full=1, a short one 0", () => {
+  assert.equal(parts(topicStrip(ui, { topics: MANY })).page.dataset.full, "1");
+  assert.equal(parts(topicStrip(ui, { topics: MANY, page: 1 })).page.dataset.full, "1");
+  assert.equal(parts(topicStrip(ui, { topics: MANY.slice(0, 3), page: 1 })).page.dataset.full, "0");
+  assert.equal(parts(topicStrip(ui, { topics: [] })).page.dataset.full, "0");
+  // The Inbox pages by 4: full means 4 there.
+  assert.equal(parts(topicStrip(ui, { topics: MANY.slice(0, 2), pageSize: 4 })).page.dataset.full, "0");
+  assert.equal(parts(topicStrip(ui, { topics: MANY.slice(0, 3), pageSize: 4 })).page.dataset.full, "1");
 });
 
 test("strip: the scope marks its tab; the create button is the primary style with a plus", () => {

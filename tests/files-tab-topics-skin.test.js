@@ -142,8 +142,9 @@ test("strip padding is 6px 12px", () => {
   assert.match(rule(".window-folder .window__topic-strip"), /padding: 6px 12px;/);
 });
 
-test("page: the tabs are centred in the room the page has", () => {
-  assert.match(rule(".window-folder .window__topic-page"), /justify-content: center/);
+test("page: a short page starts at the left, a full one is centred", () => {
+  assert.match(rule(".window-folder .window__topic-page"), /justify-content: flex-start/);
+  assert.match(rule('.window-folder .window__topic-page[data-full="1"]'), /justify-content: center/);
 });
 
 // A narrow chat panel (the Files view's side column) puts "+ Topic" on its

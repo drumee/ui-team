@@ -26,10 +26,16 @@
     flex: 1 1 auto;
     min-width: 0;
     align-items: center;
-    // The tabs sit in the middle of the room between the arrows.
-    justify-content: center;
+    // A short page (fewer tabs than topic-strip.js PAGE_SIZE) starts at the
+    // left; a full one is centred (data-full, below).
+    justify-content: flex-start;
     gap: 4px;
     overflow: hidden;
+  }
+
+  // A full page sits in the middle of the room between the arrows.
+  .window__topic-page[data-full="1"] {
+    justify-content: center;
   }
 
   // Three tabs + the arrows + "Create topic" share the side chat's width:

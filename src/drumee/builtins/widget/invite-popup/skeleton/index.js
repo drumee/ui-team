@@ -457,6 +457,15 @@ module.exports = function (ui) {
   });
 };
 
+/** Empty until libs/toast feeds it (link Copy). Fed beside __container. */
+const toastSlot = (ui, pfx) =>
+  Skeletons.Box.Y({
+    className: `${pfx}__toast-slot`,
+    sys_pn: "toast",
+    partHandler: ui,
+  });
+
+module.exports.toastSlot = toastSlot;
 module.exports.linkPanelKids = linkPanelKids;
 module.exports.orgCardKids = orgCardKids;
 module.exports.wsCardKids = wsCardKids;

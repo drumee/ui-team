@@ -6,6 +6,8 @@
 const { lookupContacts, suggestionRows } = require("libs/contact-lookup");
 const { isSeatLimitReply, showSeatLimitReached } = require("libs/billing");
 const { orgOverview, inOrganization } = require("libs/org-overview");
+const { showToast, clearToast } = require("libs/toast");
+const { copyToClipboard } = require("@drumee/ui-essentials");
 const T = require("./tree");
 const treeRows = require("./skeleton/tree").rows;
 const skeletonModule = require("./skeleton");
@@ -76,7 +78,10 @@ class __invite_popup extends LetcBox {
 
 
   onDomRefresh() {
-    this.feed(skeletonModule(this));
+    // The toast slot is a SIBLING of __container, not inside it: __container
+    // caps its height and its tree scrolls, and a fixed child of a filtered
+    // card (__ui has a backdrop-filter) is clipped by those ancestors.
+    this.feed([skeletonModule(this), skeletonModule.toastSlot(this, this.fig.family)]);
     this.el.dataset.tab = this._tab;
     this.el.dataset.state = 1;
     if (this.parent && this.parent.el) {
@@ -209,6 +214,7 @@ class __invite_popup extends LetcBox {
   }
 
   onBeforeDestroy() {
+    clearToast(this);
     if (this._wrapperEl) {
       this._wrapperEl.dataset.state = "closed";
       delete this._wrapperEl.dataset.overlay;
@@ -372,6 +378,8 @@ class __invite_popup extends LetcBox {
       this._linkPanel = child;
     } else if (pn === "tabs") {
       this._tabsBox = child;
+    } else if (pn === "toast") {
+      this._toastSlot = child;
     } else if (pn.startsWith("role-label:")) {
       this._partRefs.roleLabels[pn.slice(11)] = child;
     } else if (pn.startsWith("role-options:")) {
@@ -839,11 +847,18 @@ class __invite_popup extends LetcBox {
     this._renderLinkPanel();
   }
 
+  /**
+   * Copy, then Settings' toast (the referral Copy's, libs/toast) in the
+   * popup's own slot — the one confirmation the app's Copy buttons share,
+   * rather than Wm.acknowledge's older ack box appended to the window manager.
+   */
   _copyLink() {
-    if (!this._link.url || typeof navigator === "undefined" || !navigator.clipboard) return;
-    navigator.clipboard.writeText(this._link.url);
-    // Transient toast, the same copy-link acknowledgement permission/share uses.
-    if (Wm.acknowledge) Wm.acknowledge();
+    if (!this._link.url) return;
+    copyToClipboard(this._link.url);
+    showToast(this, {
+      part: this._toastSlot,
+      message: LOCALE.LINK_COPIED_CLIPBOARD || "Link copied to clipboard",
+    });
   }
 
   async _sendInvitation() {
