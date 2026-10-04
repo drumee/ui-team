@@ -1431,6 +1431,16 @@ class desk_module extends LetcBox {
         if (seen) this._hideInvitedWorkspaceLoader();
         return;
       }
+      // hide() was asked for before the toast had mounted (Wm.info mounts
+      // asynchronously, and an invitation can be answered in well under a
+      // second): close it the moment it shows up instead of leaving it to
+      // its 30 s self-dismiss over an already open workspace.
+      if (this._invitedLoaderHidden) {
+        clearInterval(this._invitedLoaderTimer);
+        this._invitedLoaderTimer = null;
+        if (w.goodbye) w.goodbye();
+        return;
+      }
       seen = true;
       w.el.dataset.guestJoinLoading = "1";
       w.el.dataset.busy = this._homePopupsBusy() ? "1" : "0";
@@ -1444,12 +1454,18 @@ class desk_module extends LetcBox {
    * else on screen to explain the loader.
    */
   _hideInvitedWorkspaceLoader() {
+    this._invitedLoaderHidden = true;
+    const w = this._invitedWorkspaceLoader();
+    if (!w) {
+      // Not mounted yet: leave the show() interval running, it closes the
+      // toast on first sight (see the _invitedLoaderHidden check there).
+      return;
+    }
     if (this._invitedLoaderTimer) {
       clearInterval(this._invitedLoaderTimer);
       this._invitedLoaderTimer = null;
     }
-    const w = this._invitedWorkspaceLoader();
-    if (w && w.goodbye) w.goodbye();
+    if (w.goodbye) w.goodbye();
   }
 
   /**
