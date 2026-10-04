@@ -1,7 +1,8 @@
 /**
  * Files-tab chat topic strip (Figma 869:191968): the tabs under the "Team
  * Chat" header — #General and one per topic — as a carousel of PAGE_SIZE tabs
- * between a back and a next button, then "Create topic" (styled like the
+ * between a back and a next button (only when there is more than one page),
+ * then "Create topic" (styled like the
  * folder toolbar's "+ New" primary button) at the far end. No All tab.
  *
  * Fed into the chat panel's "topic-strip" part by window/folder/topics.js
@@ -79,15 +80,26 @@ function topicStrip(ui, opt = {}) {
       dataset: { disabled: disabled ? "1" : "0" },
     });
 
-  const kids = [
-    arrow("topic-strip-prev", "caret-left", page <= 0),
-    Skeletons.Box.X({
-      className: `${pfx}-page`,
-      dataset: { slide: opt.slide === "next" || opt.slide === "prev" ? opt.slide : "none" },
-      kids: tabs,
-    }),
-    arrow("topic-strip-next", "caret-right", page >= pages - 1),
-  ];
+  // `full`: a page holding a whole PAGE_SIZE of tabs is centred, a short one
+  // (the last page, or a folder with few topics) starts at the left (skin).
+  const pageBox = Skeletons.Box.X({
+    className: `${pfx}-page`,
+    dataset: {
+      slide: opt.slide === "next" || opt.slide === "prev" ? opt.slide : "none",
+      full: tabs.length === size ? "1" : "0",
+    },
+    kids: tabs,
+  });
+  // The arrows only when there is another page to go to: a single page has
+  // nothing to page through, so it draws none rather than two dead buttons.
+  const kids =
+    pages > 1
+      ? [
+          arrow("topic-strip-prev", "caret-left", page <= 0),
+          pageBox,
+          arrow("topic-strip-next", "caret-right", page >= pages - 1),
+        ]
+      : [pageBox];
   if (opt.canCreateTopic) {
     kids.push(
       Skeletons.Box.X({
