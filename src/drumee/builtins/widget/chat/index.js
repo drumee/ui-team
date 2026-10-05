@@ -18,6 +18,26 @@ require("./skin");
  */
 const isHubScopedChat = (scope) => scope === _a.folder || scope === "workspace";
 
+/**
+ * media.search_names failures that drop a file mention to the bounded
+ * show_node_by listing (still permission-checked server side) instead of
+ * closing the dropdown. Any other readable failure stays fail-closed.
+ *
+ * - SEARCH_NAMES_UNSUPPORTED_CONTEXT: secure-share/DMZ keeps its
+ *   token-authoritative list behavior.
+ * - SEARCH_NAMES_PROJECTION_NOT_READY: the database has no READY name
+ *   projection yet (an existing workspace that was never rebuilt).
+ * - SEARCH_NAMES_UNAVAILABLE: the server answered non-200. ui-essentials
+ *   consumes that body before handing the Response to onServerComplain, so
+ *   fetchService resolves nothing and the server's reason is unreadable here.
+ */
+const SEARCH_NAMES_UNAVAILABLE = "SEARCH_NAMES_UNAVAILABLE";
+const MENTION_LISTING_FALLBACK = new Set([
+  "SEARCH_NAMES_UNSUPPORTED_CONTEXT",
+  "SEARCH_NAMES_PROJECTION_NOT_READY",
+  SEARCH_NAMES_UNAVAILABLE,
+]);
+
 const cleanMentionText = (value) =>
   value == null ? "" : String(value).trim();
 
@@ -4219,7 +4239,9 @@ class __widget_chat extends LetcBox {
     });
     if (!this._isFileMentionRequestCurrent(requestToken)) return [];
 
-    const errorCode = this._mentionErrorCode(response);
+    // A real empty result is []; nothing at all means the server refused.
+    const errorCode = response == null ?
+      SEARCH_NAMES_UNAVAILABLE : this._mentionErrorCode(response);
     if (errorCode) {
       const error = new Error(errorCode);
       error.code = errorCode;
@@ -4234,6 +4256,32 @@ class __widget_chat extends LetcBox {
       throw error;
     }
     return { rows: rows.slice(0, 6), canonical: true };
+  }
+
+  /**
+   * One settled non-blank filter: the scoped server search, or the bounded
+   * listing when the search cannot answer (MENTION_LISTING_FALLBACK).
+   */
+  async _searchOrListMentionFiles(folderHubId, folderNid, filter, requestToken) {
+    try {
+      return await this._searchMentionFiles(
+        folderHubId,
+        folderNid,
+        filter,
+        requestToken,
+      );
+    } catch (error) {
+      if (!MENTION_LISTING_FALLBACK.has(this._mentionErrorCode(error))) {
+        throw error;
+      }
+      return this._fetchMentionFiles(
+        folderHubId,
+        folderNid,
+        filter,
+        requestToken,
+        { boundedFallback: true },
+      );
+    }
   }
 
   async _fetchDirectMentionFiles(folderHubId, folderNid, requestToken) {
@@ -4511,31 +4559,13 @@ class __widget_chat extends LetcBox {
               return;
             }
             try {
-              const result = await this._searchMentionFiles(
+              resolve(await this._searchOrListMentionFiles(
                 fileScope.hubId,
                 fileScope.nid,
                 searchFilter,
                 requestToken,
-              );
-              resolve(result);
+              ));
             } catch (error) {
-              // Secure-share/DMZ keeps its existing token-authoritative list
-              // behavior.  Every other search failure stays fail-closed.
-              if (this._mentionErrorCode(error) ===
-                "SEARCH_NAMES_UNSUPPORTED_CONTEXT") {
-                try {
-                  resolve(await this._fetchMentionFiles(
-                    fileScope.hubId,
-                    fileScope.nid,
-                    searchFilter,
-                    requestToken,
-                    { boundedFallback: true },
-                  ));
-                } catch (fallbackError) {
-                  reject(fallbackError);
-                }
-                return;
-              }
               reject(error);
             }
           }, 120);
