@@ -64,7 +64,23 @@ const summarizeRoles = (selectedIds) => {
   return role?.label || LOCALE.SELECT_ROLE || "Select role";
 };
 
-const { check } = require("./tree");
+const { check, rolePill, DEFAULT_ROLE } = require("./tree");
+
+/**
+ * Workspace scope only: the role the invitee gets in THE workspace, as the
+ * grey "Admin ⌄" pill of Figma 1344:184456 (beside the email field) and
+ * 785:75492 (the Public link's Permission row). Org scope picks a role per
+ * workspace in the "Invite to" tree instead, so it draws none of these.
+ *
+ * @param {String} key  "ws-email" | "ws-link" — one pill per tab, one role
+ */
+const wsRolePill = (ui, key) =>
+  ui._scope === "workspace" && ui._ws
+    ? rolePill(ui, ui._ws, (ui._roles && ui._roles.get(String(ui._ws.hub_id))) || DEFAULT_ROLE, {
+        key,
+        size: "lg",
+      })
+    : null;
 
 const header = (ui, pfx) =>
   Skeletons.Box.X({
@@ -217,36 +233,42 @@ const emailPanel = (ui, pfx) =>
       // The dropdown floats under the email row instead of sitting in the
       // column, so the dialog does not jump while typing. Anchoring needs a
       // positioned parent, hence this wrapper.
-      Skeletons.Box.Y({
-        className: `${pfx}__email-field`,
+      Skeletons.Box.X({
+        className: `${pfx}__email-line`,
         kids: [
-          Skeletons.Box.X({
-            className: `${pfx}__email-row`,
-            sys_pn: "email-row",
-            partHandler: ui,
+          Skeletons.Box.Y({
+            className: `${pfx}__email-field`,
             kids: [
-              Skeletons.Box.X({ className: `${pfx}__chips`, sys_pn: "email-chips", partHandler: ui }),
-              Skeletons.Entry({
-                className: `${pfx}__email-input`,
-                sys_pn: "email-input",
+              Skeletons.Box.X({
+                className: `${pfx}__email-row`,
+                sys_pn: "email-row",
                 partHandler: ui,
-                uiHandler: [ui],
-                placeholder: "name@company.com",
-                require: "any",
-                mode: "commit",
-                service: "submit-email",
-                bubble: 0,
+                kids: [
+                  Skeletons.Box.X({ className: `${pfx}__chips`, sys_pn: "email-chips", partHandler: ui }),
+                  Skeletons.Entry({
+                    className: `${pfx}__email-input`,
+                    sys_pn: "email-input",
+                    partHandler: ui,
+                    uiHandler: [ui],
+                    placeholder: "name@company.com",
+                    require: "any",
+                    mode: "commit",
+                    service: "submit-email",
+                    bubble: 0,
+                  }),
+                ],
+              }),
+              Skeletons.Box.Y({
+                className: `${pfx}__suggestions`,
+                sys_pn: "suggestions",
+                partHandler: ui,
+                state: 0,
+                active: 0,
               }),
             ],
           }),
-          Skeletons.Box.Y({
-            className: `${pfx}__suggestions`,
-            sys_pn: "suggestions",
-            partHandler: ui,
-            state: 0,
-            active: 0,
-          }),
-        ],
+          wsRolePill(ui, "ws-email"),
+        ].filter(Boolean),
       }),
       Skeletons.Note({
         className: `${pfx}__field-error`,
@@ -308,7 +330,15 @@ const PRESETS = [
  */
 function linkPanelKids(ui, pfx) {
   const l = ui._link;
+  const role = wsRolePill(ui, "ws-link");
   const kids = [
+    // Figma 785:75492: "Permission" + the role pill, above Link Expiration.
+    role
+      ? Skeletons.Box.X({
+          className: `${pfx}__permission-row`,
+          kids: [Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.PERMISSION }), role],
+        })
+      : null,
     Skeletons.Box.X({
       className: `${pfx}__expiry-head`,
       kids: [
@@ -322,7 +352,7 @@ function linkPanelKids(ui, pfx) {
         }),
       ],
     }),
-  ];
+  ].filter(Boolean);
   if (l.expiry) {
     kids.push(
       Skeletons.Box.X({

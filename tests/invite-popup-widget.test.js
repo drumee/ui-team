@@ -42,6 +42,12 @@ global._e = { close: "close", destroy: "destroy" };
 global.LOCALE = new Proxy({}, { get: (t, k) => k });
 global.Visitor = { id: "me", profile: () => ({ email: "me@x.com" }) };
 global.Wm = { alert() {} };
+// Notes as plain records, so a test can read what an alert would print.
+global.Skeletons = global.Skeletons || {
+  Note: (o, cls) => (typeof o === "string" ? { content: o, className: cls } : o),
+  Box: { X: (o) => o, Y: (o) => o },
+};
+if (!String.prototype.format) String.prototype.format = function () { return String(this); };
 global._ = { isFunction: (f) => typeof f === "function", isArray: Array.isArray };
 // A document that keeps its listeners, so the outside-click tests can dispatch.
 const listeners = [];
@@ -174,6 +180,47 @@ test("workspace scope: Send invites into that one workspace", async () => {
   p.posted = [];
   await p._sendInvitation();
   assert.deepEqual(p.posted.filter(([s]) => s === "hub.invite").map(([, a]) => a.hub_id), ["h2"]);
+});
+
+// Figma 1344:184456 / 785:75492: a role pill on EACH tab, one role underneath.
+test("workspace scope: the two tab pills toggle apart, pick one role, and Send uses it", async () => {
+  const p = make(wsOpt);
+  await p._loadData();
+  const pill = () => {
+    const opts = [{ dataset: { id: "edit" } }, { dataset: { id: "admin" } }];
+    const box = part();
+    box.el.dataset = { hub_id: "h2", state: 0 };
+    box.el.querySelectorAll = () => opts;
+    box.opts = opts;
+    return box;
+  };
+  const label = () => Object.assign(part(), { el: { dataset: { hub_id: "h2" } }, set(o) { this.content = o.content; } });
+  const [mail, link] = [pill(), pill()];
+  const [mailLabel, linkLabel] = [label(), label()];
+  p.onPartReady(mail, "role-options:ws-email");
+  p.onPartReady(link, "role-options:ws-link");
+  p.onPartReady(mailLabel, "role-label:ws-email");
+  p.onPartReady(linkLabel, "role-label:ws-link");
+
+  p.onUiEvent(cmd("toggle-role", { hub_id: "h2", key: "ws-link" }));
+  assert.equal(link.el.dataset.state, 1, "the link tab's menu opens");
+  assert.equal(mail.el.dataset.state, 0, "the email tab's menu stays shut");
+
+  p._pickRole("h2", "admin");
+  assert.equal(p._roles.get("h2"), "admin");
+  for (const box of [mail, link]) {
+    assert.equal(box.el.dataset.state, 0);
+    assert.deepEqual(box.opts.map((o) => o.dataset.checked), [0, 1]);
+  }
+  assert.equal(mailLabel.content, "admin", "the other tab's pill follows");
+  assert.equal(linkLabel.content, "admin");
+
+  p._invitees = [{ email: "a@b.co" }];
+  p._closePopup = () => {};
+  p.posted = [];
+  await p._sendInvitation();
+  const sent = p.posted.filter(([s]) => s === "hub.invite").map(([, a]) => a);
+  assert.deepEqual(sent.map((a) => [a.hub_id, a.privilege]), [["h2", ADMIN]]);
 });
 
 test("workspace scope needs a real workspace: the personal home falls back to org scope", () => {
@@ -363,11 +410,104 @@ test("send posts one hub.invite per checked workspace with that row's role", asy
   p._roles.set("h2", "admin");
   p._closePopup = () => {};
   await p._sendInvitation();
-  assert.deepEqual(p.posted.map(([s, a]) => [s, a.hub_id, a.permission, a.invitees]), [
+  // `privilege`, the name hub.invite reads (acl/hub.json) — a `permission`
+  // param is ignored there and every invitee got the hub's default_privilege.
+  assert.deepEqual(p.posted.map(([s, a]) => [s, a.hub_id, a.privilege, a.invitees]), [
     ["hub.invite", "h1", 15, ["a@b.co"]],
     ["hub.invite", "h2", 31, ["a@b.co"]],
   ]);
+  assert.ok(p.posted.every(([, a]) => !("permission" in a)));
   assert.equal(p.triggered[0].service, "invitation-sent");
+});
+
+test("a failed hub.invite request tells the user and keeps the popup open", async () => {
+  const p = make();
+  await p._loadData();
+  p._invitees = [{ email: "a@b.co" }];
+  p._checked = new Set(["h1"]);
+  p.postService = async () => { throw new Error("network down"); };
+  let closed = 0;
+  p._closePopup = () => { closed++; };
+  const alerts = [];
+  const prev = global.Wm.alert;
+  global.Wm.alert = (m) => alerts.push(m);
+  try {
+    await p._sendInvitation();
+  } finally {
+    global.Wm.alert = prev;
+  }
+  assert.deepEqual(alerts, ["TRY_AGAIN"]);
+  assert.equal(closed, 0);
+  assert.equal(p._sendBtn.el.dataset.loading, undefined);
+});
+
+test("a hub.invite refused by the server shows the server's reason", async () => {
+  const p = make();
+  await p._loadData();
+  p._invitees = [{ email: "a@b.co" }];
+  p._checked = new Set(["h1"]);
+  // doRequest throws the payload itself for a 200 carrying `error`.
+  p.postService = async () => { throw { error: "PERMISSION_DENIED", reason: "Not an admin" }; };
+  p._closePopup = () => {};
+  const alerts = [];
+  const prev = global.Wm.alert;
+  global.Wm.alert = (m) => alerts.push(m);
+  try {
+    await p._sendInvitation();
+  } finally {
+    global.Wm.alert = prev;
+  }
+  assert.deepEqual(alerts, ["Not an admin"]);
+});
+
+test("partial failure: the alert carries the server's reason under the counts", async () => {
+  const p = make();
+  await p._loadData();
+  p._invitees = [{ email: "a@b.co" }, { email: "c@d.co" }];
+  p._checked = new Set(["h1"]);
+  const why = "the MTA rejected a@b.co. The invitation to 'test' is recorded — a@b.co can still accept it.";
+  p.postService = async () => ({ results: [
+    { email: "a@b.co", status: "failed", pending: true, reason: why },
+    { email: "c@d.co", status: "ok" },
+  ] });
+  let closed = 0;
+  p._closePopup = () => { closed++; };
+  const alerts = [];
+  const prev = global.Wm.alert;
+  global.Wm.alert = (m) => alerts.push(m);
+  try {
+    await p._sendInvitation();
+  } finally {
+    global.Wm.alert = prev;
+  }
+  assert.equal(alerts.length, 1);
+  assert.equal(alerts[0].kind, "window_info");
+  assert.deepEqual(alerts[0].message.map((n) => n.content), ["INVITE_PARTIAL_FAILED", why]);
+  assert.equal(closed, 1);
+});
+
+test("partial failure: the same reason from two workspaces is shown once; no reason = counts only", async () => {
+  const p = make();
+  await p._loadData();
+  p._invitees = [{ email: "a@b.co" }];
+  p._checked = new Set(["h1", "h2"]);
+  p.postService = async () => ({ results: [
+    { email: "a@b.co", status: "failed", reason: "same" },
+  ] });
+  p._closePopup = () => {};
+  const alerts = [];
+  const prev = global.Wm.alert;
+  global.Wm.alert = (m) => alerts.push(m);
+  try {
+    await p._sendInvitation();
+    assert.deepEqual(alerts[0].message.map((n) => n.content), ["INVITE_PARTIAL_FAILED", "same"]);
+    p.postService = async () => ({ results: [{ email: "a@b.co", status: "failed" }] });
+    p._closing = 0;
+    await p._sendInvitation();
+    assert.deepEqual(alerts[1].message.map((n) => n.content), ["INVITE_PARTIAL_FAILED"]);
+  } finally {
+    global.Wm.alert = prev;
+  }
 });
 
 test("no checked workspace: workspace error, nothing posted", async () => {
