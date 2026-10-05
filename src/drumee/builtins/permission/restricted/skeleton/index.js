@@ -190,7 +190,20 @@ function viewerIsAdmin(list) {
 function viewerCanLeave(list) {
   const self = list.find((m) => m.isSelf);
   if (!self) return false;
-  return !(self.privilege & _K.permission.owner);
+  return !holdsOwnerBit(self);
+}
+
+/**
+ * Is this the workspace OWNER's row? Read off the raw mask (mapMember), since
+ * the role label reads "Admin" for an owner and an admin alike.
+ *
+ * Gates two things: the viewer's Leave button above, and whether an admin may
+ * edit the row in memberRows. An owner's role is not one of the four roles the
+ * pill offers — picking any of them rewrote 63 into 31/15/7 and left the
+ * workspace without an owner (server hub.set_privilege now refuses it too).
+ */
+function holdsOwnerBit(member) {
+  return !!(member.privilege & _K.permission.owner);
 }
 
 function memberRows(list, ui, pfx, isAdmin) {
@@ -206,10 +219,11 @@ function memberRows(list, ui, pfx, isAdmin) {
   }
   return list.map((member, index) => {
     // Self row: read-only label — the server rejects self-mutation anyway.
+    // Owner row: read-only label — ownership only moves by change_owner.
     // Others, admin viewer: editable role + remove.
     // Others, non-admin viewer: read-only label, no remove.
     const actions =
-      member.isSelf || !isAdmin
+      member.isSelf || !isAdmin || holdsOwnerBit(member)
         ? [
           Skeletons.Note({
             className: `${pfx}__role-label ${pfx}__role-readonly`,
