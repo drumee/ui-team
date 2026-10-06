@@ -198,11 +198,7 @@ class __window_manager extends push {
    */
   async openDesignationLink(payload = {}, { compact = false } = {}) {
     if (compact && payload && payload.hub_id && payload.filetype === _a.folder) {
-      return this.openNotificationLocation({
-        hub_id: payload.hub_id,
-        nid: payload.nid,
-        filetype: _a.folder,
-      });
+      return this._openDesignationFolder(payload);
     }
     const hub_id = payload && payload.hub_id;
     // Already standing in it (warm click from inside the workspace) — mounting
@@ -220,6 +216,83 @@ class __window_manager extends push {
       }
     }
     return this.openFileLocation(payload);
+  }
+
+  /**
+   * The folder half of openDesignationLink: resolve the folder FIRST, and only
+   * then let openNotificationLocation dock the workspace into it.
+   *
+   * A link can be pasted to someone who is not a member of the workspace.
+   * openNotificationLocation's own guard (_canEnterWorkspace) cannot see that
+   * refusal: fetchService does not reject on a 403 — doRequest hands the
+   * response to onServerComplain and RESOLVES undefined (ui-essentials
+   * socket/utils) — and that guard deliberately reads "no data" as "go ahead"
+   * so a network blip never blocks a notification. Measured on drumee.in for a
+   * non-member: media.home and media.attributes both 403 → undefined, the guard
+   * passed, loadWorkspace reset the desk for a pane that never mounted, and the
+   * visitor was left on an endless loading state with nothing said.
+   *
+   * Here a folder that does not resolve stops BEFORE anything on the desk is
+   * touched. The second probe only picks the sentence: the workspace answers
+   * (a member, the folder is gone) → not found; it does not → no access.
+   *
+   * @param {Object} payload the parsed compact payload (nid, hub_id)
+   */
+  async _openDesignationFolder({ hub_id, nid } = {}) {
+    const attrs = await this.fetchService(SERVICE.media.attributes, {
+      hub_id,
+      nid,
+    }).catch(() => null);
+    if (!attrs || !attrs.nid) {
+      const home = await this.fetchService(SERVICE.media.home, { hub_id })
+        .catch(() => null);
+      this.alert(
+        home
+          ? LOCALE.FILE_NOT_FOUND
+          : LOCALE.WORKSPACE_NO_ACCESS || LOCALE.WEAK_PRIVILEGE,
+      );
+      return this._landAfterRefusedLink();
+    }
+    return this.openNotificationLocation({ hub_id, nid, filetype: _a.folder });
+  }
+
+  /**
+   * Behind a refused link, stand in a workspace — not on the retired home grid.
+   *
+   * Warm (the app was already open): the visitor is still in the workspace they
+   * were in, since nothing on the desk was touched — nothing to do.
+   *
+   * Cold (the link was opened by loading the page): a deep-link boot stands the
+   * remembered-screen restore down so it cannot steal focus from the target
+   * (desk _restoreDeskState, `deepLink` branch). With the target refused, that
+   * leaves NO workspace, and an empty desk renders as the old home grid. So do
+   * what a plain reload would have done: the saved workspace, else the default
+   * — the same pair, in the same order, as _restoreDeskState's saved branch —
+   * with the restore flag held as it holds it, so a late breadcrumb loadHome
+   * cannot wipe the pane being opened.
+   */
+  async _landAfterRefusedLink() {
+    if (this._curWorkspace) return;
+    const desk = window.Desk;
+    if (!desk || !_.isFunction(desk._openDefaultWorkspace)) return;
+    desk._restoreInFlight = true;
+    try {
+      const saved = desk._bootSavedState;
+      let restored = false;
+      if (saved && saved.workspace && _.isFunction(desk._restoreWorkspace)) {
+        // A throw here still falls through to the default below.
+        restored = await desk._restoreWorkspace(saved.workspace).catch(() => false);
+      }
+      if (!restored) await desk._openDefaultWorkspace();
+    } catch (e) {
+      this.warn("_landAfterRefusedLink: could not open a workspace", e);
+    } finally {
+      if (_.isFunction(desk._clearRestoreInFlight)) {
+        desk._clearRestoreInFlight(2500);
+      } else {
+        desk._restoreInFlight = false;
+      }
+    }
   }
 
   /**
