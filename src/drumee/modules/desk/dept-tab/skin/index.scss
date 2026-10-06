@@ -36,9 +36,11 @@
   &__chip {
     align-items: center;
     gap: 8px;
-    height: 32px;
+    // The workspace chip's height (--crumb-height), so the two chips of the
+    // address line up.
+    height: var(--crumb-height, 30px);
     box-sizing: border-box;
-    padding: 4px 8px 4px 4px;
+    padding: 3px 8px 3px 3px;
     border-radius: 8px;
     background-color: var(--normal-bg-90);
     cursor: pointer;

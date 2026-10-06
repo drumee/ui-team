@@ -163,7 +163,13 @@
     // Each target lights itself instead: the crumb tab in
     // breadcrumb/item/skin, and the caret in __ws-btn below. Both are painted
     // on boxes that already have their size, so nothing shifts on hover.
-    background-color: transparent;
+    //
+    // THE RESTING GROUND IS BACK, per B2B Org Structure (Figma 1003:172776):
+    // the address-tab is Grey/20 (#f2f2f7 — --normal-bg-90), r8, and the
+    // department crumb now in front of it (desk_dept_tab) carries the same
+    // ground, so the two chips read as one address "Dept v / Workspace v".
+    // The per-part hovers above stay: --overlay-bg-05 still shows on it.
+    background-color: var(--normal-bg-90);
 
     // A SECTION screen — Settings, Get help, Plan, Calendar, Inbox, Contacts,
     // Trash, Admin console — is a label with nothing behind it, and its caret
