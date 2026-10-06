@@ -108,3 +108,14 @@ test("narrow panes reflow without container queries (no size containment)", () =
   assert.match(grid, /grid-template-columns: repeat\(auto-fit, minmax\(max\(160px, \(100% - 24px\) \/ 3\), 1fr\)\)/);
   assert.match(grid, /gap: 12px/);
 });
+
+// The view toggle (group | list | grid) has nothing to lay out in an empty
+// folder, so it hides while .window__icons-list shows its empty view — but
+// not while the first page is still loading (Marionette mounts the empty
+// view until rows arrive, which would flicker the toggle away on every open)
+// and not during a search that found nothing (the folder is not empty).
+test("view toggle hides while the icons list is empty (not loading, not searching)", () => {
+  const sel =
+    '.window-folder .window__files-panel:not([data-loading="1"]):not([data-search]):has(.window__icons-list .smart-container > .no-content) .window-folder-topbar__view-toggle';
+  assert.match(rule(sel), /display: none !important/);
+});
