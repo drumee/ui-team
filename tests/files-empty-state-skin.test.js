@@ -43,14 +43,22 @@ test("root carries no display rule, so the search hide keeps winning", () => {
   assert.match(rule(".window-folder .window__files-panel[data-search] .no-content"), /display: none !important/);
 });
 
-test("Figma geometry: heading, grid, card", () => {
-  assert.match(rule(`${E}-hero`), /gap: 48px/);
+// Figma proportions at ~0.75x (user asked to downsize every item, 2026-10-05):
+// 24/18px type -> 18/14, 48px gaps -> 32, cards 16/24/24 -> 12/16/16, 20/16 card
+// type -> 15/13, 708px column -> 540.
+test("Figma geometry at 0.75x: heading, grid, card", () => {
+  const hero = rule(`${E}-hero`);
+  assert.match(hero, /gap: 32px/); assert.match(hero, /max-width: 588px/); assert.match(hero, /padding: 32px 24px/);
   const title = rule(`${E}-title`);
-  assert.match(title, /font-size: 24px/); assert.match(title, /line-height: 1\.1/); assert.match(title, /#34343a/i);
+  assert.match(title, /font-size: 18px/); assert.match(title, /line-height: 1\.1/); assert.match(title, /#34343a/i);
   const desc = rule(`${E}-desc`);
-  assert.match(desc, /font-size: 18px/); assert.match(desc, /var\(--tertiary-grey-80/);
+  assert.match(desc, /font-size: 14px/); assert.match(desc, /var\(--tertiary-grey-80/);
+  assert.match(rule(`${E}-heading`), /gap: 8px/);
   const card = rule(`${E}-card`);
-  assert.match(card, /padding: 16px/); assert.match(card, /border-radius: 24px/); assert.match(card, /gap: 24px/);
+  assert.match(card, /padding: 12px/); assert.match(card, /border-radius: 16px/); assert.match(card, /gap: 16px/);
+  assert.match(rule(`${E}-text`), /gap: 4px/);
+  assert.match(rule(`${E}-card-title`), /font-size: 15px/);
+  assert.match(rule(`${E}-card-desc`), /font-size: 13px/);
   // Figma cards are left-aligned; common.scss's .no-content centres text and
   // the hero root carries that class, so the card must reset it.
   assert.match(card, /text-align: left/);
@@ -61,6 +69,21 @@ test("Figma geometry: heading, grid, card", () => {
   assert.match(cardTitle, /var\(--primary-purple-100, #0b0a21\)/);
   const tile = rule(`${E}-ico`);
   assert.match(tile, /width: 48px/); assert.match(tile, /height: 48px/); assert.match(tile, /overflow: hidden/); assert.match(tile, /opacity: 0\.6/);
+  // The tile keeps Figma's 48px geometry (icon offsets, natural SVG sizes) and
+  // is drawn as a 36px miniature: zoom scales layout too, unlike transform.
+  assert.match(tile, /zoom: 0\.75/);
+});
+
+// The smart-container is ui-core's scroller (max-height:100%, overflow-y:auto,
+// no height), so the hero's min-height:100% resolved to nothing and it sat at
+// the top of the pane. A definite height while the hero is in it lets
+// margin:auto centre it; taller content still scrolls.
+test("hero is centred in the list: the scroller gets a definite height", () => {
+  const sc = rule(".window-folder .window__icons-list .smart-container:has(> .window__files-empty)");
+  assert.match(sc, /height: 100%/);
+  assert.match(sc, /box-sizing: border-box/);
+  assert.match(rule(".window-folder .window__icons-list .smart-container > .window__files-empty.no-content"), /min-height: 100%/);
+  assert.match(rule(`${E}-hero`), /margin: auto/);
 });
 
 test("SVG icons keep their root size; PNGs are sized to their Figma slot", () => {
@@ -77,11 +100,11 @@ test("SVG icons keep their root size; PNGs are sized to their Figma slot", () =>
 // is align-items:flex-start, so the smart-container sizes to its content, and
 // `container-type: inline-size` zeroes that content's width — the whole hero
 // collapsed to ~50px in the headless render. The grid narrows on its own
-// instead: auto-fit, never more than 3 columns, never under 200px.
+// instead: auto-fit, never more than 3 columns, never under 160px.
 test("narrow panes reflow without container queries (no size containment)", () => {
   assert.doesNotMatch(css, /files-empty[^{}]*\{[^}]*container(-type)?:/);
   assert.doesNotMatch(css, /@container files-empty/);
   const grid = rule(`.window-folder[data-can-create="1"] .window__files-empty-actions`);
-  assert.match(grid, /grid-template-columns: repeat\(auto-fit, minmax\(max\(200px, \(100% - 32px\) \/ 3\), 1fr\)\)/);
-  assert.match(rule(`${E}-hero`), /padding: clamp\(32px, 9%, 87px\) clamp\(16px, 11%, 128px\)/);
+  assert.match(grid, /grid-template-columns: repeat\(auto-fit, minmax\(max\(160px, \(100% - 24px\) \/ 3\), 1fr\)\)/);
+  assert.match(grid, /gap: 12px/);
 });
