@@ -24,20 +24,33 @@ const rule = (sel) => {
 const T = ".window-folder .widget-chat__team-empty";
 const FULL = '.window-folder__split-body[data-view=chat] .widget-chat__team-empty';
 
-test("side column: no icon, 24px title, 16px text capped at 401px", () => {
-  assert.match(rule(`${T}-ico`), /display: none !important/);
-  const title = rule(`${T}-title`);
-  assert.match(title, /font-size: 24px/); assert.match(title, /line-height: 1\.1/); assert.match(title, /#34343a/i);
-  const text = rule(`${T}-text`);
-  assert.match(text, /font-size: 16px/); assert.match(text, /max-width: 401px/);
-  assert.match(rule(T), /gap: 16px/);
+const FILES = '.window-folder__split-body[data-view=files] .widget-chat__team-empty';
+
+test("hidden by default; the icon geometry is Figma's 80px tile", () => {
+  const ico = rule(`${T}-ico`);
+  assert.match(ico, /display: none !important/);
+  assert.match(ico, /width: 80px/); assert.match(ico, /height: 80px/);
+  assert.match(ico, /overflow: hidden/); assert.match(ico, /opacity: 0\.6/);
+});
+
+// Rail "Files" active = split body data-view="files" (showFolderTab): the side
+// column always shows the icon, everything at ~0.75x (user, 2026-10-05).
+test("Files tab side column: icon always shown, ~0.75x sizes", () => {
+  const ico = rule(`${FILES}-ico`);
+  assert.match(ico, /display: block !important/);
+  assert.match(ico, /zoom: 0\.75/);              // 80px tile drawn at 60px
+  assert.match(ico, /margin-bottom: 18px/);       // 12px gap + 18 = 30 = 40 x 0.75
+  assert.match(rule(FILES), /gap: 12px/);
+  const title = rule(`${FILES}-title`);
+  assert.match(title, /font-size: 18px/);
+  const text = rule(`${FILES}-text`);
+  assert.match(text, /font-size: 13px/); assert.match(text, /max-width: 300px/);
+  assert.match(rule(`${T}-title`), /#34343a/i);
 });
 
 test("full Chat tab: 80px icon tile, 40px title, 18px text, 40px icon gap", () => {
   const ico = rule(`${FULL}-ico`);
   assert.match(ico, /display: block !important/);
-  assert.match(ico, /width: 80px/); assert.match(ico, /height: 80px/);
-  assert.match(ico, /overflow: hidden/); assert.match(ico, /opacity: 0\.6/);
   assert.match(ico, /margin-bottom: 24px/); // 16px flex gap + 24px = Figma's 40px
   assert.match(rule(`${FULL}-title`), /font-size: 40px/);
   assert.match(rule(`${FULL}-text`), /font-size: 18px/);

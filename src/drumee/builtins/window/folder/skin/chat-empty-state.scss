@@ -1,9 +1,12 @@
 // Team chat empty state — widget/chat/skeleton/empty-state.js.
 //
 // Rendered only for the workspace team chat, which only lives in a folder
-// window, so the folder skin owns it. Default = the Files-tab side column
-// (Figma 920:122905: text only); the full Chat tab (split body
-// data-view="chat", Figma 922:124283) adds the 80px icon and the large type.
+// window, so the folder skin owns it. Two views, keyed on the split body's
+// data-view (showFolderTab; the desk rail's Files / Chat buttons drive it):
+//   - files: the side column beside the grid (Figma 920:122905), drawn at
+//     ~0.75x and always with the icon;
+//   - chat:  the full Chat tab (Figma 922:124283), at Figma size.
+// The icon stays hidden in any other view (fail closed).
 //
 // Centring comes from the chat skin's `.widget-chat__body .no-content`.
 .window-folder .widget-chat__team-empty {
@@ -16,8 +19,45 @@
   text-align: center;
 }
 
+// Figma's 80px tile (922:124641). The views below reveal it and scale it.
 .window-folder .widget-chat__team-empty-ico {
   display: none !important;
+  position: relative;
+  flex: 0 0 auto;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  border-radius: 21.289px;
+  background: var(--primary-10, #e4e3ff);
+  opacity: 0.6;
+
+  // Inner plate (Figma 922:124653), clipped by the tile.
+  &::before {
+    content: "";
+    position: absolute;
+    left: 10.2px;
+    top: 9.53px;
+    width: 93.139px;
+    height: 93.139px;
+    border-radius: 16.41px;
+    background: var(--primary-purple-20, #b1adff);
+  }
+}
+
+.window-folder .widget-chat__team-empty-img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+
+.window-folder .widget-chat__team-empty-img:first-child {
+  left: 21.57px;
+  top: 22.35px;
+}
+
+.window-folder .widget-chat__team-empty-img:last-child {
+  left: 21px;
+  top: 19.86px;
 }
 
 .window-folder .widget-chat__team-empty-title {
@@ -39,46 +79,33 @@
   color: #34343a; // Grey/90 — no token
 }
 
-.window-folder .widget-chat__team-empty-img {
-  position: absolute;
-  max-width: none;
-  pointer-events: none;
+// ── Files tab side column: icon always, ~0.75x ───────────────────────────
+.window-folder__split-body[data-view=files] .widget-chat__team-empty {
+  gap: 12px;
 }
 
-// ── Full Chat tab ────────────────────────────────────────────────────────
+.window-folder__split-body[data-view=files] .widget-chat__team-empty-ico {
+  display: block !important;
+  // zoom (unlike transform) scales layout too: the 80px tile takes 60px and
+  // keeps the plate / bubble offsets and the SVGs' own sizes.
+  zoom: 0.75;
+  margin-bottom: 18px; // 12px flex gap + 18px = 30px = Figma's 40px x 0.75
+}
+
+.window-folder__split-body[data-view=files] .widget-chat__team-empty-title {
+  font-size: 18px;
+}
+
+.window-folder__split-body[data-view=files] .widget-chat__team-empty-text {
+  max-width: 300px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+// ── Full Chat tab, Figma size ────────────────────────────────────────────
 .window-folder__split-body[data-view=chat] .widget-chat__team-empty-ico {
   display: block !important;
-  position: relative;
-  flex: 0 0 auto;
-  width: 80px;
-  height: 80px;
-  overflow: hidden;
-  border-radius: 21.289px;
-  background: var(--primary-10, #e4e3ff);
-  opacity: 0.6;
   margin-bottom: 24px; // 16px flex gap + 24px = Figma's 40px
-
-  // Inner plate (Figma 922:124653), clipped by the tile.
-  &::before {
-    content: "";
-    position: absolute;
-    left: 10.2px;
-    top: 9.53px;
-    width: 93.139px;
-    height: 93.139px;
-    border-radius: 16.41px;
-    background: var(--primary-purple-20, #b1adff);
-  }
-}
-
-.window-folder__split-body[data-view=chat] .widget-chat__team-empty-img:first-child {
-  left: 21.57px;
-  top: 22.35px;
-}
-
-.window-folder__split-body[data-view=chat] .widget-chat__team-empty-img:last-child {
-  left: 21px;
-  top: 19.86px;
 }
 
 .window-folder__split-body[data-view=chat] .widget-chat__team-empty-title {
