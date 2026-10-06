@@ -52,3 +52,100 @@ test("assets are byte-identical to the Figma downloads", () => {
     }
   }
 });
+
+// ── skeleton ──────────────────────────────────────────────────────────────
+const Module = require("node:module");
+const _load = Module._load;
+Module._load = function (request, ...rest) {
+  // webpack alias: the module only needs the emitted URL, a string.
+  if (request.startsWith("assets/")) return `/static/${request}`;
+  return _load.call(this, request, ...rest);
+};
+const node = (type) => (opt = {}) => ({ type, ...opt });
+global.Skeletons = {
+  Box: { X: node("Box.X"), Y: node("Box.Y") },
+  Note: (o, cls) => (typeof o === "string" ? { type: "Note", content: o, className: cls } : { type: "Note", ...o }),
+  Element: node("Element"),
+};
+const en = require("../locale/en.json");
+global.LOCALE = new Proxy(en, { get: (t, k) => (k in t ? t[k] : k) });
+global._e = { upload: "upload" };
+
+const FE = require("../src/drumee/builtins/window/skeleton/toolkit/files-empty-state");
+const ui = { fig: { group: "window", family: "window-folder" } };
+const walk = (n, out = []) => {
+  if (Array.isArray(n)) { n.forEach((k) => walk(k, out)); return out; }
+  if (!n || typeof n !== "object") return out;
+  out.push(n);
+  (n.kids || []).forEach((k) => walk(k, out));
+  return out;
+};
+const byClass = (t, c) => walk(t).filter((n) => String(n.className || "").split(" ").includes(c));
+
+test("root keeps no-content (centring + search hiding key on it)", () => {
+  const s = FE.filesEmptyState(ui);
+  assert.deepEqual(s.className.split(" ").sort(), ["no-content", "window__files-empty"]);
+});
+
+test("heading reuses the existing FILES_EMPTY_* copy", () => {
+  const s = FE.filesEmptyState(ui);
+  assert.equal(byClass(s, "window__files-empty-title")[0].content, en.FILES_EMPTY_TITLE);
+  assert.equal(byClass(s, "window__files-empty-desc")[0].content, en.FILES_EMPTY_DESC);
+});
+
+test("six cards, Figma order, each wired to the + New service", () => {
+  const cards = byClass(FE.filesEmptyState(ui), "window__files-empty-card");
+  assert.deepEqual(cards.map((c) => c.dataset.card),
+    ["spreadsheet", "document", "presentation", "upload", "gdrive", "scratch"]);
+  assert.deepEqual(cards.map((c) => [c.service, c.name || null]), [
+    ["new-document", "spreadsheet.xlsx"],
+    ["new-document", "document.docx"],
+    ["new-document", "presentation.pptx"],
+    ["upload", null],
+    ["launch-gdrive-migration", null],
+    ["add-folder", null],
+  ]);
+  for (const c of cards) assert.deepEqual(c.uiHandler, [ui], `${c.dataset.card} uiHandler`);
+});
+
+test("everything inside a card is inactive so taps reach the card", () => {
+  for (const c of byClass(FE.filesEmptyState(ui), "window__files-empty-card")) {
+    const inner = walk(c.kids);
+    assert.ok(inner.length > 0);
+    for (const n of inner) assert.equal(n.active, 0, `${c.dataset.card}: ${n.className} is active`);
+  }
+});
+
+test("icons are the Figma assets, decorative", () => {
+  const imgs = byClass(FE.filesEmptyState(ui), "window__files-empty-img");
+  assert.deepEqual(imgs.map((i) => i.attribute.src), [
+    "/static/assets/empty-states/es-spreadsheet.svg",
+    "/static/assets/empty-states/es-document.svg",
+    "/static/assets/empty-states/es-presentation.svg",
+    "/static/assets/empty-states/es-upload.svg",
+    "/static/assets/empty-states/es-gdrive.png",
+    "/static/assets/empty-states/es-scratch.png",
+  ]);
+  for (const i of imgs) { assert.equal(i.tagName, "img"); assert.equal(i.attribute.alt, ""); }
+});
+
+test("scratch card has a title and no description; the others have both", () => {
+  for (const c of byClass(FE.filesEmptyState(ui), "window__files-empty-card")) {
+    const descs = byClass(c, "window__files-empty-card-desc");
+    assert.equal(descs.length, c.dataset.card === "scratch" ? 0 : 1, c.dataset.card);
+    assert.equal(byClass(c, "window__files-empty-card-title").length, 1);
+  }
+});
+
+test("filtered fallback carries the old plain copy", () => {
+  const f = byClass(FE.filesEmptyState(ui), "window__files-empty-filtered");
+  assert.equal(f.length, 1);
+  assert.equal(f[0].content, en.NO_FOLDERS_OR_FILES_YET);
+});
+
+test("gridFilesBrowser uses the hero for window-folder only", () => {
+  const src = fs.readFileSync(path.join(ROOT, "src/drumee/builtins/window/skeleton/toolkit/index.js"), "utf8");
+  const fn = src.slice(src.indexOf("export function gridFilesBrowser"), src.indexOf("export function tooltips"));
+  assert.match(fn, /evArgs:\s*ui\.fig\.family === "window-folder"\s*\?\s*filesEmptyState\(ui\)\s*:\s*Skeletons\.Note\(LOCALE\.NO_FOLDERS_OR_FILES_YET, "no-content"\)/);
+  assert.match(src, /require\("\.\/files-empty-state"\)/);
+});

@@ -2,6 +2,7 @@ const { button } = require("../../../skeleton/toolkit/buttons");
 const { isGrouped } = require("./file-group");
 const { menuRow, createRows } = require("./new-menu-rows");
 const { iconsSkeleton, searchStatus } = require("./icons-skeleton");
+const { filesEmptyState } = require("./files-empty-state");
 const {
   chatDetailsPanel,
   headerMenuService,
@@ -551,16 +552,20 @@ export function gridFilesBrowser(ui) {
     // Shown whenever the LISTING comes back empty — an empty folder, or a
     // file-type filter that matched nothing. Without it the pane goes blank.
     //
+    // The folder window gets the 2.0 onboarding empty state (Figma 920:123317,
+    // ./files-empty-state.js), which falls back to the plain note under a
+    // file-type filter; every other window keeps the plain note.
+    //
     // Its OWN key, not the FILES_NOT_FOUND the search window renders
     // (window/search/index.js): this reads as the folder's resting state
     // ("nothing here yet"), whereas search is reporting a query that missed.
     // Sharing one string means a copy edit for either surface silently
     // rewrites the other.
     //
-    // ui-core builds this as the `KIND.blank` empty view (collection-view.js
-    // emptyViewOptions), so the text lands inside the widget-blank placeholder
-    // that `.no-content` styles.
-    evArgs: Skeletons.Note(LOCALE.NO_FOLDERS_OR_FILES_YET, "no-content"),
+    // ui-core mounts this as the list's emptyView (collection-view.js
+    // emptyViewOptions); both shapes carry `.no-content`, the class the
+    // centring and the in-list search hiding key on.
+    evArgs: ui.fig.family === "window-folder" ? filesEmptyState(ui) : Skeletons.Note(LOCALE.NO_FOLDERS_OR_FILES_YET, "no-content"),
     api: function (x) {
       // getListApi when the window has one (the folder: search mode).
       return ui.getListApi ? ui.getListApi() : ui.getCurrentApi();
