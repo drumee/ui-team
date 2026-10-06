@@ -239,6 +239,13 @@ class __window_manager extends push {
    * @param {Object} payload the parsed compact payload (nid, hub_id)
    */
   async _openDesignationFolder({ hub_id, nid } = {}) {
+    // An empty canvas (a link opened by loading the page) is CLAIMED for the
+    // whole decision, exactly as loadWorkspace claims it before its own round
+    // trip: otherwise settleHomeGrid reads "still probing" as "nothing opened"
+    // and reveals the retired home grid until a workspace paints over it —
+    // seen on drumee.in as 1-2 s of home behind the alert.
+    const holdCanvas = !this._curWorkspace && !this.headlessPane();
+    if (holdCanvas) this._syncHomeGrid(1);
     const attrs = await this.fetchService(SERVICE.media.attributes, {
       hub_id,
       nid,
@@ -246,14 +253,27 @@ class __window_manager extends push {
     if (!attrs || !attrs.nid) {
       const home = await this.fetchService(SERVICE.media.home, { hub_id })
         .catch(() => null);
+      // Land FIRST, say why AFTER: opening a workspace closes the alert on its
+      // way (Desk.closeAllPanels and the pane mount), so it is raised only once
+      // the landed pane is up — see _landAfterRefusedLink.
+      const landed = await this._landAfterRefusedLink();
+      if (holdCanvas && !landed) this._releaseCanvas();
       this.alert(
         home
           ? LOCALE.FILE_NOT_FOUND
           : LOCALE.WORKSPACE_NO_ACCESS || LOCALE.WEAK_PRIVILEGE,
       );
-      return this._landAfterRefusedLink();
+      return;
     }
-    return this.openNotificationLocation({ hub_id, nid, filetype: _a.folder });
+    const win = await this.openNotificationLocation({
+      hub_id,
+      nid,
+      filetype: _a.folder,
+    });
+    // Nothing mounted after all — give the claim back so the canvas is decided
+    // by settleHomeGrid instead of staying blank.
+    if (holdCanvas && !win && !this._curWorkspace) this._releaseCanvas();
+    return win;
   }
 
   /**
@@ -270,20 +290,30 @@ class __window_manager extends push {
    * — the same pair, in the same order, as _restoreDeskState's saved branch —
    * with the restore flag held as it holds it, so a late breadcrumb loadHome
    * cannot wipe the pane being opened.
+   *
+   * Resolves once the landed pane's folder view is mounted (bounded).
+   *
+   * @returns {Promise<Boolean>} whether a workspace stands, or is being opened
    */
   async _landAfterRefusedLink() {
-    if (this._curWorkspace) return;
+    if (this._curWorkspace) return true;
     const desk = window.Desk;
-    if (!desk || !_.isFunction(desk._openDefaultWorkspace)) return;
+    if (!desk || !_.isFunction(desk._openDefaultWorkspace)) return false;
     desk._restoreInFlight = true;
+    let landed = false;
     try {
       const saved = desk._bootSavedState;
-      let restored = false;
       if (saved && saved.workspace && _.isFunction(desk._restoreWorkspace)) {
         // A throw here still falls through to the default below.
-        restored = await desk._restoreWorkspace(saved.workspace).catch(() => false);
+        landed = !!(await desk._restoreWorkspace(saved.workspace).catch(() => false));
       }
-      if (!restored) await desk._openDefaultWorkspace();
+      if (!landed) landed = !!(await desk._openDefaultWorkspace());
+      // _openDefaultWorkspace returns as soon as loadWorkspace is ENTERED; the
+      // pane mounts after its media.attributes round trip, and an alert raised
+      // before that is closed on the way (measured on drumee.in: gone at once
+      // when raised right after loadWorkspace, still up 6 s later when raised
+      // after the pane's folder view). So wait for the pane itself.
+      if (landed) await this._awaitLandedPane();
     } catch (e) {
       this.warn("_landAfterRefusedLink: could not open a workspace", e);
     } finally {
@@ -293,6 +323,21 @@ class __window_manager extends push {
         desk._restoreInFlight = false;
       }
     }
+    return landed;
+  }
+
+  /**
+   * Resolve once the workspace being opened has a mounted folder view: wait for
+   * loadWorkspace to set _curWorkspace (it does so after its round trip), then
+   * the same readiness _awaitWorkspaceWindow gives openNotificationLocation.
+   * Bounded, like that one — never hangs the caller.
+   */
+  async _awaitLandedPane(tries = 40) {
+    for (let i = 0; i < tries && !this._curWorkspace; i++) {
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    const cur = this._curWorkspace;
+    if (cur && cur.hub_id) await this._awaitWorkspaceWindow(cur.hub_id);
   }
 
   /**
