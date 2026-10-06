@@ -3377,5 +3377,17 @@
   "CREATE_TOPIC": "Create topic",
   "FILE_THREADS_BAR": "File threads",
   "NO_FILE_THREADS": "No file threads yet",
-  "TOPIC": "Topic"
+  "TOPIC": "Topic",
+  "FILES_EMPTY_ADD_SPREADSHEET": "Add spreadsheet",
+  "FILES_EMPTY_ADD_SPREADSHEET_DESC": "Create tables, track data, and more",
+  "FILES_EMPTY_ADD_DOCUMENT": "Add document",
+  "FILES_EMPTY_ADD_DOCUMENT_DESC": "Take notes or create detailed documents",
+  "FILES_EMPTY_ADD_PRESENTATION": "Add Presentation",
+  "FILES_EMPTY_ADD_PRESENTATION_DESC": "Create slides, decks, and more",
+  "FILES_EMPTY_UPLOAD": "Upload now",
+  "FILES_EMPTY_UPLOAD_DESC": "Upload files to get started",
+  "FILES_EMPTY_GDRIVE_DESC": "Move your files from Google Drive",
+  "FILES_EMPTY_START_SCRATCH": "Start from scratch",
+  "CHAT_EMPTY_TITLE": "Start discuss with your team now",
+  "CHAT_EMPTY_TEXT": "Share announcements and updates about company news, upcoming events,..."
 }

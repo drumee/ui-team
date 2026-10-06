@@ -3152,5 +3152,17 @@
   "CREATE_TOPIC": "Create topic",
   "FILE_THREADS_BAR": "File threads",
   "NO_FILE_THREADS": "No file threads yet",
-  "TOPIC": "Topic"
+  "TOPIC": "Topic",
+  "FILES_EMPTY_ADD_SPREADSHEET": "Добавить таблицу",
+  "FILES_EMPTY_ADD_SPREADSHEET_DESC": "Создавайте таблицы, отслеживайте данные и многое другое",
+  "FILES_EMPTY_ADD_DOCUMENT": "Добавить документ",
+  "FILES_EMPTY_ADD_DOCUMENT_DESC": "Делайте заметки или создавайте подробные документы",
+  "FILES_EMPTY_ADD_PRESENTATION": "Добавить презентацию",
+  "FILES_EMPTY_ADD_PRESENTATION_DESC": "Создавайте слайды, презентации и многое другое",
+  "FILES_EMPTY_UPLOAD": "Загрузить сейчас",
+  "FILES_EMPTY_UPLOAD_DESC": "Загрузите файлы, чтобы начать",
+  "FILES_EMPTY_GDRIVE_DESC": "Перенесите файлы из Google Drive",
+  "FILES_EMPTY_START_SCRATCH": "Начать с нуля",
+  "CHAT_EMPTY_TITLE": "Начните обсуждение с командой",
+  "CHAT_EMPTY_TEXT": "Делитесь объявлениями и новостями компании, предстоящими событиями,..."
 }

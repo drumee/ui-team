@@ -3147,5 +3147,17 @@
   "CREATE_TOPIC": "Create topic",
   "FILE_THREADS_BAR": "File threads",
   "NO_FILE_THREADS": "No file threads yet",
-  "TOPIC": "Topic"
+  "TOPIC": "Topic",
+  "FILES_EMPTY_ADD_SPREADSHEET": "Añadir hoja de cálculo",
+  "FILES_EMPTY_ADD_SPREADSHEET_DESC": "Crea tablas, sigue datos y más",
+  "FILES_EMPTY_ADD_DOCUMENT": "Añadir documento",
+  "FILES_EMPTY_ADD_DOCUMENT_DESC": "Toma notas o crea documentos detallados",
+  "FILES_EMPTY_ADD_PRESENTATION": "Añadir presentación",
+  "FILES_EMPTY_ADD_PRESENTATION_DESC": "Crea diapositivas, presentaciones y más",
+  "FILES_EMPTY_UPLOAD": "Subir ahora",
+  "FILES_EMPTY_UPLOAD_DESC": "Sube archivos para empezar",
+  "FILES_EMPTY_GDRIVE_DESC": "Mueve tus archivos desde Google Drive",
+  "FILES_EMPTY_START_SCRATCH": "Empezar desde cero",
+  "CHAT_EMPTY_TITLE": "Empieza a conversar con tu equipo",
+  "CHAT_EMPTY_TEXT": "Comparte anuncios y novedades de la empresa, próximos eventos,..."
 }
