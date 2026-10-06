@@ -26,6 +26,8 @@ test("two crumbs: parent is the workspace root, named by hub_name", () => {
     parentNid: "R1",
     currentNid: "F1",
     parentName: "aaaa",
+    parentFiletype: "hub",
+    parentArea: "private",
     area: "private",
     key: "H1:R1",
   });
@@ -119,4 +121,23 @@ test("personal workspace subfolder: parent is the workspace, not the home root",
   const s = siblingScope([home, mine, sub]);
   assert.equal(s.parentNid, "P1");
   assert.equal(s.parentName, "aaaa");
+});
+
+// The switcher heading draws the parent the way its crumb does: a workspace
+// root as a hub (area badge), anything else as a folder.
+test("parent glyph: a root with no filename of its own is a hub", () => {
+  assert.equal(siblingScope([root, abc]).parentFiletype, "hub");
+});
+
+test("parent glyph: a personal workspace root and an inner folder are folders", () => {
+  const sub = { nid: "P2", pid: "P1", hub_id: "U1", filetype: "folder", filename: "abc" };
+  assert.equal(siblingScope([home, mine, sub]).parentFiletype, "folder");
+  const x = { nid: "F2", pid: "F1", hub_id: "H1", filetype: "folder", filename: "x" };
+  assert.equal(siblingScope([root, abc, x]).parentFiletype, "folder");
+});
+
+test("parent glyph: the parent's own area wins, the current's is the fallback", () => {
+  const x = { nid: "F2", hub_id: "H1", filetype: "folder", filename: "x", area: "share" };
+  assert.equal(siblingScope([root, abc, x]).parentArea, "private");
+  assert.equal(siblingScope([{ ...root, area: "" }, abc]).parentArea, "private");
 });

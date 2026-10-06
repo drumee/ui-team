@@ -1687,6 +1687,57 @@
     }
   }
 
+  // FOLDER MODE's heading is the parent's CRUMB (desk._feedFolderSiblings):
+  // the same tab, glyph and name as breadcrumb-item__tab / __icon / __filename
+  // in breadcrumb/item/skin, so the panel opens under a copy of the crumb it
+  // lists. Values are that file's, through the same --crumb-* ramp; the class
+  // names are this file's own, because the panel lives inside __crumb-group
+  // and the breadcrumb's classes there mean "the address has loaded".
+  //
+  // The 6px side margin plus the tab's 4px inset lines the glyph up with the
+  // rows' icons (10px). No hover: the heading is not a control.
+  &__ws-section--crumb {
+    display: flex;
+    align-items: center;
+    gap: var(--crumb-gap, 6px);
+    min-width: 0;
+    height: calc(var(--crumb-height, 30px) - 6px);
+    box-sizing: border-box;
+    margin: 0 6px 4px;
+    padding: 0 var(--crumb-tab-pad, 4px);
+    border-radius: var(--crumb-radius, 8px);
+    text-transform: none;
+    letter-spacing: normal;
+
+    // Beats the label's own first-child padding: this is a tab, sized above.
+    &:first-child {
+      padding-top: 0;
+    }
+  }
+
+  &__ws-section-icon {
+    @include drumee.ws-folder-icon(20px, 16px);
+    min-width: 20px;
+
+    // The crumb's badge, not the switcher rows' larger one.
+    .badge {
+      bottom: -2px;
+      left: -2px;
+      width: 13px !important;
+      height: 13px !important;
+      filter: none;
+    }
+  }
+
+  &__ws-section-name {
+    @include drumee.typo($color: var(--normal-fg-10), $size: 13px, $line: 18px);
+    font-weight: 400;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   // Geometry and colours copied from __new-menu-item — the app's established
   // dropdown row — so the switcher reads as the same component family as the
   // "+ New" menu rather than a bespoke panel: 36px min-height, 8/10 padding,
@@ -2490,5 +2541,13 @@ html[data-theme="dark"] {
         background: rgba(89, 80, 255, 0.2);
       }
     }
+  }
+}
+
+// The crumb's dark-theme colour (breadcrumb/item/skin __filename), for the
+// folder-mode heading that copies it.
+html[data-theme="dark"] {
+  .desk-module-topbar__ws-section-name {
+    color: var(--normal-fg);
   }
 }

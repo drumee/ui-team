@@ -49,12 +49,24 @@ const part = () => {
   return p;
 };
 
-test("_feedFolderSiblings: heading is the parent's name, current row marked", () => {
-  const feed = load("_feedFolderSiblings(list, scope, rows)");
+test("_feedFolderSiblings: heading is the parent drawn like its crumb, current row marked", () => {
+  const icons = [];
+  const feed = load("_feedFolderSiblings(list, scope, rows)", {
+    folderIcon: (o) => (icons.push(o), "<svg/>"),
+  });
   const list = part();
-  feed.call({}, list, scope, rows);
+  feed.call({}, list, { ...scope, parentFiletype: "hub", parentArea: "private" }, rows);
   const kids = list.fed[0];
-  assert.equal(kids[0].content, "aaaa");
+  const head = kids[0];
+  assert.match(head.className, /desk-module-topbar__ws-section--crumb/);
+  assert.equal(head.kids[0].className, "desk-module-topbar__ws-section-icon private");
+  assert.equal(head.kids[1].className, "desk-module-topbar__ws-section-name");
+  assert.equal(head.kids[1].content, "aaaa");
+  // A workspace root wears the hub glyph with its area badge, as in the bar.
+  assert.deepEqual(
+    { area: icons[0].area, filetype: icons[0].filetype, role: icons[0].role },
+    { area: "private", filetype: "hub", role: "desk" },
+  );
   assert.deepEqual(kids.slice(1).map((k) => k.service), ["switch-folder", "switch-folder", "switch-folder"]);
   assert.deepEqual(kids.slice(1).map((k) => k.attrOpt["data-current"]), ["1", "0", "0"]);
   assert.equal(kids[2].folderNid, "F2");
@@ -262,4 +274,14 @@ test("_renderWorkspaceMenu: the empty-workspaces note also resets the folder fee
   await render.call(self, list);
   assert.equal(list.fed.length, 1);
   assert.equal(self._folderFeedSig, null);
+});
+
+test("_feedFolderSiblings: an inner-folder parent is drawn as a folder", () => {
+  const icons = [];
+  const feed = load("_feedFolderSiblings(list, scope, rows)", {
+    folderIcon: (o) => (icons.push(o), "<svg/>"),
+  });
+  feed.call({}, part(), { ...scope, parentName: "abc", parentFiletype: "folder", parentArea: "private" }, rows);
+  assert.equal(icons[0].filetype, "folder");
+  assert.equal(icons[0].role, "");
 });

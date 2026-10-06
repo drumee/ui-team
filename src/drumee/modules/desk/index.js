@@ -3602,10 +3602,36 @@ class desk_module extends LetcBox {
         }),
       ]);
     }
+    // THE HEADING IS THE PARENT'S CRUMB, not a label: its folder glyph and
+    // name, drawn and sized as breadcrumb-item__tab draws them in the bar, so
+    // the panel reads as "the folders in <that crumb>". A workspace root is a
+    // hub with its area badge, as it is in the address.
+    //
+    // Its OWN classes (desk/skin/topbar __ws-section--crumb), never the
+    // breadcrumb's: this panel is a descendant of __crumb-group, where
+    // `.breadcrumb-item__icon` / `__filename` are what _crumbClickOpensSwitcher
+    // and the chip's `:has()` rules read as "the address has loaded".
+    const parentHub = scope.parentFiletype === _a.hub;
+    const parentArea = scope.parentArea || scope.area || "";
     list.feed([
-      Skeletons.Note({
-        className: `${cn}__ws-section`,
-        content: scope.parentName || LOCALE.FOLDERS || "",
+      Skeletons.Box.X({
+        className: `${cn}__ws-section ${cn}__ws-section--crumb`,
+        kids: [
+          Skeletons.Element({
+            className: `${cn}__ws-section-icon ${parentArea}`,
+            content: folderIcon({
+              area: parentArea,
+              filetype: parentHub ? _a.hub : _a.folder,
+              role: parentHub ? "desk" : "",
+              widgetId: _.uniqueId("ws-parent-icon-"),
+              isAttachment: 1,
+            }),
+          }),
+          Skeletons.Note({
+            className: `${cn}__ws-section-name`,
+            content: scope.parentName || LOCALE.FOLDERS || "",
+          }),
+        ],
       }),
       ...rows.map((row) => {
         const area = row.area || scope.area || "";

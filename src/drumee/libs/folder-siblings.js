@@ -68,11 +68,21 @@ function siblingScope(path) {
   const parentNid = nodeNid(parent);
   const currentNid = nodeNid(current);
   if (!hub_id || !parentNid || !currentNid) return null;
+  // The parent's glyph, decided as desk_breadcrumb._buildContent decides the
+  // crumb's: a head row with no filename of its own is the workspace root and
+  // is drawn as a hub (area badge); anything else keeps its own filetype.
+  const ownName = parent.filename && parent.filename !== "/";
+  const parentFiletype =
+    (parent === path[0] && !ownName) || parent.filetype === HUB
+      ? HUB
+      : FOLDER;
   return {
     hub_id,
     parentNid,
     currentNid,
     parentName: displayName(parent),
+    parentFiletype,
+    parentArea: parent.area || current.area || "",
     area: (current && current.area) || (parent && parent.area) || "",
     key: `${hub_id}:${parentNid}`,
   };
