@@ -206,6 +206,19 @@ function holdsOwnerBit(member) {
   return !!(member.privilege & _K.permission.owner);
 }
 
+/**
+ * May this viewer delete this workspace from the panel — the owner's
+ * counterpart of viewerCanLeave, and drawn in the same place. Same FAIL
+ * CLOSED rule: only when the self row is found AND carries the owner bit. A
+ * personal workspace renders no member rows, so it never gets the button;
+ * it is deleted from Folder Settings, which knows how to trash a folder.
+ */
+function viewerCanDelete(list) {
+  const self = list.find((m) => m.isSelf);
+  if (!self) return false;
+  return holdsOwnerBit(self);
+}
+
 function memberRows(list, ui, pfx, isAdmin) {
   if (!list.length) {
     return [
@@ -488,6 +501,46 @@ function membersList(ui, pfx = ui.fig.family, members, isAdmin) {
 }
 
 /**
+ * The section at the foot of the panel through which the viewer exits the
+ * workspace: Leave for a member, Delete for the owner. One shape for both so
+ * they cannot drift apart.
+ *
+ * THE WARNING COMES FIRST, then the button: what is lost is the part the
+ * viewer has to weigh. A row of glyph + label (lw1.jpg); the service sits on
+ * the row and its kids are inactive, so a click anywhere on it fires once, and
+ * sys_pn stays on the row for the handler's data-pending stamp. The button
+ * itself never acts — the handler opens a confirm card first.
+ */
+function exitSection(ui, pfx, { service, warning, label, ico }) {
+  return Skeletons.Box.Y({
+    className: `${pfx}__leave-section`,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__leave-warning`,
+        content: warning,
+      }),
+      Skeletons.Box.X({
+        className: `${pfx}__leave-button`,
+        sys_pn: service,
+        service,
+        uiHandler: [ui],
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Image.Svg({
+            className: `${pfx}__leave-icon`,
+            ico,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__leave-label`,
+            content: label,
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
  * Permission management panel skeleton
  * @param {*} ui
  * @returns
@@ -504,6 +557,7 @@ module.exports = function (ui) {
     .map(mapMember);
   const isAdmin = viewerIsAdmin(members);
   const canLeave = viewerCanLeave(members);
+  const canDelete = viewerCanDelete(members);
   // Published back to the widget so _loadInvitations can ask the SAME question
   // this render answered, instead of re-deriving it from a privilege bit.
   //
@@ -964,37 +1018,26 @@ function workspaceCard(ui, pfx, memberCount) {
   // viewer has to weigh, and a red button on its own only says "careful". The
   // click still opens a confirm card naming the workspace (index.js
   // _leaveWorkspace) — the button itself never leaves anything.
+  //
+  // The OWNER gets the same section with Delete in it (Duy, 2026-10-05): an
+  // owner may not leave (the workspace would have no owner), so their way out
+  // is to delete it. The button opens Wm.confirmRemoveWorkspace — the same
+  // confirm card and the same hub.delete_hub as Folder Settings' Delete row.
   const leaveSection = canLeave
-    ? Skeletons.Box.Y({
-      className: `${pfx}__leave-section`,
-      kids: [
-        Skeletons.Note({
-          className: `${pfx}__leave-warning`,
-          content: LOCALE.LEAVE_WORKSPACE_WARNING,
-        }),
-        // A row of glyph + label (lw1.jpg). The service sits on the row and
-        // its kids are inactive, so a click anywhere on it fires once;
-        // sys_pn stays on the row for _leaveWorkspace's data-pending stamp.
-        Skeletons.Box.X({
-          className: `${pfx}__leave-button`,
-          sys_pn: "leave-workspace",
-          service: "leave-workspace",
-          uiHandler: [ui],
-          kidsOpt: { active: 0 },
-          kids: [
-            Skeletons.Image.Svg({
-              className: `${pfx}__leave-icon`,
-              ico: "sidebar_signout",
-            }),
-            Skeletons.Note({
-              className: `${pfx}__leave-label`,
-              content: LOCALE.LEAVE_WORKSPACE,
-            }),
-          ],
-        }),
-      ],
+    ? exitSection(ui, pfx, {
+      service: "leave-workspace",
+      warning: LOCALE.LEAVE_WORKSPACE_WARNING,
+      label: LOCALE.LEAVE_WORKSPACE,
+      ico: "sidebar_signout",
     })
-    : null;
+    : canDelete
+      ? exitSection(ui, pfx, {
+        service: "delete-workspace",
+        warning: LOCALE.DELETE_WORKSPACE_WARNING,
+        label: LOCALE.DELETE_WORKSPACE,
+        ico: "ph-trash",
+      })
+      : null;
 
   // Pinned header + scrolling body, after the base panel's -header / -scroll.
   //
@@ -1024,4 +1067,5 @@ function workspaceCard(ui, pfx, memberCount) {
 };
 
 module.exports.membersList = membersList;
+module.exports.holdsOwnerBit = holdsOwnerBit;
 module.exports.roleFilterItem = roleFilterItem;

@@ -201,6 +201,8 @@
   "LEAVE_WORKSPACE": "Quitter l'espace de travail",
   "MSG_LEAVE_WORKSPACE": "Vous êtes sur le point de quitter l'espace de travail <b>{0}</b>. Vous perdrez immédiatement l'accès à tout son contenu — fichiers, dossiers, discussions et réunions — et seul un administrateur de cet espace de travail pourra vous y réinviter.",
   "LEAVE_WORKSPACE_WARNING": "Quitter cet espace de travail vous retire l'accès à tous ses fichiers, dossiers et discussions. Seul un administrateur pourra vous réinviter.",
+  "DELETE_WORKSPACE": "Supprimer l'espace de travail",
+  "DELETE_WORKSPACE_WARNING": "La suppression efface cet espace de travail et tout son contenu (fichiers, dossiers, discussions et réunions) pour tous les membres. Elle est définitive.",
   "DISCONNECT": "Déconnexion",
   "DOCUMENT": "Document",
   "DOCUMENTS": "Documents",

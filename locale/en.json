@@ -245,6 +245,8 @@
   "LEAVE_WORKSPACE": "Leave workspace",
   "MSG_LEAVE_WORKSPACE": "You are about to leave the workspace <b>{0}</b>. You will immediately lose access to everything in it — files, folders, chats and meetings — and only an admin of this workspace can invite you back.",
   "LEAVE_WORKSPACE_WARNING": "Leaving removes your access to every file, folder and conversation in this workspace. Only an admin can invite you back.",
+  "DELETE_WORKSPACE": "Delete workspace",
+  "DELETE_WORKSPACE_WARNING": "Deleting removes this workspace and everything in it - files, folders, chat and meetings - for every member. It cannot be undone.",
   "ORGANIZE": "Organize",
   "MAKE_A_COPY": "Make a copy",
   "LINK_TO_TASK_TRACKER": "Link to task tracker",
