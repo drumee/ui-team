@@ -345,6 +345,18 @@
   // _crumbClickOpensSwitcher (desk/index.js) always opens on the caret itself,
   // so the glyph is never drawn without a dropdown behind it.
 
+  // FOLDER MODE — the address is deeper than the workspace, so the switcher
+  // lists the open folder's siblings (desk._prepareSwitcherMode stamps
+  // data-ws-mode on this chip each time it opens). The current-workspace
+  // header and "New workspaces" belong to the workspace list and go with it.
+  // !important: Box children are forced display:flex inline by the framework.
+  &__crumb-group[data-ws-mode="folders"] {
+    .desk-module-topbar__ws-head,
+    .desk-module-topbar__ws-new {
+      display: none !important;
+    }
+  }
+
   &__left-cluster {
     align-items: center;
     gap: 20px;
