@@ -16,6 +16,12 @@
 // The list's empty-view centring (window/skin/common.scss) caps the note at
 // 320px with side padding; the hero needs the whole pane. (0,5,0) beats
 // common's (0,4,0).
+//
+// NO size containment (container-type) here or on the hero: the folder skin
+// makes `.window__icons-list` align-items:flex-start, so the smart-container
+// shrink-wraps its content, and inline-size containment reports that content
+// as 0px wide — the hero collapsed to a ~50px column. The layout below narrows
+// on percentages and an auto-fit grid instead of container queries.
 .window-folder .window__icons-list .smart-container > .window__files-empty.no-content {
   max-width: none;
   width: 100%;
@@ -24,9 +30,12 @@
   color: inherit;
   font-size: inherit;
   line-height: inherit;
-  container: files-empty / inline-size;
 }
 
+// Figma 87px / 128px around a 708px column. In the app the smart-container
+// adds 24px padding, so 11% (not 128/964) keeps that 708px column — the
+// description wraps on 2 lines as in Figma. The percentages keep the ratio as the
+// pane narrows (files | chat split, mobile), the clamps bound it.
 .window-folder .window__files-empty-hero {
   flex-direction: column;
   align-items: center;
@@ -35,7 +44,7 @@
   width: 100%;
   max-width: 964px;
   margin: auto;
-  padding: 87px 128px;
+  padding: clamp(32px, 9%, 87px) clamp(16px, 11%, 128px);
   box-sizing: border-box;
 }
 
@@ -68,9 +77,11 @@
   display: none !important;
 }
 
+// Figma's 3 x 2 at full width; auto-fit drops to 2 then 1 column as the pane
+// narrows. The max() floor is a third of the row, so it never fits a 4th.
 .window-folder[data-can-create="1"] .window__files-empty-actions {
   display: grid !important;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(max(200px, calc((100% - 32px) / 3)), 1fr));
   gap: 16px;
   width: 100%;
 }
@@ -83,6 +94,8 @@
   border: 1px solid transparent;
   border-radius: 24px;
   box-sizing: border-box;
+  // The hero root carries .no-content, whose common.scss rule centres text.
+  text-align: left;
   cursor: pointer;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
 
@@ -245,24 +258,4 @@
   color: var(--normal-fg-20);
   font-size: 14px;
   line-height: 20px;
-}
-
-// ── Narrow panes (files | chat split, mobile) ────────────────────────────
-@container files-empty (max-width: 760px) {
-  .window-folder .window__files-empty-hero {
-    padding: 48px 24px;
-  }
-  .window-folder[data-can-create="1"] .window__files-empty-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@container files-empty (max-width: 480px) {
-  .window-folder .window__files-empty-hero {
-    padding: 32px 16px;
-    gap: 32px;
-  }
-  .window-folder[data-can-create="1"] .window__files-empty-actions {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

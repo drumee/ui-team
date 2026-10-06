@@ -51,7 +51,9 @@ test("Figma geometry: heading, grid, card", () => {
   assert.match(desc, /font-size: 18px/); assert.match(desc, /var\(--tertiary-grey-80/);
   const card = rule(`${E}-card`);
   assert.match(card, /padding: 16px/); assert.match(card, /border-radius: 24px/); assert.match(card, /gap: 24px/);
-  assert.match(rule(`.window-folder[data-can-create="1"] .window__files-empty-actions`), /grid-template-columns: repeat\(3, minmax\(0, 1fr\)\)/);
+  // Figma cards are left-aligned; common.scss's .no-content centres text and
+  // the hero root carries that class, so the card must reset it.
+  assert.match(card, /text-align: left/);
   const tile = rule(`${E}-ico`);
   assert.match(tile, /width: 48px/); assert.match(tile, /height: 48px/); assert.match(tile, /overflow: hidden/); assert.match(tile, /opacity: 0\.6/);
 });
@@ -66,8 +68,15 @@ test("SVG icons keep their root size; PNGs are sized to their Figma slot", () =>
   assert.match(scratch, /width: 24\.438px/); assert.match(scratch, /mix-blend-mode: multiply/); assert.match(scratch, /opacity: 0\.3/);
 });
 
-test("narrow panes fall back to 2 then 1 column", () => {
-  const cq = css.slice(css.indexOf("@container files-empty"));
-  assert.match(cq, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(cq, /grid-template-columns: minmax\(0, 1fr\)/);
+// No size containment anywhere on the hero: `.window-folder .window__icons-list`
+// is align-items:flex-start, so the smart-container sizes to its content, and
+// `container-type: inline-size` zeroes that content's width — the whole hero
+// collapsed to ~50px in the headless render. The grid narrows on its own
+// instead: auto-fit, never more than 3 columns, never under 200px.
+test("narrow panes reflow without container queries (no size containment)", () => {
+  assert.doesNotMatch(css, /files-empty[^{}]*\{[^}]*container(-type)?:/);
+  assert.doesNotMatch(css, /@container files-empty/);
+  const grid = rule(`.window-folder[data-can-create="1"] .window__files-empty-actions`);
+  assert.match(grid, /grid-template-columns: repeat\(auto-fit, minmax\(max\(200px, \(100% - 32px\) \/ 3\), 1fr\)\)/);
+  assert.match(rule(`${E}-hero`), /padding: clamp\(32px, 9%, 87px\) clamp\(16px, 11%, 128px\)/);
 });
