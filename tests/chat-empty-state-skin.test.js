@@ -48,12 +48,15 @@ test("Files tab side column: icon always shown, ~0.75x sizes", () => {
   assert.match(rule(`${T}-title`), /#34343a/i);
 });
 
-test("full Chat tab: 80px icon tile, 40px title, 18px text, 40px icon gap", () => {
+// Downsized to ~0.75x like the side column (user, 2026-10-05).
+test("full Chat tab: icon shown, ~0.75x of Figma 922:124283", () => {
   const ico = rule(`${FULL}-ico`);
   assert.match(ico, /display: block !important/);
-  assert.match(ico, /margin-bottom: 24px/); // 16px flex gap + 24px = Figma's 40px
-  assert.match(rule(`${FULL}-title`), /font-size: 40px/);
-  assert.match(rule(`${FULL}-text`), /font-size: 18px/);
+  assert.match(ico, /zoom: 0\.75/);         // 80px tile drawn at 60px
+  assert.match(ico, /margin-bottom: 18px/);  // 12px gap + 18 = 30 = 40 x 0.75
+  assert.match(rule(FULL), /gap: 12px/);
+  assert.match(rule(`${FULL}-title`), /font-size: 30px/);
+  assert.match(rule(`${FULL}-text`), /font-size: 14px/);
 });
 
 test("icon SVGs keep their root size", () => {
