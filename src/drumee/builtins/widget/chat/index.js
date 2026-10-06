@@ -1,5 +1,6 @@
 const { colorFromName, copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
 const nodeIconHtml = require("./node-icon");
+const { chatEmptyState } = require("./skeleton/empty-state");
 require("./skin");
 
 /**
@@ -2433,6 +2434,10 @@ class __widget_chat extends LetcBox {
     }
     this.ensurePart(_a.list).then((list) => {
       if (!list || !_.isFunction(list.restart)) return;
+      // The empty state depends on the scope: an empty FILE thread is not an
+      // empty team chat (skeleton/empty-state.js). ui-core re-reads the
+      // placeholder on every empty answer, so swap it before the restart.
+      list.mset(_a.placeholder, chatEmptyState(this));
       const prevSpinner = list.mget(_a.spinner);
       if (prevSpinner) list.mset(_a.spinner, false);
       list.restart();

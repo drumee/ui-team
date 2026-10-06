@@ -1,0 +1,91 @@
+// Team chat empty state — widget/chat/skeleton/empty-state.js.
+//
+// Rendered only for the workspace team chat, which only lives in a folder
+// window, so the folder skin owns it. Default = the Files-tab side column
+// (Figma 920:122905: text only); the full Chat tab (split body
+// data-view="chat", Figma 922:124283) adds the 80px icon and the large type.
+//
+// Centring comes from the chat skin's `.widget-chat__body .no-content`.
+.window-folder .widget-chat__team-empty {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px 32px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.window-folder .widget-chat__team-empty-ico {
+  display: none !important;
+}
+
+.window-folder .widget-chat__team-empty-title {
+  justify-content: center;
+  font-family: "Geist", sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.1;
+  color: #34343a; // Grey/90 — no token
+}
+
+.window-folder .widget-chat__team-empty-text {
+  justify-content: center;
+  max-width: 401px;
+  font-family: "Geist", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.2;
+  color: #34343a; // Grey/90 — no token
+}
+
+.window-folder .widget-chat__team-empty-img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+
+// ── Full Chat tab ────────────────────────────────────────────────────────
+.window-folder__split-body[data-view=chat] .widget-chat__team-empty-ico {
+  display: block !important;
+  position: relative;
+  flex: 0 0 auto;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  border-radius: 21.289px;
+  background: var(--primary-10, #e4e3ff);
+  opacity: 0.6;
+  margin-bottom: 24px; // 16px flex gap + 24px = Figma's 40px
+
+  // Inner plate (Figma 922:124653), clipped by the tile.
+  &::before {
+    content: "";
+    position: absolute;
+    left: 10.2px;
+    top: 9.53px;
+    width: 93.139px;
+    height: 93.139px;
+    border-radius: 16.41px;
+    background: var(--primary-purple-20, #b1adff);
+  }
+}
+
+.window-folder__split-body[data-view=chat] .widget-chat__team-empty-img:first-child {
+  left: 21.57px;
+  top: 22.35px;
+}
+
+.window-folder__split-body[data-view=chat] .widget-chat__team-empty-img:last-child {
+  left: 21px;
+  top: 19.86px;
+}
+
+.window-folder__split-body[data-view=chat] .widget-chat__team-empty-title {
+  font-size: 40px;
+}
+
+.window-folder__split-body[data-view=chat] .widget-chat__team-empty-text {
+  max-width: none;
+  font-size: 18px;
+}
