@@ -63,7 +63,8 @@ Module._load = function (request, ...rest) {
 };
 const node = (type) => (opt = {}) => ({ type, ...opt });
 global.Skeletons = {
-  Box: { X: node("Box.X"), Y: node("Box.Y") },
+  // kind "box" as the real builders emit (ui-core toolkit/skeleton/box-x.js, box-y.js).
+  Box: { X: (o = {}) => ({ type: "Box.X", kind: "box", ...o }), Y: (o = {}) => ({ type: "Box.Y", kind: "box", ...o }) },
   Note: (o, cls) => (typeof o === "string" ? { type: "Note", content: o, className: cls } : { type: "Note", ...o }),
   Element: node("Element"),
 };
@@ -148,4 +149,40 @@ test("gridFilesBrowser uses the hero for window-folder only", () => {
   const fn = src.slice(src.indexOf("export function gridFilesBrowser"), src.indexOf("export function tooltips"));
   assert.match(fn, /evArgs:\s*ui\.fig\.family === "window-folder"\s*\?\s*filesEmptyState\(ui\)\s*:\s*Skeletons\.Note\(LOCALE\.NO_FOLDERS_OR_FILES_YET, "no-content"\)/);
   assert.match(src, /require\("\.\/files-empty-state"\)/);
+});
+
+// ── emptyView: the hero must mount as a real Box ──────────────────────────
+// ui-core pins Box.prototype.emptyView = LetcBlank (widgets/box/index.js),
+// and LetcBlank renders only `content` / `renderer` — never `kids`. A Box
+// descriptor passed as evArgs mounted as an EMPTY div (final review, Critical).
+const UC = path.join(ROOT, "node_modules/@drumee/ui-core/letc");
+
+test("guard: ui-core still mounts evArgs through LetcBlank, which ignores kids", () => {
+  const box = fs.readFileSync(path.join(UC, "widgets/box/index.js"), "utf8");
+  assert.match(box, /this\.prototype\.emptyView = LetcBlank;/);
+  const blank = fs.readFileSync(path.join(UC, "widgets/blank/index.js"), "utf8");
+  assert.doesNotMatch(blank, /kids/);
+});
+
+test("kindEmptyView resolves the evArgs kind, so the Box hero renders its kids", () => {
+  class FakeBox {}
+  global.Kind = { get: (k) => (k === "box" ? FakeBox : null) };
+  const list = { emptyViewOptions: () => FE.filesEmptyState(ui) };
+  assert.equal(FE.kindEmptyView.call(list), FakeBox);
+});
+
+test("kindEmptyView falls back to the prototype emptyView when the kind is unknown", () => {
+  class Blank {}
+  global.Kind = { get: () => null };
+  const proto = { emptyView: Blank, emptyViewOptions: () => ({ kind: "nope" }) };
+  const list = Object.create(proto);
+  list.emptyView = FE.kindEmptyView; // instance option, as Marionette mergeOptions sets it
+  assert.equal(FE.kindEmptyView.call(list), Blank);
+});
+
+test("gridFilesBrowser hands the folder list kindEmptyView", () => {
+  const src = fs.readFileSync(path.join(ROOT, "src/drumee/builtins/window/skeleton/toolkit/index.js"), "utf8");
+  const fn = src.slice(src.indexOf("export function gridFilesBrowser"), src.indexOf("export function tooltips"));
+  assert.match(fn, /if \(ui\.fig\.family === "window-folder"\) list\.emptyView = kindEmptyView;/);
+  assert.match(src, /const \{ filesEmptyState, kindEmptyView \} = require\("\.\/files-empty-state"\);/);
 });

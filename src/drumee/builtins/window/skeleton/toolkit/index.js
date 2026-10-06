@@ -2,7 +2,7 @@ const { button } = require("../../../skeleton/toolkit/buttons");
 const { isGrouped } = require("./file-group");
 const { menuRow, createRows } = require("./new-menu-rows");
 const { iconsSkeleton, searchStatus } = require("./icons-skeleton");
-const { filesEmptyState } = require("./files-empty-state");
+const { filesEmptyState, kindEmptyView } = require("./files-empty-state");
 const {
   chatDetailsPanel,
   headerMenuService,
@@ -571,6 +571,10 @@ export function gridFilesBrowser(ui) {
       return ui.getListApi ? ui.getListApi() : ui.getCurrentApi();
     },
   });
+  // The hero is a Box: without this ui-core mounts evArgs through LetcBlank,
+  // which renders only `content`, and the pane came up blank
+  // (./files-empty-state.js kindEmptyView).
+  if (ui.fig.family === "window-folder") list.emptyView = kindEmptyView;
 
   return list;
 }

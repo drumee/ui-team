@@ -122,4 +122,21 @@ function filesEmptyState(ui) {
   });
 }
 
-module.exports = { filesEmptyCards, filesEmptyState };
+/**
+ * The folder list's `emptyView`: build evArgs by its kind.
+ *
+ * ui-core pins Box.prototype.emptyView = LetcBlank (widgets/box/index.js),
+ * shadowing its own kind-resolving CollectionView.prototype.emptyView, and
+ * LetcBlank renders only `content` / `renderer` — never `kids`. Every other
+ * evArgs in the app is a Note (content), so it never showed; the hero is a
+ * Box and mounted as an empty div. Passed as the List.Smart's `emptyView`
+ * option (Marionette merges it onto the instance) and called by Marionette's
+ * _getView with `this` = the list. Unknown kind → the prototype's LetcBlank.
+ */
+function kindEmptyView() {
+  const opt = (this.emptyViewOptions && this.emptyViewOptions()) || {};
+  const View = opt.kind && Kind.get(opt.kind);
+  return View || Object.getPrototypeOf(this).emptyView;
+}
+
+module.exports = { filesEmptyCards, filesEmptyState, kindEmptyView };
