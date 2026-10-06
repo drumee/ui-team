@@ -39,6 +39,7 @@ const DESK_BILLING_LOADER_DELAY = 220;
 // they share, which also gives it their mutual exclusion for free.
 const folderIcon = require("media/grid/template/folder");
 const { groupWorkspaces } = require("libs/workspace-groups");
+const { fetchSiblingFolders } = require("libs/folder-siblings");
 const { restoreScreen, pollFor } = require("libs/screen-restore");
 const { lightUtilityButton } = require("libs/utility-light");
 const {
@@ -3398,7 +3399,10 @@ class desk_module extends LetcBox {
     const rows = await this._fetchWorkspaces(force);
     if (!rows.length) {
       if (head) head.clear();
-      return list
+      // FOLDER MODE owns the list (_prepareSwitcherMode). A revalidation or a
+      // workspace:refresh landing while it is open must not paint workspaces
+      // over the sibling folders.
+      return list && this._wsMenuMode !== "folders"
         ? list.feed([
             Skeletons.Note({
               className: "desk-module-topbar__ws-empty",
@@ -3488,7 +3492,10 @@ class desk_module extends LetcBox {
           ]
         : [];
 
-    if (list) {
+    if (list && this._wsMenuMode !== "folders") {
+      // The list now holds workspaces: a later folder feed must not be skipped
+      // as "already on screen".
+      this._folderFeedSig = null;
       list.feed(
         this._groupWorkspaces(rows).flatMap((g) => section(g.label, g.rows)),
       );
@@ -3496,6 +3503,152 @@ class desk_module extends LetcBox {
 
     // ── Header (Figma 48:36991) ──────────────────────────────────────────
     if (head) this._feedWorkspaceHead(head, rows, cur);
+  }
+
+  /**
+   * PICK WHAT THE SWITCHER LISTS, each time it opens.
+   *
+   * The address decides: deeper than the workspace (`aaaa / abc`) → the
+   * folders at the open folder's level (abc, asdasd, test); the workspace
+   * alone or a section label → the workspaces. Asked of the breadcrumb, which
+   * holds the crumbs on screen, so the menu cannot describe another place.
+   *
+   * The mode is stamped on the chip as data-ws-mode, which is what hides the
+   * workspace header and "New workspaces" in folder mode (desk/skin/topbar).
+   * On the chip, not the menu: the chip is the switcher's button and outlives
+   * nothing it should not — a topbar re-feed builds both afresh, and the next
+   * open stamps again.
+   */
+  _prepareSwitcherMode() {
+    const crumb = _.isFunction(this.getPart) ? this.getPart("breadcrumb") : null;
+    const scope = crumb && _.isFunction(crumb.siblingScope) ? crumb.siblingScope() : null;
+    const prev = this._wsMenuMode || "workspaces";
+    const mode = scope ? "folders" : "workspaces";
+    this._wsMenuMode = mode;
+    const chip = this._crumbGroupPart;
+    if (chip && chip.el && chip.el.dataset) chip.el.dataset.wsMode = mode;
+    if (mode === "folders") {
+      return Promise.resolve(this._renderFolderSiblings(scope)).catch(() => {});
+    }
+    // Coming back from folder mode: the list still holds folders.
+    if (prev === "folders" && this._wsListPart) {
+      return Promise.resolve(this._renderWorkspaceMenu(this._wsListPart)).catch(() => {});
+    }
+  }
+
+  /**
+   * Fill the switcher list with the open folder's siblings.
+   *
+   * A level seen before paints at once from memory and is then refreshed; a
+   * new one paints empty and fills when show_node_by answers. An answer for a
+   * level the user has since left — or after the panel went back to
+   * workspaces — is dropped: it would list the wrong folders.
+   */
+  async _renderFolderSiblings(scope) {
+    const alive = (p) => !!(p && p.el && !(p.isDestroyed && p.isDestroyed()));
+    if (!scope || !alive(this._wsListPart)) return;
+    this._folderScopeKey = scope.key;
+    const cache = this._folderSiblings || (this._folderSiblings = {});
+    const cached = cache[scope.key];
+    this._feedFolderSiblings(this._wsListPart, scope, cached || []);
+    let rows = null;
+    try {
+      rows = await fetchSiblingFolders(
+        (params) => this.fetchService(SERVICE.media.show_node_by, params),
+        scope,
+      );
+    } catch (e) {
+      this.warn && this.warn("[ws-menu] sibling folders failed", e);
+    }
+    if (this._wsMenuMode !== "folders" || this._folderScopeKey !== scope.key) return;
+    if (!alive(this._wsListPart)) return;
+    if (!rows) {
+      if (!cached) this._feedFolderSiblings(this._wsListPart, scope, []);
+      return;
+    }
+    cache[scope.key] = rows;
+    this._feedFolderSiblings(this._wsListPart, scope, rows);
+  }
+
+  /**
+   * One heading (the parent's name — "aaaa") and one row per sibling, built
+   * with the workspace rows' own classes so they look and hover the same.
+   * The open folder is marked data-current, like the open workspace is.
+   */
+  _feedFolderSiblings(list, scope, rows) {
+    const cn = "desk-module-topbar";
+    const sig = `${scope.key}|${scope.currentNid}|${rows
+      .map((r) => `${r.nid}:${r.filename || r.name || ""}`)
+      .join(",")}`;
+    if (list === this._folderFeedList && sig === this._folderFeedSig) return;
+    this._folderFeedList = list;
+    this._folderFeedSig = sig;
+    if (!rows.length) {
+      return list.feed([
+        Skeletons.Note({
+          className: `${cn}__ws-empty`,
+          content: LOCALE.NO_CONTENT || "",
+        }),
+      ]);
+    }
+    list.feed([
+      Skeletons.Note({
+        className: `${cn}__ws-section`,
+        content: scope.parentName || LOCALE.FOLDERS || "",
+      }),
+      ...rows.map((row) => {
+        const area = row.area || scope.area || "";
+        const isCurrent = `${row.nid}` === `${scope.currentNid}`;
+        return Skeletons.Box.X({
+          className: `${cn}__ws-item`,
+          service: "switch-folder",
+          uiHandler: [this],
+          folderNid: row.nid,
+          folderHubId: row.hub_id || scope.hub_id,
+          folderArea: area,
+          attrOpt: {
+            "data-current": isCurrent ? "1" : "0",
+            "data-area": area,
+          },
+          kidsOpt: { active: 0 },
+          kids: [
+            Skeletons.Element({
+              className: `${cn}__ws-item-icon ${area}`,
+              content: folderIcon({
+                area,
+                filetype: _a.folder,
+                role: "",
+                widgetId: _.uniqueId("ws-folder-icon-"),
+                isAttachment: 1,
+              }),
+            }),
+            Skeletons.Note({
+              className: `${cn}__ws-item-name`,
+              content: row.filename || row.name || "",
+            }),
+          ],
+        });
+      }),
+    ]);
+  }
+
+  /**
+   * A sibling row was picked: open that folder in the workspace pane — the
+   * entry point the breadcrumb's own crumbs use, which also re-resolves the
+   * address. The folder already open is not a destination.
+   */
+  _switchFolder(cmd) {
+    const get = (k) => (cmd && _.isFunction(cmd.mget) ? cmd.mget(k) : null);
+    const nid = get("folderNid");
+    const hub_id = get("folderHubId");
+    if (!nid || !hub_id) return;
+    const crumb = _.isFunction(this.getPart) ? this.getPart("breadcrumb") : null;
+    const scope = crumb && _.isFunction(crumb.siblingScope) ? crumb.siblingScope() : null;
+    if (scope && `${scope.currentNid}` === `${nid}`) return;
+    // window.Wm, never a bare `Wm` (see _renderWorkspaceMenu).
+    const wm = window.Wm;
+    if (!wm || !_.isFunction(wm.openWorkspaceFolder)) return;
+    wm.openWorkspaceFolder({ hub_id, nid, area: get("folderArea"), filetype: _a.folder });
   }
 
   /**
@@ -4940,6 +5093,11 @@ class desk_module extends LetcBox {
     if (!menu || !menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
     // Opens on a SECTION screen too: the caret is drawn there (see
     // desk/skin/topbar.scss), and the list is a way back into a workspace.
+    //
+    // OPENING decides what it lists (_prepareSwitcherMode) — the same
+    // open test _closeWorkspaceSwitcher uses. Closing leaves the list alone.
+    const open = menu.isOpen || (menu.mget && menu.mget(_a.state));
+    if (!open) this._prepareSwitcherMode();
     if (_.isFunction(menu._triggerToggle)) menu._triggerToggle();
   }
 
@@ -10753,6 +10911,12 @@ class desk_module extends LetcBox {
       case "workspace-menu":
         return this._toggleWorkspaceMenu(cmd);
 
+
+      // Switcher row in FOLDER mode (_feedFolderSiblings) → open that sibling.
+      // The panel goes with the gesture, as for a workspace row.
+      case "switch-folder":
+        this._closeWorkspaceSwitcher();
+        return this._switchFolder(cmd);
 
       // Switcher row → open that workspace. Same entry point the sidebar list
       // used, so area handling, panel cleanup and the breadcrumb update are
