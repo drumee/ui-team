@@ -102,3 +102,21 @@ test("a rejected fetch rejects (the caller decides what to show)", async () => {
     /403/,
   );
 });
+
+// get_path for a PERSONAL workspace starts at the user's home root, a row with
+// no name that desk_breadcrumb never paints. The scope must count the crumbs
+// on screen, not the rows.
+const home = { nid: "H0", hub_id: "U1", filetype: "folder", filename: "", hub_name: "" };
+const mine = { nid: "P1", pid: "H0", hub_id: "U1", filetype: "folder", filename: "aaaa" };
+
+test("personal workspace root: the nameless home row is not a crumb", () => {
+  assert.equal(siblingScope([home, mine]), null);
+  assert.equal(siblingScope([{ ...home, filename: null }, mine]), null);
+});
+
+test("personal workspace subfolder: parent is the workspace, not the home root", () => {
+  const sub = { nid: "P2", pid: "P1", hub_id: "U1", filetype: "folder", filename: "abc" };
+  const s = siblingScope([home, mine, sub]);
+  assert.equal(s.parentNid, "P1");
+  assert.equal(s.parentName, "aaaa");
+});

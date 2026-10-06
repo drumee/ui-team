@@ -33,11 +33,35 @@ function displayName(row) {
 }
 
 /**
+ * The rows desk_breadcrumb._buildContent actually paints as crumbs — the same
+ * test, so the scope and the address count alike. get_path for a PERSONAL
+ * workspace starts at the user's home root, a row with no filename and no
+ * hub_name: the bar drops it and shows one crumb ("aaaa"), and counting it
+ * here would put a workspace root in folder mode.
+ *
+ * Only the head row may borrow a name (the workspace's hub_name, as the bar
+ * does for a root whose filename is "/" or empty).
+ */
+function visibleCrumbs(path) {
+  const head = path[0];
+  const hubName = (head && (head.hub_name || head.name)) || null;
+  return path.filter((row, i) => {
+    if (!row) return false;
+    const f = row.filename || row.name;
+    if (i > 0) return !!f;
+    if (f && f !== "/") return true;
+    return !!(row.hub_name || hubName);
+  });
+}
+
+/**
  * @param {Array<Object>} path raw get_path rows, root first (desk_breadcrumb._data)
  * @returns {Object|null} null when the address is the workspace alone
  */
 function siblingScope(path) {
-  if (!Array.isArray(path) || path.length < 2) return null;
+  if (!Array.isArray(path)) return null;
+  path = visibleCrumbs(path);
+  if (path.length < 2) return null;
   const parent = path[path.length - 2];
   const current = path[path.length - 1];
   const hub_id = (current && current.hub_id) || (parent && parent.hub_id);

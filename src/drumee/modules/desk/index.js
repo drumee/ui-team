@@ -3399,6 +3399,8 @@ class desk_module extends LetcBox {
     const rows = await this._fetchWorkspaces(force);
     if (!rows.length) {
       if (head) head.clear();
+      // The list is about to hold the empty note, not folders.
+      if (list && this._wsMenuMode !== "folders") this._folderFeedSig = null;
       // FOLDER MODE owns the list (_prepareSwitcherMode). A revalidation or a
       // workspace:refresh landing while it is open must not paint workspaces
       // over the sibling folders.
@@ -3548,6 +3550,9 @@ class desk_module extends LetcBox {
     const alive = (p) => !!(p && p.el && !(p.isDestroyed && p.isDestroyed()));
     if (!scope || !alive(this._wsListPart)) return;
     this._folderScopeKey = scope.key;
+    // The key is the PARENT; the open folder is tracked too, or a late answer
+    // for abc would mark abc current after the user moved to test.
+    this._folderScopeCur = scope.currentNid;
     const cache = this._folderSiblings || (this._folderSiblings = {});
     const cached = cache[scope.key];
     this._feedFolderSiblings(this._wsListPart, scope, cached || []);
@@ -3560,7 +3565,13 @@ class desk_module extends LetcBox {
     } catch (e) {
       this.warn && this.warn("[ws-menu] sibling folders failed", e);
     }
-    if (this._wsMenuMode !== "folders" || this._folderScopeKey !== scope.key) return;
+    if (
+      this._wsMenuMode !== "folders"
+      || this._folderScopeKey !== scope.key
+      || this._folderScopeCur !== scope.currentNid
+    ) {
+      return;
+    }
     if (!alive(this._wsListPart)) return;
     if (!rows) {
       if (!cached) this._feedFolderSiblings(this._wsListPart, scope, []);

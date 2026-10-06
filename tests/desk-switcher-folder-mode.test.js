@@ -178,11 +178,26 @@ test("_prepareSwitcherMode: one crumb → workspaces mode and the list is repain
   assert.equal(repainted, 1);
 });
 
-test("_renderWorkspaceMenu leaves the list alone in folder mode", () => {
-  // Source-level: both list feeds in _renderWorkspaceMenu are gated.
-  const body = sliceFunction(SRC, "async _renderWorkspaceMenu(target, force)");
-  const gates = body.match(/this\._wsMenuMode !== "folders"/g) || [];
-  assert.equal(gates.length, 2);
+test("_renderWorkspaceMenu leaves the list alone in folder mode", async () => {
+  // Both feeds: the empty note and the grouped rows. The mode is checked
+  // AFTER the fetch, so a revalidation that lands once the panel switched to
+  // folders is dropped too.
+  const render = load("async _renderWorkspaceMenu(target, force)");
+  for (const ws of [[], [{ hub_id: "W1", filename: "aaaa", filetype: "hub" }]]) {
+    const list = part();
+    let resolve;
+    const self = {
+      _wsMenuMode: "workspaces",
+      _fetchWorkspaces: () => new Promise((r) => (resolve = r)),
+      _workspaceKey: () => "k",
+      _groupWorkspaces: (rows) => [{ label: "W", rows }],
+    };
+    const p = render.call(self, list);
+    self._wsMenuMode = "folders";
+    resolve(ws);
+    await p;
+    assert.equal(list.fed.length, 0, `fed ${ws.length} rows over folder mode`);
+  }
 });
 
 test("_toggleWorkspaceSwitcher prepares the mode only when opening", () => {
@@ -214,4 +229,37 @@ test("onUiEvent routes switch-folder: close the panel, then switch", () => {
     SRC,
     /case "switch-folder":\s*\n\s*this\._closeWorkspaceSwitcher\(\);\s*\n\s*return this\._switchFolder\(cmd\);/,
   );
+});
+
+test("_renderFolderSiblings: a late answer for another current folder is dropped", async () => {
+  let release;
+  const render = load("async _renderFolderSiblings(scope)", {
+    fetchSiblingFolders: () => new Promise((r) => (release = r)),
+  });
+  const fed = [];
+  const self = {
+    _wsListPart: part(),
+    _wsMenuMode: "folders",
+    fetchService: () => Promise.resolve([]),
+    _feedFolderSiblings: (l, s, r) => fed.push(r.length),
+  };
+  const p = render.call(self, scope);
+  // Same parent, but the user moved to a sibling and reopened.
+  self._folderScopeCur = "F3";
+  release(rows);
+  await p;
+  assert.deepEqual(fed, [0]);
+});
+
+test("_renderWorkspaceMenu: the empty-workspaces note also resets the folder feed signature", async () => {
+  const render = load("async _renderWorkspaceMenu(target, force)");
+  const list = part();
+  const self = {
+    _wsMenuMode: "workspaces",
+    _folderFeedSig: "S",
+    _fetchWorkspaces: async () => [],
+  };
+  await render.call(self, list);
+  assert.equal(list.fed.length, 1);
+  assert.equal(self._folderFeedSig, null);
 });
