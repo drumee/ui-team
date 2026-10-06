@@ -192,10 +192,8 @@ module.exports = function (ui) {
           // radius, the inset and the hover ground, and .breadcrumb-item__tab
           // no longer paints one of its own (breadcrumb/item/skin).
           //
-          // The switcher stays the breadcrumb's IMMEDIATE next sibling inside
-          // here, which is load-bearing: topbar.scss hides the caret on section
-          // screens through `.desk-breadcrumb__ui[data-section="1"] + …`, and
-          // an element between the two would break that selector silently.
+          // The caret is always shown (topbar.scss); only the inline rename
+          // takes it out of the row.
           Skeletons.Box.X({
             className: `${pfx}__crumb-group`,
             // THE WHOLE CHIP OPENS THE SWITCHER, not the caret alone.
@@ -227,10 +225,6 @@ module.exports = function (ui) {
               // desk._renameWorkspaceInline feeds an editor into it, and
               // `&:empty { display: none }` in the skin keeps an empty one out
               // of the chip entirely.
-              //
-              // AFTER the switcher, never between it and the breadcrumb: the
-              // section-screen caret rule noted above depends on those two
-              // staying adjacent siblings.
               //
               // Here rather than on the switcher card's own header, where the
               // name is also drawn: picking Rename in the ⋯ flyout is a click

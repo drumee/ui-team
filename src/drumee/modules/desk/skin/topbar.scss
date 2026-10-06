@@ -339,20 +339,11 @@
     }
   }
 
-  // A DEEPER PATH HAS NO SWITCHER. Once the address holds more than the
-  // workspace crumb (Workspace › Folder › …) the caret and its dropdown are
-  // taken out of the chip. Asked of the DOM, like the loading rules below:
-  // a second child in the crumb track is the whole condition.
-  //
-  // !important: Box children are forced display:flex inline by the framework.
-  // _crumbClickOpensSwitcher (desk/index.js) refuses the click on the same
-  // condition, so the chip cannot open a dropdown that is not there.
-  &__crumb-group:has(.desk-breadcrumb__content > :nth-child(2)) {
-    .desk-module-topbar__ws-wrapper,
-    .desk-module-topbar__ws-menu {
-      display: none !important;
-    }
-  }
+  // THE CARET IS ALWAYS SHOWN — on a deeper path (Workspace › Folder › …), on
+  // a section screen and while the address loads. Only the inline rename above
+  // takes it out of the row, and the org view hides the whole chip (below).
+  // _crumbClickOpensSwitcher (desk/index.js) always opens on the caret itself,
+  // so the glyph is never drawn without a dropdown behind it.
 
   &__left-cluster {
     align-items: center;
@@ -376,24 +367,6 @@
       flex: 0 1 auto;
       min-width: 0;
       overflow: hidden;
-    }
-
-    // The switcher's caret belongs to the WORKSPACE crumb: it reads as one
-    // chip with the crumb's glyph and name (see workspaceSwitcher). While the
-    // bar is showing a section label instead — Settings, Get help, Plan,
-    // Calendar, Inbox, Contacts, Trash, Admin console — there is no workspace
-    // in the bar to hang it off, so a caret there offered a workspace dropdown
-    // attached to the word "Get help".
-    //
-    // `+`, because the switcher is authored as the breadcrumb's next sibling
-    // in this cluster (desk/skeleton/topbar.js), and the section flag is
-    // stamped on the breadcrumb's own root (desk_breadcrumb._setSectionMode) —
-    // the only handle it has on the caret from there.
-    //
-    // !important: Box children are forced display:flex inline by the
-    // framework, the same reason __actions-cluster[data-state="0"] needs it.
-    .desk-breadcrumb__ui[data-section="1"] + .desk-module-topbar__ws-wrapper {
-      display: none !important;
     }
 
   }
@@ -427,15 +400,6 @@
   // only the `:has()` rule reveals it. Should `:has()` ever not apply, the
   // selector is dropped and the caret stays hidden — never the other way.
   &__crumb-group {
-    // Hidden until proven otherwise. visibility, not display: the caret keeps
-    // its 22px box, so the address does not shift sideways at the moment it
-    // lands — which is exactly when the user is looking at it. And not on
-    // __ws-wrapper: the open panel lives inside that, so hiding it would yank
-    // a dropdown out from under the pointer when a workspace row is clicked.
-    .desk-module-topbar__ws-btn {
-      visibility: hidden;
-    }
-
     // The spinner, for the same "no complete crumb" condition. Drawn on a
     // pseudo-element rather than a fed widget: ui-core's own `view.spinner(1)`
     // injects `.drumee-loading-wrapper` markup whose base rules do not exist
@@ -496,9 +460,6 @@
   // a sibling of it. And it still asks for the name — a section crumb with no
   // label yet is as unfinished as a glyph with no name, and stays hidden.
   //
-  // The caret does not come back with the track: __left-cluster above hides
-  // the whole __ws-wrapper next to a `[data-section="1"]` breadcrumb, so there
-  // is no workspace dropdown hanging off the word "Organization".
   // THE ADDRESS IS ALREADY IN THE BAR — the organisation screen, and only it.
   // The org chip sits two elements to the left in this same cluster and reads
   // the organisation's name; an address chip beside it printing the same words
@@ -520,10 +481,6 @@
 
   &__crumb-group:has(.breadcrumb-item__icon):has(.breadcrumb-item__filename),
   &__crumb-group:has(.breadcrumb-item__main--section .breadcrumb-item__filename) {
-    .desk-module-topbar__ws-btn {
-      visibility: visible;
-    }
-
     .desk-breadcrumb__main {
       display: flex;
     }

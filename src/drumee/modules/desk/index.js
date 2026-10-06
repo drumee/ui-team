@@ -4874,12 +4874,20 @@ class desk_module extends LetcBox {
     // along with the chip.
     const chip = this._crumbGroupPart;
     if (!chip || !chip.el || !chip.el.querySelector) return false;
+    // THE CARET ALWAYS OPENS. It is drawn in every state — loading, a deeper
+    // path, a section screen (desk/skin/topbar.scss) — so it must never be a
+    // dead glyph. The panel lives inside __ws-wrapper, not inside __ws-btn, so
+    // this cannot catch a click meant for a row in the open dropdown.
+    if (target && _.isFunction(target.closest)
+      && target.closest(".desk-module-topbar__ws-btn")) {
+      return true;
+    }
     if (!chip.el.querySelector(".breadcrumb-item__icon")
       || !chip.el.querySelector(".breadcrumb-item__filename")) {
       return false;
     }
-    // A DEEPER PATH HAS NO SWITCHER: topbar.scss hides __ws-wrapper once the
-    // crumb track holds more than one item, so there is nothing to open.
+    // On a deeper path only the caret opens the switcher (above); the crumbs
+    // there are folders, and the current one is not the workspace.
     if (chip.el.querySelector(".desk-breadcrumb__content > :nth-child(2)")) {
       return false;
     }
@@ -4912,8 +4920,7 @@ class desk_module extends LetcBox {
     const crumb = target.closest(".breadcrumb-item__main");
     if (!crumb) return true;
     // A SECTION label carries no service — there is nothing to browse to — so
-    // it is not a destination either. It is handled again in the toggle, which
-    // refuses to open a workspace list over Settings or Trash.
+    // it is not a destination either.
     if (crumb.classList && crumb.classList.contains("breadcrumb-item__main--section")) {
       return true;
     }
@@ -4931,14 +4938,8 @@ class desk_module extends LetcBox {
   _toggleWorkspaceSwitcher() {
     const menu = this._wsSwitcher;
     if (!menu || !menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
-    // A SECTION screen has no workspace in the bar for the panel to hang off,
-    // and the chip paints no ground there — see the `:has()` rule in
-    // desk/skin/topbar.scss. Offering the list would be a control the chip is
-    // not drawing.
-    if (this.el && this.el.querySelector) {
-      const bc = this.el.querySelector(".desk-breadcrumb__ui[data-section='1']");
-      if (bc) return;
-    }
+    // Opens on a SECTION screen too: the caret is drawn there (see
+    // desk/skin/topbar.scss), and the list is a way back into a workspace.
     if (_.isFunction(menu._triggerToggle)) menu._triggerToggle();
   }
 
