@@ -135,8 +135,10 @@ class __window_manager extends push {
    * identically whether or not the visitor had a session. It is also the only
    * one that loads a note / markdown / text body: openSharedLink resolves those
    * through `if (opt.kind) launch(opt)` with no attributes fetch and no media, so
-   * they would open blank. Files only, by construction — file-deep-link's
-   * urlWantsFile matches nothing else.
+   * they would open blank. Only the two desk "open" shapes reach here —
+   * file-deep-link's urlWantsFile matches nothing else — and a compact one
+   * naming a FOLDER docks into it, exactly as the warm path does (see
+   * openDesignationLink).
    *
    * The legacy `locationOnStart` restore in route() deliberately stays on
    * openSharedLink: that path predates this one and is left exactly as it was.
@@ -145,7 +147,8 @@ class __window_manager extends push {
    */
   openDeepLinkHash(hash) {
     if (!hash) return;
-    return this.openDesignationLink(this._deepLinkPayload(hash));
+    const compact = Visitor.parseModule(hash)[2] === COMPACT_SEGMENT;
+    return this.openDesignationLink(this._deepLinkPayload(hash), { compact });
   }
 
   /**
@@ -179,9 +182,28 @@ class __window_manager extends push {
    * `openFileLocation` exactly as before. Its return value is passed through
    * unchanged for the callers that use it.
    *
+   * A FOLDER Designation link (Lexis 2026-10-05) does not open a floating
+   * window over the workspace root: the docked pane itself walks into the
+   * folder — openNotificationLocation, the proven "land in this workspace, on
+   * this folder" path (access probe, section screen dismissed, breadcrumb and
+   * rail kept in step). Only for the COMPACT form, which only the Designation
+   * link menu row emits (toCompactUrl has no other caller). A LONG `open` link
+   * to a folder also comes from the folder window's "Share link", mail and
+   * external shares, whose recipient may hold a grant on that folder alone and
+   * fail the workspace probe — those keep openFileLocation exactly as before.
+   *
    * @param {Object} payload the parsed deep-link payload (nid, hub_id, filetype…)
+   * @param {Object} [opts]
+   * @param {Boolean} [opts.compact] the payload came from a compact `/o/` link
    */
-  async openDesignationLink(payload = {}) {
+  async openDesignationLink(payload = {}, { compact = false } = {}) {
+    if (compact && payload && payload.hub_id && payload.filetype === _a.folder) {
+      return this.openNotificationLocation({
+        hub_id: payload.hub_id,
+        nid: payload.nid,
+        filetype: _a.folder,
+      });
+    }
     const hub_id = payload && payload.hub_id;
     // Already standing in it (warm click from inside the workspace) — mounting
     // again would destroy and rebuild the pane for nothing.
@@ -372,7 +394,7 @@ class __window_manager extends push {
           // too — otherwise shortening a link would silently change where the
           // desk lands, which is exactly the drift the compact form exists to
           // avoid.
-          this.openDesignationLink(compact);
+          this.openDesignationLink(compact, { compact: true });
           return;
         }
         break;
