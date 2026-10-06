@@ -363,8 +363,17 @@ class __media_core extends DrumeeMFS {
       // if (this.canShare()) sections.push([_a.share]);
       /** 4 — details: members + roles via the folder settings panel */
       sections.push([_a.info]);
-      /** 5 — outside-world share link (share area only) */
-      if (this.mget(_a.area) === _a.share) sections.push(['secureShare']);
+      /** 5 — the area's link, split the same way the file menu splits it:
+       *  external workspace (`share`) → outside-world share link; internal
+       *  workspace (`private`) → Designation link, which a fellow member opens
+       *  in their own desk (Lexis 2026-10-05: folders too, not only files).
+       *  Never on a WORKSPACE: the desk switcher's ⋯ menu is built from this
+       *  same builder (see 6), and a workspace is not "a folder in" one. */
+      if (this.mget(_a.area) === _a.share) {
+        sections.push(['secureShare']);
+      } else if (this.mget(_a.area) === _a.private && !this._isWorkspace()) {
+        sections.push(['designationLink']);
+      }
       /** 6 — trash last. On a WORKSPACE this row may be "Leave workspace"
        *  instead: the desk switcher's ⋯ menu is built from this same builder
        *  (modules/desk/index.js _resolveWorkspaceActions), so the workspace
