@@ -141,7 +141,9 @@
   font-weight: 600;
   font-size: 20px;
   line-height: 1.2;
-  color: var(--primary-100, #0b0a21);
+  // NOT --primary-100: revamp.scss redefines it to #f4e7ff (pale lavender)
+  // later in :root, which made the titles near-invisible.
+  color: var(--primary-purple-100, #0b0a21);
 }
 
 .window-folder .window__files-empty-card-desc {

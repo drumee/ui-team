@@ -34,8 +34,10 @@ function chatEmptyState(ui) {
   const p = `${ui.fig.family}__team-empty`;
   const img = (src) =>
     Skeletons.Element({ active: 0, tagName: "img", className: `${p}-img`, attribute: { src, alt: "" } });
-  const back = require("assets/empty-states/chat-empty-back.svg");
-  const front = require("assets/empty-states/chat-empty-front.svg");
+  // webpack asset loaders yield { default: url } (see tutorial/meeting/skeleton/call.js).
+  const url = (mod) => (mod && mod.default) || mod;
+  const back = url(require("assets/empty-states/chat-empty-back.svg"));
+  const front = url(require("assets/empty-states/chat-empty-front.svg"));
   return Skeletons.Box.Y({
     className: `${p} no-content`,
     kids: [

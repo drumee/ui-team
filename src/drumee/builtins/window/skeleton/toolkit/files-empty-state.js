@@ -20,13 +20,17 @@
  * (toolkit/new-menu-rows.js), so the folder window's onUiEvent handles a card
  * click exactly like the menu row — over-limit guard included.
  */
+// webpack's file-loader / url-loader emit ES modules: require() yields
+// { default: url }. Passing the module itself made every src "[object Module]"
+// (same unwrap as tutorial/meeting/skeleton/call.js).
+const url = (mod) => (mod && mod.default) || mod;
 const ICONS = {
-  spreadsheet: require("assets/empty-states/es-spreadsheet.svg"),
-  document: require("assets/empty-states/es-document.svg"),
-  presentation: require("assets/empty-states/es-presentation.svg"),
-  upload: require("assets/empty-states/es-upload.svg"),
-  gdrive: require("assets/empty-states/es-gdrive.png"),
-  scratch: require("assets/empty-states/es-scratch.png"),
+  spreadsheet: url(require("assets/empty-states/es-spreadsheet.svg")),
+  document: url(require("assets/empty-states/es-document.svg")),
+  presentation: url(require("assets/empty-states/es-presentation.svg")),
+  upload: url(require("assets/empty-states/es-upload.svg")),
+  gdrive: url(require("assets/empty-states/es-gdrive.png")),
+  scratch: url(require("assets/empty-states/es-scratch.png")),
 };
 
 /**

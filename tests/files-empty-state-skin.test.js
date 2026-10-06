@@ -54,6 +54,11 @@ test("Figma geometry: heading, grid, card", () => {
   // Figma cards are left-aligned; common.scss's .no-content centres text and
   // the hero root carries that class, so the card must reset it.
   assert.match(card, /text-align: left/);
+  // revamp.scss redefines --primary-100 to #f4e7ff (pale lavender) later in
+  // :root — card titles rendered near-invisible. Use the purple ramp's 100.
+  const cardTitle = rule(`${E}-card-title`);
+  assert.doesNotMatch(cardTitle, /--primary-100\b/);
+  assert.match(cardTitle, /var\(--primary-purple-100, #0b0a21\)/);
   const tile = rule(`${E}-ico`);
   assert.match(tile, /width: 48px/); assert.match(tile, /height: 48px/); assert.match(tile, /overflow: hidden/); assert.match(tile, /opacity: 0\.6/);
 });

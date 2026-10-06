@@ -10,7 +10,9 @@ const path = require("node:path");
 const Module = require("node:module");
 const _load = Module._load;
 Module._load = function (request, ...rest) {
-  if (request.startsWith("assets/")) return `/static/${request}`;
+  // webpack's file-loader / url-loader emit ES modules: require() yields
+  // { default: url }, not the url (see tutorial/meeting/skeleton/call.js).
+  if (request.startsWith("assets/")) return { __esModule: true, default: `/static/${request}` };
   return _load.call(this, request, ...rest);
 };
 const node = (type) => (opt = {}) => ({ type, ...opt });
