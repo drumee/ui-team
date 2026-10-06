@@ -273,3 +273,15 @@
   font-size: 14px;
   line-height: 20px;
 }
+
+// ── View toggle hidden while the icons list is empty ──────────────────────
+// Group | list | grid has nothing to arrange in an empty folder. Keyed on the
+// list's own empty view (`> .no-content`, any shape — the hero or the plain
+// note), so it follows every empty/filled transition without JS. Not while the
+// first page loads (`data-loading`, folder/icons-loading.js): Marionette mounts
+// the empty view until rows arrive, which would blink the toggle away on every
+// open. Not during a search (`data-search`): no hits is not an empty folder.
+// !important: the toggle's own `display: inline-flex` sits in the same panel.
+.window-folder .window__files-panel:not([data-loading="1"]):not([data-search]):has(.window__icons-list .smart-container > .no-content) .window-folder-topbar__view-toggle {
+  display: none !important;
+}
