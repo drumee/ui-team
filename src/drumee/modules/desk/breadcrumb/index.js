@@ -4,6 +4,8 @@
  * whenever the active window navigates, and renders the path.
  * ==================================================================== */
 const { getPath } = require("libs/path-request");
+// Aliased: the widget's own method is called siblingScope too.
+const { siblingScope: scopeOfPath } = require("libs/folder-siblings");
 const { createSectionHold } = require("./section-hold");
 
 // Shared by every instance: the topbar re-feed destroys this widget and mounts
@@ -239,6 +241,18 @@ class __desk_breadcrumb extends LetcBox {
    */
   isSectionMode() {
     return !!this._section;
+  }
+
+  /**
+   * The level the address is on, for the topbar switcher: the open folder's
+   * parent and siblings when the track is deeper than the workspace, null
+   * otherwise (workspace alone, a section label, or nothing painted yet).
+   * Read from `_data`, the raw get_path rows _buildContent painted — the
+   * crumbs on screen, so the menu and the address cannot disagree.
+   */
+  siblingScope() {
+    if (this._section) return null;
+    return scopeOfPath(this._data);
   }
 
   /**
