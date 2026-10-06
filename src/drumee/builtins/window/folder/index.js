@@ -1757,6 +1757,7 @@ class __window_folder extends mfsInteract {
   _resetFileTypeFilter() {
     if (!this._filterType) return;
     this._filterType = null;
+    this._stampFileFilter();
     const bar = this._fileTypeFilterBar;
     if (!bar || (bar.isDestroyed && bar.isDestroyed()) || !bar.children) return;
     const all =
@@ -1765,6 +1766,15 @@ class __window_folder extends mfsInteract {
     if (all && typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.trigger(`media-filter-${this._id}`, all);
     }
+  }
+
+  // The Files empty state shows its onboarding hero only on the unfiltered
+  // listing; under a Docs/PDF/Images/Other tab an empty answer means "nothing
+  // of that type", and the skin swaps in the plain note on this stamp.
+  _stampFileFilter() {
+    if (!this.el) return;
+    if (this._filterType) this.el.dataset.fileFilter = this._filterType;
+    else delete this.el.dataset.fileFilter;
   }
 
   _navigateToStackIndex(idx) {
@@ -2394,6 +2404,7 @@ class __window_folder extends mfsInteract {
         // A type tab is a FOLDER filter; picking one leaves the search.
         FilesSearch.exit(this, { reload: false, clearInput: true });
         this._filterType = value && value !== "all" ? value : null;
+        this._stampFileFilter();
         return this.loadContent();
       }
 
@@ -6653,15 +6664,20 @@ class __window_folder extends mfsInteract {
   // apply to the file grid, so showing it on Chat/Task/Meeting would
   // misrepresent what it does.
   syncNewCtrlVisibility() {
-    const newCtrl = this.getPart && this.getPart("new-ctrl");
-    if (!newCtrl || !newCtrl.el) return;
-    // Access keeps the file grid on screen, and "+ New" operates on that grid.
-    const onFiles = showsFileGrid(this.activeTab);
     // canUpload() returns the masked bitmask (truthy number), not a boolean.
     // Over-limit read-only trumps the node privilege: creating adds bytes,
     // and the REST clamp refuses it regardless of what this node allows.
     const mayCreate = !!(this.canUpload && this.canUpload())
       && !require("libs/over-limit").isLocked();
+    // The Files empty state's action cards (folder/skin/files-empty-state.scss)
+    // offer the same creates as "+ New", so they share its gate. Stamped
+    // BEFORE the new-ctrl lookup: a window whose toolbar has no + New must
+    // still answer, and the skin fails closed without the stamp.
+    if (this.el) this.el.dataset.canCreate = mayCreate ? "1" : "0";
+    const newCtrl = this.getPart && this.getPart("new-ctrl");
+    if (!newCtrl || !newCtrl.el) return;
+    // Access keeps the file grid on screen, and "+ New" operates on that grid.
+    const onFiles = showsFileGrid(this.activeTab);
     const visible = onFiles && mayCreate ? 1 : 0;
 
     // ui-core registers sys_pn parts during onBeforeRender, before its onRender

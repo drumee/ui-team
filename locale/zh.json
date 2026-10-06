@@ -3146,5 +3146,17 @@
   "CREATE_TOPIC": "Create topic",
   "FILE_THREADS_BAR": "File threads",
   "NO_FILE_THREADS": "No file threads yet",
-  "TOPIC": "Topic"
+  "TOPIC": "Topic",
+  "FILES_EMPTY_ADD_SPREADSHEET": "添加电子表格",
+  "FILES_EMPTY_ADD_SPREADSHEET_DESC": "创建表格、跟踪数据等",
+  "FILES_EMPTY_ADD_DOCUMENT": "添加文档",
+  "FILES_EMPTY_ADD_DOCUMENT_DESC": "记笔记或创建详细文档",
+  "FILES_EMPTY_ADD_PRESENTATION": "添加演示文稿",
+  "FILES_EMPTY_ADD_PRESENTATION_DESC": "创建幻灯片、演示等",
+  "FILES_EMPTY_UPLOAD": "立即上传",
+  "FILES_EMPTY_UPLOAD_DESC": "上传文件以开始使用",
+  "FILES_EMPTY_GDRIVE_DESC": "从 Google Drive 迁移您的文件",
+  "FILES_EMPTY_START_SCRATCH": "从零开始",
+  "CHAT_EMPTY_TITLE": "立即开始与团队讨论",
+  "CHAT_EMPTY_TEXT": "分享公司新闻、即将举行的活动等公告和动态,..."
 }

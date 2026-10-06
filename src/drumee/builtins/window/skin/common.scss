@@ -533,14 +533,13 @@
 // The "No Folders or Files yet" note ui-core mounts when the listing comes
 // back with nothing (skeleton/toolkit gridFilesBrowser `evArgs`).
 //
-// Scoped on `.no-content` — the className that call passes — rather than on
-// `.widget-blank`. Those are two DIFFERENT elements: ui-core only reaches for
-// the blank widget when a list declares NO evArgs at all (collection-view
-// emptyViewOptions defaults `opt.kind` to KIND.blank). This list DOES declare
-// one, built by Skeletons.Note, which carries `kind: 'note'` → kind/seeds
-// maps `note` to widgets/text → the element is `.drumee-widget.note-reader`,
-// and `.widget-blank` never appears here. `.no-content` is the only class the
-// two paths share, so it is the hook that survives either.
+// Scoped on `.no-content` — the className that call passes. A List's evArgs
+// is NOT built by its kind: ui-core pins Box.prototype.emptyView = LetcBlank
+// (widgets/box/index.js), which only innerHTMLs `content`, so a Note's text
+// lands in a blank widget carrying the `no-content` class. The folder window
+// overrides that per list (toolkit/files-empty-state.js kindEmptyView) to
+// mount its Box hero, which also carries `no-content` — the one class both
+// shapes share, so it is the hook that survives either.
 //
 // Gated behind `:has(> .no-content)` so the populated grid is untouched. That
 // also makes the rule independent of whatever display the scroll container
