@@ -1009,6 +1009,37 @@ class __permission_restricted extends DrumeeMFS {
   }
 
   /**
+   * Delete button — the owner's counterpart of Leave (skeleton exitSection).
+   *
+   * Hands straight to Wm.confirmRemoveWorkspace, the entry Folder Settings'
+   * Delete row uses: its confirm card (MSG_DELETE_HUB, naming the workspace),
+   * hub.delete_hub, the removal echo that closes this workspace's windows —
+   * this panel with them — and the restore-and-explain on failure. Nothing of
+   * that is repeated here, so the two doors cannot delete differently.
+   *
+   * The owner gate is checked again on the action, as _leaveWorkspace checks
+   * its hub: the button is a plain service string, and a stale skeleton or
+   * another surface raising it must meet the same rule the render applied.
+   */
+  async _deleteWorkspace() {
+    if (this._confirmInFlight) return;
+    const hubId = this.mget(_a.hub_id);
+    const self = (this._members || []).find(
+      (r) => `${r.entity_id || r.drumate_id || r.id}` === `${Visitor.id}`,
+    );
+    if (!hubId || `${hubId}` === `${Visitor.id}` || !self || !require("./skeleton").holdsOwnerBit(self)) {
+      this.warn("delete-workspace: refused, viewer is not this workspace's owner", { hubId });
+      return;
+    }
+    this._confirmInFlight = true;
+    try {
+      await Wm.confirmRemoveWorkspace(hubId, this._workspaceName());
+    } finally {
+      this._confirmInFlight = false;
+    }
+  }
+
+  /**
    * Which workspace this panel is about, in words — for the confirm card.
    *
    * Same order the header's own title tries (skeleton/index.js workspaceTab):
@@ -1228,6 +1259,9 @@ class __permission_restricted extends DrumeeMFS {
 
       case "leave-workspace":
         return this._leaveWorkspace();
+
+      case "delete-workspace":
+        return this._deleteWorkspace();
 
       default:
         if (super.onUiEvent) super.onUiEvent(cmd, args);
