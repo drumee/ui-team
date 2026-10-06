@@ -1729,6 +1729,26 @@
     }
   }
 
+  // The department heading's glyph (B2B Org Structure, Figma 900:151850): the
+  // department cube on the brand-wash tile, as the topbar's department crumb
+  // draws it, at the crumb heading's 20px.
+  &__ws-dept-ico {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    background-color: var(--brand-tint);
+    color: var(--primary-40);
+
+    svg {
+      display: block;
+      width: 14px;
+      height: 14px;
+    }
+  }
+
   &__ws-section-name {
     @include drumee.typo($color: var(--normal-fg-10), $size: 13px, $line: 18px);
     font-weight: 400;

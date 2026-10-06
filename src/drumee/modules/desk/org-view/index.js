@@ -6,7 +6,7 @@
  * Settings / Get help / Calendar, so it inherits their mutual exclusion and
  * their destroy-on-close.
  * ==================================================================== */
-const { orgOverview, groupByDepartment, EMPTY } = require("libs/org-overview");
+const { orgOverview, groupByDepartment, invalidate, EMPTY } = require("libs/org-overview");
 
 /**
  * How long a department stays armed for the workspace being created into it.
@@ -28,15 +28,17 @@ class __desk_org_view extends LetcBox {
     // (name / id / area / filetype all mean something to Skeletons).
     this._rows = new Map();
     this._filter = "";
-    // Arriving with the intent already set means the desk mounted this screen
-    // FOR the topbar's "New department" row. Read here rather than at paint
-    // time so it survives exactly one render and cannot re-arm on a later
-    // repaint (a search keystroke, say).
-    this._armPending = !!this.mget("armNewDepartment");
+    // ONE DEPARTMENT, or the whole organisation. Set when the screen is
+    // opened from the topbar's "Switch Departments" list (Figma "view multi
+    // wp inside org"); null is the org-wide view.
+    this._departmentId = this.mget("departmentId") || null;
     RADIO_BROADCAST.on("workspace:refresh", this._reload, this);
-    // The other half of the same intent: the topbar raised it while this
-    // screen was ALREADY the one on canvas, so there was no mount to carry it.
-    RADIO_BROADCAST.on("org:new-department", this.armNewDepartment, this);
+    // A department was created from the dialog (desk_department_form), which
+    // may have been opened from the topbar while this screen is on canvas.
+    RADIO_BROADCAST.on("department:changed", this._onDepartmentChanged, this);
+    // The topbar picked another department while this screen was ALREADY the
+    // one on canvas, so there was no mount to carry it.
+    RADIO_BROADCAST.on("org:show-department", this.showDepartment, this);
   }
 
   /**
@@ -44,7 +46,8 @@ class __desk_org_view extends LetcBox {
    */
   onBeforeDestroy() {
     RADIO_BROADCAST.off("workspace:refresh", this._reload, this);
-    RADIO_BROADCAST.off("org:new-department", this.armNewDepartment, this);
+    RADIO_BROADCAST.off("department:changed", this._onDepartmentChanged, this);
+    RADIO_BROADCAST.off("org:show-department", this.showDepartment, this);
   }
 
   /**
@@ -80,6 +83,10 @@ class __desk_org_view extends LetcBox {
    * @param {Object} [payload] a workspace:refresh payload
    */
   _reload(payload) {
+    // The topbar's department crumb reads its own cached list
+    // (libs/org-departments) and re-reads it on org:refresh, which every path
+    // below raises — so the cache goes first.
+    require("libs/org-departments").invalidate();
     const pending = this._takePendingDept();
     const created = payload && payload.workspace;
     // A PERSONAL workspace is a home-root folder, not a hub — it has no row in
@@ -116,13 +123,7 @@ class __desk_org_view extends LetcBox {
         this._rows.clear();
         for (const w of data.workspaces) this._rows.set(String(w.hub_id), w);
         this._paint(part);
-        // Only after the first paint: the entry is fed into a part that
-        // _paint creates, so arming before it exists would resolve against
-        // nothing.
-        if (this._armPending) {
-          this._armPending = false;
-          return this.armNewDepartment();
-        }
+        this._paintHeader();
       }),
     );
   }
@@ -158,10 +159,81 @@ class __desk_org_view extends LetcBox {
       require("./skeleton").sections(
         this.fig.family,
         this,
-        groupByDepartment(data),
+        this._grouped(data),
         !!data.can_manage,
       ),
     );
+  }
+
+  /**
+   * The sections to draw: every department plus the ungrouped row, or — in
+   * the one-department view — that department alone.
+   *
+   * A department that has gone (deleted elsewhere while this screen was open)
+   * falls back to the whole organisation rather than an empty page.
+   *
+   * @param {Object} data
+   * @returns {{sections: Array, ungrouped: Array}}
+   */
+  _grouped(data) {
+    const grouped = groupByDepartment(data);
+    const id = this._departmentId;
+    if (!id) return grouped;
+    const one = grouped.sections.filter((s) => String(s.department.id) === String(id));
+    if (!one.length) {
+      this._departmentId = null;
+      return grouped;
+    }
+    return { sections: one, ungrouped: [] };
+  }
+
+  /**
+   * The header: the organisation's name (or the department's, in the
+   * one-department view) and "+ New department" for those who may create one.
+   *
+   * Fed after the overview resolves rather than built with the skeleton,
+   * because both halves depend on it: can_manage decides the button, and the
+   * department's name is only known once the list is in.
+   */
+  _paintHeader() {
+    const data = this._data || {};
+    const dept = this._departmentId
+      ? (data.departments || []).find((d) => String(d.id) === String(this._departmentId))
+      : null;
+    return this.ensurePart("header").then((part) => {
+      if (!part || (part.isDestroyed && part.isDestroyed())) return;
+      part.feed(
+        require("./skeleton").header(this.fig.family, this, {
+          title: dept ? dept.name : Organization.name() || LOCALE.ORGANIZATION,
+          department: !!dept,
+          canManage: !!data.can_manage,
+        }),
+      );
+    });
+  }
+
+  /**
+   * Narrow to one department, or widen back to the organisation (null).
+   *
+   * @param {String|null} id
+   */
+  showDepartment(id) {
+    this._departmentId = id || null;
+    return this.ensurePart("sections").then((p) => {
+      if (!p) return;
+      this._paint(p);
+      this._paintHeader();
+    });
+  }
+
+  /**
+   * A department was created, renamed or removed somewhere else (the dialog,
+   * the topbar). Re-read and repaint; the chip is told by whoever made the
+   * change.
+   */
+  _onDepartmentChanged() {
+    invalidate();
+    return this._render(1);
   }
 
   /**
@@ -185,49 +257,6 @@ class __desk_org_view extends LetcBox {
         String(w.filename || w.name || "").toLowerCase().includes(q),
       ),
     };
-  }
-
-  /**
-   * Arm the inline "New department" entry and focus it.
-   *
-   * Inline rather than a modal so the topbar's "New department" row and this
-   * screen's "+ New" both land in the same place — one way to name a
-   * department however the user started.
-   */
-  armNewDepartment() {
-    const pfx = this.fig.family;
-    // An ordinary member can REACH this — the topbar's "New department" row is
-    // gated on orgFeature(), which cannot know can_manage because the answer
-    // needs a round trip the topbar renders before. So the gate lands here,
-    // where the overview has resolved. Without it the row armed an entry that
-    // the server refused on submit: an action offered and then withdrawn.
-    //
-    // Says why, rather than no-op'ing. An input that simply refuses to appear
-    // reads as a broken button.
-    if (this._data && !this._data.can_manage) {
-      if (Wm && Wm.alert) Wm.alert(LOCALE.NOT_ENOUGH_PRIVILEGE);
-      return Promise.resolve();
-    }
-    return this.ensurePart("new-dept").then((part) => {
-      if (!part) return;
-      part.feed(
-        Skeletons.Entry({
-          className: `${pfx}__new-dept-entry`,
-          sys_pn: "new-dept-entry",
-          placeholder: LOCALE.DEPARTMENT_NAME,
-          mode: _a.commit,
-          service: "commit-new-department",
-          require: "any",
-          // preselect, not autofocus — Entry has no `autofocus` prop at all
-          // (Messenger does, which is where the name comes from). preselect
-          // calls select() on the input once it is ready, which focuses it;
-          // on an empty field that is exactly a focus.
-          preselect: 1,
-          removeOnEscape: true,
-          uiHandler: [this],
-        }),
-      );
-    });
   }
 
   /**
@@ -285,20 +314,6 @@ class __desk_org_view extends LetcBox {
       return true;
     }
     return false;
-  }
-
-  /**
-   * @param {View} cmd the committing entry
-   */
-  async _createDepartment(cmd) {
-    const name = String((cmd && cmd.getValue && cmd.getValue()) || "").trim();
-    if (!name) return this._render();
-    const res = await this.postService(SERVICE.organization.department_add, {
-      hub_id: Visitor.id,
-      name,
-    }).catch(() => null);
-    if (this._complained(res)) return this._render();
-    return this._reload();
   }
 
   /**
@@ -423,11 +438,14 @@ class __desk_org_view extends LetcBox {
         // the payload already in hand and never re-fetches.
         return this.ensurePart("sections").then((p) => p && this._paint(p));
 
+      // The dialog belongs to the desk (Wm's wrapper-modal), which opens it
+      // the same way from the topbar; this screen only asks for it.
       case "new-department":
-        return this.armNewDepartment();
+        return this.triggerHandlers({ service: "new-department" });
 
-      case "commit-new-department":
-        return this._createDepartment(cmd);
+      // "All departments" back from the one-department view.
+      case "show-organization":
+        return this.showDepartment(null);
 
       case "rename-department":
         return this._renameDepartment(cmd.mget("deptId"));

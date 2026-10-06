@@ -1,0 +1,143 @@
+@use "mixins/drumee";
+
+// desk_department_form — B2B Org Structure Figma 900:151281.
+//
+// Same dialog shell as "Create new folder" (builtins/media/folder-form), so
+// the two read as one family: 360 wide, r-4, the light-mode drop shadow,
+// a ruled header, labelled fields and one full-width primary button.
+.desk-department-form {
+  &__ui {
+    width: 360px;
+    border-radius: var(--corner-radius-4);
+    background-color: var(--normal-bg);
+    box-shadow: 0px 1px 11px 0px rgba(0, 0, 0, 0.13);
+    overflow: hidden;
+  }
+
+  &__main {
+    width: 100%;
+    gap: 20px;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+
+  &__header {
+    align-items: flex-start;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__header-text {
+    gap: 8px;
+    flex: 1;
+  }
+
+  &__title {
+    @include drumee.typo($size: 20px, $weight: 600, $line: 24px, $color: var(--normal-fg));
+  }
+
+  &__subtitle {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: var(--normal-fg));
+  }
+
+  &__close {
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    cursor: pointer;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      color: var(--normal-fg);
+    }
+  }
+
+  &__field-group {
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__field-label {
+    @include drumee.typo($size: 14px, $weight: 600, $line: 17px, $color: var(--normal-fg));
+  }
+
+  // The organisation: drawn as a field (same box as the input below) so the
+  // two rows line up, but not editable — see the skeleton.
+  &__readonly,
+  &__input {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 40px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-muted);
+    background-color: var(--normal-bg);
+  }
+
+  &__readonly {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: var(--normal-fg));
+    cursor: default;
+  }
+
+  &__input {
+    transition: border-color 0.15s;
+
+    input {
+      background: transparent;
+      border: none;
+      outline: none;
+      width: 100%;
+      padding: 0;
+      color: var(--normal-fg);
+      @include drumee.typo($size: 12px, $line: 17px);
+
+      &::placeholder {
+        color: var(--normal-fg-50);
+      }
+    }
+
+    &:focus-within {
+      border-color: var(--active-border, var(--primary-40));
+    }
+  }
+
+  &__field-error {
+    &[data-state="0"] {
+      display: none;
+    }
+
+    @include drumee.typo($size: 12px, $weight: 600, $line: normal, $color: var(--red-500));
+  }
+
+  &__footer {
+    width: 100%;
+    padding-top: 4px;
+  }
+
+  &__submit {
+    width: 100%;
+    height: 40px;
+    padding: 8px 24px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background-color: var(--primary-50);
+    transition: background-color 0.15s;
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px, $color: var(--white));
+
+    &:hover {
+      background-color: var(--primary-40);
+    }
+  }
+}

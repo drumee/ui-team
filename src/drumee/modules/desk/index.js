@@ -3494,13 +3494,57 @@ class desk_module extends LetcBox {
           ]
         : [];
 
+    // ── Department scope (B2B Org Structure, Figma 900:151850) ─────────────
+    // Inside a workspace that belongs to a department, the switcher lists THAT
+    // department's workspaces under its name instead of every workspace by
+    // area. The department list is the topbar crumb's (one cached read);
+    // without one — desk, personal or ungrouped workspace, or a server that
+    // does not serve departments yet — the list is grouped as it always was.
+    const depts = require("libs/org-departments");
+    let dept = null;
+    let canManageDept = false;
+    if (depts.deptFeature()) {
+      const ddata = await depts.myDepartments(this);
+      dept = depts.departmentOf(ddata, depts.currentHubId());
+      canManageDept = !!ddata.can_manage;
+    }
+    this._wsMenuDept = dept ? { id: dept.id, canManage: canManageDept } : null;
+
     if (list && this._wsMenuMode !== "folders") {
       // The list now holds workspaces: a later folder feed must not be skipped
       // as "already on screen".
       this._folderFeedSig = null;
-      list.feed(
-        this._groupWorkspaces(rows).flatMap((g) => section(g.label, g.rows)),
-      );
+      if (dept) {
+        const ids = new Set(dept.workspaces.map((w) => String(w.hub_id)));
+        const inDept = rows.filter(
+          (r) => r.filetype !== _a.folder && ids.has(String(r.hub_id || r.id)),
+        );
+        list.feed([
+          // The department's own heading — the folder-mode crumb heading's
+          // look (__ws-section--crumb), with the department cube for a glyph.
+          Skeletons.Box.X({
+            className: `${cn}__ws-section ${cn}__ws-section--crumb ${cn}__ws-section--dept`,
+            active: 0,
+            kids: [
+              Skeletons.Box.X({
+                active: 0,
+                className: `${cn}__ws-dept-ico`,
+                kids: [Skeletons.Image.Svg({ active: 0, ico: "ph-cube" })],
+              }),
+              Skeletons.Note({
+                active: 0,
+                className: `${cn}__ws-section-name`,
+                content: dept.name || "",
+              }),
+            ],
+          }),
+          ...inDept.map(rowFor),
+        ]);
+      } else {
+        list.feed(
+          this._groupWorkspaces(rows).flatMap((g) => section(g.label, g.rows)),
+        );
+      }
     }
 
     // ── Header (Figma 48:36991) ──────────────────────────────────────────
@@ -4764,6 +4808,28 @@ class desk_module extends LetcBox {
     // re-cache the stale answer behind this (orgOverview assigns __pending up
     // front and its .then never re-assigns), so the window is closed.
     require("libs/org-overview").invalidate();
+
+    // A WORKSPACE CREATED FROM A DEPARTMENT LANDS IN IT (B2B Org Structure).
+    // The department-scoped switcher's "New workspaces" arms the department
+    // (libs/org-departments armPending); the create flow is the ordinary one
+    // and knows nothing about departments, so the assignment happens here,
+    // when it announces the new workspace — and BEFORE the switcher re-renders
+    // below, so the new row is already inside the department it lists.
+    const depts = require("libs/org-departments");
+    depts.invalidate();
+    const pendingDept = depts.takePending();
+    const madeWs = payload && payload.workspace;
+    if (pendingDept && madeWs && madeWs.hub_id && !payload.personal) {
+      await this.postService(SERVICE.organization.department_assign, {
+        hub_id: Visitor.id,
+        // The workspace being moved travels as `nid`; hub_id is the caller's
+        // own and is what the ACL reads for scope (same as desk.leave_hub).
+        nid: madeWs.hub_id,
+        department_id: pendingDept,
+      }).catch(() => null);
+      depts.invalidate();
+      RADIO_BROADCAST.trigger("org:refresh");
+    }
 
     // Was the desk on the no-workspace screen? Read the stamp BEFORE anything
     // refetches, because that is what decides whether the user needs taking
@@ -11268,23 +11334,43 @@ class desk_module extends LetcBox {
       // as Settings / Get help / Calendar so it inherits their mutual
       // exclusion and their destroy-on-close. Open-only, like its neighbours.
       case "open-org-view":
-        return this._openOrgView();
-
-      // "New department" from the topbar's + New menu. The org view owns the
-      // entry — this only has to make sure that screen is up.
-      //
-      // settings-main-slot is not a keep-alive slot, so togglePanel returns
-      // early for an already-mounted kind and never applies `opt`. Hence the
-      // split: mount it with the intent, or, when it is already the screen the
-      // user is on, tell it.
-      case "new-department": {
+        // Already on canvas (in the one-department view, say): widen it back
+        // to the whole organisation — togglePanel would return early and
+        // leave it narrowed.
         if (
           this._pendingKinds
           && this._pendingKinds["settings-main-slot"] === "desk_org_view"
         ) {
-          return RADIO_BROADCAST.trigger("org:new-department");
+          return RADIO_BROADCAST.trigger("org:show-department", null);
         }
-        return this._openOrgView({ armNewDepartment: 1 });
+        return this._openOrgView();
+
+      // "New department" — from the topbar's + New menu, the org view's
+      // "+ New department" and the department dropdown's "New departments".
+      // B2B Org Structure draws it as a dialog ("Create new department",
+      // Figma 900:151281), so it opens the same way the other create forms
+      // do: through Wm's wrapper-modal, wherever the user is.
+      case "new-department":
+        this.closeDeskNewMenu(cmd);
+        return Wm.onUiEvent(cmd, { ...args, service: "new-department-form" });
+
+      // A department picked in the topbar's "Switch Departments" list: the
+      // org screen, narrowed to that one department (Figma "view multi wp
+      // inside org").
+      //
+      // settings-main-slot is not a keep-alive slot, so togglePanel returns
+      // early for an already-mounted kind and never applies `opt`. Hence the
+      // split: mount it with the department, or, when it is already the
+      // screen the user is on, tell it.
+      case "open-department-view": {
+        const departmentId = args.departmentId || (cmd && cmd.mget && cmd.mget("deptId"));
+        if (
+          this._pendingKinds
+          && this._pendingKinds["settings-main-slot"] === "desk_org_view"
+        ) {
+          return RADIO_BROADCAST.trigger("org:show-department", departmentId || null);
+        }
+        return this._openOrgView({ departmentId });
       }
 
       case "toggle-trash":
@@ -11410,6 +11496,15 @@ class desk_module extends LetcBox {
       // and the _closeWhenEmpty hook that waits for the whole media_form ->
       // permission_* chain to empty). A second copy of that is what drifts.
       case "new-workspace-form": {
+        // From the switcher while it lists ONE department: the new workspace
+        // belongs in that department (see _onWorkspaceCreated). Only for those
+        // who may assign — a member's create is not refused, it simply stays
+        // ungrouped, which is what it would have been anyway.
+        if (this._wsMenuDept && this._wsMenuDept.canManage
+          && cmd && cmd.el && cmd.el.closest
+          && cmd.el.closest(".desk-module-topbar__ws-menu")) {
+          require("libs/org-departments").armPending(this._wsMenuDept.id);
+        }
         this.closeDeskNewMenu(cmd);
         if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.onUiEvent(cmd, {

@@ -4243,6 +4243,26 @@ class __window_manager extends push {
           }
         });
 
+      // "Create new department" (B2B Org Structure). Same wrapper-modal host
+      // and the same close-when-empty hook as "new-workspace" above, so the
+      // overlay comes and goes exactly as it does for the other create forms.
+      case "new-department-form":
+        return this.ensurePart("wrapper-modal").then((p) => {
+          p.clear();
+          p.el.dataset.state = "open";
+          p.el.dataset.overlay = "none";
+          p.feed({ kind: "desk_department_form" });
+          if (!p._closeWhenEmpty) {
+            p._closeWhenEmpty = () => {
+              if (p.collection && p.collection.length === 0) {
+                p.el.dataset.state = "closed";
+                delete p.el.dataset.overlay;
+              }
+            };
+            p.collection.on("update reset", p._closeWhenEmpty);
+          }
+        });
+
       case "new-sub-folder":
         if (require("libs/over-limit").guardWrite("write")) return;
         return this.addFolder({

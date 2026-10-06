@@ -169,6 +169,12 @@ module.exports = {
   desk_org_view: function () {
     return import("./modules/desk/org-view");
   },
+  desk_dept_tab: function () {
+    return import("./modules/desk/dept-tab");
+  },
+  desk_department_form: function () {
+    return import("./modules/desk/department-form");
+  },
   workspace_item: function () {
     return import("./modules/desk/workspace-item");
   },

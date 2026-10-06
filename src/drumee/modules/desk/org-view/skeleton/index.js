@@ -1,8 +1,9 @@
 /* ==================================================================== *
  * desk_org_view skeleton — Figma 104:33055
  *
- * Header (org name / search / + New), then one section per department, then
- * the ungrouped workspaces in a bare row with no header of their own.
+ * Header (org or department name / + New department), then one section per
+ * department, then the ungrouped workspaces in a bare row with no header of
+ * their own.
  * ==================================================================== */
 
 // The area-tinted workspace glyph. An HTML STRING from the legacy grid
@@ -261,74 +262,52 @@ function sections(pfx, ui, grouped, canManage) {
     );
   }
 
-  // Where the inline "New department" entry is fed. A row rather than a
-  // dialog: the topbar's menu item and this screen's "+ New" both arm the same
-  // entry, so there is one way to name a department however it was started.
-  kids.push(
-    Skeletons.Box.Y({
-      className: `${pfx}__new-dept`,
-      sys_pn: "new-dept",
-      partHandler: ui,
-    }),
-  );
-
   return kids;
 }
 
 /**
- * The "+ New" menu — the frame's three rows.
+ * The header — B2B Org Structure Figma 900:151138: the organisation's name and
+ * one primary "+ New department" button. In the one-department view (Figma
+ * "view multi wp inside org") the title is the department's, behind its cube.
  *
- * "Migrate from Google Drive" and "New workspace" already exist as desk
- * services; only "New department" is new. They dispatch to the DESK, not here,
- * because that is where both already live (topbar.js raises the same two).
+ * The earlier frame (104:33055) also carried a workspace search and a "+ New"
+ * menu (department / workspace / Google Drive migration). The B2B frame drops
+ * both: creating a workspace is the section's own "+ New workspace" or the
+ * topbar switcher's "New workspaces", and the migration stays on the topbar's
+ * "+ New".
+ *
+ * @param {String} pfx
+ * @param {Object} ui
+ * @param {Object} opt {title, department, canManage}
  */
-function newMenu(pfx, ui) {
-  return Skeletons.Menu({
-    className: `${pfx}__new-wrapper`,
-    direction: _a.down,
-    // See the note in desk/skeleton/topbar.js: without an explicit duration the
-    // menu falls back to Visitor.timeout() milliseconds read as gsap seconds.
-    duration: 0.01,
-    opening: _e.click,
-    persistence: _a.once,
-    sys_pn: "new-menu",
-    partHandler: [ui],
-    trigger: Skeletons.Button.Label({
-      // The app's own plus, not the Phosphor one. Both are square symbols, but
-      // `topbar-add` is drawn on a 12x12 viewBox against ph-plus's 20x20 — the
-      // skin's `svg { width: 20px; height: 20px }` scales either to the same
-      // box, so the stroke reads a touch heavier, which is the point.
-      ico: "topbar-add",
-      className: `${pfx}__new-btn`,
-      label: LOCALE.NEW,
-    }),
-    items: Skeletons.Box.Y({
-      className: `${pfx}__new-menu-items`,
+function header(pfx, ui, opt) {
+  return [
+    Skeletons.Box.X({
+      className: `${pfx}__title-row`,
       kids: [
-        Skeletons.Button.Label({
-          ico: "ph-cube",
-          className: `${pfx}__new-menu-item`,
-          label: LOCALE.NEW_DEPARTMENT,
-          service: "new-department",
-          uiHandler: [ui],
-        }),
-        Skeletons.Button.Label({
-          ico: "app-folder",
-          className: `${pfx}__new-menu-item`,
-          label: LOCALE.NEW_WORKSPACE,
-          service: "new-workspace-form",
-          uiHandler: [ui],
-        }),
-        Skeletons.Button.Label({
-          ico: "logo-google",
-          className: `${pfx}__new-menu-item`,
-          label: LOCALE.MIGRATE_GDRIVE_TITLE,
-          service: "launch-gdrive-migration",
-          uiHandler: [ui],
+        opt.department
+          ? Skeletons.Box.X({
+              className: `${pfx}__title-ico`,
+              kids: [Skeletons.Image.Svg({ ico: "ph-cube", className: `${pfx}__title-ico-svg` })],
+            })
+          : null,
+        Skeletons.Note({
+          className: `${pfx}__title`,
+          sys_pn: "org-title",
+          content: opt.title,
         }),
       ],
     }),
-  });
+    opt.canManage
+      ? Skeletons.Button.Label({
+          ico: "ph-plus",
+          className: `${pfx}__new-btn`,
+          label: LOCALE.NEW_DEPARTMENT,
+          service: "new-department",
+          uiHandler: [ui],
+        })
+      : null,
+  ];
 }
 
 module.exports = function (ui) {
@@ -338,47 +317,16 @@ module.exports = function (ui) {
     className: `${pfx}__main`,
     debug: __filename,
     kids: [
+      // Fed by _paintHeader once the overview resolves — the button depends
+      // on can_manage, and the one-department title on the department list.
       Skeletons.Box.X({
         className: `${pfx}__header`,
+        sys_pn: "header",
+        partHandler: ui,
         kids: [
           Skeletons.Note({
             className: `${pfx}__title`,
-            sys_pn: "org-title",
-            partHandler: ui,
             content: Organization.name() || LOCALE.ORGANIZATION,
-          }),
-          Skeletons.Box.X({
-            className: `${pfx}__header-actions`,
-            kids: [
-              // Figma 48:37106 draws the search as a 245x36 white pill, r12,
-              // with the magnifier INSIDE at the left — not a bare input. The
-              // icon is a sibling of the entry inside the pill, so the pill owns
-              // the border and the entry itself is chromeless (see the skin).
-              Skeletons.Box.X({
-                className: `${pfx}__search-box`,
-                kids: [
-                  Skeletons.Image.Svg({
-                    ico: "ph-magnifying-glass",
-                    className: `${pfx}__search-ico`,
-                  }),
-                  // Filters the ALREADY-LOADED payload rather than calling a
-                  // search service: overview returns the whole organisation in
-                  // one read, so a round trip per keystroke would re-fetch data
-                  // the client is holding. `watch` fires per keystroke, which is
-                  // what makes the filter feel live.
-                  Skeletons.Entry({
-                    className: `${pfx}__search`,
-                    sys_pn: "search",
-                    placeholder: LOCALE.SEARCH_WORKSPACES,
-                    watch: "filter-workspaces",
-                    require: "any",
-                    interactive: 1,
-                    uiHandler: [ui],
-                  }),
-                ],
-              }),
-              newMenu(pfx, ui),
-            ],
           }),
         ],
       }),
@@ -392,3 +340,4 @@ module.exports = function (ui) {
 };
 
 module.exports.sections = sections;
+module.exports.header = header;

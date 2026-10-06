@@ -66,6 +66,31 @@
     min-width: 0;
   }
 
+  // The title, behind a cube in the one-department view (Figma "view multi
+  // wp inside org"): the same 24x24 brand-wash tile the topbar's department
+  // crumb draws, so the screen and the crumb that opened it match.
+  &__title-row {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  &__title-ico {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background-color: var(--brand-tint);
+    color: var(--primary-40);
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
   &__header-actions {
     align-items: center;
     gap: 12px;
@@ -283,8 +308,9 @@
     min-width: 0;
   }
 
+  // B2B Figma 900:151160: Buttons/Medium Button — 16 / 600.
   &__section-name {
-    @include drumee.typo($color: var(--normal-fg), $size: 15px, $line: 19px);
+    @include drumee.typo($color: var(--normal-fg), $size: 16px, $line: 19px);
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -341,12 +367,14 @@
     // align-items actually line the digits up with the glyph.
     display: flex;
     align-items: center;
-    @include drumee.typo($color: var(--primary-50), $size: 13px, $line: 17px);
+    // B2B Figma 900:151163: Buttons/Small Button — 14 / 600, Primary/50.
+    @include drumee.typo($color: var(--primary-50), $size: 14px, $line: 17px);
     font-weight: 600;
   }
 
+  // B2B Figma 900:151164: Body/Small Body — 14 / 400, Grey/80.
   &__section-count-label {
-    @include drumee.typo($color: var(--normal-fg-50), $size: 12px, $line: 17px);
+    @include drumee.typo($color: var(--normal-fg-50), $size: 14px, $line: 17px);
   }
 
   // Figma "Button Lightmode": 167x36, fill #f2f2f7, r12, padding 8/16, gap 8,
@@ -398,25 +426,8 @@
     gap: 24px;
   }
 
-  // Figma 104:33154 card: 215x128, r16, padding 24, gap 8, fill
-  // `rgba(89,80,255,0.1)` — the brand at 10%, Figma's "Overlay/brand" style —
-  // over a rgba(0,0,0,.05) hairline.
-  //
-  // THE FILL WAS WHITE HERE, read from an earlier revision of the frame that
-  // drew the tiles unfilled. The tiles are a lavender wash in the current
-  // design, which is what separates them from the white section frame they sit
-  // in — the hairline alone is nearly invisible by intent, so unfilled tiles on
-  // a white section had almost no edge at all.
-  //
-  // --brand-tint, not --primary-10. The two are NOT the same wash: --primary-10
-  // is #e4e3ff, the brand at roughly 16% and visibly stronger, and it is one
-  // flat light-mode hex. --brand-tint is the 10% the frame specifies, and being
-  // translucent it sits correctly on either theme's ground (themes/light.scss,
-  // themes/dark.scss).
-  //
-  // An even earlier revision filled them with --normal-bg-90 and bordered them
-  // with the heavier --border-default, which turned a light tile grid into rows
-  // of grey blocks.
+  // Workspace tile: 215x128, r16, padding 24, gap 8, a rgba(0,0,0,.05)
+  // hairline (Figma 104:33154). Fill: see below.
   &__card {
     gap: 8px;
     padding: 24px;
@@ -425,7 +436,11 @@
     // half height and read as a dense table rather than the tile grid drawn.
     min-height: 128px;
     border-radius: var(--corner-radius-5);
-    background-color: var(--brand-tint);
+    // B2B Org Structure (Figma 900:151170) fills the tiles Grey/20, #f2f2f7 —
+    // --normal-bg-90 — and lets the folder glyph alone carry the area. That
+    // supersedes the brand-wash and per-area tints of the earlier 104:33154
+    // tile.
+    background-color: var(--normal-bg-90);
     // ALREADY THE FRAME'S VALUE: --border-muted is rgba(0, 0, 0, 0.05) in
     // themes/light.scss, which is the stroke Figma reports. Left as it was.
     border: 1px solid var(--border-muted);
@@ -442,29 +457,8 @@
     }
   }
 
-  // ── The tint follows the workspace's AREA ──────────────────────────────
-  //
-  // The same signal the folder glyph beside it is drawn from, so a share
-  // workspace reads pink and a private one amber without reading the name.
-  //
-  // KEYED ON THE CARD'S OWN `data-area`, which the skeleton already stamps for
-  // exactly this (see the attrOpt note in card()). The glyph carries the area
-  // as a CLASS too, and an earlier reading of this asked for the tint to follow
-  // that — but the two come from one field on one row, and asking the parent
-  // for its own attribute needs no `:has()` and cannot disagree with itself.
-  //
-  // RESTRICTED IS DELIBERATELY ABSENT. org_workspaces returns three areas —
-  // `private`, `share` and `restricted` (yellow_page/procedures/organization/
-  // org_workspaces.sql) — and the design names a colour for two. The third
-  // keeps the base --brand-tint above rather than being given an invented
-  // colour, and so does a row whose area is null.
-  &__card[data-area="share"] {
-    background-color: var(--area-tint-share);
-  }
-
-  &__card[data-area="private"] {
-    background-color: var(--area-tint-private);
-  }
+  // No per-area tint on the tile: the B2B frame draws every tile Grey/20 and
+  // leaves the area to the folder glyph (see __card above).
 
   // Icon at the top, name and member count together at the foot — the frame
   // groups the two text rows rather than distributing all three evenly.
@@ -551,7 +545,8 @@
     // align-items actually line the digits up with the glyph.
     display: flex;
     align-items: center;
-    @include drumee.typo($color: var(--primary-50), $size: 16px, $line: 19px);
+    // B2B Figma 900:151175: Buttons/Small Button — 14 / 600, Primary/50.
+    @include drumee.typo($color: var(--primary-50), $size: 14px, $line: 17px);
     font-weight: 600;
   }
 

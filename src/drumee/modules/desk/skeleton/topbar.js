@@ -183,6 +183,13 @@ module.exports = function (ui) {
           require("libs/org-overview").orgFeature()
             ? { kind: "desk_org_tab", className: `${pfx}__org-tab`, uiHandler: [ui] }
             : null,
+          // Department crumb (B2B Org Structure, Figma 1003:172774): the
+          // department the open workspace belongs to, between the org chip
+          // and the workspace chip, with its own "/" — Org v  Dept v / Ws v.
+          // Draws nothing when the workspace has no department to name.
+          require("libs/org-departments").deptFeature()
+            ? { kind: "desk_dept_tab", className: `${pfx}__dept-tab`, uiHandler: [ui] }
+            : null,
           // The address chip: crumb track + the switcher's caret, in one box.
           //
           // They were adjacent siblings and merely LOOKED like one control —
@@ -676,8 +683,8 @@ function userMenu(pfx, ui) {
  * The trigger shows the CURRENT workspace name (the frame's "Workspace-name
  * v"), refreshed on every switch by _setWorkspaceLabel.
  *
- * The frame's "Department-name" group header is omitted — departments are
- * deferred, so grouping by one would render an empty or invented level.
+ * Inside a department (B2B Org Structure, Figma 900:151850) the list is that
+ * department's workspaces under its name — see _renderWorkspaceMenu.
  *
  * @param {String} pfx  topbar BEM prefix
  * @param {Object} ui   desk module
