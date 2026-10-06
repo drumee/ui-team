@@ -1,0 +1,268 @@
+// Files grid empty state (Figma 920:123317) — skeleton/toolkit/files-empty-state.js.
+//
+// Gating is on positive stamps on the folder window root, written by
+// folder/index.js: data-can-create="1" (same gate as "+ New") reveals the
+// action cards; data-file-filter (any file-type tab but All) swaps the hero
+// for the plain "No Folders or Files yet" note. No stamp = no cards (fail
+// closed) and the hero (unfiltered).
+//
+// NEVER put `display` on .window__files-empty itself: the in-list search hides
+// it through `.window__files-panel[data-search] .no-content` (icons-skeleton.scss),
+// and an !important display here would out-rank that rule.
+//
+// Overrides of a Box's display use !important: the framework's
+// `.drumee-widget[data-flow=…]{display:flex}` sits at (0,2,0).
+
+// The list's empty-view centring (window/skin/common.scss) caps the note at
+// 320px with side padding; the hero needs the whole pane. (0,5,0) beats
+// common's (0,4,0).
+.window-folder .window__icons-list .smart-container > .window__files-empty.no-content {
+  max-width: none;
+  width: 100%;
+  min-height: 100%;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  container: files-empty / inline-size;
+}
+
+.window-folder .window__files-empty-hero {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 48px;
+  width: 100%;
+  max-width: 964px;
+  margin: auto;
+  padding: 87px 128px;
+  box-sizing: border-box;
+}
+
+.window-folder .window__files-empty-heading {
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  text-align: center;
+}
+
+.window-folder .window__files-empty-title {
+  justify-content: center;
+  font-family: "Geist", sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.1;
+  color: #34343a; // Grey/90 — no token
+}
+
+.window-folder .window__files-empty-desc {
+  justify-content: center;
+  font-family: "Geist", sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1.2;
+  color: var(--tertiary-grey-80, #65656c);
+}
+
+.window-folder .window__files-empty-actions {
+  display: none !important;
+}
+
+.window-folder[data-can-create="1"] .window__files-empty-actions {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.window-folder .window__files-empty-card {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  padding: 16px;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+
+  &:hover {
+    // Figma effect "lightmode" drop shadow (0 1 11 #00000021).
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .window-folder .window__files-empty-card {
+    transition: none;
+  }
+  .window-folder .window__files-empty-card:hover {
+    transform: none;
+  }
+}
+
+.window-folder .window__files-empty-ico {
+  position: relative;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  opacity: 0.6;
+}
+
+.window-folder .window__files-empty-img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+}
+
+.window-folder .window__files-empty-text {
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.window-folder .window__files-empty-card-title {
+  font-family: "Geist", sans-serif;
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--primary-100, #0b0a21);
+}
+
+.window-folder .window__files-empty-card-desc {
+  font-family: "Geist", sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--tertiary-grey-80, #65656c);
+}
+
+// ── Per-card colour + icon placement (Figma 920:123310 … 922:124661) ──────
+// SVG icons sit at their natural (root width/height) size — only offset.
+.window-folder .window__files-empty-card[data-card=spreadsheet] {
+  background: rgba(61, 222, 140, 0.05);
+  border-color: rgba(61, 222, 140, 0.15);
+}
+.window-folder .window__files-empty-card[data-card=spreadsheet] .window__files-empty-ico {
+  background: rgba(61, 222, 140, 0.25);
+  border-radius: 9.931px;
+}
+.window-folder .window__files-empty-card[data-card=spreadsheet] .window__files-empty-img {
+  left: 6.62px;
+  top: 6.62px;
+}
+
+.window-folder .window__files-empty-card[data-card=document] {
+  background: rgba(113, 163, 244, 0.05);
+  border-color: rgba(113, 163, 244, 0.1);
+}
+.window-folder .window__files-empty-card[data-card=document] .window__files-empty-ico {
+  background: rgba(113, 163, 244, 0.2);
+  border-radius: 10.037px;
+}
+.window-folder .window__files-empty-card[data-card=document] .window__files-empty-img {
+  left: 6.6px;
+  top: 6.6px;
+}
+
+.window-folder .window__files-empty-card[data-card=presentation] {
+  background: rgba(255, 168, 220, 0.1);
+  border-color: rgba(255, 168, 220, 0.15);
+}
+.window-folder .window__files-empty-card[data-card=presentation] .window__files-empty-ico {
+  background: rgba(255, 168, 220, 0.3);
+  border-radius: 10.09px;
+}
+.window-folder .window__files-empty-card[data-card=presentation] .window__files-empty-img {
+  left: 6.6px;
+  top: 6.6px;
+}
+
+.window-folder .window__files-empty-card[data-card=upload] {
+  background: rgba(89, 80, 255, 0.05);
+  border-color: rgba(89, 80, 255, 0.1);
+}
+.window-folder .window__files-empty-card[data-card=upload] .window__files-empty-ico {
+  background: rgba(89, 80, 255, 0.15);
+  border-radius: 10.143px;
+}
+.window-folder .window__files-empty-card[data-card=upload] .window__files-empty-img {
+  left: 6.6px;
+  top: 7px;
+}
+
+.window-folder .window__files-empty-card[data-card=gdrive] {
+  background: rgba(255, 225, 0, 0.05);
+  border-color: rgba(232, 161, 59, 0.15);
+}
+.window-folder .window__files-empty-card[data-card=gdrive] .window__files-empty-ico {
+  background: rgba(235, 210, 18, 0.25);
+  border-radius: 9.403px;
+}
+.window-folder .window__files-empty-card[data-card=gdrive] .window__files-empty-img {
+  left: 7.01px;
+  top: 3.95px;
+  width: 46.725px;
+  height: 46.725px;
+}
+
+.window-folder .window__files-empty-card[data-card=scratch] {
+  background: transparent;
+  border-color: var(--tertiary-grey-30, #e5e5ea);
+}
+.window-folder .window__files-empty-card[data-card=scratch] .window__files-empty-ico {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 8.98px;
+  opacity: 1;
+}
+.window-folder .window__files-empty-card[data-card=scratch] .window__files-empty-img {
+  left: 11.85px;
+  top: 12.3px;
+  width: 24.438px;
+  height: 24.438px;
+  mix-blend-mode: multiply;
+  opacity: 0.3;
+}
+
+// ── Filtered: plain note instead of the hero ──────────────────────────────
+.window-folder .window__files-empty-filtered {
+  display: none !important;
+}
+
+.window-folder[data-file-filter] .window__files-empty-hero {
+  display: none !important;
+}
+
+.window-folder[data-file-filter] .window__files-empty-filtered {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: auto;
+  padding: 0 24px;
+  text-align: center;
+  color: var(--normal-fg-20);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+// ── Narrow panes (files | chat split, mobile) ────────────────────────────
+@container files-empty (max-width: 760px) {
+  .window-folder .window__files-empty-hero {
+    padding: 48px 24px;
+  }
+  .window-folder[data-can-create="1"] .window__files-empty-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container files-empty (max-width: 480px) {
+  .window-folder .window__files-empty-hero {
+    padding: 32px 16px;
+    gap: 32px;
+  }
+  .window-folder[data-can-create="1"] .window__files-empty-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
