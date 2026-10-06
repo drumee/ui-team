@@ -204,6 +204,13 @@ class __window_manager extends push {
     // Already standing in it (warm click from inside the workspace) — mounting
     // again would destroy and rebuild the pane for nothing.
     if (hub_id && !this._findWorkspaceWindow(hub_id)) {
+      // Before the desk is touched: a link opened by a non-member must not
+      // dock a workspace they cannot enter (see _refusedDesignationTarget).
+      if (this._isPlainDesignationTarget(payload)) {
+        const holdCanvas = !this._curWorkspace && !this.headlessPane();
+        if (holdCanvas) this._syncHomeGrid(1);
+        if (await this._refusedDesignationTarget(payload, holdCanvas)) return;
+      }
       try {
         // nid 0 is the server's "this hub's root" shortcut (_rootNid), exactly
         // as openNotificationLocation mounts it: the pane opens at the workspace
@@ -246,23 +253,7 @@ class __window_manager extends push {
     // seen on drumee.in as 1-2 s of home behind the alert.
     const holdCanvas = !this._curWorkspace && !this.headlessPane();
     if (holdCanvas) this._syncHomeGrid(1);
-    const attrs = await this.fetchService(SERVICE.media.attributes, {
-      hub_id,
-      nid,
-    }).catch(() => null);
-    if (!attrs || !attrs.nid) {
-      const home = await this.fetchService(SERVICE.media.home, { hub_id })
-        .catch(() => null);
-      // Land FIRST, say why AFTER: opening a workspace closes the alert on its
-      // way (Desk.closeAllPanels and the pane mount), so it is raised only once
-      // the landed pane is up — see _landAfterRefusedLink.
-      const landed = await this._landAfterRefusedLink();
-      if (holdCanvas && !landed) this._releaseCanvas();
-      this.alert(
-        home
-          ? LOCALE.FILE_NOT_FOUND
-          : LOCALE.WORKSPACE_NO_ACCESS || LOCALE.WEAK_PRIVILEGE,
-      );
+    if (await this._refusedDesignationTarget({ hub_id, nid }, holdCanvas)) {
       return;
     }
     const win = await this.openNotificationLocation({
@@ -274,6 +265,71 @@ class __window_manager extends push {
     // by settleHomeGrid instead of staying blank.
     if (holdCanvas && !win && !this._curWorkspace) this._releaseCanvas();
     return win;
+  }
+
+  /**
+   * Is this payload the shape a Designation link carries — one concrete node,
+   * typed, with nothing else to do? Only those are probed by openDesignationLink.
+   *
+   * The LONG `open` route that also lands there has other emitters, left
+   * exactly as they were: activity chat links (activeTab + message_id), the
+   * websocket channel/meeting links (no filetype, nid 0 or `*`), and any reveal
+   * (highlight, which opens the PARENT, so the node's own attributes are not
+   * the question). Everything else — the compact form always, and viewerLink's
+   * long form — names a node whose media.attributes is the very request
+   * openFileLocation makes next, so probing it first changes only WHEN a refusal
+   * is learned, never WHETHER: before the desk is touched instead of after.
+   *
+   * @param {Object} payload
+   * @returns {Boolean}
+   */
+  _isPlainDesignationTarget(payload = {}) {
+    const { nid, filetype, highlight, activeTab } = payload || {};
+    if (!filetype || !nid) return false;
+    if (`${nid}` === "0" || `${nid}` === "*") return false;
+    if (highlight && `${highlight}` !== "0") return false;
+    if (activeTab) return false;
+    return true;
+  }
+
+  /**
+   * Resolve a Designation link's node BEFORE anything on the desk is touched;
+   * when it does not resolve, land in a workspace and say why.
+   *
+   * fetchService does not reject on a 403 — doRequest hands the response to
+   * onServerComplain and RESOLVES undefined (ui-essentials socket/utils) — so a
+   * non-member's refusal reads as "no data". Measured on drumee.in, for a folder
+   * and then a file: without this the desk docked a workspace that never
+   * mounted (_curWorkspace reset under the visible pane, ~7 s of nothing), and
+   * on a page load the retired home grid came up, followed by a "does not
+   * exist" alert for a file that does exist.
+   *
+   * The second probe only picks the sentence: the workspace answers (a member,
+   * the node is gone) → not found; it does not → no access.
+   *
+   * @param {Object} target { hub_id, nid }
+   * @param {Boolean} holdCanvas the caller claimed an empty canvas
+   * @returns {Promise<Boolean>} true when refused (and handled)
+   */
+  async _refusedDesignationTarget({ hub_id, nid } = {}, holdCanvas = false) {
+    const attrs = await this.fetchService(SERVICE.media.attributes, {
+      hub_id,
+      nid,
+    }).catch(() => null);
+    if (attrs && attrs.nid) return false;
+    const home = await this.fetchService(SERVICE.media.home, { hub_id })
+      .catch(() => null);
+    // Land FIRST, say why AFTER: opening a workspace closes the alert on its
+    // way (Desk.closeAllPanels and the pane mount), so it is raised only once
+    // the landed pane is up — see _landAfterRefusedLink.
+    const landed = await this._landAfterRefusedLink();
+    if (holdCanvas && !landed) this._releaseCanvas();
+    this.alert(
+      home
+        ? LOCALE.FILE_NOT_FOUND
+        : LOCALE.WORKSPACE_NO_ACCESS || LOCALE.WEAK_PRIVILEGE,
+    );
+    return true;
   }
 
   /**
