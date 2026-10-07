@@ -1791,6 +1791,7 @@ class __media_interact extends media_core {
    * still answers .value, and the ui event above keeps a copy either way.
    */
   async _renameWorkspacePrompt() {
+    if (!this._workspaceRenameAllowed()) return;
     const current = this.mget(_a.filename) || "";
     this.__wsRenameValue = current;
 

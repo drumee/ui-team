@@ -3818,6 +3818,11 @@ class desk_module extends LetcBox {
       _cur && `${_cur.hub_id}` === `${wsHub}` ? _cur.nid : w.mget && w.mget(_a.nid),
     );
     if (!tile || !_.isFunction(tile._commitRename)) return false;
+    // Admins and up only. Answer "handled" so the caller does not fall back
+    // to the dialog, which would be refused just the same.
+    if (_.isFunction(tile._workspaceRenameAllowed) && !tile._workspaceRenameAllowed()) {
+      return true;
+    }
 
     const box = this._wsRenamePart;
     if (!box || !box.el || (box.isDestroyed && box.isDestroyed())) return false;
@@ -4455,7 +4460,13 @@ class desk_module extends LetcBox {
               // `share` workspace, but sharing already has two doors — the
               // header's chain icon and the rail's Access — and a third one
               // here is the duplication this menu was just cleared of.
-              && k !== "secureShare" && k !== _a.share),
+              && k !== "secureShare" && k !== _a.share
+              // RENAME — admins and up only (Duy, 2026-10-07). The builder
+              // offers it to anyone who can organise, which is right for a
+              // folder; on a workspace the tile says whether it is allowed.
+              && (k !== _a.rename
+                || !_.isFunction(media._workspaceRenameAllowed)
+                || media._workspaceRenameAllowed())),
         )
       : [];
 

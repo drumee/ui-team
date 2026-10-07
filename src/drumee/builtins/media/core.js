@@ -290,13 +290,27 @@ class __media_core extends DrumeeMFS {
     }
   }
 
+  /**
+   * Whether this node may be renamed by the viewer as far as the WORKSPACE
+   * rule goes. Renaming a workspace is an admin act (Duy, 2026-10-07): an
+   * admin's rename reaches every member, and a member below admin renaming it
+   * for themselves only made the same workspace go by different names. Files
+   * and folders are untouched (true). Tested on filetype, not `isHub`, which
+   * is also true for a folder that merely contains workspaces.
+   */
+  _workspaceRenameAllowed() {
+    if (this.mget(_a.filetype) !== _a.hub) return true;
+    return !!this.canAdmin();
+  }
+
   contextmenuItemsForHub() {
     let fileItems = [];
     // Over-limit: upload + invite are paused — omit them from the kebab so
     // the menu doesn't offer actions the REST clamp will refuse.
     const locked = require("libs/over-limit").isLocked();
     if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems = ['openInWindow', _a.separator, _a.rename];
+      fileItems = ['openInWindow', _a.separator];
+      if (this._workspaceRenameAllowed()) fileItems.push(_a.rename);
       if (!locked) fileItems.push(_a.upload);
       fileItems.push(_a.download, _a.separator, _a.info);
       if (!locked && this._canInviteToHub()) {
@@ -1788,6 +1802,7 @@ class __media_core extends DrumeeMFS {
     if (!this.isGranted(_K.permission.delete) && !this.isHub) {
       return;
     }
+    if (!this._workspaceRenameAllowed()) return;
     if (pointerDragged) {
       return;
     }
@@ -2321,6 +2336,8 @@ class __media_core extends DrumeeMFS {
     if (_.isEmpty(value)) {
       return;
     }
+    // Every rename path ends here (grid, switcher chip, dialog).
+    if (!this._workspaceRenameAllowed()) return;
     if (value === this.mget(_a.filename)) {
       try {
         this.entry.softDestroy();
