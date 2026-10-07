@@ -124,7 +124,7 @@
 
     &-label {
       color: var(--neutral-600);
-      font-family: "Armin Grotesk";
+      font-family: var(--font-main);
       font-size: 14px;
       font-style: normal;
       font-weight: 400;
@@ -142,7 +142,7 @@
       font-size: 14px;
       line-height: 22px;
       color: var(--default-text-neutral);
-      font-family: "Armin Grotesk";
+      font-family: var(--font-main);
       font-weight: 400;
       letter-spacing: 0.14px;
     }
