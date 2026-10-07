@@ -1819,6 +1819,35 @@ class settings_billing extends LetcBox {
       actions: [
         { label: LOCALE.CLOSE, priority: "secondary", service: _e.close },
       ],
+    }).then((card) => this._blurBehindSalesMail(card));
+  }
+
+  /**
+   * Frost the page behind the Contact sales card, the same glass the
+   * request-access and create-folder modals use.
+   *
+   * Wm.alert takes no backdrop, so the host's `data-overlay` is set here —
+   * and taken off again when the card goes, whichever way it goes (Close, a
+   * web mail picked, replaced by another modal). The host is SHARED: a value
+   * left behind would frost the desk behind the next card, which never asked
+   * for it. Stamped with the same `overlaySeq` owner counter Wm.confirm uses,
+   * so a card that has already been replaced clears nothing.
+   */
+  _blurBehindSalesMail(card) {
+    if (!card || !card.fig || card.fig.family !== "window-info") return;
+    if (!_.isFunction(Wm.ensurePart)) return;
+    Wm.ensurePart("wrapper-modal").then((host) => {
+      if (!host || !host.el || card.isDestroyed()) return;
+      const seq = String(~~host.el.dataset.overlaySeq + 1);
+      host.el.dataset.state = "open";
+      host.el.dataset.overlay = "blur";
+      host.el.dataset.overlaySeq = seq;
+      card.once("destroy", () => {
+        if (host.el && host.el.dataset.overlaySeq === seq) {
+          host.el.dataset.overlay = "";
+          delete host.el.dataset.overlaySeq;
+        }
+      });
     });
   }
 
