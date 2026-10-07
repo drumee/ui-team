@@ -1015,8 +1015,15 @@ html {
 //
 // Specificity (0,7,0), nested (0,8,0): clears the focus lift (0,4,0) and the
 // global lift (0,1,0), both !important.
+//
+// The full-page Billing screen is the same case and gets the same pin: any
+// Wm.alert / Wm.confirm raised from it (Contact sales on the Sovereign card,
+// cancel/switch-plan confirms) painted over the workspace pane instead of the
+// page the user clicked from. settings_billing is not in
+// KEEP_ALIVE_MAIN_KINDS either, so present means showing here too.
 .desk-module[data-wm-modal="open"]:has(
-    .desk-module__settings-main-slot > [data-kind="apps_main"]:not([data-anim="out"])
+    .desk-module__settings-main-slot > [data-kind="apps_main"]:not([data-anim="out"]),
+    .desk-module__settings-main-slot > [data-kind="settings_billing"]:not([data-anim="out"])
   ) {
   .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer) {
     z-index: 1300 !important;
