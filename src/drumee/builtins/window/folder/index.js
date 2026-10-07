@@ -770,6 +770,10 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._mmInviteeBlurTimer);
       this._mmInviteeBlurTimer = null;
     }
+    if (this._meetingsChangedTimer) {
+      clearTimeout(this._meetingsChangedTimer);
+      this._meetingsChangedTimer = null;
+    }
     this._stopAwaitMeetingReady();
     this._ftTeardown();
     this._unbindThreadMenuOutside();
@@ -3427,12 +3431,18 @@ class __window_folder extends mfsInteract {
     const { stime, etime } = this._meetingRange();
     // Keyed at request time: the range can move while the answer is in flight.
     const cacheKey = this._meetingsCacheKey();
+    // Only the newest request may set _meetings: a live refetch of this week
+    // answering after the user moved to the next one would otherwise repaint
+    // the new range with the old rows.
+    const seq = (this._meetingsFetchSeq || 0) + 1;
+    this._meetingsFetchSeq = seq;
     return Promise.resolve()
       .then(() => this.fetchService(svc, { stime, etime, ...this._meetingScope() }))
       .then((rows) => {
-        this._meetings = this._asMeetingRows(rows);
+        const list = this._asMeetingRows(rows);
         // A copy, not the live array — see _refreshSchedule.
-        readCache.set(cacheKey, this._meetings.slice());
+        readCache.set(cacheKey, list.slice());
+        if (seq === this._meetingsFetchSeq) this._meetings = list;
       })
       .catch(() => {
         this._meetings = this._meetings || [];
@@ -6539,7 +6549,47 @@ class __window_folder extends mfsInteract {
     else if (svc === "hub.member_joined" || svc === "hub.members_changed") {
       this._onMemberJoined(data || {});
     }
+    // A meeting was booked, edited or removed on this hub — from another
+    // member, or from this user's phone (server-team room._broadcast).
+    else if (svc === "room.book" || svc === "room.update" || svc === "room.remove") {
+      this._onMeetingsChanged(data || {});
+    }
     return super.handleWsEvent(args);
+  }
+
+  // Refetch the Meet tab's calendar once per burst: booking with invitees is
+  // two calls (room.book, then room.update), so two frames. Only repaints the
+  // "meeting-panel" part — an open meeting modal lives in "wrapper-dialog" and
+  // keeps what is typed in it. A tab never opened has nothing on screen and
+  // fetches on first open; a hidden one is flagged stale by _refreshSchedule.
+  _onMeetingsChanged(data = {}) {
+    if (!this._meetingPanelMounted) return;
+    const { hub_id } = this._meetingScope();
+    if (data.hub_id && hub_id && `${data.hub_id}` !== `${hub_id}`) return;
+    if (this._meetingsChangedTimer) return;
+    this._meetingsChangedTimer = setTimeout(() => {
+      this._meetingsChangedTimer = null;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      // A repaint re-creates the grid, which then opens at its top: put it
+      // back where the viewer left it, unless they moved to another view or
+      // range meanwhile. After layout — the new grid cannot scroll before.
+      const shown = this._schedBody();
+      const top = shown ? shown.scrollTop : null;
+      const key = this._schedFadeKey;
+      this._refreshSchedule({ quiet: true }).then(() => {
+        if (top == null) return;
+        requestAnimationFrame(() => {
+          const body = this._schedBody();
+          if (body && this._schedFadeKey === key && body.scrollTop !== top) body.scrollTop = top;
+        });
+      });
+    }, 250);
+  }
+
+  // The Meet tab's scrolling grid body, when it is on screen.
+  _schedBody() {
+    const panel = this.getPart && this.getPart("meeting-panel");
+    return (panel && panel.el && panel.el.querySelector(`.${this.fig.family}__meeting-sched-body`)) || null;
   }
 
   // Server-side handler: server-team/service/lib/notify-member-joined.js.
