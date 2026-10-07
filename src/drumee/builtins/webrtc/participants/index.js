@@ -86,6 +86,17 @@ class __participants_manager extends LetcBox {
   }
 
   /**
+   * The local tile is fed with this manager as its uiHandler (onDomRefresh),
+   * while remote tiles talk to the room directly. Pass its pin on to the room
+   * (our own uiHandler), or pinning yourself is silently dropped here.
+   * @param {*} cmd  the local tile
+   * @param {*} args what it raised
+   */
+  onUiEvent(cmd, args = {}) {
+    if (args.service === "pin-tile") this.triggerHandlers(args);
+  }
+
+  /**
    * 
    * @param {*} width 
    * @param {*} height 
