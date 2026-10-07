@@ -231,6 +231,14 @@ class __push_manager extends winman {
       // spot instead, and say who did it.
       case "hub.member_removed":
         return this.onWorkspaceAccessRevoked(data);
+
+      // The user's pinned workspaces changed in another tab or on another
+      // device (server drumate.pinned_workspaces). The desk redraws them.
+      case "drumate.pinned_workspaces":
+        if (typeof Desk !== "undefined" && Desk && _.isFunction(Desk._onPinsPushed)) {
+          Desk._onPinsPushed(data);
+        }
+        return;
       // case SERVICE.adminpanel.mimic_new:
       //   return this.loadMimicNew(data);
 

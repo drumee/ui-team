@@ -60,6 +60,8 @@ const __icon = function (_ui_) {
     // uses, so leaving reads the same wherever the app offers it. NOT the
     // trash can: this row does not delete anything.
     leaveWorkspace: "meeting-leave",
+    pinWorkspace: "ctxmenu-pin",
+    unpinWorkspace: "ctxmenu-unpin",
     unlock: "protected-unlock",
     // Archive box with the contents coming back out. Its own sprite rather
     // than a reuse of `app-archive`, which is the same glyph hard-filled
