@@ -1692,6 +1692,7 @@
   "ADD_TASK": "+ Add",
   "TASK_TITLE": "任务标题",
   "TASK_TITLE_REQUIRED": "请为任务填写标题。",
+  "TASK_DUE_REQUIRED": "请选择截止日期。",
   "DUE_DATE": "截止日期",
   "DROP_TASKS_HERE": "将任务拖到此处",
   "SELECT_DATE": "选择日期",

@@ -3852,13 +3852,37 @@ function positionDueCalendarLeft(instance) {
 // step hint ("Select start date" → "Select end date"), and a live "N days"
 // readout beside the Duration label confirms the span. Kept standalone so the
 // Duration toggle can re-feed just this sub-part in place.
+/**
+ * flatpickr `disable` rules: no day before today, EXCEPT the dates the field
+ * already holds.
+ *
+ * Not `minDate: "today"`: flatpickr filters its starting dates through the
+ * same enabled-check, so a stored due date that has since gone past (an
+ * overdue task, or a child pre-filled from one) was silently dropped — the
+ * field rendered EMPTY while the draft still held the date. Required-field
+ * validation then passed on a value nobody could see, and Create/Update saved
+ * it. Keeping the stored days enabled makes the field show what will be sent.
+ *
+ * @param {...String} kept  the field's current dates (Y-m-d; empties ignored)
+ */
+function noPastDaysExcept(...kept) {
+  const keep = new Set(
+    kept.filter(Boolean).map((d) => Dayjs(d).format("YYYY-MM-DD")),
+  );
+  const today = Dayjs().startOf("day");
+  return [
+    (d) => Dayjs(d).isBefore(today) && !keep.has(Dayjs(d).format("YYYY-MM-DD")),
+  ];
+}
+
 function buildDueSectionContent(ui, scope = "detail") {
   const pfx = ui.fig.family;
   const isCreate = scope === "create";
   const draft = (isCreate ? ui.getCreateDraft() : ui.getDetailDraft()) || {};
-  // Disable picking days in the past (both create and detail); flatpickr still
-  // shows an existing past due date, it just can't be (re)selected earlier.
-  const minDate = "today";
+  // Days in the past can't be picked (both create and detail) — but the
+  // field's own stored dates stay enabled so an overdue task still shows its
+  // date (see noPastDaysExcept).
+  const disable = noPastDaysExcept(draft.start_date, draft.due_date);
 
   // Tag the calendar for theming; when `withHint`, also inject a step hint that
   // guides the two-click range pick. The hint updates via a pushed onChange
@@ -3906,7 +3930,7 @@ function buildDueSectionContent(ui, scope = "detail") {
           altInput: true,
           altFormat: "d/m/Y",
           rangeSeparator: "  →  ",
-          minDate,
+          disable,
           appendTo: document.body,
           position: positionDueCalendarLeft,
           onReady: onReady(true),
@@ -3934,7 +3958,7 @@ function buildDueSectionContent(ui, scope = "detail") {
           // commit, so a picker that seeded itself with today would silently
           // stamp every new task with its creation date.
           defaultDate: draft.due_date || null,
-          minDate,
+          disable,
           appendTo: document.body,
           position: positionDueCalendarLeft,
           onReady: onReady(false),
@@ -3985,7 +4009,21 @@ function buildDueSectionContent(ui, scope = "detail") {
         }),
       ],
     }),
-    picker,
+    // The picker and its required-field message share a wrapper, so the flag
+    // (draft._dueMissing, also stamped in place by the controller) outlines the
+    // field and reveals the message. Inside the fed content, so the Duration
+    // toggle's re-feed keeps it.
+    Skeletons.Box.Y({
+      className: `${pfx}__due-field`,
+      attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
+      kids: [
+        picker,
+        Skeletons.Note({
+          className: `${pfx}__due-missing`,
+          content: LOCALE.TASK_DUE_REQUIRED,
+        }),
+      ],
+    }),
   ];
 }
 
@@ -4089,6 +4127,7 @@ const SUBTASK_SERVICES = {
     open: "open-detail",
     remove: "remove-task",
     titleField: "subtask-title",
+    dateField: "subtask-due-date",
   },
   create: {
     add: "add-create-subtask",
@@ -4102,6 +4141,7 @@ const SUBTASK_SERVICES = {
     open: null,
     remove: "remove-create-subtask",
     titleField: "create-subtask-title",
+    dateField: "create-subtask-due-date",
   },
 };
 
@@ -4191,7 +4231,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
             // See gantt.js: the bare string form renders the tooltip as
             // inline text inside the button and hides the icon.
             tooltips: {
-              content: LOCALE.CREATE_CHILD_TASK,
+              content: LOCALE.CREATE_SUBTASK,
               className: `${pfx}__tip`,
             },
           })
@@ -4207,6 +4247,9 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
     const isDone = ui.isDoneStatus(t.status);
     const pm = metaOf(priorities, t.priority || "medium");
     const due = t.due_date ? formatDueDate(t.due_date) : "";
+    // Overdue only while still open — a finished child is never late.
+    const overdue =
+      !!t.due_date && !isDone && Dayjs(t.due_date).isBefore(Dayjs(), "day");
     return Skeletons.Box.X({
       className: `${pfx}__subtask-row`,
       bubble: 0,
@@ -4237,6 +4280,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
               ? Skeletons.Note({
                   className: `${pfx}__subtask-meta`,
                   content: due,
+                  attrOpt: { "data-overdue": overdue ? "1" : "0" },
                 })
               : null,
           ].filter(Boolean),
@@ -4263,8 +4307,8 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
   };
 
   // ── Creator card (Figma) ────────────────────────────────────────────────
-  // Bordered card: title + ✕ on the first row, then the Priority / Due date /
-  // Status chips, then Create. The Figma frame has no Create button — it
+  // Bordered card: title + ✕ on the first row, then the Priority / Status
+  // chips, the Due date field on its own row, then Create. The Figma frame has no Create button — it
   // assumes Enter — but the panel's own Update sits right below the card, so
   // "fill it in and press save" hit Update, which commits the PARENT and closes
   // the panel. Enter still commits; the button is the discoverable path.
@@ -4276,8 +4320,8 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
         "data-open": draft && draft.menu === kind ? "1" : "0",
       },
       bubble: 0,
-      service: kind === "date" ? null : svc.menu,
-      uiHandler: kind === "date" ? null : [ui],
+      service: svc.menu,
+      uiHandler: [ui],
       menuKind: kind,
       kids: [
         dot
@@ -4291,27 +4335,9 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
           content: label,
         }),
         Skeletons.Image.Svg({
-          ico: kind === "date" ? "calendar" : "apps-caret-down",
+          ico: "apps-caret-down",
           className: `${pfx}__subtask-chip-ico`,
         }),
-        // The native picker sits invisibly over the whole chip so the click
-        // opens the platform date UI. Its change is caught by a delegated
-        // listener on the panel root (the card is rebuilt on every re-feed, so
-        // a per-node listener would not survive).
-        kind === "date"
-          ? Skeletons.Element({
-              tagName: "input",
-              className: `${pfx}__subtask-date-input`,
-              // data-scope: the change listener is delegated on the panel root
-              // (the card is rebuilt on every re-feed), so it has to read off
-              // the node which of the two drafts it is editing.
-              attrOpt: {
-                type: "date",
-                value: (draft && draft.due_date) || "",
-                "data-scope": scope,
-              },
-            })
-          : null,
         // The dropdown is a child of the chip that opened it, not of the card:
         // absolutely positioned against the card it dropped below the WHOLE
         // form, nowhere near the control that was clicked. __subtask-chip is
@@ -4321,7 +4347,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
     });
 
   const menu = (kind) => {
-    if (!draft || !kind || kind === "date") return null;
+    if (!draft || !kind) return null;
     const isPriority = kind === "priority";
     const items = isPriority
       ? priorities.map((p) => ({
@@ -4369,6 +4395,9 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
     const sm = metaOf(cols, draft.status);
     return Skeletons.Box.Y({
       className: `${pfx}__subtask-card`,
+      // Required-title flag. Rides on the draft so a re-feed (chip menu, a
+      // peer's push) keeps it; the controller also flips it in place.
+      attrOpt: { "data-title-missing": draft._titleMissing ? "1" : "0" },
       bubble: 0,
       kids: [
         Skeletons.Box.X({
@@ -4399,6 +4428,11 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
             }),
           ],
         }),
+        // Always built, shown only while the card is flagged (see skin).
+        Skeletons.Note({
+          className: `${pfx}__subtask-title-missing`,
+          content: LOCALE.TASK_TITLE_REQUIRED,
+        }),
         Skeletons.Box.X({
           className: `${pfx}__subtask-card-chips`,
           kids: [
@@ -4408,20 +4442,47 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
               pm && pm.color,
             ),
             chip(
-              "date",
-              draft.due_date ? formatDueDate(draft.due_date) : LOCALE.DUE_DATE,
-              null,
-            ),
-          ],
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__subtask-card-chips`,
-          kids: [
-            chip(
               "status",
               sm ? sm.name || LOCALE[sm.label] || sm.key : LOCALE.STATUS,
               sm && sm.color,
             ),
+          ],
+        }),
+        // Due date on a row of its own, as the same flatpickr field the parent's
+        // Due date uses (__due-input) rather than a chip over a native picker.
+        Skeletons.Box.Y({
+          className: `${pfx}__subtask-card-date ${pfx}__due-field`,
+          attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
+          kids: [
+            {
+              kind: "date_picker",
+              className: `${pfx}__due-input ${pfx}__subtask-due-input`,
+              innerClass: `${pfx}__due-input-inner`,
+              name: svc.dateField,
+              placeholder: LOCALE.DUE_DATE,
+              value: draft.due_date || "",
+              service: "task-input-changed",
+              uiHandler: [ui],
+              vendorOpt: {
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                // Explicit null keeps an unset due date unset (see the parent's
+                // picker in buildDueSectionContent).
+                defaultDate: draft.due_date || null,
+                disable: noPastDaysExcept(draft.due_date),
+                appendTo: document.body,
+                position: positionDueCalendarLeft,
+                onReady: (_d, _s, instance) => {
+                  const cc = instance && instance.calendarContainer;
+                  if (cc) cc.classList.add("tasks-panel__flatpickr");
+                },
+              },
+            },
+            Skeletons.Note({
+              className: `${pfx}__due-missing`,
+              content: LOCALE.TASK_DUE_REQUIRED,
+            }),
           ],
         }),
         // Explicit Create. The Figma frame has no button — it assumes Enter —
