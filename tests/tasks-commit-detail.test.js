@@ -41,12 +41,13 @@ const commitDetail = (Wm) =>
   new Function(
     "SERVICE", "Wm", "LOCALE", "snapshotTask", "planDetailCommit",
     "advanceBase", "settlePendingFiles", "rowOf", "ownedPatch",
-    "applyLabelOps", "longestList", "committablePending",
+    "applyLabelOps", "longestList", "committablePending", "titleTooLong",
     `${sliceMethod("_commitDetail")}\nreturn _commitDetail;`,
   )(
     SERVICE, Wm, LOCALE, helpers.snapshotTask, helpers.planDetailCommit,
     helpers.advanceBase, helpers.settlePendingFiles, liveSync.rowOf,
     liveSync.ownedPatch, liveSync.applyLabelOps, liveSync.longestList, require("../src/drumee/builtins/window/tasks/pending-uploads").committablePending,
+    require("../src/drumee/builtins/window/tasks/list-edit").titleTooLong,
   );
 
 // A successful answer for each service, shaped like the server's: the row
@@ -157,6 +158,22 @@ function makePanel({ opened = TASK, now = opened, edit = {}, fail = () => false 
 }
 
 const sent = (posted, service) => posted.filter((p) => p.service === service);
+
+test("a title over 250 characters is refused: nothing is sent, the card stays open", async () => {
+  const { panel, posted } = makePanel({ edit: { title: "a".repeat(251) } });
+  const flagged = [];
+  panel._flagTitleTooLong = (scope) => flagged.push(scope);
+  await panel._commitDetail();
+  assert.deepEqual(flagged, ["detail"]);
+  assert.equal(posted.length, 0);
+  assert.equal(panel.closed, false);
+});
+
+test("a title of exactly 250 characters is saved", async () => {
+  const { panel, posted } = makePanel({ edit: { title: "a".repeat(250) } });
+  await panel._commitDetail();
+  assert.equal(sent(posted, "task.update")[0].title, "a".repeat(250));
+});
 
 test("a peer's priority change is not written back when I only rename", async () => {
   const { panel, posted } = makePanel({

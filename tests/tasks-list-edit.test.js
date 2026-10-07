@@ -1,6 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  TITLE_MAX,
+  titleTooLong,
   fieldPatch,
   toggleUid,
   parseDateInput,
@@ -33,6 +35,20 @@ test("an unchanged value sends nothing", () => {
 
 test("an empty title is refused", () => {
   assert.deepEqual(fieldPatch(task, "title", "   "), { error: "empty" });
+});
+
+test("a title over TITLE_MAX characters is refused; exactly the limit is sent", () => {
+  assert.equal(TITLE_MAX, 250);
+  assert.deepEqual(fieldPatch(task, "title", "a".repeat(251)), { error: "too-long" });
+  assert.equal(fieldPatch(task, "title", "a".repeat(250)).args.title, "a".repeat(250));
+});
+
+test("the limit counts characters, ignores edge spaces", () => {
+  // 250 emoji are 500 UTF-16 units but 250 characters — the varchar's unit.
+  assert.equal(titleTooLong("😀".repeat(250)), false);
+  assert.equal(titleTooLong("😀".repeat(251)), true);
+  assert.equal(titleTooLong(`  ${"a".repeat(250)}  `), false);
+  assert.equal(titleTooLong(""), false);
 });
 
 test("task.update always carries both current dates", () => {

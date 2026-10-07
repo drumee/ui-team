@@ -24,6 +24,12 @@ const FIELDS = [
 const TEXT_FIELDS = ["title", "description"];
 
 const trim = (v) => String(v == null ? "" : v).trim();
+
+// Longest title any create/update path accepts. Counted in characters (code
+// points), as MariaDB counts the varchar — not UTF-16 units, which would let
+// an emoji count twice.
+const TITLE_MAX = 250;
+const titleTooLong = (v) => Array.from(trim(v)).length > TITLE_MAX;
 const day = (v) => (v ? String(v).slice(0, 10) : "");
 
 // task_update writes BOTH dates unconditionally (a missing one is cleared), so
@@ -53,6 +59,7 @@ function fieldPatch(task, field, value) {
     case "title": {
       const title = trim(value);
       if (!title) return { error: "empty" };
+      if (titleTooLong(title)) return { error: "too-long" };
       if (title === trim(task.title)) return null;
       return {
         service: "task.update",
@@ -248,6 +255,8 @@ function describePeerChange(service, prev, patch, ctx) {
 }
 
 module.exports = {
+  TITLE_MAX,
+  titleTooLong,
   FIELDS,
   TEXT_FIELDS,
   fieldPatch,

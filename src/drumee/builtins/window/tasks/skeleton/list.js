@@ -551,7 +551,13 @@ function textEditor(ui, edit, task, pfx) {
       ],
     }),
     edit.error
-      ? Skeletons.Note({ className: `${pfx}__list-pop-error`, content: LOCALE.TASK_TITLE_REQUIRED })
+      ? Skeletons.Note({
+          className: `${pfx}__list-pop-error`,
+          content:
+            edit.error === "too-long"
+              ? LOCALE.TASK_TITLE_TOO_LONG
+              : LOCALE.TASK_TITLE_REQUIRED,
+        })
       : null,
   ].filter(Boolean);
 }
