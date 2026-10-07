@@ -39,6 +39,7 @@ const DESK_BILLING_LOADER_DELAY = 220;
 // they share, which also gives it their mutual exclusion for free.
 const folderIcon = require("media/grid/template/folder");
 const { groupWorkspaces } = require("libs/workspace-groups");
+const workspacePins = require("libs/workspace-pins");
 const { fetchSiblingFolders } = require("libs/folder-siblings");
 const { restoreScreen, pollFor } = require("libs/screen-restore");
 const { lightUtilityButton } = require("libs/utility-light");
@@ -3275,7 +3276,21 @@ class desk_module extends LetcBox {
    * @returns {Array} [{ label, rows }] — empty groups omitted
    */
   _groupWorkspaces(rows) {
-    return groupWorkspaces(rows);
+    // PINNED FIRST, above every type heading, in the user's own order (Lexis,
+    // 2026-10-07). A pinned workspace leaves its type's group rather than being
+    // listed twice. Done here rather than in libs/workspace-groups so the
+    // invite popup's picker, which calls that lib directly, is unchanged.
+    const { pinned, rest } = workspacePins.split(
+      rows,
+      this._pinnedKeys(),
+      (r) => this._workspaceKey(r),
+    );
+    const groups = groupWorkspaces(rest);
+    if (!pinned.length) return groups;
+    return [
+      { label: `${LOCALE.PINNED} (${pinned.length})`, rows: pinned, pinned: 1 },
+      ...groups,
+    ];
   }
 
   /**
@@ -3441,12 +3456,13 @@ class desk_module extends LetcBox {
 
     const cn = "desk-module-topbar";
     const curKey = this._workspaceKey(cur);
-    const rowFor = (row) => {
+    const rowFor = (row, pinned) => {
       const hubId = row.hub_id || row.id;
       const wsKey = this._workspaceKey(row);
       // By KEY, not by hub_id: personal workspaces all share the user's, so
       // comparing ids marked every one of them current at once.
       const isCurrent = !!wsKey && wsKey === curKey;
+      if (pinned) return this._pinnedWorkspaceRow(row, wsKey, hubId, isCurrent, glyph);
       return Skeletons.Box.X({
         className: `${cn}__ws-item`,
         service: "switch-workspace",
@@ -3483,14 +3499,25 @@ class desk_module extends LetcBox {
     // them and each group gets a heading instead of one undifferentiated list.
     // `group`, not `list` — the outer `list` is the part being fed, and
     // shadowing it here would read as though the section fed itself.
-    const section = (label, group) =>
+    const section = (label, group, pinned) =>
       group.length
         ? [
-            Skeletons.Note({
-              className: `${cn}__ws-section`,
-              content: label,
-            }),
-            ...group.map(rowFor),
+            pinned
+              ? Skeletons.Box.X({
+                  className: `${cn}__ws-section ${cn}__ws-section--pinned`,
+                  kids: [
+                    Skeletons.Image.Svg({
+                      ico: "ph-push-pin-fill",
+                      className: `${cn}__ws-section-pin`,
+                    }),
+                    Skeletons.Note({ content: label }),
+                  ],
+                })
+              : Skeletons.Note({
+                  className: `${cn}__ws-section`,
+                  content: label,
+                }),
+            ...group.map((r) => rowFor(r, pinned)),
           ]
         : [];
 
@@ -3499,12 +3526,262 @@ class desk_module extends LetcBox {
       // as "already on screen".
       this._folderFeedSig = null;
       list.feed(
-        this._groupWorkspaces(rows).flatMap((g) => section(g.label, g.rows)),
+        this._groupWorkspaces(rows).flatMap((g) => section(g.label, g.rows, g.pinned)),
       );
+      this._bindPinnedDrag(list);
     }
 
     // ── Header (Figma 48:36991) ──────────────────────────────────────────
     if (head) this._feedWorkspaceHead(head, rows, cur);
+  }
+
+  // ── Pinned workspaces (Lexis, 2026-10-07) ────────────────────────────────
+  //
+  // The rules (order, pin/unpin/move, which pins are shown) live in
+  // libs/workspace-pins. These methods only read and write the user's settings
+  // and redraw the switcher.
+
+  /** The user's pinned workspace keys, newest pin first. */
+  _pinnedKeys() {
+    const settings = _.isFunction(Visitor.settings) ? Visitor.settings() : null;
+    return workspacePins.readPins(_.isObject(settings) ? settings : null);
+  }
+
+  /** The open workspace's switcher key, or null with none open. */
+  _currentWorkspaceKey() {
+    return this._workspaceKey((window.Wm && window.Wm._curWorkspace) || null);
+  }
+
+  /**
+   * One row of the PINNED section: the regular row's glyph and name, then the
+   * pin (press = unpin, after a confirm) and the drag grip.
+   *
+   * NO kidsOpt, unlike the regular row. ui-core merges a box's kidsOpt into
+   * every kid with the PARENT's value winning, so `active: 0` there would
+   * silence the unpin button too. The inert kids carry it individually, as the
+   * phone sheet's header does for the same reason.
+   *
+   * `draggable` + `data-pin-key` are what _bindPinnedDrag reads.
+   */
+  _pinnedWorkspaceRow(row, wsKey, hubId, isCurrent, glyph) {
+    const cn = "desk-module-topbar";
+    const name = row.filename || row.name || "";
+    return Skeletons.Box.X({
+      className: `${cn}__ws-item ${cn}__ws-item--pinned`,
+      service: "switch-workspace",
+      uiHandler: [this],
+      wsKey,
+      wsHubId: hubId,
+      attrOpt: {
+        "data-current": isCurrent ? "1" : "0",
+        "data-area": row.area || "",
+        "data-pin-key": wsKey || "",
+        draggable: "true",
+      },
+      kids: [
+        Skeletons.Element({
+          className: `${cn}__ws-item-icon ${row.area || ""}`,
+          content: glyph(row),
+          active: 0,
+        }),
+        Skeletons.Note({
+          className: `${cn}__ws-item-name`,
+          content: name,
+          active: 0,
+        }),
+        Skeletons.Button.Svg({
+          ico: "ph-push-pin-fill",
+          className: `${cn}__ws-item-unpin`,
+          service: "workspace-unpin-row",
+          wsKey,
+          tooltips: LOCALE.UNPIN_WORKSPACE,
+          uiHandler: [this],
+        }),
+        Skeletons.Image.Svg({
+          ico: "ph-dots-six-vertical",
+          className: `${cn}__ws-item-grip`,
+          active: 0,
+        }),
+      ],
+    });
+  }
+
+  /**
+   * Add the Pin / Unpin row to the ⋯ menu's keys, just above the way out
+   * (Move to trash / Leave workspace), the place Lexis' mock gives it. Shared
+   * by the desktop ⋯ and the phone's sheet through _resolveWorkspaceActions.
+   *
+   * An EMPTY list stays empty: that is how the ⋯ knows the workspace's tile is
+   * missing and the grid has to be fetched (_toggleWorkspaceMenu).
+   */
+  _withPinAction(keys) {
+    if (!keys || !keys.length) return keys;
+    const wsKey = this._currentWorkspaceKey();
+    if (!wsKey) return keys;
+    const k = this._pinnedKeys().includes(wsKey) ? "unpinWorkspace" : "pinWorkspace";
+    const out = keys.slice();
+    const last = out.length - 1;
+    if (out[last] !== _a.trash && out[last] !== "leaveWorkspace") {
+      out.push(k);
+    } else if (out[last - 1] === "separator") {
+      out.splice(last - 1, 0, k);
+    } else {
+      out.splice(last, 0, k, "separator");
+    }
+    return out;
+  }
+
+  /**
+   * Store a new pin list and redraw the switcher at once; the request follows.
+   *
+   * Only `pinned_workspaces` is posted: drumate.update_settings merges at the
+   * top level from the settings it reads at request time, so every other
+   * setting stays as the server has it. Writes are queued so two quick changes
+   * reach the server in the order they were made.
+   *
+   * On failure the previous list comes back — unless a later change has
+   * replaced it in the meantime, which is then the list to keep.
+   *
+   * @param {Array<String>} next
+   * @returns {Promise<Boolean>} whether it was saved
+   */
+  _savePins(next) {
+    const prev = this._pinnedKeys();
+    // Pins of workspaces that are gone are dropped on the way out — but only
+    // against a list that actually loaded (see workspacePins.prune).
+    const clean = workspacePins.prune(next, this._workspaces, (r) =>
+      this._workspaceKey(r),
+    );
+    if (_.isEqual(prev, clean)) return Promise.resolve(true);
+    this._setLocalPins(clean);
+    const run = () =>
+      this.postService({
+        service: SERVICE.drumate.update_settings,
+        settings: { [workspacePins.SETTINGS_KEY]: clean },
+        hub_id: Visitor.id,
+      })
+        .then(() => true)
+        .catch((e) => {
+          this.warn && this.warn("[ws-pin] save failed", e);
+          if (_.isEqual(this._pinnedKeys(), clean)) this._setLocalPins(prev);
+          if (window.Wm && _.isFunction(window.Wm.alert)) {
+            window.Wm.alert(LOCALE.PIN_WORKSPACE_FAILED);
+          }
+          return false;
+        });
+    this._pinWrite = (this._pinWrite || Promise.resolve()).then(run, run);
+    return this._pinWrite;
+  }
+
+  /** Put `keys` into Visitor's settings and redraw the switcher list. */
+  _setLocalPins(keys) {
+    const cur = _.isFunction(Visitor.settings) ? Visitor.settings() : null;
+    Visitor.set({
+      settings: {
+        ...(_.isObject(cur) ? cur : {}),
+        [workspacePins.SETTINGS_KEY]: keys,
+      },
+    });
+    if (this._wsListPart) this._renderWorkspaceMenu(this._wsListPart);
+  }
+
+  /** Unpin, after the user confirms (Duy, 2026-10-07). */
+  _confirmUnpinWorkspace(wsKey) {
+    const wm = window.Wm;
+    if (!wsKey || !wm || !_.isFunction(wm.confirm)) return;
+    const row = (this._workspaces || []).find((r) => this._workspaceKey(r) === wsKey);
+    const name = (row && (row.filename || row.name)) || "";
+    return wm
+      .confirm({
+        title: LOCALE.UNPIN_WORKSPACE,
+        // Escaped: the message is rendered as markup and the name is whatever
+        // the workspace's admins typed.
+        message: LOCALE.MSG_UNPIN_WORKSPACE.format(_.escape(name)),
+        confirm: LOCALE.UNPIN,
+        confirm_type: "primary",
+        cancel: LOCALE.CANCEL,
+        cancel_type: "secondary",
+        mode: "hbf",
+      })
+      .then(() => this._savePins(workspacePins.unpin(this._pinnedKeys(), wsKey)))
+      .catch(() => {});
+  }
+
+  /**
+   * Drag a pinned row to reorder the pins. HTML5 drag and drop, as the docs
+   * editor's tab rail does, delegated on the list element so it survives every
+   * re-feed of the rows. Bound once per element.
+   *
+   * Only rows carrying `data-pin-key` (the pinned ones) take part; the drag is
+   * tagged internal and stopped here so the desk's file-drop machinery never
+   * treats it as an upload (same as the tasks board).
+   */
+  _bindPinnedDrag(list) {
+    const root = list && list.el;
+    if (!root || root.__wsPinDragBound) return;
+    root.__wsPinDragBound = 1;
+    const rowOf = (t) => {
+      const row = t && _.isFunction(t.closest) ? t.closest("[data-pin-key]") : null;
+      return row && root.contains(row) && row.dataset.pinKey ? row : null;
+    };
+    const clear = () => {
+      root.querySelectorAll("[data-pin-drop]").forEach((n) => n.removeAttribute("data-pin-drop"));
+    };
+    root.addEventListener("dragstart", (e) => {
+      const row = rowOf(e.target);
+      if (!row) return;
+      e.stopPropagation();
+      this._pinDragKey = row.dataset.pinKey;
+      row.dataset.pinDragging = "1";
+      try {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", this._pinDragKey);
+      } catch (err) {
+        /* the stopPropagation above still holds */
+      }
+      try {
+        e.dataTransfer.setData(_K.internalDragType, "1");
+      } catch (err) {
+        /* some engines refuse custom types */
+      }
+    });
+    root.addEventListener("dragenter", (e) => {
+      if (this._pinDragKey) e.stopPropagation();
+    });
+    root.addEventListener("dragover", (e) => {
+      if (!this._pinDragKey) return;
+      e.stopPropagation();
+      const row = rowOf(e.target);
+      if (!row) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+      clear();
+      if (row.dataset.pinKey === this._pinDragKey) return;
+      const b = row.getBoundingClientRect();
+      row.dataset.pinDrop = e.clientY < b.top + b.height / 2 ? "before" : "after";
+    });
+    root.addEventListener("drop", (e) => {
+      const key = this._pinDragKey;
+      if (!key) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const row = rowOf(e.target);
+      const where = row && row.dataset.pinDrop;
+      clear();
+      if (!row || !where) return;
+      const pins = this._pinnedKeys();
+      const target = row.dataset.pinKey;
+      const i = pins.indexOf(target);
+      if (i === -1) return;
+      // "after X" is "before whatever follows X", or the end.
+      const beforeKey = where === "before" ? target : (pins[i + 1] || null);
+      this._savePins(workspacePins.move(pins, key, beforeKey));
+    });
+    root.addEventListener("dragend", () => {
+      this._pinDragKey = null;
+      clear();
+      root.querySelectorAll("[data-pin-dragging]").forEach((n) => n.removeAttribute("data-pin-dragging"));
+    });
   }
 
   /**
@@ -4364,12 +4641,14 @@ class desk_module extends LetcBox {
       const label = (kids.find((x) => x && x.content != null) || {}).content;
       if (!label) continue;
       const isRename = k === _a.rename;
+      // Pin / Unpin are the desk's too (see _toggleWorkspaceMenu).
+      const isPin = k === "pinWorkspace" || k === "unpinWorkspace";
       out.push({
         key: k,
         label,
         ico,
         service: isRename ? "workspace-rename" : row.service,
-        onDesk: isRename ? 1 : 0,
+        onDesk: isRename || isPin ? 1 : 0,
       });
     }
     return out;
@@ -4470,7 +4749,7 @@ class desk_module extends LetcBox {
         )
       : [];
 
-    return { w, media, target, keys };
+    return { w, media, target, keys: this._withPinAction(keys) };
   }
 
   /**
@@ -4568,6 +4847,11 @@ class desk_module extends LetcBox {
           // the topbar, which is the desk's own chrome; the tile still owns
           // the commit (its _commitRename carries the holder-scoped payload),
           // but it does not own the label being edited.
+          row.uiHandler = [this];
+        }
+        // PIN / UNPIN act on the user's settings, not on the tile: the desk
+        // answers them, as it answers Rename.
+        if (row && (k === "pinWorkspace" || k === "unpinWorkspace")) {
           row.uiHandler = [this];
         }
         return row;
@@ -5457,7 +5741,12 @@ class desk_module extends LetcBox {
     }
     if (this.isDestroyed && this.isDestroyed()) return false;
 
-    const first = rows && rows[0];
+    // The FIRST PINNED workspace when there is one (Lexis, 2026-10-07: it is
+    // the one that shows up when the user enters Drumee), else the first row.
+    const first = rows && (
+      workspacePins.firstPinned(rows, this._pinnedKeys(), (r) => this._workspaceKey(r))
+      || rows[0]
+    );
     await this._showEmptyWorkspaceScreen(!first);
     if (!first) return false;
 
@@ -10958,6 +11247,21 @@ class desk_module extends LetcBox {
       // right-click builds one. Its rows dispatch to the workspace WINDOW.
       case "workspace-menu":
         return this._toggleWorkspaceMenu(cmd);
+
+      // ⋯ menu (desktop) or the phone sheet's action row: pin or unpin the
+      // OPEN workspace. Unpinning asks first.
+      case "workspace-pin":
+      case "workspace-unpin": {
+        this._closeWorkspaceMenu();
+        const wsKey = this._currentWorkspaceKey();
+        if (!wsKey) return;
+        if (service === "workspace-unpin") return this._confirmUnpinWorkspace(wsKey);
+        return this._savePins(workspacePins.pin(this._pinnedKeys(), wsKey));
+      }
+
+      // The pin on a row of the switcher's PINNED section.
+      case "workspace-unpin-row":
+        return this._confirmUnpinWorkspace(cmd.mget("wsKey"));
 
 
       // Switcher row in FOLDER mode (_feedFolderSiblings) → open that sibling.
