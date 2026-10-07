@@ -1601,6 +1601,31 @@
     white-space: nowrap;
   }
 
+  // The active pill's label turns 600, which is wider than 400. In a wrapping
+  // row that made every tap reflow the pills — "To review" jumped between
+  // lines and its neighbours shifted 1-3px — the stutter reported when picking
+  // a status or priority. An invisible bold copy of the text (data-label)
+  // shares the label's grid cell, so the label is always as wide as its bold
+  // form and lighting a pill changes nothing but its colours. (0,3,0) +
+  // !important: the Note's own data-flow rule makes it a flex row.
+  &__pill &__pill-label[data-label] {
+    display: inline-grid !important;
+
+    > .note-content {
+      grid-area: 1 / 1;
+    }
+
+    &::after {
+      content: attr(data-label);
+      grid-area: 1 / 1;
+      font-weight: 600;
+      height: 0;
+      overflow: hidden;
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
+
   // ── time pickers ──────────────────────────────────────────────────────────
   &__time-row {
     align-items: flex-start;

@@ -46,6 +46,9 @@ module.exports = function (ui) {
             Skeletons.Note({
               className: `${pfx}__pill-label`,
               content: LOCALE[o.label] || o.key,
+              // The skin reserves the label's BOLD width from this (::after),
+              // so lighting a pill never changes its width. See __pill-label.
+              attrOpt: { "data-label": LOCALE[o.label] || o.key },
             }),
           ],
         }),

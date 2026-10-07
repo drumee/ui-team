@@ -277,10 +277,26 @@ class __widget_chat_export extends LetcBox {
 
   // ------------------------------------------------------------------ format
 
+  // Flip the selection in place. Re-feeding rebuilt the whole card (scope
+  // list, date inputs, footer) on every click, so a switch could visibly lag
+  // on a conversation with many folders/threads.
   _setFormat(fmt) {
     if (fmt !== "pdf" && fmt !== "json") return;
     this._format = fmt;
-    this.feed(require("./skeleton").default(this));
+    const pfx = this.fig.family;
+    const cards = this.el
+      ? this.el.querySelectorAll(`.${pfx}__format-card[data-format]`)
+      : [];
+    if (cards.length !== 2) {
+      return this.feed(require("./skeleton").default(this));
+    }
+    cards.forEach((card) => {
+      const on = card.getAttribute("data-format") === fmt;
+      card.classList.toggle("is-active", on);
+      card
+        .querySelectorAll(`.${pfx}__format-icon-box, .${pfx}__format-title`)
+        .forEach((n) => n.classList.toggle("is-active", on));
+    });
   }
 
   // ------------------------------------------------------------------ groups collapse
