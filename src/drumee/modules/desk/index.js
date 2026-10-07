@@ -3172,6 +3172,9 @@ class desk_module extends LetcBox {
         .map((r) => `${r.hub_id || r.id}:${r.filename || r.name}:${r.area}`)
         .join("|");
     const before = sig(this._workspaces);
+    // The pins ride the same refresh: a tab that slept through a push from
+    // another device catches up here, at no extra cadence.
+    this._refreshPins();
     // force:1, so this cannot re-enter the stale branch that called it.
     this._wsRevalidating = this._fetchWorkspaces(1)
       .then((rows) => {
@@ -3594,7 +3597,13 @@ class desk_module extends LetcBox {
           className: `${cn}__ws-item-unpin`,
           service: "workspace-unpin-row",
           wsKey,
-          tooltips: LOCALE.UNPIN_WORKSPACE,
+          // The BROWSER's tooltip, not ui-core's `tooltips`: that one is a
+          // node inside the button, so it took the pin's red, widened the row
+          // and put a horizontal scrollbar on the list.
+          attrOpt: {
+            title: LOCALE.UNPIN_WORKSPACE,
+            "aria-label": LOCALE.UNPIN_WORKSPACE,
+          },
           uiHandler: [this],
         }),
         Skeletons.Image.Svg({
@@ -3632,45 +3641,111 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * Store a new pin list and redraw the switcher at once; the request follows.
+   * Pin, unpin or move one workspace. The switcher redraws at once; the server
+   * then applies the SAME operation to the list it holds and answers with the
+   * whole list, which this tab adopts — so a device signed in long ago cannot
+   * write its old copy back over pins made elsewhere. Every other open session
+   * of the user gets the new list pushed (_onPinsPushed).
    *
-   * Only `pinned_workspaces` is posted: drumate.update_settings merges at the
-   * top level from the settings it reads at request time, so every other
-   * setting stays as the server has it. Writes are queued so two quick changes
-   * reach the server in the order they were made.
+   * Operations are queued so they reach the server in the order they were made.
+   * The server's answer is adopted only for the LAST one queued: an earlier
+   * answer would briefly undo a change still on its way.
    *
-   * On failure the previous list comes back — unless a later change has
-   * replaced it in the meantime, which is then the list to keep.
+   * On failure the user is told and the list is re-read from the server.
    *
-   * @param {Array<String>} next
+   * @param {String} op pin | unpin | move
+   * @param {String} key switcher key
+   * @param {String|null} [before] move only: the key to land before, null = last
    * @returns {Promise<Boolean>} whether it was saved
    */
-  _savePins(next) {
+  _pinOp(op, key, before = null) {
     const prev = this._pinnedKeys();
-    // Pins of workspaces that are gone are dropped on the way out — but only
-    // against a list that actually loaded (see workspacePins.prune).
-    const clean = workspacePins.prune(next, this._workspaces, (r) =>
-      this._workspaceKey(r),
-    );
-    if (_.isEqual(prev, clean)) return Promise.resolve(true);
-    this._setLocalPins(clean);
-    const run = () =>
-      this.postService({
-        service: SERVICE.drumate.update_settings,
-        settings: { [workspacePins.SETTINGS_KEY]: clean },
-        hub_id: Visitor.id,
-      })
-        .then(() => true)
+    const local =
+      op === "pin" ? workspacePins.pin(prev, key)
+        : op === "unpin" ? workspacePins.unpin(prev, key)
+          : workspacePins.move(prev, key, before);
+    if (_.isEqual(prev, local)) return Promise.resolve(true);
+    this._setLocalPins(local);
+    const seq = (this._pinSeq = (this._pinSeq || 0) + 1);
+    const svc = SERVICE.drumate && SERVICE.drumate.pinned_workspaces;
+    // A server without the op service yet (UI deployed first): the plain
+    // settings write this feature started with.
+    const send = () =>
+      svc
+        ? this.postService({ service: svc, op, key, before: before || "", hub_id: Visitor.id })
+        : this.postService({
+          service: SERVICE.drumate.update_settings,
+          settings: { [workspacePins.SETTINGS_KEY]: local },
+          hub_id: Visitor.id,
+        });
+    const run = () => {
+      this._pinInFlight = (this._pinInFlight || 0) + 1;
+      return send()
+        .then((res) => {
+          const list = res && res[workspacePins.SETTINGS_KEY];
+          if (seq === this._pinSeq && Array.isArray(list)) {
+            this._setLocalPins(workspacePins.readPins(res));
+          }
+          return true;
+        })
         .catch((e) => {
           this.warn && this.warn("[ws-pin] save failed", e);
-          if (_.isEqual(this._pinnedKeys(), clean)) this._setLocalPins(prev);
           if (window.Wm && _.isFunction(window.Wm.alert)) {
             window.Wm.alert(LOCALE.PIN_WORKSPACE_FAILED);
           }
+          this._pinsStale = 1;
           return false;
+        })
+        .finally(() => {
+          this._pinInFlight -= 1;
+          // A push from another device landed while this tab was waiting, or
+          // the write failed: the order of the two answers is not known, so
+          // ask the server once what the list is now.
+          if (!this._pinInFlight && this._pinsStale) this._refreshPins();
         });
+    };
     this._pinWrite = (this._pinWrite || Promise.resolve()).then(run, run);
     return this._pinWrite;
+  }
+
+  /**
+   * Re-read the pins from the server and redraw. One small GET, run only when
+   * the list is known or suspected to be behind: after a failed write, after a
+   * push that crossed this tab's own request, and on the switcher's existing
+   * background refresh (_revalidateWorkspaces) — which covers a tab that slept
+   * through a push. Never on a timer.
+   */
+  _refreshPins() {
+    const svc = SERVICE.drumate && SERVICE.drumate.pinned_workspaces;
+    if (!svc) return Promise.resolve(false);
+    this._pinsStale = 0;
+    return Promise.resolve(this.fetchService(svc, { op: "get", hub_id: Visitor.id }))
+      .then((res) => {
+        const list = res && res[workspacePins.SETTINGS_KEY];
+        // Something was changed meanwhile; its own answer is the newer truth.
+        if (!Array.isArray(list) || this._pinInFlight) return false;
+        if (!_.isEqual(workspacePins.readPins(res), this._pinnedKeys())) {
+          this._setLocalPins(workspacePins.readPins(res));
+        }
+        return true;
+      })
+      .catch(() => false);
+  }
+
+  /**
+   * Another tab or device changed the pins (server push, via Wm). Adopt the
+   * list — unless this tab has its own change on the way, in which case the
+   * order of the two is unknown and the list is re-read once it lands.
+   */
+  _onPinsPushed(data) {
+    const list = data && data[workspacePins.SETTINGS_KEY];
+    if (!Array.isArray(list)) return;
+    if (this._pinInFlight) {
+      this._pinsStale = 1;
+      return;
+    }
+    const next = workspacePins.readPins(data);
+    if (!_.isEqual(next, this._pinnedKeys())) this._setLocalPins(next);
   }
 
   /** Put `keys` into Visitor's settings and redraw the switcher list. */
@@ -3703,7 +3778,7 @@ class desk_module extends LetcBox {
         cancel_type: "secondary",
         mode: "hbf",
       })
-      .then(() => this._savePins(workspacePins.unpin(this._pinnedKeys(), wsKey)))
+      .then(() => this._pinOp("unpin", wsKey))
       .catch(() => {});
   }
 
@@ -3775,7 +3850,7 @@ class desk_module extends LetcBox {
       if (i === -1) return;
       // "after X" is "before whatever follows X", or the end.
       const beforeKey = where === "before" ? target : (pins[i + 1] || null);
-      this._savePins(workspacePins.move(pins, key, beforeKey));
+      this._pinOp("move", key, beforeKey);
     });
     root.addEventListener("dragend", () => {
       this._pinDragKey = null;
@@ -11256,7 +11331,7 @@ class desk_module extends LetcBox {
         const wsKey = this._currentWorkspaceKey();
         if (!wsKey) return;
         if (service === "workspace-unpin") return this._confirmUnpinWorkspace(wsKey);
-        return this._savePins(workspacePins.pin(this._pinnedKeys(), wsKey));
+        return this._pinOp("pin", wsKey);
       }
 
       // The pin on a row of the switcher's PINNED section.

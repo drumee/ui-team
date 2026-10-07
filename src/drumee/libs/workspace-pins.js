@@ -7,12 +7,12 @@
  * one the desk opens when the user enters Drumee
  * (desk _openWorkspaceOrEmptyScreen).
  *
- * STORED in the user's own settings (`drumate.update_settings`, the
- * yp.entity.settings JSON every device of the account reads at sign-in), under
- * one top-level key holding the switcher's own row keys — `hub:<hub_id>` for a
- * hub, `folder:<nid>` for a personal workspace (desk _workspaceKey). That
- * service merges at the TOP level only, so the whole array is always written
- * and nothing else in the settings is touched.
+ * STORED in the user's own settings (yp.entity.settings, `pinned_workspaces`):
+ * the switcher's own row keys — `hub:<hub_id>` for a hub, `folder:<nid>` for a
+ * personal workspace (desk _workspaceKey). Changed through server-team
+ * `drumate.pinned_workspaces`, which applies ONE operation to the stored list
+ * and pushes the result to the user's other sessions (desk _pinOp /
+ * _onPinsPushed); its service/lib/workspace-pins.js holds the same rules.
  *
  * Pure functions: nothing here reads Visitor or the network, so the desk and
  * the tests drive exactly the same code.
@@ -22,7 +22,7 @@ const SETTINGS_KEY = "pinned_workspaces";
 
 // A switcher key, nothing else. Anything that does not look like one — an old
 // shape, a hand-edited value — is ignored rather than trusted.
-const KEY_RE = /^(hub|folder):[^\s:]+$/;
+const KEY_RE = /^(hub|folder):[A-Za-z0-9]{1,64}$/;
 
 /**
  * The pinned keys out of a settings object, cleaned: strings that look like
@@ -76,8 +76,8 @@ function move(pins, key, beforeKey) {
  * (in their own order).
  *
  * A pin whose workspace is not in `rows` — deleted, left, or not loaded — is
- * simply not shown. It is NOT dropped from `pins` here: an incomplete list
- * must never be what erases a user's pins. See prune().
+ * simply not shown. It is never dropped from the stored list on that basis:
+ * an incomplete list must never be what erases a user's pins.
  *
  * @param {Array} rows desk.home workspaces
  * @param {Array<String>} pins
@@ -102,18 +102,6 @@ function split(rows, pins, keyOf) {
   return { pinned, rest };
 }
 
-/**
- * The pins that still name a workspace in `rows`. Used only when WRITING, and
- * only with a list that actually loaded — an empty `rows` keeps every pin,
- * because "the list failed to load" and "every workspace is gone" look the
- * same from here.
- */
-function prune(pins, rows, keyOf) {
-  if (!rows || !rows.length) return (pins || []).slice();
-  const live = new Set(rows.map(keyOf).filter(Boolean));
-  return (pins || []).filter((k) => live.has(k));
-}
-
 /** The workspace to land on: the first pinned one still listed, or null. */
 function firstPinned(rows, pins, keyOf) {
   return split(rows, pins, keyOf).pinned[0] || null;
@@ -126,6 +114,5 @@ module.exports = {
   unpin,
   move,
   split,
-  prune,
   firstPinned,
 };

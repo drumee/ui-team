@@ -61,13 +61,6 @@ test("split: pinned in pin order, rest in their own order, gone pins hidden", ()
   assert.deepEqual(rest.map(keyOf), ["hub:2", "folder:3"]);
 });
 
-test("prune: drops gone pins, but never against an empty (unloaded) list", () => {
-  const rows = [R("hub:1"), R("hub:2")];
-  assert.deepEqual(pins.prune(["hub:2", "hub:9", "hub:1"], rows, keyOf), ["hub:2", "hub:1"]);
-  assert.deepEqual(pins.prune(["hub:2", "hub:9"], [], keyOf), ["hub:2", "hub:9"]);
-  assert.deepEqual(pins.prune(["hub:2", "hub:9"], null, keyOf), ["hub:2", "hub:9"]);
-});
-
 test("firstPinned: first pin still listed, else null", () => {
   const rows = [R("hub:1"), R("hub:2")];
   assert.equal(pins.firstPinned(rows, ["gone", "hub:2", "hub:1"], keyOf).key, "hub:2");
@@ -144,38 +137,105 @@ test("_withPinAction: empty stays empty (the â‹¯ refetch signal), no workspace â
   assert.equal(fn.call({ ...self, _currentWorkspaceKey: () => null }, keys), keys);
 });
 
-test("_savePins: posts ONLY pinned_workspaces, prunes, rolls back on failure", async () => {
+// _pinOp against a stub desk: `server` plays drumate.pinned_workspaces.
+function pinDesk({ fail = false, service = "drumate.pinned_workspaces", server } = {}) {
   const posted = [];
   const alerts = [];
-  let fail = false;
-  const fn = load("_savePins(next)", {
-    SERVICE: { drumate: { update_settings: "drumate.update_settings" } },
+  const refreshed = [];
+  const fn = load("_pinOp(op, key, before = null)", {
+    SERVICE: { drumate: { update_settings: "drumate.update_settings", pinned_workspaces: service } },
     Visitor: { id: "U1" },
     LOCALE: { PIN_WORKSPACE_FAILED: "failed" },
     window: { Wm: { alert: (m) => alerts.push(m) } },
   });
-  let local = ["hub:1"];
   const self = {
-    _workspaces: [R("hub:1"), R("hub:2")],
-    _workspaceKey: keyOf,
-    _pinnedKeys: () => local,
-    _setLocalPins: (k) => { local = k; },
-    postService: (o) => (posted.push(o), fail ? Promise.reject(new Error("x")) : Promise.resolve({})),
+    local: ["hub:1"],
+    _pinnedKeys() { return this.local; },
+    _setLocalPins(k) { this.local = k; },
+    _refreshPins() { refreshed.push(1); },
+    postService: (o) => {
+      posted.push(o);
+      if (fail) return Promise.reject(new Error("x"));
+      return Promise.resolve(server ? server(o) : {});
+    },
   };
-  assert.equal(await fn.call(self, ["hub:2", "hub:gone", "hub:1"]), true);
-  assert.deepEqual(local, ["hub:2", "hub:1"]);
-  assert.deepEqual(posted[0].settings, { pinned_workspaces: ["hub:2", "hub:1"] });
-  assert.equal(posted[0].hub_id, "U1");
+  self.op = (...a) => fn.apply(self, a);
+  return { self, posted, alerts, refreshed };
+}
 
-  fail = true;
-  assert.equal(await fn.call(self, ["hub:1"]), false);
-  assert.deepEqual(local, ["hub:2", "hub:1"], "rolled back");
-  assert.deepEqual(alerts, ["failed"]);
+test("_pinOp: sends ONE operation, redraws at once, adopts the server's list", async () => {
+  // The server holds a pin made on another device ("hub:9") that this tab has
+  // never seen; its answer must win over the tab's own guess.
+  const { self, posted } = pinDesk({ server: () => ({ pinned_workspaces: ["hub:2", "hub:9", "hub:1"] }) });
+  const p = self.op("pin", "hub:2");
+  assert.deepEqual(self.local, ["hub:2", "hub:1"], "optimistic, before the answer");
+  assert.equal(await p, true);
+  assert.deepEqual(posted[0], {
+    service: "drumate.pinned_workspaces", op: "pin", key: "hub:2", before: "", hub_id: "U1",
+  });
+  assert.deepEqual(self.local, ["hub:2", "hub:9", "hub:1"]);
+});
 
-  // Unchanged list: no request at all.
+test("_pinOp: move carries `before`; a no-op sends nothing", async () => {
+  const { self, posted } = pinDesk({ server: () => ({}) });
+  self.local = ["hub:1", "hub:2"];
+  await self.op("move", "hub:2", "hub:1");
+  assert.equal(posted[0].before, "hub:1");
+  assert.deepEqual(self.local, ["hub:2", "hub:1"]);
   const n = posted.length;
-  assert.equal(await fn.call(self, ["hub:2", "hub:1"]), true);
+  assert.equal(await self.op("unpin", "hub:gone"), true);
   assert.equal(posted.length, n);
+});
+
+test("_pinOp: only the LAST queued answer is adopted", async () => {
+  const answers = [["hub:2", "hub:1"], ["hub:3", "hub:2", "hub:1"]];
+  const { self } = pinDesk({ server: () => ({ pinned_workspaces: answers.shift() }) });
+  const a = self.op("pin", "hub:2");
+  const b = self.op("pin", "hub:3");
+  await a;
+  // The first answer predates "hub:3": adopting it would flicker the pin away.
+  assert.deepEqual(self.local, ["hub:3", "hub:2", "hub:1"]);
+  await b;
+  assert.deepEqual(self.local, ["hub:3", "hub:2", "hub:1"]);
+});
+
+test("_pinOp: failure alerts and re-reads the server's list", async () => {
+  const { self, alerts, refreshed } = pinDesk({ fail: true });
+  assert.equal(await self.op("pin", "hub:2"), false);
+  assert.deepEqual(alerts, ["failed"]);
+  assert.equal(refreshed.length, 1);
+});
+
+test("_pinOp: a server without the op service falls back to update_settings", async () => {
+  const { self, posted } = pinDesk({ service: null });
+  await self.op("pin", "hub:2");
+  assert.deepEqual(posted[0], {
+    service: "drumate.update_settings",
+    settings: { pinned_workspaces: ["hub:2", "hub:1"] },
+    hub_id: "U1",
+  });
+});
+
+test("_onPinsPushed: adopts another device's list, defers while this tab is writing", () => {
+  const fn = load("_onPinsPushed(data)");
+  const self = {
+    local: ["hub:1"],
+    _pinnedKeys() { return this.local; },
+    _setLocalPins(k) { this.local = k; },
+  };
+  fn.call(self, { pinned_workspaces: ["hub:5", "hub:1", "junk"] });
+  assert.deepEqual(self.local, ["hub:5", "hub:1"]);
+  fn.call(self, {});
+  assert.deepEqual(self.local, ["hub:5", "hub:1"], "malformed push ignored");
+  self._pinInFlight = 1;
+  fn.call(self, { pinned_workspaces: ["hub:7"] });
+  assert.deepEqual(self.local, ["hub:5", "hub:1"]);
+  assert.equal(self._pinsStale, 1, "re-read once the write lands");
+});
+
+test("push is routed from Wm to the desk", () => {
+  const PUSH = fs.readFileSync(path.join(__dirname, "../src/drumee/modules/desk/wm/push.js"), "utf8");
+  assert.match(PUSH, /case "drumate\.pinned_workspaces":\s*\n\s*if \(typeof Desk !== "undefined" && Desk && _\.isFunction\(Desk\._onPinsPushed\)\) \{\s*\n\s*Desk\._onPinsPushed\(data\);/);
 });
 
 test("landing: the first pinned workspace, else the first row", () => {
