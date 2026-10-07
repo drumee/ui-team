@@ -28,6 +28,9 @@ const {
 const { showTaskToast, isToastMuted } = require("./task-toast");
 
 const POP = ".tasks-panel__list-pop";
+// The List header's height — mirrors `__list-head` in the skin. A row whose
+// bottom is above this line has scrolled under the sticky header.
+const LIST_HEAD_H = 40;
 
 // Every service the list's cells and editor declare. onUiEvent hands these
 // straight to _onListUiEvent.
@@ -156,18 +159,8 @@ module.exports = {
         else this._listSelected.add(id);
         return this._listRepaint();
       }
-      case "list-select-all": {
-        // The rows that are BUILT — a box ticking rows past the render window
-        // would delete tasks the user never saw.
-        const ids = Array.from(
-          this.el.querySelectorAll('.tasks-panel__list-row[data-sub="0"]'),
-        ).map((el) => el.dataset.tid);
-        if (!this._listSelected) this._listSelected = new Set();
-        const every = ids.length && ids.every((id) => this._listSelected.has(id));
-        if (every) ids.forEach((id) => this._listSelected.delete(id));
-        else ids.forEach((id) => this._listSelected.add(id));
-        return this._listRepaint();
-      }
+      case "list-select-all":
+        return this._toggleListSelectAll(trigger);
       case "list-remove-selected":
         return this._removeListSelected();
       case "list-reload": {
@@ -422,9 +415,50 @@ module.exports = {
 
   // ── Paint, placement, keyboard ──────────────────────────────────────────
   _listRepaint() {
-    if (this.getView() !== "list") return;
-    this._refreshViewBody({ enter: false });
+    if (this.getView() !== "list") return Promise.resolve();
+    const done = this._refreshViewBody({ enter: false });
     this._afterListPaint();
+    return Promise.resolve(done);
+  },
+
+  /**
+   * The header checkbox: tick every BUILT top-level row, or clear them all.
+   *
+   * Ticking re-patches every row of the list, which on a long list holds the
+   * main thread long enough to read as a dead click — so the box shows a
+   * spinner first. Two frames are yielded before the work so the spinner is
+   * actually painted (set and then blocked in the same task, it never shows);
+   * it clears once the repaint has landed. A click while it spins is ignored.
+   */
+  _toggleListSelectAll(trigger) {
+    if (this._listSelectingAll) return;
+    this._listSelectingAll = true;
+    const SEL = ".tasks-panel__list-th-task .tasks-panel__list-check";
+    const box = (trigger && trigger.el) || (this.el && this.el.querySelector(SEL));
+    if (box) box.dataset.loading = "1";
+    const raf =
+      typeof requestAnimationFrame === "function" ? requestAnimationFrame : (f) => setTimeout(f, 16);
+    return new Promise((resolve) => raf(() => raf(resolve)))
+      .then(() => {
+        if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
+        // The rows that are BUILT — a box ticking rows past the render window
+        // would delete tasks the user never saw.
+        const ids = Array.from(
+          this.el.querySelectorAll('.tasks-panel__list-row[data-sub="0"]'),
+        ).map((el) => el.dataset.tid);
+        if (!this._listSelected) this._listSelected = new Set();
+        const every = ids.length && ids.every((id) => this._listSelected.has(id));
+        if (every) ids.forEach((id) => this._listSelected.delete(id));
+        else ids.forEach((id) => this._listSelected.add(id));
+        return this._listRepaint();
+      })
+      .finally(() => {
+        this._listSelectingAll = false;
+        // The patch may have kept the node or replaced it — clear both.
+        if (box) box.dataset.loading = "0";
+        const now = this.el && this.el.querySelector(SEL);
+        if (now) now.dataset.loading = "0";
+      });
   },
 
   // _refreshViewBody patches asynchronously (part lookup + FLIP), so place the
@@ -460,7 +494,7 @@ module.exports = {
     const scroller = wrap.querySelector(".tasks-panel__list");
     const s = scroller ? scroller.getBoundingClientRect() : w;
     // Scrolled out of sight: hide rather than float over the header.
-    if (a.bottom < s.top + 48 || a.top > s.bottom) {
+    if (a.bottom < s.top + LIST_HEAD_H || a.top > s.bottom) {
       pop.dataset.placed = "0";
       return;
     }

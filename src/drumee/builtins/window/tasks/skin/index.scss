@@ -1367,6 +1367,24 @@ $theme-colors: (
     }
   }
 
+  // The column's "New task" button: app-add before the label, same grey.
+  &__add-btn {
+    gap: 6px;
+  }
+
+  &__add-ico {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+
+    svg {
+      display: block;
+      width: 10px;
+      height: 10px;
+      fill: var(--normal-fg-50, #65656c);
+    }
+  }
+
   &__add-label {
     @include drumee.typo(
       $size: 11px,
@@ -5192,6 +5210,8 @@ $theme-colors: (
   }
 
   &__viewbar-new {
+    align-items: center;
+    gap: 6px;
     padding: 5px 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -5201,6 +5221,24 @@ $theme-colors: (
     &:hover {
       opacity: 0.92;
     }
+  }
+
+  // app-add: the bare 12px plus, painted white on the primary fill.
+  &__viewbar-new-ico {
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+
+    svg {
+      display: block;
+      width: 10px;
+      height: 10px;
+      fill: #fff;
+    }
+  }
+
+  &__viewbar-new-label {
+    @include drumee.typo($size: 13px, $weight: 600, $line: 18px, $color: #fff);
   }
 
   // "+ New board" — outlined pill (Figma 2040-53814).
@@ -5219,8 +5257,16 @@ $theme-colors: (
   }
 
   &__viewbar-board-ico {
-    width: 14px;
-    height: 14px;
+    flex-shrink: 0;
+    width: 10px;
+    height: 10px;
+
+    svg {
+      display: block;
+      width: 10px;
+      height: 10px;
+      fill: var(--normal-fg-10, #0b0a21);
+    }
   }
 
   &__viewbar-board-label {
@@ -5252,8 +5298,15 @@ $theme-colors: (
   }
 
   &__viewbar-filter-ico {
-    width: 16px;
-    height: 16px;
+    flex-shrink: 0;
+    width: 13px;
+    height: 13px;
+
+    svg {
+      display: block;
+      width: 13px;
+      height: 13px;
+    }
   }
 
   &__viewbar-filter-label {
@@ -5378,8 +5431,8 @@ $theme-colors: (
 
     // The wrapper's size is half of it; the sprite <svg> needs its own box.
     svg {
-      width: 14px;
-      height: 14px;
+      width: 12px;
+      height: 12px;
     }
 
     &:hover {
@@ -5430,15 +5483,15 @@ $theme-colors: (
 
   &__tcal-view-ico,
   &__tcal-view-caret {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex: 0 0 auto;
     color: currentColor;
   }
 
   &__tcal-view-caret {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     transition: transform 0.15s ease-out;
   }
 
@@ -6505,8 +6558,10 @@ $theme-colors: (
   // single scroll container, both axes: the sticky header and the rows live in
   // the SAME box, so every column stays aligned under its header.
   //
-  // Grid (Figma): Task 400 · eight columns of 172, rows and header 48 high,
-  // every cell padded 8 with a #E5E5EA hairline.
+  // Grid: Task 360 · eight columns of 156, rows and header 40 high, every
+  // cell padded 6 with a #E5E5EA hairline — a compact pass on the Figma grid
+  // (Task 400 · 172 · 48 · 8). The header height is mirrored in list-inline.js
+  // (LIST_HEAD_H), which hides the floating editor once its row scrolls under it.
   &__list-wrap {
     flex: 1 1 auto;
     min-height: 0;
@@ -6519,24 +6574,36 @@ $theme-colors: (
     min-height: 0;
     overflow: auto;
     margin: 12px 12px 0;
-    // Figma scroll bar: 8px, Overlay/light track, Primary/20 thumb.
+    // Same thin neutral bar as the detail panel's columns.
     scrollbar-width: thin;
-    scrollbar-color: #b1adff rgba(0, 0, 0, 0.05);
+    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+      border-radius: 6px;
+    }
+    &::-webkit-scrollbar-track,
+    &::-webkit-scrollbar-corner {
+      background: transparent;
+    }
   }
 
   &__list-head,
   &__list-row {
-    flex: 0 0 48px;
-    height: 48px;
-    min-width: 1776px;
+    flex: 0 0 40px;
+    height: 40px;
+    min-width: 1608px;
     align-items: stretch;
     box-sizing: border-box;
 
     & > * {
-      flex: 0 0 172px;
-      width: 172px;
+      flex: 0 0 156px;
+      width: 156px;
       min-width: 0;
-      padding: 8px;
+      padding: 6px;
       align-items: center;
       box-sizing: border-box;
       border-right: 1px solid #e5e5ea;
@@ -6546,7 +6613,7 @@ $theme-colors: (
     // The Task column absorbs any width the window has beyond the grid, and
     // stays pinned while the other columns scroll under it.
     & > *:first-child {
-      flex: 1 0 400px;
+      flex: 1 0 360px;
       width: auto;
       border-left: 1px solid #e5e5ea;
       position: sticky;
@@ -6569,11 +6636,11 @@ $theme-colors: (
   }
 
   &__list-th-task {
-    gap: 10px;
+    gap: 8px;
   }
 
   &__list-th {
-    @include drumee.typo($size: 12px, $weight: 600, $line: 14px, $color: #0b0a21);
+    @include drumee.typo($size: 11px, $weight: 600, $line: 14px, $color: #0b0a21);
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -6628,11 +6695,11 @@ $theme-colors: (
 
   // Task cell — checkbox + chevron + title + hover actions.
   &__list-title-cell {
-    gap: 10px;
+    gap: 8px;
   }
 
   &__list-title-cell[data-sub="1"] {
-    padding-left: 34px;
+    padding-left: 28px;
   }
 
   &__list-title-wrap {
@@ -6653,7 +6720,7 @@ $theme-colors: (
 
   &__list-title {
     min-width: 0;
-    @include drumee.typo($size: 14px, $weight: 600, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 13px, $weight: 600, $line: 16px, $color: #0b0a21);
     font-weight: 600;
 
     .note-content {
@@ -6675,7 +6742,7 @@ $theme-colors: (
     padding: 0 6px;
     border-radius: 100px;
     background: rgba(0, 0, 0, 0.05);
-    @include drumee.typo($size: 11px, $weight: 500, $line: 16px, $color: #65656c);
+    @include drumee.typo($size: 10px, $weight: 500, $line: 14px, $color: #65656c);
 
     &[data-complete="1"] {
       background: #dff5e7;
@@ -6683,11 +6750,14 @@ $theme-colors: (
     }
   }
 
-  // Select checkbox (Figma 16×16, Overlay/dark border, Primary/50 when ticked).
+  // Select checkbox (Figma 16×16 Overlay/dark border, Primary/50 when ticked;
+  // 14 in the compact grid). The tick is `upload-checked`, a STROKED path —
+  // the icon build strips fill/stroke attributes, so it is drawn here as a
+  // white line, never filled.
   &__list-check {
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 3px;
     box-sizing: border-box;
@@ -6698,10 +6768,11 @@ $theme-colors: (
     position: relative;
 
     svg {
-      width: 10px !important;
-      height: 10px !important;
+      width: 12px !important;
+      height: 12px !important;
       opacity: 0;
-      fill: #fff;
+      fill: none;
+      stroke: #fff;
       color: #fff;
     }
     &[data-checked="1"] {
@@ -6711,31 +6782,74 @@ $theme-colors: (
         opacity: 1;
       }
     }
+    // Header only ("some rows selected"). The dash is laid ON the box, not
+    // beside the hidden tick: as a flex sibling it shared the 12px inside
+    // with the tick's 12px and was pushed off-centre, out of the box.
+    &[data-checked="mixed"] svg {
+      display: none;
+    }
     &[data-checked="mixed"]::after {
       content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
       width: 8px;
       height: 2px;
       border-radius: 1px;
       background: #433cc5;
+      transform: translate(-50%, -50%);
     }
     &[data-disabled="1"] {
       cursor: default;
       opacity: 0.5;
+    }
+    // Header select-all while it ticks the rows (_toggleListSelectAll): a
+    // ring spinner on a neutral box. Wins over `mixed` (same ::after) by
+    // coming later at equal specificity.
+    &[data-loading="1"] {
+      pointer-events: none;
+      background: transparent;
+      border-color: rgba(67, 60, 197, 0.35);
+
+      svg {
+        display: none;
+      }
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(67, 60, 197, 0.25);
+        border-top-color: #433cc5;
+        background: transparent;
+        box-sizing: border-box;
+        transform: translate(-50%, -50%);
+        animation: tasks-list-check-spin 0.7s linear infinite;
+      }
+    }
+  }
+
+  @keyframes tasks-list-check-spin {
+    to {
+      transform: translate(-50%, -50%) rotate(360deg);
     }
   }
 
   // Expand/collapse for a task with children. Fixed width so the inert
   // `data-empty` spacer reserves exactly the same column.
   &__list-chevron {
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
     transition: transform 0.15s ease;
 
     svg {
-      width: 16px !important;
-      height: 16px !important;
+      width: 14px !important;
+      height: 14px !important;
       fill: #65656c;
       color: #65656c;
     }
@@ -6753,13 +6867,13 @@ $theme-colors: (
   &__list-row-acts {
     flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   &__list-row-act {
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
     position: relative;
     overflow: visible;
@@ -6767,8 +6881,8 @@ $theme-colors: (
     transition: opacity 0.12s;
 
     svg {
-      width: 16px !important;
-      height: 16px !important;
+      width: 14px !important;
+      height: 14px !important;
       fill: #65656c;
       color: #65656c;
     }
@@ -6807,25 +6921,25 @@ $theme-colors: (
   }
 
   &__list-caret {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
 
     svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 12px !important;
+      height: 12px !important;
     }
   }
 
-  // Priority — filled pill (32 high, 2 16, radius 100); outline when unset.
+  // Priority — filled pill (26 high, 2 12, radius 100); outline when unset.
   &__list-priority {
     align-items: center;
     gap: 4px;
-    height: 32px;
-    padding: 2px 16px;
+    height: 26px;
+    padding: 2px 12px;
     border-radius: 100px;
     box-sizing: border-box;
-    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #fff);
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #fff);
 
     &[data-priority="low"] {
       background: #54b684;
@@ -6846,15 +6960,15 @@ $theme-colors: (
     }
   }
 
-  // Status — tinted pill (24 high, 2 12, radius 16) + 8px dot.
+  // Status — tinted pill (22 high, 2 10, radius 16) + 6px dot.
   &__list-status {
     align-items: center;
-    gap: 8px;
-    height: 24px;
-    padding: 2px 12px;
+    gap: 6px;
+    height: 22px;
+    padding: 2px 10px;
     border-radius: 16px;
     box-sizing: border-box;
-    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
     @include theme-tint(rgba(0, 0, 0, 0.05));
 
     &[data-empty="1"] {
@@ -6865,9 +6979,9 @@ $theme-colors: (
   }
 
   &__list-status-dot {
-    flex: 0 0 8px;
-    width: 8px;
-    height: 8px;
+    flex: 0 0 6px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #aeaeb2;
   }
@@ -6876,13 +6990,13 @@ $theme-colors: (
   &__list-date {
     align-items: center;
     gap: 4px;
-    height: 32px;
-    padding: 2px 12px;
+    height: 26px;
+    padding: 2px 10px;
     border-radius: 100px;
     background: rgba(0, 0, 0, 0.05);
     box-sizing: border-box;
     white-space: nowrap;
-    @include drumee.typo($size: 14px, $weight: 400, $line: 32px, $color: #34343a);
+    @include drumee.typo($size: 12px, $weight: 400, $line: 22px, $color: #34343a);
 
     &[data-overdue="1"] {
       color: #d74e49;
@@ -6892,18 +7006,18 @@ $theme-colors: (
       background: transparent;
       border: 1px solid rgba(0, 0, 0, 0.05);
       color: #0b0a21;
-      line-height: 17px;
+      line-height: 16px;
     }
   }
 
   &__list-date-ico {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
 
     svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 12px !important;
+      height: 12px !important;
       fill: #34343a;
       color: #34343a;
     }
@@ -6912,7 +7026,7 @@ $theme-colors: (
   &__list-desc {
     flex: 1 1 auto;
     min-width: 0;
-    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
 
     .note-content {
       overflow: hidden;
@@ -6931,20 +7045,20 @@ $theme-colors: (
     min-width: 0;
     align-items: center;
     gap: 4px;
-    padding: 4px 8px;
+    padding: 3px 6px;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.05);
     box-sizing: border-box;
   }
 
   &__list-file-ico {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
 
     svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 12px !important;
+      height: 12px !important;
       fill: #0b0a21;
       color: #0b0a21;
     }
@@ -6952,7 +7066,7 @@ $theme-colors: (
 
   &__list-file-name {
     min-width: 0;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 11px, $weight: 400, $line: 16px, $color: #0b0a21);
 
     .note-content {
       overflow: hidden;
@@ -6964,41 +7078,41 @@ $theme-colors: (
   &__list-file-more,
   &__list-person-more {
     flex: 0 0 auto;
-    padding: 4px 8px;
+    padding: 3px 6px;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.05);
-    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 11px, $weight: 400, $line: 16px, $color: #0b0a21);
   }
 
-  // Assignee / reporter chips (Primary/40 @ 10%, radius 4, 4 8, gap 8).
+  // Assignee / reporter chips (Primary/40 @ 10%, radius 4, 3 6, gap 6).
   &__list-assignees-cell,
   &__list-reporter-cell {
-    gap: 8px;
+    gap: 6px;
   }
 
   &__list-person {
     flex: 0 1 auto;
     min-width: 0;
     align-items: center;
-    gap: 8px;
-    padding: 4px 8px;
+    gap: 6px;
+    padding: 3px 6px;
     border-radius: 4px;
     background: rgba(89, 80, 255, 0.1);
     box-sizing: border-box;
   }
 
   &__list-person-avatar {
-    flex: 0 0 17px;
-    width: 17px;
-    height: 17px;
+    flex: 0 0 15px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
     overflow: hidden;
-    font-size: 8px;
+    font-size: 7px;
   }
 
   &__list-person-name {
     min-width: 0;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #433cc5);
+    @include drumee.typo($size: 11px, $weight: 400, $line: 16px, $color: #433cc5);
 
     .note-content {
       overflow: hidden;
@@ -7008,15 +7122,15 @@ $theme-colors: (
   }
 
   &__list-person-x {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
     cursor: pointer;
 
     svg {
-      width: 9px !important;
-      height: 9px !important;
-      margin: 2.5px;
+      width: 8px !important;
+      height: 8px !important;
+      margin: 2px;
       fill: #65656c;
       color: #65656c;
     }
@@ -7029,24 +7143,24 @@ $theme-colors: (
   &__list-empty {
     padding: 24px 12px;
     text-align: center;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #84848c);
+    @include drumee.typo($size: 11px, $weight: 400, $line: 16px, $color: #84848c);
   }
 
   // Footer — "Remove selected" + "N of M ⟳" (Figma 867:104812).
   &__list-foot {
     flex: 0 0 auto;
     align-items: center;
-    gap: 12px;
-    padding: 20px 12px;
+    gap: 10px;
+    padding: 12px;
   }
 
   &__list-remove {
     flex: 0 0 auto;
-    padding: 12px 20px;
-    border-radius: 12px;
+    padding: 8px 14px;
+    border-radius: 10px;
     background: rgba(246, 81, 75, 0.1);
     cursor: pointer;
-    @include drumee.typo($size: 14px, $weight: 600, $line: 17px, $color: #d74e49);
+    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #d74e49);
     font-weight: 600;
 
     &:hover {
@@ -7062,18 +7176,18 @@ $theme-colors: (
   }
 
   &__list-count-text {
-    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
   }
 
   &__list-reload {
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
 
     svg {
-      width: 16px !important;
-      height: 16px !important;
+      width: 14px !important;
+      height: 14px !important;
       fill: #0b0a21;
       color: #0b0a21;
     }
@@ -7091,9 +7205,9 @@ $theme-colors: (
     z-index: 20;
     top: 0;
     left: 0;
-    gap: 8px;
-    padding: 12px;
-    border-radius: 12px;
+    gap: 6px;
+    padding: 10px;
+    border-radius: 10px;
     background: #fff;
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     box-sizing: border-box;
@@ -7106,24 +7220,25 @@ $theme-colors: (
 
     &[data-kind="priority"],
     &[data-kind="status"] {
-      width: 149px;
+      width: 132px;
       gap: 0;
     }
     &[data-kind="start_date"],
     &[data-kind="due_date"] {
-      width: 277px;
+      // 7 day cells of 30 + 2 × 10 padding.
+      width: 230px;
     }
     &[data-kind="files"] {
-      width: 240px;
+      width: 216px;
     }
     &[data-kind="assignees"],
     &[data-kind="reporter"] {
-      width: 227px;
+      width: 204px;
     }
     // Text editors are the cell itself, outlined in Primary/40.
     &[data-kind="title"],
     &[data-kind="description"] {
-      padding: 8px 12px;
+      padding: 6px 10px;
       border: 1px solid #5950ff;
       border-radius: 8px;
       box-shadow: none;
@@ -7132,12 +7247,12 @@ $theme-colors: (
   }
 
   &__list-pop-title {
-    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
   }
 
   &__list-pop-text {
     align-items: center;
-    gap: 16px;
+    gap: 10px;
   }
 
   &__list-pop-input {
@@ -7154,28 +7269,28 @@ $theme-colors: (
       background: transparent;
       resize: none;
       caret-color: #0b0a21;
-      @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+      @include drumee.typo($size: 13px, $weight: 400, $line: 16px, $color: #0b0a21);
     }
   }
   &__list-pop[data-kind="title"] &__list-pop-input input {
     font-weight: 600;
-    height: 30px;
+    height: 24px;
   }
   &__list-pop[data-kind="description"] &__list-pop-input textarea {
-    height: 34px;
+    height: 32px;
   }
 
   &__list-pop-btns {
     flex: 0 0 auto;
-    gap: 8px;
+    gap: 6px;
   }
 
   &__list-pop-btn {
-    flex: 0 0 32px;
-    width: 32px;
-    height: 32px;
-    padding: 7px;
-    border-radius: 8px;
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
+    padding: 5px;
+    border-radius: 6px;
     border: 1px solid rgba(0, 0, 0, 0.05);
     background: #fff;
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15), 0 7px 10px rgba(0, 0, 0, 0.05);
@@ -7183,8 +7298,8 @@ $theme-colors: (
     cursor: pointer;
 
     svg {
-      width: 18px !important;
-      height: 18px !important;
+      width: 14px !important;
+      height: 14px !important;
       fill: #0b0a21;
       color: #0b0a21;
     }
@@ -7193,17 +7308,26 @@ $theme-colors: (
     }
   }
 
-  &__list-pop-error {
-    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #d74e49);
+  // Save: upload-checked is a STROKED tick, and the icon build strips every
+  // fill/stroke attribute — left to the rule above it would fill the open
+  // path as a dark sliver. Draw it as a line, in the glyph's own green.
+  &__list-pop-btn--save svg {
+    fill: none;
+    stroke: #10b667;
+    color: #10b667;
   }
 
-  // Priority / status menu rows (8 padding, radius 8, 12px dot).
+  &__list-pop-error {
+    @include drumee.typo($size: 11px, $weight: 400, $line: 14px, $color: #d74e49);
+  }
+
+  // Priority / status menu rows (6 padding, radius 6, 10px dot).
   &__list-pop-item {
     flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
-    padding: 8px;
-    border-radius: 8px;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 6px;
     cursor: pointer;
 
     &:hover,
@@ -7216,16 +7340,16 @@ $theme-colors: (
   }
 
   &__list-pop-dot {
-    flex: 0 0 12px;
-    width: 12px;
-    height: 12px;
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
   }
 
   &__list-pop-label {
     flex: 1 1 auto;
     min-width: 0;
-    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
 
     .note-content {
       overflow: hidden;
@@ -7234,24 +7358,24 @@ $theme-colors: (
     }
   }
 
-  // Search bar (Overlay/light, radius 12, 8 12).
+  // Search bar (Overlay/light, radius 10, 6 10).
   &__list-pop-search {
     flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-radius: 12px;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 10px;
     background: rgba(0, 0, 0, 0.05);
   }
 
   &__list-pop-search-ico {
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
 
     svg {
-      width: 16px !important;
-      height: 16px !important;
+      width: 14px !important;
+      height: 14px !important;
       fill: #84848c;
       color: #84848c;
     }
@@ -7267,7 +7391,7 @@ $theme-colors: (
       outline: 0;
       padding: 0;
       background: transparent;
-      @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+      @include drumee.typo($size: 11px, $weight: 400, $line: 16px, $color: #0b0a21);
 
       &::placeholder {
         color: #84848c;
@@ -7277,39 +7401,51 @@ $theme-colors: (
 
   &__list-pop-list {
     flex: 0 1 auto;
-    max-height: 196px;
+    max-height: 176px;
     overflow-y: auto;
-    gap: 4px;
+    gap: 2px;
     scrollbar-width: thin;
-    scrollbar-color: #847eff rgba(0, 0, 0, 0.05);
+    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+      border-radius: 6px;
+    }
+    &::-webkit-scrollbar-track,
+    &::-webkit-scrollbar-corner {
+      background: transparent;
+    }
   }
 
   &__list-pop-empty {
-    padding: 8px 4px;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #84848c);
+    padding: 6px 4px;
+    @include drumee.typo($size: 11px, $weight: 400, $line: 16px, $color: #84848c);
   }
 
   &__list-pop-member {
-    padding: 4px;
+    padding: 3px 4px;
   }
 
   &__list-pop-avatar {
-    flex: 0 0 32px;
-    width: 32px;
-    height: 32px;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     overflow: hidden;
   }
 
   &__list-pop-tick {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
     visibility: hidden;
 
     svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 12px !important;
+      height: 12px !important;
       fill: #5950ff;
       color: #5950ff;
     }
@@ -7335,13 +7471,13 @@ $theme-colors: (
   }
 
   &__list-pop-file-ico {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
 
     svg {
-      width: 16px !important;
-      height: 16px !important;
+      width: 14px !important;
+      height: 14px !important;
       margin: 2px;
       fill: #65656c;
       color: #65656c;
@@ -7349,10 +7485,10 @@ $theme-colors: (
   }
 
   &__list-pop-box {
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
-    border-radius: 4px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
     border: 1px solid rgba(0, 0, 0, 0.2);
     box-sizing: border-box;
     position: relative;
@@ -7364,10 +7500,10 @@ $theme-colors: (
       &::after {
         content: "";
         position: absolute;
-        left: 4.5px;
-        top: 1.5px;
-        width: 4px;
-        height: 8px;
+        left: 3.75px;
+        top: 1px;
+        width: 3.5px;
+        height: 7px;
         border: solid #fff;
         border-width: 0 1.5px 1.5px 0;
         transform: rotate(45deg);
@@ -7379,8 +7515,8 @@ $theme-colors: (
   &__list-date-field {
     flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
-    padding: 12px;
+    gap: 6px;
+    padding: 8px 10px;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.05);
 
@@ -7403,29 +7539,29 @@ $theme-colors: (
       padding: 0;
       background: transparent;
       caret-color: #433cc5;
-      @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+      @include drumee.typo($size: 11px, $weight: 400, $line: 16px, $color: #0b0a21);
     }
   }
 
   &__list-cal-head {
-    flex: 0 0 48px;
+    flex: 0 0 36px;
     align-items: center;
     justify-content: space-between;
   }
 
   &__list-cal-nav {
-    flex: 0 0 30px;
-    width: 30px;
-    height: 30px;
-    padding: 9px;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    padding: 7px;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.05);
     box-sizing: border-box;
     cursor: pointer;
 
     svg {
-      width: 12px !important;
-      height: 12px !important;
+      width: 10px !important;
+      height: 10px !important;
       fill: #65656c;
       color: #65656c;
     }
@@ -7435,7 +7571,7 @@ $theme-colors: (
   }
 
   &__list-cal-month {
-    @include drumee.typo($size: 14px, $weight: 600, $line: 17px, $color: #433cc5);
+    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #433cc5);
     font-weight: 600;
   }
 
@@ -7445,21 +7581,21 @@ $theme-colors: (
   }
 
   &__list-cal-week {
-    flex: 0 0 36px;
+    flex: 0 0 30px;
     justify-content: space-between;
   }
 
   &__list-cal-wd,
   &__list-cal-day {
-    flex: 0 0 36px;
-    width: 36px;
-    height: 36px;
+    flex: 0 0 30px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     box-sizing: border-box;
     justify-content: center;
     align-items: center;
     text-align: center;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 36px, $color: #84848c);
+    @include drumee.typo($size: 11px, $weight: 400, $line: 30px, $color: #84848c);
   }
 
   &__list-cal-day {
@@ -7488,19 +7624,19 @@ $theme-colors: (
   &__list-cal-foot {
     flex: 0 0 auto;
     justify-content: flex-end;
-    gap: 12px;
+    gap: 8px;
     padding-top: 6px;
     border-top: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   &__list-cal-cancel,
   &__list-cal-done {
-    height: 36px;
-    padding: 0 12px;
-    border-radius: 12px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 10px;
     align-items: center;
     cursor: pointer;
-    @include drumee.typo($size: 12px, $weight: 600, $line: 36px, $color: #65656c);
+    @include drumee.typo($size: 11px, $weight: 600, $line: 28px, $color: #65656c);
     font-weight: 600;
   }
 
@@ -7513,7 +7649,7 @@ $theme-colors: (
   }
 
   &__list-cal-done {
-    gap: 9px;
+    gap: 6px;
     background: #5950ff;
     color: #fff;
 
@@ -7523,13 +7659,13 @@ $theme-colors: (
   }
 
   &__list-cal-done-ico {
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
 
     svg {
-      width: 18px !important;
-      height: 18px !important;
+      width: 14px !important;
+      height: 14px !important;
       fill: #fff;
       color: #fff;
     }
@@ -8798,12 +8934,14 @@ $theme-colors: (
     }
   }
 
+  // Priority chip — the label on the priority's own colour (set inline).
   &__subtask-dot {
     flex-shrink: 0;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
+    padding: 1px 8px;
+    border-radius: 100px;
+    white-space: nowrap;
+    font-weight: 500;
+    @include drumee.typo($size: 10px, $weight: 500, $line: 16px, $color: #fff);
   }
 
   &__subtask-empty {
@@ -9273,7 +9411,7 @@ html[data-theme="dark"] .tasks-panel {
   }
 
   &__subtask-dot {
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+    color: #fff;
   }
 
   // The creator card and its chip dropdown are white/hairline in light mode;

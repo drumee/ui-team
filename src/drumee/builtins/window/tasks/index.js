@@ -9998,7 +9998,9 @@ class __tasks_panel extends LetcBox {
     if (opt.dropScroll) {
       savedScroll = savedScroll.filter((s) => s.selector !== opt.dropScroll);
     }
-    this._withPart("view-host").then((host) => {
+    // Returned so a caller can tell when the repaint has landed (the List's
+    // select-all clears its spinner on it); existing callers ignore it.
+    return this._withPart("view-host").then((host) => {
       if (!host || !this.el) return;
       const root = require("./skeleton")(this);
       const node = (root.kids || []).find(
