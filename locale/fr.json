@@ -3300,6 +3300,12 @@
   "MIGRATE_GDRIVE_SUMMARY_EXISTING": "{0} déjà présent(s), ignoré(s).",
   "MIGRATE_GDRIVE_CANCEL_TOO_LATE": "La migration était déjà terminée avant de pouvoir être annulée.",
   "MIGRATE_GDRIVE_DONE_HINT_NONE": "Aucun nouveau fichier n'a été importé.",
+  "SALES_MAIL_TITLE": "Contacter notre équipe commerciale",
+  "SALES_MAIL_TEXT": "Écrivez-nous à cette adresse :",
+  "SALES_MAIL_GMAIL": "Ouvrir dans Gmail",
+  "SALES_MAIL_OUTLOOK": "Ouvrir dans Outlook.com",
+  "SALES_MAIL_APP": "Ouvrir mon application de messagerie",
+  "SALES_MAIL_COPY": "Copier l'adresse e-mail",
   "CONTACT_INVITE_JOINED": "Vous êtes maintenant en contact avec {0}",
   "CONTACT_CONNECTED_SAY_HELLO": "Vous êtes maintenant en contact. Dites bonjour !"
 }
