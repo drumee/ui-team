@@ -2508,6 +2508,10 @@ class __panel_activity extends LetcBox {
     this._meetingItems = (this._meetingItems || []).filter(m => m.item_key !== key);
     this._meetingItems.unshift({
       ...data,
+      // The push carries the workspace's shared name (yp.hub profile), which
+      // a desk rename never writes. Name it the way this desk does, as the
+      // stored rollup for the same meeting will after the next refresh.
+      hub_name: this._ownWorkspaceName(hub_id) || data.hub_name,
       kind: 'activity_item',
       category: 'meeting',
       type: 'meeting',
@@ -2530,6 +2534,18 @@ class __panel_activity extends LetcBox {
       logicalParent: this,
     });
     this.refreshActivity(0);
+  }
+
+  /**
+   * This desk's label for a workspace, from the desk's cached workspace list
+   * (a hub row's nid is the hub id). '' when the desk has not loaded it.
+   */
+  _ownWorkspaceName(hubId) {
+    if (typeof Desk === 'undefined' || !Desk || !hubId) return '';
+    const row = (Desk._workspaces || []).find(
+      (r) => r && r.filetype === _a.hub && `${r.nid}` === `${hubId}`,
+    );
+    return (row && row.filename) || '';
   }
 
   /**
