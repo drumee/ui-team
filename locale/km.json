@@ -3160,5 +3160,11 @@
   "FILES_EMPTY_GDRIVE_DESC": "Move your files from Google Drive",
   "FILES_EMPTY_START_SCRATCH": "Start from scratch",
   "CHAT_EMPTY_TITLE": "Start discuss with your team now",
-  "CHAT_EMPTY_TEXT": "Share announcements and updates about company news, upcoming events,..."
+  "CHAT_EMPTY_TEXT": "Share announcements and updates about company news, upcoming events,...",
+  "SALES_MAIL_TITLE": "ទាក់ទងក្រុមលក់របស់យើង",
+  "SALES_MAIL_TEXT": "សរសេរមកយើងតាមអាសយដ្ឋាននេះ៖",
+  "SALES_MAIL_GMAIL": "បើកក្នុង Gmail",
+  "SALES_MAIL_OUTLOOK": "បើកក្នុង Outlook.com",
+  "SALES_MAIL_APP": "បើកកម្មវិធីអ៊ីមែលរបស់ខ្ញុំ",
+  "SALES_MAIL_COPY": "ចម្លងអាសយដ្ឋានអ៊ីមែល"
 }

@@ -3392,5 +3392,11 @@
   "FILES_EMPTY_GDRIVE_DESC": "Transférez vos fichiers depuis Google Drive",
   "FILES_EMPTY_START_SCRATCH": "Partir de zéro",
   "CHAT_EMPTY_TITLE": "Commencez à discuter avec votre équipe",
-  "CHAT_EMPTY_TEXT": "Partagez annonces et nouvelles de l'entreprise, événements à venir,..."
+  "CHAT_EMPTY_TEXT": "Partagez annonces et nouvelles de l'entreprise, événements à venir,...",
+  "SALES_MAIL_TITLE": "Contacter notre équipe commerciale",
+  "SALES_MAIL_TEXT": "Écrivez-nous à cette adresse :",
+  "SALES_MAIL_GMAIL": "Ouvrir dans Gmail",
+  "SALES_MAIL_OUTLOOK": "Ouvrir dans Outlook.com",
+  "SALES_MAIL_APP": "Ouvrir mon application de messagerie",
+  "SALES_MAIL_COPY": "Copier l'adresse e-mail"
 }

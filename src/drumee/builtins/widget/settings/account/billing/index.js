@@ -2,6 +2,7 @@ const {
   canUpgradePlan, billingAvailable, planRank, planKey,
   PROMO_YEARLY_PCT, promoYearlyEndsAt, promoYearlySecondsLeft, promoYearlyCountdown,
 } = require("libs/billing");
+const { copyToClipboard } = require("@drumee/ui-essentials");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
@@ -1787,45 +1788,72 @@ class settings_billing extends LetcBox {
 
   // Map an org-ident validation status to its user-facing message.
   /**
-   * Open the user's mail client addressed to sales.
+   * Hand a sales-led enquiry over to the user's mail, whichever one it is.
    *
    * The sales-led plans have no checkout to enter, so their CTA has to hand
-   * the conversation over. It used to show the address in an alert, which left
-   * the user to copy it out by hand to do the very thing the button offered.
-   * The subject carries the plan so the enquiry arrives already identified.
+   * the conversation over. The subject carries the plan so the enquiry
+   * arrives already identified.
    *
-   * mailto is opened via location.assign rather than window.open: a popup
-   * blocker silently swallows the latter when the click has already been
-   * through a confirm dialog, and the user is left thinking nothing happened.
+   * It used to fire a bare mailto, which could dead-end with no way to tell:
+   * on Windows the OS app picker offers Chrome and Edge next to Outlook, and
+   * either browser opens an empty window unless a web mail is registered as
+   * its mailto handler (reported 2026-10-06). The window still lost focus,
+   * so the no-mail-client fallback believed the hand-off had worked. Offer
+   * the routes instead — Gmail and Outlook.com by their own compose URLs, the
+   * mail app by mailto, and the address to copy — see skeleton/sales-mail.
    */
   _openSalesMail(plan) {
     const to = LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org";
     const planName = String(plan || "").replace(/^./, (c) => c.toUpperCase());
     const subject = (LOCALE.MAIL_SALES_SUBJECT || "Drumee {0} plan enquiry")
       .format(planName);
-    // mailto: NEVER throws — a machine with no mail client just does
-    // nothing, silently (reported 2026-07-29: "click ... không mở email").
-    // The only observable difference is focus: a mail app taking over blurs
-    // this window. Fire the mailto, and if we still own the focus a moment
-    // later, show the address instead so the path is never a dead end.
-    let handed_off = false;
-    const onBlur = () => { handed_off = true; };
-    try { window.addEventListener("blur", onBlur, { once: true }); } catch (e) { /* old UA */ }
-    try {
-      window.location.assign(
-        `mailto:${to}?subject=${encodeURIComponent(subject)}`
-      );
-    } catch (e) { /* fall through to the address fallback */ }
-    setTimeout(() => {
-      try { window.removeEventListener("blur", onBlur); } catch (e) { /* noop */ }
-      if (handed_off || document.visibilityState === "hidden") return;
-      if (Wm && Wm.alert) {
-        Wm.alert(
-          (LOCALE.CONTACT_SALES_VIA || "Please contact our sales team via {0}")
-            .format(to)
-        );
-      }
-    }, 1200);
+    this._salesMail = { to, subject };
+    if (!Wm || !Wm.alert) return this._salesMailAction("sales-mail-app");
+    const { salesMailBody } = require("./skeleton/sales-mail");
+    // `kind` set so alert feeds the object verbatim (variant + actions)
+    // instead of wrapping it as a plain body.
+    Wm.alert({
+      kind: "window_info",
+      variant: "notice",
+      message: salesMailBody(this, this._salesMail),
+      actions: [
+        { label: LOCALE.CLOSE, priority: "secondary", service: _e.close },
+      ],
+    });
+  }
+
+  /**
+   * One of the "Contact sales" dialog's options. The web mails open in a new
+   * tab and close the dialog. The mail app leaves it up: if that hand-off is
+   * the one that dead-ends, the other routes are still on screen.
+   *
+   * window.open / location.assign run inside the click, so a popup blocker
+   * lets them through.
+   */
+  _salesMailAction(service, cmd) {
+    const mail = this._salesMail;
+    if (!mail) return;
+    const to = encodeURIComponent(mail.to);
+    const subject = encodeURIComponent(mail.subject);
+    const openTab = (url) => {
+      window.open(url, "_blank", "noopener,noreferrer");
+      if (Wm && Wm.alert) Wm.alert(null);
+    };
+    switch (service) {
+      case "sales-mail-gmail":
+        return openTab(`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}`);
+      case "sales-mail-outlook":
+        return openTab(`https://outlook.live.com/mail/0/deeplink/compose?to=${to}&subject=${subject}`);
+      case "sales-mail-app":
+        try {
+          window.location.assign(`mailto:${mail.to}?subject=${subject}`);
+        } catch (e) { /* the address stays on screen */ }
+        return;
+      case "sales-mail-copy":
+        copyToClipboard(mail.to);
+        if (cmd && cmd.set) cmd.set(_a.content, LOCALE.COPIED || "Copied");
+        return;
+    }
   }
 
   // `data` is the whole checkout response, optional — only
@@ -2682,6 +2710,13 @@ class settings_billing extends LetcBox {
       // address in an alert) is the same one the Sovereign CTA already has.
       case "contact-sales":
         this._openSalesMail(LOCALE.ENTERPRISE || "enterprise");
+        return false;
+
+      case "sales-mail-gmail":
+      case "sales-mail-outlook":
+      case "sales-mail-app":
+      case "sales-mail-copy":
+        this._salesMailAction(service, cmd);
         return false;
 
       case "manage-billing":

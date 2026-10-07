@@ -3391,5 +3391,11 @@
   "FILES_EMPTY_GDRIVE_DESC": "Move your files from Google Drive",
   "FILES_EMPTY_START_SCRATCH": "Start from scratch",
   "CHAT_EMPTY_TITLE": "Start discuss with your team now",
-  "CHAT_EMPTY_TEXT": "Share announcements and updates about company news, upcoming events,..."
+  "CHAT_EMPTY_TEXT": "Share announcements and updates about company news, upcoming events,...",
+  "SALES_MAIL_TITLE": "Contact our sales team",
+  "SALES_MAIL_TEXT": "Write to us at this address:",
+  "SALES_MAIL_GMAIL": "Open in Gmail",
+  "SALES_MAIL_OUTLOOK": "Open in Outlook.com",
+  "SALES_MAIL_APP": "Open my email app",
+  "SALES_MAIL_COPY": "Copy email address"
 }

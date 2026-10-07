@@ -3166,5 +3166,11 @@
   "FILES_EMPTY_GDRIVE_DESC": "Перенесите файлы из Google Drive",
   "FILES_EMPTY_START_SCRATCH": "Начать с нуля",
   "CHAT_EMPTY_TITLE": "Начните обсуждение с командой",
-  "CHAT_EMPTY_TEXT": "Делитесь объявлениями и новостями компании, предстоящими событиями,..."
+  "CHAT_EMPTY_TEXT": "Делитесь объявлениями и новостями компании, предстоящими событиями,...",
+  "SALES_MAIL_TITLE": "Связаться с отделом продаж",
+  "SALES_MAIL_TEXT": "Напишите нам по этому адресу:",
+  "SALES_MAIL_GMAIL": "Открыть в Gmail",
+  "SALES_MAIL_OUTLOOK": "Открыть в Outlook.com",
+  "SALES_MAIL_APP": "Открыть почтовое приложение",
+  "SALES_MAIL_COPY": "Скопировать адрес эл. почты"
 }

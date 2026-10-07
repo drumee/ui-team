@@ -3161,5 +3161,11 @@
   "FILES_EMPTY_GDRIVE_DESC": "Mueve tus archivos desde Google Drive",
   "FILES_EMPTY_START_SCRATCH": "Empezar desde cero",
   "CHAT_EMPTY_TITLE": "Empieza a conversar con tu equipo",
-  "CHAT_EMPTY_TEXT": "Comparte anuncios y novedades de la empresa, próximos eventos,..."
+  "CHAT_EMPTY_TEXT": "Comparte anuncios y novedades de la empresa, próximos eventos,...",
+  "SALES_MAIL_TITLE": "Contacta con nuestro equipo de ventas",
+  "SALES_MAIL_TEXT": "Escríbenos a esta dirección:",
+  "SALES_MAIL_GMAIL": "Abrir en Gmail",
+  "SALES_MAIL_OUTLOOK": "Abrir en Outlook.com",
+  "SALES_MAIL_APP": "Abrir mi aplicación de correo",
+  "SALES_MAIL_COPY": "Copiar la dirección de correo"
 }

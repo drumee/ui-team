@@ -3160,5 +3160,11 @@
   "FILES_EMPTY_GDRIVE_DESC": "从 Google Drive 迁移您的文件",
   "FILES_EMPTY_START_SCRATCH": "从零开始",
   "CHAT_EMPTY_TITLE": "立即开始与团队讨论",
-  "CHAT_EMPTY_TEXT": "分享公司新闻、即将举行的活动等公告和动态,..."
+  "CHAT_EMPTY_TEXT": "分享公司新闻、即将举行的活动等公告和动态,...",
+  "SALES_MAIL_TITLE": "联系我们的销售团队",
+  "SALES_MAIL_TEXT": "请发送邮件至以下地址：",
+  "SALES_MAIL_GMAIL": "在 Gmail 中打开",
+  "SALES_MAIL_OUTLOOK": "在 Outlook.com 中打开",
+  "SALES_MAIL_APP": "打开我的邮件应用",
+  "SALES_MAIL_COPY": "复制邮箱地址"
 }
