@@ -9291,6 +9291,16 @@ class desk_module extends LetcBox {
     // toggle-apps: an open that refuses must not darken the rail over a screen
     // that never changed.
     this._railUnlight();
+    // ...and then light FILES. B2B Org Structure draws this screen as the
+    // Files root (Figma 900:151138: the organisation's workspaces, grouped by
+    // department, with the rail on Files), so Files is the row that names it.
+    // The row alone, not _railHighlight: that also stamps data-mtab, which
+    // says which tab of the workspace UNDERNEATH is selected, and this screen
+    // changes no workspace tab.
+    const filesRow = _.isFunction(this.getPart) && this.getPart("sidebar-files");
+    if (filesRow && filesRow.el && !(filesRow.isDestroyed && filesRow.isDestroyed())) {
+      RADIO_BROADCAST.trigger("sidebar-radio", filesRow);
+    }
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: Organization.name() || LOCALE.ORGANIZATION,
       // NO ADDRESS CHIP FOR THIS ONE. The org chip is two elements to the left
