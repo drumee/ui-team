@@ -423,9 +423,10 @@ const make = function (ui) {
       uiHandler: [ui],
       taskColumn: colKey,
       kids: [
+        Skeletons.Image.Svg({ ico: "app-add", className: `${pfx}__add-ico` }),
         Skeletons.Note({
           className: `${pfx}__add-label`,
-          content: `+ ${LOCALE.NEW_TASK}`,
+          content: LOCALE.NEW_TASK,
         }),
       ],
     });
@@ -2222,12 +2223,18 @@ const make = function (ui) {
 
   // Right-side controls (Figma 2040-53814): calendar/gantt granularity when
   // those views are active, then the create buttons, then the shared Filter.
-  const newTaskBtn = !mayCreateTask(ui) ? "" : Skeletons.Note({
+  const newTaskBtn = !mayCreateTask(ui) ? "" : Skeletons.Box.X({
     className: `${pfx}__viewbar-new`,
-    content: `+ ${LOCALE.NEW_TASK}`,
     bubble: 0,
     service: "add-task",
     uiHandler: [ui],
+    kids: [
+      Skeletons.Image.Svg({ ico: "app-add", className: `${pfx}__viewbar-new-ico` }),
+      Skeletons.Note({
+        className: `${pfx}__viewbar-new-label`,
+        content: LOCALE.NEW_TASK,
+      }),
+    ],
   });
   const newBoardBtn = !mayCreateTask(ui) ? "" : Skeletons.Box.X({
     className: `${pfx}__viewbar-board`,
@@ -2235,7 +2242,7 @@ const make = function (ui) {
     service: "add-board",
     uiHandler: [ui],
     kids: [
-      Skeletons.Image.Svg({ ico: "plus", className: `${pfx}__viewbar-board-ico` }),
+      Skeletons.Image.Svg({ ico: "app-add", className: `${pfx}__viewbar-board-ico` }),
       Skeletons.Note({
         className: `${pfx}__viewbar-board-label`,
         content: LOCALE.NEW_BOARD,
@@ -4295,9 +4302,13 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
               : null,
           ].filter(Boolean),
         }),
+        // Priority as a text chip (was a bare dot): the label on the
+        // priority's own colour, like the List view's priority pill.
         t.priority && pm
           ? Skeletons.Note({
               className: `${pfx}__subtask-dot`,
+              content: LOCALE[pm.label] || pm.key,
+              attrOpt: { "data-priority": pm.key },
               styleOpt: { background: pm.color },
             })
           : null,
