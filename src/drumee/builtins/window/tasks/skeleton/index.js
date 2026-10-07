@@ -116,11 +116,21 @@ const make = function (ui) {
   // Always rendered, shown only while its `__title-field` carries
   // `is-missing` — the panel toggles that class in place (_flagTitleMissing),
   // so a blocked submit doesn't need a re-feed that would wipe other edits.
-  const titleMissingNote = () =>
+  // Its sibling for an over-long title: shown while the field carries
+  // `is-too-long` (_flagTitleTooLong).
+  const titleMissingNote = () => [
     Skeletons.Note({
       className: `${pfx}__title-missing`,
       content: LOCALE.TASK_TITLE_REQUIRED,
-    });
+    }),
+    Skeletons.Note({
+      className: `${pfx}__title-too-long`,
+      content: LOCALE.TASK_TITLE_TOO_LONG,
+    }),
+  ];
+  // The title field's flag classes, from the draft (survive a re-feed).
+  const titleFlags = (d) =>
+    `${d && d._titleMissing ? " is-missing" : ""}${d && d._titleTooLong ? " is-too-long" : ""}`;
   // Phone flag stamped directly onto the popups / list / gantt roots (see
   // `data-mobile` below). Driven from JS rather than a CSS media/container
   // query because the panel lives in a resizable window — the viewport is
@@ -1319,7 +1329,7 @@ const make = function (ui) {
       className: `${pfx}__detail-header`,
       kids: [
         Skeletons.Box.Y({
-          className: `${pfx}__title-field ${pfx}__detail-title-field${dDraft._titleMissing ? " is-missing" : ""}`,
+          className: `${pfx}__title-field ${pfx}__detail-title-field${titleFlags(dDraft)}`,
           kids: [
             // Textarea (not Entry) so a long title wraps and stays fully
             // visible in the update popup instead of being clipped past the
@@ -1336,7 +1346,7 @@ const make = function (ui) {
               watch: "task-input-changed",
               uiHandler: [ui],
             }),
-            titleMissingNote(),
+            ...titleMissingNote(),
           ],
         }),
         Skeletons.Button.Svg({
@@ -1717,14 +1727,14 @@ const make = function (ui) {
               className: `${pfx}__modal-main`,
               kids: [
                 Skeletons.Box.Y({
-                  className: `${pfx}__create-field ${pfx}__title-field${draft?._titleMissing ? " is-missing" : ""}`,
+                  className: `${pfx}__create-field ${pfx}__title-field${titleFlags(draft)}`,
                   kids: [
                     Skeletons.Note({
                       className: `${pfx}__create-label`,
                       content: LOCALE.TASK_TITLE,
                     }),
                     titleControl,
-                    titleMissingNote(),
+                    ...titleMissingNote(),
                   ],
                 }),
                 field(
@@ -4397,7 +4407,10 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
       className: `${pfx}__subtask-card`,
       // Required-title flag. Rides on the draft so a re-feed (chip menu, a
       // peer's push) keeps it; the controller also flips it in place.
-      attrOpt: { "data-title-missing": draft._titleMissing ? "1" : "0" },
+      attrOpt: {
+        "data-title-missing": draft._titleMissing ? "1" : "0",
+        "data-title-too-long": draft._titleTooLong ? "1" : "0",
+      },
       bubble: 0,
       kids: [
         Skeletons.Box.X({
@@ -4432,6 +4445,10 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
         Skeletons.Note({
           className: `${pfx}__subtask-title-missing`,
           content: LOCALE.TASK_TITLE_REQUIRED,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__subtask-title-too-long`,
+          content: LOCALE.TASK_TITLE_TOO_LONG,
         }),
         Skeletons.Box.X({
           className: `${pfx}__subtask-card-chips`,

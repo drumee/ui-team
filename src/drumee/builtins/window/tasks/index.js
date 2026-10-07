@@ -11,6 +11,7 @@ const {
   settlePendingFiles,
 } = require("./detail-commit");
 const { restoreScroll } = require("./scroll-restore");
+const { titleTooLong } = require("./list-edit");
 const { stamp, reconcile } = require("./reconcile");
 const listInline = require("./list-inline");
 const { killTaskToast } = require("./task-toast");
@@ -3808,6 +3809,9 @@ class __tasks_panel extends LetcBox {
     if (name === "subtask-title") {
       if (this._subtaskDraft) this._subtaskDraft.title = value;
       if (value.trim()) this._clearSubtaskTitleMissing("detail-panel", this._subtaskDraft);
+      if (!titleTooLong(value)) {
+        this._clearSubtaskTitleTooLong("detail-panel", this._subtaskDraft);
+      }
       return;
     }
     // Same, for the creator inside the create modal — its draft is a different
@@ -3818,6 +3822,9 @@ class __tasks_panel extends LetcBox {
       if (this._createSubtaskDraft) this._createSubtaskDraft.title = value;
       if (value.trim()) {
         this._clearSubtaskTitleMissing("create-modal", this._createSubtaskDraft);
+      }
+      if (!titleTooLong(value)) {
+        this._clearSubtaskTitleTooLong("create-modal", this._createSubtaskDraft);
       }
       return;
     }
@@ -3847,10 +3854,12 @@ class __tasks_panel extends LetcBox {
     ) {
       this._createDefaults[name] = value;
       if (name === "title" && value.trim()) this._clearTitleMissing("create");
+      if (name === "title" && !titleTooLong(value)) this._clearTitleTooLong("create");
       if (name === "due_date" && value) this._clearDueMissing("create");
     } else if (this._detailDraft && inDetail && inDetail.contains(scopeEl)) {
       this._detailDraft[name] = value;
       if (name === "title" && value.trim()) this._clearTitleMissing("detail");
+      if (name === "title" && !titleTooLong(value)) this._clearTitleTooLong("detail");
       if (name === "due_date" && value) this._clearDueMissing("detail");
     }
   }
@@ -3881,6 +3890,30 @@ class __tasks_panel extends LetcBox {
     if (field) field.classList.add("is-missing");
     const input = root.querySelector('[name="title"]');
     if (input && typeof input.focus === "function") input.focus();
+  }
+
+  /**
+   * Over-long title (more than TITLE_MAX characters): the same in-place flag
+   * as a missing one — red field, its own message, caret back in the box —
+   * riding on the draft so a re-feed keeps it.
+   */
+  _flagTitleTooLong(scope) {
+    const { draft, root } = this._titleScope(scope);
+    if (draft) draft._titleTooLong = true;
+    if (!root) return;
+    const field = root.querySelector(`.${this.fig.family}__title-field`);
+    if (field) field.classList.add("is-too-long");
+    const input = root.querySelector('[name="title"]');
+    if (input && typeof input.focus === "function") input.focus();
+  }
+
+  _clearTitleTooLong(scope) {
+    const { draft, root } = this._titleScope(scope);
+    if (!draft || !draft._titleTooLong) return;
+    draft._titleTooLong = false;
+    const field =
+      root && root.querySelector(`.${this.fig.family}__title-field`);
+    if (field) field.classList.remove("is-too-long");
   }
 
   _clearTitleMissing(scope) {
@@ -3936,7 +3969,16 @@ class __tasks_panel extends LetcBox {
     // missing field at once rather than one per press.
     if (!dueRaw) this._flagDueMissing("create");
     if (!title) return this._flagTitleMissing("create");
-    if (!dueRaw) return;
+    const tooLong = titleTooLong(title);
+    if (tooLong) this._flagTitleTooLong("create");
+    // A child left typed in the creator card is posted with this Create (see
+    // _flushCreateSubtaskDraft) — an over-long one would be dropped there
+    // without a word, so stop here and say so on the card instead.
+    const childDraft = this._createSubtaskDraft;
+    const childTooLong =
+      !!childDraft && titleTooLong(this._readCreateSubtaskTitle());
+    if (childTooLong) this._flagSubtaskTitleTooLong("create-modal", childDraft);
+    if (tooLong || childTooLong || !dueRaw) return;
     if (!(await this._gateUnfinishedUploads("create", draft))) return;
 
     this._setSubmitting(".tasks-panel__create-submit", true);
@@ -4231,7 +4273,9 @@ class __tasks_panel extends LetcBox {
     const dueMissing = !String(draft.due_date || "").trim();
     if (dueMissing) this._flagDueMissing("detail");
     if (!String(draft.title || "").trim()) return this._flagTitleMissing("detail");
-    if (dueMissing) return;
+    const tooLong = titleTooLong(draft.title);
+    if (tooLong) this._flagTitleTooLong("detail");
+    if (dueMissing || tooLong) return;
     if (!(await this._gateUnfinishedUploads("detail", draft))) return;
 
     this._setSubmitting(".tasks-panel__detail-submit", true);
@@ -10937,6 +10981,20 @@ class __tasks_panel extends LetcBox {
     this._focusSubtaskTitle(host);
   }
 
+  _flagSubtaskTitleTooLong(host, draft) {
+    if (draft) draft._titleTooLong = true;
+    const card = this._subtaskCard(host);
+    if (card) card.dataset.titleTooLong = "1";
+    this._focusSubtaskTitle(host);
+  }
+
+  _clearSubtaskTitleTooLong(host, draft) {
+    if (!draft || !draft._titleTooLong) return;
+    draft._titleTooLong = false;
+    const card = this._subtaskCard(host);
+    if (card) card.dataset.titleTooLong = "0";
+  }
+
   _clearSubtaskTitleMissing(host, draft) {
     if (!draft || !draft._titleMissing) return;
     draft._titleMissing = false;
@@ -11102,7 +11160,9 @@ class __tasks_panel extends LetcBox {
     const title = this._readCreateSubtaskTitle();
     if (!draft.due_date) this._flagSubtaskDueMissing("create-modal", draft);
     if (!title) return this._flagSubtaskTitleMissing("create-modal", draft);
-    if (!draft.due_date) return;
+    const tooLong = titleTooLong(title);
+    if (tooLong) this._flagSubtaskTitleTooLong("create-modal", draft);
+    if (!draft.due_date || tooLong) return;
     if (!Array.isArray(parentDraft.subtasks)) parentDraft.subtasks = [];
     parentDraft.subtasks.push({
       // Local key, not a server id. Named `id` so the shared row skeleton can
@@ -11209,7 +11269,9 @@ class __tasks_panel extends LetcBox {
     const title = String((input && input.value) || draft.title || "").trim();
     if (!draft.due_date) this._flagSubtaskDueMissing("detail-panel", draft);
     if (!title) return this._flagSubtaskTitleMissing("detail-panel", draft);
-    if (!draft.due_date) return;
+    const tooLong = titleTooLong(title);
+    if (tooLong) this._flagSubtaskTitleTooLong("detail-panel", draft);
+    if (!draft.due_date || tooLong) return;
 
     // _setControlBusy, NOT _setSubmitting: the latter raises the panel-wide
     // _submitting flag that gates commit-task / commit-detail, and creating a
