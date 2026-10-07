@@ -3165,6 +3165,6 @@
   "SALES_MAIL_TEXT": "请发送邮件至以下地址：",
   "SALES_MAIL_GMAIL": "在 Gmail 中打开",
   "SALES_MAIL_OUTLOOK": "在 Outlook.com 中打开",
-  "SALES_MAIL_APP": "打开我的邮件应用",
+  "SALES_MAIL_APP": "打开桌面邮件应用（Outlook、Apple Mail…）",
   "SALES_MAIL_COPY": "复制邮箱地址"
 }

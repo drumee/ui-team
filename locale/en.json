@@ -3396,6 +3396,6 @@
   "SALES_MAIL_TEXT": "Write to us at this address:",
   "SALES_MAIL_GMAIL": "Open in Gmail",
   "SALES_MAIL_OUTLOOK": "Open in Outlook.com",
-  "SALES_MAIL_APP": "Open my email app",
+  "SALES_MAIL_APP": "Open desktop mail app (Outlook, Apple Mail…)",
   "SALES_MAIL_COPY": "Copy email address"
 }

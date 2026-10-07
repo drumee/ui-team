@@ -3171,6 +3171,6 @@
   "SALES_MAIL_TEXT": "Напишите нам по этому адресу:",
   "SALES_MAIL_GMAIL": "Открыть в Gmail",
   "SALES_MAIL_OUTLOOK": "Открыть в Outlook.com",
-  "SALES_MAIL_APP": "Открыть почтовое приложение",
+  "SALES_MAIL_APP": "Открыть почтовую программу (Outlook, Apple Mail…)",
   "SALES_MAIL_COPY": "Скопировать адрес эл. почты"
 }
