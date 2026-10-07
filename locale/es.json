@@ -3093,7 +3093,7 @@
   "SALES_MAIL_TEXT": "Escríbenos a esta dirección:",
   "SALES_MAIL_GMAIL": "Abrir en Gmail",
   "SALES_MAIL_OUTLOOK": "Abrir en Outlook.com",
-  "SALES_MAIL_APP": "Abrir mi aplicación de correo",
+  "SALES_MAIL_APP": "Abrir el correo de escritorio (Outlook, Apple Mail…)",
   "SALES_MAIL_COPY": "Copiar la dirección de correo",
   "CONTACT_INVITE_JOINED": "Ahora estás conectado con {0}",
   "CONTACT_CONNECTED_SAY_HELLO": "Ahora están conectados. ¡Saluda!"

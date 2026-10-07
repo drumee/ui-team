@@ -52,7 +52,14 @@ function salesMailBody(ui, mail) {
           kids: [
             option(LOCALE.SALES_MAIL_GMAIL || "Open in Gmail", "sales-mail-gmail"),
             option(LOCALE.SALES_MAIL_OUTLOOK || "Open in Outlook.com", "sales-mail-outlook"),
-            option(LOCALE.SALES_MAIL_APP || "Open my email app", "sales-mail-app"),
+            // Named as a DESKTOP mail app on purpose: on Windows this mailto
+            // raises the OS picker, where Chrome / Edge are also listed and
+            // open an empty window. The label steers the choice to a mail
+            // client; the web mails have their own options above.
+            option(
+              LOCALE.SALES_MAIL_APP || "Open desktop mail app (Outlook, Apple Mail…)",
+              "sales-mail-app",
+            ),
             option(LOCALE.SALES_MAIL_COPY || "Copy email address", "sales-mail-copy", {
               sys_pn: "sales-mail-copy",
             }),

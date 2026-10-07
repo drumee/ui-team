@@ -3304,7 +3304,7 @@
   "SALES_MAIL_TEXT": "Écrivez-nous à cette adresse :",
   "SALES_MAIL_GMAIL": "Ouvrir dans Gmail",
   "SALES_MAIL_OUTLOOK": "Ouvrir dans Outlook.com",
-  "SALES_MAIL_APP": "Ouvrir mon application de messagerie",
+  "SALES_MAIL_APP": "Ouvrir la messagerie de bureau (Outlook, Apple Mail…)",
   "SALES_MAIL_COPY": "Copier l'adresse e-mail",
   "CONTACT_INVITE_JOINED": "Vous êtes maintenant en contact avec {0}",
   "CONTACT_CONNECTED_SAY_HELLO": "Vous êtes maintenant en contact. Dites bonjour !"
