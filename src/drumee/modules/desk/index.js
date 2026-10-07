@@ -317,11 +317,15 @@ class desk_module extends LetcBox {
       return this._deskServiceShim(_e.home);
     };
     this._onOverLimitChanged = this._onOverLimitChanged.bind(this);
-    // The user clicked the docked call to come back to it: take down whatever
-    // screen was covering the desk so the restored, full-size window is not
-    // parked behind it (window/meeting _leaveCallTile).
-    this._onCallReturned = () => this.closeAllPanels();
+    // The user clicked the docked call to come back to it — see _onCallBack.
+    // Park and end only keep the rail honest about it (_onCallParked /
+    // _onCallGone); all three come from builtins/webrtc/call-parking.
+    this._onCallReturned = (call) => this._onCallBack(call);
+    this._onCallMinimized = () => this._onCallParked();
+    this._onCallEnded = (call) => this._onCallGone(call);
     RADIO_BROADCAST.on("call:returned", this._onCallReturned);
+    RADIO_BROADCAST.on("call:minimize", this._onCallMinimized);
+    RADIO_BROADCAST.on("call:ended", this._onCallEnded);
     RADIO_BROADCAST.on("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.on("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.on("desk:open-home", this._openHomeFromPopup);
@@ -829,6 +833,8 @@ class desk_module extends LetcBox {
     }
     RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
     RADIO_BROADCAST.off("call:returned", this._onCallReturned);
+    RADIO_BROADCAST.off("call:minimize", this._onCallMinimized);
+    RADIO_BROADCAST.off("call:ended", this._onCallEnded);
     RADIO_BROADCAST.off("desk:open-admin-console", this._openAdminConsole);
     RADIO_BROADCAST.off("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.off("desk:open-home", this._openHomeFromPopup);
@@ -6873,12 +6879,17 @@ class desk_module extends LetcBox {
    * the folder window's tab name for the row the rail calls "meet". A tab with
    * no rail row of its own leaves the rail alone rather than guessing.
    *
+   * `stamp: false` lights the row without touching `mtab`: for a row that is
+   * not the workspace tab underneath — Meet for a full-frame meeting, see
+   * _onCallBack — since closeSectionScreen and _onCallGone relight from it.
+   *
    * @param {String} tab folder-window tab: files | chat | task | meeting
+   * @param {{stamp?: Boolean}} [opt]
    */
-  _railHighlight(tab) {
+  _railHighlight(tab, { stamp = true } = {}) {
     const key = tab === "meeting" ? "meet" : tab;
     if (!["files", _a.chat, _a.task, "meet", "access"].includes(key)) return;
-    if (this.el) this.el.dataset.mtab = key === "meet" ? "meeting" : key;
+    if (stamp && this.el) this.el.dataset.mtab = key === "meet" ? "meeting" : key;
     if (!_.isFunction(this.getPart)) return;
     const light = (pn, channel) => {
       const p = this.getPart(pn);
@@ -6930,6 +6941,46 @@ class desk_module extends LetcBox {
    */
   _railUnlight() {
     RADIO_BROADCAST.trigger("sidebar-radio", this);
+  }
+
+  /**
+   * "Return to call" on the docked tile (call-parking _leaveCallTile).
+   *
+   * Take down whatever screen was covering the desk, so the restored,
+   * full-size window is not parked behind it. And for a MEETING, light the
+   * rail's Meet row: the full-frame meeting IS the screen now, and the row
+   * still lit is whichever one sent the call away (Files, or nothing after a
+   * section screen). A 1:1 call is a popup over the workspace, so its rail
+   * stays as it is.
+   *
+   * Lit WITHOUT the `mtab` stamp — the workspace underneath has not changed
+   * tab, and _onCallGone puts the rail back on that tab when the meeting ends.
+   * @param {{kind?: String}} [call]
+   */
+  _onCallBack(call) {
+    this.closeAllPanels();
+    if (!call || call.kind !== "window_meeting") return;
+    this._railHighlight("meeting", { stamp: false });
+    this._railOnCall = true;
+  }
+
+  /**
+   * The call parked again. Every way that happens is a navigation that lights
+   * (or puts out) the rail on its own, so the Meet light is no longer ours.
+   */
+  _onCallParked() {
+    this._railOnCall = false;
+  }
+
+  /**
+   * The call window was torn down. If Meet was lit for it, the meeting's
+   * screen is gone and the workspace tab underneath is showing again.
+   * @param {{kind?: String}} [call]
+   */
+  _onCallGone(call) {
+    if (!this._railOnCall) return;
+    this._railOnCall = false;
+    this._railHighlight((this.el && this.el.dataset.mtab) || "files");
   }
 
   /**
