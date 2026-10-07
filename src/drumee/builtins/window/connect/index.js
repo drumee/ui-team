@@ -930,7 +930,9 @@ class __window_connect extends __room {
         // One screen at a time: block starting a share while the peer is
         // presenting (belt-and-suspenders with the disabled button). The
         // active local presenter is never locked, so they can still stop.
-        if (this._shareLocked && !this._presentingLocally) return;
+        if (this._shareLocked && !this._presentingLocally) {
+          return this._explainShareLocked(cmd);
+        }
         super.onUiEvent(cmd, args);
         break;
 

@@ -3241,6 +3241,7 @@
   "PASSWORD_SET": "Mot de passe défini",
   "PENDING_REQUESTS": "Demandes en attente",
   "SCREEN_SHARE_BUSY": "Quelqu'un partage déjà son écran",
+  "CANT_SHARE_X_IS_SHARING": "Vous ne pouvez pas partager maintenant car {0} partage son écran.",
   "SELECT_ROLE": "Choisir un rôle",
   "SIGNIN_CANCELLED": "La connexion a été annulée",
   "UPLOAD_FILE": "Importer un fichier",

@@ -3013,6 +3013,7 @@
   "PASSWORD_SET": "Password set",
   "PENDING_REQUESTS": "Pending requests",
   "SCREEN_SHARE_BUSY": "Someone is already sharing their screen",
+  "CANT_SHARE_X_IS_SHARING": "You can't share now because {0} is sharing screen.",
   "SELECT_ROLE": "Select role",
   "SIGNIN_CANCELLED": "Sign-in was cancelled",
   "UPLOAD_FILE": "Upload file",

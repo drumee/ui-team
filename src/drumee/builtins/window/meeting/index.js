@@ -206,6 +206,7 @@ class __window_meeting extends __room {
       // secondary topbar controls).
       this.el.dataset.panelOverlay = w < CHAT_AUTO_CLOSE_W ? "1" : "0";
       if (this._floatDocked()) this._layoutShareStrip();
+      else this._layoutPinStage();
     }
     this._applyChatAutoClose(w);
   }
@@ -484,6 +485,7 @@ class __window_meeting extends __room {
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
     this._unwatchShareStrip();
+    this._unwatchPinStage();
     this._teardownCallParking();
     // Duration-cap timers. Left armed they would fire against a destroyed
     // window minutes after the meeting was over — and the cutoff one would
@@ -1183,7 +1185,9 @@ class __window_meeting extends __room {
         // One screen at a time: block starting a share while a remote is
         // presenting (belt-and-suspenders with the disabled button). The
         // active local presenter is never locked, so they can still stop.
-        if (this._shareLocked && !this._presentingLocally) return;
+        if (this._shareLocked && !this._presentingLocally) {
+          return this._explainShareLocked(cmd);
+        }
         super.onUiEvent(cmd, args);
         break;
 
@@ -1239,8 +1243,10 @@ class __window_meeting extends __room {
     if (!panel) return;
     if (!opts.auto) this._chatAutoClosed = 0;
     panel.dataset.open = open ? "1" : "0";
-    // The share strip turns from a right-hand column into a bottom row.
+    // The share strip (and the pin strip) turn from a right-hand column into a
+    // bottom row.
     if (this._floatDocked()) this._layoutShareStrip();
+    else this._layoutPinStage();
     // Opening the panel only clears the pane you actually land on — a chat
     // message shouldn't be marked seen because you opened Participants.
     if (open) this._clearUnreadForTab(panel.dataset.tab);
@@ -1507,6 +1513,10 @@ class __window_meeting extends __room {
   _updateFloatFocus() {
     if (!this._floatDocked()) return;
     this._layoutShareStrip();
+    // The user's own pin outranks every automatic choice: while a screen owns
+    // the stage, the pinned person takes the strip's first slot.
+    const pinned = this._pinnedTileEl();
+    if (pinned) return this._applyFloatFocus(pinned);
     const raisedUid = this._activeRaisedUid();
     if (raisedUid != null) return this._focusByUid(raisedUid);
     // While a REMOTE peer is presenting, spotlight THEIR camera tile — the float
@@ -1732,60 +1742,202 @@ class __window_meeting extends __room {
     }
   }
 
-  // Toggle pin on a participant's tile. Only one pinned tile at a time —
-  // clicking pin on a different participant moves the spotlight; clicking
-  // again on the same one un-pins. The visible effect is driven by
-  // CSS rules keyed on data-pinned (on the tile root) and data-pinned-mode
-  // (on the meeting window root), which scale the pinned tile up and
-  // switch __endpoints into presenter mode so __participants becomes a
-  // sidebar — even when no one is sharing screen.
+  // ── Pin a participant to the main stage ─────────────────────────────────
+  // Only one pinned tile at a time: pinning someone else moves the spotlight,
+  // pinning the same tile again un-pins. With no screen shared, the pinned
+  // camera fills the stage and everyone else sits in a strip beside it (a
+  // column on the right, or a row under it when the side panel is open or the
+  // window is narrow), using the same 4-slot "+N" plan as the share strip.
+  // While a screen IS shared, the screen keeps the stage and the pinned person
+  // takes the share strip's first slot (_updateFloatFocus).
+  //
+  // Like the share strip, it is all attributes on the live elements: the tiles
+  // never move, so their tracks keep playing.
+  //   root  data-pin-stage = column | row | solo   (skin: window/meeting/skin)
+  //   tile  data-pinned = 1, style.order, data-strip-hidden
+  //   mgr   data-more = "+N"
+  //
+  // NB: `dataset["pinned-mode"]` THROWS (a dash before a lowercase letter is
+  // not a valid dataset name). The old code did exactly that, so a pin never
+  // got past its first line of layout. Use camelCase.
   _togglePinnedTile(args) {
-    const pid = args && args.participant_id;
+    const isLocal = !!(args && args.isLocal);
+    // The local tile has no `this.room`, so its pin arrives without an id —
+    // fall back to ours. The local tile is found by kind, so any stable key works.
+    const pid = (args && args.participant_id) ||
+      (isLocal ? this._myParticipantId() || "local" : null);
     if (!pid) return;
-    const wasSame = this._pinnedParticipantId === pid;
-    // Clear previous pin (if any) before setting the new one.
-    if (this._pinnedParticipantId) {
-      const prev = this._tileForPin(this._pinnedParticipantId, this._pinnedIsLocal);
-      if (prev && prev.el) prev.el.dataset.pinned = 0;
+    // Our own tile is one tile whatever key it was pinned under ("local"
+    // before the join, the jitsi id after).
+    const wasSame = isLocal
+      ? !!this._pinnedParticipantId && this._pinnedIsLocal
+      : this._pinnedParticipantId === pid && !this._pinnedIsLocal;
+    this._unpinTile();
+    if (!wasSame) {
+      this._pinnedParticipantId = pid;
+      this._pinnedIsLocal = isLocal;
     }
-    if (wasSame) {
-      this._pinnedParticipantId = null;
-      this._pinnedIsLocal = false;
-      if (this.el) this.el.dataset["pinned-mode"] = 0;
-      return;
-    }
-    this._pinnedParticipantId = pid;
-    this._pinnedIsLocal = !!(args && args.isLocal);
-    const tile = this._tileForPin(pid, this._pinnedIsLocal);
-    if (tile && tile.el) tile.el.dataset.pinned = 1;
-    if (this.el) this.el.dataset["pinned-mode"] = 1;
-    // NOTE: do NOT call responsive("presenter") here. Forcing presenter
-    // mode when no one is actually sharing leaves the __presenter slot
-    // visible but empty — rendering as a huge black rectangle. The pin
-    // is now purely a visual highlight on the existing grid; participants
-    // sizing follows the natural mode (normal / presenter on real share).
+    this._refreshPin();
   }
 
-  // Resolve a tile widget for the pin highlight. Local tile lives in
-  // __participants alongside remote tiles; remote tiles are indexed by
-  // participant_id in `this.endpoints`. Local has no entry there so we
-  // walk the children to find the endpoint_local kind.
+  _unpinTile() {
+    const prev = this._pinnedTileEl();
+    if (prev) prev.dataset.pinned = "0";
+    this._pinnedParticipantId = null;
+    this._pinnedIsLocal = false;
+  }
+
+  // Re-apply the pin everywhere it shows: the stage layout when nothing is
+  // shared, the strip's first slot when something is.
+  _refreshPin() {
+    if (this.el) this.el.dataset.pinnedMode = this._pinnedParticipantId ? "1" : "0";
+    if (this._floatDocked()) {
+      const pinned = this._pinnedTileEl();
+      if (pinned) pinned.dataset.pinned = "1";
+      this._updateFloatFocus();
+    } else {
+      this._layoutPinStage();
+    }
+  }
+
+  // The participants manager element, wherever it currently lives (the stage,
+  // or the float dock during a share).
+  _participantsMgrEl() {
+    const p = this.__participants;
+    return p && !(p.isDestroyed && p.isDestroyed()) ? p.el : null;
+  }
+
+  // Element of the pinned tile, or null. Resolved from the live DOM each time:
+  // a remote tile can be re-created under the same participant_id (reconnect).
+  _pinnedTileEl() {
+    const pid = this._pinnedParticipantId;
+    if (!pid) return null;
+    const tile = this._tileForPin(pid, this._pinnedIsLocal);
+    return (tile && tile.el) || null;
+  }
+
+  // Resolve a tile widget for the pin. Remote tiles are indexed by
+  // participant_id in `this.endpoints`; the local tile has no entry there, so
+  // walk the manager's children for the webrtc_local_user kind. (This used to
+  // compare against "endpoint_local", a kind that does not exist, so pinning
+  // yourself never marked any tile.)
   _tileForPin(pid, isLocal) {
     if (!isLocal && this.endpoints && this.endpoints[pid]) {
       const ep = this.endpoints[pid];
       if (ep && !ep.isDestroyed()) return ep;
     }
-    if (this.__participants && this.__participants.children) {
-      const list = this.__participants.children.toArray
-        ? this.__participants.children.toArray()
-        : [];
-      for (const c of list) {
-        if (c.isDestroyed && c.isDestroyed()) continue;
-        if (isLocal && c.kind === "endpoint_local") return c;
-        if (!isLocal && c.mget && c.mget("participant_id") === pid) return c;
+    const p = this.__participants;
+    if (p && !p.isDestroyed() && p.children && p.children.toArray) {
+      for (const c of p.children.toArray()) {
+        if (!c || (c.isDestroyed && c.isDestroyed()) || !c.el) continue;
+        const kind = c.el.dataset.kind || (c.mget && c.mget(_a.kind));
+        if (isLocal && kind === "webrtc_local_user") return c;
+        if (!isLocal && kind === "webrtc_remote_user" &&
+          c.mget && c.mget("participant_id") === pid) return c;
       }
     }
     return null;
+  }
+
+  _layoutPinStage() {
+    if (!this.el) return;
+    const mgr = this._participantsMgrEl();
+    if (!mgr || !this._pinnedParticipantId || this._floatDocked()) {
+      return this._clearPinStage();
+    }
+    const pinned = this._pinnedTileEl();
+    if (!pinned || !mgr.contains(pinned)) {
+      // The pinned person left the call: drop the pin, back to the grid.
+      this._unpinTile();
+      this.el.dataset.pinnedMode = "0";
+      return this._clearPinStage();
+    }
+    if (pinned.dataset.pinned !== "1") pinned.dataset.pinned = "1";
+    const others = this._stripTiles(mgr).filter((el) => el !== pinned);
+    let mode = "solo";
+    if (others.length) {
+      const panel = this._chatPanelEl();
+      const panelBeside =
+        !!panel && panel.dataset.open === "1" && this.el.dataset.panelOverlay !== "1";
+      mode = panelBeside || this.el.dataset.narrow === "1" ? "row" : "column";
+    }
+    if (this.el.dataset.pinStage !== mode) this.el.dataset.pinStage = mode;
+    if (pinned.style.order !== "0") pinned.style.order = "0";
+    if (pinned.dataset.stripHidden !== "0") pinned.dataset.stripHidden = "0";
+    const plan = planShareStrip(others);
+    others.forEach((el, i) => {
+      const order = String(plan.rank[i] + 1);
+      const hidden = plan.visible[i] ? "0" : "1";
+      if (el.style.order !== order) el.style.order = order;
+      if (el.dataset.stripHidden !== hidden) el.dataset.stripHidden = hidden;
+    });
+    const more = plan.more ? `+${plan.more}` : "";
+    if (mgr.dataset.more !== more) mgr.dataset.more = more;
+    this._watchPinStage(mgr);
+  }
+
+  _clearPinStage() {
+    if (!this.el) return;
+    const had = this.el.dataset.pinStage != null;
+    delete this.el.dataset.pinStage;
+    const mgr = this._pinWatched;
+    this._unwatchPinStage();
+    // Only scrub tiles this layout wrote to. The share strip writes the same
+    // attributes while docked and must not be wiped from here.
+    if (!mgr || !had || this._floatDocked()) return;
+    delete mgr.dataset.more;
+    this._stripTiles(mgr).forEach((el) => {
+      el.style.order = "";
+      delete el.dataset.stripHidden;
+    });
+  }
+
+  // Join / leave while pinned: re-plan the strip, and notice the pinned person
+  // leaving. Only childList is observed, so our own attribute writes cannot
+  // re-trigger it.
+  _watchPinStage(mgr) {
+    if (this._pinWatched === mgr) return;
+    this._unwatchPinStage();
+    this._pinWatched = mgr;
+    if (typeof MutationObserver === "function") {
+      this._pinObserver = new MutationObserver(() => {
+        if (this._pinRaf) return;
+        this._pinRaf = requestAnimationFrame(() => {
+          this._pinRaf = 0;
+          if (!this.isDestroyed()) this._layoutPinStage();
+        });
+      });
+      this._pinObserver.observe(mgr, { childList: true });
+    }
+    // "+N" is the manager's ::after, so its click lands on the manager itself.
+    // Only past the last visible strip tile counts — gaps also hit the manager.
+    this._onPinMoreClick = (e) => {
+      if (e.target !== mgr || !mgr.dataset.more) return;
+      const row = this.el.dataset.pinStage === "row";
+      const pinned = this._pinnedTileEl();
+      const edge = this._stripTiles(mgr)
+        .filter((t) => t !== pinned && t.dataset.stripHidden !== "1")
+        .reduce((m, t) => {
+          const r = t.getBoundingClientRect();
+          return Math.max(m, row ? r.right : r.bottom);
+        }, -Infinity);
+      if ((row ? e.clientX : e.clientY) <= edge) return;
+      e.stopPropagation();
+      this._switchPanelTab("participants");
+    };
+    mgr.addEventListener("click", this._onPinMoreClick, true);
+  }
+
+  _unwatchPinStage() {
+    if (this._pinObserver) this._pinObserver.disconnect();
+    this._pinObserver = null;
+    if (this._pinRaf) cancelAnimationFrame(this._pinRaf);
+    this._pinRaf = 0;
+    if (this._pinWatched && this._onPinMoreClick) {
+      this._pinWatched.removeEventListener("click", this._onPinMoreClick, true);
+    }
+    this._pinWatched = null;
+    this._onPinMoreClick = null;
   }
 
   _applyRemoteHandRaise(data) {

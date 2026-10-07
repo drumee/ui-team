@@ -1961,6 +1961,13 @@
       pointer-events: none;
       cursor: not-allowed;
     }
+
+    // ...except the share button: it stays clickable while locked so the click
+    // can say WHO is sharing (screenshare.js _explainShareLocked) instead of
+    // silently doing nothing.
+    &.screen[data-disabled="1"] {
+      pointer-events: auto;
+    }
   }
 
   // ── Raised-hand count badge on the hand control ──────────────────────────
