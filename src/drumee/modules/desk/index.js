@@ -3509,6 +3509,9 @@ class desk_module extends LetcBox {
       canManageDept = !!ddata.can_manage;
     }
     this._wsMenuDept = dept ? { id: dept.id, canManage: canManageDept } : null;
+    // Which workspace this list was drawn for — _prepareSwitcherMode redraws
+    // it when the open workspace has changed since.
+    this._wsMenuRenderedFor = depts.currentHubId();
 
     if (list && this._wsMenuMode !== "folders") {
       // The list now holds workspaces: a later folder feed must not be skipped
@@ -3577,7 +3580,16 @@ class desk_module extends LetcBox {
       return Promise.resolve(this._renderFolderSiblings(scope)).catch(() => {});
     }
     // Coming back from folder mode: the list still holds folders.
-    if (prev === "folders" && this._wsListPart) {
+    //
+    // OR the list was drawn for ANOTHER workspace while departments are on.
+    // Inside a department the list is that department's workspaces
+    // (_renderWorkspaceMenu), so a switch into a workspace of another
+    // department — or out of every department — leaves it listing the wrong
+    // set until something else re-renders it. The rows are cached, so the
+    // re-render is local.
+    const depts = require("libs/org-departments");
+    const stale = depts.deptFeature() && this._wsMenuRenderedFor !== depts.currentHubId();
+    if ((prev === "folders" || stale) && this._wsListPart) {
       return Promise.resolve(this._renderWorkspaceMenu(this._wsListPart)).catch(() => {});
     }
   }
