@@ -100,10 +100,14 @@ function fieldPatch(task, field, value) {
       const cur = datesOf(task);
       let start = field === "start_date" ? next || null : cur.start_date;
       let due = field === "due_date" ? next || null : cur.due_date;
-      // Keep the range ordered: a start moved past the due date drags the due
-      // date along, and a due date moved before the start pulls the start in.
+      // Keep the range ordered. A start moved past the due date keeps the
+      // start the user picked and CLEARS the due date, so the cell shows the
+      // "Due date" placeholder and asks for a new one. Dragging the due date
+      // along used to collapse the range to one day, and that dropped the start
+      // the user had just picked. A due date moved before the start still
+      // pulls the start in.
       if (start && due && start > due) {
-        if (field === "start_date") due = start;
+        if (field === "start_date") due = null;
         else start = due;
       }
       // A range of one day is a single-day task.

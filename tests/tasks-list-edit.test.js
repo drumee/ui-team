@@ -68,10 +68,15 @@ test("status and assignees use their own services", () => {
 });
 
 test("date edits keep the range ordered", () => {
-  // Start past the due date drags the due date along (and collapses to one day).
+  // Start past the due date keeps the start and clears the due date, so the
+  // cell asks for a new one (due 3.10, start set to 5.10 -> start 5.10, no due).
   assert.deepEqual(fieldPatch(task, "start_date", "2026-06-20").args, {
-    due_date: "2026-06-20",
-    start_date: null,
+    due_date: null,
+    start_date: "2026-06-20",
+  });
+  assert.deepEqual(fieldPatch(task, "start_date", "2026-06-20").local, {
+    due_date: null,
+    start_date: "2026-06-20",
   });
   // Due before the start pulls the start in.
   assert.deepEqual(fieldPatch(task, "due_date", "2026-06-05").args, {
