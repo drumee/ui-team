@@ -40,6 +40,11 @@ const {
 // "click close → delay → popup finally disappears" this panel was already
 // bitten by once. See _dismissOverlay.
 const OVERLAY_EXIT_MS = 140;
+// The child creator card's exit — matches `tasks-panel-subtask-out` in the skin.
+const SUBTASK_CARD_EXIT_MS = 160;
+// The card's entrance highlight (slide-in + glow), after which data-anim is
+// dropped — matches `tasks-panel-subtask-glow` (delay + duration) in the skin.
+const SUBTASK_CARD_GLOW_MS = 1600;
 
 // A deleted card's fade-out before its row is pruned. MUST MATCH the 0.14s the
 // skin gives `[data-leaving="1"]` on __task-card / __list-row.
@@ -675,7 +680,6 @@ class __tasks_panel extends LetcBox {
     this._installCardWindow();
     this._installListEdit();
     this._installAssigneeSearch();
-    this._installSubtaskDateWatch();
     this._watchVisibility();
     // PAINT AS SOON AS THERE IS SOMETHING TO PAINT, then revalidate.
     //
@@ -1902,7 +1906,9 @@ class __tasks_panel extends LetcBox {
 
       case "cancel-create-subtask":
         this._createSubtaskDraft = null;
-        return this._refreshCreateSubtaskSection();
+        return this._leaveSubtaskCard("create-modal").then(() =>
+          this._refreshCreateSubtaskSection(),
+        );
 
       case "commit-create-subtask":
         return this._queueCreateSubtask();
@@ -2664,34 +2670,6 @@ class __tasks_panel extends LetcBox {
   // rebuilt on every _render(), so per-input listeners would race the focus
   // restoration. The 200ms blur deferral lets a click on a result row fire
   // before the dropdown is hidden.
-  /**
-   * Due-date chip on the child-item creator card.
-   *
-   * The chip carries a native <input type="date"> laid invisibly over it, so
-   * clicking it opens the platform picker. Delegated on the persistent panel
-   * root, like the assignee and file-search fields: the card is rebuilt on
-   * every re-feed of the block, so a per-node listener would not survive.
-   */
-  _installSubtaskDateWatch() {
-    if (this._subtaskDateInstalled || !this.el) return;
-    this._subtaskDateInstalled = true;
-    this.el.addEventListener("change", (e) => {
-      const t = e.target;
-      if (!t || !t.matches || !t.matches(`.${this.fig.family}__subtask-date-input`)) {
-        return;
-      }
-      // data-scope says which of the two creators this input belongs to (the
-      // create modal's or the detail panel's) — they use the same class.
-      const isCreate = t.getAttribute("data-scope") === "create";
-      const draft = isCreate ? this._createSubtaskDraft : this._subtaskDraft;
-      if (!draft) return;
-      // "" when the user clears the field — a child with no due date is valid.
-      draft.due_date = t.value || "";
-      if (isCreate) this._refreshCreateSubtaskSection();
-      else this._refreshSubtaskSection();
-    });
-  }
-
   /**
    * How many cards a column may build right now.
    *
@@ -3799,6 +3777,9 @@ class __tasks_panel extends LetcBox {
       const end = this._isoDate(trigger.mget("endDate"));
       draft.start_date = start;
       draft.due_date = end || start;
+      if (draft.due_date) {
+        this._clearDueMissing(draft === this._createDefaults ? "create" : "detail");
+      }
       // Live-refresh the duration readout without a re-feed that would close /
       // rebuild the calendar mid-interaction.
       const summary = require("./skeleton").dueSummaryText(
@@ -3826,6 +3807,7 @@ class __tasks_panel extends LetcBox {
     // without this a colleague's edit wipes whatever is half-typed here.
     if (name === "subtask-title") {
       if (this._subtaskDraft) this._subtaskDraft.title = value;
+      if (value.trim()) this._clearSubtaskTitleMissing("detail-panel", this._subtaskDraft);
       return;
     }
     // Same, for the creator inside the create modal — its draft is a different
@@ -3834,6 +3816,24 @@ class __tasks_panel extends LetcBox {
     // created.
     if (name === "create-subtask-title") {
       if (this._createSubtaskDraft) this._createSubtaskDraft.title = value;
+      if (value.trim()) {
+        this._clearSubtaskTitleMissing("create-modal", this._createSubtaskDraft);
+      }
+      return;
+    }
+    // The creators' Due date pickers: same reason — the generic tail would
+    // move the PARENT's due date. No re-feed: the field already shows the pick,
+    // and rebuilding it would tear down the calendar under the click.
+    if (name === "subtask-due-date") {
+      if (this._subtaskDraft) this._subtaskDraft.due_date = value;
+      if (value) this._clearSubtaskDueMissing("detail-panel", this._subtaskDraft);
+      return;
+    }
+    if (name === "create-subtask-due-date") {
+      if (this._createSubtaskDraft) this._createSubtaskDraft.due_date = value;
+      if (value) {
+        this._clearSubtaskDueMissing("create-modal", this._createSubtaskDraft);
+      }
       return;
     }
 
@@ -3847,9 +3847,11 @@ class __tasks_panel extends LetcBox {
     ) {
       this._createDefaults[name] = value;
       if (name === "title" && value.trim()) this._clearTitleMissing("create");
+      if (name === "due_date" && value) this._clearDueMissing("create");
     } else if (this._detailDraft && inDetail && inDetail.contains(scopeEl)) {
       this._detailDraft[name] = value;
       if (name === "title" && value.trim()) this._clearTitleMissing("detail");
+      if (name === "due_date" && value) this._clearDueMissing("detail");
     }
   }
 
@@ -3890,6 +3892,36 @@ class __tasks_panel extends LetcBox {
     if (field) field.classList.remove("is-missing");
   }
 
+  /**
+   * The due date is required too: same in-place flag as the title, on the
+   * __due-field wrapper (outline + message), riding on the draft so a re-feed
+   * of the due section — the Duration toggle — keeps it.
+   */
+  _flagDueMissing(scope) {
+    const { draft, root } = this._titleScope(scope);
+    if (draft) draft._dueMissing = true;
+    const field =
+      root &&
+      root.querySelector(
+        // The child creator card's date is a __due-field too — skip it.
+        `.${this.fig.family}__due-field:not(.${this.fig.family}__subtask-card-date)`,
+      );
+    if (field) field.dataset.missing = "1";
+  }
+
+  _clearDueMissing(scope) {
+    const { draft, root } = this._titleScope(scope);
+    if (!draft || !draft._dueMissing) return;
+    draft._dueMissing = false;
+    const field =
+      root &&
+      root.querySelector(
+        // The child creator card's date is a __due-field too — skip it.
+        `.${this.fig.family}__due-field:not(.${this.fig.family}__subtask-card-date)`,
+      );
+    if (field) field.dataset.missing = "0";
+  }
+
   async _commitTask() {
     this._captureCreateDraft();
     const draft = this._createDefaults || {};
@@ -3900,7 +3932,11 @@ class __tasks_panel extends LetcBox {
     // Already in marker form (chips serialize to "[@Name](user:uid)").
     const description = String(draft.description || "").trim();
 
+    // Both required fields are flagged in one pass, so the user sees every
+    // missing field at once rather than one per press.
+    if (!dueRaw) this._flagDueMissing("create");
     if (!title) return this._flagTitleMissing("create");
+    if (!dueRaw) return;
     if (!(await this._gateUnfinishedUploads("create", draft))) return;
 
     this._setSubmitting(".tasks-panel__create-submit", true);
@@ -4192,7 +4228,10 @@ class __tasks_panel extends LetcBox {
     if (!task) return;
     // planDetailCommit drops an empty title and saves everything else, so a
     // cleared title used to quietly snap back to the old one. Refuse instead.
+    const dueMissing = !String(draft.due_date || "").trim();
+    if (dueMissing) this._flagDueMissing("detail");
     if (!String(draft.title || "").trim()) return this._flagTitleMissing("detail");
+    if (dueMissing) return;
     if (!(await this._gateUnfinishedUploads("detail", draft))) return;
 
     this._setSubmitting(".tasks-panel__detail-submit", true);
@@ -10726,20 +10765,217 @@ class __tasks_panel extends LetcBox {
     const firstOpen = cols.find((c) => !c.is_done) || cols[0];
     this._subtaskDraft = {
       title: "",
-      // Pre-filled from the parent, and editable right here via the Due date
-      // chip (the earlier build only inherited it read-only).
-      due_date: parent.due_date || "",
+      // Pre-filled from the parent and editable in the card — unless the
+      // parent's date has already passed: a new child can't be due in the past,
+      // so it starts empty and the required check asks for a real date.
+      due_date: this._notPast(parent.due_date),
       priority: "medium",
       status: firstOpen ? firstOpen.key : "todo",
       // Which chip's dropdown is open: null | "priority" | "status".
       menu: null,
     };
-    this._refreshSubtaskSection();
+    this._refreshSubtaskSection().then(() =>
+      this._revealSubtaskCard("detail-panel"),
+    );
+  }
+
+  /**
+   * Bring a freshly opened creator card into view: scroll its column so the
+   * card shows (it sits at the foot of the metadata column, usually below the
+   * fold when the panel was opened from a row's ＋), play the entrance
+   * highlight once, and put the caret in its title.
+   *
+   * The highlight is stamped on THIS node by JS, never declared in the
+   * skeleton: the card is rebuilt on every re-feed of its section (a chip
+   * menu, a peer's push), and a skeleton-declared animation would replay each
+   * time. A rebuilt card simply comes back without the stamp.
+   *
+   * Waits up to ~20 frames — opened from a list/gantt ＋ the detail panel is
+   * mounting in the same tick, and the Entry's <input> lands after the feed.
+   *
+   * @param {String} host  detail-panel | create-modal — whose creator card
+   */
+  _revealSubtaskCard(host) {
+    if (typeof requestAnimationFrame !== "function") return;
+    const pfx = this.fig.family;
+    const reduced = this._prefersReducedMotion();
+    let tries = 20;
+    const attempt = () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const card = this._subtaskCard(host);
+      const input = card && card.querySelector(`.${pfx}__subtask-card-title input`);
+      if (!card || !input) {
+        if (--tries > 0) requestAnimationFrame(attempt);
+        return;
+      }
+      // Our own scroll, so focus() must not do its instant jump first.
+      try {
+        input.focus({ preventScroll: true });
+      } catch (_) {
+        input.focus();
+      }
+      this._keepSubtaskCardInView(card, reduced);
+      if (reduced) return;
+      card.dataset.anim = "enter";
+      clearTimeout(this._subtaskGlowTimer);
+      this._subtaskGlowTimer = setTimeout(() => {
+        if (card.dataset.anim === "enter") delete card.dataset.anim;
+      }, SUBTASK_CARD_GLOW_MS);
+    };
+    attempt();
+  }
+
+  /**
+   * Scroll the card's column until the WHOLE card shows, Create button
+   * included — and keep it that way while the card settles.
+   *
+   * One scroll at reveal time is not enough: the due-date field is a lazy
+   * kind (seeds.js import()), so the card first lays out around a short
+   * placeholder and grows once flatpickr mounts, pushing Create back below the
+   * fold. The panel's pop-in and the card's own entrance also scale it while
+   * the first measurement is taken. So: scroll now, then re-check on every
+   * resize of the card and once after the animations, for a short window.
+   *
+   * @param {HTMLElement} card
+   * @param {Boolean} reduced  prefers-reduced-motion — jump instead of glide
+   */
+  _keepSubtaskCardInView(card, reduced) {
+    const MARGIN = 16;
+    // Nearest ancestor that actually scrolls: the metadata column on desktop,
+    // the panel itself when the columns stack on mobile.
+    let scroller = card.parentElement;
+    while (scroller && scroller !== this.el) {
+      const oy = getComputedStyle(scroller).overflowY;
+      if ((oy === "auto" || oy === "scroll") && scroller.scrollHeight > scroller.clientHeight) {
+        break;
+      }
+      scroller = scroller.parentElement;
+    }
+    if (!scroller || scroller === this.el) {
+      card.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
+      return;
+    }
+    const fit = () => {
+      if (!card.isConnected) return;
+      const c = card.getBoundingClientRect();
+      const v = scroller.getBoundingClientRect();
+      let delta = 0;
+      // Taller than the viewport: show its top, the title is what matters.
+      if (c.height + 2 * MARGIN > v.height) delta = c.top - v.top - MARGIN;
+      else if (c.bottom + MARGIN > v.bottom) delta = c.bottom + MARGIN - v.bottom;
+      else if (c.top - MARGIN < v.top) delta = c.top - MARGIN - v.top;
+      if (Math.abs(delta) < 1) return;
+      scroller.scrollBy({ top: delta, behavior: reduced ? "auto" : "smooth" });
+    };
+    fit();
+    if (this._subtaskViewWatch) this._subtaskViewWatch();
+    const timers = [setTimeout(fit, 260), setTimeout(fit, 600)];
+    let ro = null;
+    if (typeof ResizeObserver === "function") {
+      ro = new ResizeObserver(() => fit());
+      ro.observe(card);
+    }
+    const stop = () => {
+      timers.forEach(clearTimeout);
+      if (ro) ro.disconnect();
+      if (this._subtaskViewWatch === stop) this._subtaskViewWatch = null;
+    };
+    this._subtaskViewWatch = stop;
+    // Long enough for the lazy picker to mount; short enough that a user who
+    // then scrolls away and opens a chip menu is not dragged back.
+    setTimeout(stop, 1200);
+  }
+
+  /**
+   * Play the creator card's exit, then resolve. Callers clear the draft
+   * BEFORE calling this (the card is shut as far as any handler is concerned)
+   * and re-feed the section once it resolves — that re-feed reads the state
+   * as it is THEN, so a ＋ pressed during the exit simply draws the new card.
+   *
+   * @param {String} host  detail-panel | create-modal — whose creator card
+   */
+  _leaveSubtaskCard(host) {
+    const card = this._subtaskCard(host);
+    if (!card || this._prefersReducedMotion()) return Promise.resolve();
+    card.dataset.anim = "leave";
+    return new Promise((resolve) => setTimeout(resolve, SUBTASK_CARD_EXIT_MS));
+  }
+
+  /**
+   * Put the caret in the creator card's title once it is on screen. The part
+   * feed resolves before the Entry has mounted its <input>, so a single
+   * querySelector right after it finds nothing — retry for a few frames.
+   *
+   * @param {String} host  detail-panel | create-modal — whose creator card
+   */
+  _focusSubtaskTitle(host) {
+    const pfx = this.fig.family;
+    const sel = `.${pfx}__${host} .${pfx}__subtask-card-title input`;
+    let tries = 10;
+    const attempt = () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const input = this.el && this.el.querySelector(sel);
+      if (input && typeof input.focus === "function") return input.focus();
+      if (--tries > 0) requestAnimationFrame(attempt);
+    };
+    if (typeof requestAnimationFrame === "function") attempt();
+  }
+
+  /**
+   * The creator card's title is required: flag the card (red field + message)
+   * and put the caret back in the box. In place, not via a re-feed, so the
+   * half-filled chips and date stay as they are; the flag also rides on the
+   * draft so a later re-feed keeps it.
+   *
+   * @param {String} host   detail-panel | create-modal — whose creator card
+   * @param {Object} draft  that creator's draft
+   */
+  _flagSubtaskTitleMissing(host, draft) {
+    if (draft) draft._titleMissing = true;
+    const card = this._subtaskCard(host);
+    if (card) card.dataset.titleMissing = "1";
+    this._focusSubtaskTitle(host);
+  }
+
+  _clearSubtaskTitleMissing(host, draft) {
+    if (!draft || !draft._titleMissing) return;
+    draft._titleMissing = false;
+    const card = this._subtaskCard(host);
+    if (card) card.dataset.titleMissing = "0";
+  }
+
+  _flagSubtaskDueMissing(host, draft) {
+    if (draft) draft._dueMissing = true;
+    const card = this._subtaskCard(host);
+    const field = card && card.querySelector(`.${this.fig.family}__due-field`);
+    if (field) field.dataset.missing = "1";
+  }
+
+  _clearSubtaskDueMissing(host, draft) {
+    if (!draft || !draft._dueMissing) return;
+    draft._dueMissing = false;
+    const card = this._subtaskCard(host);
+    const field = card && card.querySelector(`.${this.fig.family}__due-field`);
+    if (field) field.dataset.missing = "0";
+  }
+
+  _subtaskCard(host) {
+    const pfx = this.fig.family;
+    return this.el && this.el.querySelector(`.${pfx}__${host} .${pfx}__subtask-card`);
+  }
+
+  // A Y-m-d date if it is today or later, else "" — what a new child may
+  // inherit from its parent.
+  _notPast(iso) {
+    if (!iso) return "";
+    return Dayjs(iso).isBefore(Dayjs().startOf("day")) ? "" : iso;
   }
 
   _closeSubtaskDraft() {
     this._subtaskDraft = null;
-    this._refreshSubtaskSection();
+    this._leaveSubtaskCard("detail-panel").then(() =>
+      this._refreshSubtaskSection(),
+    );
   }
 
   /**
@@ -10750,8 +10986,8 @@ class __tasks_panel extends LetcBox {
    * attachments, comments and the due section are all their own sys_pn parts.
    */
   _refreshSubtaskSection() {
-    if (!this._detailId) return;
-    this._withPart("subtask-rows").then((part) => {
+    if (!this._detailId) return Promise.resolve();
+    return this._withPart("subtask-rows").then((part) => {
       if (!this._detailId || !part) return;
       part.feed(
         require("./skeleton").buildSubtaskRowsContent(this, this._detailId),
@@ -10779,12 +11015,14 @@ class __tasks_panel extends LetcBox {
     const firstOpen = cols.find((c) => !c.is_done) || cols[0];
     this._createSubtaskDraft = {
       title: "",
-      due_date: this._createDefaults.due_date || "",
+      due_date: this._notPast(this._createDefaults.due_date),
       priority: "medium",
       status: firstOpen ? firstOpen.key : "todo",
       menu: null,
     };
-    this._refreshCreateSubtaskSection();
+    this._refreshCreateSubtaskSection().then(() =>
+      this._revealSubtaskCard("create-modal"),
+    );
   }
 
   /**
@@ -10795,8 +11033,8 @@ class __tasks_panel extends LetcBox {
    * section and the detail panel's own child block are separate parts.
    */
   _refreshCreateSubtaskSection() {
-    if (!this._creating) return;
-    this._withPart("create-subtask-rows")
+    if (!this._creating) return Promise.resolve();
+    return this._withPart("create-subtask-rows")
       .then((part) => {
         if (!this._creating || !part || part.isDestroyed?.()) return;
         part.feed(
@@ -10838,7 +11076,14 @@ class __tasks_panel extends LetcBox {
    * way pressing Add on it would.
    */
   _flushCreateSubtaskDraft() {
-    if (!this._createSubtaskDraft || !this._readCreateSubtaskTitle()) return;
+    const draft = this._createSubtaskDraft;
+    if (!draft || !this._readCreateSubtaskTitle()) return;
+    // Runs inside the parent's Create, after the parent's own due date passed
+    // validation — so a child the user typed but never dated takes that date
+    // rather than being dropped without a word.
+    if (!draft.due_date && this._createDefaults) {
+      draft.due_date = this._createDefaults.due_date || "";
+    }
     this._queueCreateSubtask();
   }
 
@@ -10854,12 +11099,10 @@ class __tasks_panel extends LetcBox {
     const parentDraft = this._createDefaults;
     const draft = this._createSubtaskDraft;
     if (!parentDraft || !draft) return;
-    const input = this._createSubtaskInput();
     const title = this._readCreateSubtaskTitle();
-    if (!title) {
-      if (input && typeof input.focus === "function") input.focus();
-      return;
-    }
+    if (!draft.due_date) this._flagSubtaskDueMissing("create-modal", draft);
+    if (!title) return this._flagSubtaskTitleMissing("create-modal", draft);
+    if (!draft.due_date) return;
     if (!Array.isArray(parentDraft.subtasks)) parentDraft.subtasks = [];
     parentDraft.subtasks.push({
       // Local key, not a server id. Named `id` so the shared row skeleton can
@@ -10871,11 +11114,12 @@ class __tasks_panel extends LetcBox {
       status: draft.status || this.getDefaultStatus(),
       due_date: draft.due_date || "",
     });
-    // Stay open with only the title cleared, matching the detail-panel creator:
-    // breaking a task down means adding several children in a row.
-    this._createSubtaskDraft = { ...draft, title: "", menu: null };
-    if (input) input.value = "";
-    this._refreshCreateSubtaskSection();
+    // Queued: close the card, matching the detail-panel creator — the row now
+    // shows in the list, and the ＋ opens a fresh card for the next one.
+    this._createSubtaskDraft = null;
+    this._leaveSubtaskCard("create-modal").then(() =>
+      this._refreshCreateSubtaskSection(),
+    );
   }
 
   _removeCreateSubtask(trigger) {
@@ -10963,10 +11207,9 @@ class __tasks_panel extends LetcBox {
         `.${this.fig.family}__detail-panel .${this.fig.family}__subtask-card-title input`,
       );
     const title = String((input && input.value) || draft.title || "").trim();
-    if (!title) {
-      if (input && typeof input.focus === "function") input.focus();
-      return;
-    }
+    if (!draft.due_date) this._flagSubtaskDueMissing("detail-panel", draft);
+    if (!title) return this._flagSubtaskTitleMissing("detail-panel", draft);
+    if (!draft.due_date) return;
 
     // _setControlBusy, NOT _setSubmitting: the latter raises the panel-wide
     // _submitting flag that gates commit-task / commit-detail, and creating a
@@ -10998,27 +11241,26 @@ class __tasks_panel extends LetcBox {
         return;
       }
       this._mergeTask(row);
-      // Keep the creator open so several subtasks can be added in a row — the
-      // common case when breaking a task down. Only the title resets.
-      this._subtaskDraft = { ...draft, title: "", menu: null };
-      if (input) input.value = "";
+      // Done: the creator card closes and the new child shows in the list
+      // above. The ＋ in the section header opens a fresh card for the next.
+      this._subtaskDraft = null;
       // Two targeted re-feeds rather than a full _render().
       //
       // The parent's count badge lives OUTSIDE this part — on the board card,
       // list row, gantt row and calendar chip behind the modal — so the view
       // does have to be rebuilt or those read as "the subtask was never
       // created". But the view sits in its own "view-host" part, a SIBLING of
-      // the detail wrapper, so re-feeding it leaves this section (and the
-      // creator's focused input) alone. Both calls are therefore safe together:
+      // the detail wrapper, so re-feeding it leaves this section alone.
+      // Both calls are therefore safe together:
       // they touch disjoint subtrees, which was not true of the old
       // _render()-then-ensurePart pairing.
-      //
-      // Keeping the panel intact also keeps the caret in the title box, so the
-      // next child can be typed straight away — the common case, and the whole
-      // reason the creator stays open.
       this._syncSubtaskBadges(parentId);
       this._refreshViewBody();
-      this._refreshSubtaskSection();
+      // The card plays its exit first; the re-feed then drops it and shows the
+      // new child row in one paint.
+      this._leaveSubtaskCard("detail-panel").then(() =>
+        this._refreshSubtaskSection(),
+      );
     } catch (err) {
       console.error("[tasks_panel] subtask create failed:", err);
     } finally {

@@ -2770,6 +2770,33 @@ $theme-colors: (
     }
   }
 
+  // Wraps the due picker and its required message (create, detail and the
+  // child creator card). data-missing="1" outlines the field in red.
+  &__due-field {
+    width: 100%;
+    gap: 4px;
+  }
+
+  &__due-missing {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $color: var(--error, #f6514b)
+    );
+  }
+
+  // !important: ui-core's data-flow rules give every Note display:flex at
+  // higher specificity (same as __title-missing).
+  &__due-field:not([data-missing="1"]) .tasks-panel__due-missing {
+    display: none !important;
+  }
+
+  &__due-field[data-missing="1"] .tasks-panel__due-input {
+    box-shadow:
+      0 0 0 1px var(--error, #f6514b),
+      0 0 0 4px rgba(246, 81, 75, 0.15);
+  }
+
   // Live duration readout ("N days"), shown beside the Duration label.
   &__due-summary {
     @include drumee.typo(
@@ -8618,22 +8645,34 @@ $theme-colors: (
   // ── An existing child ───────────────────────────────────────────
   &__subtask-row {
     align-items: center;
-    gap: 8px;
-    padding: 6px 2px;
-    border-bottom: 1px solid var(--normal-bg-80, #f0f0f5);
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
+    background: var(--normal-bg-100, #fff);
     cursor: pointer;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s,
+      background 0.15s;
 
-    &:last-of-type {
-      border-bottom: 0;
-    }
     &:hover {
-      background: var(--normal-bg-90, #fafafc);
+      border-color: rgba(89, 80, 255, 0.35);
+      box-shadow: 0 2px 8px rgba(11, 10, 33, 0.06);
     }
     // Struck through rather than hidden: this is a checklist, and a
     // disappearing row loses the done/total context.
-    &[data-done="1"] .tasks-panel__subtask-title {
-      text-decoration: line-through;
-      color: var(--normal-fg-50, #8a8aa3);
+    &[data-done="1"] {
+      background: var(--normal-bg-90, #fafafc);
+
+      .tasks-panel__subtask-title {
+        text-decoration: line-through;
+        color: var(--normal-fg-50, #8a8aa3);
+      }
+      .tasks-panel__subtask-dot,
+      .tasks-panel__subtask-meta {
+        opacity: 0.5;
+      }
     }
   }
 
@@ -8673,18 +8712,29 @@ $theme-colors: (
 
   &__subtask-check {
     flex-shrink: 0;
-    width: 16px;
-    height: 16px;
-    border-radius: 5px;
-    border: 1.5px solid var(--normal-bg-70, #e0e0ea);
+    width: 18px;
+    height: 18px;
+    border-radius: 6px;
+    border: 1.5px solid var(--normal-fg-30, #c4c4d0);
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition:
+      border-color 0.15s,
+      background 0.15s;
 
     svg {
       width: 10px;
       height: 10px;
       fill: transparent;
+    }
+
+    &:hover {
+      border-color: #54b684;
+
+      svg {
+        fill: rgba(84, 182, 132, 0.5);
+      }
     }
 
     &[data-done="1"] {
@@ -8699,26 +8749,48 @@ $theme-colors: (
   &__subtask-text {
     flex: 1;
     min-width: 0;
-    gap: 1px;
+    gap: 2px;
   }
 
   &__subtask-title {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 500;
     @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
+      $size: 13px,
+      $line: 18px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
+  // Due date, with a calendar glyph drawn as a mask so it takes the text colour
+  // (red when overdue) without a second icon.
   &__subtask-meta {
+    align-items: center;
+    gap: 4px;
     @include drumee.typo(
-      $size: 10px,
+      $size: 11px,
       $line: 14px,
       $color: var(--normal-fg-50, #8a8aa3)
     );
+
+    &::before {
+      content: "";
+      flex-shrink: 0;
+      width: 11px;
+      height: 11px;
+      background: currentColor;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E")
+        no-repeat center / contain;
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E")
+        no-repeat center / contain;
+    }
+
+    &[data-overdue="1"] {
+      color: var(--error, #f6514b);
+      font-weight: 500;
+    }
   }
 
   &__subtask-dot {
@@ -8726,6 +8798,7 @@ $theme-colors: (
     width: 8px;
     height: 8px;
     border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
   }
 
   &__subtask-empty {
@@ -8749,6 +8822,66 @@ $theme-colors: (
     border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
   }
 
+  // Entrance highlight + exit, stamped by the controller on the one node it
+  // revealed (_revealSubtaskCard / _leaveSubtaskCard) — never declared in the
+  // skeleton, or every re-feed of the section would replay it.
+  &__subtask-card[data-anim="enter"] {
+    animation:
+      tasks-panel-subtask-in 220ms ease-out,
+      tasks-panel-subtask-glow 1400ms ease-out 200ms;
+  }
+
+  &__subtask-card[data-anim="leave"] {
+    pointer-events: none;
+    animation: tasks-panel-subtask-out 160ms ease-in forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__subtask-card[data-anim] {
+      animation: none;
+    }
+  }
+
+  @keyframes tasks-panel-subtask-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  // Two soft pulses of the primary ring, settling back to the hairline.
+  @keyframes tasks-panel-subtask-glow {
+    0% {
+      border-color: var(--col-primary-100, #5950ff);
+      box-shadow: 0 0 0 0 rgba(89, 80, 255, 0.45);
+    }
+    35% {
+      border-color: var(--col-primary-100, #5950ff);
+      box-shadow: 0 0 0 6px rgba(89, 80, 255, 0);
+    }
+    36% {
+      box-shadow: 0 0 0 0 rgba(89, 80, 255, 0.35);
+    }
+    70% {
+      border-color: var(--col-primary-100, #5950ff);
+      box-shadow: 0 0 0 6px rgba(89, 80, 255, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(89, 80, 255, 0);
+    }
+  }
+
+  @keyframes tasks-panel-subtask-out {
+    to {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+  }
+
   &__subtask-card-head {
     align-items: center;
     gap: 8px;
@@ -8757,6 +8890,15 @@ $theme-colors: (
   &__subtask-card-title {
     flex: 1;
     min-width: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--border-default, #84848c);
+    border-radius: 8px;
+    transition: border-color 0.15s;
+
+    &:hover,
+    &:focus-within {
+      border-color: var(--active-border, #433cc5);
+    }
 
     input {
       width: 100%;
@@ -8790,6 +8932,40 @@ $theme-colors: (
     align-items: center;
     gap: 4px;
     flex-wrap: wrap;
+  }
+
+  // Required title — same red as the parent's __title-missing. !important on
+  // the hide for the same reason as there: ui-core's data-flow rules give
+  // every Note display:flex at higher specificity.
+  &__subtask-title-missing {
+    margin-top: -6px;
+    @include drumee.typo(
+      $size: 11px,
+      $line: 16px,
+      $color: var(--error, #f6514b)
+    );
+  }
+
+  &__subtask-card:not([data-title-missing="1"]) .tasks-panel__subtask-title-missing {
+    display: none !important;
+  }
+
+  &__subtask-card[data-title-missing="1"] .tasks-panel__subtask-card-title {
+    border-color: var(--error, #f6514b);
+    box-shadow: 0 0 0 3px rgba(246, 81, 75, 0.15);
+  }
+
+  // Due date row: the parent's __due-input field, full card width.
+  &__subtask-card-date {
+    width: 100%;
+
+    .tasks-panel__due-missing {
+      font-size: 11px;
+    }
+
+    .tasks-panel__subtask-due-input {
+      width: 100%;
+    }
   }
 
   // Explicit Create for the inline creator. The card is a form inside a panel
@@ -8869,25 +9045,6 @@ $theme-colors: (
     }
   }
 
-  // The native picker covers the whole chip so a click opens the platform date
-  // UI; it is invisible, the chip's own label is what shows.
-  &__subtask-date-input {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    border: 0;
-    padding: 0;
-    cursor: pointer;
-
-    &::-webkit-calendar-picker-indicator {
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
-    }
-  }
-
   // ── Chip dropdown ───────────────────────────────────────────────
   // Anchored to the chip that opened it (__subtask-chip is position:relative),
   // not to the card — against the card it dropped below the whole form, well
@@ -8951,7 +9108,8 @@ $theme-colors: (
     cursor: default;
 
     &:hover {
-      background: transparent;
+      border-color: var(--border-default, rgba(0, 0, 0, 0.06));
+      box-shadow: none;
     }
   }
 
@@ -9079,9 +9237,35 @@ html[data-theme="dark"] .tasks-panel {
     border-color: #1f8f5c;
   }
 
-  &__subtask-row:hover,
   &__list-row[data-sub="1"] {
     background: rgba(255, 255, 255, 0.04);
+  }
+
+  &__subtask-row {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+
+    &:hover {
+      border-color: rgba(140, 133, 255, 0.45);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+    }
+
+    &[data-done="1"] {
+      background: transparent;
+    }
+  }
+
+  &__create-modal &__subtask-row:hover {
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+  }
+
+  &__subtask-check {
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  &__subtask-dot {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
   }
 
   // The creator card and its chip dropdown are white/hairline in light mode;
