@@ -55,6 +55,7 @@ function detachWhenFaded(node) {
 
 const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
+const { withOwnWorkspaceName } = require("libs/workspace-label");
 
 class __push_manager extends winman {
 
@@ -972,6 +973,8 @@ class __push_manager extends winman {
     try {
       if (!data || data.room_type != _a.meeting) return;
       if (!data.hub_id) return;
+      // Name the workspace as this desk does, not by its shared name.
+      data = withOwnWorkspaceName(data);
       if (data.uid && data.uid == Visitor.id) return;
       if (this._hasLiveMeetingToastFor(data.hub_id)) return;
 
@@ -1180,6 +1183,10 @@ class __push_manager extends winman {
     const currentRoom =
       Wm.getItemsByKind("window_connect")[0] || Wm.getItemsByKind("window_meeting")[0];
     if (!data || !data.room_id) return;
+    // Name the workspace as this desk does, not by its shared name: the toast,
+    // the browser notification, the switchcall popup and the folder window
+    // Join opens all read hub_name from here on.
+    data = withOwnWorkspaceName(data);
     if (currentRoom && !currentRoom.isDestroyed()) {
       if (currentRoom.mget(_a.hub_id) == data.hub_id) {
         currentRoom.onRemoteDrumateJoined(data);
