@@ -2161,9 +2161,9 @@ const make = function (ui) {
   // there are, and deriving both from one array is what keeps them in step.
   const viewDefs = [
     ["board", LOCALE.TASK_VIEW_BOARD, "square-split-horizontal"],
+    ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
     ["calendar", LOCALE.TASK_VIEW_CALENDAR, "calendar"],
     ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
-    ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
     ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
   ];
 
