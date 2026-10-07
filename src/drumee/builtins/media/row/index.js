@@ -75,6 +75,41 @@ class __media_row extends DrumeeMediaInteract {
   }
 
   /**
+   * Inline rename (pencil icon) in list mode.
+   *
+   * The shared editor (interact.js) is appended as the row's LAST child and
+   * the row skin parks it with a fixed `left: 119px; top: 12%`. The Files tab
+   * redefines the row's columns (44px checkbox + 44px icon, then a flexible
+   * name column), so the box landed away from the name and at a width
+   * unrelated to it. Lay it over the real filename cell instead, centred in
+   * the row — right after the file icon, whatever the column template is.
+   * (Focus + name preselection is interact.js _readyRenameField.)
+   */
+  async _createInput(value, opt) {
+    await super._createInput(value, opt);
+    const entry = this.children.last();
+    if (!entry || entry.isDestroyed() || !entry.el) return;
+    this._alignRenameInput(entry);
+  }
+
+  _alignRenameInput(entry) {
+    const name = document.getElementById(`${this._id}-filename`);
+    const cell =
+      (name && name.closest(`.${this.fig.family}__field-filename`)) || name;
+    const host = entry.el.offsetParent;
+    if (!cell || !host) return;
+    const h = host.getBoundingClientRect();
+    const c = cell.getBoundingClientRect();
+    if (!c.width) return;
+    const st = entry.el.style;
+    st.left = `${Math.round(c.left - h.left)}px`;
+    st.width = `${Math.round(c.width)}px`;
+    st.top = `${Math.round(c.top - h.top + c.height / 2)}px`;
+    st.height = "auto";
+    st.transform = "translateY(-50%)";
+  }
+
+  /**
    * 
    * @param {*} toggle 
    */
