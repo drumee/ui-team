@@ -1519,11 +1519,13 @@
     pointer-events: auto;
   }
 
+  // Compact card (~80% of Figma 172:100435's 450px): it closes a call, so it
+  // should read as a quick question, not a page.
   &__feedback-card {
-    width: 450px;
+    width: 360px;
     max-width: calc(100% - 32px);
-    padding: 32px;
-    gap: 24px;
+    padding: 24px;
+    gap: 16px;
     background: var(--normal-bg);
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 12px;
@@ -1535,12 +1537,12 @@
   &__feedback-header {
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   &__feedback-icon {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     align-items: center;
     justify-content: center;
     background: rgba(84, 182, 132, 0.15);
@@ -1548,16 +1550,16 @@
     flex-shrink: 0;
 
     svg {
-      width: 22px;
-      height: 22px;
+      width: 18px;
+      height: 18px;
       color: #54b684;
     }
   }
 
   &__feedback-title {
     @include drumee.typo(
-      $size: 20px,
-      $line: 28px,
+      $size: 18px,
+      $line: 24px,
       $weight: 700,
       $color: var(--normal-fg)
     );
@@ -1566,13 +1568,13 @@
   &__feedback-stats {
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 12px;
     align-self: center;
   }
 
   &__feedback-stat {
     @include drumee.typo(
-      $size: 14px,
+      $size: 13px,
       $line: 1.4,
       $weight: 400,
       $color: #65656c
@@ -1580,24 +1582,24 @@
   }
 
   &__feedback-stats-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #847eff;
     flex-shrink: 0;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 
   &__feedback-rating {
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
   }
 
   &__feedback-prompt {
     @include drumee.typo(
-      $size: 16px,
-      $line: 24px,
+      $size: 14px,
+      $line: 20px,
       $weight: 600,
       $color: var(--normal-fg)
     );
@@ -1609,9 +1611,9 @@
   }
 
   &__feedback-star {
-    width: 36px;
-    height: 36px;
-    padding: 6px;
+    width: 28px;
+    height: 28px;
+    padding: 4px;
     border-radius: 4px;
     background: transparent;
     cursor: pointer;
@@ -1674,14 +1676,14 @@
 
   &__feedback-skip,
   &__feedback-submit {
-    height: 48px;
-    padding: 12px 24px;
+    height: 40px;
+    padding: 8px 20px;
     border-radius: 4px;
     box-sizing: border-box;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    @include drumee.typo($size: 16px, $line: 24px, $weight: 600);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600);
 
     .note-content {
       white-space: nowrap;
@@ -1689,8 +1691,8 @@
   }
 
   &__feedback-skip {
-    flex: 0 1 120px;
-    min-width: 80px;
+    flex: 0 1 100px;
+    min-width: 72px;
     background: #f2f2f7;
     color: var(--normal-fg);
     border: 1px solid var(--border-default);
