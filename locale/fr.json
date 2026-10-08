@@ -3283,5 +3283,8 @@
   "X_ITEMS": "{0} éléments",
   "ONE_ITEM": "1 élément",
   "X_SELECTED": "{0} sélectionné(s)",
-  "CLEAR_SELECTION": "Effacer la sélection"
+  "CLEAR_SELECTION": "Effacer la sélection",
+  "DOWNLOADING_X_OF_Y": "Téléchargement {0} sur {1}",
+  "DOWNLOAD_COMPLETE": "Téléchargement terminé",
+  "DOWNLOAD_X_FAILED": "{0} fichier(s) n'ont pas pu être téléchargé(s)"
 }

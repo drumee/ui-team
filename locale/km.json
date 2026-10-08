@@ -3070,5 +3070,8 @@
   "X_ITEMS": "{0} ធាតុ",
   "ONE_ITEM": "1 ធាតុ",
   "X_SELECTED": "បានជ្រើសរើស {0}",
-  "CLEAR_SELECTION": "សម្អាតការជ្រើសរើស"
+  "CLEAR_SELECTION": "សម្អាតការជ្រើសរើស",
+  "DOWNLOADING_X_OF_Y": "កំពុងទាញយក {0} នៃ {1}",
+  "DOWNLOAD_COMPLETE": "ការទាញយកបានបញ្ចប់",
+  "DOWNLOAD_X_FAILED": "មិនអាចទាញយកឯកសារ {0} បានទេ"
 }

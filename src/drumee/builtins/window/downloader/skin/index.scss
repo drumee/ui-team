@@ -1,239 +1,667 @@
 @use 'mixins/drumee.scss';
 
+// Download card. The confirm step (skeleton/index.js: __head / __badge /
+// __close / __footer / __btn) is a centred card; once a download runs
+// (skeleton/files.js, skeleton/progress.js) the window docks bottom-right and
+// takes the upload window's frame (skeleton/frame.js) and look.
 .window-downloader {
   &__ui {
-    background-color: var(--default-bg);//var(--ewhite);
-    box-shadow: var(--shadow-main);
-    border-radius: 12px; // Figma modal card
-    // The shared .window__ui floor is min-width:600px, which overrode the inline
-    // 520px width (min-width beats width) and made the card too wide. Pin it to
-    // the Figma 520px card. Compound selector (.window-downloader__ui.window__ui,
-    // 0,2,0) beats the base .window__ui (0,1,0) regardless of load order; min()
-    // keeps it inside the viewport on narrow screens.
+    // The card's accent: icons, tints, the progress fill, the tile hover.
+    // Brand indigo; lifted in dark below, where #433cc5 sinks into the card.
+    --dl-accent: var(--primary-50, #433cc5);
+    background-color: var(--normal-bg-elevated, var(--default-bg));
+    box-shadow: 0 12px 32px rgba(11, 10, 33, 0.18), 0 2px 6px rgba(11, 10, 33, 0.08);
+    border-radius: 12px;
+    overflow: hidden;
+
+    // The shared .window__ui floor (min 600x320) beats the 400px inline size,
+    // so cancel it; and let the height follow the content instead of the
+    // inline estimate (index.js H). Two classes (0,2,0) beat the base rule
+    // regardless of load order; min() keeps the card inside a phone screen.
     &.window__ui {
-      min-width: min(520px, 100%);
+      min-width: 0;
+      min-height: 0;
+      width: min(400px, calc(100vw - 32px)) !important;
+      height: auto !important;
     }
-    &[data-state="0"]{
+
+    &[data-state="0"] {
       display: none;
+    }
+
+    // Download running (index.js _dock): the upload window's spot
+    // (window/upload-progress skin + index.js) — fixed, bottom-right above the
+    // dock launcher, 360px, and over every window layer on the same z-index
+    // property. !important: initialize() centred the card with an inline
+    // left/top, and raise() keeps writing an inline z-index.
+    &[data-docked="1"] {
+      position: fixed !important;
+      left: auto !important;
+      top: auto !important;
+      right: 24px !important;
+      bottom: 130px !important;
+      z-index: var(--z-index-upload-progress, 50002) !important;
+
+      // The upload card itself (window/upload-progress skin, &__ui): its
+      // surface, border, corner, shadow and its fixed 280px, collapsing to
+      // the 64px header bar.
+      background-color: var(--normal-bg-90, #f2f2f7);
+      border: 1px solid var(--border-default, #e5e5ea);
+      border-radius: var(--corner-radius-3, 12px);
+      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+      transition: height 0.2s ease;
+
+      &.window__ui {
+        width: min(360px, calc(100vw - 48px)) !important;
+        height: 280px !important;
+      }
+
+      &[data-expanded="0"].window__ui {
+        height: 64px !important;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
     }
   }
 
   &__main {
-    height: 100%;
-    width:100%;
-    u{
+    box-sizing: border-box;
+    width: 100%;
+    gap: 20px;
+    padding: 20px;
+
+    u {
       text-decoration: underline;
     }
   }
 
-  &__progress {
-    padding: 30px;
-
-    .label {
-      align-items: center;
-      justify-content: center;
-      padding: 0 27px;
-    }
-  }
-
-  &__wrapper {
-    align-items: center;
-    justify-content: center;
-    justify-items: center;
-  }
-
-  &-topbar {
-    &__container {
-      height: 44px;
-      width: 100%;
-      svg {
-        color: var(--egrey-2f);
-        opacity:0.5
-      }
-    }
-  }
-
-  &__labels {
-    margin-left: auto;
-    margin-right: auto;
-    margin-top: 80px;
-    max-width: 381px;
-    @include drumee.typo($size: 16px, $line: 16px, $color: var(--default-text-color));//var(--egrey-2f));
-    
-    .line {
-      justify-items: center;
-      margin-bottom: 6px;
-      text-align: center;
-
-      &.three {
-        justify-content: center;
-        margin-bottom: 30px;
-        margin-top: 40px;
-      }
-    }
-  }
-
-  &__buttons {
-    align-items: center;
-    height: 38px;
-    justify-content: space-evenly;
-    justify-items: center;
-    margin-bottom: 80px;
-    margin-top: 40px;
+  // ---- Shared header: badge · title (+ subtitle) · close -------------------
+  &__head {
     width: 100%;
-    &[data-device="mobile"] {
-      display: grid;
-      grid-auto-rows: 49px;
-      align-items: center;
-    }
-
-    .button {
-      border-radius:var(--border-radius);
-      @include drumee.typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));//$size: 15px,
-      // Was var(--btn-commit-background), which resolves to the invalid token
-      // "-primary-500" (see skin/vars/default.scss) → transparent background +
-      // white text = the two action buttons ("Single file .zip" / "Multiple
-      // files") were invisible until hover. Use the valid brand commit color
-      // (--btn-commit) for the resting state; the darker hover is unchanged.
-      background-color:var(--btn-commit);// var(--egreen-soft);
-      cursor: pointer;
-      justify-content: center;
-      padding : 10px;
-      width:160px;// 150px;
-      height:40px;
-      &:hover{
-        background-color:var(--btn-commit-background-hover);
-      }
-
-      &.cancel {
-        @include drumee.typo($size: 15px, $color: var(--btn-rollback-text));
-        background-color: var(--btn-rollback-background);
-        border: 1px solid var(--btn-rollback-border);
-        &:hover {
-          border: 2px solid var(--btn-rollback-border-hover);
-          color: var(--btn-rollback-text-hover);     
-        }
-      }
-    }
-  }
-
-  & .dialog__button--close {
-    cursor: pointer;
-    position: absolute;
-    right: 0;
-    color:var(--default-thinline-icon);
-    :hover{
-      color:var(--default-thinline-icon-hover);
-    }
-  }
-
-  /* ---- Confirm-download modal (Figma 2914:186797) -------------------------
-     Scoped to __confirm so the download-in-progress view (skeleton/progress.js,
-     which reuses __main / __labels / __buttons) is untouched. Tokens only. */
-  &__confirm {
-    box-sizing: border-box;
     align-items: center;
-    justify-content: center;
-    gap: 32px;
-    padding: 32px;
-    text-align: center;
+    gap: 12px;
   }
 
   &__badge {
-    flex: 0 0 auto;
+    flex: 0 0 40px;
     align-items: center;
     justify-content: center;
-    width: 56px;
-    height: 56px;
-    border-radius: 100px;
-    // Overlay/brand: 10% of the brand accent (no dedicated token → derive it
-    // from --primary-40 so it tracks the brand color and both themes).
-    background-color: color-mix(in srgb, var(--primary-40) 10%, transparent);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--dl-accent) 10%, transparent);
   }
 
   &__badge-icon {
-    width: 32px;
-    height: 32px;
+    width: 20px;
+    height: 20px;
+
     svg {
-      width: 32px;
-      height: 32px;
-      color: var(--primary-40);
-      fill: var(--primary-40);
+      width: 20px;
+      height: 20px;
+      color: var(--dl-accent);
+      fill: var(--dl-accent);
     }
   }
 
-  &__prompt {
-    align-items: center;
-    gap: 0; // size + hint are one paragraph (Figma has them as a single node)
-    width: 100%;
+  &__head-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 2px;
+  }
 
-    &-size,
-    &-hint {
-      // Figma "Body/Sub Title": Geist 600, 20/1.1. Theme-aware near-black —
-      // NOT --primary-100: revamp.scss redefines that token to a pale lavender
-      // (#f4e7ff) later in :root, which rendered the text almost invisible.
-      @include drumee.typo($size: 20px, $line: 1.1, $weight: 700, $color: var(--default-text-color));
-      text-align: center;
+  &__title {
+    @include drumee.typo($size: 15px, $line: 20px, $color: var(--normal-fg-10, var(--default-text-color)));
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  &__subtitle {
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-20, #65656c));
+  }
+
+  &__close {
+    flex: 0 0 28px;
+    align-self: flex-start;
+    width: 28px;
+    height: 28px;
+    padding: 7px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--normal-fg-20, #65656c);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
     }
 
-    &-method {
-      // Figma "Buttons/Large Button": Geist 600, 18/24, brand color.
-      @include drumee.typo($size: 18px, $line: 24px, $weight: 700, $color: var(--primary-40));
-      text-align: center;
-      margin-top: 32px;
+    &:hover {
+      background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+      color: var(--normal-fg-10, var(--default-text-color));
     }
+  }
+
+  // ---- Confirm step ---------------------------------------------------------
+  &__question {
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-10, var(--default-text-color)));
+    font-weight: 600;
+    margin-bottom: -8px; // sits with the tiles it asks about
   }
 
   &__actions {
-    align-items: stretch;
-    gap: 24px;
     width: 100%;
+    gap: 16px;
   }
 
-  &__actions-row {
-    gap: 8px;
+  &__options {
     width: 100%;
+    gap: 10px;
   }
 
-  &__action {
+  &__option {
     flex: 1 1 0;
     min-width: 0;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 16px 24px;
-    border-radius: 4px;
+    padding: 16px 12px;
+    border: 1px solid var(--border-default, #e5e5ea);
+    border-radius: 10px;
     cursor: pointer;
-    // Figma primary button fill = Primary/50 (#433cc5), a deeper indigo than
-    // the brand --primary-40 (#5950ff) used for the badge/subtitle.
-    background-color: var(--primary-50);
-    // Figma "Buttons/Medium Button": Geist 600, 16/24.
-    @include drumee.typo($size: 16px, $line: 24px, $weight: 700, $color: var(--btn-commit-text));
-
-    svg {
-      width: 24px;
-      height: 24px;
-      fill: var(--btn-commit-text);
-      color: var(--btn-commit-text);
-    }
+    transition: border-color 0.15s ease, background-color 0.15s ease;
 
     &:hover {
-      background-color: var(--primary-60);
+      border-color: var(--dl-accent);
+      background-color: color-mix(in srgb, var(--dl-accent) 6%, transparent);
+    }
+
+    &:hover .window-downloader__option-icon {
+      background-color: var(--dl-accent);
+      color: #fff;
+
+      svg {
+        fill: #fff;
+        color: #fff;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
     }
   }
 
-  &__cancel {
+  &__option-icon {
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    background-color: color-mix(in srgb, var(--dl-accent) 10%, transparent);
+    color: var(--dl-accent);
+    transition: background-color 0.15s ease;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: var(--dl-accent);
+      color: var(--dl-accent);
+    }
+  }
+
+  &__option-label {
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-10, var(--default-text-color)));
+    font-weight: 600;
+    text-align: center;
+  }
+
+  // ---- Footer buttons (both steps) ------------------------------------------
+  &__footer {
     width: 100%;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  &__btn {
+    align-items: center;
     justify-content: center;
-    padding: 16px 24px;
-    border-radius: 4px;
+    height: 34px;
+    padding: 0 16px;
+    border-radius: 8px;
     cursor: pointer;
-    background-color: var(--tertiary-grey-20);
-    // Figma "Buttons/Medium Button": Geist 600, 16/24.
-    @include drumee.typo($size: 16px, $line: 24px, $weight: 700, $color: var(--tertiary-grey-70));
+    white-space: nowrap;
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-10, var(--default-text-color)));
+    font-weight: 600;
+
+    &--ghost {
+      color: var(--normal-fg-20, #65656c);
+
+      &:hover {
+        background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+        color: var(--normal-fg-10, var(--default-text-color));
+      }
+    }
+
+    &--primary {
+      background-color: var(--primary-50, #433cc5);
+      color: #fff;
+
+      &:hover {
+        background-color: var(--primary-60, #4642a9);
+      }
+    }
+  }
+
+  // ==== Running steps: the upload window's frame (skeleton/frame.js) ========
+  // Values from window/upload-progress/skin, so the two floaters match: a
+  // pinned 65px header with a divider, one scroller with a hidden scrollbar,
+  // 64px tinted tiles, 4px bars, a 48px footer with a divider.
+  &__panel {
+    height: 100%;
+    gap: 0;
+    padding: 0;
+  }
+
+  &__header {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    box-sizing: border-box;
+    min-height: 64px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-default, #e5e5ea);
+  }
+
+  &__header-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__icon {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__icon-svg {
+    width: 28px;
+    height: 28px;
+    color: var(--dl-accent);
+    fill: var(--dl-accent);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__heading {
+    min-width: 0;
+    @include drumee.typo($size: 14px, $line: 24px, $color: var(--normal-fg-10, var(--default-text-color)));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__header-actions {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__collapse-wrapper,
+  &__close-wrapper {
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  // Bare 16px icons, as upload's header has them.
+  &__collapse,
+  &__close-btn {
+    width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    color: var(--normal-fg-10, var(--default-text-color));
+    transition: transform 0.2s ease, color 0.2s ease;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
+    }
 
     &:hover {
-      background-color: var(--tertiary-grey-30);
+      color: var(--normal-fg-20, #65656c);
     }
+  }
+
+  // Expanded: chevron up; collapsed: down — upload's rotation.
+  &__collapse svg {
+    rotate: -90deg;
+  }
+
+  &__ui[data-expanded="1"] &__collapse {
+    transform: rotate(180deg);
+  }
+
+  &__close-btn:active {
+    transform: scale(0.95);
+  }
+
+  &__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__bottom {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+    box-sizing: border-box;
+    min-height: 48px;
+    padding: 12px 24px;
+    border-top: 1px solid var(--border-default, #e5e5ea);
+  }
+
+  &__bottom-text {
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-20, #65656c));
+  }
+
+  &__bottom-spacer {
+    flex: 1 1 auto;
+  }
+
+  &__cancel-all {
+    cursor: pointer;
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--default-text-error, #ea4d44));
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &__done {
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: var(--primary-50, #433cc5);
+    @include drumee.typo($size: 12px, $line: 16px, $color: #fff);
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: var(--primary-40, #5950ff);
+    }
+  }
+
+  // One action at a time, as upload swaps cancel-all for close: Cancel while
+  // running, Close once done or failed. (0,3,0) over data-flow's display.
+  &__panel[data-state="running"] &__done,
+  &__panel:not([data-state="running"]) &__cancel-all {
+    display: none;
+  }
+
+  // Collapsed: the header bar alone.
+  &__ui[data-expanded="0"] &__body,
+  &__ui[data-expanded="0"] &__bottom {
+    display: none;
+  }
+
+  &__ui[data-expanded="0"] &__header {
+    border-bottom: none;
+  }
+
+  // ---- Multiple files (skeleton/files.js; index.js _paintFiles/_paintItem) --
+  // Upload's __aggregate: straight under the header, its text 4px off the bar.
+  &__aggregate {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0 24px;
+  }
+
+  &__bar {
+    position: relative;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+    background-color: var(--normal-bg-80, #e5e5ea);
+  }
+
+  &__bar-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+    background-color: var(--dl-accent);
+    transition: width 0.3s ease;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &__meta {
+    width: 100%;
+    justify-content: space-between;
+    padding: 4px 0;
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-20, #65656c));
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__items {
+    box-sizing: border-box;
+    width: 100%;
+    gap: 4px;
+    padding: 12px 24px;
+  }
+
+  // Upload's __progress-row (upload-progress skin): one line, a 4px tile on
+  // --overlay-bg-05 — icon and name left, count and status right.
+  &__item {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    color: var(--normal-fg-10, var(--default-text-color));
+  }
+
+  &__item-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+  }
+
+  &__item-right {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__item-icon {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    color: var(--normal-fg-20, #65656c);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  }
+
+  &__item-name {
+    min-width: 0;
+    @include drumee.typo($size: 12px, $line: 18px, $color: var(--normal-fg-10, var(--default-text-color)));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Upload's __progress-count.
+  &__item-meta {
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-20, #65656c));
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  // Upload's __progress-spinner.
+  &__item-spinner {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+    border: 2px solid var(--normal-bg-80, #e5e5ea);
+    border-top-color: var(--dl-accent);
+    border-radius: 50%;
+    animation: window-downloader-spin 0.8s linear infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  // Upload's __progress-check: checked-circle carries its own colours, so it
+  // is only sized, never filled.
+  &__item-check {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--green-400, #10b667);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  }
+
+  // Upload's __progress-canceled: a warning glyph in the error colour.
+  &__item-error {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--default-text-error, #ea4d44);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      fill: currentColor;
+    }
+  }
+
+  // Per status: the spinner while downloading, the check when done, the
+  // warning on error; the count while pending or downloading. (0,3,0) —
+  // above `.drumee-widget[data-flow]`'s display:flex.
+  &__item:not([data-status="downloading"]) &__item-spinner,
+  &__item:not([data-status="done"]) &__item-check,
+  &__item:not([data-status="error"]) &__item-error,
+  &__item[data-status="done"] &__item-meta,
+  &__item[data-status="error"] &__item-meta {
+    display: none;
+  }
+
+  // A failed run: the aggregate bar turns red.
+  &__files[data-state="failed"] &__bar-fill {
+    background-color: var(--default-text-error, #ea4d44);
+  }
+
+  // ---- .zip (skeleton/progress.js): the ui-core progress_bar, restyled -----
+  // progress_bar's update() writes the WIDTH OF `.bar` itself (its id is the
+  // one it looks up), so `.bar` is the fill; the track is drawn by the row.
+  &__progress {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 16px 24px;
+
+    .progress-bar__main {
+      gap: 12px;
+    }
+
+    .progress-bar__row {
+      position: relative;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      padding-top: 10px;
+
+      &::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        border-radius: 2px;
+        background-color: var(--normal-bg-80, #e5e5ea);
+      }
+
+      .bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 4px;
+        border-radius: 2px;
+        background-color: var(--dl-accent);
+        transition: width 0.4s ease;
+      }
+
+      .bar-value {
+        display: none;
+      }
+
+      .loaded,
+      .total {
+        width: auto;
+        @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-20, #65656c));
+        font-variant-numeric: tabular-nums;
+      }
+    }
+
+    .label {
+      justify-content: flex-start;
+      padding: 0;
+      @include drumee.typo($size: 12px, $line: 18px, $color: var(--normal-fg-20, #65656c));
+    }
+  }
+}
+
+html[data-theme="dark"] .window-downloader__ui {
+  --dl-accent: #8f89ff;
+}
+
+@keyframes window-downloader-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
