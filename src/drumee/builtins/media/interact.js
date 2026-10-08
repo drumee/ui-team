@@ -1046,20 +1046,8 @@ class __media_interact extends media_core {
       case "set-as-homepage":
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));
 
-      case _e.download: {
-        // Casual Docs / Sheets files are stored as JSON (.udoc / .usheet);
-        // hand the user a real .docx / .xlsx instead of the raw payload
-        // (builtins/editor/export). Any conversion failure falls back to the
-        // plain download so the click is never dead.
-        const { isCasualFile, downloadAsOffice } = require("builtins/editor/export");
-        if (isCasualFile(this)) {
-          return downloadAsOffice(this).catch((e) => {
-            this.warn("media: office export failed, raw download", e);
-            return this.download();
-          });
-        }
-        return this.download();
-      }
+      case _e.download:
+        return this._downloadFromMenu();
 
       case 'open-in-window': {
         // Force-open a workspace (hub) as a window_folder, regardless of its
@@ -2065,6 +2053,41 @@ class __media_interact extends media_core {
       this.warn("Workspace merge failed", e);
       return Wm.alert((e && (e.reason || e.error)) || LOCALE.MOVE_FAILED);
     }
+  }
+
+  /**
+   * The contextmenu "Download" row.
+   *
+   * On an item that is part of a MULTI-selection, download the selection, as
+   * Move and Link to task tracker act on it: Wm.download() (window/manager)
+   * takes getGlobalSelection() and zips it through window_downloader, or
+   * fetches the files one by one when any was hand-picked. This row used to
+   * call this.download() — ui-core mfs.js, which fetches its own node and
+   * nothing else — so a selection only ever downloaded the right-clicked item.
+   *
+   * Only a multi-selection that INCLUDES this item: a right-click outside the
+   * selection is about that item alone (media/row onToggle clears the rest).
+   * A lone item keeps the single path, with its Casual Docs export.
+   */
+  _downloadFromMenu() {
+    const wm = window.Wm;
+    const selected =
+      (wm && _.isFunction(wm.getGlobalSelection) && wm.getGlobalSelection()) || [];
+    if (selected.length > 1 && selected.includes(this) && _.isFunction(wm.download)) {
+      return wm.download();
+    }
+    // Casual Docs / Sheets files are stored as JSON (.udoc / .usheet);
+    // hand the user a real .docx / .xlsx instead of the raw payload
+    // (builtins/editor/export). Any conversion failure falls back to the
+    // plain download so the click is never dead.
+    const { isCasualFile, downloadAsOffice } = require("builtins/editor/export");
+    if (isCasualFile(this)) {
+      return downloadAsOffice(this).catch((e) => {
+        this.warn("media: office export failed, raw download", e);
+        return this.download();
+      });
+    }
+    return this.download();
   }
 
   /**
