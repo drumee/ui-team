@@ -1,5 +1,10 @@
 const __room = require("builtins/webrtc/room/jitsi");
-const { planShareStrip } = require("builtins/webrtc/share-strip");
+const { planShareStrip, SLOTS } = require("builtins/webrtc/share-strip");
+const {
+  pinStageWanted,
+  enterPinStage,
+  leavePinStage,
+} = require("builtins/webrtc/pin-stage");
 const { canUpgradePlan } = require("libs/billing");
 const {
   mediaDeviceLabel,
@@ -486,6 +491,7 @@ class __window_meeting extends __room {
     clearTimeout(this._idleTimer);
     this._unwatchShareStrip();
     this._unwatchPinStage();
+    this._unbindPinOverShareClick();
     this._teardownCallParking();
     // Duration-cap timers. Left armed they would fire against a destroyed
     // window minutes after the meeting was over — and the cutoff one would
@@ -1513,10 +1519,13 @@ class __window_meeting extends __room {
   _updateFloatFocus() {
     if (!this._floatDocked()) return;
     this._layoutShareStrip();
-    // The user's own pin outranks every automatic choice: while a screen owns
-    // the stage, the pinned person takes the strip's first slot.
+    // The user's own pin outranks every automatic choice. Normally the pinned
+    // person has already taken the stage from the screen (_syncPinOverShare);
+    // when they could not (parked), they take the strip's first slot.
     const pinned = this._pinnedTileEl();
-    if (pinned) return this._applyFloatFocus(pinned);
+    if (pinned && this.el.dataset.pinOverShare !== "1") {
+      return this._applyFloatFocus(pinned);
+    }
     const raisedUid = this._activeRaisedUid();
     if (raisedUid != null) return this._focusByUid(raisedUid);
     // While a REMOTE peer is presenting, spotlight THEIR camera tile — the float
@@ -1606,6 +1615,7 @@ class __window_meeting extends __room {
 
   _layoutShareStrip() {
     if (!this.el) return;
+    const onStage = this._syncPinOverShare();
     const participants = this.__participants;
     const mgr = participants && !participants.isDestroyed() && participants.el;
     if (!mgr || !this._floatDocked()) return this._clearShareStrip();
@@ -1615,7 +1625,11 @@ class __window_meeting extends __room {
     const mode = panelBeside || this.el.dataset.narrow === "1" ? "row" : "column";
     if (this.el.dataset.shareStrip !== mode) this.el.dataset.shareStrip = mode;
     const tiles = this._stripTiles(mgr);
-    const plan = planShareStrip(tiles.map((el) => ({ focused: el.dataset.focused === "1" })));
+    // A pinned tile on the stage hands its strip slot to the shared screen.
+    const plan = planShareStrip(
+      tiles.map((el) => ({ focused: el.dataset.focused === "1" })),
+      onStage ? SLOTS - 1 : SLOTS,
+    );
     // Runs on every speaker change: write only what moved, so a steady strip
     // costs no style recalc.
     tiles.forEach((el, i) => {
@@ -1632,6 +1646,7 @@ class __window_meeting extends __room {
 
   _clearShareStrip() {
     if (!this.el) return;
+    this._syncPinOverShare();
     delete this.el.dataset.shareStrip;
     const mgr = this._stripWatched;
     this._unwatchShareStrip();
@@ -1938,6 +1953,84 @@ class __window_meeting extends __room {
     }
     this._pinWatched = null;
     this._onPinMoreClick = null;
+  }
+
+  // ── Pin over a share: the pinned person replaces the screen ──────────────
+  // While a screen is shared, the pinned participant's tile moves onto the
+  // stage (__endpoints) and the shared screen (__presenter) takes the strip's
+  // first slot; clicking it un-pins. Un-pinning, the share ending, the pinned
+  // person leaving or parking the call swaps back (the parked tile keeps its
+  // single thumbnail, and the pin falls back to the strip's first slot). The
+  // moves live in builtins/webrtc/pin-stage; this re-runs from
+  // _layoutShareStrip / _clearShareStrip, which fire on every dock, undock,
+  // join, leave and spotlight change. With no share the pin is
+  // _layoutPinStage's grid, which moves nothing.
+  _pinOverShareParts() {
+    const live = (w) => (w && !(w.isDestroyed && w.isDestroyed()) && w.el) || null;
+    return {
+      stage: this._participantsHome || null,
+      strip: this.el.querySelector(`.${this.fig.family}__float-tiles`),
+      home: live(this.__participants),
+      presenter: live(this.__presenter),
+      tile: this._pinnedTileEl(),
+      doc: document,
+    };
+  }
+
+  // Returns true while the pinned tile holds the stage over a share.
+  _syncPinOverShare() {
+    if (!this.el) return false;
+    const parts = this._pinOverShareParts();
+    const on = pinStageWanted({
+      ...parts,
+      docked: this._floatDocked(),
+      parked: this.el.dataset.callTile === "1",
+    });
+    const prev = this._pinOverShareTile;
+    // Off, or a different person pinned: send the previous tile home first,
+    // so the stage never holds two — and before _layoutPinStage looks for it
+    // in the manager (it drops a pin whose tile is missing).
+    if (prev && (!on || prev !== parts.tile)) {
+      leavePinStage({ ...parts, tile: prev });
+      this._pinOverShareTile = null;
+    }
+    if (on) {
+      enterPinStage(parts);
+      this._pinOverShareTile = parts.tile;
+      // Out of the strip: drop what the strip planner wrote on it.
+      parts.tile.style.order = "";
+      delete parts.tile.dataset.stripHidden;
+      parts.tile.dataset.focused = "0";
+      this._bindPinOverShareClick(parts.presenter);
+    } else {
+      this._unbindPinOverShareClick();
+    }
+    const flag = on ? "1" : "0";
+    if (this.el.dataset.pinOverShare !== flag) this.el.dataset.pinOverShare = flag;
+    return on;
+  }
+
+  // The shared screen in its strip slot is the way back to it (Google Meet):
+  // a click anywhere but its own fullscreen button un-pins.
+  _bindPinOverShareClick(el) {
+    if (!el || this._pinOverShareClickEl === el) return;
+    this._unbindPinOverShareClick();
+    this._pinOverShareClickEl = el;
+    this._onPinOverShareClick = (e) => {
+      const t = e.target;
+      if (t && t.closest && t.closest(".remote-display__fullscreen")) return;
+      this._unpinTile();
+      this._refreshPin();
+    };
+    el.addEventListener("click", this._onPinOverShareClick);
+  }
+
+  _unbindPinOverShareClick() {
+    if (this._pinOverShareClickEl && this._onPinOverShareClick) {
+      this._pinOverShareClickEl.removeEventListener("click", this._onPinOverShareClick);
+    }
+    this._pinOverShareClickEl = null;
+    this._onPinOverShareClick = null;
   }
 
   _applyRemoteHandRaise(data) {

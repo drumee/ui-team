@@ -176,6 +176,9 @@ module.exports = {
     this.el.dataset.callTile = "1";
     this._bindCallTileClick();
     this._bindCallTileDrag();
+    // A pinned tile holding the stage over a share goes back into the strip:
+    // the parked tile is a single thumbnail (meeting only).
+    if (_.isFunction(this._layoutShareStrip)) this._layoutShareStrip();
 
     const dock = this._callDockEl();
     if (dock) {
@@ -223,6 +226,8 @@ module.exports = {
     this.el.dataset.callTile = "0";
     this._unbindCallTileClick();
     this._unbindCallTileDrag();
+    // ...and takes the stage again on the way back.
+    if (_.isFunction(this._layoutShareStrip)) this._layoutShareStrip();
     if (home && home !== this.el.parentNode && home.appendChild) {
       home.appendChild(this.el);
       this._resumeCallVideos();

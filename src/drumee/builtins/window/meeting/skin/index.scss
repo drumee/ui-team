@@ -605,3 +605,88 @@
   grid-template-rows: minmax(0, 1fr) !important;
   grid-template-areas: "stage" !important;
 }
+
+// ── Pin over a share (window_meeting._syncPinOverShare) ──────────────────────
+// data-pin-over-share="1": someone is pinned while a screen is shared. Their
+// tile was moved onto the stage (__endpoints) and the shared screen
+// (__presenter) into the strip, ahead of the participants manager. The strip
+// keeps four equal slots: the screen takes a quarter and the manager's three
+// slots split the rest — (H - 3 gaps) / 4 either way, so the screen lines up
+// with the tiles. Clicking the screen slot un-pins and puts it back. (With no
+// share the pin is the data-pin-stage grid above, which moves nothing.)
+.window-meeting__ui[data-share-strip][data-pin-over-share="1"]:not([data-call-tile="1"]) {
+  // The pinned tile, out of the manager, fills the stage like the shared
+  // screen did. !important beats the inline width/height the participants
+  // manager writes on its tiles.
+  .window-meeting__endpoints > [data-kind="webrtc_local_user"],
+  .window-meeting__endpoints > [data-kind="webrtc_remote_user"] {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    z-index: auto !important;
+    border-radius: 12px;
+    overflow: hidden;
+    isolation: isolate;
+    container-type: size;
+  }
+
+  // The manager-scoped tile background does not reach it out here.
+  .window-meeting__endpoints > [data-kind="webrtc_local_user"] {
+    background-color: var(--primary-50, #433cc5);
+  }
+
+  .window-meeting__float-tiles {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    > .window-meeting__presenter {
+      flex: 0 0 calc((100% - 30px) / 4);
+      width: 100%;
+      height: auto;
+      min-height: 0;
+      border-radius: 16px;
+      cursor: pointer;
+    }
+
+    // Was absolutely filling the strip; now it shares it with the screen.
+    .participants-manager__ui {
+      position: relative !important;
+      inset: auto !important;
+      flex: 1 1 0;
+      width: 100% !important;
+      height: auto !important;
+      min-width: 0;
+      min-height: 0;
+
+      > [data-kind="webrtc_local_user"],
+      > [data-kind="webrtc_remote_user"] {
+        flex: 0 0 calc((100% - 20px) / 3);
+      }
+
+      &[data-more]:not([data-more=""])::after {
+        flex: 0 0 calc((100% - 20px) / 3);
+      }
+    }
+  }
+}
+
+// Row: the same four slots, left to right under the stage.
+.window-meeting__ui[data-share-strip="row"][data-pin-over-share="1"]:not([data-call-tile="1"]) {
+  .window-meeting__float-tiles {
+    flex-direction: row;
+
+    > .window-meeting__presenter {
+      width: auto;
+      height: 100%;
+    }
+
+    .participants-manager__ui {
+      width: auto !important;
+      height: 100% !important;
+    }
+  }
+}
