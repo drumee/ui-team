@@ -412,8 +412,11 @@ class drumee_router extends LetcBox {
       return true;
     }
     let [hostname] = location.host.split(':'); /** In case specific port */
-    if (Visitor.isOnline() && hostname != Organization.host()) {
-      if (this.changeHost(Organization.host())) {
+    // Multi-org: the organisation get_env said this address works in (see
+    // drumee.js init_globals), not whatever Organization holds now.
+    const orgHost = (window.__drumeeActiveOrg && window.__drumeeActiveOrg.link) || Organization.host();
+    if (Visitor.isOnline() && hostname != orgHost) {
+      if (this.changeHost(orgHost)) {
         // DROP THIS ORIGIN'S COPY — but only when the URL is carrying the
         // destination onward, AND only for the account the link names.
         //

@@ -154,6 +154,13 @@ class Drumee extends Marionette.Application {
       Platform.set(platform);
       Visitor.set(user);
       Organization.set(organization)
+      // Multi-org: on another organisation's address the person belongs to,
+      // get_env reports THAT organisation (server service/lib/active-org.js).
+      // Remember it apart from the models, which other payloads (the
+      // websocket hello) refill from the person's primary organisation.
+      window.__drumeeActiveOrg = (user && user.home_domain_id && organization && organization.link)
+        ? { link: organization.link, domain_id: user.domain_id, home_domain_id: user.home_domain_id }
+        : null;
       window.currentDevice = Visitor.device();
       const localServices = require('lex/services');
       const platformServices = Platform.get('services');

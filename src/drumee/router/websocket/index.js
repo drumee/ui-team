@@ -107,11 +107,16 @@ class __router_websocket extends LetcBox {
    *
    */
   switchOn(data) {
-    if (data.user) {
-      Visitor.set(data.user);
-    } else {
-      Visitor.set(data);
+    let user = data.user || data;
+    // Multi-org: the live channel's hello carries the person's PRIMARY
+    // organisation; on another organisation's address keep the one get_env
+    // reported (drumee.js init_globals).
+    const active = window.__drumeeActiveOrg;
+    if (active && user) {
+      user = { ...user, domain_id: active.domain_id, home_domain_id: active.home_domain_id };
+      delete user.privilege;
     }
+    Visitor.set(user);
     if (data.socket_id) {
       Visitor.set(_a.socket_id, data.socket_id);
     }
