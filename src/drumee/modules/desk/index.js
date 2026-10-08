@@ -8900,6 +8900,38 @@ class desk_module extends LetcBox {
    * @param {Boolean} [opt.immediate] show the LAUNCH30 offer without the hold
    * @returns {Promise}
    */
+  /**
+   * "SET UP YOUR ORGANIZATION" — B2B Org Structure, Figma 900:149766.
+   *
+   * Offered ONCE to the OWNER of an organisation that has no department yet
+   * and never finished or skipped the wizard (organization.setup_state). The
+   * wizard is the onboarding plugin's org_setup kind, so a server without it
+   * — or without setup_state — simply never offers it.
+   *
+   * LAST in the home chain and only onto an empty modal host: it must not
+   * stack on the over-limit sheet, the LAUNCH30 welcome or a nudge.
+   *
+   * localStorage "force-org-setup" shows it regardless (QA), and is consumed.
+   */
+  async _maybeShowOrgSetup() {
+    if (!(require("libs/org-overview").orgFeature())) return;
+    if (!(SERVICE.organization && SERVICE.organization.setup_state)) return;
+    let force = false;
+    try { force = !!localStorage.getItem("force-org-setup"); } catch (e) { /* private mode */ }
+    const st = await this.fetchService(SERVICE.organization.setup_state, { hub_id: Visitor.id })
+      .catch(() => null);
+    if (!st) return;
+    if (!force && (st.role !== "owner" || ~~st.setup_done || ~~st.department_count > 0)) return;
+    const wm = window.Wm;
+    const host = wm && _.isFunction(wm.getPart) ? wm.getPart("wrapper-modal") : null;
+    if (host && host.el && host.el.dataset.state === "open") return;
+    try { localStorage.removeItem("force-org-setup"); } catch (e) { /* private mode */ }
+    return Kind.loadPlugin({ name: "onboarding", kind: "org_setup" })
+      .then(() => Kind.waitFor("org_setup"))
+      .then(() => wm && wm.onUiEvent(this, { service: "org-setup-form" }))
+      .catch((e) => this.warn && this.warn("[org-setup] could not open", e));
+  }
+
   _afterHomeSettled(opt = {}) {
     // Once per session. There are now four ways in — no-tutorial, after the
     // tutorial, the tutorial-never-mounted fallback, and a re-fed module — and
@@ -8967,6 +8999,7 @@ class desk_module extends LetcBox {
       // is actually clear means a granted (= marked shown) nudge is never
       // burned underneath a promo, the reward flow or a lock popup.
       .then(() => this._maybeShowUpgradeNudge())
+      .then(() => this._maybeShowOrgSetup())
       .catch((e) => {
         this._hideInvitedWorkspaceLoader();
         this.warn && this.warn("[home] post-ready chain failed", e);

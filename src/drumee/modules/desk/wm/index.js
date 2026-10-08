@@ -4263,6 +4263,26 @@ class __window_manager extends push {
           }
         });
 
+      // "Set up your organization" (B2B Org Structure). A full-screen wizard
+      // from the onboarding plugin (kind org_setup), hosted in the same
+      // wrapper-modal so the desk's close-when-empty plumbing drops it.
+      case "org-setup-form":
+        return this.ensurePart("wrapper-modal").then((p) => {
+          p.clear();
+          p.el.dataset.state = "open";
+          p.el.dataset.overlay = "none";
+          p.feed({ kind: "org_setup" });
+          if (!p._closeWhenEmpty) {
+            p._closeWhenEmpty = () => {
+              if (p.collection && p.collection.length === 0) {
+                p.el.dataset.state = "closed";
+                delete p.el.dataset.overlay;
+              }
+            };
+            p.collection.on("update reset", p._closeWhenEmpty);
+          }
+        });
+
       case "new-sub-folder":
         if (require("libs/over-limit").guardWrite("write")) return;
         return this.addFolder({
