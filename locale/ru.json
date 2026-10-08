@@ -3074,5 +3074,7 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "удалить это пространство",
   "PERMISSION_ACTION_MANAGE_SHARE": "управлять ссылками для общего доступа",
   "X_ITEMS": "Элементов: {0}",
-  "ONE_ITEM": "1 элемент"
+  "ONE_ITEM": "1 элемент",
+  "X_SELECTED": "Выбрано: {0}",
+  "CLEAR_SELECTION": "Снять выделение"
 }

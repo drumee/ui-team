@@ -3280,5 +3280,7 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "delete this workspace",
   "PERMISSION_ACTION_MANAGE_SHARE": "manage share links",
   "X_ITEMS": "{0} items",
-  "ONE_ITEM": "1 item"
+  "ONE_ITEM": "1 item",
+  "X_SELECTED": "{0} selected",
+  "CLEAR_SELECTION": "Clear selection"
 }

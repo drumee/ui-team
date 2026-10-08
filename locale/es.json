@@ -3069,5 +3069,7 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "eliminar este espacio",
   "PERMISSION_ACTION_MANAGE_SHARE": "gestionar enlaces para compartir",
   "X_ITEMS": "{0} elementos",
-  "ONE_ITEM": "1 elemento"
+  "ONE_ITEM": "1 elemento",
+  "X_SELECTED": "{0} seleccionado(s)",
+  "CLEAR_SELECTION": "Borrar la selección"
 }
