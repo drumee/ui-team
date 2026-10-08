@@ -34,17 +34,27 @@ class __window_media_details extends mfsInteract {
   /**
    * Centre on the viewport, never off the top-left edge.
    *
-   * Skipped once an opener has placed this card itself — the document
-   * player parks it under its header (`_placeDetails`) and sets the flag.
-   * Without this, the re-centre at the end of `_fitToContent` would run on
-   * a later frame and drag the card back to the middle of the screen.
+   * Written to the element as well as the style model: the preset's
+   * `style` (the opener's geometry) is applied during render, and after
+   * that a `style.set` alone no longer moves the element — the card stayed
+   * wherever the window that opened it was.
+   *
+   * Centred on the size the card actually renders at, not on `this.size`:
+   * any CSS floor that wins over the inline size would otherwise shift it
+   * by half the difference. And `left`/`top` are relative to the windows
+   * layer, which sits below the desk top bar, so its offset is taken off.
    */
   _center() {
-    if (this._anchored) return;
-    this.style.set({
-      left: Math.max(0, Math.round((window.innerWidth - this.size.width) / 2)),
-      top: Math.max(0, Math.round((window.innerHeight - this.size.height) / 2)),
-    });
+    const el = this.el;
+    const rect = el && el.isConnected ? el.getBoundingClientRect() : null;
+    const width = (rect && rect.width) || this.size.width;
+    const height = (rect && rect.height) || this.size.height;
+    const parent = el && el.offsetParent;
+    const origin = parent ? parent.getBoundingClientRect() : { left: 0, top: 0 };
+    const left = Math.round(Math.max(0, (window.innerWidth - width) / 2) - origin.left);
+    const top = Math.round(Math.max(0, (window.innerHeight - height) / 2) - origin.top);
+    this.style.set({ left, top });
+    if (this.$el) this.$el.css({ left, top });
   }
 
   /**
