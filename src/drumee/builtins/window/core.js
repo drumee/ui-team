@@ -691,6 +691,33 @@ class __window_core extends __utils {
   }
 
   /**
+   * Row view, folders split from files: the skin (skin/group/body/main.scss)
+   * orders the rows by type and draws the "Folders" / "Files" headings as the
+   * list container's ::before / ::after, whose text it reads from these
+   * attributes — CSS cannot reach LOCALE. On the container itself, which a
+   * restart keeps (only its children are rebuilt). The grid sorts the same way
+   * by moving tiles into section wrappers (utils _doPartition); rows need no
+   * DOM moves, so paging, drag and selection see the list as it is.
+   * @param {*} list the list part
+   */
+  _labelRowSections(list) {
+    if (!list || !list.el) return;
+    if (!list.el.classList.contains(`${this.fig.group}__content-row`)) return;
+    const box = list.el.querySelector(".smart-container");
+    if (!box) {
+      // The container is the list's template: rendered by now in practice;
+      // otherwise label it once the list reports ready.
+      if (!list._sectionsLabelPending) {
+        list._sectionsLabelPending = 1;
+        list.once(_e.ready, () => this._labelRowSections(list));
+      }
+      return;
+    }
+    box.dataset.labelFolders = LOCALE.FOLDERS;
+    box.dataset.labelFiles = LOCALE.FILES;
+  }
+
+  /**
    * Keep the header in step with the rows. add/remove:child cover paging (a
    * new page turns "all" into "mixed"), a restart on navigation and rows
    * removed under the selection. A row's own checkbox (media/interact.js
@@ -707,6 +734,7 @@ class __window_core extends __utils {
       this.stopListening(this._rowSelectList);
     }
     this._rowSelectList = list;
+    this._labelRowSections(list);
     this.listenTo(
       list,
       `add:child remove:child ${_e.ready} ${_e.eod} ${_e.error} ${_e.scroll} mousewheel`,

@@ -84,6 +84,71 @@
     }
   }
 
+  // ---- Row view: folders split from files ----------------------------------
+  // The list keeps its own (server) order; the rows are only DISPLAYED by
+  // type — workspaces, then folders, then files — through flex `order`, so no
+  // tile is moved in the DOM (the grid moves them into section wrappers,
+  // window/utils _doPartition). Paging, drag, selection and the column sort
+  // all keep working on the list as it is; a sort applies within each group.
+  //
+  // The headings are the container's ::before / ::after flex items, their
+  // text from data-label-* (core _labelRowSections: CSS cannot reach LOCALE),
+  // shown only when the list holds both folders and files. Same treatment as
+  // the grid's Group view titles (folder skin .group-section-title).
+  &__content-row .smart-container {
+    display: flex;
+    flex-direction: column;
+
+    // A fixed-height flex column shrinks its items to fit instead of
+    // scrolling; rows keep their height.
+    > * {
+      flex-shrink: 0;
+    }
+
+    > [data-filetype] {
+      order: 4;
+    }
+
+    > [data-filetype="hub"] {
+      order: 1;
+    }
+
+    > [data-filetype="folder"] {
+      order: 2;
+    }
+
+    &::before,
+    &::after {
+      display: none;
+      flex-shrink: 0;
+      box-sizing: border-box;
+      padding: 12px 12px 4px;
+      color: var(--tertiary-grey-80, #48484e);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 20px;
+    }
+
+    &::before {
+      order: 0;
+      content: attr(data-label-folders);
+    }
+
+    &::after {
+      order: 3;
+      content: attr(data-label-files);
+    }
+
+    &:has(> [data-filetype="hub"], > [data-filetype="folder"]):has(
+        > [data-filetype]:not([data-filetype="hub"]):not([data-filetype="folder"])
+      ) {
+      &::before,
+      &::after {
+        display: block;
+      }
+    }
+  }
+
   &__split-body {
     grid-template-columns: 2fr 1fr;
     width: 100%;
