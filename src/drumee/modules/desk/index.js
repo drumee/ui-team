@@ -8927,7 +8927,9 @@ class desk_module extends LetcBox {
     // (multi-org): open it, where its workspaces and departments live.
     if (res.org_link && res.org_link !== location.hostname) {
       setTimeout(() => {
-        location.href = `${location.protocol}//${res.org_link}${location.pathname}`;
+        // join_done: that organisation's origin may still hold the token from
+        // when the link was first opened there (libs/join-link).
+        location.href = `${location.protocol}//${res.org_link}${location.pathname}?join_done=${token}`;
       }, 1500);
       return;
     }

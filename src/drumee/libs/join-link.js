@@ -19,6 +19,17 @@ const TOKEN_RE = /^[0-9a-f]{32}$/i;
 function captureFromUrl() {
   try {
     const params = new URLSearchParams(location.search);
+    // Accepted on the person's own organisation, which then sent them here
+    // (desk _maybeAcceptJoinLink): drop the copy this origin kept when the
+    // link was first opened here, before the router sent them home.
+    const done = params.get("join_done");
+    if (done) {
+      if (localStorage.getItem(KEY) === done) localStorage.removeItem(KEY);
+      params.delete("join_done");
+      const q = params.toString();
+      history.replaceState(null, "", `${location.pathname}${q ? `?${q}` : ""}${location.hash}`);
+      return;
+    }
     const token = params.get("join");
     if (!token || !TOKEN_RE.test(token)) return;
     localStorage.setItem(KEY, token);
