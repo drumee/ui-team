@@ -401,10 +401,13 @@ function invitationRows(list, pfx, ui) {
           kids: [
             Skeletons.Image.Svg({
               className: `${pfx}__invitation-badge-ico`,
-              // Phosphor Clock / XCircle, as in Figma. NOT `clock`: that is
-              // a solid Illustrator dial whose fills the sprite strips, so it
-              // drew as a filled blob rather than an outlined clock.
-              ico: declined ? "noti-x-circle" : "apps-clock",
+              // Phosphor Clock / XCircle, as in Figma, from the 256 set like
+              // the row's X and arrow. NOT `clock` (a solid Illustrator dial
+              // the sprite strips to a blob), and no longer `apps-clock` /
+              // `noti-x-circle`: their paths sit off-centre in their viewBox
+              // (apps-clock's ink is the top-left 11 of 21 units), so the
+              // glyph drew small and high beside the word.
+              ico: declined ? "ph-x-circle" : "ph-clock",
             }),
             Skeletons.Note({
               className: `${pfx}__invitation-badge-text`,
