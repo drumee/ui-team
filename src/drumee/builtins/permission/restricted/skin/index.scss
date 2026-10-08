@@ -1210,9 +1210,9 @@ $gutter: 16px;
   // data-status drives both, so one rule pair covers the two states and a
   // third could be added without touching the skeleton.
   //
-  // 28px tall, 8px radius, icon 16, word 13 SemiBold — a notch under the
-  // 32px X and arrow beside it, centred on them, so the name keeps more room
-  // in the 360px drawer (Duy, 2026-10-08).
+  // 28px tall, 8px radius, icon 16, word 13 SemiBold — the same height as
+  // the X and arrow beside it, and compact enough that the name keeps its
+  // room in the 360px drawer (Duy, 2026-10-08).
   &__invitation-badge {
     align-items: center;
     border-radius: 8px;
@@ -1349,16 +1349,18 @@ $gutter: 16px;
     color: var(--primary-50);
   }
 
-  // The X and the arrow beside the badge. Figma: 32px rounded squares, the
+  // The X and the arrow beside the badge. Figma: rounded squares, the
   // X on Overlay/red with Signal/Error (the Declined badge's own pair), the
   // arrow on a neutral grey.
   &__invitation-action {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 0 0 32px;
-    width: 32px;
-    height: 32px;
+    // 28px square: the status badge's height, so badge, X and arrow line up
+    // as one even strip (Duy, 2026-10-08); 16px glyph like the badge's.
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     border-radius: 8px;
     box-sizing: border-box;
@@ -1366,6 +1368,7 @@ $gutter: 16px;
     transition: background-color 120ms ease;
 
     svg {
+      display: block;
       width: 16px;
       height: 16px;
       fill: currentColor;
