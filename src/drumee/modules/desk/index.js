@@ -8920,10 +8920,18 @@ class desk_module extends LetcBox {
       if (window.Wm && Wm.alert) Wm.alert(msg);
       return;
     }
-    RADIO_BROADCAST.trigger("workspace:refresh");
     if (window.Wm && Wm.alert) {
       Wm.alert(say("JOIN_LINK_JOINED", "You joined the team. Its workspaces are now in your list."));
     }
+    // Someone from another organisation now belongs to this one as well
+    // (multi-org): open it, where its workspaces and departments live.
+    if (res.org_link && res.org_link !== location.hostname) {
+      setTimeout(() => {
+        location.href = `${location.protocol}//${res.org_link}${location.pathname}`;
+      }, 1500);
+      return;
+    }
+    RADIO_BROADCAST.trigger("workspace:refresh");
   }
 
   /**

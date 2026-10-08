@@ -3165,5 +3165,15 @@
   "CHAT_EMPTY_TEXT": "Share announcements and updates about company news, upcoming events,...",
   "JOIN_LINK_EXPIRED": "This invitation link has expired or was revoked.",
   "JOIN_LINK_INVALID": "This invitation link is not valid.",
-  "JOIN_LINK_JOINED": "You joined the team. Its workspaces are now in your list."
+  "JOIN_LINK_JOINED": "You joined the team. Its workspaces are now in your list.",
+  "YOUR_ORGANIZATION": "Your organization",
+  "INVITED_ORGANIZATIONS": "Invited Organizations",
+  "MULTI_ORG_UPSELL": "Need to run more than one organization?",
+  "MULTI_ORG_UPSELL_LINK": "Business plan supports that →",
+  "PLAN_NAMED": "%s plan",
+  "ORG_ROLE_GUEST": "Guest",
+  "ORG_NAME_REQUIRED": "Give your organization a name.",
+  "INVALID_IDENT": "Use 2 to 40 lowercase letters, numbers or dashes (not at the start or end).",
+  "IDENT_NOT_AVAILABLE": "This address is already taken. Please pick another one.",
+  "IDENT_RESERVED": "This address is reserved. Please pick another one."
 }

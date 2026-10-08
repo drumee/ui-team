@@ -300,9 +300,149 @@
     &:hover { background-color: var(--normal-bg-80); }
   }
 
-  // ── Deferred multi-org block (see ../multi-org.js) ─────────────────────
+  // ── Multi-org: Your organization / Invited Organizations ───────────────
+  // Figma 900:150849 / 900:150993: section titles in Body/Small, rows of
+  // [34px tile] name / sub-line, 8px 12px padding, 8px radius; the shown
+  // organisation's row sits on the light overlay.
   &__switch {
     gap: 8px;
+  }
+
+  &__switch-body {
+    gap: 12px;
+  }
+
+  &__org-list {
+    gap: 2px;
+    max-height: 176px;
+    overflow-y: auto;
+  }
+
+  &__org-row {
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: var(--corner-radius-3);
+    cursor: pointer;
+
+    &:hover { background-color: var(--normal-bg-90); }
+
+    &--current {
+      cursor: default;
+      background-color: var(--normal-bg-90);
+    }
+  }
+
+  &__org-row-avatar {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--corner-radius-3);
+    background-color: #e4e3ff;
+
+    .desk-org-tab__avatar-text { color: var(--primary-40); }
+  }
+
+  &__org-row-id {
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__org-row-name {
+    @include drumee.typo($color: var(--normal-fg), $size: 14px, $line: 17px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__org-row-sub {
+    @include drumee.typo($color: var(--normal-fg-50), $size: 12px, $line: 17px);
+  }
+
+  &__upsell {
+    gap: 4px;
+  }
+
+  &__upsell-text {
+    @include drumee.typo($color: var(--normal-fg), $size: 14px, $line: 17px);
+  }
+
+  &__upsell-link {
+    @include drumee.typo($color: var(--primary-40), $size: 14px, $line: 17px);
+    cursor: pointer;
+
+    &:hover { text-decoration: underline; }
+  }
+
+  &__new-org-form {
+    gap: 8px;
+  }
+
+  &__new-org-entry {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 34px;
+    padding: 6px 10px;
+    border-radius: var(--corner-radius-3);
+    border: 1px solid var(--border-default);
+
+    input {
+      width: 100%;
+      border: 0;
+      outline: none;
+      padding: 0;
+      background: transparent;
+      font-size: 14px;
+    }
+  }
+
+  &__new-org-domain {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__new-org-ident {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__new-org-suffix {
+    @include drumee.typo($color: var(--normal-fg-50), $size: 13px, $line: 17px);
+    flex-shrink: 0;
+  }
+
+  &__new-org-error {
+    @include drumee.typo($color: #d74e49, $size: 12px, $line: 16px);
+  }
+
+  &__new-org-actions {
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  &__new-org-cancel,
+  &__new-org-create {
+    padding: 6px 14px;
+    border-radius: var(--corner-radius-3);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  &__new-org-cancel {
+    color: var(--normal-fg);
+    background-color: var(--normal-bg-90);
+  }
+
+  &__new-org-create {
+    color: var(--white);
+    background-color: var(--primary-50);
+
+    &:hover { background-color: var(--primary-40); }
+
+    &--busy { opacity: 0.6; cursor: progress; }
   }
 
   &__divider {

@@ -1,47 +1,30 @@
 /**
- * Multi-organisation chrome — "Switch Organizations" and "New organization".
+ * Multi-organisation chrome: "Your organization", "Invited Organizations"
+ * and "+ New organization" (B2B Org Structure, Figma 900:150849 / 900:150993).
  *
- * OFF, and off for a data-model reason rather than a UI one. In this schema an
- * organisation IS a domain, and a person belongs to exactly one:
+ * The data model keeps one PRIMARY organisation per person (yp.privilege
+ * UNIQUE uid, drumate.domain_id) and adds the others in yp.org_membership.
+ * Each organisation is still its own subdomain, so switching is navigating to
+ * that organisation's address: the server (service/lib/active-org.js) makes
+ * every request there act in it, and get_env reports it as Organization so
+ * the router no longer sends the person home.
  *
- *   yp.privilege   UNIQUE KEY (uid)          one privilege row per user
- *   yp.drumate     domain_id is a scalar     one domain per user
- *   yp.organisation UNIQUE KEY (owner_id)    one organisation per owner
- *
- * and each organisation is served from its own subdomain (yp.vhost), so
- * "switching" is not a client concern at all — it is a different host and a
- * different session. Drawing a switcher over that would list one entry that
- * cannot be left, and a "New organization" button whose insert the database
- * refuses.
- *
- * Kept as a flag rather than deleted because the design specifies both, and
- * the panel has a place reserved for them: when the membership model grows a
- * yp.org_membership (or privilege loses its UNIQUE on uid), this flips to true
- * and both sections appear together.
- *
- * Same shape and same reasoning as desk/tutorial/skeleton/org.js, which gates
- * the tour's org chrome for the same kind of reason.
+ * On whenever the server ships the listing (organization.my_orgs); a server
+ * without it keeps the panel exactly as before.
  */
-const MULTI_ORG_ENABLED = false;
-
-/** @returns {Boolean} whether multi-organisation chrome should be rendered */
 function multiOrgEnabled() {
-  return MULTI_ORG_ENABLED;
+  return !!(window.SERVICE && SERVICE.organization && SERVICE.organization.my_orgs);
 }
 
 /**
- * Drop a skeleton entry unless multi-org is on.
- *
- * Takes a THUNK, not a node: a gated row may name a locale key or an icon that
- * only exists once the feature ships, and a thunk means the row is never built
- * while the flag is off. `null` entries are filtered by `feed`/`kids`, so a
- * gated row costs nothing at render.
+ * Drop a skeleton entry unless multi-org is on. Takes a THUNK so a gated row
+ * is never built while it is off; `null` entries are filtered by feed/kids.
  *
  * @param {Function} build
  * @returns {Object|null}
  */
 function multiOrgOnly(build) {
-  return MULTI_ORG_ENABLED ? build() : null;
+  return multiOrgEnabled() ? build() : null;
 }
 
 module.exports = { multiOrgEnabled, multiOrgOnly };

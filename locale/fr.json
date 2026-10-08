@@ -3397,5 +3397,15 @@
   "CHAT_EMPTY_TEXT": "Partagez annonces et nouvelles de l'entreprise, événements à venir,...",
   "JOIN_LINK_EXPIRED": "Ce lien d'invitation a expiré ou a été révoqué.",
   "JOIN_LINK_INVALID": "Ce lien d'invitation n'est pas valide.",
-  "JOIN_LINK_JOINED": "Vous avez rejoint l'équipe. Ses espaces de travail sont dans votre liste."
+  "JOIN_LINK_JOINED": "Vous avez rejoint l'équipe. Ses espaces de travail sont dans votre liste.",
+  "YOUR_ORGANIZATION": "Votre organisation",
+  "INVITED_ORGANIZATIONS": "Organisations invitées",
+  "MULTI_ORG_UPSELL": "Besoin de gérer plusieurs organisations ?",
+  "MULTI_ORG_UPSELL_LINK": "Le forfait Business le permet →",
+  "PLAN_NAMED": "Forfait %s",
+  "ORG_ROLE_GUEST": "Invité",
+  "ORG_NAME_REQUIRED": "Donnez un nom à votre organisation.",
+  "INVALID_IDENT": "Utilisez 2 à 40 lettres minuscules, chiffres ou tirets (pas au début ni à la fin).",
+  "IDENT_NOT_AVAILABLE": "Cette adresse est déjà prise. Choisissez-en une autre.",
+  "IDENT_RESERVED": "Cette adresse est réservée. Choisissez-en une autre."
 }

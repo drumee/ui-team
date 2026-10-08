@@ -3165,5 +3165,15 @@
   "CHAT_EMPTY_TEXT": "分享公司新闻、即将举行的活动等公告和动态,...",
   "JOIN_LINK_EXPIRED": "该邀请链接已过期或被撤销。",
   "JOIN_LINK_INVALID": "该邀请链接无效。",
-  "JOIN_LINK_JOINED": "你已加入团队，其工作区已出现在你的列表中。"
+  "JOIN_LINK_JOINED": "你已加入团队，其工作区已出现在你的列表中。",
+  "YOUR_ORGANIZATION": "你的组织",
+  "INVITED_ORGANIZATIONS": "受邀的组织",
+  "MULTI_ORG_UPSELL": "需要管理多个组织？",
+  "MULTI_ORG_UPSELL_LINK": "Business 方案支持 →",
+  "PLAN_NAMED": "%s 方案",
+  "ORG_ROLE_GUEST": "访客",
+  "ORG_NAME_REQUIRED": "请为你的组织命名。",
+  "INVALID_IDENT": "请使用 2 到 40 个小写字母、数字或连字符（不能在开头或结尾）。",
+  "IDENT_NOT_AVAILABLE": "该地址已被占用，请换一个。",
+  "IDENT_RESERVED": "该地址为保留地址，请换一个。"
 }

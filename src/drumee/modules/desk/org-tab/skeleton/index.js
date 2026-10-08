@@ -18,7 +18,7 @@ const { multiOrgOnly } = require("../multi-org");
  *
  * @param {String} pfx BEM root
  */
-function chip(pfx) {
+function chip(pfx, plan) {
   const name = Organization.name() || "";
   return Skeletons.Box.X({
     className: `${pfx}__chip`,
@@ -52,7 +52,9 @@ function chip(pfx) {
       // resolves it (libs/billing).
       Skeletons.Note({ active: 0,
         className: `${pfx}__plan`,
-        content: require("libs/billing").planLabel(),
+        // The plan of the organisation being shown: on another organisation
+        // (multi-org) that is its plan, not the person's own (my_orgs).
+        content: require("libs/billing").planLabel(plan),
       }),
       Skeletons.Image.Svg({ active: 0, ico: "ph-caret-down", className: `${pfx}__caret` }),
     ],
@@ -213,35 +215,194 @@ function panel(pfx, ui, data) {
     className: `${pfx}__panel`,
     kids: [
       header(pfx, ui, data),
-      // Deferred — see ../multi-org.js. The divider belongs to the gated block,
-      // so with the flag off the panel ends cleanly after the header rather
-      // than on a rule with nothing under it.
+      // Your organization / Invited Organizations (../multi-org.js). Fed
+      // once organization.my_orgs answers, like the counts above.
       multiOrgOnly(() =>
         Skeletons.Box.Y({
           className: `${pfx}__switch`,
-          kids: [
-            Skeletons.Box.X({ className: `${pfx}__divider` }),
-            Skeletons.Note({
-              className: `${pfx}__switch-label`,
-              content: LOCALE.SWITCH_ORGANIZATIONS,
-            }),
-            Skeletons.Box.Y({
-              className: `${pfx}__switch-list`,
-              sys_pn: "switch-list",
-              partHandler: ui,
-            }),
-            Skeletons.Button.Label({
-              ico: "ph-plus",
-              className: `${pfx}__new-org`,
-              label: LOCALE.NEW_ORGANIZATION,
-              service: "new-organization",
-              uiHandler: [ui],
-            }),
-          ],
+          sys_pn: "switch-list",
+          partHandler: ui,
         }),
       ),
     ],
   });
+}
+
+/**
+ * A LOCALE string, or the fallback when the key is missing (LOCALE echoes the
+ * key name rather than returning undefined).
+ */
+function say(key, fallback) {
+  const v = LOCALE[key];
+  return v && v !== key ? v : fallback;
+}
+
+/**
+ * "Team", "Business"... from a plan name, through the app's one plan ladder.
+ */
+function planName(plan) {
+  return require("libs/billing").planLabel(plan || "free");
+}
+
+function roleName(role) {
+  return {
+    owner: say("ORG_ROLE_OWNER", "Owner"),
+    admin: say("ORG_ROLE_ADMIN", "Admin"),
+    member: say("ORG_ROLE_MEMBER", "Member"),
+    guest: say("ORG_ROLE_GUEST", "Guest"),
+  }[role] || "";
+}
+
+/**
+ * One organisation row: [initial] Name / sub-line. The whole row switches to
+ * that organisation; the current one is drawn selected and does nothing.
+ *
+ * @param {String} pfx
+ * @param {Object} ui
+ * @param {Object} org a my_orgs row
+ * @param {String} sub
+ */
+function orgRow(pfx, ui, org, sub) {
+  const name = org.name || org.link || "";
+  const act = org.current
+    ? { active: 0 }
+    : { service: "switch-organization", link: org.link, uiHandler: [ui] };
+  return Skeletons.Box.X({
+    className: `${pfx}__org-row${org.current ? ` ${pfx}__org-row--current` : ""}`,
+    ...act,
+    kids: [
+      Skeletons.Box.Y({
+        active: 0,
+        className: `${pfx}__org-row-avatar`,
+        kids: [Skeletons.Note({ active: 0, className: `${pfx}__avatar-text`, content: name.charAt(0) })],
+      }),
+      Skeletons.Box.Y({
+        active: 0,
+        className: `${pfx}__org-row-id`,
+        kids: [
+          Skeletons.Note({ active: 0, className: `${pfx}__org-row-name`, content: name }),
+          Skeletons.Note({ active: 0, className: `${pfx}__org-row-sub`, content: sub }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
+ * The inline "New organization" form (Business plan): name + address.
+ */
+function newOrgForm(pfx, ui) {
+  const suffix = `.${(Organization.host() || location.hostname).split(".").slice(1).join(".")}`;
+  return Skeletons.Box.Y({
+    className: `${pfx}__new-org-form`,
+    kids: [
+      Skeletons.Entry({
+        className: `${pfx}__new-org-entry`,
+        sys_pn: "new-org-name",
+        partHandler: ui,
+        placeholder: say("ORGANIZATION_NAME", "Organization name"),
+        require: "any",
+        preselect: 1,
+      }),
+      Skeletons.Box.X({
+        className: `${pfx}__new-org-domain`,
+        kids: [
+          Skeletons.Entry({
+            className: `${pfx}__new-org-entry ${pfx}__new-org-ident`,
+            sys_pn: "new-org-ident",
+            partHandler: ui,
+            placeholder: "northbeam",
+            require: "any",
+          }),
+          Skeletons.Note({ active: 0, className: `${pfx}__new-org-suffix`, content: suffix }),
+        ],
+      }),
+      ui._newOrgError
+        ? Skeletons.Note({ className: `${pfx}__new-org-error`, content: ui._newOrgError })
+        : null,
+      Skeletons.Box.X({
+        className: `${pfx}__new-org-actions`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__new-org-cancel`,
+            content: say("CANCEL", "Cancel"),
+            service: "new-organization-cancel",
+            uiHandler: [ui],
+          }),
+          Skeletons.Note({
+            className: `${pfx}__new-org-create${ui._newOrgBusy ? ` ${pfx}__new-org-create--busy` : ""}`,
+            content: say("CREATE", "Create"),
+            service: "new-organization-create",
+            uiHandler: [ui],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
+ * "Your organization" + "Invited Organizations" (Figma 900:150849 Free/Pro/
+ * Team, 900:150993 Business).
+ *   owned   = organisations the person owns (their first, extra ones);
+ *   invited = member / admin / guest elsewhere: "Team plan · Member".
+ * Below "Your organization": the Business upsell, or "+ New organization".
+ *
+ * @param {String} pfx
+ * @param {Object} ui
+ * @param {Object} data a my_orgs result
+ */
+function orgSections(pfx, ui, data) {
+  const orgs = (data && data.orgs) || [];
+  const owned = orgs.filter((o) => o.owned);
+  const invited = orgs.filter((o) => !o.owned);
+  const kids = [Skeletons.Box.X({ className: `${pfx}__divider` })];
+
+  kids.push(Skeletons.Note({ className: `${pfx}__switch-label`, content: say("YOUR_ORGANIZATION", "Your organization") }));
+  kids.push(Skeletons.Box.Y({
+    className: `${pfx}__org-list`,
+    kids: owned.map((o) => orgRow(pfx, ui, o, planName(o.plan))),
+  }));
+
+  if (invited.length) {
+    kids.push(Skeletons.Note({ className: `${pfx}__switch-label`, content: say("INVITED_ORGANIZATIONS", "Invited Organizations") }));
+    kids.push(Skeletons.Box.Y({
+      className: `${pfx}__org-list`,
+      kids: invited.map((o) => orgRow(
+        pfx, ui, o,
+        `${say("PLAN_NAMED", "%s plan").replace("%s", planName(o.plan))} · ${roleName(o.role)}`,
+      )),
+    }));
+  }
+
+  if (data && data.can_create_org) {
+    kids.push(ui._creatingOrg
+      ? newOrgForm(pfx, ui)
+      : Skeletons.Button.Label({
+        ico: "ph-plus",
+        className: `${pfx}__new-org`,
+        label: say("NEW_ORGANIZATION", "New organization"),
+        service: "new-organization",
+        uiHandler: [ui],
+      }));
+  } else if (data) {
+    kids.push(Skeletons.Box.Y({
+      className: `${pfx}__upsell`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__upsell-text`,
+          content: say("MULTI_ORG_UPSELL", "Need to run more than one organization?"),
+        }),
+        Skeletons.Note({
+          className: `${pfx}__upsell-link`,
+          content: say("MULTI_ORG_UPSELL_LINK", "Business plan supports that →"),
+          service: "upgrade-for-orgs",
+          uiHandler: [ui],
+        }),
+      ],
+    }));
+  }
+  return Skeletons.Box.Y({ className: `${pfx}__switch-body`, kids });
 }
 
 module.exports = function (ui) {
@@ -264,7 +425,7 @@ module.exports = function (ui) {
     persistence: _a.always,
     sys_pn: "org-menu",
     partHandler: [ui],
-    trigger: chip(pfx),
+    trigger: chip(pfx, ui._currentPlan),
     items: Skeletons.Box.Y({
       className: `${pfx}__items`,
       sys_pn: "org-panel",
@@ -274,3 +435,4 @@ module.exports = function (ui) {
 };
 
 module.exports.panel = panel;
+module.exports.orgSections = orgSections;
