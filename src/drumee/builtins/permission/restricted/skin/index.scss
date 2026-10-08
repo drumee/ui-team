@@ -1210,16 +1210,17 @@ $gutter: 16px;
   // data-status drives both, so one rule pair covers the two states and a
   // third could be added without touching the skeleton.
   //
-  // Same 32px height and 8px radius as the X and arrow beside it (pd1), so the
-  // three read as one row of controls; icon 18, word 14 SemiBold.
+  // 28px tall, 8px radius, icon 16, word 13 SemiBold — a notch under the
+  // 32px X and arrow beside it, centred on them, so the name keeps more room
+  // in the 360px drawer (Duy, 2026-10-08).
   &__invitation-badge {
     align-items: center;
     border-radius: 8px;
     box-sizing: border-box;
     flex-shrink: 0;
-    gap: 6px;
-    height: 32px;
-    padding: 0 12px 0 10px;
+    gap: 5px;
+    height: 28px;
+    padding: 0 10px 0 8px;
 
     // Figma's own pairs, to the value: Overlay/Orange rgba(232,161,59,.15)
     // over Signal/Warning #E8A13B, and Overlay/red rgba(255,106,101,.15) over
@@ -1238,33 +1239,33 @@ $gutter: 16px;
     }
   }
 
-  // Phosphor Clock / XCircle at 18px. Its colour comes from the badge through
+  // Phosphor Clock / XCircle at 16px. Its colour comes from the badge through
   // currentColor — the sprite strips the source fills.
   &__invitation-badge-ico {
     flex-shrink: 0;
-    height: 18px;
-    width: 18px;
+    height: 16px;
+    width: 16px;
 
     svg {
       display: block;
-      height: 18px;
-      width: 18px;
+      height: 16px;
+      width: 16px;
       fill: currentColor;
     }
   }
 
   // Colour is INHERITED from the badge, which is what makes one data-status
   // rule tint the glyph and the word together.
-  // Figma: Buttons/Small Button 14 SemiBold.
+  // 13 SemiBold.
   //
   // 🎯 OPTICAL CENTRING. Armin Grotesk's ascent/descent are lopsided (11/5 at
-  // 12px), so a line box centred on the badge puts the capitals 2px HIGH of
+  // 12px), so a line box centred on the badge puts the capitals ~2px HIGH of
   // the icon's centre — the misalignment Duy saw. A 14px line box plus 4px on
-  // top makes the box 18px (the icon's height) and lowers the glyphs by
-  // exactly those 2px: measured on drumee.in, badge centre = icon centre =
-  // cap-height centre.
+  // top lowers the glyphs by exactly that: measured on drumee.in (13px), badge
+  // centre = icon centre = cap-height centre, Pending and Declined alike. If
+  // the size changes, re-measure (baseline probe + canvas cap height).
   &__invitation-badge-text {
-    @include drumee.typo($size: 14px, $line: 14px, $weight: 500);
+    @include drumee.typo($size: 13px, $line: 14px, $weight: 500);
     font-weight: 600;
     white-space: nowrap;
     box-sizing: border-box;
