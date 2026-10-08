@@ -8901,6 +8901,32 @@ class desk_module extends LetcBox {
    * @returns {Promise}
    */
   /**
+   * A DEPARTMENT JOIN LINK the person opened (libs/join-link captured it
+   * before any sign-in hop): accept it now that they are signed in — they
+   * join the link's departments and get their workspaces — and say so.
+   * Single-shot: the token is consumed whatever the answer.
+   */
+  async _maybeAcceptJoinLink() {
+    const token = require("libs/join-link").take();
+    if (!token) return;
+    if (!(SERVICE.organization && SERVICE.organization.join_link_accept)) return;
+    const res = await this.postService(SERVICE.organization.join_link_accept, { hub_id: Visitor.id, token })
+      .catch(() => null);
+    const say = (key, fallback) => (LOCALE[key] && LOCALE[key] !== key ? LOCALE[key] : fallback);
+    if (!res || res.status) {
+      const msg = res && res.status === "LINK_EXPIRED"
+        ? say("JOIN_LINK_EXPIRED", "This invitation link has expired or was revoked.")
+        : say("JOIN_LINK_INVALID", "This invitation link is not valid.");
+      if (window.Wm && Wm.alert) Wm.alert(msg);
+      return;
+    }
+    RADIO_BROADCAST.trigger("workspace:refresh");
+    if (window.Wm && Wm.alert) {
+      Wm.alert(say("JOIN_LINK_JOINED", "You joined the team. Its workspaces are now in your list."));
+    }
+  }
+
+  /**
    * "SET UP YOUR ORGANIZATION" — B2B Org Structure, Figma 900:149766.
    *
    * Offered ONCE to the OWNER of an organisation that has no department yet
@@ -8999,6 +9025,7 @@ class desk_module extends LetcBox {
       // is actually clear means a granted (= marked shown) nudge is never
       // burned underneath a promo, the reward flow or a lock popup.
       .then(() => this._maybeShowUpgradeNudge())
+      .then(() => this._maybeAcceptJoinLink())
       .then(() => this._maybeShowOrgSetup())
       .catch((e) => {
         this._hideInvitedWorkspaceLoader();

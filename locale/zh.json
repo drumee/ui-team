@@ -3162,5 +3162,8 @@
   "FILES_EMPTY_GDRIVE_DESC": "从 Google Drive 迁移您的文件",
   "FILES_EMPTY_START_SCRATCH": "从零开始",
   "CHAT_EMPTY_TITLE": "立即开始与团队讨论",
-  "CHAT_EMPTY_TEXT": "分享公司新闻、即将举行的活动等公告和动态,..."
+  "CHAT_EMPTY_TEXT": "分享公司新闻、即将举行的活动等公告和动态,...",
+  "JOIN_LINK_EXPIRED": "该邀请链接已过期或被撤销。",
+  "JOIN_LINK_INVALID": "该邀请链接无效。",
+  "JOIN_LINK_JOINED": "你已加入团队，其工作区已出现在你的列表中。"
 }

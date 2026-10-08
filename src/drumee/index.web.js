@@ -28,6 +28,8 @@ let bunldes = new Map();
 // "#/welcome/signin". Module scope here runs while the original URL is still
 // the original URL, and sessionStorage outlives the navigation.
 require('libs/billing-deep-link').captureFromUrl();
+// A department join link (?join=<token>) — same reason, see libs/join-link.
+require('libs/join-link').captureFromUrl();
 
 // "#/desk/wm/o/…" — a Designation link sent to somebody else, opened by a visitor
 // with no session. Captured here for the same reason and at the same moment as

@@ -3393,5 +3393,8 @@
   "FILES_EMPTY_GDRIVE_DESC": "Move your files from Google Drive",
   "FILES_EMPTY_START_SCRATCH": "Start from scratch",
   "CHAT_EMPTY_TITLE": "Start discuss with your team now",
-  "CHAT_EMPTY_TEXT": "Share announcements and updates about company news, upcoming events,..."
+  "CHAT_EMPTY_TEXT": "Share announcements and updates about company news, upcoming events,...",
+  "JOIN_LINK_EXPIRED": "This invitation link has expired or was revoked.",
+  "JOIN_LINK_INVALID": "This invitation link is not valid.",
+  "JOIN_LINK_JOINED": "You joined the team. Its workspaces are now in your list."
 }

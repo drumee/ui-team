@@ -3163,5 +3163,8 @@
   "FILES_EMPTY_GDRIVE_DESC": "Mueve tus archivos desde Google Drive",
   "FILES_EMPTY_START_SCRATCH": "Empezar desde cero",
   "CHAT_EMPTY_TITLE": "Empieza a conversar con tu equipo",
-  "CHAT_EMPTY_TEXT": "Comparte anuncios y novedades de la empresa, próximos eventos,..."
+  "CHAT_EMPTY_TEXT": "Comparte anuncios y novedades de la empresa, próximos eventos,...",
+  "JOIN_LINK_EXPIRED": "Este enlace de invitación ha caducado o fue revocado.",
+  "JOIN_LINK_INVALID": "Este enlace de invitación no es válido.",
+  "JOIN_LINK_JOINED": "Te uniste al equipo. Sus espacios de trabajo ya están en tu lista."
 }
