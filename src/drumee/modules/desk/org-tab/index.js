@@ -282,6 +282,8 @@ class __desk_org_tab extends LetcBox {
       case "new-organization-cancel":
         this._creatingOrg = false;
         this._newOrgError = "";
+        this._newOrgName = "";
+        this._newOrgIdent = "";
         return this._feedOrgs();
 
       case "new-organization-create":
