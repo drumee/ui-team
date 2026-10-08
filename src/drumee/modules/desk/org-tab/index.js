@@ -118,6 +118,9 @@ class __desk_org_tab extends LetcBox {
     if (this._newOrgBusy) return;
     const name = this._entryValue("new-org-name");
     const ident = this._entryValue("new-org-ident").toLowerCase();
+    // Kept so a repaint (error, busy) gives the fields back as typed.
+    this._newOrgName = name;
+    this._newOrgIdent = ident;
     const say = (k, f) => (LOCALE[k] && LOCALE[k] !== k ? LOCALE[k] : f);
     if (!name) this._newOrgError = say("ORG_NAME_REQUIRED", "Give your organization a name.");
     else if (!/^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$/.test(ident)) {
