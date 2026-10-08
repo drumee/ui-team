@@ -8,7 +8,7 @@
  * The "Get info" Details card, as a player owns it.
  *
  * Shared by all five players so the card behaves the same everywhere:
- * docked under the player's header, always smaller than the player, and
+ * centred on the screen, always smaller than the player, and
  * gone when the player closes.
  *
  * The card is a separate WM window and cannot simply be handed a parent:
@@ -61,8 +61,9 @@ function isReady(card) {
 }
 
 /**
- * Cap the card to the player's box and park it under the header.
- * Always strictly smaller than the player, on both axes.
+ * Cap the card to the player's box — always strictly smaller than the
+ * player, on both axes. Position is the card's own: `constrainTo` re-fits
+ * it and centres it on the screen.
  */
 function place(ui, card) {
   const el = ui.el;
@@ -76,9 +77,6 @@ function place(ui, card) {
     el.querySelector(`.${ui.fig.group}__header`);
   const hb = header ? header.getBoundingClientRect() : win;
 
-  // Stops the card re-centring itself once it measures its own height.
-  card._anchored = 1;
-
   const maxWidth = Math.max(MIN.width, Math.round(win.width) - 2 * GAP);
   const maxHeight = Math.max(MIN.height, Math.round(win.bottom - hb.bottom) - 2 * GAP);
   const width = Math.min(PREFERRED_WIDTH, maxWidth);
@@ -86,34 +84,6 @@ function place(ui, card) {
   if (_.isFunction(card.constrainTo)) {
     card.constrainTo({ width, maxHeight });
   }
-
-  // Centre on what the card ACTUALLY measures, not on the width we asked
-  // for. If the width could not be applied — the preset's geometry lands
-  // late and has overwritten it before — centring on the request shifts the
-  // card by half the difference, which reads as a lean to the right.
-  const rect = card.el ? card.el.getBoundingClientRect() : null;
-  const actualWidth = Math.round((rect && rect.width) || width);
-  const height = Math.round(
-    (rect && rect.height) || (card.size && card.size.height) || 0,
-  );
-
-  const left = Math.max(
-    0,
-    Math.min(
-      Math.round(hb.left + (hb.width - actualWidth) / 2),
-      Math.max(0, window.innerWidth - actualWidth),
-    ),
-  );
-  const top = Math.max(
-    0,
-    Math.min(
-      Math.round(hb.bottom + GAP / 2),
-      Math.max(0, window.innerHeight - height),
-    ),
-  );
-
-  card.style.set({ left, top });
-  card.$el.css({ left, top });
 }
 
 function adopt(ui, deadline) {

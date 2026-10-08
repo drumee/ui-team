@@ -5,6 +5,15 @@
   box-shadow: var(--shadow-main);
   overflow: hidden;
 
+  // `.window__ui` (window/skin/window.scss) floors every window at
+  // 600x320, and a CSS minimum wins over a smaller inline size — so the
+  // 420px card rendered 600 wide and could never shrink to its rows. Two
+  // classes, so this beats the single-class floor whatever the load order.
+  &.window__ui {
+    min-height: 0;
+    min-width: 0;
+  }
+
   &__container {
     // Sizes to its rows — NOT `height: 100%`. The window is then shrunk to
     // match in `_fitToContent`; forcing 100% here made `scrollHeight` echo
