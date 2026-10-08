@@ -1,0 +1,103 @@
+// The list checkbox, after the tasks list's .tasks-panel__list-check
+// (builtins/window/tasks/skin/index.scss): a 14px rounded box that fills
+// indigo with a white upload-checked tick. Shared by the Files row view —
+// header select-all (window__filter__select-all) and each row
+// (media-row__checkbox).
+//
+// $checked: the selector of the ticked state on the box. The header uses
+// data-checked="1"; a row's own checkbox carries data-selected="1".
+@mixin list-check($checked: '&[data-checked="1"]') {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  box-sizing: border-box;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+
+  svg {
+    width: 12px !important;
+    height: 12px !important;
+    padding: 0;
+    margin: 0;
+    opacity: 0;
+    fill: none;
+    stroke: #fff;
+    color: #fff;
+    background: transparent;
+  }
+
+  #{$checked} {
+    background: #433cc5;
+    border-color: #433cc5;
+
+    svg {
+      opacity: 1;
+    }
+  }
+
+  // Header only ("some rows selected"). The dash is laid ON the box, not
+  // beside the hidden tick, so it stays centred.
+  &[data-checked="mixed"] svg {
+    display: none;
+  }
+
+  &[data-checked="mixed"]::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 2px;
+    border-radius: 1px;
+    background: #433cc5;
+    transform: translate(-50%, -50%);
+  }
+
+  &[data-disabled="1"] {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  // While a select-all ticks the rows: a ring spinner on a neutral box. Wins
+  // over `mixed` (same ::after) by coming later at equal specificity.
+  &[data-loading="1"] {
+    pointer-events: none;
+    background: transparent;
+    border-color: rgba(67, 60, 197, 0.35);
+
+    svg {
+      display: none;
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(67, 60, 197, 0.25);
+      border-top-color: #433cc5;
+      background: transparent;
+      box-sizing: border-box;
+      transform: translate(-50%, -50%);
+      animation: list-check-spin 0.7s linear infinite;
+    }
+  }
+
+  @at-root {
+    @keyframes list-check-spin {
+      to {
+        transform: translate(-50%, -50%) rotate(360deg);
+      }
+    }
+  }
+}

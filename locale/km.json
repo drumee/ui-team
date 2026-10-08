@@ -3068,5 +3068,7 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "លុបកន្លែងធ្វើការនេះ",
   "PERMISSION_ACTION_MANAGE_SHARE": "គ្រប់គ្រងតំណចែករំលែក",
   "X_ITEMS": "{0} ធាតុ",
-  "ONE_ITEM": "1 ធាតុ"
+  "ONE_ITEM": "1 ធាតុ",
+  "X_SELECTED": "បានជ្រើសរើស {0}",
+  "CLEAR_SELECTION": "សម្អាតការជ្រើសរើស"
 }

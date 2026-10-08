@@ -1547,6 +1547,8 @@ class __window_folder extends mfsInteract {
     }
     if (pn === _a.list) {
       this.iconsList = child;
+      // Row-view header checkbox (window/core); returns below skip core's wiring.
+      this._wireRowSelectAll(child);
       if (this.getViewMode && this.getViewMode() !== _a.row) {
         this._prepareListPartition(child);
       }

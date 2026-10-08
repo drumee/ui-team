@@ -6,6 +6,10 @@ const EOD = "end:of:data";
 // Used to tell a fully-loaded folder from a partially-loaded one before
 // renumbering ranks — see _syncOrder.
 const PAGE_SIZE = 45;
+// Row-view select-all spinner: shortest time it stays up after a click, and
+// how often it re-checks a list still fetching (see _syncRowSelectAll).
+const ROW_SELECT_MIN_SPIN = 300;
+const ROW_FETCH_POLL = 500;
 const __utils = require("./utils");
 
 const { TweenLite, TimelineMax, TweenMax } = require("@drumee/ui-core/vendor");
@@ -498,6 +502,225 @@ class __window_core extends __utils {
     }
   }
 
+  // ── Row view select-all ──────────────────────────────────────────────
+  // The header checkbox of content/row. Selection is each row's own `state`
+  // (getLocalSelection / Wm.getGlobalSelection read it), so ticking rows here
+  // is all the existing bulk actions need. Modelled on the tasks list's
+  // select-all (tasks/list-inline.js _toggleListSelectAll).
+
+  /**
+   * The list whose rows the header governs, or null in any other view.
+   */
+  _rowList() {
+    const list = this.iconsList;
+    if (!list || !list.el || (list.isDestroyed && list.isDestroyed())) return null;
+    return list;
+  }
+
+  /**
+   * The header checkbox of THIS window's row view. Resolved from the list,
+   * not from this.el: Wm shares this code and its el holds every window.
+   */
+  _rowSelectAllBox() {
+    const main = this._rowMain();
+    return main ? main.querySelector(`.${this.fig.group}__filter__select-all`) : null;
+  }
+
+  /**
+   * The row view's __content-main, found from the list for the same reason.
+   */
+  _rowMain() {
+    const list = this._rowList();
+    return list ? list.el.closest(`.${this.fig.group}__content-main`) : null;
+  }
+
+  /**
+   * Paint the selected chip (content/row): its count, and data-count, which
+   * the skin hides it on at "0".
+   * @param {Number} count ticked rows
+   */
+  _paintSelectedChip(count) {
+    const main = this._rowMain();
+    const chip = main && main.querySelector(`.${this.fig.group}__selected-chip`);
+    if (!chip) return;
+    chip.dataset.count = String(count);
+    const label = chip.querySelector(`.${this.fig.group}__selected-chip-label`);
+    if (label && count) label.textContent = LOCALE.X_SELECTED.format(count);
+  }
+
+  /**
+   * The chip's ✕: unselect every ticked row of this window. unselect(), not a
+   * state write, so each checkbox repaints with it.
+   */
+  _clearRowSelection() {
+    for (let c of this._selectableRows()) {
+      if (!c.mget(_a.state)) continue;
+      try {
+        c.unselect();
+      } catch (e) { }
+    }
+    this._syncRowSelectAll();
+  }
+
+  /**
+   * The rows that are BUILT: a box ticking files past the loaded pages would
+   * hand a bulk delete files the user never saw. Pseudo rows (uploads in
+   * flight, paste placeholders) have no node to act on.
+   */
+  _selectableRows() {
+    const list = this._rowList();
+    if (!list || !list.children) return [];
+    return list.children
+      .toArray()
+      .filter(
+        (c) =>
+          c &&
+          _.isFunction(c.select) &&
+          !c.isPseudo &&
+          !(c.isDestroyed && c.isDestroyed()),
+      );
+  }
+
+  /**
+   * Tick every built row, or clear them all when every one is ticked already.
+   *
+   * Ticking touches every row, which on a long list holds the main thread long
+   * enough to read as a dead click — so the box shows a spinner first, and two
+   * frames are yielded so it is actually painted. On a short list the work
+   * takes a frame, so the spinner is held for ROW_SELECT_MIN_SPIN ms or it
+   * would only flicker. A click while it spins, or while the list is still
+   * fetching a page, is ignored.
+   */
+  _toggleRowSelectAll() {
+    if (this._rowSelectingAll || this._rowListFetching()) return;
+    if (!this._selectableRows().length) return this._syncRowSelectAll();
+    this._rowSelectingAll = true;
+    const box = this._rowSelectAllBox();
+    if (box) box.dataset.loading = "1";
+    const raf =
+      typeof requestAnimationFrame === "function"
+        ? requestAnimationFrame
+        : (f) => setTimeout(f, 16);
+    const since = Date.now();
+    return new Promise((resolve) => raf(() => raf(resolve)))
+      .then(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        // Re-read: a page may have landed while the spinner was painting.
+        const rows = this._selectableRows();
+        const every = rows.every((c) => c.mget(_a.state));
+        for (let c of rows) {
+          try {
+            if (every) {
+              c.unselect();
+            } else if (!c.mget(_a.state)) {
+              c.select();
+              // select() marks the row only; unselect() and tick() also
+              // repaint its checkbox.
+              if (_.isFunction(c._changeState)) {
+                c._changeState("checkbox", "selected", 1);
+              }
+            }
+          } catch (e) { }
+        }
+        const left = ROW_SELECT_MIN_SPIN - (Date.now() - since);
+        if (left > 0) return new Promise((resolve) => setTimeout(resolve, left));
+      })
+      .finally(() => {
+        this._rowSelectingAll = false;
+        // The list may have been rebuilt meanwhile — clear both boxes.
+        if (box) box.dataset.loading = "0";
+        const now = this._rowSelectAllBox();
+        if (now) now.dataset.loading = "0";
+        this._syncRowSelectAll();
+      });
+  }
+
+  /**
+   * True while the list has a page request in flight (first load, a restart
+   * on navigation or filter, scroll paging).
+   */
+  _rowListFetching() {
+    const list = this._rowList();
+    return !!(list && _.isFunction(list.isWaiting) && list.isWaiting());
+  }
+
+  /**
+   * Paint the header from the rows: "1" all ticked, "mixed" some, "0" none,
+   * and spin while the list is fetching — the rows it is about to add are not
+   * there to select yet.
+   */
+  _syncRowSelectAll() {
+    if (this._rowSelectingAll) return;
+    const box = this._rowSelectAllBox();
+    if (!box) return;
+    const rows = this._selectableRows();
+    const ticked = rows.filter((c) => c.mget(_a.state)).length;
+    const fetching = this._rowListFetching();
+    this._paintSelectedChip(ticked);
+    box.dataset.checked =
+      !rows.length || !ticked ? "0" : ticked === rows.length ? "1" : "mixed";
+    box.dataset.disabled = rows.length || fetching ? "0" : "1";
+    box.dataset.loading = fetching ? "1" : "0";
+    // The list announces no "fetch done" on a page that is neither the last
+    // nor rendered (a failed render, a dropped stale response) — re-check
+    // until it settles rather than spin forever.
+    if (fetching && !this._rowFetchPoll) {
+      this._rowFetchPoll = setTimeout(() => {
+        this._rowFetchPoll = null;
+        if (this.isDestroyed && this.isDestroyed()) return;
+        this._syncRowSelectAll();
+      }, ROW_FETCH_POLL);
+    }
+  }
+
+  /**
+   * Coalesce a burst (a page of rows, a whole-window unselect) into one sync.
+   */
+  _scheduleRowSelectSync() {
+    if (this._rowSelectSyncPending) return;
+    this._rowSelectSyncPending = 1;
+    const raf =
+      typeof requestAnimationFrame === "function"
+        ? requestAnimationFrame
+        : (f) => setTimeout(f, 16);
+    raf(() => {
+      this._rowSelectSyncPending = 0;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._syncRowSelectAll();
+    });
+  }
+
+  /**
+   * Keep the header in step with the rows. add/remove:child cover paging (a
+   * new page turns "all" into "mixed"), a restart on navigation and rows
+   * removed under the selection. A row's own checkbox (media/interact.js
+   * tick) reports nothing to its window — it only broadcasts.
+   *
+   * The list has no "fetch started" event, but each path into fetch() raises
+   * one in the same task, ahead of the request: ready (first load), eod
+   * (restart), scroll and mousewheel (paging). The sync runs a frame later and
+   * reads isWaiting() then. eod/error/add:child cover the request ending.
+   * @param {*} list the freshly mounted list part
+   */
+  _wireRowSelectAll(list) {
+    if (this._rowSelectList && this._rowSelectList !== list) {
+      this.stopListening(this._rowSelectList);
+    }
+    this._rowSelectList = list;
+    this.listenTo(
+      list,
+      `add:child remove:child ${_e.ready} ${_e.eod} ${_e.error} ${_e.scroll} mousewheel`,
+      this._scheduleRowSelectSync,
+    );
+    if (!this._rowSelectBroadcast && typeof RADIO_BROADCAST !== "undefined") {
+      this._rowSelectBroadcast = 1;
+      this.listenTo(RADIO_BROADCAST, _e.select, (media) => {
+        if (media && media.logicalParent === this) this._scheduleRowSelectSync();
+      });
+    }
+    this._scheduleRowSelectSync();
+  }
+
   /**
    *
    * @param {*} cmd
@@ -725,6 +948,7 @@ class __window_core extends __utils {
       case _a.list:
       case "navigation":
         this.buildIconsList(child, pn);
+        if (pn === _a.list) this._wireRowSelectAll(child);
         break;
 
       case "nav-wrapper":
@@ -1084,6 +1308,12 @@ class __window_core extends __utils {
       case _e.sort:
         return this.sortContent(cmd);
 
+      case "row-select-all":
+        return this._toggleRowSelectAll(cmd);
+
+      case "row-select-clear":
+        return this._clearRowSelection();
+
       case "show-navigation":
         return this.showNavigation();
 
@@ -1159,6 +1389,7 @@ class __window_core extends __utils {
       case _e.select:
         this.service = _e.select;
         this.status = _a.idle;
+        this._scheduleRowSelectSync();
         return this.triggerHandlers(args, cmd);
 
       case _a.properties:
@@ -1171,12 +1402,17 @@ class __window_core extends __utils {
         return Wm.handleUpload();
       case "show-hidden-files":
         localStorage.setItem("showHidden", "yes");
-        this.iconsList.model.unset("skip");
+        // Dotfiles back in; schedules stay out (toolkit/list-skip).
+        this.iconsList.model.set({
+          skip: require("./skeleton/toolkit/list-skip").fileListSkip(true),
+        });
         this.iconsList.restart();
         break;
       case "hide-hidden-files":
         localStorage.removeItem("showHidden");
-        this.iconsList.model.set({ skip: { filename: /^\./ } });
+        this.iconsList.model.set({
+          skip: require("./skeleton/toolkit/list-skip").fileListSkip(false),
+        });
         this.iconsList.restart();
         break;
       case "export-to-server":

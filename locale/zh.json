@@ -3068,5 +3068,7 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "删除此工作区",
   "PERMISSION_ACTION_MANAGE_SHARE": "管理共享链接",
   "X_ITEMS": "{0} 项",
-  "ONE_ITEM": "1 项"
+  "ONE_ITEM": "1 项",
+  "X_SELECTED": "已选择 {0} 项",
+  "CLEAR_SELECTION": "清除选择"
 }
