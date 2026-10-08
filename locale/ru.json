@@ -3076,5 +3076,8 @@
   "X_ITEMS": "Элементов: {0}",
   "ONE_ITEM": "1 элемент",
   "X_SELECTED": "Выбрано: {0}",
-  "CLEAR_SELECTION": "Снять выделение"
+  "CLEAR_SELECTION": "Снять выделение",
+  "DOWNLOADING_X_OF_Y": "Загрузка {0} из {1}",
+  "DOWNLOAD_COMPLETE": "Загрузка завершена",
+  "DOWNLOAD_X_FAILED": "Не удалось скачать файлов: {0}"
 }

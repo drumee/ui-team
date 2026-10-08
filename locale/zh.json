@@ -3070,5 +3070,8 @@
   "X_ITEMS": "{0} 项",
   "ONE_ITEM": "1 项",
   "X_SELECTED": "已选择 {0} 项",
-  "CLEAR_SELECTION": "清除选择"
+  "CLEAR_SELECTION": "清除选择",
+  "DOWNLOADING_X_OF_Y": "正在下载 {0}/{1}",
+  "DOWNLOAD_COMPLETE": "下载完成",
+  "DOWNLOAD_X_FAILED": "{0} 个文件无法下载"
 }
