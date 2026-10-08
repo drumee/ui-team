@@ -1257,6 +1257,127 @@ $gutter: 16px;
     white-space: nowrap;
   }
 
+  // ── Pending invitations: Cancel / Resend / Select (Figma pd1) ──
+  // Heading on the left, the selection controls on the right.
+  &__invitations-head {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  &__invitations-controls {
+    align-items: center;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  // Text buttons in the head. "Select"/"Done" in the primary colour,
+  // "Cancel (n)" in Signal/Error — it withdraws invitations.
+  // $weight 500 + font-weight 600 for the typo() 600 trap.
+  &__invitations-select,
+  &__invitations-bulk-cancel {
+    @include drumee.typo($size: 13px, $line: 1.2em, $weight: 500);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  &__invitations-select {
+    color: var(--primary-50);
+  }
+
+  &__invitations-bulk-cancel {
+    color: var(--signal-error, #d74e49);
+
+    // Nothing ticked: shown, so the control is discoverable, but inert.
+    &[data-disabled="1"] {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    &[data-pending="1"] {
+      cursor: progress;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+
+  // Select mode: the row is the checkbox's hit area (skeleton).
+  &__invitation-row[data-selecting="1"] {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  // Phosphor Square / CheckSquare (fill) at 20px, grey when empty and the
+  // primary colour when ticked.
+  &__invitation-check {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--tertiary-grey-80, #65656c);
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+  }
+
+  &__invitation-row[data-checked="1"] &__invitation-check {
+    color: var(--primary-50);
+  }
+
+  // The X and the arrow beside the badge. Figma: 32px rounded squares, the
+  // X on Overlay/red with Signal/Error (the Declined badge's own pair), the
+  // arrow on a neutral grey.
+  &__invitation-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 8px;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    // In flight (index.js _invitationBusy): the actual disable is
+    // pointer-events; the handlers refuse a second press as well.
+    &[data-pending="1"] {
+      cursor: progress;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  &__invitation-cancel {
+    background: rgba(255, 106, 101, 0.15);
+    color: var(--signal-error, #d74e49);
+
+    &:hover {
+      background: rgba(255, 106, 101, 0.28);
+    }
+  }
+
+  &__invitation-resend {
+    background: var(--normal-bg-90, #f2f2f7);
+    color: var(--tertiary-grey-80, #65656c);
+
+    &:hover {
+      background: color-mix(in srgb, var(--normal-fg-10, #18181b) 10%, var(--normal-bg-90, #f2f2f7));
+    }
+  }
+
   // ── Member rows ───────────────────────────────────────────────
   &__member-row {
     display: flex;
