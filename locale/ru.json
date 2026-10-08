@@ -3189,5 +3189,7 @@
   "SALES_MAIL_GMAIL": "Открыть в Gmail",
   "SALES_MAIL_OUTLOOK": "Открыть в Outlook.com",
   "SALES_MAIL_APP": "Открыть почтовую программу (Outlook, Apple Mail…)",
-  "SALES_MAIL_COPY": "Скопировать адрес эл. почты"
+  "SALES_MAIL_COPY": "Скопировать адрес эл. почты",
+  "X_SELECTED": "Выбрано: {0}",
+  "CLEAR_SELECTION": "Снять выделение"
 }

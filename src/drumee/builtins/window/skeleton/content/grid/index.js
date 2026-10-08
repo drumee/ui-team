@@ -39,9 +39,8 @@ const __media_skl_grid = function (ui) {
     spinnerWait: 1500,
     spinner: true,
     itemsOpt: opt,
-    skip: {
-      filename: /^\./,
-    },
+    // No schedule rows, ever; dotfiles only under showHidden (toolkit/list-skip).
+    skip: require("../../toolkit/list-skip").fileListSkip(),
     vendorOpt: Preset.List.Orange_e,
     // List._initApi calls api(this) as a plain function (no `this` binding),
     // so a bare `ui.getCurrentApi` reference runs with this=undefined and
@@ -51,10 +50,6 @@ const __media_skl_grid = function (ui) {
       return ui.getCurrentApi();
     },
   });
-
-  if (localStorage.getItem("showHidden")) {
-    delete list.skip;
-  }
 
   const cnWidowFilter = "window-filter";
 

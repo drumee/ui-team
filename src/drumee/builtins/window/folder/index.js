@@ -1594,6 +1594,8 @@ class __window_folder extends mfsInteract {
     }
     if (pn === _a.list) {
       this.iconsList = child;
+      // Row-view header checkbox (window/core); returns below skip core's wiring.
+      this._wireRowSelectAll(child);
       // A view switch rebuilt the list mid-search: refill it with the hits.
       if (FilesSearch.onListReady(this, child)) return;
       // A freshly mounted list starts its own first fetch on render, without

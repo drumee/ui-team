@@ -6,7 +6,22 @@ const __media_skl_row = function (ui) {
   const header = Skeletons.Box.G({
     className: `${pfx}__main`,
     kids: [
-      Skeletons.Box.X(),
+      // Select-all, in the track of the rows' own checkbox. Ticks the rows that
+      // are BUILT (window/core _toggleRowSelectAll); bubble:0 so the click does
+      // not reach onChildBubble, which unselects everything in folder windows.
+      Skeletons.Box.X({
+        className: `${pfx}__select-cell`,
+        kids: [
+          Skeletons.Button.Svg({
+            className: `${pfx}__select-all`,
+            ico: "upload-checked",
+            bubble: 0,
+            service: "row-select-all",
+            uiHandler: [ui],
+            attrOpt: { "data-checked": "0", "data-disabled": "1" },
+          }),
+        ],
+      }),
       Skeletons.Box.X(),
       Skeletons.Button.Label({
         ico: "arrow-up",
@@ -74,9 +89,9 @@ const __media_skl_row = function (ui) {
     dataset: {
       role: _a.container,
     },
-    skip: {
-      filename: /^\./,
-    },
+    // Same filter as the grid (toolkit/list-skip): no schedule rows, ever, and
+    // no dotfiles unless showHidden.
+    skip: require("../../toolkit/list-skip").fileListSkip(),
     itemsOpt: {
       kind: "media_row",
       flow: _a.x,
@@ -96,16 +111,39 @@ const __media_skl_row = function (ui) {
     },
   });
 
-  if (localStorage.getItem("showHidden")) {
-    delete list.skip;
-  }
-
   // Folder windows only: its skin is the one that styles and gates the
   // skeleton (folder/skin/icons-skeleton.scss); elsewhere it would paint raw.
   const kids = [header, list];
   if (ui.fig.family === "window-folder") {
     kids.push(require("../../toolkit/icons-skeleton").iconsSkeleton(ui, "row"));
   }
+
+  // Selected chip — "N selected  ✕", floating over the bottom of the list
+  // while anything is ticked. window/core _syncRowSelectAll writes the count
+  // (data-count + label text); ✕ clears the selection (_clearRowSelection).
+  // bubble:0 for the same reason as the select-all box.
+  const g = ui.fig.group;
+  kids.push(
+    Skeletons.Box.X({
+      className: `${g}__selected-chip`,
+      dataset: { count: "0" },
+      kids: [
+        Skeletons.Element({
+          className: `${g}__selected-chip-label`,
+          content: "",
+        }),
+        Skeletons.Button.Svg({
+          className: `${g}__selected-chip-clear`,
+          ico: "cross",
+          bubble: 0,
+          service: "row-select-clear",
+          uiHandler: [ui],
+          tooltips: LOCALE.CLEAR_SELECTION,
+        }),
+      ],
+    }),
+  );
+
   return (a = Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.group}__content-main`,
