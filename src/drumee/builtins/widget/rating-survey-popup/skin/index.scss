@@ -1,5 +1,5 @@
 // PMF rating-survey popup — Figma 2144-128133 / 2144-173302 / 2144-173408.
-// Centered white card (radius 12, pad 32, gap 32), purple stars, gray
+// Centered white card (radius 12, pad 24, gap 24 — downsized from the design's 32), purple stars, gray
 // "Take the survey" bar, equal Cancel/Confirm footer. All colors via theme
 // tokens whose LIGHT values match the design palette exactly:
 //   card #fff = --normal-bg-100 · gray btn #f2f2f7 = --normal-bg-90
@@ -12,7 +12,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: min(542px, calc(100vw - 32px));
+    width: min(440px, calc(100vw - 32px));
     max-height: calc(100vh - 48px);
     overflow-y: auto;
     background: var(--normal-bg-100, #ffffff);
@@ -26,22 +26,22 @@
   }
 
   &__container {
-    padding: var(--spacer-7, 2rem); // 32px
-    gap: var(--spacer-7, 2rem);
+    padding: var(--spacer-6, 1.5rem); // 24px
+    gap: var(--spacer-6, 1.5rem);
     align-items: center;
   }
 
   &__body {
     width: 100%;
     align-items: center;
-    gap: var(--spacer-7, 2rem);
+    gap: var(--spacer-6, 1.5rem);
   }
 
   // ── rating ──
   &__rating-title {
     justify-content: center;
     text-align: center;
-    font-size: 24px;
+    font-size: 20px;
     line-height: 1.1;
     font-weight: 600;
     color: var(--normal-fg-800, #34343a);
@@ -53,16 +53,16 @@
   }
 
   &__star {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     color: #e5e5ea; // design Grey/30 — unpicked star
 
     svg {
-      width: 34px;
-      height: 34px;
+      width: 28px;
+      height: 28px;
     }
 
     &[data-on="1"] {
@@ -107,7 +107,7 @@
     justify-content: center;
     align-items: center;
     gap: var(--spacer-3, 0.5rem);
-    padding: var(--spacer-5, 1rem) var(--spacer-6, 1.5rem);
+    padding: var(--spacer-4, 0.75rem) var(--spacer-5, 1rem);
     background: var(--normal-bg-90, #f2f2f7);
     border-radius: var(--corner-radius-1); // 4px
     cursor: pointer;
@@ -306,11 +306,11 @@
     flex: 1;
     justify-content: center;
     align-items: center;
-    padding: var(--spacer-5, 1rem) var(--spacer-6, 1.5rem);
+    padding: var(--spacer-4, 0.75rem) var(--spacer-5, 1rem);
     border-radius: var(--corner-radius-1); // 4px
     cursor: pointer;
-    font-size: 16px;
-    line-height: 24px;
+    font-size: 14px;
+    line-height: 20px;
     font-weight: 600;
   }
 
