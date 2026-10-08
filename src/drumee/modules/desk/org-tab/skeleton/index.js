@@ -271,11 +271,9 @@ function orgRow(pfx, ui, org, sub) {
     className: `${pfx}__org-row${org.current ? ` ${pfx}__org-row--current` : ""}`,
     ...act,
     kids: [
-      Skeletons.Box.Y({
-        active: 0,
-        className: `${pfx}__org-row-avatar`,
-        kids: [Skeletons.Note({ active: 0, className: `${pfx}__avatar-text`, content: name.charAt(0) })],
-      }),
+      // An empty Primary/10 tile, as drawn: the place an organisation logo
+      // goes (ui-core's Organization has no logo to show yet).
+      Skeletons.Box.Y({ active: 0, className: `${pfx}__org-row-avatar` }),
       Skeletons.Box.Y({
         active: 0,
         className: `${pfx}__org-row-id`,

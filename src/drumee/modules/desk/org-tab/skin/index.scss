@@ -325,11 +325,12 @@
     border-radius: var(--corner-radius-3);
     cursor: pointer;
 
+    // The overlay in the frame is the HOVER state (the pointer sits on that
+    // row); the organisation being shown carries no fill of its own.
     &:hover { background-color: var(--normal-bg-90); }
 
     &--current {
       cursor: default;
-      background-color: var(--normal-bg-90);
     }
   }
 
@@ -340,9 +341,8 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--corner-radius-3);
+    // Primary/10, empty: the slot an organisation logo will fill.
     background-color: #e4e3ff;
-
-    .desk-org-tab__avatar-text { color: var(--primary-40); }
   }
 
   &__org-row-id {
@@ -358,7 +358,7 @@
   }
 
   &__org-row-sub {
-    @include drumee.typo($color: var(--normal-fg-50), $size: 12px, $line: 17px);
+    @include drumee.typo($color: var(--tertiary-grey-80), $size: 12px, $line: 17px);
   }
 
   &__upsell {
@@ -451,8 +451,9 @@
     background-color: var(--border-default);
   }
 
+  // Figma: Body/Small Body, Primary/100 -- a heading, not a muted caption.
   &__switch-label {
-    @include drumee.typo($color: var(--normal-fg-50), $size: 12px, $line: 17px);
+    @include drumee.typo($color: var(--normal-fg), $size: 14px, $line: 17px);
   }
 
   &__switch-list {
@@ -470,9 +471,10 @@
     box-sizing: border-box;
     width: 100%;
     min-height: 36px;
-    padding: 8px 12px;
-    border-radius: var(--corner-radius-4);
-    background-color: var(--primary-40);
+    // Figma Button Lightmode Small/Primary: 8px 24px, 8px radius, Primary/50.
+    padding: 8px 24px;
+    border-radius: var(--corner-radius-3);
+    background-color: var(--primary-50);
     cursor: pointer;
     @include drumee.typo($color: var(--white), $size: 14px, $line: 20px);
     font-weight: 600;
@@ -483,7 +485,7 @@
       flex: 0 0 20px;
     }
 
-    &:hover { background-color: var(--primary-50); }
+    &:hover { background-color: var(--primary-40); }
   }
 
   // The hover bubble ui-core injects INSIDE the icon element (__addTooltips
