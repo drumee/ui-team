@@ -1,44 +1,22 @@
+@use "mixins/list-check";
+
 .media-row {
 
   &__checkbox {
-    //position: absolute;
-    width: 16px;
-    height: 16px;
-    visibility: hidden;
-    cursor: pointer;
-    text-align: center;
-    background-color: var(--default-checkbox-bg); //white; 
-    padding: 0;
-    border-radius: 5px;
-    border: 1px solid orange;
+    // The tasks list's checkbox (mixins/list-check). The row's checkbox is
+    // ticked through data-selected (media _changeState), not data-checked.
+    @include list-check.list-check('&[data-selected="1"]');
     margin-left: 24px;
-    display: flex;
+    // Shown on row hover and while ticked only, as before.
+    visibility: hidden;
 
-    &[data-hover="on"] {
-      visibility: visible;
-    }
-
-    svg {
-      visibility: hidden;
-    }
-
+    &[data-hover="on"],
     &[data-selected="1"] {
       visibility: visible;
-
-      svg {
-        border-radius: var(--checkbox-border-radius);
-        fill: orange;
-        border: 1px solid orange;
-        visibility: visible;
-        // background-color: var(--white); 
-        // fill:#879BFF;
-      }
     }
 
     &--icon {
       pointer-events: none;
-      background-color: var(--white);
-      fill: var(--ewhite);
     }
   }
 }

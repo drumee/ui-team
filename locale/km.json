@@ -3183,5 +3183,7 @@
   "SALES_MAIL_GMAIL": "បើកក្នុង Gmail",
   "SALES_MAIL_OUTLOOK": "បើកក្នុង Outlook.com",
   "SALES_MAIL_APP": "បើកកម្មវិធីអ៊ីមែលលើកុំព្យូទ័រ (Outlook, Apple Mail…)",
-  "SALES_MAIL_COPY": "ចម្លងអាសយដ្ឋានអ៊ីមែល"
+  "SALES_MAIL_COPY": "ចម្លងអាសយដ្ឋានអ៊ីមែល",
+  "X_SELECTED": "បានជ្រើសរើស {0}",
+  "CLEAR_SELECTION": "សម្អាតការជ្រើសរើស"
 }

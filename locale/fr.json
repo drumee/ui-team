@@ -3415,5 +3415,7 @@
   "SALES_MAIL_GMAIL": "Ouvrir dans Gmail",
   "SALES_MAIL_OUTLOOK": "Ouvrir dans Outlook.com",
   "SALES_MAIL_APP": "Ouvrir la messagerie de bureau (Outlook, Apple Mail…)",
-  "SALES_MAIL_COPY": "Copier l'adresse e-mail"
+  "SALES_MAIL_COPY": "Copier l'adresse e-mail",
+  "X_SELECTED": "{0} sélectionné(s)",
+  "CLEAR_SELECTION": "Effacer la sélection"
 }
