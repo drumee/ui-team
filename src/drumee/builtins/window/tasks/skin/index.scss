@@ -8726,23 +8726,17 @@ $theme-colors: (
     );
   }
 
+  // done/total — white on the brand primary, whether or not every child is
+  // done (the header's count, unlike the card/list badges, has no green
+  // all-done state).
   &__subtask-count {
     flex-shrink: 0;
     height: 18px;
     padding: 0 7px;
     border-radius: 100px;
-    background: var(--normal-bg-80, #f0f0f5);
+    background: var(--col-primary-40, #5950ff);
     font-weight: 700;
-    @include drumee.typo(
-      $size: 10px,
-      $line: 18px,
-      $color: var(--normal-fg-30, #4a4a68)
-    );
-
-    &[data-complete="1"] {
-      background: #d8f0e4;
-      color: #1f6b47;
-    }
+    @include drumee.typo($size: 10px, $line: 18px, $color: #fff);
   }
 
   &__subtask-add {
@@ -8801,13 +8795,13 @@ $theme-colors: (
       border-color: rgba(89, 80, 255, 0.35);
       box-shadow: 0 2px 8px rgba(11, 10, 33, 0.06);
     }
-    // Struck through rather than hidden: this is a checklist, and a
-    // disappearing row loses the done/total context.
+    // Dimmed rather than hidden: this is a checklist, and a disappearing row
+    // loses the done/total context. No strike-through — the ticked box and
+    // the grey title already say it is done.
     &[data-done="1"] {
       background: var(--normal-bg-90, #fafafc);
 
       .tasks-panel__subtask-title {
-        text-decoration: line-through;
         color: var(--normal-fg-50, #8a8aa3);
       }
       .tasks-panel__subtask-dot,
@@ -8857,6 +8851,10 @@ $theme-colors: (
     height: 18px;
     border-radius: 6px;
     border: 1.5px solid var(--normal-fg-30, #c4c4d0);
+    box-sizing: border-box;
+    // Explicit, as on __list-check: a Button.Svg is display:block, so the
+    // centring below did nothing and the tick sat 2px up-left.
+    display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -8864,25 +8862,31 @@ $theme-colors: (
       border-color 0.15s,
       background 0.15s;
 
+    // Same tick and fill as the List's __list-check. upload-checked is a
+    // STROKED path and the icon build strips fill/stroke, so it is drawn as a
+    // line here, never filled.
     svg {
-      width: 10px;
-      height: 10px;
-      fill: transparent;
+      display: block;
+      flex-shrink: 0;
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: transparent;
     }
 
     &:hover {
-      border-color: #54b684;
+      border-color: #433cc5;
 
       svg {
-        fill: rgba(84, 182, 132, 0.5);
+        stroke: rgba(67, 60, 197, 0.5);
       }
     }
 
     &[data-done="1"] {
-      background: #54b684;
-      border-color: #54b684;
+      background: #433cc5;
+      border-color: #433cc5;
       svg {
-        fill: #fff;
+        stroke: #fff;
       }
     }
   }
@@ -9370,17 +9374,11 @@ html[data-theme="dark"] .tasks-panel {
   &__list-subcount,
   &__cal-chip-subcount,
   &__cal-card-subcount,
-  &__gantt-subcount,
-  &__subtask-count {
+  &__gantt-subcount {
     &[data-complete="1"] {
       background: rgba(34, 181, 115, 0.22);
       color: #7cc79b;
     }
-  }
-
-  &__subtask-check[data-done="1"] {
-    background: #1f8f5c;
-    border-color: #1f8f5c;
   }
 
   &__list-row[data-sub="1"] {
@@ -9406,7 +9404,9 @@ html[data-theme="dark"] .tasks-panel {
     box-shadow: none;
   }
 
-  &__subtask-check {
+  // Only the resting box: a ticked or hovered one keeps its purple border
+  // (an unscoped rule here outranks those light-mode states).
+  &__subtask-check:not([data-done="1"]):not(:hover) {
     border-color: rgba(255, 255, 255, 0.25);
   }
 

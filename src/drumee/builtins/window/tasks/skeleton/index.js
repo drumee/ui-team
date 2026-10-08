@@ -4279,7 +4279,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
       kids: [
         Skeletons.Button.Svg({
           className: `${pfx}__subtask-check`,
-          ico: "app-check",
+          ico: "upload-checked",
           bubble: 0,
           service: svc.toggleDone,
           uiHandler: [ui],
