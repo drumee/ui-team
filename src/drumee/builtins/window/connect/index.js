@@ -380,9 +380,17 @@ class __window_connect extends __room {
   /**
    * The callee had no live session when we dialed. Keep the window in 'dial'
    * (ring-back already playing) and retry conference.invite until it reaches
-   * one of their sessions — from then on it is an ordinary ringing call — or
-   * OFFLINE_RING_MS runs out. Staying in 'dial' keeps Cancel on the usual
-   * path: it revokes and logs the missed call like any unanswered call.
+   * one of their sessions or OFFLINE_RING_MS runs out. Staying in 'dial' keeps
+   * Cancel on the usual path: it revokes and logs the missed call like any
+   * unanswered call.
+   *
+   * Reaching a session does not end the retries. A session that has just come
+   * online has its socket live a few seconds before its desk listens for
+   * pushes, so the first invite to land can be dropped there. Until the
+   * deadline the invite is re-sent for the SAME room (room_id is on the model
+   * from the first reply), and the callee rings once per room
+   * (desk/wm/push.js). Past the deadline a reached call simply keeps ringing,
+   * like a call to an online callee.
    *
    * @param {Object} callee
    */
@@ -390,11 +398,12 @@ class __window_connect extends __room {
     this._stopOfflineRing();
     const deadline = Date.now() + OFFLINE_RING_MS;
     const ringing = () => !this.isDestroyed() && !this._ending && this.state === 'dial';
+    let reached = false;
     const retry = async () => {
       this._offlineRingTimer = null;
       if (!ringing()) return;
       if (Date.now() >= deadline) {
-        this._noAnswer();
+        if (!reached) this._noAnswer();
         return;
       }
       let guest = null;
@@ -412,9 +421,9 @@ class __window_connect extends __room {
         this.handleCrossCall(guest);
         return;
       }
-      if (guest && guest.room_id) {
+      if (guest && guest.room_id && !reached) {
+        reached = true;
         this.mset(guest);
-        return;
       }
       this._offlineRingTimer = setTimeout(retry, OFFLINE_RETRY_MS);
     };
