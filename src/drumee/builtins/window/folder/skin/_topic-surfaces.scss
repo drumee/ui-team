@@ -6,169 +6,97 @@
 // window/folder/skeleton/topic-strip.js + file-threads-bar.js.
 @mixin parts {
   // ── Topic strip ────────────────────────────────────────────────────
+  // Underlined text tabs on a hairline (Figma 775:130783): the page of tabs
+  // scrolls sideways when it overflows; "+ Create topic" stays pinned after
+  // it. topic-strip.js reveal() keeps the picked tab in view.
   .window__topic-strip {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
     flex-shrink: 0;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    // A carousel (topic-strip.js pages 3 tabs), not a scroller.
-    overflow: hidden;
+    align-items: stretch;
+    min-width: 0;
+    padding: 0 12px;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
     font-family: var(--font-main);
   }
 
-  // The page of tabs between the back / next buttons.
+  // The scroller: as wide as its tabs, at most the room left by the create
+  // tab; no visible scrollbar (wheel / trackpad / touch scroll it).
   .window__topic-page {
     display: flex;
     flex-direction: row;
-    flex: 1 1 auto;
-    min-width: 0;
-    align-items: center;
-    // A short page (fewer tabs than topic-strip.js PAGE_SIZE) starts at the
-    // left; a full one is centred (data-full, below).
-    justify-content: flex-start;
-    gap: 4px;
-    overflow: hidden;
-  }
-
-  // A full page sits in the middle of the room between the arrows.
-  .window__topic-page[data-full="1"] {
-    justify-content: center;
-  }
-
-  // Three tabs + the arrows + "Create topic" share the side chat's width:
-  // tabs shrink and their names ellipsize instead of clipping mid-word.
-  .window__topic-page .window__topic-tab {
     flex: 0 1 auto;
     min-width: 0;
-    padding: 4px 12px;
-  }
+    align-items: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
 
-  // A page change slides the new page in from the side it came from
-  // (data-slide, stamped once by window/folder/topics.js).
-  .window__topic-page[data-slide="next"] {
-    animation: topic-page-next 0.22s ease-out both;
-  }
-
-  .window__topic-page[data-slide="prev"] {
-    animation: topic-page-prev 0.22s ease-out both;
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .window__topic-page {
-      animation: none !important;
+      scroll-behavior: auto;
     }
   }
 
-  // #General is short and always there: it keeps its width, topics give way.
-  .window__topic-page .window__topic-tab--general {
-    flex-shrink: 0;
+  // Press-and-drag pans the page (topic-strip.js bind()).
+  .window__topic-page[data-panning="1"] {
+    cursor: grabbing;
+    user-select: none;
   }
 
-  .window__topic-page .window__topic-tab-name {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  // More tabs past an edge: that edge fades out (data-fade, stamped by
+  // topic-strip.js on scroll / resize / feed).
+  .window__topic-page[data-fade="start"] {
+    mask-image: linear-gradient(to right, transparent, #000 24px);
   }
 
-  // The picked tab shows its whole name; the other tabs of the page shrink
-  // and ellipsize around it.
-  .window__topic-page .window__topic-tab[data-active="1"] {
-    flex-shrink: 0;
+  .window__topic-page[data-fade="end"] {
+    mask-image: linear-gradient(to left, transparent, #000 24px);
   }
 
-  .window__topic-page .window__topic-tab[data-active="1"] .window__topic-tab-name {
-    max-width: none;
-    overflow: visible;
+  .window__topic-page[data-fade="both"] {
+    mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
   }
 
-  .window__topic-page .window__topic-tab[data-active="1"] .window__topic-tab-name .note-content {
-    overflow: visible;
-    text-overflow: clip;
-  }
-
-  // ui-core renders a Note as .note > .note-content: ellipsize the inner one.
-  .window__topic-page .window__topic-tab-name .note-content {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .window__topic-arrow {
-    width: 24px;
-    height: 24px;
-    flex: 0 0 24px;
-    padding: 4px;
-    box-sizing: border-box;
-    border-radius: 6px;
-    cursor: pointer;
-    color: var(--normal-fg-10, #0b0a21);
-    fill: currentColor;
-
-    &:hover {
-      background-color: var(--hover-bg-40);
-    }
-  }
-
-  .window__topic-arrow[data-disabled="1"] {
-    opacity: 0.3;
-    pointer-events: none;
-  }
-
-  // Tabs are chips: pill-shaped, lightly filled; the active one is tinted.
+  // A tab: its whole name, never shrunk (the page scrolls instead); the
+  // underline is an inset shadow so it sits on the strip's hairline.
   .window__topic-tab {
     flex: 0 0 auto;
-    height: 28px;
+    height: 36px;
     box-sizing: border-box;
     align-items: center;
     gap: 6px;
-    padding: 4px 12px;
+    padding: 0 12px;
     border: 0;
-    border-radius: 16px;
-    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 0;
+    background: transparent;
     cursor: pointer;
+    white-space: nowrap;
     color: #65656c;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: color 0.15s ease, box-shadow 0.15s ease;
 
     &:hover {
       color: var(--normal-fg-10, #0b0a21);
-      background-color: rgba(0, 0, 0, 0.08);
     }
   }
 
   .window__topic-tab[data-active="1"] {
     color: #5950ff;
-    background-color: rgba(89, 80, 255, 0.1);
+    box-shadow: inset 0 -2px 0 #5950ff;
   }
 
-  // "Create topic" at the far end, styled like the folder toolbar's "+ New"
-  // (window-button__label-button primary, folder skin __new-ctrl). Scoped to
-  // the strip to beat the base tab and the generic .primary.
+  // "+ Create topic": a tab like the others, pinned after the scroller.
   .window__topic-strip .window__topic-tab--create {
-    margin-left: auto;
     flex: 0 0 auto;
-    height: 30px;
-    min-height: 30px;
-    padding: 0 14px;
-    gap: 6px;
-    border: 0;
-    border-radius: 8px;
-    background-color: var(--primary-40);
-    color: var(--white);
-    white-space: nowrap;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-  }
-
-  .window__topic-strip .window__topic-tab--create:hover {
-    background-color: var(--primary-50);
-  }
-
-  .window__topic-strip .window__topic-tab--create:active {
-    background-color: #9d98e6;
   }
 
   .window__topic-create-ico {
@@ -180,15 +108,12 @@
   }
 
   .window__topic-create-label {
-    @include drumee.typo($size: 14px, $line: 16px, $weight: 500, $color: var(--white));
+    @include drumee.typo($size: 14px, $line: 16px, $weight: 500, $color: currentColor);
   }
 
   .window__topic-tab-name {
-    max-width: 160px;
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($size: 14px, $line: 1.2, $weight: 600, $color: currentColor);
+    @include drumee.typo($size: 14px, $line: 1.2, $weight: 500, $color: currentColor);
   }
 
   .window__topic-tab-emoji {
@@ -315,27 +240,5 @@
     border-radius: 100px;
     background: #d74e49; // Signal/Error
     @include drumee.typo($size: 8px, $line: 1, $weight: 400, $color: #fff);
-  }
-}
-
-@keyframes topic-page-next {
-  from {
-    opacity: 0;
-    transform: translateX(24px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@keyframes topic-page-prev {
-  from {
-    opacity: 0;
-    transform: translateX(-24px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
   }
 }

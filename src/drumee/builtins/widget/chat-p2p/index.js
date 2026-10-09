@@ -1947,12 +1947,6 @@ class __chat_p2p extends LetcBox {
         return topicId ? WorkspaceTopics.scopeTopic(this, topicId) : undefined;
       }
 
-      case "topic-strip-prev":
-        return WorkspaceTopics.stripPage(this, -1);
-
-      case "topic-strip-next":
-        return WorkspaceTopics.stripPage(this, +1);
-
       case "topic-new":
         return WorkspaceTopics.openDialog(this);
 

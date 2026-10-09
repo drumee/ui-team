@@ -739,8 +739,8 @@
     display: none;
   }
 
-  // Strip and File threads bar on one row, half each: the carousel (its
-  // "+ Topic" at its end) on the left, the bar — slimmed to the chips'
+  // Strip and File threads bar on one row, half each: the scrolling tabs
+  // (their "+ Create topic" after them) on the left, the bar — slimmed to the chips'
   // height — on the right.
   &__chat-area &__topic-row {
     display: flex;
