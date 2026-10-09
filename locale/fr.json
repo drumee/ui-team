@@ -3294,5 +3294,6 @@
   "NOTI_FILTER_TITLE": "Filtrer les notifications",
   "NOTI_FILTER_UNREAD": "Non lues",
   "NOTI_FILTER_BOOKMARKED": "Enregistrées",
-  "NO_BOOKMARKED_NOTIFICATIONS": "Aucune notification enregistrée"
+  "NO_BOOKMARKED_NOTIFICATIONS": "Aucune notification enregistrée",
+  "CONTACT_INVITE_JOINED": "Vous êtes maintenant en contact avec {0}"
 }

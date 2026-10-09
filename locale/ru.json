@@ -3088,5 +3088,6 @@
   "NOTI_FILTER_TITLE": "Фильтр уведомлений",
   "NOTI_FILTER_UNREAD": "Непрочитанные",
   "NOTI_FILTER_BOOKMARKED": "В закладках",
-  "NO_BOOKMARKED_NOTIFICATIONS": "Нет уведомлений в закладках"
+  "NO_BOOKMARKED_NOTIFICATIONS": "Нет уведомлений в закладках",
+  "CONTACT_INVITE_JOINED": "Теперь вы на связи с {0}"
 }

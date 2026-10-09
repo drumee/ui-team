@@ -3083,5 +3083,6 @@
   "NOTI_FILTER_TITLE": "Filtrar notificaciones",
   "NOTI_FILTER_UNREAD": "No leídas",
   "NOTI_FILTER_BOOKMARKED": "Guardadas",
-  "NO_BOOKMARKED_NOTIFICATIONS": "No hay notificaciones guardadas"
+  "NO_BOOKMARKED_NOTIFICATIONS": "No hay notificaciones guardadas",
+  "CONTACT_INVITE_JOINED": "Ahora estás conectado con {0}"
 }

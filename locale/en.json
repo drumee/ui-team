@@ -3293,5 +3293,6 @@
   "NOTI_FILTER_TITLE": "Filter notifications",
   "NOTI_FILTER_UNREAD": "Unread",
   "NOTI_FILTER_BOOKMARKED": "Bookmarked",
-  "NO_BOOKMARKED_NOTIFICATIONS": "No bookmarked notifications"
+  "NO_BOOKMARKED_NOTIFICATIONS": "No bookmarked notifications",
+  "CONTACT_INVITE_JOINED": "You are now connected with {0}"
 }
