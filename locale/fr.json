@@ -3295,5 +3295,6 @@
   "NOTI_FILTER_UNREAD": "Non lues",
   "NOTI_FILTER_BOOKMARKED": "Enregistrées",
   "NO_BOOKMARKED_NOTIFICATIONS": "Aucune notification enregistrée",
-  "CONTACT_INVITE_JOINED": "Vous êtes maintenant en contact avec {0}"
+  "CONTACT_INVITE_JOINED": "Vous êtes maintenant en contact avec {0}",
+  "CONTACT_CONNECTED_SAY_HELLO": "Vous êtes maintenant en contact. Dites bonjour !"
 }

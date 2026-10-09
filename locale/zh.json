@@ -3083,5 +3083,6 @@
   "NOTI_FILTER_UNREAD": "未读",
   "NOTI_FILTER_BOOKMARKED": "已收藏",
   "NO_BOOKMARKED_NOTIFICATIONS": "没有已收藏的通知",
-  "CONTACT_INVITE_JOINED": "你现在已与 {0} 建立联系"
+  "CONTACT_INVITE_JOINED": "你现在已与 {0} 建立联系",
+  "CONTACT_CONNECTED_SAY_HELLO": "你们现在已建立联系，打个招呼吧！"
 }

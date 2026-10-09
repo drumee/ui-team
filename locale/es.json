@@ -3084,5 +3084,6 @@
   "NOTI_FILTER_UNREAD": "No leídas",
   "NOTI_FILTER_BOOKMARKED": "Guardadas",
   "NO_BOOKMARKED_NOTIFICATIONS": "No hay notificaciones guardadas",
-  "CONTACT_INVITE_JOINED": "Ahora estás conectado con {0}"
+  "CONTACT_INVITE_JOINED": "Ahora estás conectado con {0}",
+  "CONTACT_CONNECTED_SAY_HELLO": "Ahora están conectados. ¡Saluda!"
 }

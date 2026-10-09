@@ -3294,5 +3294,6 @@
   "NOTI_FILTER_UNREAD": "Unread",
   "NOTI_FILTER_BOOKMARKED": "Bookmarked",
   "NO_BOOKMARKED_NOTIFICATIONS": "No bookmarked notifications",
-  "CONTACT_INVITE_JOINED": "You are now connected with {0}"
+  "CONTACT_INVITE_JOINED": "You are now connected with {0}",
+  "CONTACT_CONNECTED_SAY_HELLO": "You are now connected. Say hello!"
 }
