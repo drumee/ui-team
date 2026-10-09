@@ -3074,6 +3074,7 @@
   "ONE_ITEM": "1 elemento",
   "X_SELECTED": "{0} seleccionado(s)",
   "CLEAR_SELECTION": "Borrar la selección",
+  "CALL_NO_ANSWER": "Sin respuesta",
   "DOWNLOADING_X_OF_Y": "Descargando {0} de {1}",
   "DOWNLOAD_COMPLETE": "Descarga completada",
   "DOWNLOAD_X_FAILED": "No se pudo descargar {0} archivo(s)",

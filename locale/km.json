@@ -3073,6 +3073,7 @@
   "ONE_ITEM": "1 ធាតុ",
   "X_SELECTED": "បានជ្រើសរើស {0}",
   "CLEAR_SELECTION": "សម្អាតការជ្រើសរើស",
+  "CALL_NO_ANSWER": "គ្មានការឆ្លើយតប",
   "DOWNLOADING_X_OF_Y": "កំពុងទាញយក {0} នៃ {1}",
   "DOWNLOAD_COMPLETE": "ការទាញយកបានបញ្ចប់",
   "DOWNLOAD_X_FAILED": "មិនអាចទាញយកឯកសារ {0} បានទេ",
