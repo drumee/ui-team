@@ -3199,5 +3199,6 @@
   "PHONE_NUMBER": "Номер телефона",
   "CONTACT_NOTE_PLACEHOLDER": "Отметьте всё важное об этом человеке: часовой пояс, время в сети, сроки.",
   "CALL_NO_ANSWER": "Нет ответа",
-  "CONTACT_INVITE_JOINED": "Теперь вы на связи с {0}"
+  "CONTACT_INVITE_JOINED": "Теперь вы на связи с {0}",
+  "CONTACT_CONNECTED_SAY_HELLO": "Теперь вы на связи. Поздоровайтесь!"
 }

@@ -3194,5 +3194,6 @@
   "PHONE_NUMBER": "Número de teléfono",
   "CONTACT_NOTE_PLACEHOLDER": "Anota lo importante sobre esta persona, como su zona horaria, horario en línea o plazos.",
   "CALL_NO_ANSWER": "Sin respuesta",
-  "CONTACT_INVITE_JOINED": "Ahora estás conectado con {0}"
+  "CONTACT_INVITE_JOINED": "Ahora estás conectado con {0}",
+  "CONTACT_CONNECTED_SAY_HELLO": "Ahora están conectados. ¡Saluda!"
 }

@@ -7,6 +7,7 @@ const {
 } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
 const contactInviteLink = require("libs/contact-invite-link");
+const { showContactConnectedToast } = require("builtins/panel/activity/contact-toast");
 const { inviteWorkspaceScope } = require("libs/invite-scope");
 // "Open this file once I am signed in" — a Designation link opened by a visitor
 // with no session. Armed at module scope in index.web.js, consumed below.
@@ -990,8 +991,34 @@ class desk_module extends LetcBox {
     }
     // Failures answer {status: NO_INVITE | NOT_A_DRUMATE} with no contact.
     if (!res || !res.contact_id) return;
-    const name = (res.fullname || "").trim();
-    if (name && window.Wm && Wm.acknowledge) {
+    this._announceContact(res.drumate_id || intent.inviter, res.fullname);
+  }
+
+  /**
+   * "You are now connected with …" after an invitation accepted from email:
+   * the chat-toast-style card (builtins/panel/activity/contact-toast) with a
+   * Message action that opens the 1:1 conversation. Falls back to the plain
+   * acknowledgement when the windows layer is not up yet.
+   * @param {String} id       the new contact's account id
+   * @param {String} fullname display name
+   */
+  _announceContact(id, fullname) {
+    const name = String(fullname || "").trim();
+    if (!name) return;
+    const peer = {
+      entity_id: id,
+      drumate_id: id,
+      uid: id,
+      firstname: "",
+      lastname: "",
+      display: name,
+      fullname: name,
+    };
+    const shown = showContactConnectedToast(
+      { id, fullname: name },
+      id ? () => this.openPeerChat(peer) : null,
+    );
+    if (!shown && window.Wm && Wm.acknowledge) {
       Wm.acknowledge(LOCALE.CONTACT_INVITE_JOINED.format(_.escape(name)));
     }
   }
@@ -1015,10 +1042,7 @@ class desk_module extends LetcBox {
     }
     const status = (res && res.status) || "";
     if (status !== "ok" && status !== "ALREADY_IN_CONTACT") return;
-    const name = (res.fullname || res.email || "").trim();
-    if (name && window.Wm && Wm.acknowledge) {
-      Wm.acknowledge(LOCALE.CONTACT_INVITE_JOINED.format(_.escape(name)));
-    }
+    this._announceContact(res.drumate_id, res.fullname || res.email);
   }
 
   /**
