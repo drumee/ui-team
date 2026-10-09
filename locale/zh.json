@@ -3078,5 +3078,6 @@
   "ALLOW_DOWNLOADS_TO_START": "请允许下载以开始",
   "DOWNLOADING_IN_BROWSER": "正在浏览器中下载",
   "DOWNLOAD_FAILED": "下载失败",
-  "DOWNLOAD_SAVING_IN_BROWSER": "文件正在保存到浏览器的下载中，您可以继续工作。"
+  "DOWNLOAD_SAVING_IN_BROWSER": "文件正在保存到浏览器的下载中，您可以继续工作。",
+  "CONTACT_INVITE_JOINED": "你现在已与 {0} 建立联系"
 }

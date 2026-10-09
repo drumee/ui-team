@@ -3289,5 +3289,6 @@
   "PREPARING_DOWNLOAD": "Preparing download…",
   "ALLOW_DOWNLOADS_TO_START": "Allow downloads to start",
   "DOWNLOADING_IN_BROWSER": "Downloading in your browser",
-  "DOWNLOAD_FAILED": "Download failed"
+  "DOWNLOAD_FAILED": "Download failed",
+  "CONTACT_INVITE_JOINED": "You are now connected with {0}"
 }
