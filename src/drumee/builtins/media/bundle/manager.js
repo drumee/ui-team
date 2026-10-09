@@ -53,10 +53,16 @@ class _BundleManager {
     for (const job of this._active) {
       if (job.cancel) job.cancel();
     }
-    for (const job of this._queue) {
-      if (job.cancel) job.cancel();
-    }
+    const queued = this._queue;
     this._queue = [];
+    for (const job of queued) {
+      if (job.cancel) job.cancel();
+      // A queued job never ran start(), the only place "done" is fired, so its
+      // listeners — the progress window and whoever is waiting on the batch,
+      // like the chat composer's upload lock — would wait for it forever.
+      // Close it out the way a running job closes.
+      job.trigger("done", { job, canceled: true });
+    }
   }
 }
 

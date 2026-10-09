@@ -101,6 +101,15 @@ class __bundle_job extends LetcBox {
     // and folders mid-recursion are "creating"/"uploading". Walk the whole tree
     // and settle them, or the popup keeps promising work that will never run.
     this._markCanceled(this._entries);
+    // ...except that abort() does NOT always reach onAbort. Once the request
+    // body is fully sent (a small file, a server slow to answer), xhr.upload
+    // fires no abort event, and the readystatechange net in _uploadOneFile
+    // ignores the status-0 a cancelled XHR ends on. The file's promise then
+    // never settles: start() never reaches "done", the manager's only job slot
+    // stays taken, and every caller gated on the batch — the chat composer's
+    // upload lock — stays locked for good. Settle it here; onAbort no-ops when
+    // the abort event already did.
+    this.onAbort();
   }
 
   /**
