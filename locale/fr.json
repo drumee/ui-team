@@ -3286,5 +3286,6 @@
   "CLEAR_SELECTION": "Effacer la sélection",
   "DOWNLOADING_X_OF_Y": "Téléchargement {0} sur {1}",
   "DOWNLOAD_COMPLETE": "Téléchargement terminé",
-  "DOWNLOAD_X_FAILED": "{0} fichier(s) n'ont pas pu être téléchargé(s)"
+  "DOWNLOAD_X_FAILED": "{0} fichier(s) n'ont pas pu être téléchargé(s)",
+  "DOWNLOAD_FAILED": "Échec du téléchargement"
 }

@@ -29,6 +29,24 @@
       display: none;
     }
 
+    // Confirm step: centred on the SCREEN. initialize()'s inline left/top
+    // centred it on window.innerWidth/innerHeight, but they apply relative to
+    // the windows layer — which starts below the desk top bar and right of the
+    // sidebar — so the card landed low and to the right, by both offsets, and
+    // the 300px height it centred on is only an estimate of auto. Fixed with
+    // inset 0 + auto margins centres it on the viewport whatever its height
+    // (fit-content keeps that height definite, which vertical auto margins
+    // need), and leaves `transform` free for the motion in index.js. Same
+    // viewport anchoring as the docked step below; !important for the same
+    // reason (the inline left/top).
+    &:not([data-docked="1"]) {
+      position: fixed !important;
+      inset: 0 !important;
+      margin: auto !important;
+      height: fit-content !important;
+      max-height: calc(100vh - 32px);
+    }
+
     // Download running (index.js _dock): the upload window's spot
     // (window/upload-progress skin + index.js) — fixed, bottom-right above the
     // dock launcher, 360px, and over every window layer on the same z-index
@@ -36,8 +54,8 @@
     // left/top, and raise() keeps writing an inline z-index.
     &[data-docked="1"] {
       position: fixed !important;
-      left: auto !important;
-      top: auto !important;
+      inset: auto !important;
+      margin: 0 !important;
       right: 24px !important;
       bottom: 130px !important;
       z-index: var(--z-index-upload-progress, 50002) !important;
@@ -593,13 +611,18 @@
   }
 
   // A failed run: the aggregate bar turns red.
-  &__files[data-state="failed"] &__bar-fill {
+  &__files[data-state="failed"] &__bar-fill,
+  &__zip[data-state="failed"] .progress-bar__row .bar-value {
     background-color: var(--default-text-error, #ea4d44);
   }
 
   // ---- .zip (skeleton/progress.js): the ui-core progress_bar, restyled -----
-  // progress_bar's update() writes the WIDTH OF `.bar` itself (its id is the
-  // one it looks up), so `.bar` is the fill; the track is drawn by the row.
+  // ui-core progress_bar: `.bar` is the TRACK and its inner `.bar-value` the
+  // FILL — update() sizes the element it captured as `${percent._id}-inner`,
+  // which is the Note's inner div, `.bar-value` (widgets/progress/bar
+  // onPartReady). So: a full-width track, a fill that starts empty. (Styled
+  // the other way round, the fill was hidden and the track either posed as a
+  // ~45% fill — ui-core's calc(100% - 160px) — or vanished at width 0.)
   &__progress {
     box-sizing: border-box;
     width: 100%;
@@ -615,34 +638,41 @@
       justify-content: space-between;
       padding-top: 10px;
 
-      &::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        border-radius: 2px;
-        background-color: var(--normal-bg-80, #e5e5ea);
-      }
-
       .bar {
         position: absolute;
         top: 0;
         left: 0;
+        right: 0;
+        width: auto;
         height: 4px;
         border-radius: 2px;
-        background-color: var(--dl-accent);
-        transition: width 0.4s ease;
+        overflow: hidden;
+        background-color: var(--normal-bg-80, #e5e5ea);
       }
 
       .bar-value {
+        display: block;
+        width: 0;
+        height: 100%;
+        border-radius: 2px;
+        background-color: var(--dl-accent);
+        transition: width 0.4s ease;
+
+        @media (prefers-reduced-motion: reduce) {
+          transition: none;
+        }
+      }
+
+      // One number, the percentage, on the right (index.js _paintPercent).
+      // ui-core's left-hand "loaded" label goes; (0,3,0) over data-flow.
+      .loaded {
         display: none;
       }
 
-      .loaded,
       .total {
         width: auto;
+        margin-left: auto;
+        justify-content: flex-end;
         @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-20, #65656c));
         font-variant-numeric: tabular-nums;
       }

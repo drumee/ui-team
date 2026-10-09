@@ -3073,5 +3073,7 @@
   "CLEAR_SELECTION": "清除选择",
   "DOWNLOADING_X_OF_Y": "正在下载 {0}/{1}",
   "DOWNLOAD_COMPLETE": "下载完成",
-  "DOWNLOAD_X_FAILED": "{0} 个文件无法下载"
+  "DOWNLOAD_X_FAILED": "{0} 个文件无法下载",
+  "DOWNLOAD_FAILED": "下载失败",
+  "DOWNLOAD_SAVING_IN_BROWSER": "文件正在保存到浏览器的下载中，您可以继续工作。"
 }

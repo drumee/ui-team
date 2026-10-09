@@ -11,6 +11,9 @@ const MAX_BLOB_SIZE = 100000000;
 const DL_SHOW_MS = 200;
 const DL_SWITCH_MS = 320;
 const DL_CLOSE_MS = 180;
+// Share of the archive bar given to the worker's quick preparation run, ahead
+// of compression (_archivePercent).
+const ARCHIVE_PREP_SHARE = 10;
 class __window_downloader extends mfsInteract {
 
   /**
@@ -21,10 +24,10 @@ class __window_downloader extends mfsInteract {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
-    // Compact card, centred. The height follows the content (skin: height
-    // auto, and the 600x320 .window__ui floor cancelled), so H is only the
-    // estimate the initial centring uses; both steps — confirm and in
-    // progress — land close to it.
+    // Compact card. The skin places it — centred on the screen for the
+    // confirm step, docked bottom-right once a download runs — and sizes its
+    // height to the content; this inline box is only the fallback until the
+    // skin applies.
     const W = 400, H = 300;
     this.style.set({
       width: W,
@@ -421,8 +424,7 @@ class __window_downloader extends mfsInteract {
    * 
    */
   getFromUrl(opt) {
-    let nid = opt.nid || this.mget(_a.nid) || Visitor.get(_a.home_id);
-    let hub_id = opt.hub_id || this.mget(_a.hub_id) || Visitor.get(_a.id);
+    let { nid, hub_id } = this._zipSource(opt);
     let zip_id = opt.zipid || this._zipid;
     let { svc, keysel } = bootstrap();
     // Two fixes here: (1) `data.zipname` was an undefined ReferenceError (should
@@ -433,10 +435,46 @@ class __window_downloader extends mfsInteract {
     const _sst = this._token ? `&token=${encodeURIComponent(this._token)}` : '';
     let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${encodeURIComponent(opt.zipname || '')}${_sst}`;
     super.getFromUrl(url);
-    // Native browser download (no in-app byte progress) → simulated size-scaled
-    // progress bar instead of the plain alert. Download itself is unchanged.
-    Wm.downloadNotice(opt.zipname, this._zipsize);
-    this.goodbye();
+    // The archive is ready and the BROWSER now fetches it (native download: no
+    // byte progress reaches the page). Say so in this card and stay. This used
+    // to close the card and open Wm.downloadNotice — a second window_info card
+    // whose bar is simulated and parks near 90%, so the one download showed
+    // two UIs and the second looked stuck.
+    this._ensureProgress().then(() => {
+      if (this.isDestroyed()) return;
+      this._zipSettle({
+        state: 'done',
+        title: `${opt.zipname || this.mget('zipname') || ''}.zip`,
+        label: LOCALE.DOWNLOAD_SAVING_IN_BROWSER,
+        full: true,
+      });
+    });
+  }
+
+  /**
+   * The node media.zip is checked against: the nid media.download answered,
+   * on the hub THAT NODE lives on.
+   *
+   * With a `nodes` list the server grants each selected node on its own hub,
+   * and download() answers `nid: source_granted().id` — the first of them —
+   * next to `hub_id: this.hub` — the hub of the REQUEST. Opened from the
+   * desk, that request hub is the user's personal one (Wm.download passes no
+   * hub_id, so _api falls back to Visitor.id), while the selection can live
+   * in any workspace: media.zip then asked for a workspace folder on the
+   * personal hub, which it is not on, and was refused (PERMISSION_DENIED,
+   * stage 2026-10-09). The selection knows each node's own hub, so take it
+   * from there. In a share the two already agree (every node is on the share
+   * hub) and nothing changes.
+   * @param {Object} o the media.download answer
+   * @returns {{nid: String, hub_id: String}}
+   */
+  _zipSource(o = {}) {
+    const nid = o.nid || this.mget(_a.nid) || Visitor.get(_a.home_id);
+    const nodes = (this._api && this._api.nodes) || [];
+    const own = nodes.find((n) => n && n.nid != null && `${n.nid}` === `${nid}`);
+    const hub_id =
+      (own && own.hub_id) || o.hub_id || this.mget(_a.hub_id) || Visitor.get(_a.id);
+    return { nid, hub_id };
   }
 
   /**
@@ -450,8 +488,7 @@ class __window_downloader extends mfsInteract {
    * successfully staged server-side.
    */
   download_zip(o = {}) {
-    let nid = o.nid || this.mget(_a.nid) || Visitor.get(_a.home_id);
-    let hub_id = o.hub_id || this.mget(_a.hub_id) || Visitor.get(_a.id);
+    let { nid, hub_id } = this._zipSource(o);
     let zip_id = o.zipid || this._zipid;
     let { svc, keysel } = bootstrap();
     let zipname =
@@ -499,52 +536,155 @@ class __window_downloader extends mfsInteract {
   // in every context — e.g. the DMZ share bundle — so ensurePart('progress')
   // can resolve to a failover view that lacks update/setLabel/restart. Guard
   // every call so a missing progress widget never crashes the download; the
-  // size-scaled Wm.downloadNotice still gives the user feedback for the (native)
-  // transfer. Returns the widget only when it's the real, functional one.
+  // card's title and Close still report the outcome (_zipSettle).
   _progress(method, ...args) {
     const p = this.__progress;
-    if (p && typeof p[method] === "function") return p[method](...args);
+    if (!p || typeof p[method] !== "function") return;
+    const r = p[method](...args);
+    if (method === "update") this._paintPercent(args[0]);
+    if (method === "restart") this._paintPercent(0, true);
+    return r;
+  }
+
+  /**
+   * The one number beside the bar: the percentage, on the right, only ever
+   * going up. ui-core's progress_bar writes "loaded" at the left (the skin
+   * hides it) and, at the right, either the byte total or the bar's width
+   * depending on how update() was called — "0" … "100%" or "197.82 MB".
+   * Painted after it, over that right label.
+   * @param {Number|Object} v a percentage, or { loaded, total }
+   * @param {Boolean} reset a new transfer: start again from 0
+   */
+  _paintPercent(v, reset) {
+    const p = this.__progress;
+    const total = p && p.__total;
+    if (!total || (total.isDestroyed && total.isDestroyed())) return;
+    let pct = 0;
+    if (v && typeof v === "object") {
+      pct = v.total ? (100 * v.loaded) / v.total : 0;
+    } else {
+      pct = Number(v) || 0;
+    }
+    pct = Math.max(0, Math.min(100, Math.floor(pct)));
+    if (reset) this._pctShown = 0;
+    this._pctShown = Math.max(this._pctShown || 0, pct);
+    total.set(_a.content, `${this._pctShown}%`);
   }
 
   _hasProgress() {
     return this.__progress && typeof this.__progress.update === "function";
   }
 
-  downloadZip(data) {
+  /**
+   * Fetch the prepared archive and report it in the card.
+   *
+   * Two things kept the .zip step on "Loading" forever, whatever happened:
+   *
+   *  - Its result was read off an `eod` that never fires. ui-core fetchFile
+   *    triggers eod only when it is NOT saving (no `download` option); with
+   *    one it hands the blob to getBlob and returns. So the archive was saved
+   *    and the card never knew. The outcome is now download_zip()'s own.
+   *  - The progress bar was only resolved in handleDownload — the server's
+   *    progress pushes, which only come for an archive over 5 MB. Below that
+   *    the server answers wait:0 straight away, and every _progress() call
+   *    here found nothing. It is resolved here now, in both paths.
+   */
+  async downloadZip(data) {
     if (this._isDownloading) return;
     if (this._zipsize > MAX_BLOB_SIZE) {
       this.getFromUrl(data);
       return;
     }
-    this._progress('setLabel', data.zipname);
-    this.once(_e.eod, () => {
-      this._progress('setLabel', LOCALE.YOUR_DATA.printf(LOCALE.HAS_BEEN_SAVED));
-      this.__btnCancel.suppress();
-      this.__btnStatus.set({ content: LOCALE.ACK_REQ_OK });
-      this.__btnAction.mset({ service: _e.close });
-      // The frame swaps Cancel for Close off this (skeleton/frame.js).
-      const main = this.el.querySelector(`.${this.fig.family}__zip`);
-      if (main) main.dataset.state = 'done';
-      this._running = 0;
-      this.el.show();
-      this.raise();
-      this.postService({ service: SERVICE.media.zip_release, id: data.zipid, token: this._token });
-    });
     this._isDownloading = 1;
-    this._progress('restart', this._filesize);
-    this.download_zip({ ...data, progress: this._hasProgress() ? this.__progress : undefined })
-      .then()
-      .catch((e) => {
-        this.warn("GOT ERRO WHILE DOWNLOADING", e);
-        // this.postService({service: SERVICE.media.zip_release, id:data.zipid});
-        if (/aborted/.test(e)) {
-          this._progress('setLabel', LOCALE.CANCELED);
-        } else {
-          this._progress('setLabel', e);
-        }
+    await this._ensureProgress();
+    if (this.isDestroyed()) return;
+    this._progress('setLabel', data.zipname);
+    this._progress('restart', this._zipsize, 0);
+    let res;
+    try {
+      res = await this.download_zip({
+        ...data,
+        // Through _progress, so fetchFile's byte updates reach the
+        // percentage too (it calls progress.update({ loaded, total })).
+        progress: this._hasProgress()
+          ? { update: (o) => this._progress('update', o) }
+          : undefined,
       });
-
+    } catch (e) {
+      this.warn("GOT ERRO WHILE DOWNLOADING", e);
+      res = { error: e };
+    }
+    if (this.isDestroyed()) return;
+    this._zipDone(data, res);
   }
+
+  /**
+   * The progress_bar part, resolved once. Bounded: ensurePart never settles
+   * for a part that does not mount (a DMZ bundle without progress_bar), and
+   * _progress() already copes with having none.
+   */
+  _ensureProgress() {
+    if (this._hasProgress()) return Promise.resolve(this.__progress);
+    if (!this._progressReady) {
+      this._progressReady = Promise.race([
+        this.ensurePart('progress').then((p) => (this.__progress = p)),
+        new Promise((r) => setTimeout(r, 1500)),
+      ]).catch(() => {});
+    }
+    return this._progressReady;
+  }
+
+  /**
+   * The .zip step's result: saved — the bar full, Close in place of Cancel
+   * (the frame swaps them off data-state), the server's copy released — or
+   * failed, with the card kept up to say so. fetchFile answers { error: code }
+   * when the archive cannot be served (404 when it was never built).
+   * @param {Object} data the media.download answer (zipid, zipname)
+   * @param {*} res download_zip()'s result
+   */
+  _zipDone(data, res) {
+    const ok = !(res && res.error);
+    let label;
+    if (/aborted/.test(String(res && res.error))) {
+      label = LOCALE.CANCELED;
+    } else {
+      label = ok ? LOCALE.HAS_BEEN_SAVED.format(`${data.zipname}.zip`) : LOCALE.DOWNLOAD_FAILED;
+    }
+    this._zipSettle({
+      state: ok ? 'done' : 'failed',
+      title: ok ? LOCALE.DOWNLOAD_COMPLETE : LOCALE.DOWNLOAD_FAILED,
+      label,
+      full: ok,
+    });
+    if (ok) {
+      this.postService({ service: SERVICE.media.zip_release, id: data.zipid, token: this._token });
+    }
+  }
+
+  /**
+   * End the .zip step in place: the bar (full when the archive got through),
+   * the title and the line under the bar, Close instead of Cancel (the frame
+   * swaps them off data-state), and the card no longer "running" so its ×
+   * just closes. Shared by the in-page fetch (_zipDone) and the hand-off to
+   * the browser's own download (getFromUrl).
+   * @param {{state: String, title: String, label: String, full: Boolean}} o
+   */
+  _zipSettle(o) {
+    if (o.full) this._progress('update', 100);
+    this._progress('setLabel', o.label);
+    if (this.__btnCancel && !this.__btnCancel.isDestroyed()) this.__btnCancel.suppress();
+    if (this.__btnStatus && !this.__btnStatus.isDestroyed()) {
+      this.__btnStatus.set({ content: o.title });
+    }
+    if (this.__btnAction && !this.__btnAction.isDestroyed()) {
+      this.__btnAction.mset({ service: _e.close });
+    }
+    const main = this.el && this.el.querySelector(`.${this.fig.family}__zip`);
+    if (main) main.dataset.state = o.state;
+    this._running = 0;
+    this.raise();
+  }
+
 
   /**
    * 
@@ -613,6 +753,26 @@ class __window_downloader extends mfsInteract {
    * @param {*} data 
    * @returns 
    */
+  /**
+   * The worker's archive phase on ONE 0-100 scale. offline/media/download.js
+   * reports two runs, each 0→100: IN_PREPARATION, one message per file as it
+   * links them into place (fast), then BEING_CREATED, 7z's own percentage
+   * while it compresses (the long part). Fed straight to the bar, the first
+   * run filled it at once and the second dragged it back to a few percent —
+   * and the label, which only goes up, sat on 100% for the whole compression.
+   * Preparation fills the first ARCHIVE_PREP_SHARE percent, compression the rest.
+   * @param {Number} progress the worker's 0-100 for its current run
+   * @param {String} message IN_PREPARATION | BEING_CREATED
+   * @returns {Number}
+   */
+  _archivePercent(progress, message) {
+    const p = Math.max(0, Math.min(100, Number(progress) || 0));
+    if (message === "BEING_CREATED") {
+      return ARCHIVE_PREP_SHARE + ((100 - ARCHIVE_PREP_SHARE) * p) / 100;
+    }
+    return (ARCHIVE_PREP_SHARE * p) / 100;
+  }
+
   async handleDownload(data) {
     const { phase, progress, message } = data;
     let text;
@@ -625,12 +785,10 @@ class __window_downloader extends mfsInteract {
       this.__btnStatus.set({ content: text });
       this._prevText = text;
     }
-    if(!this.__progress){
-      this.__progress = await this.ensurePart('progress');
-    }
+    await this._ensureProgress();
     switch (phase) {
       case 'archive':
-        this._progress('update', progress);
+        this._progress('update', this._archivePercent(progress, message));
         break;
       case 'exit':
         this.downloadZip(data);

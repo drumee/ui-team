@@ -3074,5 +3074,7 @@
   "CLEAR_SELECTION": "Borrar la selección",
   "DOWNLOADING_X_OF_Y": "Descargando {0} de {1}",
   "DOWNLOAD_COMPLETE": "Descarga completada",
-  "DOWNLOAD_X_FAILED": "No se pudo descargar {0} archivo(s)"
+  "DOWNLOAD_X_FAILED": "No se pudo descargar {0} archivo(s)",
+  "DOWNLOAD_FAILED": "Error en la descarga",
+  "DOWNLOAD_SAVING_IN_BROWSER": "Tu archivo se está guardando en las descargas del navegador; puedes seguir trabajando."
 }

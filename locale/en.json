@@ -3285,5 +3285,6 @@
   "CLEAR_SELECTION": "Clear selection",
   "DOWNLOADING_X_OF_Y": "Downloading {0} of {1}",
   "DOWNLOAD_COMPLETE": "Download complete",
-  "DOWNLOAD_X_FAILED": "{0} file(s) couldn't be downloaded"
+  "DOWNLOAD_X_FAILED": "{0} file(s) couldn't be downloaded",
+  "DOWNLOAD_FAILED": "Download failed"
 }

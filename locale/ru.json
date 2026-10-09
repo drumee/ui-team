@@ -3079,5 +3079,7 @@
   "CLEAR_SELECTION": "Снять выделение",
   "DOWNLOADING_X_OF_Y": "Загрузка {0} из {1}",
   "DOWNLOAD_COMPLETE": "Загрузка завершена",
-  "DOWNLOAD_X_FAILED": "Не удалось скачать файлов: {0}"
+  "DOWNLOAD_X_FAILED": "Не удалось скачать файлов: {0}",
+  "DOWNLOAD_FAILED": "Не удалось скачать",
+  "DOWNLOAD_SAVING_IN_BROWSER": "Файл сохраняется в загрузки браузера — можно продолжать работу."
 }

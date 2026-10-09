@@ -27,7 +27,8 @@ const __window_downloader_progress = function(_ui_, size) {
     partHandler: _ui_,
     className: `${pfx}__progress`,
     label: LOCALE.BACKUP_TIPS,
-    total:filesize(bytes),
+    // The right label is the percentage (index.js _paintPercent).
+    total: '0%',
     autoDestroy : _a.no,
     uiHandler:[_ui_],
   };
