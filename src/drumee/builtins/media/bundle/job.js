@@ -136,7 +136,17 @@ class __bundle_job extends LetcBox {
       this._clearWatchdog();
       // onAbort settles _current and resolves the file's promise, so the loop
       // moves on to the next entry.
-      if (this._currentXhr && this._currentXhr.abort) this._currentXhr.abort();
+      const xhr = this._currentXhr;
+      if (xhr && xhr.abort) xhr.abort();
+      // A plain XHR whose body is fully sent fires no abort event (see
+      // cancel()), so this file would hold the job — and the manager's only
+      // slot — forever: settle it here. abort() dispatches synchronously, so
+      // nothing arrives later. NOT for a chunked handle: it settles its own
+      // pending chunks and reports onAbort asynchronously, and the bundle moves
+      // on after a dropped file — settling here would let that late onAbort
+      // land on the NEXT file. A no-op when the event already settled it; the
+      // entry keeps its "canceled" verdict.
+      if (!(xhr && xhr.chunked)) this.onAbort();
     }
     this.trigger("progress", { job: this, entry });
     return true;
