@@ -1,46 +1,65 @@
 const { iconTextBtn } = require("./action-buttons");
+const { contactAvatar } = require("./avatar");
+const { areacodeDigits } = require("../areacode");
 
+// Edit form — Figma "Contact — Multi-Action" (node 775:149791).
+// `_readEditFields` (index.js) reads the values back through the
+// `data-field` / `data-row-kind` attributes set here, so keep them in sync.
 module.exports = function (ui, contact, ctx) {
   const fig = ui.fig.family;
-  const { initials, contactId, editError } = ctx;
+  const { fullName, contactId, editError } = ctx;
   const tags = ui.getTags();
   const editEmails = ui.getEditEmails();
   const editPhones = ui.getEditPhones();
   const editTags = ui.getEditTags();
   const submitting = ui.isEditSubmitting();
 
+  const label = (content) =>
+    Skeletons.Note({ className: `${fig}__modal-label`, content });
+
+  // Row delete (×) for extra emails/phones and assigned tag chips.
+  const removeBtn = (service, extra, variant = "") =>
+    Skeletons.Button.Svg({
+      ico: "ph-x",
+      className: `${fig}__row-remove${variant}`,
+      bubble: 0,
+      service,
+      uiHandler: [ui],
+      ...extra,
+    });
+
   // `placeholder` is not optional: ui-core's entry widget falls back to
   // LOCALE.FORM_ENTRY when none is given, so an unset placeholder renders a
   // generic hint in a field that already carries its own label above it.
-  const labeledInput = (label, name, value) =>
+  const labeledInput = (text, name, value) =>
     Skeletons.Box.Y({
       className: `${fig}__edit-field`,
       dataset: { field: name },
       kids: [
-        Skeletons.Note({ className: `${fig}__modal-label`, content: label }),
+        label(text),
         Skeletons.Entry({
           className: `${fig}__modal-input`,
           formItem: name,
           attribute: { name },
           value: value || "",
-          placeholder: label,
+          placeholder: text,
           require: "any",
           bubble: 0,
         }),
       ],
     });
 
-  const labeledTextarea = (label, name, value) =>
+  const labeledTextarea = (text, name, value, placeholder) =>
     Skeletons.Box.Y({
       className: `${fig}__edit-field`,
       dataset: { field: name },
       kids: [
-        Skeletons.Note({ className: `${fig}__modal-label`, content: label }),
+        label(text),
         Skeletons.Textarea({
           className: `${fig}__modal-textarea`,
           formItem: name,
           value: value || "",
-          placeholder: label,
+          placeholder,
           require: "any",
           rows: 3,
           ignoreEnter: true,
@@ -66,7 +85,7 @@ module.exports = function (ui, contact, ctx) {
           className: `${fig}__modal-input`,
           formItem: `email_${idx}`,
           value: e.email || "",
-          placeholder: LOCALE.EMAIL_ADDRESS,
+          placeholder: LOCALE.CONTACT_EMAIL_ADDRESS,
           require: "any",
           bubble: 0,
           // Default email is read-only and cannot be removed — to change it,
@@ -74,26 +93,7 @@ module.exports = function (ui, contact, ctx) {
           readonly: isDefault ? 1 : undefined,
           dataset: isDefault ? { disabled: 1 } : undefined,
         }),
-        isDefault
-          ? Skeletons.Note({
-              className: `${fig}__row-pill`,
-              dataset: { active: 1 },
-              content: LOCALE.DEFAULT,
-              bubble: 0,
-              uiHandler: [ui],
-              rowIndex: idx,
-            })
-          : null,
-        isDefault
-          ? null
-          : Skeletons.Note({
-              className: `${fig}__row-remove`,
-              content: "×",
-              bubble: 0,
-              service: "edit-remove-email",
-              uiHandler: [ui],
-              rowIndex: idx,
-            }),
+        isDefault ? null : removeBtn("edit-remove-email", { rowIndex: idx }),
       ].filter(Boolean),
     });
   };
@@ -103,37 +103,41 @@ module.exports = function (ui, contact, ctx) {
       className: `${fig}__edit-row`,
       dataset: { "row-kind": "phone", category: p.category || "priv" },
       kids: [
-        Skeletons.Entry({
-          className: `${fig}__modal-input ${fig}__modal-input--narrow`,
-          formItem: `areacode_${idx}`,
-          value: p.areacode || "",
-          placeholder: "+1",
-          require: "any",
-          bubble: 0,
+        // Country code: a fixed "+" in front of a digits-only field, so
+        // typing "84" reads "+84" (onPartReady "ab-areacode" filters the
+        // input; _readEditFields stores "+84").
+        Skeletons.Box.X({
+          className: `${fig}__areacode`,
+          kids: [
+            Skeletons.Note({ className: `${fig}__areacode-plus`, content: "+" }),
+            Skeletons.Entry({
+              className: `${fig}__modal-input ${fig}__areacode-input`,
+              formItem: `areacode_${idx}`,
+              value: areacodeDigits(p.areacode),
+              placeholder: "00",
+              require: "any",
+              bubble: 0,
+              sys_pn: "ab-areacode",
+              partHandler: ui,
+            }),
+          ],
         }),
         Skeletons.Entry({
           className: `${fig}__modal-input`,
           formItem: `phone_${idx}`,
           value: p.phone || "",
-          placeholder: LOCALE.MOBILE,
+          placeholder: LOCALE.PHONE_NUMBER,
           require: "any",
           bubble: 0,
         }),
-        Skeletons.Note({
-          className: `${fig}__row-remove`,
-          content: "×",
-          bubble: 0,
-          service: "edit-remove-phone",
-          uiHandler: [ui],
-          rowIndex: idx,
-        }),
+        removeBtn("edit-remove-phone", { rowIndex: idx }),
       ],
     });
 
-  const addRowBtn = (label, service) =>
+  const addRowBtn = (text, service) =>
     Skeletons.Note({
       className: `${fig}__row-add`,
-      content: `+ ${label}`,
+      content: `+ ${text}`,
       bubble: 0,
       service,
       uiHandler: [ui],
@@ -142,108 +146,73 @@ module.exports = function (ui, contact, ctx) {
   const emailSection = Skeletons.Box.Y({
     className: `${fig}__edit-list`,
     kids: [
-      Skeletons.Note({ className: `${fig}__modal-label`, content: LOCALE.EMAIL }),
+      label(LOCALE.EMAIL),
       ...editEmails.map(emailRow),
-      addRowBtn(LOCALE.EMAIL, "edit-add-email"),
+      addRowBtn(LOCALE.CONTACT_EMAIL_ADDRESS, "edit-add-email"),
     ],
   });
 
   const phoneSection = Skeletons.Box.Y({
     className: `${fig}__edit-list`,
     kids: [
-      Skeletons.Note({ className: `${fig}__modal-label`, content: LOCALE.MOBILE }),
+      label(LOCALE.MOBILE),
       ...editPhones.map(phoneRow),
-      addRowBtn(LOCALE.MOBILE, "edit-add-phone"),
+      addRowBtn(LOCALE.PHONE_NUMBER, "edit-add-phone"),
     ],
   });
 
+  // Only the contact's own tags, each with × to unassign (applied on Save).
+  // "Add" assigns an existing tag of that name or creates it (_createTag).
+  const assigned = tags.filter((t) => editTags.includes(t.tag_id));
   const tagSection = Skeletons.Box.Y({
     className: `${fig}__edit-list`,
     kids: [
+      label(LOCALE.TAGS || "Tags"),
+      assigned.length
+        ? Skeletons.Box.X({
+            className: `${fig}__tag-chips`,
+            kids: assigned.map((t) =>
+              Skeletons.Box.X({
+                className: `${fig}__tag-chip`,
+                kids: [
+                  Skeletons.Note({
+                    className: `${fig}__tag-chip-label`,
+                    content: t.name || t.tag_name || "",
+                  }),
+                  removeBtn("edit-toggle-tag", { tagId: t.tag_id }, ` ${fig}__row-remove--chip`),
+                ],
+              })
+            ),
+          })
+        : null,
       Skeletons.Box.X({
-        className: `${fig}__edit-list-header`,
+        className: `${fig}__new-tag-input`,
         kids: [
-          Skeletons.Note({ className: `${fig}__modal-label`, content: LOCALE.TAGS || "Tags" }),
-          Skeletons.Button.Svg({
-            ico: "info",
-            className: `${fig}__tag-help`,
-            tooltips: {
-              content: `<svg class="${fig}__tag-help-ico"><use href="#--icon-info"></use></svg><span>${LOCALE.TAGS_USAGE_GUIDE}</span>`,
-              className: `${fig}__tag-help-tip`,
-            },
+          Skeletons.Entry({
+            className: `${fig}__modal-input`,
+            formItem: "new_tag_name",
+            placeholder: LOCALE.NEW_TAG || "New tag",
+            require: "any",
+            mode: "commit",
+            bubble: 0,
+            service: "create-tag",
+            uiHandler: [ui],
           }),
+          iconTextBtn(fig, "primary", "ph-plus", LOCALE.ADD || "Add", "create-tag", {}, ui),
         ],
       }),
-      Skeletons.Box.X({
-        className: `${fig}__tag-picker`,
-        kids: [
-          ...tags.map((t) =>
-            Skeletons.Box.X({
-              className: `${fig}__tag-chip-wrap`,
-              dataset: { active: editTags.includes(t.tag_id) ? 1 : 0 },
-              kids: [
-                Skeletons.Note({
-                  className: `${fig}__tag-chip`,
-                  content: t.name || t.tag_name || "",
-                  bubble: 0,
-                  service: "edit-toggle-tag",
-                  uiHandler: [ui],
-                  tagId: t.tag_id,
-                }),
-                Skeletons.Note({
-                  className: `${fig}__tag-chip-remove`,
-                  content: "×",
-                  bubble: 0,
-                  service: "delete-tag",
-                  uiHandler: [ui],
-                  tagId: t.tag_id,
-                }),
-              ],
-            })
-          ),
-          Skeletons.Box.X({
-            className: `${fig}__new-tag-input`,
-            kids: [
-              Skeletons.Entry({
-                className: `${fig}__modal-input ${fig}__modal-input--narrow`,
-                formItem: "new_tag_name",
-                placeholder: LOCALE.NEW_TAG || "New tag",
-                require: "any",
-                mode: "commit",
-                bubble: 0,
-                service: "create-tag",
-                uiHandler: [ui],
-              }),
-              Skeletons.Note({
-                className: `${fig}__row-add`,
-                content: `+ ${LOCALE.ADD || "Add"}`,
-                bubble: 0,
-                service: "create-tag",
-                uiHandler: [ui],
-              }),
-            ],
-          }),
-        ],
-      }),
-    ],
+    ].filter(Boolean),
   });
 
   return Skeletons.Box.Y({
-    className: `${fig}__detail-panel`,
+    // `--edit` scopes the Figma form styles; the invite/import modals share
+    // `__modal-label` / `__modal-input` and keep their own look.
+    className: `${fig}__detail-panel ${fig}__detail-panel--edit`,
     kids: [
       Skeletons.Box.Y({
         className: `${fig}__detail-header`,
         kids: [
-          Skeletons.Box.Y({
-            className: `${fig}__detail-avatar`,
-            styleOpt: { background: contact.color || "#e4e3ff" },
-            kids: [
-              Skeletons.Note({
-                className: `${fig}__detail-avatar-text`,
-                content: initials,
-              }),
-            ],
-          }),
+          contactAvatar(ui, contact, fullName, "detail"),
           Skeletons.Note({
             className: `${fig}__detail-name`,
             content: LOCALE.EDIT_CONTACT,
@@ -261,30 +230,30 @@ module.exports = function (ui, contact, ctx) {
           emailSection,
           phoneSection,
           tagSection,
-          labeledTextarea(LOCALE.COMMENT, "comment", ui.getEditComment()),
+          labeledTextarea(LOCALE.NOTE, "comment", ui.getEditComment(), LOCALE.CONTACT_NOTE_PLACEHOLDER),
         ],
       }),
-      Skeletons.Box.X({
+      Skeletons.Box.Y({
         className: `${fig}__detail-actions`,
         kids: [
           iconTextBtn(
             fig,
-            "neutral",
-            "cross",
-            LOCALE.CANCEL,
-            submitting ? null : "cancel-edit",
-            submitting ? { state: 0, dataset: { disabled: 1 } } : {},
-            ui,
-          ),
-          iconTextBtn(
-            fig,
             "primary",
-            "apps-floppy",
-            submitting ? (LOCALE.SAVING || `${LOCALE.SAVE}…`) : LOCALE.SAVE,
+            "ph-floppy-disk",
+            submitting ? (LOCALE.SAVING || `${LOCALE.SAVE}…`) : LOCALE.SAVE_CHANGE,
             submitting ? null : "save-edit",
             submitting
               ? { state: 0, dataset: { disabled: 1, loading: 1 }, contactId }
               : { contactId },
+            ui,
+          ),
+          iconTextBtn(
+            fig,
+            "neutral",
+            null,
+            LOCALE.CANCEL,
+            submitting ? null : "cancel-edit",
+            submitting ? { state: 0, dataset: { disabled: 1 } } : {},
             ui,
           ),
         ],

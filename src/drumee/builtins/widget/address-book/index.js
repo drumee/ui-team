@@ -1,5 +1,8 @@
 const { trackDeskCanvas } = require("libs/desk-canvas");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { startP2PCall } = require("libs/p2p-call");
+const { linkedDrumateId } = require("./skeleton/avatar");
+const { areacodeDigits, formatAreacode } = require("./areacode");
 
 const idOf = (c) =>
   (c && (c.id || c.contact_id || c.drumate_id || c.entity_id || c.entity)) ||
@@ -229,6 +232,11 @@ class __address_book extends LetcBox {
         return this._block(trigger);
       case "unblock-contact":
         return this._unblock(trigger);
+
+      case "contact-inbox":
+        return this._openContactChat();
+      case "contact-call":
+        return this._callContact();
 
       case "edit-contact":
         return this._beginEdit();
@@ -656,6 +664,54 @@ class __address_book extends LetcBox {
     this._refreshDetail();
   }
 
+  // ─── Reach out (Inbox / Call) ───────────────────────────────────
+
+  // The selected contact as the peer chat_p2p.openPeer and window_connect
+  // expect, or null when it cannot be reached in Drumee: no linked account
+  // (saved by email only), blocked, or still an invitation. The detail tiles
+  // are already inert in those cases; this re-checks at click time.
+  _selectedPeer() {
+    const c = this.getSelectedContact();
+    if (!c) return null;
+    if (["received", "invitation", "sent"].includes(c.status)) return null;
+    if (c.is_blocked === 1 || c.status === "blocked") return null;
+    const entity_id = linkedDrumateId(c);
+    if (!entity_id) return null;
+    const firstname = (c.firstname || "").trim();
+    const lastname = (c.lastname || "").trim();
+    const display =
+      (firstname && lastname && firstname !== lastname
+        ? `${firstname} ${lastname}`
+        : firstname || lastname) ||
+      c.surname ||
+      c.email ||
+      entity_id;
+    return {
+      entity_id,
+      drumate_id: entity_id,
+      uid: entity_id,
+      firstname,
+      lastname,
+      display,
+      fullname: display,
+      online: c.online,
+    };
+  }
+
+  _openContactChat() {
+    const peer = this._selectedPeer();
+    const desk = window.Desk;
+    if (!peer || !desk || typeof desk.openPeerChat !== "function") return;
+    return desk.openPeerChat(peer);
+  }
+
+  // Voice call, same as the phone button in a chat header.
+  _callContact() {
+    const peer = this._selectedPeer();
+    if (!peer) return;
+    startP2PCall(peer, { video: 0 });
+  }
+
   // ─── Edit form ──────────────────────────────────────────────────
 
   // `show_contact` (used by `_loadContacts`) only returns scalar columns,
@@ -767,7 +823,8 @@ class __address_book extends LetcBox {
     ).map((row) => {
       const inputs = row.querySelectorAll("input");
       return {
-        areacode: inputs[0]?.value?.trim() || "",
+        // The field holds digits only; the "+" is drawn beside it.
+        areacode: formatAreacode(inputs[0]?.value),
         phone: inputs[1]?.value?.trim() || "",
         category: row.dataset.category || "priv",
       };
@@ -1079,6 +1136,19 @@ class __address_book extends LetcBox {
     );
     const name = root?.value?.trim();
     if (!name) return;
+    // The edit form lists only the contact's own tags, so typing the name of
+    // one that already exists is how it gets assigned — reuse it rather than
+    // creating a duplicate.
+    const existing = this._editing
+      ? this._tags.find((t) => (t.name || "").toLowerCase() === name.toLowerCase())
+      : null;
+    if (existing) {
+      if (!this._editTags.includes(existing.tag_id)) {
+        this._editTags = [...this._editTags, existing.tag_id];
+      }
+      if (root) root.value = "";
+      return this._refreshDetail();
+    }
     try {
       const tag = await this.postService({
         service: SERVICE.tagcontact.add,
@@ -1382,6 +1452,22 @@ class __address_book extends LetcBox {
   onPartReady(child, pn) {
     if (pn === "ab-fileselector") {
       child.el.onchange = (e) => this._onImportFilePicked(e);
+      return;
+    }
+    if (pn === "ab-areacode") {
+      // Digits only: the "+" is fixed beside the field, so a typed or pasted
+      // "+84" / "84 " is reduced to "84" as it comes in.
+      const bind = () => {
+        const input = child.el.querySelector("input");
+        if (!input) return;
+        input.setAttribute("inputmode", "numeric");
+        input.addEventListener("input", () => {
+          const digits = areacodeDigits(input.value);
+          if (digits !== input.value) input.value = digits;
+        });
+      };
+      if (child.waitElement) child.waitElement(child.el, bind);
+      else bind();
       return;
     }
     if (pn === "ab-search") {

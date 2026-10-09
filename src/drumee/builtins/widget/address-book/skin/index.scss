@@ -1,5 +1,14 @@
 @use "mixins/drumee";
 
+// Armin Grotesk's line box is bottom-heavy (ascent 13 / descent 6 at 14px),
+// so a 20px line centred on an icon puts the cap-height ink 1.5px above the
+// icon's centre. Nudge the label down by that much; relative offset, so the
+// button keeps its size (a margin would grow an auto-height button).
+@mixin optical-center {
+  position: relative;
+  top: 1.5px;
+}
+
 .address-book {
   &__ui {
     width: 720px;
@@ -19,7 +28,7 @@
     position: fixed;
     // Parked clear of the right gutter as well as its own width.
     transform: translateX(calc(100% + var(--desk-gutter, 8px)));
-    background-color: var(--normal-bg-90, #fff);
+    background-color: var(--normal-bg, #fff);
     border: 1px solid var(--border-muted, #e5e5e5);
     overflow: hidden;
     transition: transform 0.5s;
@@ -42,67 +51,88 @@
 
   // ── Sidebar (contact list) ────────────────────────────────────────
   &__sidebar {
-    width: 300px;
+    width: 400px;
     flex-shrink: 0;
     height: 100%;
-    background-color: var(--normal-bg-90, #fff);
+    background-color: var(--normal-bg, #fff);
     border-right: 1px solid var(--border-muted, #e5e5e5);
     overflow: hidden;
   }
 
+  // ── Sidebar header — Figma 775:139332 (list pane, 16px padding) ──
   &__sidebar-header {
     align-items: center;
     justify-content: space-between;
-    padding: 20px 16px 12px;
+    padding: 16px 16px 0;
     flex-shrink: 0;
   }
 
   &__sidebar-title {
     @include drumee.typo(
-      $size: 20px,
+      $size: 16px,
       $weight: 600,
-      $line: 26px,
+      $line: 24px,
       $color: var(--normal-fg-10, #0b0a21)
     );
+    font-weight: 600;
   }
 
   &__add-btn {
     align-items: center;
-    padding: 5px 10px;
-    border-radius: 6px;
-    background: rgba(89, 80, 255, 0.12);
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--primary-purple-40, #5950ff);
+    color: #fff;
     cursor: pointer;
     user-select: none;
     transition: background 0.15s;
 
     &:hover {
-      background: rgba(89, 80, 255, 0.22);
+      background: var(--primary-purple-50, #433cc5);
+    }
+  }
+
+  &__add-ico {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    color: inherit;
+    pointer-events: none;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
   }
 
   &__add-label {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 16px,
-      $color: var(--primary-purple-40, #5950ff)
-    );
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px, $color: #fff);
+    font-weight: 600;
+    white-space: nowrap;
     pointer-events: none;
+    @include optical-center;
   }
 
+  // Segmented filter bar: grey track, the active segment filled purple.
   &__tabs {
     align-items: center;
-    gap: 2px;
-    padding: 0 16px;
-    margin-bottom: 8px;
+    margin: 12px 16px 16px;
+    padding: 4px;
+    border-radius: 12px;
+    background: var(--normal-bg-90, #f2f2f7);
     flex-shrink: 0;
   }
 
   &__tab {
+    flex: 1 1 auto;
     align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
-    border-radius: 100px;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
     cursor: pointer;
     user-select: none;
     transition:
@@ -110,8 +140,12 @@
       color 0.15s;
 
     &[data-active="1"] {
-      background: rgba(89, 80, 255, 0.12);
+      background: var(--primary-purple-40, #5950ff);
       .address-book__tab-label {
+        color: #fff;
+      }
+      .address-book__tab-count {
+        background: #fff;
         color: var(--primary-purple-40, #5950ff);
       }
     }
@@ -123,13 +157,13 @@
 
   &__tab-label {
     @include drumee.typo(
-      $size: 10px,
-      $weight: 600,
-      $line: 16px,
-      $color: var(--normal-fg-50, #65656c)
+      $size: 14px,
+      $weight: 400,
+      $line: 17px,
+      $color: var(--normal-fg-10, #0b0a21)
     );
+    white-space: nowrap;
     pointer-events: none;
-    text-transform: uppercase;
   }
 
   &__tab-count {
@@ -143,38 +177,58 @@
   }
 
   &__search {
-    padding: 0 16px 10px;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 16px 0;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
+    transition: box-shadow 0.15s;
+
+    &:focus-within {
+      box-shadow: 0 0 0 2px rgba(89, 80, 255, 0.3);
+    }
+  }
+
+  &__search-ico {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50, #84848c);
+    pointer-events: none;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
   }
 
   &__search-input {
-    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
     background: transparent;
 
     input {
       width: 100%;
-      padding: 7px 12px;
-      border: 1px solid var(--border-default, #d1d1d6);
-      border-radius: 8px;
+      height: 17px;
+      // A global input rule sets min-height: 20px.
+      min-height: 0;
+      padding: 0;
+      border: none;
       outline: none;
-      background: var(--normal-bg-80, #f7f7f8);
+      background: transparent;
       box-sizing: border-box;
       @include drumee.typo(
-        $size: 13px,
-        $weight: 500,
-        $line: 18px,
+        $size: 12px,
+        $weight: 400,
+        $line: 17px,
         $color: var(--normal-fg-10, #0b0a21)
       );
 
-      &:focus {
-        background: var(--normal-bg-90, #fff);
-        border-color: var(--primary-purple-40, #5950ff);
-        box-shadow: 0 0 0 3px rgba(89, 80, 255, 0.15);
-      }
-
       &::placeholder {
-        color: var(--normal-fg-50, #aeaeb2);
-        font-weight: 400;
+        color: var(--normal-fg-50, #84848c);
       }
     }
   }
@@ -187,15 +241,13 @@
 
   &__sidebar-stack {
     height: 100%;
-    gap: 8px;
   }
 
   &__contact-list {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    padding: 0 8px 16px;
-    gap: 1px;
+    padding: 0 16px 16px;
 
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
@@ -208,19 +260,21 @@
     }
   }
 
+  // 72px row: 12px padding around a 48px avatar (Figma "Active Convo").
   &__contact-item {
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
+    gap: 16px;
+    padding: 12px;
     border-radius: 8px;
     cursor: pointer;
+    flex-shrink: 0;
     transition: background 0.15s;
 
     &:hover {
       background: rgba(0, 0, 0, 0.04);
     }
     &[data-selected="1"] {
-      background: rgba(89, 80, 255, 0.12);
+      background: rgba(89, 80, 255, 0.1);
     }
   }
 
@@ -234,8 +288,8 @@
     position: relative;
     flex-shrink: 0;
     pointer-events: none;
-    width: 32px;
-    height: 32px;
+    width: 48px;
+    height: 48px;
     // Never clip here: the online badge is a `:before` anchored to the
     // avatar's bottom-right corner and overhangs the box.
     overflow: visible;
@@ -243,7 +297,7 @@
 
   // The widget variant carries `.user-profile__ui` too; restating the compound
   // selector is how chatcontactItem__profile beats the widget's own 40px/50%
-  // defaults. Rounded square keeps the base's 48/12 ratio at this size (32/8).
+  // defaults. Rounded square, 48/12 (Figma).
   // Rounding is clipped on the inner `.user-profile__main` (and on the chip's
   // own background), NOT here — the root carries the online `:before`, so
   // `overflow: hidden` at this level would cut the badge off.
@@ -254,26 +308,34 @@
     height: 100%;
     min-width: 0;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: visible;
     align-items: center;
     justify-content: center;
   }
 
   // The chip branch has no inner box to clip against, so it rounds itself.
+  // Figma initials chip: purple tint behind purple letters.
   &__avatar:not(.user-profile__ui) {
     overflow: hidden;
+    background: rgba(89, 80, 255, 0.1);
   }
 
   &__avatar.user-profile__ui {
     .user-profile__main,
     & > .user-profile__main {
-      border-radius: 8px !important;
+      border-radius: 12px !important;
       overflow: hidden;
 
       img {
-        border-radius: 8px;
+        border-radius: 12px;
       }
+    }
+
+    // UserProfile paints its initials with an inline per-name color
+    // (auto_color); the address book uses the Figma chip for every contact.
+    .user-profile__initiales {
+      background-color: rgba(89, 80, 255, 0.1) !important;
     }
 
     // Online dot: the widget default sits at a hardcoded left/top meant for
@@ -281,12 +343,12 @@
     // the box (0/0, not negative) so it survives any clipping ancestor.
     &[data-online="1"]:before,
     &[data-online="2"]:before {
-      background-color: #847eff;
+      background-color: #54b684;
       border-radius: 50%;
-      box-shadow: 0 0 0 2px var(--normal-bg);
+      box-shadow: 0 0 0 4px var(--normal-bg);
       content: " ";
-      height: 8px;
-      width: 8px;
+      height: 10px;
+      width: 10px;
       position: absolute;
       right: 0;
       bottom: 0;
@@ -300,29 +362,26 @@
   // the one the widget draws. Same type scale on both.
   &__avatar-text,
   &__avatar .user-profile__initiales .note-content {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 16px,
-      $color: var(--ewhite, #fff)
-    );
+    @include drumee.typo($size: 16px, $weight: 600, $line: 24px, $color: #847eff);
+    font-weight: 600;
     text-transform: uppercase;
   }
 
   &__contact-text {
     flex: 1 1 auto;
     min-width: 0;
-    gap: 1px;
+    gap: 2px;
     pointer-events: none;
   }
 
   &__contact-name {
     @include drumee.typo(
-      $size: 13px,
+      $size: 14px,
       $weight: 600,
-      $line: 18px,
+      $line: 20px,
       $color: var(--normal-fg-10, #0b0a21)
     );
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -330,10 +389,10 @@
 
   &__contact-sub {
     @include drumee.typo(
-      $size: 11px,
+      $size: 12px,
       $weight: 400,
-      $line: 14px,
-      $color: var(--normal-fg-50, #65656c)
+      $line: 17px,
+      $color: var(--normal-fg-20, #65656c)
     );
     white-space: nowrap;
     overflow: hidden;
@@ -361,43 +420,6 @@
     }
   }
 
-  // ── Hover actions ─────────────────────────────────────────────────
-  // Hidden by default; revealed when a row is hovered or selected. Uses the
-  // shared __btn (Archive/Accept text) and __action-icon (everything else)
-  // styles — same set as the detail footer minus Edit. Compact-sized to fit
-  // the list row.
-  &__contact-actions {
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-    display: none !important;
-
-    .address-book__action-icon {
-      width: 28px;
-      height: 28px;
-
-      svg {
-        width: 15px;
-        height: 15px;
-      }
-    }
-
-    .address-book__btn {
-      padding: 6px 10px;
-    }
-  }
-
-  // On hover/selection, swap the status pill for the action buttons.
-  &__contact-item:hover,
-  &__contact-item[data-selected="1"] {
-    .address-book__contact-actions {
-      display: flex !important;
-    }
-    .address-book__contact-pill {
-      display: none;
-    }
-  }
-
   &__empty {
     @include drumee.typo(
       $size: 12px,
@@ -415,7 +437,7 @@
     flex: 1 1 auto;
     min-width: 0;
     height: 100%;
-    background-color: var(--normal-bg-90, #f7f7f8);
+    background-color: var(--normal-bg, #fff);
     overflow: hidden;
   }
 
@@ -439,25 +461,6 @@
     gap: 10px;
     padding-bottom: 16px;
     border-bottom: 1px solid var(--border-muted, #e5e5e5);
-  }
-
-  &__detail-avatar {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  &__detail-avatar-text {
-    @include drumee.typo(
-      $size: 20px,
-      $weight: 600,
-      $line: 24px,
-      $color: var(--primary-purple-100, #0b0a21)
-    );
-    text-transform: uppercase;
   }
 
   &__detail-name {
@@ -493,11 +496,6 @@
     gap: 4px;
   }
 
-  &__field-multi {
-    align-items: center;
-    gap: 8px;
-  }
-
   &__field-label {
     @include drumee.typo(
       $size: 10px,
@@ -519,47 +517,24 @@
     word-break: break-word;
   }
 
-  &__field-tag {
-    @include drumee.typo(
-      $size: 9px,
-      $weight: 600,
-      $line: 12px,
-      $color: var(--primary-purple-40, #5950ff)
-    );
-    padding: 1px 6px;
-    border-radius: 100px;
-    background: rgba(89, 80, 255, 0.12);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  // Action row directly below the avatar/name (inside the header). Buttons
-  // share the width equally and wrap when there are too many to fit.
-  // 2-column grid: two buttons per row. `!important` overrides the Box.X
-  // default display:flex (same reason __contact-actions needs it).
+  // Edit-form footer: Save change above Cancel, full width (Figma
+  // 775:149791).
   &__detail-actions {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
+    gap: 12px;
     width: 100%;
-    margin-top: 4px;
-
-    // A lone trailing button (odd count) spans the full row.
-    > .address-book__detail-btn:last-child:nth-child(odd) {
-      grid-column: 1 / -1;
-    }
   }
 
-  // Icon + text action button (Archive, Block, Delete, Edit, Accept, …).
+  // Button with an optional leading icon — the edit footer and the tag
+  // "Add" button.
   &__detail-btn {
-    flex: 1 1 0;
-    min-width: 88px;
+    flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    height: 32px;
-    padding: 0 12px;
-    border-radius: 4px;
+    gap: 8px;
+    height: 38px;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    border-radius: 12px;
     cursor: pointer;
     user-select: none;
     transition:
@@ -569,6 +544,7 @@
     &--primary {
       color: #fff;
       background: var(--primary-purple-40, #5950ff);
+      border: 1px solid rgba(0, 0, 0, 0.05);
 
       &:hover {
         background: var(--primary-purple-50, #433cc5);
@@ -576,20 +552,11 @@
     }
 
     &--neutral {
-      color: var(--primary-purple-50, #433cc5);
-      background: rgba(89, 80, 255, 0.1);
+      color: var(--normal-fg-10, #0b0a21);
+      background: var(--normal-bg-90, #f2f2f7);
 
       &:hover {
-        background: rgba(89, 80, 255, 0.18);
-      }
-    }
-
-    &--danger {
-      color: #d74e49;
-      background: rgba(214, 95, 89, 0.16);
-
-      &:hover {
-        background: rgba(214, 95, 89, 0.26);
+        background: var(--normal-bg-80, #e5e5ea);
       }
     }
 
@@ -606,8 +573,8 @@
   }
 
   &__detail-btn-ico {
-    width: 16px;
-    height: 16px;
+    width: 17px;
+    height: 17px;
     flex-shrink: 0;
     color: inherit;
     pointer-events: none;
@@ -620,69 +587,351 @@
   }
 
   &__detail-btn-label {
-    @include drumee.typo($size: 11px, $weight: 600, $line: 15px);
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px);
+    font-weight: 600;
     color: inherit;
     pointer-events: none;
     white-space: nowrap;
-    margin-top: 3px;
+    @include optical-center;
   }
 
-  // Icon-only action buttons in the detail footer (Delete, Block/Unblock,
-  // Edit, Restore, Refuse, Cancel-invite). Archive and Accept stay as text
-  // buttons (&__btn).
-  &__action-icon {
-    display: flex;
+  // ── Detail view — Figma "Contact — Multi-Action" (node 775:139402) ──
+  // Scoped to `--view`: the edit form shares `__detail-panel`/`__detail-header`
+  // and keeps its own look. Two-class selectors also outrank the tablet
+  // rules below, so the view keeps the Figma scale at every width.
+  &__detail-panel--view {
+    padding: 16px;
+    gap: 16px;
+
+    .address-book__detail-header {
+      gap: 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-muted, rgba(0, 0, 0, 0.05));
+    }
+
+    .address-book__detail-name {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 600,
+        $line: 20px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+      font-weight: 600;
+    }
+
+    .address-book__detail-fields {
+      gap: 16px;
+    }
+
+    .address-book__field-row {
+      gap: 8px;
+    }
+
+    .address-book__field-label {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 400,
+        $line: 17px,
+        $color: var(--normal-fg-50, #64646c)
+      );
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .address-book__field-value {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 400,
+        $line: 17px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+      font-weight: 400;
+    }
+  }
+
+  // ── Edit form — Figma 775:149791 ─────────────────────────────
+  // Scoped to `--edit`: `__modal-label` / `__modal-input` are shared with
+  // the invite/import dialogs, which keep their own look.
+  &__detail-panel--edit {
+    padding: 16px;
+    gap: 24px;
+
+    .address-book__detail-header {
+      gap: 24px;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .address-book__detail-name {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 600,
+        $line: 20px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+      font-weight: 600;
+    }
+
+    .address-book__modal-label {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 600,
+        $line: 17px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+      font-weight: 600;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .address-book__modal-input input,
+    .address-book__modal-textarea textarea {
+      padding: 0 12px;
+      height: 42px;
+      border: 1px solid var(--border-muted, rgba(0, 0, 0, 0.05));
+      border-radius: 12px;
+      background: var(--normal-bg, #fff);
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 400,
+        $line: 17px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+
+      &::placeholder {
+        color: var(--normal-fg-20, #65656c);
+      }
+    }
+
+    .address-book__modal-textarea textarea {
+      height: auto;
+      min-height: 76px;
+      padding: 12px;
+    }
+
+    .address-book__new-tag-input .address-book__modal-input input {
+      height: 38px;
+    }
+
+    // Country code: the box is the bordered field, the "+" sits inside it
+    // before a borderless digits-only input.
+    .address-book__areacode {
+      width: 70px;
+      height: 42px;
+      flex-shrink: 0;
+      align-items: center;
+      padding: 0 12px;
+      box-sizing: border-box;
+      border: 1px solid var(--border-muted, rgba(0, 0, 0, 0.05));
+      border-radius: 12px;
+      background: var(--normal-bg, #fff);
+      transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+
+      &:focus-within {
+        border-color: var(--primary-purple-40, #5950ff);
+        box-shadow: 0 0 0 3px rgba(89, 80, 255, 0.15);
+      }
+
+      // Greyed with the placeholder so an empty field reads "+00".
+      &:has(input:placeholder-shown) .address-book__areacode-plus {
+        color: var(--normal-fg-20, #65656c);
+      }
+
+      .address-book__modal-input input {
+        height: 40px;
+        min-height: 0;
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+      }
+    }
+
+    .address-book__areacode-plus {
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 400,
+        $line: 17px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+      flex-shrink: 0;
+      pointer-events: none;
+    }
+
+    .address-book__areacode-input {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+
+  &__field-head {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__field-ico {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50, #64646c);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  }
+
+  // Email value doubles as a mailto link.
+  &__field-value--link {
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  // Avatar: the sidebar row's avatar, scaled to Figma's 72px / radius 18.
+  &__avatar-wrapper--detail {
+    width: 72px;
+    height: 72px;
+
+    .address-book__avatar,
+    .address-book__avatar.user-profile__ui {
+      border-radius: 18px;
+    }
+
+    .address-book__avatar.user-profile__ui {
+      .user-profile__main,
+      & > .user-profile__main {
+        border-radius: 18px !important;
+
+        img {
+          border-radius: 18px;
+        }
+      }
+
+      &[data-online="1"]:before,
+      &[data-online="2"]:before {
+        width: 15px;
+        height: 15px;
+        box-shadow: 0 0 0 6px var(--normal-bg);
+      }
+    }
+
+    .address-book__avatar-text,
+    .address-book__avatar .user-profile__initiales .note-content {
+      font-size: 26px;
+      line-height: 30px;
+    }
+  }
+
+  // Action grid: two tiles per row. `!important` overrides the Box.X default
+  // display:flex (same reason __detail-actions needs it).
+  &__detail-tiles {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    width: 100%;
+
+    // A lone trailing tile (odd count) spans the full row.
+    > .address-book__detail-tile:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+  }
+
+  // Icon above label, 62px tall, radius 12 (Figma tile).
+  &__detail-tile {
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    border-radius: 6px;
+    gap: 2px;
+    min-width: 0;
+    min-height: 62px;
+    padding: 8px 20px;
+    box-sizing: border-box;
+    border-radius: 12px;
     cursor: pointer;
     user-select: none;
-    flex-shrink: 0;
-    color: var(--normal-fg-50, #65656c);
-    background: transparent;
-    border: 1px solid var(--border-default, #d1d1d6);
     transition:
       background 0.15s,
       color 0.15s,
-      border-color 0.15s;
+      opacity 0.15s;
 
-    svg {
-      width: 16px;
-      height: 16px;
-      display: block;
+    &--neutral {
+      color: var(--normal-fg-10, #0b0a21);
+      background: var(--normal-bg-90, #f2f2f7);
+
+      &:hover {
+        background: rgba(89, 80, 255, 0.1);
+      }
     }
 
-    &:hover {
-      background: rgba(0, 0, 0, 0.05);
-      color: var(--normal-fg-10, #0b0a21);
-      border-color: var(--normal-fg-50, #84848c);
+    &--primary {
+      color: #fff;
+      background: var(--primary-purple-40, #5950ff);
+
+      &:hover {
+        background: var(--primary-purple-50, #433cc5);
+      }
     }
 
     &--danger {
-      color: #d65f59;
-      border-color: rgba(214, 95, 89, 0.3);
+      color: #d64e49;
+      background: rgba(255, 105, 100, 0.15);
 
       &:hover {
-        background: rgba(214, 95, 89, 0.08);
-        border-color: #d65f59;
-        color: #d65f59;
+        background: rgba(255, 105, 100, 0.25);
       }
     }
+
+    // No linked Drumee account / blocked: visible but inert.
+    &[data-disabled="1"] {
+      cursor: not-allowed;
+      opacity: 0.45;
+
+      &:hover {
+        background: var(--normal-bg-90, #f2f2f7);
+      }
+    }
+  }
+
+  &__detail-tile-ico {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: inherit;
+    pointer-events: none;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  }
+
+  &__detail-tile-label {
+    @include drumee.typo($size: 14px, $weight: 400, $line: 20px);
+    font-weight: 400;
+    color: inherit;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   &__edit-form {
     gap: 16px;
   }
 
-  &__edit-field {
-    gap: 6px;
-  }
-
+  &__edit-field,
   &__edit-list {
-    gap: 6px;
+    gap: 8px;
   }
 
   &__edit-row {
@@ -690,59 +939,42 @@
     gap: 8px;
   }
 
-  &__row-pill {
-    @include drumee.typo(
-      $size: 10px,
-      $weight: 600,
-      $line: 14px,
-      $color: var(--normal-fg-50, #65656c)
-    );
-    padding: 3px 8px;
-    border: 1px solid var(--border-default, #d1d1d6);
-    border-radius: 100px;
-    cursor: pointer;
-    user-select: none;
-    flex-shrink: 0;
-    transition:
-      background 0.15s,
-      color 0.15s,
-      border-color 0.15s;
-
-    &[data-active="1"] {
-      background: rgba(89, 80, 255, 0.12);
-      color: var(--primary-purple-40, #5950ff);
-      border-color: rgba(89, 80, 255, 0.3);
-    }
-  }
-
+  // × on extra email/phone rows and on assigned tag chips.
   &__row-remove {
-    @include drumee.typo(
-      $size: 18px,
-      $weight: 600,
-      $line: 18px,
-      $color: var(--normal-fg-50, #84848c)
-    );
-    cursor: pointer;
-    user-select: none;
+    width: 17px;
+    height: 17px;
+    padding: 0;
     flex-shrink: 0;
-    padding: 0 6px;
+    cursor: pointer;
+    color: var(--normal-fg-20, #65656c);
+    transition: color 0.15s;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
 
     &:hover {
-      color: #d65f59;
+      color: #d64e49;
+    }
+
+    &--chip {
+      width: 12px;
+      height: 12px;
     }
   }
 
   &__row-add {
     @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 16px,
+      $size: 14px,
+      $weight: 400,
+      $line: 17px,
       $color: var(--primary-purple-40, #5950ff)
     );
     cursor: pointer;
     user-select: none;
     align-self: flex-start;
-    padding: 4px 0;
     pointer-events: auto;
 
     &:hover {
@@ -797,13 +1029,15 @@
     border-radius: 6px;
     cursor: pointer;
     color: var(--normal-fg-50, #65656c);
+    // Opaque so the detail pane's content scrolls under it cleanly.
+    background: var(--normal-bg, #fff);
     transition:
       background 0.15s,
       color 0.15s;
     z-index: 2;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.06);
+      background: var(--normal-bg-90, #f2f2f7);
       color: var(--normal-fg-10, #0b0a21);
     }
 
@@ -877,10 +1111,9 @@
 
   // ── Tags ──────────────────────────────────────────────────────
   &__tag-chips,
-  &__tag-picker,
   &__tag-filter {
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     align-items: center;
   }
 
@@ -889,131 +1122,41 @@
     flex-shrink: 0;
   }
 
+  // Figma tag pill — view (label only) and edit (label + ×).
   &__tag-chip {
     @include drumee.typo(
-      $size: 11px,
-      $weight: 600,
-      $line: 14px,
-      $color: var(--normal-fg-50, #65656c)
+      $size: 14px,
+      $weight: 400,
+      $line: 17px,
+      $color: var(--primary-purple-40, #5950ff)
     );
-    padding: 3px 10px;
-    border: 1px solid var(--border-default, #d1d1d6);
-    border-radius: 100px;
-    cursor: pointer;
-    user-select: none;
-    transition:
-      background 0.15s,
-      color 0.15s,
-      border-color 0.15s;
-    flex-shrink: 0;
-
-    &[data-active="1"] {
-      background: rgba(89, 80, 255, 0.12);
-      color: var(--primary-purple-40, #5950ff);
-      border-color: rgba(89, 80, 255, 0.3);
-    }
-  }
-
-  // Edit-mode chip wrap — hosts the chip + delete (×) button so active state
-  // lives on the wrap (since the inner chip and × are separately clickable).
-  &__tag-chip-wrap {
-    align-items: stretch;
-    border: 1px solid var(--border-default, #d1d1d6);
-    border-radius: 100px;
-    overflow: hidden;
-    flex-shrink: 0;
-    transition:
-      background 0.15s,
-      border-color 0.15s;
-
-    > .address-book__tag-chip {
-      border: none;
-      border-radius: 0;
-      padding: 3px 4px 3px 10px;
-    }
-
-    &[data-active="1"] {
-      background: rgba(89, 80, 255, 0.12);
-      border-color: rgba(89, 80, 255, 0.3);
-
-      > .address-book__tag-chip {
-        color: var(--primary-purple-40, #5950ff);
-        background: transparent;
-        border: none;
-      }
-    }
-  }
-
-  &__tag-chip-remove {
-    @include drumee.typo(
-      $size: 13px,
-      $weight: 700,
-      $line: 14px,
-      $color: var(--normal-fg-30, #9c9ca3)
-    );
-    padding: 3px 8px 3px 4px;
-    cursor: pointer;
-    user-select: none;
-    transition: color 0.15s;
-
-    &:hover {
-      color: var(--danger-fg, #e74c3c);
-    }
-  }
-
-  &__edit-list-header {
     align-items: center;
-    gap: 6px;
-  }
-
-  &__tag-help {
-    width: 14px;
-    height: 14px;
-    padding: 0;
-    cursor: help;
-    opacity: 0.6;
+    gap: 10px;
+    padding: 4px 12px;
+    border-radius: 111px;
+    background: rgba(89, 80, 255, 0.1);
     flex-shrink: 0;
-    position: relative;
-    overflow: visible;
-
-    &:hover {
-      opacity: 1;
-    }
   }
 
-  // Tooltip box for the TAGS help icon — mirrors the trash panel restore
-  // tooltip: purple background, white text, info icon on the left.
-  &__tag-help-tip {
-    position: absolute;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    width: 250px;
-    left: 22px;
-    top: -4px;
-    padding: var(--spacer-4);
-    background-color: var(--primary-purple-40);
-    color: var(--white);
-    border-radius: var(--corner-radius-1);
-    height: auto;
-    z-index: 2;
-    font-size: 12px;
-    line-height: 1.4;
+  &__tag-chip-label {
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 17px,
+      $color: var(--primary-purple-40, #5950ff)
+    );
   }
 
-  &__tag-help-ico {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    margin-top: 1px;
-    fill: var(--white);
-    color: var(--white);
-  }
-
+  // New tag field + Add button.
   &__new-tag-input {
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
+
+    .address-book__modal-input {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
   }
 
   // ── Import modal options ──────────────────────────────────────
@@ -1070,11 +1213,6 @@
     padding: 8px 12px;
     background: rgba(89, 80, 255, 0.1);
     border-radius: 6px;
-  }
-
-  &__modal-input--narrow {
-    max-width: 80px;
-    flex-shrink: 0;
   }
 
   // ── Buttons (shared) ──────────────────────────────────────────────
@@ -1466,90 +1604,6 @@
     // list view, and the back button returns to it from the detail pane.
     &__close-btn {
       display: none;
-    }
-  }
-
-  // Tablet (801–1024px): the panel is much wider than the 300px the items
-  // were sized for, so scale up the contact-list rows and the detail
-  // content to fill it.
-  @media (min-width: 801px) and (max-width: 1024px) {
-
-    // ── Sidebar (contact list) ──
-    &__contact-item {
-      gap: 14px;
-      padding: 12px 14px;
-    }
-
-    &__avatar-wrapper {
-      width: 44px;
-      height: 44px;
-    }
-
-    &__avatar,
-    &__avatar.user-profile__ui {
-      border-radius: 11px;
-    }
-
-    &__avatar.user-profile__ui {
-      .user-profile__main,
-      & > .user-profile__main {
-        border-radius: 11px !important;
-
-        img {
-          border-radius: 11px;
-        }
-      }
-    }
-
-    &__avatar-text,
-    &__avatar .user-profile__initiales .note-content {
-      font-size: 16px;
-      line-height: 20px;
-    }
-
-    &__contact-name {
-      font-size: 16px;
-      line-height: 22px;
-    }
-
-    &__contact-sub {
-      font-size: 13px;
-      line-height: 18px;
-    }
-
-    // ── Detail area ──
-    &__detail-panel {
-      padding: 32px;
-      gap: 24px;
-    }
-
-    &__detail-avatar {
-      width: 72px;
-      height: 72px;
-    }
-
-    &__detail-avatar-text {
-      font-size: 26px;
-      line-height: 30px;
-    }
-
-    &__detail-name {
-      font-size: 20px;
-      line-height: 26px;
-    }
-
-    &__detail-fields {
-      gap: 18px;
-    }
-
-    &__field-label {
-      font-size: 12px;
-      line-height: 16px;
-    }
-
-    &__field-value {
-      font-size: 15px;
-      line-height: 22px;
     }
   }
 }

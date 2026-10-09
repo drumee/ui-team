@@ -34,9 +34,13 @@ module.exports = function (ui) {
                 service: "open-invite",
                 uiHandler: [ui],
                 kids: [
+                  Skeletons.Image.Svg({
+                    className: `${fig}__add-ico`,
+                    ico: "ph-plus",
+                  }),
                   Skeletons.Note({
                     className: `${fig}__add-label`,
-                    content: `+ ${LOCALE.ADD_CONTACTS}`,
+                    content: LOCALE.ADD_CONTACTS,
                   }),
                 ],
               }),
@@ -53,13 +57,17 @@ module.exports = function (ui) {
           }),
         ],
       }),
-      Skeletons.Box.Y({
+      Skeletons.Box.X({
         className: `${fig}__search`,
         kids: [
+          Skeletons.Image.Svg({
+            className: `${fig}__search-ico`,
+            ico: "ph-magnifying-glass",
+          }),
           Skeletons.Entry({
             className: `${fig}__search-input`,
             sys_pn: "ab-search",
-            placeholder: LOCALE.SEARCH,
+            placeholder: `${LOCALE.SEARCH}...`,
             value: ui.getSearch(),
             require: "any",
             interactive: 1,

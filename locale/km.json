@@ -3185,5 +3185,11 @@
   "SALES_MAIL_APP": "បើកកម្មវិធីអ៊ីមែលលើកុំព្យូទ័រ (Outlook, Apple Mail…)",
   "SALES_MAIL_COPY": "ចម្លងអាសយដ្ឋានអ៊ីមែល",
   "X_SELECTED": "បានជ្រើសរើស {0}",
-  "CLEAR_SELECTION": "សម្អាតការជ្រើសរើស"
+  "CLEAR_SELECTION": "សម្អាតការជ្រើសរើស",
+  "CONTACT_NO_DRUMEE_ACCOUNT": "ទំនាក់ទំនងនេះមិនទាន់មានគណនី Drumee នៅឡើយទេ",
+  "CONTACT_UNBLOCK_TO_REACH": "ដោះការទប់ស្កាត់ទំនាក់ទំនងនេះ ដើម្បីជជែក ឬហៅទូរសព្ទ",
+  "SEND_AN_EMAIL": "ផ្ញើអ៊ីមែល",
+  "CONTACT_EMAIL_ADDRESS": "អាសយដ្ឋានអ៊ីមែល",
+  "PHONE_NUMBER": "លេខទូរស័ព្ទ",
+  "CONTACT_NOTE_PLACEHOLDER": "កត់ត្រាអ្វីដែលសំខាន់អំពីមនុស្សនេះ ដូចជាតំបន់ម៉ោង ម៉ោងអនឡាញ ឬកាលកំណត់។"
 }

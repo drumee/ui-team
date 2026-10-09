@@ -8560,6 +8560,20 @@ class desk_module extends LetcBox {
       is_support: 1,
     };
 
+    await this.openPeerChat(peer);
+    return true;
+  }
+
+  /**
+   * Open the Inbox panel on a 1:1 conversation with `peer`.
+   *
+   * Shared by Contact Support and the Contacts panel's Inbox action. Nothing
+   * is written server-side: chat.post creates the thread on the first message.
+   *
+   * @param {Object} peer  needs `entity_id`; display fields ride along as meta
+   */
+  async openPeerChat(peer) {
+    if (!peer || !peer.entity_id) return;
     const part = this.getPart && this.getPart(INBOX_SLOT);
     const child =
       part && !part.isEmpty() && part.children && part.children.last();
@@ -8567,17 +8581,16 @@ class desk_module extends LetcBox {
     // The chat panel is a keep-alive slot: once mounted it is hidden and
     // reshown rather than rebuilt, and togglePanel's mounted-widget branch
     // returns before it can pass options down. Drive the live widget directly
-    // so an already-open inbox switches to the support conversation instead
+    // so an already-open inbox switches to the requested conversation instead
     // of revealing whatever was last open — or toggling itself shut.
     if (child && _.isFunction(child.openPeer)) {
       this.closeOtherSidebarPanels(INBOX_SLOT);
       this._showPanel(part);
       await child.openPeer(peer.entity_id, peer);
-      return true;
+      return;
     }
 
     await this.togglePanel("chat_p2p", INBOX_SLOT, true, { open_peer: peer });
-    return true;
   }
 
   /**

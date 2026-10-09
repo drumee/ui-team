@@ -3191,5 +3191,11 @@
   "SALES_MAIL_APP": "Открыть почтовую программу (Outlook, Apple Mail…)",
   "SALES_MAIL_COPY": "Скопировать адрес эл. почты",
   "X_SELECTED": "Выбрано: {0}",
-  "CLEAR_SELECTION": "Снять выделение"
+  "CLEAR_SELECTION": "Снять выделение",
+  "CONTACT_NO_DRUMEE_ACCOUNT": "У этого контакта пока нет аккаунта Drumee",
+  "CONTACT_UNBLOCK_TO_REACH": "Разблокируйте этот контакт, чтобы писать или звонить",
+  "SEND_AN_EMAIL": "Отправить письмо",
+  "CONTACT_EMAIL_ADDRESS": "Адрес эл. почты",
+  "PHONE_NUMBER": "Номер телефона",
+  "CONTACT_NOTE_PLACEHOLDER": "Отметьте всё важное об этом человеке: часовой пояс, время в сети, сроки."
 }
