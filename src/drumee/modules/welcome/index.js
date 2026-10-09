@@ -53,9 +53,16 @@ class __welcome_router extends LetcBox {
     // was sent to. Signed in as somebody else, that session is signed out first
     // — once; markForced() keeps a later wrong-account sign-in from being
     // thrown out again — and the sign-in page follows (Butler.logout restarts
-    // on the main domain with this same hash).
+    // on the main domain; the intent itself waits on its shelf).
+    if (_contactInvite || args.contact_accept) {
+      if (args.contact_accept) contactInviteLink.armAccept(args.contact_accept, args.for);
+      // Armed ONCE per click: the invitation leaves the URL now. Left there,
+      // the same route mounting again after sign-in re-armed an intent the desk
+      // had just answered, and it then accepted the next invitation between
+      // the same two people at a later sign-in, with no click.
+      this._stripContactInviteArgs();
+    }
     if (args.contact_accept) {
-      contactInviteLink.armAccept(args.contact_accept, args.for);
       const _accept = contactInviteLink.peekAccept();
       if (_accept && Visitor.isOnline() && Visitor.id !== _accept.for
         && !_accept.forced && window.Butler && Butler.logout) {
@@ -107,6 +114,30 @@ class __welcome_router extends LetcBox {
       });
     }
     this.route();
+  }
+
+  /**
+   * Drop the contact-invitation arguments from the current URL without a
+   * navigation (replaceState fires no hashchange, so nothing re-routes).
+   * `email` stays: it only prefills the sign-up form.
+   */
+  _stripContactInviteArgs() {
+    try {
+      const h = location.hash || '';
+      const qi = h.indexOf('?');
+      let route = qi < 0 ? h : h.slice(0, qi);
+      // Older Join Drumee emails: #/welcome/signup/<token>
+      route = route.replace(/^(#\/welcome\/signup)\/[^/?&]+$/, '$1');
+      const keep = (qi < 0 ? '' : h.slice(qi + 1)).split('&')
+        // `for` belongs to contact_accept here; other routes use it too
+        // (billing deep links), so it only goes together with it.
+        .filter((kv) => kv && !/^(contact_accept|contact_invite)=/.test(kv)
+          && !(/^for=/.test(kv) && /(^|[?&])contact_accept=/.test(h)));
+      const next = route + (keep.length ? `?${keep.join('&')}` : '');
+      if (next !== h) history.replaceState(history.state, '', location.pathname + location.search + next);
+    } catch (e) {
+      /* the intent is armed either way; a re-arm is also time-limited */
+    }
   }
 
   /**

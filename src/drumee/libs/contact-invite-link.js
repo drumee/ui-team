@@ -29,11 +29,18 @@
 const TOKEN_KEY = "drumee_contactInvite";
 const ACCEPT_KEY = "drumee_contactAccept";
 
-/** yp.token rows for these invitations are purged after 7 days server-side. */
+/** yp.token rows for these invitations are purged after 7 days server-side,
+ * and a Join Drumee arrival may go through sign-up + email verification. */
 const AGE_LIMIT = 7 * 24 * 3600 * 1000;
-
-/** A day is far beyond any sign-in; the shelf is cleared once answered. */
 const COOKIE_MAX_AGE_S = 24 * 3600;
+
+/**
+ * An accept intent only has to outlive ONE sign-in. Kept for days, a copy that
+ * survived its own answer accepted the NEXT invitation between the same two
+ * people at the next sign-in, with no click (seen on drumee.in 2026-10-09).
+ */
+const ACCEPT_AGE_LIMIT = 3600 * 1000;
+const ACCEPT_COOKIE_MAX_AGE_S = 3600;
 
 /** Tokens are server-minted random strings; anything else is not ours. */
 const TOKEN_RE = /^[A-Za-z0-9_-]{8,128}$/;
@@ -52,19 +59,21 @@ function _mainDomain() {
   }
 }
 
-function _parse(raw) {
+function _parse(raw, maxAge) {
   try {
     const v = raw ? JSON.parse(raw) : null;
     if (!v || typeof v !== "object") return null;
-    if (v.ts && Date.now() - Number(v.ts) > AGE_LIMIT) return null;
+    // Undated is refused: every writer stamps ts.
+    if (!v.ts || Date.now() - Number(v.ts) > maxAge) return null;
     return v;
   } catch (e) {
     return null;
   }
 }
 
-function _write(key, value) {
-  const payload = JSON.stringify({ ...value, ts: Date.now() });
+function _write(key, value, cookieMaxAge) {
+  // A ts already in `value` is kept: re-writing an intent must not extend it.
+  const payload = JSON.stringify({ ts: Date.now(), ...value });
   try {
     localStorage.setItem(key, payload);
   } catch (e) {
@@ -74,23 +83,23 @@ function _write(key, value) {
   if (!md) return;
   try {
     document.cookie =
-      `${key}=${encodeURIComponent(payload)}; domain=${md}; path=/; max-age=${COOKIE_MAX_AGE_S}; secure; samesite=lax`;
+      `${key}=${encodeURIComponent(payload)}; domain=${md}; path=/; max-age=${cookieMaxAge}; secure; samesite=lax`;
   } catch (e) {
     /* cookies blocked: localStorage still covers this origin */
   }
 }
 
-function _read(key) {
+function _read(key, maxAge) {
   let v = null;
   try {
-    v = _parse(localStorage.getItem(key));
+    v = _parse(localStorage.getItem(key), maxAge);
   } catch (e) {
     v = null;
   }
   if (v) return v;
   try {
     const m = new RegExp("(?:^|;\\s*)" + key + "=([^;]*)").exec(document.cookie || "");
-    return m && m[1] ? _parse(decodeURIComponent(m[1])) : null;
+    return m && m[1] ? _parse(decodeURIComponent(m[1]), maxAge) : null;
   } catch (e) {
     return null;
   }
@@ -120,12 +129,12 @@ function _erase(key) {
 function arm(token) {
   token = String(token || "");
   if (!TOKEN_RE.test(token)) return;
-  _write(TOKEN_KEY, { token });
+  _write(TOKEN_KEY, { token }, COOKIE_MAX_AGE_S);
 }
 
 /** The armed token, without consuming it; null when nothing (fresh) is armed. */
 function peek() {
-  const v = _read(TOKEN_KEY);
+  const v = _read(TOKEN_KEY, AGE_LIMIT);
   return v && TOKEN_RE.test(String(v.token || "")) ? String(v.token) : null;
 }
 
@@ -156,14 +165,14 @@ function armAccept(inviter, forUid) {
   if (!ID_RE.test(inviter) || !ID_RE.test(forUid) || inviter === forUid) return;
   const cur = peekAccept();
   const forced = cur && cur.inviter === inviter && cur.for === forUid ? cur.forced : 0;
-  _write(ACCEPT_KEY, { inviter, for: forUid, forced: forced ? 1 : 0 });
+  _write(ACCEPT_KEY, { inviter, for: forUid, forced: forced ? 1 : 0 }, ACCEPT_COOKIE_MAX_AGE_S);
 }
 
 /** @returns {{inviter: String, for: String, forced: Number}|null} */
 function peekAccept() {
-  const v = _read(ACCEPT_KEY);
+  const v = _read(ACCEPT_KEY, ACCEPT_AGE_LIMIT);
   if (!v || !ID_RE.test(String(v.inviter || "")) || !ID_RE.test(String(v.for || ""))) return null;
-  return { inviter: String(v.inviter), for: String(v.for), forced: v.forced ? 1 : 0 };
+  return { inviter: String(v.inviter), for: String(v.for), forced: v.forced ? 1 : 0, ts: Number(v.ts) };
 }
 
 /**
@@ -173,7 +182,7 @@ function peekAccept() {
  */
 function markForced() {
   const cur = peekAccept();
-  if (cur) _write(ACCEPT_KEY, { ...cur, forced: 1 });
+  if (cur) _write(ACCEPT_KEY, { ...cur, forced: 1 }, ACCEPT_COOKIE_MAX_AGE_S);
 }
 
 /** Forget the accept intent on both shelves. */
