@@ -26,8 +26,16 @@ function kill() {
   timer = null;
   const t = current;
   current = null;
+  // destroy() + DOM removal, exactly as killChatToast: goodbye() is a no-op
+  // for a view appended straight to a layer (measured there, and again here —
+  // the card stayed connected after close).
   try {
-    if (t && (!t.isDestroyed || !t.isDestroyed())) t.goodbye();
+    if (t && (!t.isDestroyed || !t.isDestroyed())) {
+      const node = t.el;
+      if (t.destroy) t.destroy();
+      else if (t.remove) t.remove();
+      if (node && node.isConnected && node.remove) node.remove();
+    }
   } catch (e) {
     /* already gone */
   }
