@@ -122,6 +122,7 @@ class __push_manager extends winman {
         if (data.room_type == _a.meeting) {
           return this.dispatchRoom(data, options);
         }
+        if (this._seenInboundCall(data.room_id)) return;
         return this.dispatchInboundCall(data);
 
       case SERVICE.conference.join:
@@ -1053,6 +1054,25 @@ class __push_manager extends winman {
     // Never strand the flag if the kind fails to load.
     setTimeout(() => { this._switchcallPending = 0; }, 10000);
     return true;
+  }
+
+  // A caller ringing someone who was offline re-sends conference.invite for the
+  // same room every few seconds (window_connect _ringOffline), because the
+  // first one can reach this socket before the desk listens for pushes. Ring
+  // once per room: a repeat must not open a second window while the first is
+  // still loading, nor ring again after the call was declined.
+  //
+  // @returns {boolean} true if this room was already seen
+  _seenInboundCall(room_id) {
+    if (!room_id) return false;
+    const now = Date.now();
+    if (!this._inboundCallRooms) this._inboundCallRooms = new Map();
+    for (const [id, t] of this._inboundCallRooms) {
+      if (now - t > 10 * 60000) this._inboundCallRooms.delete(id);
+    }
+    if (this._inboundCallRooms.has(room_id)) return true;
+    this._inboundCallRooms.set(room_id, now);
+    return false;
   }
 
   _joinMeetingFromData(data = {}) {
