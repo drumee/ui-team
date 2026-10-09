@@ -3423,5 +3423,6 @@
   "SEND_AN_EMAIL": "Envoyer un e-mail",
   "CONTACT_EMAIL_ADDRESS": "Adresse e-mail",
   "PHONE_NUMBER": "Numéro de téléphone",
-  "CONTACT_NOTE_PLACEHOLDER": "Notez tout ce qui compte pour cette personne : fuseau horaire, heures de connexion, échéances…"
+  "CONTACT_NOTE_PLACEHOLDER": "Notez tout ce qui compte pour cette personne : fuseau horaire, heures de connexion, échéances…",
+  "CALL_NO_ANSWER": "Pas de réponse"
 }

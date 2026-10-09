@@ -17,11 +17,13 @@ function avatarId(c) {
 // address-book entry saved by email (manual add, CSV/VCF import, Google sync)
 // for someone without a Drumee account. `my_contact_show_next` stores the uid
 // in `entity` when the email resolved to a drumate and the raw email
-// otherwise, and reports that resolution as `is_drumate`.
+// otherwise, and reports that resolution as `is_drumate`. A row saved by email
+// for someone who HAS an account keeps the email in `entity`; `show_contact`
+// resolves those to `drumate_id`.
 function linkedDrumateId(c) {
   if (!c) return null;
   if (c.is_drumate != null && Number(c.is_drumate) !== 1) return null;
-  const uid = c.entity;
+  const uid = looksLikeEmail(c.entity) ? c.drumate_id : c.entity;
   if (typeof uid !== "string" || !uid || looksLikeEmail(uid)) return null;
   if (uid === Visitor.id) return null;
   return uid;

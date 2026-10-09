@@ -10,6 +10,11 @@ const CONNECT_H = 520;
 // Keep-out from the edges of the work area, used only when the area is smaller
 // than the window and there is nothing left to centre.
 const CONNECT_INSET = 16;
+// An offline callee is rung this long before the call ends as "No answer",
+// with the invite retried every OFFLINE_RETRY_MS meanwhile — the retry is what
+// reaches them if they come online while it rings.
+const OFFLINE_RING_MS = 45000;
+const OFFLINE_RETRY_MS = 3000;
 
 class __window_connect extends __room {
 
@@ -373,6 +378,72 @@ class __window_connect extends __room {
 
 
   /**
+   * The callee had no live session when we dialed. Keep the window in 'dial'
+   * (ring-back already playing) and retry conference.invite until it reaches
+   * one of their sessions — from then on it is an ordinary ringing call — or
+   * OFFLINE_RING_MS runs out. Staying in 'dial' keeps Cancel on the usual
+   * path: it revokes and logs the missed call like any unanswered call.
+   *
+   * @param {Object} callee
+   */
+  _ringOffline(callee) {
+    this._stopOfflineRing();
+    const deadline = Date.now() + OFFLINE_RING_MS;
+    const ringing = () => !this.isDestroyed() && !this._ending && this.state === 'dial';
+    const retry = async () => {
+      this._offlineRingTimer = null;
+      if (!ringing()) return;
+      if (Date.now() >= deadline) {
+        this._noAnswer();
+        return;
+      }
+      let guest = null;
+      try {
+        guest = await this.sendRoomSignaling(SERVICE.conference.invite, {
+          guest_id: callee.drumate_id
+        });
+      } catch (e) {
+        this.warn("offline ring: invite retry failed", e);
+      }
+      if (!ringing()) return;
+      if (guest && guest.cross_call) {
+        this.stateMessage(LOCALE.X_IS_CALLING_YOU.format(callee.display));
+        Visitor.muteSound();
+        this.handleCrossCall(guest);
+        return;
+      }
+      if (guest && guest.room_id) {
+        this.mset(guest);
+        return;
+      }
+      this._offlineRingTimer = setTimeout(retry, OFFLINE_RETRY_MS);
+    };
+    this._offlineRingTimer = setTimeout(retry, OFFLINE_RETRY_MS);
+  }
+
+  _stopOfflineRing() {
+    if (this._offlineRingTimer) {
+      clearTimeout(this._offlineRingTimer);
+      this._offlineRingTimer = null;
+    }
+  }
+
+  // Nobody picked up an offline-rung call. Same signal (and missed-call log)
+  // the Cancel button sends, then the terminal panel instead of a bare close.
+  async _noAnswer() {
+    this._stopOfflineRing();
+    this.beforeLeavingState = _a.none;
+    try {
+      await this.sendRoomSignaling(SERVICE.conference.revoke, {
+        callee: this.callee,
+      });
+    } catch (e) {
+      this.warn("offline ring: revoke failed", e);
+    }
+    this.showCallEnded(LOCALE.CALL_NO_ANSWER);
+  }
+
+  /**
    * 
    * @param {*} opt 
    */
@@ -476,7 +547,15 @@ class __window_connect extends __room {
           this.handleCrossCall(guest);
           return;
         }
-        if (!guest || guest.offline || !guest.room_id) {
+        if (guest && guest.offline) {
+          // Ring an offline callee like any phone would: ring-back on our
+          // side while the invite is retried, so they get the call if they
+          // come online in time. See _ringOffline.
+          Visitor.playSound(_K.dialtones.rinback, 10);
+          this._ringOffline(callee);
+          break;
+        }
+        if (!guest || !guest.room_id) {
           this.stateMachine('offline');
           return;
         }
@@ -948,6 +1027,7 @@ class __window_connect extends __room {
   }
 
   onBeforeDestroy(opt) {
+    this._stopOfflineRing();
     // Drop the reactions picker's document click-listener if open at teardown.
     this._closeReactionsPicker();
     // Un-park (if parked), release the broadcasts and tell the desk the call is

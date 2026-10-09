@@ -3192,5 +3192,6 @@
   "SEND_AN_EMAIL": "Enviar un correo electrónico",
   "CONTACT_EMAIL_ADDRESS": "Correo electrónico",
   "PHONE_NUMBER": "Número de teléfono",
-  "CONTACT_NOTE_PLACEHOLDER": "Anota lo importante sobre esta persona, como su zona horaria, horario en línea o plazos."
+  "CONTACT_NOTE_PLACEHOLDER": "Anota lo importante sobre esta persona, como su zona horaria, horario en línea o plazos.",
+  "CALL_NO_ANSWER": "Sin respuesta"
 }
