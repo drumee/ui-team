@@ -3110,8 +3110,13 @@ class desk_module extends LetcBox {
       return this._workspaces;
     }
     let rows = [];
+    if (force) this._wsScope = null;
+    let scope;
     try {
-      rows = await this._fetchWorkspacePages(force);
+      [rows, scope] = await Promise.all([
+        this._fetchWorkspacePages(force),
+        this._workspaceScope(),
+      ]);
     } catch (e) {
       this.warn && this.warn("[workspaces] desk.home failed", e);
       return [];
@@ -3156,6 +3161,9 @@ class desk_module extends LetcBox {
         }
         return false;
       })
+      // Multi-org: only the organisation being worked in (see
+      // _workspaceScope). Personal folders are the person's own, kept.
+      .filter((it) => this._inWorkspaceScope(it, scope))
       .map((it) =>
         it.filetype === _a.folder && !it.area ? { ...it, area: _a.personal } : it,
       );
@@ -3168,6 +3176,38 @@ class desk_module extends LetcBox {
     // keeps the last good list rather than emptying the switcher.
     this._workspacesAt = Date.now();
     return this._workspaces;
+  }
+
+  /**
+   * Multi-org: which workspaces belong in the organisation this address works
+   * in (organization.workspace_scope). desk.home lists every workspace the
+   * person holds, whatever organisation it lives in; on another
+   * organisation's address only that organisation's belong in the list, and
+   * on their own, the workspaces of organisations they are a member of
+   * elsewhere are reached by switching instead. Asked once per page; a
+   * forced refetch asks again (a join link may just have added one).
+   *
+   * @returns {Promise<Object>} {mode: 'all'|'only'|'hide', ids}
+   */
+  async _workspaceScope() {
+    if (this._wsScope) return this._wsScope;
+    const all = { mode: "all" };
+    if (!(SERVICE.organization && SERVICE.organization.workspace_scope)) return (this._wsScope = all);
+    const res = await this.fetchService(SERVICE.organization.workspace_scope, { hub_id: Visitor.id })
+      .catch(() => null);
+    if (!res || !/^(only|hide)$/.test(res.mode)) return (this._wsScope = all);
+    const ids = new Set((Array.isArray(res.hub_ids) ? res.hub_ids : [res.hub_ids]).filter(Boolean).map(String));
+    return (this._wsScope = { mode: res.mode, ids });
+  }
+
+  /**
+   * @param {Object} it a desk.home row
+   * @param {Object} scope a _workspaceScope() answer
+   */
+  _inWorkspaceScope(it, scope) {
+    if (!scope || scope.mode === "all" || it.filetype !== _a.hub) return true;
+    const inSet = scope.ids.has(String(it.hub_id || it.id));
+    return scope.mode === "only" ? inSet : !inSet;
   }
 
   /**
