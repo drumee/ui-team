@@ -964,6 +964,36 @@ class desk_module extends LetcBox {
     // apps-main's own sessionStorage flag).
     this._maybeOpenPromoAdminAfterClaim();
     this._maybeRedeemContactInvite();
+    this._maybeAcceptContactInvite();
+  }
+
+  /**
+   * Accept the invitation an "Open my desktop" email was sent for (armed by
+   * the welcome module). Only the account it was addressed to answers it: any
+   * other one leaves it armed, so the right account signing in later on this
+   * browser still gets it. contact.invite_accept is the same call as the
+   * Accept button, so the inviter is notified the same way.
+   */
+  async _maybeAcceptContactInvite() {
+    const intent = contactInviteLink.peekAccept();
+    if (!intent || intent.for !== Visitor.id) return;
+    contactInviteLink.clearAccept();
+    let res;
+    try {
+      res = await this.postService(SERVICE.contact.invite_accept, {
+        email: intent.inviter,
+        hub_id: Visitor.id,
+      });
+    } catch (e) {
+      this.warn && this.warn("[contact-invite] invite_accept failed", e);
+      return;
+    }
+    // Failures answer {status: NO_INVITE | NOT_A_DRUMATE} with no contact.
+    if (!res || !res.contact_id) return;
+    const name = (res.fullname || "").trim();
+    if (name && window.Wm && Wm.acknowledge) {
+      Wm.acknowledge(LOCALE.CONTACT_INVITE_JOINED.format(_.escape(name)));
+    }
   }
 
   /**
