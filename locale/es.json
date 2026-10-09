@@ -3080,5 +3080,6 @@
   "DOWNLOADING_IN_BROWSER": "Descargando en el navegador",
   "DOWNLOAD_FAILED": "Error en la descarga",
   "DOWNLOAD_SAVING_IN_BROWSER": "Tu archivo se está guardando en las descargas del navegador; puedes seguir trabajando.",
-  "CONTACT_INVITE_JOINED": "Ahora estás conectado con {0}"
+  "CONTACT_INVITE_JOINED": "Ahora estás conectado con {0}",
+  "CONTACT_CONNECTED_SAY_HELLO": "Ahora están conectados. ¡Saluda!"
 }

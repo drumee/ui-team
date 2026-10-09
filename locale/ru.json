@@ -3085,5 +3085,6 @@
   "DOWNLOADING_IN_BROWSER": "Загрузка в браузере",
   "DOWNLOAD_FAILED": "Не удалось скачать",
   "DOWNLOAD_SAVING_IN_BROWSER": "Файл сохраняется в загрузки браузера — можно продолжать работу.",
-  "CONTACT_INVITE_JOINED": "Теперь вы на связи с {0}"
+  "CONTACT_INVITE_JOINED": "Теперь вы на связи с {0}",
+  "CONTACT_CONNECTED_SAY_HELLO": "Теперь вы на связи. Поздоровайтесь!"
 }

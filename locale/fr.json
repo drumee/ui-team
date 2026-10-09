@@ -3291,5 +3291,6 @@
   "ALLOW_DOWNLOADS_TO_START": "Autorisez les téléchargements",
   "DOWNLOADING_IN_BROWSER": "Téléchargement dans le navigateur",
   "DOWNLOAD_FAILED": "Échec du téléchargement",
-  "CONTACT_INVITE_JOINED": "Vous êtes maintenant en contact avec {0}"
+  "CONTACT_INVITE_JOINED": "Vous êtes maintenant en contact avec {0}",
+  "CONTACT_CONNECTED_SAY_HELLO": "Vous êtes maintenant en contact. Dites bonjour !"
 }
