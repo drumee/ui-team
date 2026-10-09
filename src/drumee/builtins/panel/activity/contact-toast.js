@@ -42,7 +42,14 @@ function kill() {
  * @returns {Boolean} whether the card was shown (false → caller falls back)
  */
 function showContactConnectedToast(peer = {}, onMessage) {
-  const layer = typeof Wm !== "undefined" && Wm && Wm.windowsLayer;
+  // The acknowledgement layer, not Wm.windowsLayer: an open workspace window
+  // sits in a sibling layer one z-index above windowsLayer (50001 vs 50000),
+  // so a card appended there was drawn UNDER the workspace's chat panel —
+  // measured on drumee.in, elementFromPoint at the card's centre hit
+  // window__ft-bar-card. The ack layer is what Wm.acknowledge uses and stays
+  // on top.
+  const layer = typeof Wm !== "undefined" && Wm
+    && ((Wm._acknowledgeHost && Wm._acknowledgeHost()) || Wm.windowsLayer);
   if (!layer || !layer.append || !peer.fullname) return false;
   kill();
 
