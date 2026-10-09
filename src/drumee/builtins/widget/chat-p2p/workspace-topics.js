@@ -7,7 +7,7 @@
  * peer.nid) as the folder.
  *
  * State lives on the workspace pane (`win._panes.workspace.topicState`):
- * a parked pane keeps its topic and page, a replaced one forgets them. Only
+ * a parked pane keeps its topic, a replaced one forgets it. Only
  * the pane on screen under Workspace chat is ever painted; anything else
  * empties the parts and unstamps the chat area (data-topics="0").
  *
@@ -18,8 +18,6 @@ const topicStrip = require("../../window/folder/skeleton/topic-strip");
 const fileThreadsBar = require("../../window/folder/skeleton/file-threads-bar");
 
 const GROUP = "window";
-// Tabs per carousel page here (the folder's Files tab keeps 3).
-const PAGE_SIZE = 4;
 
 function svc(name) {
   return (typeof SERVICE !== "undefined" && SERVICE.channel && SERVICE.channel[name]) || `channel.${name}`;
@@ -42,7 +40,7 @@ function pane(win) {
 
 function state(p) {
   if (!p.topicState) {
-    p.topicState = { topics: [], topicId: "general", page: 0, slide: null, ftOpen: false, ftItems: [] };
+    p.topicState = { topics: [], topicId: "general", ftOpen: false, ftItems: [] };
   }
   return p.topicState;
 }
@@ -113,13 +111,9 @@ function paint(win, { bar: barOnly = false } = {}) {
         return;
       }
       const s = state(p);
-      // The slide plays once, for the page change that asked for it.
-      const slide = s.slide || "none";
-      s.slide = null;
       if (!barOnly && alive(strip)) {
-        strip.feed(
-          topicStrip(win, { group: GROUP, topics: s.topics, topicId: s.topicId, canCreateTopic: 1, page: s.page, pageSize: PAGE_SIZE, slide }),
-        );
+        strip.feed(topicStrip(win, { group: GROUP, topics: s.topics, topicId: s.topicId, canCreateTopic: 1 }));
+        topicStrip.reveal(strip);
       }
       if (alive(bar)) {
         bar.feed(
@@ -144,10 +138,7 @@ function refresh(win) {
     .then(rowsOf)
     .catch(() => null)
     .then((rows) => {
-      if (rows) {
-        s.topics = rows;
-        s.page = topicStrip.pageOf(s.topics, s.topicId, PAGE_SIZE);
-      }
+      if (rows) s.topics = rows;
       // Left for another conversation meanwhile: its own sync paints it.
       if (pane(win) !== p) return undefined;
       return paint(win);
@@ -158,7 +149,7 @@ function refresh(win) {
 function sync(win) {
   const p = pane(win);
   if (p && !p.topicState) {
-    // A new workspace: # General, page 0, bar closed on screen at once — not
+    // A new workspace: # General, bar closed on screen at once — not
     // the previous workspace's strip until its topics arrive.
     // The fetch starts alongside; its paint comes after this one.
     state(p);
@@ -180,23 +171,8 @@ function scopeTopic(win, topicId) {
   s.topicId = next;
   // Opening a topic reads it (server-side): clear its cached badge.
   if (next !== "general") s.topics = s.topics.map((t) => (`${t.id}` === next ? { ...t, unread: 0 } : t));
-  const page = topicStrip.pageOf(s.topics, next, PAGE_SIZE);
-  if (page !== s.page) s.slide = page > s.page ? "next" : "prev";
-  s.page = page;
   s.ftOpen = false;
   if (typeof p.widget.setScopedTopic === "function") p.widget.setScopedTopic(next);
-  return paint(win);
-}
-
-/** Carousel: one page back (-1) or forward (+1), clamped. */
-function stripPage(win, delta) {
-  const p = pane(win);
-  if (!p) return Promise.resolve();
-  const s = state(p);
-  const last = Math.max(0, Math.ceil((1 + s.topics.length) / PAGE_SIZE) - 1);
-  const was = s.page || 0;
-  s.page = Math.min(Math.max(0, was + delta), last);
-  if (s.page !== was) s.slide = s.page > was ? "next" : "prev";
   return paint(win);
 }
 
@@ -286,7 +262,6 @@ module.exports = {
   paint,
   refresh,
   scopeTopic,
-  stripPage,
   toggleBar,
   closeBar,
   pickFile,

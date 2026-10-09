@@ -1,5 +1,5 @@
 // files-tab-topics-skeleton.test.js — the Files-tab chat's topic strip and
-// File threads bar (Figma 869:189953 / 869:191968).
+// File threads bar (Figma 775:130783 / 869:189953).
 //
 //   node --test tests/files-tab-topics-skeleton.test.js
 const test = require("node:test");
@@ -16,77 +16,75 @@ const text = (n) => walk(n).filter((k) => k.type === "Note").map((k) => k.conten
 const ui = { fig: { group: "window", family: "window-folder" } };
 const TOPICS = [{ id: "t1", name: "Topic name", emoji: "😀", unread: 90 }];
 
-// The strip is a carousel: #General + topics, 3 per page, between a back and
-// a next button; the create button (styled like the "+ New" primary button)
-// stays at the far end.
+// The strip: every tab (#General, then the topics) in one scrolling page,
+// then "+ Create topic" pinned after it. No arrows, no paging.
 const MANY = ["a", "b", "c", "d", "e"].map((x, i) => ({ id: `t${i + 1}`, name: `Topic ${x}`, emoji: "😀" }));
 const parts = (kids) => ({
-  prev: kids.find((k) => k.service === "topic-strip-prev"),
-  next: kids.find((k) => k.service === "topic-strip-next"),
   page: kids.find((k) => /__topic-page\b/.test(k.className || "")),
   create: kids.find((k) => k.service === "topic-new"),
 });
 const tabsOf = (page) => page.kids.map((k) => (k.topic_id ? k.topic_id : k.service));
 
-test("strip: back · 3 tabs · next · Create topic; page 0 starts with #General", () => {
+test("strip: one page with #General and every topic, then Create topic; no arrows", () => {
   const kids = topicStrip(ui, { topics: MANY, canCreateTopic: 1 });
-  assert.deepEqual(kids.map((k) => k.service || "page"), ["topic-strip-prev", "page", "topic-strip-next", "topic-new"]);
+  assert.deepEqual(kids.map((k) => k.service || "page"), ["page", "topic-new"]);
   const p = parts(kids);
-  assert.deepEqual(tabsOf(p.page), ["thread-menu-general", "t1", "t2"]);
+  assert.deepEqual(tabsOf(p.page), ["thread-menu-general", "t1", "t2", "t3", "t4", "t5"]);
   assert.equal(p.page.kids[0].dataset.active, "1");
   assert.match(p.page.kids[0].className, /__topic-tab--general/);
-  assert.equal(p.prev.dataset.disabled, "1");
-  assert.equal(p.next.dataset.disabled, "0");
-  assert.equal(p.prev.ico, "caret-left");
-  assert.equal(p.next.ico, "caret-right");
-  assert.ok(!kids.some((k) => k.service === "topic-tab-all"));
+  assert.ok(!walk(kids).some((k) => /topic-strip-(prev|next)|topic-tab-all/.test(k.service || "")));
+  assert.deepEqual(topicStrip(ui, { topics: [] }).map((k) => k.service || "page"), ["page"]);
 });
 
-test("strip: pages of 3; the last page may be short; the arrows disable at the ends", () => {
-  const p1 = parts(topicStrip(ui, { topics: MANY, page: 1 }));
-  assert.deepEqual(tabsOf(p1.page), ["t3", "t4", "t5"]);
-  assert.equal(p1.prev.dataset.disabled, "0");
-  assert.equal(p1.next.dataset.disabled, "1");
-  // Out of range clamps to the last page.
-  assert.deepEqual(tabsOf(parts(topicStrip(ui, { topics: MANY, page: 9 })).page), ["t3", "t4", "t5"]);
-});
-
-test("strip: a single page draws no arrows; two pages draw both", () => {
-  const one = topicStrip(ui, { topics: MANY.slice(0, 1), canCreateTopic: 1 });
-  assert.deepEqual(one.map((k) => k.service || "page"), ["page", "topic-new"]);
-  // #General + 2 topics fills page 0 exactly: still one page, still no arrows.
-  assert.deepEqual(topicStrip(ui, { topics: MANY.slice(0, 2) }).map((k) => k.service || "page"), ["page"]);
-  // One more tab spills onto a second page.
-  const two = parts(topicStrip(ui, { topics: MANY.slice(0, 3) }));
-  assert.ok(two.prev && two.next);
-});
-
-test("strip: a full page (3 tabs) is stamped data-full=1, a short one 0", () => {
-  assert.equal(parts(topicStrip(ui, { topics: MANY })).page.dataset.full, "1");
-  assert.equal(parts(topicStrip(ui, { topics: MANY, page: 1 })).page.dataset.full, "1");
-  assert.equal(parts(topicStrip(ui, { topics: MANY.slice(0, 3), page: 1 })).page.dataset.full, "0");
-  assert.equal(parts(topicStrip(ui, { topics: [] })).page.dataset.full, "0");
-  // The Inbox pages by 4: full means 4 there.
-  assert.equal(parts(topicStrip(ui, { topics: MANY.slice(0, 2), pageSize: 4 })).page.dataset.full, "0");
-  assert.equal(parts(topicStrip(ui, { topics: MANY.slice(0, 3), pageSize: 4 })).page.dataset.full, "1");
-});
-
-test("strip: the scope marks its tab; the create button is the primary style with a plus", () => {
-  const p = parts(topicStrip(ui, { topics: MANY, topicId: "t4", page: 1, canCreateTopic: 1 }));
-  assert.deepEqual(p.page.kids.map((k) => k.dataset.active), ["0", "1", "0"]);
-  assert.match(p.create.className, /window-button__label-button primary/);
+test("strip: the scope marks its tab; Create topic is a tab with a plus", () => {
+  const p = parts(topicStrip(ui, { topics: MANY, topicId: "t4", canCreateTopic: 1 }));
+  assert.deepEqual(p.page.kids.map((k) => k.dataset.active), ["0", "0", "0", "0", "1", "0"]);
+  assert.match(p.create.className, /__topic-tab __topic-tab--create|window__topic-tab window__topic-tab--create/);
+  assert.doesNotMatch(p.create.className, /primary/);
   assert.ok(walk(p.create).some((n) => n.ico === "ph-plus"));
-  assert.equal(text(p.create), en.TOPIC);
+  assert.equal(text(p.create), en.CREATE_TOPIC);
   assert.equal(parts(topicStrip(ui, { topics: MANY })).create, undefined, "no create without chat access");
   // A legacy "all" scope reads as #General.
   assert.equal(parts(topicStrip(ui, { topics: MANY, topicId: "all" })).page.kids[0].dataset.active, "1");
 });
 
-test("pageOf: the page that shows a scope", () => {
-  assert.equal(topicStrip.pageOf(MANY, "general"), 0);
-  assert.equal(topicStrip.pageOf(MANY, "t2"), 0);
-  assert.equal(topicStrip.pageOf(MANY, "t3"), 1);
-  assert.equal(topicStrip.pageOf(MANY, "gone"), 0);
+// reveal(): scrolls the page so the picked tab is in view; wheel bound once.
+const fakeStrip = (tabLeft, tabWidth, scrollLeft = 0) => {
+  const listeners = [];
+  const tab = { getBoundingClientRect: () => ({ left: 100 + tabLeft - scrollLeft, width: tabWidth }) };
+  const page = { scrollLeft, clientWidth: 200, scrollWidth: 600, dataset: {}, getBoundingClientRect: () => ({ left: 100 }), querySelector: () => tab };
+  const el = { querySelector: () => page, addEventListener: (...a) => listeners.push(a) };
+  return { part: { el }, page, listeners };
+};
+
+test("reveal: scrolls a tab past either edge into view, leaves a visible one alone", () => {
+  const raf = global.requestAnimationFrame;
+  global.requestAnimationFrame = undefined;
+  try {
+    const right = fakeStrip(300, 80);
+    topicStrip.reveal(right.part);
+    assert.equal(right.page.scrollLeft, 180);
+    const left = fakeStrip(40, 80, 150);
+    topicStrip.reveal(left.part);
+    assert.equal(left.page.scrollLeft, 40);
+    assert.equal(left.page.dataset.fade, "both", "more tabs on both sides");
+    const last = fakeStrip(500, 100);
+    topicStrip.reveal(last.part);
+    assert.equal(last.page.scrollLeft, 400);
+    assert.equal(last.page.dataset.fade, "start", "scrolled to the end");
+    assert.equal(fakeStrip(0, 80).page.dataset.fade, undefined);
+    const first = fakeStrip(0, 80);
+    topicStrip.reveal(first.part);
+    assert.equal(first.page.dataset.fade, "end");
+    const inView = fakeStrip(50, 80, 0);
+    topicStrip.reveal(inView.part);
+    assert.equal(inView.page.scrollLeft, 0);
+    topicStrip.reveal(inView.part);
+    assert.deepEqual(inView.listeners.map((l) => l[0]), ["wheel", "mousedown", "scroll"], "bound once per strip element");
+    topicStrip.reveal(null); // no part: no throw
+  } finally {
+    global.requestAnimationFrame = raf;
+  }
 });
 
 test("bar: closed = the bar only; open = the thread rows with real unread; active row", () => {
@@ -108,18 +106,12 @@ test("bar: closed = the bar only; open = the thread rows with real unread; activ
   assert.ok(walk(empty).some((n) => n.content === en.NO_FILE_THREADS));
 });
 
-test("page slide stamp: none by default, next / prev when asked", () => {
-  assert.equal(parts(topicStrip(ui, { topics: MANY })).page.dataset.slide, "none");
-  assert.equal(parts(topicStrip(ui, { topics: MANY, page: 1, slide: "next" })).page.dataset.slide, "next");
-  assert.equal(parts(topicStrip(ui, { topics: MANY, slide: "prev" })).page.dataset.slide, "prev");
-});
-
 test("group option: an Inbox (chat-p2p) host builds the window__ classes, handler stays the host", () => {
   const host = { fig: { group: "chat-p2p", family: "chat-p2p" } };
   const strip = topicStrip(host, { group: "window", topics: [{ id: "t1", name: "A" }], canCreateTopic: 1 });
   const classes = JSON.stringify(strip);
   assert.match(classes, /window__topic-page/);
-  assert.match(classes, /window__topic-tab--create window-button__label-button primary/);
+  assert.match(classes, /window__topic-tab window__topic-tab--create/);
   assert.doesNotMatch(classes, /chat-p2p__topic/);
   const create = strip.find((k) => k.service === "topic-new");
   assert.equal(create.uiHandler[0], host);
@@ -129,16 +121,4 @@ test("group option: an Inbox (chat-p2p) host builds the window__ classes, handle
   assert.match(b, /window__ft-row/);
   assert.match(b, /window__thread-menu__badge/);
   assert.doesNotMatch(b, /chat-p2p__ft/);
-});
-
-test("pageSize: a host may page by another size (the Inbox: 4); pageOf follows it", () => {
-  const p0 = parts(topicStrip(ui, { topics: MANY, pageSize: 4 }));
-  assert.deepEqual(tabsOf(p0.page), ["thread-menu-general", "t1", "t2", "t3"]);
-  const p1 = parts(topicStrip(ui, { topics: MANY, pageSize: 4, page: 1 }));
-  assert.deepEqual(tabsOf(p1.page), ["t4", "t5"]);
-  assert.equal(p1.next.dataset.disabled, "1");
-  assert.equal(topicStrip.pageOf(MANY, "t3", 4), 0);
-  assert.equal(topicStrip.pageOf(MANY, "t4", 4), 1);
-  // The default stays 3.
-  assert.equal(topicStrip.pageOf(MANY, "t3"), 1);
 });

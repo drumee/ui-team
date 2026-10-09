@@ -19,19 +19,23 @@ const rule = (sel) => {
   return m[1];
 };
 
-test("strip: one scrolling row; active tab brand + 3px underline; long names ellipsize", () => {
+test("strip: one row of underlined text tabs on a hairline; the active tab is brand", () => {
   const s = rule(".window-folder .window__topic-strip");
   assert.match(s, /display: flex/);
-  assert.match(s, /gap: 4px/);
   assert.match(s, /flex-wrap: nowrap/);
-  // Chips (no underline): the active one is brand-tinted.
+  assert.match(s, /padding: 0 12px/);
+  assert.match(s, /box-shadow: inset 0 -1px 0 rgba\(0, 0, 0, 0\.08\)/);
+  const t = rule(".window-folder .window__topic-tab");
+  assert.match(t, /flex: 0 0 auto/);
+  assert.match(t, /background: transparent/);
+  assert.match(t, /border-radius: 0/);
+  assert.match(t, /white-space: nowrap/);
+  assert.match(t, /color: #65656c/);
   const a = rule('.window-folder .window__topic-tab[data-active="1"]');
   assert.match(a, /color: #5950ff/);
-  assert.match(a, /background-color: rgba\(89, 80, 255, 0\.1\)/);
-  assert.doesNotMatch(a, /border-bottom/);
-  const n = rule(".window-folder .window__topic-tab-name");
-  assert.match(n, /max-width: 160px/);
-  assert.match(n, /text-overflow: ellipsis/);
+  assert.match(a, /box-shadow: inset 0 -2px 0 #5950ff/);
+  // Whole names: the page scrolls rather than ellipsizing.
+  assert.doesNotMatch(rule(".window-folder .window__topic-tab-name"), /ellipsis|max-width/);
 });
 
 test("bar card and dropdown tokens", () => {
@@ -61,102 +65,23 @@ test("chatPanel mounts topic-strip and ft-bar for the workspace folder window on
   assert.match(before, /const topicSurfaces = isFolderChat && !ui\.mget\(_a\.token\)/);
 });
 
-// Tabs on the left, "+ Create topic" pushed to the right end of the strip
-// (still one scrolling row when the topics overflow).
-test("strip: the create button sits at the far end, styled like the '+ New' primary button", () => {
+// The tabs overflow by scrolling sideways (no scrollbar drawn); "+ Create
+// topic" sits after them and never scrolls away.
+test("page: scrolls horizontally, hidden scrollbar, never wider than its tabs", () => {
+  const p = rule(".window-folder .window__topic-page");
+  assert.match(p, /overflow-x: auto/);
+  assert.match(p, /overflow-y: hidden/);
+  assert.match(p, /flex: 0 1 auto/);
+  assert.match(p, /min-width: 0/);
+  assert.match(p, /scrollbar-width: none/);
+  assert.match(rule(".window-folder .window__topic-page::-webkit-scrollbar"), /display: none/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[^@]*\.window__topic-page \{ scroll-behavior: auto/);
+  assert.doesNotMatch(css, /window__topic-arrow|@keyframes topic-page-/);
+});
+
+test("strip: the create tab follows the tabs, styled like them", () => {
   const c = rule(".window-folder .window__topic-strip .window__topic-tab--create");
-  assert.match(c, /margin-left: auto/);
-  assert.match(c, /background-color: var\(--primary-40\)/);
-  assert.match(c, /border-radius: 8px/);
-  assert.match(c, /height: 30px/);
-  assert.match(c, /color: var\(--white\)/);
-  assert.match(rule(".window-folder .window__topic-strip .window__topic-tab--create:hover"), /background-color: var\(--primary-50\)/);
-});
-
-test("carousel: a page of tabs between two arrow buttons; disabled arrows are dimmed and inert", () => {
-  assert.match(rule(".window-folder .window__topic-page"), /overflow: hidden/);
-  const arrow = rule(".window-folder .window__topic-arrow");
-  assert.match(arrow, /width: 24px/);
-  assert.match(arrow, /cursor: pointer/);
-  const off = rule('.window-folder .window__topic-arrow[data-disabled="1"]');
-  assert.match(off, /opacity: 0\.3/);
-  assert.match(off, /pointer-events: none/);
-});
-
-// Three tabs + the arrows + "Create topic" must fit the side chat: a tab in
-// the page shrinks and its name ellipsizes instead of being clipped mid-word.
-test("carousel: tabs in a page shrink and ellipsize, never clip", () => {
-  const t = rule(".window-folder .window__topic-page .window__topic-tab");
-  assert.match(t, /flex: 0 1 auto/);
-  assert.match(t, /min-width: 0/);
-  assert.match(t, /padding: 4px 12px/); // the chip's padding
-  const n = rule(".window-folder .window__topic-page .window__topic-tab-name");
-  assert.match(n, /min-width: 0/);
-  assert.match(n, /text-overflow: ellipsis/);
-  // ui-core renders a Note as .note > .note-content: the dots belong there.
-  const inner = rule(".window-folder .window__topic-page .window__topic-tab-name .note-content");
-  assert.match(inner, /text-overflow: ellipsis/);
-  assert.match(inner, /overflow: hidden/);
-  // The page takes the room between the arrows (tabs are not squeezed early).
-  assert.match(rule(".window-folder .window__topic-page"), /flex: 1 1 auto/);
-});
-
-// #General is short and always there: it keeps its full width, topics give way.
-test("carousel: the #General tab never shrinks", () => {
-  assert.match(rule(".window-folder .window__topic-page .window__topic-tab--general"), /flex-shrink: 0/);
-});
-
-// The picked tab shows its whole name; the other tabs of the page give way.
-test("carousel: the active tab keeps its full name, the others shrink", () => {
-  const a = rule('.window-folder .window__topic-page .window__topic-tab[data-active="1"]');
-  assert.match(a, /flex-shrink: 0/);
-  const n = rule('.window-folder .window__topic-page .window__topic-tab[data-active="1"] .window__topic-tab-name');
-  assert.match(n, /max-width: none/);
-  assert.match(n, /overflow: visible/);
-  const inner = rule('.window-folder .window__topic-page .window__topic-tab[data-active="1"] .window__topic-tab-name .note-content');
-  assert.match(inner, /overflow: visible/);
-  assert.match(inner, /text-overflow: clip/);
-});
-
-// Tabs are chips: pill-shaped, lightly filled, no underline.
-test("tabs are chips", () => {
-  const c = rule(".window-folder .window__topic-tab");
-  assert.match(c, /border-radius: 16px/);
-  assert.match(c, /height: 28px/);
-  assert.match(c, /padding: 4px 12px/);
-  assert.match(c, /background-color: rgba\(0, 0, 0, 0\.05\)/);
-  assert.match(c, /border: 0/);
-  assert.match(rule(".window-folder .window__topic-page .window__topic-tab"), /padding: 4px 12px/);
-});
-
-// Changing page slides the new one in from the side it came from.
-test("carousel: the new page slides in (next from the right, back from the left); none under reduced motion", () => {
-  assert.match(rule(".window-folder .window__topic-page[data-slide=next]"), /animation: topic-page-next /);
-  assert.match(rule(".window-folder .window__topic-page[data-slide=prev]"), /animation: topic-page-prev /);
-  assert.match(css, /@keyframes topic-page-next \{ from \{ opacity: 0; transform: translateX\(24px\); \}/);
-  assert.match(css, /@keyframes topic-page-prev \{ from \{ opacity: 0; transform: translateX\(-24px\); \}/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\) \{[^@]*\.window__topic-page \{ animation: none/);
-});
-
-test("strip padding is 6px 12px", () => {
-  assert.match(rule(".window-folder .window__topic-strip"), /padding: 6px 12px;/);
-});
-
-test("page: a short page starts at the left, a full one is centred", () => {
-  assert.match(rule(".window-folder .window__topic-page"), /justify-content: flex-start/);
-  assert.match(rule('.window-folder .window__topic-page[data-full="1"]'), /justify-content: center/);
-});
-
-// A narrow chat panel (the Files view's side column) puts "+ Topic" on its
-// own line under the carousel instead of squeezing the tabs.
-test("responsive: the chat panel is a container; ≤420px the create button wraps to its own line", () => {
-  assert.match(css, /(^|\})\s*\.window-folder \.window__chat-panel \{[^}]*container: window-chat-panel ?\/ ?inline-size/);
-  const m = css.match(/@container window-chat-panel \(max-width: 420px\) \{(.*?\})\s*\}/);
-  assert.ok(m, "missing @container window-chat-panel (max-width: 420px)");
-  const q = m[1];
-  assert.match(q, /\.window-folder \.window__topic-strip \{[^}]*flex-wrap: wrap/);
-  const create = q.match(/\.window-folder \.window__topic-strip \.window__topic-tab--create \{([^}]*)\}/);
-  assert.ok(create, "create button rule in the query");
-  assert.match(create[1], /flex: 1 0 100%/);
-  assert.match(create[1], /margin-left: 0/);
+  assert.match(c, /flex: 0 0 auto/);
+  assert.doesNotMatch(c, /margin-left: auto|--primary/);
+  assert.match(rule(".window-folder .window__topic-create-label"), /color: currentColor/);
 });
