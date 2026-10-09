@@ -191,7 +191,7 @@
     &__note {
       &.title {
         color: var(--neutral-900, #222732);
-        font-family: "Armin Grotesk";
+        font-family: var(--font-main);
         font-size: 24px;
         font-style: normal;
         font-weight: 600;

@@ -812,8 +812,34 @@ class __media_interact extends media_core {
     c.once(_e.destroy, (a) => {
       return (this._filename.style.visibility = _a.visible);
     });
+    this._readyRenameField(c, value);
 
     RADIO_CLICK.trigger(_e.click);
+  }
+
+  /**
+   * Once the inline editor's field exists: no spellcheck (a file name is not
+   * prose, and the red squiggle under it read as an error), and — when the
+   * caller asked for `preselect` — focus it with the name selected so typing
+   * replaces it. ui-core's own preselect did not survive in every layout
+   * (list rows lost it), so it is redone here after the value is seeded.
+   */
+  _readyRenameField(entry, value) {
+    const run = () =>
+      requestAnimationFrame(() => {
+        if (!entry || entry.isDestroyed() || !entry.el) return;
+        const field = entry.el.querySelector("textarea, input");
+        if (!field) return;
+        field.spellcheck = false;
+        field.setAttribute("autocomplete", "off");
+        if (!field.value && value) field.value = value;
+        if (entry.mget("preselect")) {
+          field.focus();
+          field.select();
+        }
+      });
+    if (_.isFunction(entry.isReaddy) && entry.isReaddy()) run();
+    else entry.once("input:ready", run);
   }
 
   /**
@@ -1791,6 +1817,7 @@ class __media_interact extends media_core {
    * still answers .value, and the ui event above keeps a copy either way.
    */
   async _renameWorkspacePrompt() {
+    if (!this._workspaceRenameAllowed()) return;
     const current = this.mget(_a.filename) || "";
     this.__wsRenameValue = current;
 

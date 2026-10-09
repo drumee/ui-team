@@ -20,11 +20,9 @@ const ruleIn = (css, sel) => {
 test("skin: the Inbox chat area styles the strip and bar exactly as the folder does", () => {
   const inbox = compile("builtins/widget/chat-p2p/skin/index.scss");
   const folder = compile("builtins/window/folder/skin/index.scss");
-  for (const part of [".window__topic-strip", ".window__topic-page .window__topic-tab", ".window__ft-bar-card", ".window__ft-list", ".window__topic-strip .window__topic-tab--create"]) {
+  for (const part of [".window__topic-strip", ".window__topic-page", ".window__topic-tab", '.window__topic-tab[data-active="1"]', ".window__ft-bar-card", ".window__ft-list", ".window__topic-strip .window__topic-tab--create"]) {
     assert.equal(ruleIn(inbox, `.chat-p2p__chat-area ${part}`), ruleIn(folder, `.window-folder ${part}`), part);
   }
-  assert.match(inbox, /@keyframes topic-page-next/);
-  assert.equal((folder.match(/@keyframes topic-page-next/g) || []).length, 1, "keyframes emitted once in the folder skin");
 });
 
 test("skin: hidden in the Inbox unless the chat area is stamped data-topics=1", () => {
@@ -163,20 +161,6 @@ test("a topic tab scopes the widget; # General scopes back; a file scope is left
   assert.equal(w.scopedTopicId, "general");
 });
 
-test("carousel: next/back clamp and slide once; picking a topic on page 2 jumps there", async () => {
-  const win = fakeInbox();
-  await WT.sync(win);
-  await WT.stripPage(win, +1);
-  assert.equal(stripPage_(lastFeed(win, "topic-strip")).dataset.slide, "next");
-  await WT.stripPage(win, +1); // last page already (5 entries / 3)
-  assert.equal(stripPage_(lastFeed(win, "topic-strip")).dataset.slide, "none");
-  await WT.stripPage(win, -1);
-  assert.equal(stripPage_(lastFeed(win, "topic-strip")).dataset.slide, "prev");
-  await WT.scopeTopic(win, "t4");
-  assert.equal(stripPage_(lastFeed(win, "topic-strip")).dataset.slide, "next");
-  assert.deepEqual(activeTab(lastFeed(win, "topic-strip")), ["t4"]);
-});
-
 test("state lives on the pane: a new workspace pane starts over; a slow answer for the old one paints nothing", async () => {
   let release;
   const win = fakeInbox();
@@ -301,15 +285,14 @@ test("a newly opened workspace paints # General (bar closed) at once, before its
   assert.match(classes(lastFeed(win, "topic-strip")), /window__topic-page/);
 });
 
-test("the Inbox pages the strip by 4", async () => {
+test("the Inbox strip shows every topic on one scrolling page", async () => {
   const win = fakeInbox({ topics: [...TOPICS, { id: "t5", name: "E" }] });
   await WT.sync(win);
   const ids = () => stripPage_(lastFeed(win, "topic-strip")).kids.map((k) => k.topic_id || k.service);
-  assert.deepEqual(ids(), ["thread-menu-general", "t1", "t2", "t3"]);
-  await WT.stripPage(win, +1);
-  assert.deepEqual(ids(), ["t4", "t5"]);
-  await WT.scopeTopic(win, "t3");
-  assert.deepEqual(ids(), ["thread-menu-general", "t1", "t2", "t3"]);
+  assert.deepEqual(ids(), ["thread-menu-general", "t1", "t2", "t3", "t4", "t5"]);
+  await WT.scopeTopic(win, "t5");
+  assert.deepEqual(activeTab(lastFeed(win, "topic-strip")), ["t5"]);
+  assert.equal(WT.stripPage, undefined, "no carousel paging");
 });
 
 test("no mock topics: a workspace without topics shows # General alone", async () => {

@@ -29,6 +29,12 @@ function _sameRows(a, b) {
   }
 }
 
+// Invitations are matched by address, case-folded: the server compares them
+// case-insensitively, and so must the busy set and the selection.
+function _invitationKey(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
 class __permission_restricted extends DrumeeMFS {
   /**
    * @param {Object} opt
@@ -60,6 +66,14 @@ class __permission_restricted extends DrumeeMFS {
     // the first read answers, which is how the skeleton tells "not fetched
     // yet" from "none" — an empty section and a missing one look different.
     this._invitations = null;
+    // Pending Invitations actions. Addresses (lowercased) with a cancel or
+    // resend in flight — their buttons spin and refuse a second press — and
+    // the select mode: on/off plus the ticked addresses. State, not DOM, for
+    // the reason everything else here is: the skeleton is re-fed on pushes.
+    this._invitationBusy = new Set();
+    this._invitationSelecting = false;
+    this._invitationSelected = new Set();
+    this._invitationBulkBusy = false;
     // The inline message under the invite field, as STATE rather than a DOM
     // write alone: _loadMembers re-feeds the whole skeleton, and the
     // hub.member_joined push lands within a second of a successful invite —
@@ -533,7 +547,18 @@ class __permission_restricted extends DrumeeMFS {
     const changed =
       this._invitations === null || !_sameRows(this._invitations, rows);
     this._invitations = rows;
-    if (changed) this._render();
+    if (changed) {
+      // A ticked address that is no longer listed (answered, cancelled by
+      // another admin) must not stay counted in "Cancel (n)".
+      const listed = new Set(rows.map((r) => _invitationKey(r.email)));
+      for (const k of this._invitationSelected) {
+        if (!listed.has(k)) this._invitationSelected.delete(k);
+      }
+      if (rows.length < 2 && !this._invitationSelected.size) {
+        this._invitationSelecting = false;
+      }
+      this._render();
+    }
   }
 
   /**
@@ -1192,6 +1217,188 @@ class __permission_restricted extends DrumeeMFS {
   }
 
   /**
+   * The invitation row a click came from, by the index the skeleton stamped
+   * on the button (or on the row itself in select mode).
+   */
+  _invitationAt(cmd) {
+    const index = Number(cmd?.el?.dataset?.index);
+    if (!Number.isInteger(index)) return null;
+    const row = (this._invitations || [])[index];
+    return row && row.email ? row : null;
+  }
+
+  /** Spin (or stop) the action buttons of these addresses' rows. */
+  _setInvitationBusy(emails, on) {
+    for (const e of emails) {
+      if (on) this._invitationBusy.add(_invitationKey(e));
+      else this._invitationBusy.delete(_invitationKey(e));
+    }
+    this._render();
+  }
+
+  /**
+   * Cancel one invitation (the row's X) or the selection ("Cancel (n)").
+   *
+   * Confirmed first: the invitee's email link stops working the moment this
+   * lands, and the only way back is sending a new invitation.
+   *
+   * hub.cancel_invite withdraws every invitation of the address to this
+   * workspace (all inviters) and frees its seat. `not_found` means it was
+   * already gone — answered, or cancelled by another admin — and the row goes
+   * just the same; only `failed` keeps a row. The list is re-read afterwards
+   * either way, so what is shown ends up being what the server holds.
+   *
+   * @param {string[]} emails
+   * @param {object}  [o]
+   * @param {boolean} [o.bulk]  from the selection head
+   */
+  async _cancelInvitations(emails, { bulk = false } = {}) {
+    if (this._confirmInFlight || !emails.length) return;
+    if (emails.some((e) => this._invitationBusy.has(_invitationKey(e)))) return;
+    if (bulk && this._invitationBulkBusy) return;
+
+    this._confirmInFlight = true;
+    try {
+      await Wm.confirm({
+        title: LOCALE.CANCEL_INVITATION,
+        message: emails.length === 1
+          ? LOCALE.MSG_CANCEL_INVITATION.format(emails[0])
+          : LOCALE.MSG_CANCEL_INVITATIONS.format(emails.length),
+        confirm: LOCALE.CANCEL_INVITATION,
+        confirm_type: "danger",
+        cancel: LOCALE.KEEP_INVITATION,
+        cancel_type: "secondary",
+        mode: "hbf",
+        // No backdrop, as for Remove member: the rows it names are right
+        // there behind it.
+        overlay: "none",
+      });
+    } catch (_) {
+      this._confirmInFlight = false;
+      return;
+    }
+    this._confirmInFlight = false;
+
+    if (bulk) this._invitationBulkBusy = true;
+    this._setInvitationBusy(emails, true);
+    let res;
+    try {
+      // Literal fallback for an endpoint whose server has not shipped the
+      // service yet — see _loadInvitations.
+      res = await this.postService(
+        (SERVICE.hub && SERVICE.hub.cancel_invite) || "hub.cancel_invite",
+        { hub_id: this.mget(_a.hub_id), emails },
+      );
+    } catch (e) {
+      res = null;
+    }
+    if (bulk) this._invitationBulkBusy = false;
+    this._setInvitationBusy(emails, false);
+
+    // A rejected POST resolves undefined (doRequest → onServerComplain only
+    // warns), so only a results array proves anything happened.
+    const results = res && _.isArray(res.results) ? res.results : null;
+    if (!results) {
+      this._loadInvitations();
+      return this._notice(LOCALE.TRY_AGAIN);
+    }
+    const gone = new Set(
+      results
+        .filter((r) => r && (r.status === "cancelled" || r.status === "not_found"))
+        .map((r) => _invitationKey(r.email)),
+    );
+    const failed = results.filter((r) => r && r.status === "failed");
+    // Drop the rows straight away rather than waiting for the re-read below:
+    // the X was pressed on them, and they must not linger with a spinner gone.
+    this._invitations = (this._invitations || []).filter(
+      (r) => !gone.has(_invitationKey(r.email)),
+    );
+    for (const k of gone) this._invitationSelected.delete(k);
+    if (bulk && !failed.length) this._invitationSelecting = false;
+    if (this._invitations.length < 2 && !this._invitationSelected.size) {
+      this._invitationSelecting = false;
+    }
+    this._render();
+    this._loadInvitations();
+    if (failed.length) return this._notice(LOCALE.TRY_AGAIN);
+    this._setInviteNotice(
+      gone.size > 1
+        ? LOCALE.INVITATIONS_CANCELLED.format(gone.size)
+        : LOCALE.INVITATION_CANCELLED,
+      "success",
+    );
+  }
+
+  /**
+   * Resend one invitation (the row's counter-clockwise arrow).
+   *
+   * Simply hub.invite again, for that one address, at the role the invitation
+   * offered. hub.invite already does everything a resend needs: a fresh token
+   * replaces every older one of the address for this workspace (so the
+   * previous email's link stops working and a Declined row turns back into
+   * Pending), a new email goes out, an existing account gets a new
+   * notification, and the seat check runs. One send path, not two.
+   *
+   * Confirmed first (Duy, 2026-10-07) — it emails somebody.
+   */
+  async _resendInvitation(row) {
+    if (!row || this._confirmInFlight) return;
+    const email = row.email;
+    if (this._invitationBusy.has(_invitationKey(email))) return;
+
+    this._confirmInFlight = true;
+    try {
+      await Wm.confirm({
+        title: LOCALE.RESEND_INVITATION,
+        message: LOCALE.MSG_RESEND_INVITATION.format(email),
+        confirm: LOCALE.RESEND,
+        confirm_type: "primary",
+        cancel: LOCALE.CANCEL,
+        cancel_type: "secondary",
+        mode: "hbf",
+        overlay: "none",
+      });
+    } catch (_) {
+      this._confirmInFlight = false;
+      return;
+    }
+    this._confirmInFlight = false;
+
+    // The role the invitation offered. hub_invitations reads it out of JSON,
+    // so it arrives as a string; anything unusable falls back to the invite
+    // row's role rather than sending a privilege of 0.
+    const offered = parseInt(row.permission, 10);
+    const privilege = offered > 0
+      ? offered
+      : (this._inviteRole?.privilege || _K.privilege.write);
+
+    this._setInvitationBusy([email], true);
+    let res;
+    try {
+      res = await this.postService(SERVICE.hub.invite, {
+        hub_id: this.mget(_a.hub_id),
+        invitees: [email],
+        privilege,
+      });
+    } catch (e) {
+      res = { error: e?.reason || e?.error || LOCALE.TRY_AGAIN };
+    }
+    this._setInvitationBusy([email], false);
+
+    if (res && (res.error || res.error_code)) {
+      return this._notice(res.reason || res.error || LOCALE.TRY_AGAIN);
+    }
+    if (isSeatLimitReply(res)) return this._notice(seatLimitMessage(res));
+    const result = res && _.isArray(res.results) ? res.results[0] : null;
+    if (!result || result.status !== "ok") {
+      return this._notice((result && result.reason) || LOCALE.TRY_AGAIN);
+    }
+    this._setInviteNotice(LOCALE.INVITATION_RESENT, "success");
+    // "invited just now", and Pending again if it had been declined.
+    this._loadInvitations();
+  }
+
+  /**
    * Flip the in-flight state of the Send button. Kept on the widget, and read
    * by the skeleton, so a re-render during the send (the chip commit, a
    * member push) redraws the button still busy; the DOM write here only
@@ -1229,6 +1436,35 @@ class __permission_restricted extends DrumeeMFS {
 
       case "send-invitation":
         return this._sendInvitation(cmd);
+
+      case "cancel-invitation": {
+        const row = this._invitationAt(cmd);
+        return row && this._cancelInvitations([row.email]);
+      }
+
+      case "resend-invitation":
+        return this._resendInvitation(this._invitationAt(cmd));
+
+      case "toggle-invitation-select":
+        this._invitationSelecting = !this._invitationSelecting;
+        this._invitationSelected.clear();
+        return this._render();
+
+      case "toggle-invitation": {
+        const row = this._invitationAt(cmd);
+        if (!row) return;
+        const key = _invitationKey(row.email);
+        if (this._invitationSelected.has(key)) this._invitationSelected.delete(key);
+        else this._invitationSelected.add(key);
+        return this._render();
+      }
+
+      case "cancel-selected-invitations": {
+        const emails = (this._invitations || [])
+          .filter((r) => this._invitationSelected.has(_invitationKey(r.email)))
+          .map((r) => r.email);
+        return emails.length && this._cancelInvitations(emails, { bulk: true });
+      }
 
       case "pick-invite-contact":
         return this._pickInviteContact(cmd);

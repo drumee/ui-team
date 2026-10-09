@@ -71,6 +71,12 @@
         cursor: not-allowed;
       }
 
+      // The share button stays clickable while locked, so the click can say
+      // who is sharing (screenshare.js _explainShareLocked).
+      &.screen[data-disabled="1"] {
+        pointer-events: auto;
+      }
+
       &[data-muted="1"]:not([data-disabled="1"]) {
         opacity: 0.85;
       }

@@ -303,6 +303,11 @@ const __button = function (ui, trigger, k) {
 
     pricing: button({ content: "Pricing", service: "pricing" }),
 
+    // Workspace ⋯ menu only (desk _withPinAction); the desk answers both.
+    pinWorkspace: button({ content: LOCALE.PIN_WORKSPACE, service: 'workspace-pin' }),
+
+    unpinWorkspace: button({ content: LOCALE.UNPIN_WORKSPACE, service: 'workspace-unpin' }),
+
     trash: button({ content: LOCALE.MOVE_TO_TRASH, service: _e.remove }),
 
     unlock: button({ content: LOCALE.UNPROTECTED, service: _e.lock }),

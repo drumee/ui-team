@@ -24,6 +24,12 @@ const FIELDS = [
 const TEXT_FIELDS = ["title", "description"];
 
 const trim = (v) => String(v == null ? "" : v).trim();
+
+// Longest title any create/update path accepts. Counted in characters (code
+// points), as MariaDB counts the varchar — not UTF-16 units, which would let
+// an emoji count twice.
+const TITLE_MAX = 250;
+const titleTooLong = (v) => Array.from(trim(v)).length > TITLE_MAX;
 const day = (v) => (v ? String(v).slice(0, 10) : "");
 
 // task_update writes BOTH dates unconditionally (a missing one is cleared), so
@@ -53,6 +59,7 @@ function fieldPatch(task, field, value) {
     case "title": {
       const title = trim(value);
       if (!title) return { error: "empty" };
+      if (titleTooLong(title)) return { error: "too-long" };
       if (title === trim(task.title)) return null;
       return {
         service: "task.update",
@@ -93,10 +100,14 @@ function fieldPatch(task, field, value) {
       const cur = datesOf(task);
       let start = field === "start_date" ? next || null : cur.start_date;
       let due = field === "due_date" ? next || null : cur.due_date;
-      // Keep the range ordered: a start moved past the due date drags the due
-      // date along, and a due date moved before the start pulls the start in.
+      // Keep the range ordered. A start moved past the due date keeps the
+      // start the user picked and CLEARS the due date, so the cell shows the
+      // "Due date" placeholder and asks for a new one. Dragging the due date
+      // along used to collapse the range to one day, and that dropped the start
+      // the user had just picked. A due date moved before the start still
+      // pulls the start in.
       if (start && due && start > due) {
-        if (field === "start_date") due = start;
+        if (field === "start_date") due = null;
         else start = due;
       }
       // A range of one day is a single-day task.
@@ -248,6 +259,8 @@ function describePeerChange(service, prev, patch, ctx) {
 }
 
 module.exports = {
+  TITLE_MAX,
+  titleTooLong,
   FIELDS,
   TEXT_FIELDS,
   fieldPatch,

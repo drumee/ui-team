@@ -27,6 +27,61 @@
   &__content-main {
     width: 100%;
     height: 100%;
+    // Containing block for the selected chip below.
+    position: relative;
+
+    // Selected chip (content/row): "N selected  x" floating over the bottom
+    // of the list while rows are ticked; core _syncRowSelectAll writes the
+    // count. Indigo of the select-all box (mixins/list-check) so the two read
+    // as one control. Hidden at a count of 0 — at (0,3,0), because
+    // `.drumee-widget[data-flow]` sets display:flex at (0,2,0) on every Box.
+    .window__selected-chip {
+      position: absolute;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      z-index: 101;
+      align-items: center;
+      gap: 8px;
+      height: 32px;
+      padding: 0 8px 0 14px;
+      border-radius: 16px;
+      background: #433cc5;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(11, 10, 33, 0.24);
+      white-space: nowrap;
+      font-size: 13px;
+      line-height: 18px;
+    }
+
+    .window__selected-chip[data-count="0"] {
+      display: none;
+    }
+
+    .window__selected-chip-label {
+      font-weight: 500;
+    }
+
+    .window__selected-chip-clear {
+      width: 20px;
+      height: 20px;
+      padding: 4px;
+      box-sizing: border-box;
+      border-radius: 50%;
+      cursor: pointer;
+      color: #fff;
+      fill: currentColor;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      svg {
+        width: 100%;
+        height: 100%;
+        fill: currentColor;
+      }
+    }
   }
 
   &__split-body {

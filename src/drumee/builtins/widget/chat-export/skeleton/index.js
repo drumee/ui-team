@@ -307,11 +307,21 @@ function _formatCard(pfx, ui, fmt, active) {
   // The existing set-format service + uiHandler wire is preserved.
   // One row: the icon (format-card-top) on the left, then a text column with
   // the title and the subtitle, each on a single line.
+  //
+  // EVERY descendant is `active: 0`, not just the direct kids: `kidsOpt` only
+  // reaches direct kids, and any widget left active binds its own click
+  // handler that stopPropagation()s before the card's service can fire. The
+  // icon, the title and the subtitle were all left active, so a click on them
+  // was swallowed and only a click on the card's padding switched the format —
+  // the "intermittently unresponsive" PDF/JSON choice.
+  //
+  // data-format lets index.js _setFormat flip the selection in place.
   return Skeletons.Box.X({
     className: `${pfx}__format-card${active ? " is-active" : ""}`,
     service: "set-format",
     format: fmt,
     uiHandler: [ui],
+    attrOpt: { "data-format": fmt },
     kidsOpt: { active: 0 },
     kids: [
       Skeletons.Box.X({
@@ -319,10 +329,12 @@ function _formatCard(pfx, ui, fmt, active) {
         kids: [
           Skeletons.Box.Y({
             className: `${pfx}__format-icon-box${active ? " is-active" : ""}`,
+            active: 0,
             kids: [
               Skeletons.Image.Svg({
                 ico,
                 className: `${pfx}__format-icon`,
+                active: 0,
               }),
             ],
           }),
@@ -335,10 +347,12 @@ function _formatCard(pfx, ui, fmt, active) {
           Skeletons.Note({
             className: `${pfx}__format-title${active ? " is-active" : ""} ${pfx}__format-title--bold`,
             content: title,
+            active: 0,
           }),
           Skeletons.Note({
             className: `${pfx}__format-subtitle`,
             content: subtitle,
+            active: 0,
           }),
         ],
       }),

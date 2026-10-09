@@ -198,6 +198,41 @@
   }
 }
 
+// File tile rename: the field sits in meta-row-top in place of the name, next
+// to the "..." button (grid/index.js _createInput stamps data-inline). Same
+// type as the name it replaces, one line, and a real input look — a border in
+// the brand colour with a soft focus ring — instead of a bare textarea.
+// (0,4,0): the base &__input rule above and the meta-row rules are (0,2,0).
+.media-grid .media-grid__meta-row-top > .media-grid__input[data-inline="1"] {
+  position: relative;
+  bottom: auto;
+  z-index: auto;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+
+  textarea {
+    display: block;
+    width: 100%;
+    height: 26px !important;
+    min-height: 0;
+    padding: 4px 8px;
+    border: 1px solid var(--primary-purple-40, #5950ff);
+    border-radius: 6px;
+    box-shadow: 0 0 0 3px rgba(89, 80, 255, 0.15);
+    outline: 0;
+    cursor: text;
+    white-space: pre;
+    overflow: hidden;
+    font-family: "Geist", sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--grid-color-name, var(--default-text-color));
+    text-decoration: none;
+  }
+}
+
 html[data-theme="dark"] .media-grid {
   &__input {
     textarea {

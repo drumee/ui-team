@@ -539,10 +539,13 @@ class __calendar_main extends LetcBox {
       case (SERVICE.task && SERVICE.task.update_status) || "task.update_status":
       case (SERVICE.task && SERVICE.task.update_assignee) || "task.update_assignee":
       case (SERVICE.task && SERVICE.task.delete) || "task.delete":
-      // Meetings push on room.scheduled (room.js _notify_invitees). Note it
-      // targets INVITEES, so a hub meeting the viewer is not invited to still
-      // only appears on the next view change.
+      // Meetings push on room.scheduled to new INVITEES (room.js
+      // _notify_invitees), and on room.book / room.update / room.remove to
+      // every socket on the meeting's hub (room.js _broadcast).
       case "room.scheduled":
+      case "room.book":
+      case "room.update":
+      case "room.remove":
         this._scheduleReload();
         return;
       default:

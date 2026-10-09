@@ -503,3 +503,105 @@
     }
   }
 }
+
+// ── Pinned participant on the main stage ───────────────────────────────────
+//
+// window_meeting._layoutPinStage stamps `data-pin-stage` on the window root
+// while a tile is pinned and NO screen is shared (a share owns the stage; the
+// pinned person then takes the share strip's first slot instead):
+//   column — the pinned camera, then a 264px column of the others on the right.
+//   row    — side panel open beside the stage, or a narrow window: the others
+//            in a 163px row under the pinned camera.
+//   solo   — nobody else in the call: the pinned camera alone.
+// Same 4-slot plan as the share strip: over four others, three tiles and a
+// "+N" (the manager's ::after, text from data-more). Inline `order` puts the
+// pinned tile first; the others' slots come from data-strip-hidden.
+//
+// The participants manager carries inline grid templates from its own
+// responsive() and the base skin absolutely positions the local tile in a
+// 1:1 call, hence the !important. Not while parked: the corner tile keeps the
+// plain grid.
+.window-meeting__ui[data-pin-stage]:not([data-call-tile="1"])
+  .window-meeting__endpoints
+  .participants-manager__ui {
+  display: grid !important;
+  gap: 10px;
+  padding: 0 !important;
+  overflow: hidden !important;
+  align-content: stretch !important;
+  justify-content: stretch !important;
+  align-self: stretch !important;
+  grid-auto-rows: 0 !important;
+  grid-auto-columns: 0 !important;
+
+  > [data-kind="webrtc_local_user"],
+  > [data-kind="webrtc_remote_user"] {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    aspect-ratio: auto !important;
+    z-index: auto !important;
+    border-radius: 16px;
+    overflow: hidden;
+    // So the camera-off avatar sizes off the tile, not the viewport.
+    container-type: size;
+
+    &[data-strip-hidden="1"] {
+      display: none !important;
+    }
+
+    .user-profile__ui {
+      width: min(53cqh, 120px) !important;
+      height: min(53cqh, 120px) !important;
+    }
+  }
+
+  > [data-pinned="1"] {
+    grid-area: stage !important;
+  }
+
+  &[data-more]:not([data-more=""])::after {
+    content: attr(data-more);
+    order: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 0;
+    border-radius: 16px;
+    background: rgba(20, 17, 35, 0.72);
+    color: #fff;
+    font-family: var(--font-main);
+    font-size: 24px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+
+.window-meeting__ui[data-pin-stage="column"]:not([data-call-tile="1"])
+  .window-meeting__endpoints
+  .participants-manager__ui {
+  grid-template-columns: minmax(0, 1fr) 264px !important;
+  grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-areas: "stage a" "stage b" "stage c" "stage d" !important;
+}
+
+.window-meeting__ui[data-pin-stage="row"]:not([data-call-tile="1"])
+  .window-meeting__endpoints
+  .participants-manager__ui {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-rows: minmax(0, 1fr) 163px !important;
+  grid-template-areas: "stage stage stage stage" "a b c d" !important;
+}
+
+.window-meeting__ui[data-pin-stage="solo"]:not([data-call-tile="1"])
+  .window-meeting__endpoints
+  .participants-manager__ui {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  grid-template-areas: "stage" !important;
+}

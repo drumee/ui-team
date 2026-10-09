@@ -1811,6 +1811,75 @@
     white-space: nowrap;
   }
 
+  // ── PINNED section (desk _groupWorkspaces / _pinnedWorkspaceRow) ──────────
+  // A heading with its pin glyph, then rows that end in the pin (press =
+  // unpin) and a drag grip. Pin red as in Lexis' mock.
+  &__ws-section--pinned {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__ws-section-pin {
+    width: 12px;
+    height: 12px;
+    color: var(--error);
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  &__ws-item-unpin {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: var(--error);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  &__ws-item-grip {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-50);
+    cursor: grab;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  // While a pinned row is dragged: the row itself fades, and the row under
+  // the pointer shows a line on the side it will land.
+  &__ws-item--pinned {
+    &[data-pin-dragging="1"] {
+      opacity: 0.4;
+    }
+
+    &[data-pin-drop="before"] {
+      box-shadow: inset 0 2px 0 var(--primary-40);
+    }
+
+    &[data-pin-drop="after"] {
+      box-shadow: inset 0 -2px 0 var(--primary-40);
+    }
+  }
+
   &__ws-empty {
     padding: 10px;
     font-size: 12px;

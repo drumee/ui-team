@@ -320,9 +320,13 @@ function memberRows(list, ui, pfx, isAdmin) {
  * null in that case and UserProfile draws its initials-on-colour placeholder
  * from whatever name it is given.
  */
-function invitationRows(list, pfx) {
+function invitationRows(list, pfx, ui) {
+  const selecting = !!ui._invitationSelecting;
+  const selected = ui._invitationSelected || new Set();
+  const busy = ui._invitationBusy || new Set();
   return list.map((row, index) => {
     const email = String(row.email || "");
+    const key = email.trim().toLowerCase();
     const name = String(row.invitee_fullname || "").trim() || email;
     const inviter = String(row.inviter_fullname || "").trim();
     const when = row.ctime ? Dayjs.unix(Number(row.ctime)).fromNow() : "";
@@ -340,10 +344,28 @@ function invitationRows(list, pfx) {
       ? LOCALE.INVITED_AGO_BY.format(when, inviter)
       : "";
     const declined = row.status === "declined";
+    const checked = selecting && selected.has(key);
     return Skeletons.Box.X({
       className: `${pfx}__invitation-row`,
-      dataset: { index, status: row.status || "pending" },
+      dataset: {
+        index,
+        status: row.status || "pending",
+        selecting: selecting ? "1" : "0",
+        checked: checked ? "1" : "0",
+      },
+      // Select mode: the whole row is the checkbox's hit area, the way a
+      // mail client's list is — aiming at a 20px box on each line is the
+      // tedious part of selecting several.
+      ...(selecting ? { service: "toggle-invitation", uiHandler: [ui] } : {}),
       kids: [
+        selecting
+          // Drawn only: the ROW carries the service. A service here as well
+          // would toggle twice on one click (box, then the row it sits in).
+          ? Skeletons.Image.Svg({
+            className: `${pfx}__invitation-check`,
+            ico: checked ? "ph-check-square-fill" : "ph-square",
+          })
+          : null,
         Skeletons.Box.X({
           className: `${pfx}__invitation-info`,
           kids: [
@@ -379,10 +401,13 @@ function invitationRows(list, pfx) {
           kids: [
             Skeletons.Image.Svg({
               className: `${pfx}__invitation-badge-ico`,
-              // Phosphor Clock / XCircle, as in Figma. NOT `clock`: that is
-              // a solid Illustrator dial whose fills the sprite strips, so it
-              // drew as a filled blob rather than an outlined clock.
-              ico: declined ? "noti-x-circle" : "apps-clock",
+              // Phosphor Clock / XCircle, as in Figma, from the 256 set like
+              // the row's X and arrow. NOT `clock` (a solid Illustrator dial
+              // the sprite strips to a blob), and no longer `apps-clock` /
+              // `noti-x-circle`: their paths sit off-centre in their viewBox
+              // (apps-clock's ink is the top-left 11 of 21 units), so the
+              // glyph drew small and high beside the word.
+              ico: declined ? "ph-x-circle" : "ph-clock",
             }),
             Skeletons.Note({
               className: `${pfx}__invitation-badge-text`,
@@ -390,8 +415,101 @@ function invitationRows(list, pfx) {
             }),
           ],
         }),
-      ],
+        // Cancel and Resend (Figma pd1): a red-washed X and a grey
+        // counter-clockwise arrow beside the badge. Hidden while selecting —
+        // the selection has its own Cancel in the section head, and two ways
+        // to cancel on one line invite the wrong one.
+        //
+        // Tooltips through attrOpt `title`, NOT ui-core `tooltips`: that one
+        // is a CHILD node of the button and draws inside the row (the pin
+        // feature's tooltip widened its row into a scrollbar).
+        //
+        // data-pending while this address has a request in flight: the
+        // spinner, and the handlers refuse a second press on the same row.
+        selecting
+          ? null
+          : Skeletons.Button.Svg({
+            className: `${pfx}__invitation-action ${pfx}__invitation-cancel`,
+            ico: "ph-x",
+            service: "cancel-invitation",
+            dataset: busy.has(key) ? { index, pending: "1" } : { index },
+            attrOpt: {
+              title: LOCALE.CANCEL_INVITATION,
+              "aria-label": LOCALE.CANCEL_INVITATION,
+            },
+            uiHandler: [ui],
+          }),
+        selecting
+          ? null
+          : Skeletons.Button.Svg({
+            className: `${pfx}__invitation-action ${pfx}__invitation-resend`,
+            ico: "ph-arrow-counter-clockwise",
+            service: "resend-invitation",
+            dataset: busy.has(key) ? { index, pending: "1" } : { index },
+            attrOpt: {
+              title: LOCALE.RESEND_INVITATION,
+              "aria-label": LOCALE.RESEND_INVITATION,
+            },
+            uiHandler: [ui],
+          }),
+      ].filter(Boolean),
     });
+  });
+}
+
+/**
+ * The Pending Invitations heading, with the selection controls beside it.
+ *
+ * "Select" appears only when there are at least two rows — selecting one of
+ * one is what the row's own X is for. In select mode the head offers
+ * "Cancel (n)" for the ticked rows, disabled at zero, and "Done" to leave.
+ */
+function invitationsHead(ui, pfx, invitations) {
+  const selecting = !!ui._invitationSelecting;
+  const count = (ui._invitationSelected || new Set()).size;
+  const controls = [];
+  if (selecting) {
+    controls.push(
+      Skeletons.Note({
+        className: `${pfx}__invitations-bulk-cancel`,
+        content: LOCALE.CANCEL_SELECTED_INVITATIONS.format(count),
+        service: "cancel-selected-invitations",
+        dataset: ui._invitationBulkBusy
+          ? { disabled: count ? "0" : "1", pending: "1" }
+          : { disabled: count ? "0" : "1" },
+        uiHandler: [ui],
+      }),
+      Skeletons.Note({
+        className: `${pfx}__invitations-select`,
+        content: LOCALE.DONE,
+        service: "toggle-invitation-select",
+        uiHandler: [ui],
+      }),
+    );
+  } else if (invitations.length > 1) {
+    controls.push(
+      Skeletons.Note({
+        className: `${pfx}__invitations-select`,
+        content: LOCALE.SELECT,
+        service: "toggle-invitation-select",
+        uiHandler: [ui],
+      }),
+    );
+  }
+  return Skeletons.Box.X({
+    className: `${pfx}__invitations-head`,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__section-title`,
+        content: `${LOCALE.PENDING_INVITATIONS} (${invitations.length})`,
+      }),
+      controls.length
+        ? Skeletons.Box.X({
+          className: `${pfx}__invitations-controls`,
+          kids: controls,
+        })
+        : null,
+    ].filter(Boolean),
   });
 }
 
@@ -971,15 +1089,12 @@ function workspaceCard(ui, pfx, memberCount) {
     ? Skeletons.Box.Y({
       className: `${pfx}__invitations-section`,
       kids: [
-        Skeletons.Note({
-          className: `${pfx}__section-title`,
-          content: `${LOCALE.PENDING_INVITATIONS} (${invitations.length})`,
-        }),
+        invitationsHead(ui, pfx, invitations),
         Skeletons.Note({
           className: `${pfx}__section-hint`,
           content: LOCALE.PENDING_INVITATIONS_HINT,
         }),
-        ...invitationRows(invitations, pfx),
+        ...invitationRows(invitations, pfx, ui),
       ],
     })
     : null;

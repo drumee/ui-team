@@ -25,6 +25,7 @@ const { hubCounts, latestTime } = require('./hub-counts');
 require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { ownWorkspaceName } = require('libs/workspace-label');
 
 class __panel_activity extends LetcBox {
   constructor(...args) {
@@ -2508,6 +2509,10 @@ class __panel_activity extends LetcBox {
     this._meetingItems = (this._meetingItems || []).filter(m => m.item_key !== key);
     this._meetingItems.unshift({
       ...data,
+      // The push carries the workspace's shared name (yp.hub profile), which
+      // a desk rename never writes. Name it the way this desk does, as the
+      // stored rollup for the same meeting will after the next refresh.
+      hub_name: ownWorkspaceName(hub_id) || data.hub_name,
       kind: 'activity_item',
       category: 'meeting',
       type: 'meeting',

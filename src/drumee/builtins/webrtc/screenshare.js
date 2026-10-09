@@ -78,6 +78,8 @@ module.exports = {
     if (__room.prototype.prepareRemoteScreen) {
       __room.prototype.prepareRemoteScreen.call(this, args);
     }
+    // Remember who is presenting, so a blocked share can name them.
+    if (args && args.username) this._presenterName = String(args.username).trim();
     // Dock the tiles into the float overlay so the shared screen owns the stage.
     this._dockParticipants(true);
     // One screen at a time — lock our own share control while a REMOTE peer is
@@ -115,6 +117,7 @@ module.exports = {
     }
     this._dockParticipants(false);
     this._setShareLocked(false);
+    this._presenterName = null;
     if (this._currentPresenterUid) {
       if (this._setMemberPresenting) {
         this._setMemberPresenting(this._currentPresenterUid, false);
@@ -138,6 +141,7 @@ module.exports = {
     if (wasPresenter) {
       this._setShareLocked(false);
       this._currentPresenterUid = null;
+      this._presenterName = null;
     }
   },
 
@@ -155,6 +159,37 @@ module.exports = {
         ? (LOCALE.SCREEN_SHARE_BUSY || "Someone is already sharing their screen")
         : (LOCALE.SHARE_SCREEN || "Share screen"),
     );
+  },
+
+  // B clicked Share while A is presenting. The click is blocked; say why
+  // instead of doing nothing: "You can't share now because A is sharing screen."
+  // The button is a toggle, so it already flipped to "sharing" before
+  // onUiEvent ran — put it back.
+  _explainShareLocked(cmd) {
+    if (cmd && typeof cmd.setState === "function") cmd.setState(0);
+    const name = this._presenterName || this._presenterNameFromStage();
+    const msg = name
+      ? LOCALE.CANT_SHARE_X_IS_SHARING.format(name)
+      : LOCALE.SCREEN_SHARE_BUSY;
+    if (typeof Wm !== "undefined" && Wm && Wm.alert) Wm.alert(msg);
+  },
+
+  // Name of whoever owns the presenter stage, for a late joiner whose
+  // START_REMOTE_SCREEN never arrived (prepareRemoteScreen got no username).
+  _presenterNameFromStage() {
+    try {
+      const p = this.__presenter;
+      const child = p && p.children && p.children.last && p.children.last();
+      if (!child || (child.isDestroyed && child.isDestroyed())) return null;
+      const pid = child.mget && child.mget("participant_id");
+      const ep = pid && this.endpoints && this.endpoints[pid];
+      const name =
+        (ep && !ep.isDestroyed() && ep.mget(_a.username)) ||
+        (child.mget && child.mget(_a.username));
+      return name ? String(name).trim() || null : null;
+    } catch (e) {
+      return null;
+    }
   },
 
   _toggleScreenShareFullscreen() {
@@ -200,6 +235,9 @@ module.exports = {
         this._participantsHome.dataset.docked = toPanel ? "1" : "0";
       }
       if (toPanel) {
+        // A pinned camera gives the stage up to the shared screen (meeting
+        // only). Before the share strip lays out, so it does not undo it.
+        if (this._layoutPinStage) this._layoutPinStage();
         if (this._updateFloatFocus) this._updateFloatFocus();
       } else {
         if (this._clearFloatFocus) this._clearFloatFocus();
@@ -208,6 +246,9 @@ module.exports = {
         if (typeof participants.responsive === "function") {
           participants.responsive("normal");
         }
+        // ...and the pinned camera takes the stage back. After the share strip
+        // is cleared, since both write the same tile attributes.
+        if (this._layoutPinStage) this._layoutPinStage();
       }
     } catch (e) {
       if (this.warn) this.warn("dock participants failed", e);

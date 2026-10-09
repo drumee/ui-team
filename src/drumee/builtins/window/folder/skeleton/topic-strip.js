@@ -1,49 +1,26 @@
 /**
- * Files-tab chat topic strip (Figma 869:191968): the tabs under the "Team
- * Chat" header — #General and one per topic — as a carousel of PAGE_SIZE tabs
- * between a back and a next button (only when there is more than one page),
- * then "Create topic" (styled like the
- * folder toolbar's "+ New" primary button) at the far end. No All tab.
+ * Files-tab chat topic strip (Figma 775:130783): the tabs under the "Team
+ * Chat" header — #General and one per topic — in one row that scrolls
+ * sideways when it overflows, then "+ Create topic" pinned after it (always
+ * in view). No All tab.
  *
  * Fed into the chat panel's "topic-strip" part by window/folder/topics.js
- * (paintStrip), which keeps the page; the scope is shared with the Chat-tab
- * rail (`topicId`: "general" or a topic id; a legacy "all" reads as
- * #General).
- *
- * @param {Object} ui folder window
- * `slide` ("next" | "prev") stamps the page so the skin slides it in from
- * that side (a page change only; topics.js decides).
+ * (paintStrip); the scope is shared with the Chat-tab rail (`topicId`:
+ * "general" or a topic id; a legacy "all" reads as #General). After each
+ * feed the caller runs `reveal(part)` to scroll the picked tab into view.
  *
  * `group` overrides the class family (the Inbox builds the window__ strip).
  *
- * `pageSize` overrides PAGE_SIZE (the Inbox pages by 4).
- *
- * @param {{ topics?: Array, topicId?: string, canCreateTopic?: any, page?: number, pageSize?: number, slide?: string, group?: string }} opt
+ * @param {Object} ui folder window
+ * @param {{ topics?: Array, topicId?: string, canCreateTopic?: any, group?: string }} opt
  * @returns {Array} kids of the strip
  */
-const PAGE_SIZE = 3;
-
-// The strip's items in order: #General, then the topics.
-function entries(topics) {
-  return [{ general: true }, ...(Array.isArray(topics) ? topics : [])];
-}
-
-/** The page (of `size` tabs) that shows `topicId` ("general" / a topic id); 0 when absent. */
-function pageOf(topics, topicId, size = PAGE_SIZE) {
-  const id = topicId && topicId !== "all" ? `${topicId}` : "general";
-  const i = entries(topics).findIndex((e) => (e.general ? id === "general" : `${e.id}` === id));
-  return i < 0 ? 0 : Math.floor(i / (Number(size) || PAGE_SIZE));
-}
-
 function topicStrip(ui, opt = {}) {
   // `group`: the class family — the Inbox builds the folder's window__ strip.
   const grp = opt.group || ui.fig.group;
   const pfx = `${grp}__topic`;
   const topicId = opt.topicId && opt.topicId !== "all" ? `${opt.topicId}` : "general";
-  const all = entries(opt.topics);
-  const size = Math.max(1, Number(opt.pageSize) || PAGE_SIZE);
-  const pages = Math.max(1, Math.ceil(all.length / size));
-  const page = Math.min(Math.max(0, Number(opt.page) || 0), pages - 1);
+  const topics = Array.isArray(opt.topics) ? opt.topics : [];
 
   const tab = (attrs, kids, active) =>
     Skeletons.Box.X({
@@ -56,60 +33,34 @@ function topicStrip(ui, opt = {}) {
     });
   const label = (content) => Skeletons.Note({ className: `${pfx}-tab-name`, content });
 
-  const tabs = all.slice(page * size, page * size + size).map((e) =>
-    e.general
-      ? // Same service as the rail's # General row (topic_scope marks the pick).
-        tab(
-          { service: "thread-menu-general", topic_scope: "general", className: `${pfx}-tab ${pfx}-tab--general` },
-          [label(`#${LOCALE.GENERAL || "General"}`)],
-          topicId === "general",
-        )
-      : tab(
-          { service: "topic-menu-topic", topic_id: `${e.id || ""}`, topic_name: e.name || "" },
-          [Skeletons.Note({ className: `${pfx}-tab-emoji`, content: e.emoji || "" }), label(e.name || "")],
-          topicId === `${e.id}`,
-        ),
-  );
+  const tabs = [
+    // Same service as the rail's # General row (topic_scope marks the pick).
+    tab(
+      { service: "thread-menu-general", topic_scope: "general", className: `${pfx}-tab ${pfx}-tab--general` },
+      [label(`#${LOCALE.GENERAL || "General"}`)],
+      topicId === "general",
+    ),
+    ...topics.map((e) =>
+      tab(
+        { service: "topic-menu-topic", topic_id: `${e.id || ""}`, topic_name: e.name || "" },
+        [Skeletons.Note({ className: `${pfx}-tab-emoji`, content: e.emoji || "" }), label(e.name || "")],
+        topicId === `${e.id}`,
+      ),
+    ),
+  ];
 
-  const arrow = (service, ico, disabled) =>
-    Skeletons.Button.Svg({
-      className: `${pfx}-arrow`,
-      ico,
-      service,
-      uiHandler: [ui],
-      dataset: { disabled: disabled ? "1" : "0" },
-    });
-
-  // `full`: a page holding a whole PAGE_SIZE of tabs is centred, a short one
-  // (the last page, or a folder with few topics) starts at the left (skin).
-  const pageBox = Skeletons.Box.X({
-    className: `${pfx}-page`,
-    dataset: {
-      slide: opt.slide === "next" || opt.slide === "prev" ? opt.slide : "none",
-      full: tabs.length === size ? "1" : "0",
-    },
-    kids: tabs,
-  });
-  // The arrows only when there is another page to go to: a single page has
-  // nothing to page through, so it draws none rather than two dead buttons.
-  const kids =
-    pages > 1
-      ? [
-          arrow("topic-strip-prev", "caret-left", page <= 0),
-          pageBox,
-          arrow("topic-strip-next", "caret-right", page >= pages - 1),
-        ]
-      : [pageBox];
+  // The scroller: every tab, overflow scrolls sideways (skin).
+  const kids = [Skeletons.Box.X({ className: `${pfx}-page`, kids: tabs })];
   if (opt.canCreateTopic) {
     kids.push(
       Skeletons.Box.X({
-        className: `${pfx}-tab ${pfx}-tab--create ${grp}-button__label-button primary`,
+        className: `${pfx}-tab ${pfx}-tab--create`,
         service: "topic-new",
         uiHandler: [ui],
         kidsOpt: { active: 0 },
         kids: [
           Skeletons.Image.Svg({ className: `${pfx}-create-ico`, ico: "ph-plus" }),
-          Skeletons.Note({ className: `${pfx}-create-label`, content: LOCALE.TOPIC || "Topic" }),
+          Skeletons.Note({ className: `${pfx}-create-label`, content: LOCALE.CREATE_TOPIC || "Create topic" }),
         ],
       }),
     );
@@ -117,6 +68,113 @@ function topicStrip(ui, opt = {}) {
   return kids;
 }
 
+const PAGE = '[class*="__topic-page"]';
+
+/** Stamp which edges hide more tabs (data-fade: none|start|end|both; skin fades them). */
+function edges(page) {
+  if (!page || !page.dataset) return;
+  const max = page.scrollWidth - page.clientWidth;
+  const start = page.scrollLeft > 1;
+  const end = max > 1 && page.scrollLeft < max - 1;
+  page.dataset.fade = start && end ? "both" : start ? "start" : end ? "end" : "none";
+}
+
+/**
+ * Desktop scrolling for the page, bound once on the strip's own element
+ * (it outlives its feeds; every listener is delegated): a plain mouse wheel
+ * scrolls it sideways (a trackpad / shift-wheel already does), a press-and-
+ * drag pans it (the scrollbar is hidden), and the edge fades follow scroll
+ * and resize.
+ */
+function bind(el) {
+  if (el._topicScroll || typeof el.addEventListener !== "function") return;
+  const pageOf = (e) => e.target && e.target.closest && e.target.closest(PAGE);
+  const wheel = (e) => {
+    const page = pageOf(e);
+    if (!page || page.scrollWidth <= page.clientWidth) return;
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    page.scrollLeft += e.deltaY;
+    e.preventDefault();
+  };
+
+  let drag = null;
+  const move = (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    // A small tolerance so a plain click on a tab stays a click.
+    if (!drag.moved && Math.abs(dx) < 4) return;
+    drag.moved = true;
+    drag.page.style.scrollBehavior = "auto";
+    drag.page.scrollLeft = drag.left - dx;
+    e.preventDefault();
+  };
+  const up = () => {
+    if (!drag) return;
+    document.removeEventListener("mousemove", move, true);
+    document.removeEventListener("mouseup", up, true);
+    drag.page.style.scrollBehavior = "";
+    delete drag.page.dataset.panning;
+    // A pan ends with a click on whatever tab is under the pointer: swallow it.
+    if (drag.moved) {
+      const swallow = (ev) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+      };
+      el.addEventListener("click", swallow, { capture: true, once: true });
+      setTimeout(() => el.removeEventListener("click", swallow, true), 0);
+    }
+    drag = null;
+  };
+  const down = (e) => {
+    if (e.button !== 0) return;
+    const page = pageOf(e);
+    if (!page || page.scrollWidth <= page.clientWidth) return;
+    drag = { page, x: e.clientX, left: page.scrollLeft, moved: false };
+    page.dataset.panning = "1";
+    document.addEventListener("mousemove", move, true);
+    document.addEventListener("mouseup", up, true);
+  };
+  // scroll does not bubble: listen in the capture phase.
+  const scroll = (e) => {
+    if (e.target && e.target.matches && e.target.matches(PAGE)) edges(e.target);
+  };
+
+  el.addEventListener("wheel", wheel, { passive: false });
+  el.addEventListener("mousedown", down);
+  el.addEventListener("scroll", scroll, true);
+  if (typeof ResizeObserver === "function") {
+    new ResizeObserver(() => edges(el.querySelector(PAGE))).observe(el);
+  }
+  el._topicScroll = true;
+}
+
+/**
+ * After a feed: bind the page's scrolling, scroll the picked tab into view
+ * and stamp the edge fades.
+ *
+ * @param {Object} part the "topic-strip" part
+ */
+function reveal(part) {
+  const el = part && part.el;
+  if (!el || typeof el.querySelector !== "function") return;
+  bind(el);
+  const run = () => {
+    const page = el.querySelector(PAGE);
+    const tab = page && page.querySelector('[data-active="1"]');
+    if (tab) {
+      const box = page.getBoundingClientRect();
+      const r = tab.getBoundingClientRect();
+      const left = r.left - box.left + page.scrollLeft;
+      const right = left + r.width;
+      if (left < page.scrollLeft) page.scrollLeft = left;
+      else if (right > page.scrollLeft + page.clientWidth) page.scrollLeft = right - page.clientWidth;
+    }
+    edges(page);
+  };
+  // The fed kids render on the next frame.
+  if (typeof requestAnimationFrame === "function") requestAnimationFrame(run);
+  else run();
+}
+
 module.exports = topicStrip;
-module.exports.pageOf = pageOf;
-module.exports.PAGE_SIZE = PAGE_SIZE;
+module.exports.reveal = reveal;

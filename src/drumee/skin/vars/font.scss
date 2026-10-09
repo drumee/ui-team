@@ -1,12 +1,22 @@
 :root {
-  --font-light: "Armin Grotesk", sans-serif;
-  --font-light-italic: "Armin Grotesk", sans-serif;
-  --font-main: "Armin Grotesk", sans-serif;
-  --font-italic: "Armin Grotesk", sans-serif;
-  --font-medium: "Armin Grotesk", sans-serif;
-  --font-medium-italic: "Armin Grotesk", sans-serif;
-  --font-bold: "Armin Grotesk", sans-serif;
-  --font-bold-italic: "Armin Grotesk", sans-serif;
+  // Armin Grotesk has no Vietnamese coverage: ơ ư, the dot-below and hook
+  // tones (ạ ả ế ộ ự …) and the combining U+0309/U+0323 marks are missing from
+  // every weight, while â ê ô đ à á ã are present. The browser draws each missing
+  // letter in the next family of the stack, so "Thiết kế ưu tiên" mixes two
+  // fonts. A bare `sans-serif` resolves to Arial on Windows / DejaVu on Linux,
+  // whose bold is far heavier than Armin's 600 — the "font issue" seen while
+  // typing a Vietnamese task title. These system faces all carry full
+  // Vietnamese and sit much closer to Armin in shape and weight.
+  --font-fallback: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont,
+    Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-light: "Armin Grotesk", var(--font-fallback);
+  --font-light-italic: "Armin Grotesk", var(--font-fallback);
+  --font-main: "Armin Grotesk", var(--font-fallback);
+  --font-italic: "Armin Grotesk", var(--font-fallback);
+  --font-medium: "Armin Grotesk", var(--font-fallback);
+  --font-medium-italic: "Armin Grotesk", var(--font-fallback);
+  --font-bold: "Armin Grotesk", var(--font-fallback);
+  --font-bold-italic: "Armin Grotesk", var(--font-fallback);
 
   --main-typo-light: --font-light;
   --main-typo: --font-main;

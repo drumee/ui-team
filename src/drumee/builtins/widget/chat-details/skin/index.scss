@@ -57,7 +57,7 @@
   // page's body each scroll on their own.
   overflow: hidden;
   background: var(--normal-bg, #fff);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-default);
   border-radius: 8px;
   color: var(--normal-fg, #0b0a21);
 

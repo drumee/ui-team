@@ -100,7 +100,7 @@ module.exports = function (ui) {
   const checkbox = (state, service, taskId) =>
     Skeletons.Button.Svg({
       className: `${pfx}__list-check`,
-      ico: "app-check",
+      ico: "upload-checked",
       bubble: 0,
       service: canEdit ? service : null,
       uiHandler: canEdit ? [ui] : null,
@@ -192,7 +192,7 @@ module.exports = function (ui) {
       canEdit && !sub
         ? Skeletons.Button.Svg({
             className: `${pfx}__list-row-act ${pfx}__list-row-add`,
-            ico: "plus",
+            ico: "app-add",
             bubble: 0,
             service: "add-child-task",
             uiHandler: [ui],
@@ -513,9 +513,9 @@ function editorLayer(ui, edit) {
   });
 }
 
-const iconBtn = (pfx, ico, service, ui) =>
+const iconBtn = (pfx, ico, service, ui, mod) =>
   Skeletons.Button.Svg({
-    className: `${pfx}__list-pop-btn`,
+    className: `${pfx}__list-pop-btn${mod ? ` ${pfx}__list-pop-btn--${mod}` : ""}`,
     ico,
     bubble: 0,
     service,
@@ -544,14 +544,20 @@ function textEditor(ui, edit, task, pfx) {
         Skeletons.Box.X({
           className: `${pfx}__list-pop-btns`,
           kids: [
-            iconBtn(pfx, "app-check", "list-edit-save", ui),
+            iconBtn(pfx, "upload-checked", "list-edit-save", ui, "save"),
             iconBtn(pfx, "cross", "list-edit-cancel", ui),
           ],
         }),
       ],
     }),
     edit.error
-      ? Skeletons.Note({ className: `${pfx}__list-pop-error`, content: LOCALE.TASK_TITLE_REQUIRED })
+      ? Skeletons.Note({
+          className: `${pfx}__list-pop-error`,
+          content:
+            edit.error === "too-long"
+              ? LOCALE.TASK_TITLE_TOO_LONG
+              : LOCALE.TASK_TITLE_REQUIRED,
+        })
       : null,
   ].filter(Boolean);
 }

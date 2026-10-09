@@ -1,6 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
+  TITLE_MAX,
+  titleTooLong,
   fieldPatch,
   toggleUid,
   parseDateInput,
@@ -35,6 +37,20 @@ test("an empty title is refused", () => {
   assert.deepEqual(fieldPatch(task, "title", "   "), { error: "empty" });
 });
 
+test("a title over TITLE_MAX characters is refused; exactly the limit is sent", () => {
+  assert.equal(TITLE_MAX, 250);
+  assert.deepEqual(fieldPatch(task, "title", "a".repeat(251)), { error: "too-long" });
+  assert.equal(fieldPatch(task, "title", "a".repeat(250)).args.title, "a".repeat(250));
+});
+
+test("the limit counts characters, ignores edge spaces", () => {
+  // 250 emoji are 500 UTF-16 units but 250 characters — the varchar's unit.
+  assert.equal(titleTooLong("😀".repeat(250)), false);
+  assert.equal(titleTooLong("😀".repeat(251)), true);
+  assert.equal(titleTooLong(`  ${"a".repeat(250)}  `), false);
+  assert.equal(titleTooLong(""), false);
+});
+
 test("task.update always carries both current dates", () => {
   const p = fieldPatch(task, "priority", "high");
   assert.equal(p.service, "task.update");
@@ -52,10 +68,15 @@ test("status and assignees use their own services", () => {
 });
 
 test("date edits keep the range ordered", () => {
-  // Start past the due date drags the due date along (and collapses to one day).
+  // Start past the due date keeps the start and clears the due date, so the
+  // cell asks for a new one (due 3.10, start set to 5.10 -> start 5.10, no due).
   assert.deepEqual(fieldPatch(task, "start_date", "2026-06-20").args, {
-    due_date: "2026-06-20",
-    start_date: null,
+    due_date: null,
+    start_date: "2026-06-20",
+  });
+  assert.deepEqual(fieldPatch(task, "start_date", "2026-06-20").local, {
+    due_date: null,
+    start_date: "2026-06-20",
   });
   // Due before the start pulls the start in.
   assert.deepEqual(fieldPatch(task, "due_date", "2026-06-05").args, {

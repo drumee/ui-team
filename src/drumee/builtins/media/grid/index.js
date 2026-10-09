@@ -251,6 +251,32 @@ class __media_grid extends DrumeeMediaInteract {
   }
 
   /**
+   * Inline rename on a FILE tile. The shared editor (interact.js) is appended
+   * as the tile's last child and the skin pins it to the tile's bottom edge,
+   * so it opened below the name and away from the "..." button beside it.
+   * Put it where the name is — inside meta-row-top, before the kebab — and
+   * hide the name while it is up. `visibility: hidden` (what interact.js
+   * does) would keep the name's box and squeeze the field, hence display.
+   * Folder and workspace tiles keep their own layout.
+   */
+  async _createInput(value, opt) {
+    await super._createInput(value, opt);
+    const entry = this.children.last();
+    if (!entry || entry.isDestroyed() || !entry.el) return;
+    const type = this.mget(_a.filetype);
+    if (type === _a.folder || type === _a.hub) return;
+    const name = document.getElementById(`${this._id}-filename`);
+    const row = name && name.closest(`.${this.fig.family}__meta-row-top`);
+    if (!row) return;
+    row.insertBefore(entry.el, name);
+    entry.el.dataset.inline = "1";
+    name.style.display = "none";
+    entry.once(_e.destroy, () => {
+      name.style.display = "";
+    });
+  }
+
+  /**
    *
    */
   rowsCount(value) {

@@ -26,6 +26,10 @@
 // panel it is introducing teaches the wrong words.
 const VIEWS = [
   { key: 'board', label: () => LOCALE.TASK_VIEW_BOARD, ico: 'square-split-horizontal', build: require('./board') },
+  // The list needs no width of its own: its columns are fixed, so what decides
+  // whether Due date lands inside the crop is their widths — see
+  // `__ls-cell[data-col]` in ../skin/views.scss.
+  { key: 'list', label: () => LOCALE.TASK_VIEW_LIST, ico: 'app-task-list', build: require('./list') },
   { key: 'calendar', label: () => LOCALE.TASK_VIEW_CALENDAR, ico: 'calendar', build: require('./calendar') },
   // NARROWER, and this is the frame's doing rather than a fudge. The gantt's
   // chart divides the width it is given by its nine days (`pctOf` in
@@ -34,10 +38,6 @@ const VIEWS = [
   // the crop, which is 590 once the card's 0.62 is undone. At 1242 the same
   // nine days spread to 105px each and less than three of them fit.
   { key: 'gantt', label: () => LOCALE.TASK_VIEW_GANTT, ico: 'app-task-grant', build: require('./gantt'), w: 570 },
-  // The list needs no width of its own: its columns are fixed, so what decides
-  // whether Due date lands inside the crop is their widths — see
-  // `__ls-cell[data-col]` in ../skin/views.scss.
-  { key: 'list', label: () => LOCALE.TASK_VIEW_LIST, ico: 'app-task-list', build: require('./list') },
   // Its four stat tiles are `flex: 1`, so the window decides how much of the
   // third one the crop reaches. 146:40683 shows three and the edge of a
   // fourth, which is 760.

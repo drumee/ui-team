@@ -24,6 +24,7 @@ function makeJob(over = {}) {
     aborted: 0, uploads: [],
     trigger(name, ev) { events.push([name, ev]); },
     _clearWatchdog() {},
+    onAbort,
     _uploadOneFile(entry) { this.uploads.push(entry.id); },
     events,
     ...over,
@@ -84,4 +85,65 @@ test("_uploadEntry never starts a canceled file", async () => {
   assert.deepEqual(job.uploads, []);
   await uploadEntry.call(job, file({ id: "be_2" }), "n1");
   assert.deepEqual(job.uploads, ["be_2"]);
+});
+
+// Once the request body is fully sent, xhr.abort() fires no abort event, so
+// relying on it left the dropped file's promise unsettled: the job never moved
+// to the next file nor reported "done", and held the manager's only slot.
+test("dropping the in-flight file settles it even when abort() fires nothing", () => {
+  const e = file({ status: "uploading" });
+  let resolved = 0;
+  const job = makeJob();
+  job._current = { entry: e, loaded: 100, resolve: () => (resolved += 1) };
+  job._currentXhr = { abort() { job.aborted += 1; } };
+  cancelEntry.call(job, e);
+  assert.equal(job.aborted, 1);
+  assert.equal(resolved, 1, "the file's promise settles");
+  assert.equal(job._current, null);
+  assert.equal(e.status, "canceled", "keeps the dropped verdict, not 'skipped'");
+  assert.equal(job._canceled, false, "the rest of the bundle carries on");
+});
+
+test("dropping the in-flight file settles it once when abort() does fire", () => {
+  const e = file({ status: "uploading" });
+  let resolved = 0;
+  const job = makeJob();
+  job._current = { entry: e, loaded: 0, resolve: () => (resolved += 1) };
+  job._currentXhr = { abort() { job.onAbort(); } };
+  cancelEntry.call(job, e);
+  assert.equal(resolved, 1);
+  assert.equal(e.status, "canceled");
+});
+
+test("dropping a queued file leaves the in-flight one alone", () => {
+  const busy = file({ id: "be_busy", status: "uploading" });
+  let resolved = 0;
+  const job = makeJob();
+  job._current = { entry: busy, loaded: 10, resolve: () => (resolved += 1) };
+  job._currentXhr = { abort() { job.aborted += 1; } };
+  cancelEntry.call(job, file({ id: "be_2" }));
+  assert.equal(job.aborted, 0);
+  assert.equal(resolved, 0);
+  assert.equal(job._current.entry, busy);
+  assert.equal(busy.status, "uploading");
+});
+
+// A chunked handle settles its own pending chunks and reports onAbort LATER.
+// The bundle carries on after a dropped file, so settling here as well would
+// let that late onAbort land on whichever file started next.
+test("a dropped chunked upload is left for its own late onAbort", () => {
+  const e = file({ status: "uploading" });
+  let resolved = 0;
+  const job = makeJob();
+  job._current = { entry: e, loaded: 100, resolve: () => (resolved += 1) };
+  job._currentXhr = { chunked: true, abort() { job.aborted += 1; } };
+  cancelEntry.call(job, e);
+  assert.equal(job.aborted, 1);
+  assert.equal(resolved, 0, "not settled here");
+  assert.equal(job._current.entry, e, "still waiting on the dropped file");
+  // The handle's finish() → ctx.onAbort, a tick later: it settles THIS file.
+  job.onAbort();
+  assert.equal(resolved, 1);
+  assert.equal(e.status, "canceled");
+  assert.equal(job._current, null);
 });

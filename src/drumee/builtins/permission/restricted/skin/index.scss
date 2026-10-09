@@ -1209,13 +1209,18 @@ $gutter: 16px;
   // Declined ("Rejected" there) = Overlay/red + Signal/Error + XCircle.
   // data-status drives both, so one rule pair covers the two states and a
   // third could be added without touching the skeleton.
+  //
+  // 28px tall, 8px radius, icon 16, word 13 SemiBold — the same height as
+  // the X and arrow beside it, and compact enough that the name keeps its
+  // room in the 360px drawer (Duy, 2026-10-08).
   &__invitation-badge {
     align-items: center;
-    border-radius: 12px;
+    border-radius: 8px;
+    box-sizing: border-box;
     flex-shrink: 0;
-    gap: 4px;
-    // Figma Overlay+Border: 4px 12px 4px 8px.
-    padding: 2px 8px 2px 6px;
+    gap: 5px;
+    height: 28px;
+    padding: 0 10px 0 8px;
 
     // Figma's own pairs, to the value: Overlay/Orange rgba(232,161,59,.15)
     // over Signal/Warning #E8A13B, and Overlay/red rgba(255,106,101,.15) over
@@ -1234,27 +1239,166 @@ $gutter: 16px;
     }
   }
 
-  // Figma: the Clock / XCircle glyph is 17px wide. Its colour comes from the
-  // badge through currentColor — the sprite strips the source fills.
+  // Phosphor Clock / XCircle at 16px. Its colour comes from the badge through
+  // currentColor — the sprite strips the source fills.
   &__invitation-badge-ico {
     flex-shrink: 0;
-    height: 14px;
-    width: 14px;
+    height: 16px;
+    width: 16px;
 
     svg {
-      height: 14px;
-      width: 14px;
+      display: block;
+      height: 16px;
+      width: 16px;
       fill: currentColor;
     }
   }
 
   // Colour is INHERITED from the badge, which is what makes one data-status
   // rule tint the glyph and the word together.
-  // Figma: Buttons/Small Button 14 SemiBold, line 1.2em.
+  // 13 SemiBold.
+  //
+  // 🎯 OPTICAL CENTRING. Armin Grotesk's ascent/descent are lopsided (11/5 at
+  // 12px), so a line box centred on the badge puts the capitals ~2px HIGH of
+  // the icon's centre — the misalignment Duy saw. A 14px line box plus 4px on
+  // top lowers the glyphs by exactly that: measured on drumee.in (13px), badge
+  // centre = icon centre = cap-height centre, Pending and Declined alike. If
+  // the size changes, re-measure (baseline probe + canvas cap height).
   &__invitation-badge-text {
-    @include drumee.typo($size: 12px, $line: 1.2em, $weight: 500);
+    @include drumee.typo($size: 13px, $line: 14px, $weight: 500);
     font-weight: 600;
     white-space: nowrap;
+    box-sizing: border-box;
+    padding-top: 4px;
+    height: 18px;
+
+    .note-content {
+      line-height: 14px;
+    }
+  }
+
+  // ── Pending invitations: Cancel / Resend / Select (Figma pd1) ──
+  // Heading on the left, the selection controls on the right.
+  &__invitations-head {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  &__invitations-controls {
+    align-items: center;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+
+  // Text buttons in the head. "Select"/"Done" in the primary colour,
+  // "Cancel (n)" in Signal/Error — it withdraws invitations.
+  // $weight 500 + font-weight 600 for the typo() 600 trap.
+  &__invitations-select,
+  &__invitations-bulk-cancel {
+    @include drumee.typo($size: 13px, $line: 1.2em, $weight: 500);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  &__invitations-select {
+    color: var(--primary-50);
+  }
+
+  &__invitations-bulk-cancel {
+    color: var(--signal-error, #d74e49);
+
+    // Nothing ticked: shown, so the control is discoverable, but inert.
+    &[data-disabled="1"] {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+
+    &[data-pending="1"] {
+      cursor: progress;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+
+  // Select mode: the row is the checkbox's hit area (skeleton).
+  &__invitation-row[data-selecting="1"] {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  // Phosphor Square / CheckSquare (fill) at 20px, grey when empty and the
+  // primary colour when ticked.
+  &__invitation-check {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--tertiary-grey-80, #65656c);
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+  }
+
+  &__invitation-row[data-checked="1"] &__invitation-check {
+    color: var(--primary-50);
+  }
+
+  // The X and the arrow beside the badge. Figma: rounded squares, the
+  // X on Overlay/red with Signal/Error (the Declined badge's own pair), the
+  // arrow on a neutral grey.
+  &__invitation-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    // 28px square: the status badge's height, so badge, X and arrow line up
+    // as one even strip (Duy, 2026-10-08); 16px glyph like the badge's.
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 8px;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: background-color 120ms ease;
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    // In flight (index.js _invitationBusy): the actual disable is
+    // pointer-events; the handlers refuse a second press as well.
+    &[data-pending="1"] {
+      cursor: progress;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  &__invitation-cancel {
+    background: rgba(255, 106, 101, 0.15);
+    color: var(--signal-error, #d74e49);
+
+    &:hover {
+      background: rgba(255, 106, 101, 0.28);
+    }
+  }
+
+  &__invitation-resend {
+    background: var(--normal-bg-90, #f2f2f7);
+    color: var(--tertiary-grey-80, #65656c);
+
+    &:hover {
+      background: color-mix(in srgb, var(--normal-fg-10, #18181b) 10%, var(--normal-bg-90, #f2f2f7));
+    }
   }
 
   // ── Member rows ───────────────────────────────────────────────

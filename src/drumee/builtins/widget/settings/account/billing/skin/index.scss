@@ -2773,6 +2773,60 @@
   }
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// "Contact sales" dialog (skeleton/sales-mail)
+// ═════════════════════════════════════════════════════════════════════════════
+// Rendered inside window_info's notice card, outside this widget's DOM. Each
+// Note also carries `note-reader`, which the notice card styles as body text
+// through `.window-info__container .note-reader` (4 classes deep), so these
+// start from the same card and add one more class to win without !important.
+.window-info__ui[data-variant="notice"] .window-info__container .settings-billing__sales-mail {
+  &-main {
+    width: 100%;
+    gap: var(--spacer-3, 12px);
+  }
+
+  &-title.note-reader {
+    font-weight: 600;
+    font-size: 18px;
+    line-height: 24px;
+    color: var(--normal-fg-10);
+  }
+
+  // The address is the one thing every route needs, so it stays on screen and
+  // selectable even when none of the buttons suits the user.
+  &-address.note-reader {
+    font-weight: 600;
+    color: var(--primary-50, #433cc5);
+    user-select: text;
+    overflow-wrap: anywhere;
+  }
+
+  &-options {
+    width: 100%;
+    gap: var(--spacer-2, 8px);
+    margin-top: var(--spacer-1, 4px);
+  }
+
+  // Same outline treatment as the card's secondary button.
+  &-option.note-reader {
+    padding: 9px 16px;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 600;
+    border: 1px solid var(--neutral-300, rgba(0, 0, 0, 0.12));
+    border-radius: var(--corner-radius-2, 8px);
+    color: var(--normal-fg-10);
+    transition: background-color 120ms ease, border-color 120ms ease;
+
+    &:hover {
+      background-color: var(--normal-bg-100);
+      border-color: var(--primary-50, #433cc5);
+    }
+  }
+}
+
 // ── Reduced motion ───────────────────────────────────────────────────────────
 // Keep every state change, drop the movement.
 @media (prefers-reduced-motion: reduce) {

@@ -55,6 +55,7 @@ function detachWhenFaded(node) {
 
 const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
+const { withOwnWorkspaceName } = require("libs/workspace-label");
 
 class __push_manager extends winman {
 
@@ -121,6 +122,7 @@ class __push_manager extends winman {
         if (data.room_type == _a.meeting) {
           return this.dispatchRoom(data, options);
         }
+        if (this._seenInboundCall(data.room_id)) return;
         return this.dispatchInboundCall(data);
 
       case SERVICE.conference.join:
@@ -230,6 +232,14 @@ class __push_manager extends winman {
       // spot instead, and say who did it.
       case "hub.member_removed":
         return this.onWorkspaceAccessRevoked(data);
+
+      // The user's pinned workspaces changed in another tab or on another
+      // device (server drumate.pinned_workspaces). The desk redraws them.
+      case "drumate.pinned_workspaces":
+        if (typeof Desk !== "undefined" && Desk && _.isFunction(Desk._onPinsPushed)) {
+          Desk._onPinsPushed(data);
+        }
+        return;
       // case SERVICE.adminpanel.mimic_new:
       //   return this.loadMimicNew(data);
 
@@ -972,6 +982,8 @@ class __push_manager extends winman {
     try {
       if (!data || data.room_type != _a.meeting) return;
       if (!data.hub_id) return;
+      // Name the workspace as this desk does, not by its shared name.
+      data = withOwnWorkspaceName(data);
       if (data.uid && data.uid == Visitor.id) return;
       if (this._hasLiveMeetingToastFor(data.hub_id)) return;
 
@@ -1042,6 +1054,25 @@ class __push_manager extends winman {
     // Never strand the flag if the kind fails to load.
     setTimeout(() => { this._switchcallPending = 0; }, 10000);
     return true;
+  }
+
+  // A caller ringing someone who was offline re-sends conference.invite for the
+  // same room every few seconds (window_connect _ringOffline), because the
+  // first one can reach this socket before the desk listens for pushes. Ring
+  // once per room: a repeat must not open a second window while the first is
+  // still loading, nor ring again after the call was declined.
+  //
+  // @returns {boolean} true if this room was already seen
+  _seenInboundCall(room_id) {
+    if (!room_id) return false;
+    const now = Date.now();
+    if (!this._inboundCallRooms) this._inboundCallRooms = new Map();
+    for (const [id, t] of this._inboundCallRooms) {
+      if (now - t > 10 * 60000) this._inboundCallRooms.delete(id);
+    }
+    if (this._inboundCallRooms.has(room_id)) return true;
+    this._inboundCallRooms.set(room_id, now);
+    return false;
   }
 
   _joinMeetingFromData(data = {}) {
@@ -1180,6 +1211,10 @@ class __push_manager extends winman {
     const currentRoom =
       Wm.getItemsByKind("window_connect")[0] || Wm.getItemsByKind("window_meeting")[0];
     if (!data || !data.room_id) return;
+    // Name the workspace as this desk does, not by its shared name: the toast,
+    // the browser notification, the switchcall popup and the folder window
+    // Join opens all read hub_name from here on.
+    data = withOwnWorkspaceName(data);
     if (currentRoom && !currentRoom.isDestroyed()) {
       if (currentRoom.mget(_a.hub_id) == data.hub_id) {
         currentRoom.onRemoteDrumateJoined(data);
