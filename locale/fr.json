@@ -3424,5 +3424,6 @@
   "CONTACT_EMAIL_ADDRESS": "Adresse e-mail",
   "PHONE_NUMBER": "Numéro de téléphone",
   "CONTACT_NOTE_PLACEHOLDER": "Notez tout ce qui compte pour cette personne : fuseau horaire, heures de connexion, échéances…",
-  "CALL_NO_ANSWER": "Pas de réponse"
+  "CALL_NO_ANSWER": "Pas de réponse",
+  "CONTACT_INVITE_JOINED": "Vous êtes maintenant en contact avec {0}"
 }

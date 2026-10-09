@@ -6,6 +6,7 @@ const {
   captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN,
 } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
+const contactInviteLink = require("libs/contact-invite-link");
 const { inviteWorkspaceScope } = require("libs/invite-scope");
 // "Open this file once I am signed in" — a Designation link opened by a visitor
 // with no session. Armed at module scope in index.web.js, consumed below.
@@ -962,6 +963,32 @@ class desk_module extends LetcBox {
     // is picked up by get_env; then open Admin Console (+ Invite via
     // apps-main's own sessionStorage flag).
     this._maybeOpenPromoAdminAfterClaim();
+    this._maybeRedeemContactInvite();
+  }
+
+  /**
+   * Answer the "Join Drumee" contact invitation this visit arrived with (armed
+   * by the welcome module, possibly on another origin before the sign-in hop).
+   * The server connects both accounts and tells the inviter; here we only say
+   * so. Consumed before the call, so a failure is never retried in a loop —
+   * the email link still works for another try while its token lives.
+   */
+  async _maybeRedeemContactInvite() {
+    const token = contactInviteLink.consume();
+    if (!token) return;
+    let res;
+    try {
+      res = await this.postService("contact.accept_invite", { token, hub_id: Visitor.id });
+    } catch (e) {
+      this.warn && this.warn("[contact-invite] accept failed", e);
+      return;
+    }
+    const status = (res && res.status) || "";
+    if (status !== "ok" && status !== "ALREADY_IN_CONTACT") return;
+    const name = (res.fullname || res.email || "").trim();
+    if (name && window.Wm && Wm.acknowledge) {
+      Wm.acknowledge(LOCALE.CONTACT_INVITE_JOINED.format(_.escape(name)));
+    }
   }
 
   /**

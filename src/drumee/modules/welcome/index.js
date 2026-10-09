@@ -1,6 +1,7 @@
 
 const { captureUtm } = require('libs/campaign');
 const { arm: armHubDeepLink, clear: clearHubDeepLink } = require('libs/hub-deep-link');
+const contactInviteLink = require('libs/contact-invite-link');
 
 /**
  * Class representing the Welcome module.
@@ -37,6 +38,16 @@ class __welcome_router extends LetcBox {
       });
     }
     const path = Visitor.parseModule() || [];
+    // "Join Drumee" contact invitation (contact._joinLink). Kept until somebody
+    // is signed in, then the desk redeems it — whether they sign up, sign in,
+    // or were already signed in and are being forwarded to their own host.
+    // Emails sent before the link carried `contact_invite` put the token in the
+    // path instead (#/welcome/signup/<token>); those are still out there.
+    // parseModule also splits on ?/&, so a query arg (`email=…`, `ref=…`) can
+    // sit at path[2] — arm() refuses anything that is not token-shaped.
+    const _contactInvite = args.contact_invite
+      || (path[1] === 'signup' && path[2] ? String(path[2]) : '');
+    if (_contactInvite) contactInviteLink.arm(_contactInvite);
     // Secure-share recipients who click Login / Sign up arrive with
     // ?return_to=<their share link>. Validate it (open-redirect guard) and, because
     // login here triggers a FULL PAGE RELOAD that wipes any in-memory state, PERSIST

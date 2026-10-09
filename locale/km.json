@@ -3192,5 +3192,6 @@
   "CONTACT_EMAIL_ADDRESS": "អាសយដ្ឋានអ៊ីមែល",
   "PHONE_NUMBER": "លេខទូរស័ព្ទ",
   "CONTACT_NOTE_PLACEHOLDER": "កត់ត្រាអ្វីដែលសំខាន់អំពីមនុស្សនេះ ដូចជាតំបន់ម៉ោង ម៉ោងអនឡាញ ឬកាលកំណត់។",
-  "CALL_NO_ANSWER": "គ្មានការឆ្លើយតប"
+  "CALL_NO_ANSWER": "គ្មានការឆ្លើយតប",
+  "CONTACT_INVITE_JOINED": "ឥឡូវនេះអ្នកបានភ្ជាប់ជាមួយ {0}"
 }

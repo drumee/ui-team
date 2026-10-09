@@ -3192,5 +3192,6 @@
   "CONTACT_EMAIL_ADDRESS": "电子邮件地址",
   "PHONE_NUMBER": "电话号码",
   "CONTACT_NOTE_PLACEHOLDER": "记录关于此人的重要信息，例如时区、在线时间或截止日期。",
-  "CALL_NO_ANSWER": "无人接听"
+  "CALL_NO_ANSWER": "无人接听",
+  "CONTACT_INVITE_JOINED": "你现在已与 {0} 建立联系"
 }

@@ -3198,5 +3198,6 @@
   "CONTACT_EMAIL_ADDRESS": "Адрес эл. почты",
   "PHONE_NUMBER": "Номер телефона",
   "CONTACT_NOTE_PLACEHOLDER": "Отметьте всё важное об этом человеке: часовой пояс, время в сети, сроки.",
-  "CALL_NO_ANSWER": "Нет ответа"
+  "CALL_NO_ANSWER": "Нет ответа",
+  "CONTACT_INVITE_JOINED": "Теперь вы на связи с {0}"
 }
