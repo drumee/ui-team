@@ -48,6 +48,22 @@ class __welcome_router extends LetcBox {
     const _contactInvite = args.contact_invite
       || (path[1] === 'signup' && path[2] ? String(path[2]) : '');
     if (_contactInvite) contactInviteLink.arm(_contactInvite);
+    // "Open my desktop" contact invitation to an existing account
+    // (contact._acceptLink): answered by the desk, and only by the account it
+    // was sent to. Signed in as somebody else, that session is signed out first
+    // — once; markForced() keeps a later wrong-account sign-in from being
+    // thrown out again — and the sign-in page follows (Butler.logout restarts
+    // on the main domain with this same hash).
+    if (args.contact_accept) {
+      contactInviteLink.armAccept(args.contact_accept, args.for);
+      const _accept = contactInviteLink.peekAccept();
+      if (_accept && Visitor.isOnline() && Visitor.id !== _accept.for
+        && !_accept.forced && window.Butler && Butler.logout) {
+        contactInviteLink.markForced();
+        Butler.logout();
+        return;
+      }
+    }
     // Secure-share recipients who click Login / Sign up arrive with
     // ?return_to=<their share link>. Validate it (open-redirect guard) and, because
     // login here triggers a FULL PAGE RELOAD that wipes any in-memory state, PERSIST
