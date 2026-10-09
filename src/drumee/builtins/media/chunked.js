@@ -23,7 +23,7 @@
 const { uploadFile, postService } = require("@drumee/ui-essentials");
 
 /** Files at or above this size go chunked; smaller ones keep the single request. */
-const CHUNK_THRESHOLD = 64 * 1024 * 1024;
+const CHUNK_THRESHOLD = 8 * 1024 * 1024;
 const PARALLEL = 4;
 const RETRIES = 3;
 const RETRY_DELAYS_MS = [1000, 3000, 7000];
