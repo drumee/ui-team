@@ -18,8 +18,18 @@ const { multiOrgOnly } = require("../multi-org");
  *
  * @param {String} pfx BEM root
  */
+// A personal account (multi-org: it belongs to organisations but has none of
+// its own) shows itself rather than the platform's organisation.
+function personal() {
+  return !require("libs/org-overview").inOrganization();
+}
+
+function personalName() {
+  return (Visitor.fullname && Visitor.fullname()) || Visitor.get("fullname") || "";
+}
+
 function chip(pfx, plan) {
-  const name = Organization.name() || "";
+  const name = (personal() ? personalName() : Organization.name()) || "";
   return Skeletons.Box.X({
     className: `${pfx}__chip`,
     // The trigger must RAISE an event or the menu's own onUiEvent never runs
@@ -131,7 +141,8 @@ function stat(pfx, value, ico, tip) {
  */
 function header(pfx, ui, data) {
   const org = data.organisation || {};
-  const name = org.name || Organization.name() || "";
+  const own = personal() && !data.organisation;
+  const name = org.name || (own ? personalName() : Organization.name()) || "";
   return Skeletons.Box.X({
     className: `${pfx}__head`,
     kids: [
@@ -171,13 +182,15 @@ function header(pfx, ui, data) {
                 : null,
             ],
           }),
-          Skeletons.Box.X({
-            className: `${pfx}__stats`,
-            kids: [
-              stat(pfx, org.department_count, "ph-cube", LOCALE.DEPARTMENTS),
-              stat(pfx, org.member_count, "ph-users", LOCALE.MEMBERS),
-            ],
-          }),
+          own
+            ? null
+            : Skeletons.Box.X({
+                className: `${pfx}__stats`,
+                kids: [
+                  stat(pfx, org.department_count, "ph-cube", LOCALE.DEPARTMENTS),
+                  stat(pfx, org.member_count, "ph-users", LOCALE.MEMBERS),
+                ],
+              }),
         ],
       }),
       // "Open" — the org view. A Note rather than a Button.Label because the

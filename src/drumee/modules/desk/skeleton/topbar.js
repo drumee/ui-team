@@ -180,7 +180,10 @@ module.exports = function (ui) {
           // the second case the chip would otherwise look fine (name and plan
           // come from the boot payload) while its dropdown reported "0
           // departments, 0 members" — a number it never actually learned.
+          // Also for a personal account that belongs to organisations
+          // (multi-org): the chip is its way to them.
           require("libs/org-overview").orgFeature()
+            || (~~Visitor.get("org_membership_count") > 0 && require("../org-tab/multi-org").multiOrgEnabled())
             ? { kind: "desk_org_tab", className: `${pfx}__org-tab`, uiHandler: [ui] }
             : null,
           // Department crumb (B2B Org Structure, Figma 1003:172774): the
