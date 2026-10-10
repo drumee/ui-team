@@ -661,53 +661,13 @@
     }
 
     &-title {
-      // Takes the slack so the countdown is pinned to the right edge, the way
-      // the design's fill-width title frame does.
+      // Takes the slack, the way the design's fill-width title frame does.
       flex: 1 1 auto;
       min-width: 0;
       font-weight: 600;
       font-size: 24px;
       line-height: 1.1;
       color: var(--white);
-    }
-
-    &-timer {
-      flex-shrink: 0;
-      align-items: center;
-      gap: var(--spacer-2);
-      padding: var(--spacer-3) var(--spacer-4);
-      border-radius: 12px;
-      background: var(--white);
-    }
-
-    &-timer-icon {
-      width: 24px;
-      height: 24px;
-
-      svg {
-        width: 24px;
-        height: 24px;
-        color: var(--primary-40);
-        fill: var(--primary-40);
-      }
-    }
-
-    // Layout only: settings_billing re-feeds this box once a second, so it
-    // is the stable wrapper and the text below is the part that is replaced.
-    &-timer-value {
-      align-items: center;
-    }
-
-    &-timer-text {
-      font-weight: 600;
-      font-size: 16px;
-      line-height: 24px;
-      color: var(--primary-purple-100);
-      // The seconds change every tick, so the chip must not resize on every
-      // one of them — a proportional font makes "11" narrower than "00" and
-      // the whole strip would twitch once a second.
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
     }
   }
 
@@ -2895,9 +2855,8 @@
 }
 
 @container billing-page (max-width: 560px) {
-  // The countdown chip is nowrap and the headline is 24px — below this the
-  // strip has to give, so the ticket goes and the type steps down rather
-  // than the chip wrapping or the row scrolling sideways.
+  // The headline is 24px — below this the strip has to give, so the ticket
+  // goes and the type steps down rather than the row scrolling sideways.
   .settings-billing__promo-banner-ticket {
     display: none;
   }
