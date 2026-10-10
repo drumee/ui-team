@@ -9466,7 +9466,10 @@ class desk_module extends LetcBox {
     const st = await this.fetchService(SERVICE.organization.setup_state, { hub_id: Visitor.id })
       .catch(() => null);
     if (!st) return;
-    if (!force && (st.role !== "owner" || ~~st.setup_done || ~~st.department_count > 0)) return;
+    // Until the owner finishes or skips it (setup_done), whatever the
+    // organisation already holds: step 1 creates the departments, so an owner
+    // who reloads half-way through would otherwise never see it again.
+    if (!force && (st.role !== "owner" || ~~st.setup_done)) return;
     const wm = window.Wm;
     const host = wm && _.isFunction(wm.getPart) ? wm.getPart("wrapper-modal") : null;
     if (host && host.el && host.el.dataset.state === "open") return;
