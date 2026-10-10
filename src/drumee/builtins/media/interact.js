@@ -968,6 +968,26 @@ class __media_interact extends media_core {
   }
 
   /**
+   * The contextmenu "Make a copy" row: of the whole selection when this item
+   * is among several selected (media/core contextmenuItemsForSelection), else
+   * of this item. One after the other — each copy ends by clearing the
+   * selection (duplicateInPlace), so it is read once, first.
+   */
+  async _duplicateFromMenu() {
+    const wm = window.Wm;
+    const selected =
+      (wm && _.isFunction(wm.getGlobalSelection) && wm.getGlobalSelection()) || [];
+    if (!(selected.length > 1 && selected.includes(this))) {
+      return this.duplicateInPlace();
+    }
+    for (const m of selected.slice()) {
+      if (!m || !_.isFunction(m.duplicateInPlace)) continue;
+      if (_.isFunction(m.isDestroyed) && m.isDestroyed()) continue;
+      await m.duplicateInPlace();
+    }
+  }
+
+  /**
    * @param {Letc} cmd
    * @param {Object} args
    */
@@ -1038,7 +1058,7 @@ class __media_interact extends media_core {
         return this.linkToTaskTracker();
 
       case _a.duplicate:
-        return this.duplicateInPlace();
+        return this._duplicateFromMenu();
 
       case "unzip":
         return this.openArchive();
