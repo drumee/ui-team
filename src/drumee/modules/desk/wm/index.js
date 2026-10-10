@@ -4271,7 +4271,8 @@ class __window_manager extends push {
           p.clear();
           p.el.dataset.state = "open";
           p.el.dataset.overlay = "none";
-          p.feed({ kind: "org_setup" });
+          // mode "create": the dropdown's "New organization" (a new org).
+          p.feed(args && args.mode ? { kind: "org_setup", mode: args.mode } : { kind: "org_setup" });
           if (!p._closeWhenEmpty) {
             p._closeWhenEmpty = () => {
               if (p.collection && p.collection.length === 0) {

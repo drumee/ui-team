@@ -300,61 +300,6 @@ function orgRow(pfx, ui, org, sub) {
 }
 
 /**
- * The inline "New organization" form (Business plan): name + address.
- */
-function newOrgForm(pfx, ui) {
-  const suffix = `.${(Organization.host() || location.hostname).split(".").slice(1).join(".")}`;
-  return Skeletons.Box.Y({
-    className: `${pfx}__new-org-form`,
-    kids: [
-      Skeletons.Entry({
-        className: `${pfx}__new-org-entry`,
-        sys_pn: "new-org-name",
-        partHandler: ui,
-        value: ui._newOrgName || "",
-        placeholder: say("ORGANIZATION_NAME", "Organization name"),
-        require: "any",
-        preselect: 1,
-      }),
-      Skeletons.Box.X({
-        className: `${pfx}__new-org-domain`,
-        kids: [
-          Skeletons.Entry({
-            className: `${pfx}__new-org-entry ${pfx}__new-org-ident`,
-            sys_pn: "new-org-ident",
-            partHandler: ui,
-            value: ui._newOrgIdent || "",
-            placeholder: "northbeam",
-            require: "any",
-          }),
-          Skeletons.Note({ active: 0, className: `${pfx}__new-org-suffix`, content: suffix }),
-        ],
-      }),
-      ui._newOrgError
-        ? Skeletons.Note({ className: `${pfx}__new-org-error`, content: ui._newOrgError })
-        : null,
-      Skeletons.Box.X({
-        className: `${pfx}__new-org-actions`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__new-org-cancel`,
-            content: say("CANCEL", "Cancel"),
-            service: "new-organization-cancel",
-            uiHandler: [ui],
-          }),
-          Skeletons.Note({
-            className: `${pfx}__new-org-create${ui._newOrgBusy ? ` ${pfx}__new-org-create--busy` : ""}`,
-            content: say("CREATE", "Create"),
-            service: "new-organization-create",
-            uiHandler: [ui],
-          }),
-        ],
-      }),
-    ],
-  });
-}
-
-/**
  * "Your organization" + "Invited Organizations" (Figma 900:150849 Free/Pro/
  * Team, 900:150993 Business).
  *   owned   = organisations the person owns (their first, extra ones);
@@ -389,15 +334,13 @@ function orgSections(pfx, ui, data) {
   }
 
   if (data && data.can_create_org) {
-    kids.push(ui._creatingOrg
-      ? newOrgForm(pfx, ui)
-      : Skeletons.Button.Label({
-        ico: "ph-plus",
-        className: `${pfx}__new-org`,
-        label: say("NEW_ORGANIZATION", "New organization"),
-        service: "new-organization",
-        uiHandler: [ui],
-      }));
+    kids.push(Skeletons.Button.Label({
+      ico: "ph-plus",
+      className: `${pfx}__new-org`,
+      label: say("NEW_ORGANIZATION", "New organization"),
+      service: "new-organization",
+      uiHandler: [ui],
+    }));
   } else if (data) {
     kids.push(Skeletons.Box.Y({
       className: `${pfx}__upsell`,

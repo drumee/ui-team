@@ -106,42 +106,18 @@ class __desk_org_tab extends LetcBox {
     location.href = `${location.protocol}//${link}${location.pathname}`;
   }
 
-  _entryValue(pn) {
-    const p = this.getPart(pn);
-    return String((p && p.getValue && p.getValue()) || "").trim();
-  }
-
   /**
-   * "+ New organization" (Business plan): create it, then open it.
+   * "+ New organization" (Business plan, Figma 900:151136): the
+   * "Set up your organization" wizard, in its create mode -- the organisation
+   * is created on its first Continue (org_setup._createOrg).
    */
-  async _createOrganization() {
-    if (this._newOrgBusy) return;
-    const name = this._entryValue("new-org-name");
-    const ident = this._entryValue("new-org-ident").toLowerCase();
-    // Kept so a repaint (error, busy) gives the fields back as typed.
-    this._newOrgName = name;
-    this._newOrgIdent = ident;
-    const say = (k, f) => (LOCALE[k] && LOCALE[k] !== k ? LOCALE[k] : f);
-    if (!name) this._newOrgError = say("ORG_NAME_REQUIRED", "Give your organization a name.");
-    else if (!/^[a-z0-9][a-z0-9-]{0,38}[a-z0-9]$/.test(ident)) {
-      this._newOrgError = say("INVALID_IDENT", "Use 2 to 40 lowercase letters, numbers or dashes (not at the start or end).");
-    } else this._newOrgError = "";
-    if (this._newOrgError) return this._feedOrgs();
-    this._newOrgBusy = true;
-    this._feedOrgs();
-    const res = await this.postService(SERVICE.organization.create_org, { hub_id: Visitor.id, name, ident })
-      .catch(() => null);
-    this._newOrgBusy = false;
-    if (!res || res.status || !res.link) {
-      const st = res && res.status;
-      this._newOrgError = {
-        IDENT_NOT_AVAILABLE: say("IDENT_NOT_AVAILABLE", "This address is already taken. Please pick another one."),
-        IDENT_RESERVED: say("IDENT_RESERVED", "This address is reserved. Please pick another one."),
-        PLAN_UPGRADE_REQUIRED: say("MULTI_ORG_UPSELL_LINK", "Business plan supports that →"),
-      }[st] || say("SOMETHING_WENT_WRONG", "Something went wrong. Please try again.");
-      return this._feedOrgs();
-    }
-    this._switchOrganization(res.link);
+  _openNewOrganization() {
+    this._closeMenu();
+    const wm = window.Wm;
+    return Kind.loadPlugin({ name: "onboarding", kind: "org_setup" })
+      .then(() => Kind.waitFor("org_setup"))
+      .then(() => wm && wm.onUiEvent(this, { service: "org-setup-form", mode: "create" }))
+      .catch((e) => this.warn && this.warn("[org-tab] could not open org setup", e));
   }
 
   _feedPanel(force) {
@@ -275,19 +251,7 @@ class __desk_org_tab extends LetcBox {
         return this._switchOrganization(cmd.mget("link"));
 
       case "new-organization":
-        this._creatingOrg = true;
-        this._newOrgError = "";
-        return this._feedOrgs();
-
-      case "new-organization-cancel":
-        this._creatingOrg = false;
-        this._newOrgError = "";
-        this._newOrgName = "";
-        this._newOrgIdent = "";
-        return this._feedOrgs();
-
-      case "new-organization-create":
-        return this._createOrganization();
+        return this._openNewOrganization();
 
       case "upgrade-for-orgs":
         this._closeMenu();
