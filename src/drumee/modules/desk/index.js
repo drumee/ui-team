@@ -9425,7 +9425,9 @@ class desk_module extends LetcBox {
     if (!res || res.status) {
       const msg = res && res.status === "LINK_EXPIRED"
         ? say("JOIN_LINK_EXPIRED", "This invitation link has expired or was revoked.")
-        : say("JOIN_LINK_INVALID", "This invitation link is not valid.");
+        : res && res.status === "SEAT_LIMIT_REACHED"
+          ? say("INVITE_SEAT_LIMIT_INVITEE", "This team has no free seats left. Ask its admin to add seats.")
+          : say("JOIN_LINK_INVALID", "This invitation link is not valid.");
       if (window.Wm && Wm.alert) Wm.alert(msg);
       return;
     }
