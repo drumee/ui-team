@@ -337,24 +337,47 @@
 
   &__collapse-wrapper,
   &__close-wrapper {
+    width: 16px;
+    height: 16px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
   }
 
-  // Bare 16px icons, as upload's header has them.
+  // Bare 16px icons, as upload's header has them. The glyph is centred in
+  // its box (flex, no line box under it): the collapse box turns 180° to
+  // point down, and a glyph sat at the top of the box would land at its
+  // bottom — below the ×.
   &__collapse,
   &__close-btn {
+    display: flex;
+    flex-shrink: 0;
     width: 16px;
     height: 16px;
+    padding: 0;
+    margin: 0;
+    line-height: 0;
     align-items: center;
     justify-content: center;
     color: var(--normal-fg-10, var(--default-text-color));
     transition: transform 0.2s ease, color 0.2s ease;
 
-    svg {
+    > * {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    svg,
+    .icon {
+      display: block;
+      flex-shrink: 0;
       width: 12px;
       height: 12px;
+      padding: 0;
+      margin: 0;
       fill: currentColor;
     }
 
@@ -538,6 +561,54 @@
     }
   }
 
+  // A folder row's icon (skeleton/files.js): the Files list's folder art —
+  // its AREA CLASS is the fill, never a currentColor tint (the media/row
+  // skin's .folder-art, at this row's 24px). The SVG is authored at 105x86
+  // and renders at that size unless pinned.
+  &__item-folder {
+    overflow: visible;
+
+    .media-grid__folder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 24px;
+      height: 20px;
+    }
+
+    .folder-shape {
+      width: 24px;
+      height: 20px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder {
+        fill: var(--area-personal);
+      }
+      &.public {
+        fill: var(--area-public);
+      }
+      &.share,
+      &.dmz {
+        fill: var(--area-share);
+      }
+      &.private {
+        fill: var(--area-private);
+      }
+    }
+
+    // The area badge rides the folder body, as on the crumb and the row.
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 15px !important;
+      height: 15px !important;
+      color: var(--grid-color-folder-badge);
+    }
+  }
+
   &__item-name {
     min-width: 0;
     @include drumee.typo($size: 12px, $line: 18px, $color: var(--normal-fg-10, var(--default-text-color)));
@@ -599,10 +670,12 @@
     }
   }
 
-  // Per status: the spinner while downloading, the check when done, the
-  // warning on error; the count while pending or downloading. (0,3,0) —
-  // above `.drumee-widget[data-flow]`'s display:flex.
-  &__item:not([data-status="downloading"]) &__item-spinner,
+  // Per status: the spinner while downloading or waiting for the browser's
+  // permission, the check when done, the warning on error; the count while
+  // pending or downloading. (0,3,0)+ — above `.drumee-widget[data-flow]`'s
+  // display:flex.
+  &__item:not([data-status="downloading"]):not([data-status="waiting"]) &__item-spinner,
+  &__item[data-status="waiting"] &__item-meta,
   &__item:not([data-status="done"]) &__item-check,
   &__item:not([data-status="error"]) &__item-error,
   &__item[data-status="done"] &__item-meta,
@@ -610,79 +683,16 @@
     display: none;
   }
 
-  // A failed run: the aggregate bar turns red.
-  &__files[data-state="failed"] &__bar-fill,
-  &__zip[data-state="failed"] .progress-bar__row .bar-value {
-    background-color: var(--default-text-error, #ea4d44);
+  // All of it in the browser's own downloads: no bar to fill here.
+  &__files[data-state="browser"] &__aggregate,
+  &__zip[data-state="browser"] &__aggregate {
+    display: none;
   }
 
-  // ---- .zip (skeleton/progress.js): the ui-core progress_bar, restyled -----
-  // ui-core progress_bar: `.bar` is the TRACK and its inner `.bar-value` the
-  // FILL — update() sizes the element it captured as `${percent._id}-inner`,
-  // which is the Note's inner div, `.bar-value` (widgets/progress/bar
-  // onPartReady). So: a full-width track, a fill that starts empty. (Styled
-  // the other way round, the fill was hidden and the track either posed as a
-  // ~45% fill — ui-core's calc(100% - 160px) — or vanished at width 0.)
-  &__progress {
-    box-sizing: border-box;
-    width: 100%;
-    padding: 16px 24px;
-
-    .progress-bar__main {
-      gap: 12px;
-    }
-
-    .progress-bar__row {
-      position: relative;
-      flex-wrap: wrap;
-      justify-content: space-between;
-      padding-top: 10px;
-
-      .bar {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        width: auto;
-        height: 4px;
-        border-radius: 2px;
-        overflow: hidden;
-        background-color: var(--normal-bg-80, #e5e5ea);
-      }
-
-      .bar-value {
-        display: block;
-        width: 0;
-        height: 100%;
-        border-radius: 2px;
-        background-color: var(--dl-accent);
-        transition: width 0.4s ease;
-
-        @media (prefers-reduced-motion: reduce) {
-          transition: none;
-        }
-      }
-
-      // One number, the percentage, on the right (index.js _paintPercent).
-      // ui-core's left-hand "loaded" label goes; (0,3,0) over data-flow.
-      .loaded {
-        display: none;
-      }
-
-      .total {
-        width: auto;
-        margin-left: auto;
-        justify-content: flex-end;
-        @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-20, #65656c));
-        font-variant-numeric: tabular-nums;
-      }
-    }
-
-    .label {
-      justify-content: flex-start;
-      padding: 0;
-      @include drumee.typo($size: 12px, $line: 18px, $color: var(--normal-fg-20, #65656c));
-    }
+  // A failed run: the aggregate bar turns red.
+  &__files[data-state="failed"] &__bar-fill,
+  &__zip[data-state="failed"] &__bar-fill {
+    background-color: var(--default-text-error, #ea4d44);
   }
 }
 

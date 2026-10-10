@@ -1,12 +1,14 @@
-// window-downloader-zip.test.js — the .zip step reaches its result.
+// window-downloader-zip.test.js — the .zip step reaches its result, drawn like
+// the multiple-files step.
 //
 //   node --test tests/window-downloader-zip.test.js
 //
 // Below 5 MB the server answers media.download with wait:0 and the archive is
 // fetched at once. The card waited for an `eod` that fetchFile never fires when
-// it saves (it only does when NOT given a download name), and its progress bar
-// was only resolved for the server's >5 MB progress pushes — so it sat on
-// "Loading" forever. Runs the real downloadZip / _zipDone / _ensureProgress.
+// it saves (it only does when NOT given a download name) — so it sat on
+// "Loading" forever. The card is now the multiple-files one (skeleton/rows.js):
+// the bar with its bytes and percentage, and one row, the archive's. Runs the
+// real downloadZip / _zipDone / _zipPaint / _zipItem / handleDownload.
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("fs");
@@ -24,26 +26,31 @@ if (!String.prototype.format) {
   };
 }
 const LOCALE = {
-  HAS_BEEN_SAVED: "{0} has been saved successfully.",
+  DOWNLOADING: "Downloading",
   DOWNLOAD_COMPLETE: "Download complete",
   DOWNLOAD_FAILED: "Download failed",
+  DOWNLOADING_IN_BROWSER: "Downloading in your browser",
   CANCELED: "Operation canceled!",
 };
 const SERVICE = { media: { zip_release: "media.zip_release" } };
+const filesize = (n) => `${n}B`;
 const load = (sig) =>
   new Function(
-    "_", "_a", "_e", "LOCALE", "SERVICE", "MAX_BLOB_SIZE",
+    "_", "_a", "_e", "LOCALE", "SERVICE", "MAX_BLOB_SIZE", "filesize", "ARCHIVE_PREP_SHARE", "Dayjs",
     `return ${sliceFunction(SRC, sig)}`,
-  )(_, { content: "content" }, { close: "close" }, LOCALE, SERVICE, 100000000);
+  )(_, { content: "content" }, { close: "close" }, LOCALE, SERVICE, 100000000, filesize, 10,
+    () => ({ format: () => "drumee-today" }));
 
 const methods = {
   downloadZip: load("async downloadZip(data)"),
   _zipDone: load("_zipDone(data, res)"),
-  _ensureProgress: load("_ensureProgress()"),
-  _zipSettle: new Function("_e", `return ${sliceFunction(SRC, "_zipSettle(o)")}`)({ close: "close" }),
-  _progress: load("_progress(method, ...args)"),
-  _hasProgress: load("_hasProgress()"),
-  _paintPercent: load("_paintPercent(v, reset)"),
+  _zipSettle: load("_zipSettle(o)"),
+  _setZipTitle: load("_setZipTitle(text)"),
+  _zipPaint: load("_zipPaint(v, reset)"),
+  _zipItem: load("_zipItem(status, zipname)"),
+  _zipLabel: load("_zipLabel()"),
+  _archivePercent: load("_archivePercent(progress, message)"),
+  handleDownload: load("async handleDownload(data)"),
 };
 
 function part() {
@@ -57,83 +64,105 @@ function part() {
   };
 }
 
-function win(result, { progress = true } = {}) {
-  const bar = {
-    calls: [],
-    __total: { text: "", set(k, v) { this.text = v; } },
-    update(v) { this.calls.push(["update", v]); },
-    setLabel(l) { this.calls.push(["label", l]); },
-    restart(...a) { this.calls.push(["restart", ...a]); },
+// The card's DOM (skeleton/progress.js): the bar, its two labels, one row.
+function card() {
+  const node = () => ({ textContent: "", style: {}, dataset: {} });
+  const els = {};
+  const row = { ...node(), dataset: { status: "waiting" }, parts: {} };
+  row.querySelector = (sel) => {
+    const k = sel.replace(".window-downloader__", "");
+    return (row.parts[k] = row.parts[k] || node());
   };
   const main = { dataset: { state: "running" } };
+  return {
+    els,
+    row,
+    main,
+    querySelector(sel) {
+      if (sel === ".window-downloader__zip") return main;
+      if (sel === ".window-downloader__item") return row;
+      if (sel === ".window-downloader__item-meta") return row.querySelector(sel);
+      const k = sel.replace(".window-downloader__", "");
+      return (els[k] = els[k] || node());
+    },
+  };
+}
+
+function win(result) {
+  const el = card();
   const w = {
     ...methods,
     fig: { family: "window-downloader" },
-    _zipsize: 1234,
+    _zipsize: 1000,
     _running: 1,
     _token: "tok",
-    bar,
-    main,
+    el,
     posted: [],
     raised: 0,
+    attrs: {},
     __btnCancel: part(),
     __btnStatus: part(),
     __btnAction: part(),
-    el: { querySelector: (s) => (s === ".window-downloader__zip" ? main : null) },
+    mget(k) { return this.attrs[k]; },
     isDestroyed: () => false,
     warn() {},
     raise() { this.raised++; },
     postService(o) { this.posted.push(o); },
-    // No progress resolved up front: the wait:0 path never ran handleDownload.
-    ensurePart: () => Promise.resolve(progress ? bar : {}),
     download_zip(o) {
       this.fetched = o;
-      return typeof result === "function" ? result() : Promise.resolve(result);
+      return typeof result === "function" ? result(o) : Promise.resolve(result);
     },
   };
   return w;
 }
+const pct = (w) => w.el.els["meta-percent"].textContent;
+const bytes = (w) => w.el.els["meta-bytes"].textContent;
+const fill = (w) => w.el.els["bar-fill"].style.width;
+const titles = (w) => w.__btnStatus.calls.map((c) => c[1].content);
 
 const data = { zipid: "z1", zipname: "abc-2026-10-08-1700" };
 
-test("a saved archive ends on Download complete, with Close and the copy released", async () => {
+test("a saved archive ends on Download complete: full bar, its row checked, the copy released", async () => {
   const w = win(undefined); // fetchFile resolves undefined once getBlob saved it
   await w.downloadZip(data);
-  // The bar is wired even without server pushes — through _progress.
   assert.equal(typeof w.fetched.progress.update, "function");
-  assert.deepEqual(w.bar.calls[0], ["label", data.zipname]);
-  assert.deepEqual(w.bar.calls.find((c) => c[0] === "update"), ["update", 100]);
-  assert.deepEqual(w.bar.calls.at(-1), ["label", "abc-2026-10-08-1700.zip has been saved successfully."]);
-  assert.equal(w.main.dataset.state, "done");
+  assert.equal(w.el.row.parts["item-name"].textContent, "abc-2026-10-08-1700.zip");
+  assert.equal(w.el.row.dataset.status, "done");
+  assert.deepEqual([fill(w), pct(w), bytes(w)], ["100%", "100%", "1000B / 1000B"]);
+  assert.equal(w.el.main.dataset.state, "done");
   assert.equal(w._running, 0);
   assert.equal(w.__btnCancel.gone, 1);
-  assert.deepEqual(w.__btnStatus.calls, [["set", { content: "Download complete" }]]);
+  assert.deepEqual(titles(w), ["Downloading", "Download complete"]);
   assert.deepEqual(w.__btnAction.calls, [["mset", { service: "close" }]]);
   assert.deepEqual(w.posted, [{ service: "media.zip_release", id: "z1", token: "tok" }]);
 });
 
-test("an archive the server cannot serve ends on Download failed and keeps it", async () => {
+test("while it is fetched: the bytes, the percentage, and the row's own count", async () => {
+  let seen;
+  const w = win((o) => {
+    o.progress.update({ loaded: 250, total: 1000 });
+    seen = [fill(w), pct(w), bytes(w), w.el.row.dataset.status, w.el.row.parts["item-meta"].textContent];
+    return Promise.resolve();
+  });
+  await w.downloadZip(data);
+  assert.deepEqual(seen, ["25%", "25%", "250B / 1000B", "downloading", "25%"]);
+});
+
+test("an archive the server cannot serve ends on Download failed, its row in error", async () => {
   const w = win({ error: 404 });
   await w.downloadZip(data);
-  assert.equal(w.main.dataset.state, "failed");
-  assert.deepEqual(w.__btnStatus.calls, [["set", { content: "Download failed" }]]);
-  assert.deepEqual(w.bar.calls.at(-1), ["label", "Download failed"]);
-  assert.equal(w.bar.calls.some((c) => c[0] === "update"), false, "no full bar");
+  assert.equal(w.el.main.dataset.state, "failed");
+  assert.equal(w.el.row.dataset.status, "error");
+  assert.equal(titles(w).at(-1), "Download failed");
+  assert.notEqual(pct(w), "100%", "no full bar");
   assert.deepEqual(w.posted, [], "nothing released");
 });
 
 test("an aborted fetch says so", async () => {
   const w = win(() => Promise.reject("aborted"));
   await w.downloadZip(data);
-  assert.equal(w.main.dataset.state, "failed");
-  assert.deepEqual(w.bar.calls.at(-1), ["label", "Operation canceled!"]);
-});
-
-test("no progress_bar in this bundle: the result still lands", async () => {
-  const w = win(undefined, { progress: false });
-  await w.downloadZip(data);
-  assert.equal(w.fetched.progress, undefined);
-  assert.equal(w.main.dataset.state, "done");
+  assert.equal(w.el.main.dataset.state, "failed");
+  assert.equal(titles(w).at(-1), "Operation canceled!");
 });
 
 test("a second call while downloading is ignored", async () => {
@@ -209,78 +238,50 @@ test("download_zip builds media.zip on the node's own hub", () => {
 // card with a simulated bar that parks near 90%.
 test("a large archive hands off to the browser and settles in this card", async () => {
   global.bootstrap = () => ({ svc: "/svc/", keysel: "k" });
-  const L = { ...LOCALE, DOWNLOAD_SAVING_IN_BROWSER: "Saving to your browser's downloads" };
   const getFromUrl = new Function(
     "_a", "LOCALE", "Wm",
     `return ${sliceFunction(SRC, "getFromUrl(opt)").replace(/super\.getFromUrl/g, "this.__nativeGet")}`,
-  )({}, L, { downloadNotice() { throw new Error("no second card"); } });
-  const settle = new Function("_e", `return ${sliceFunction(SRC, "_zipSettle(o)")}`)({ close: "close" });
+  )({}, LOCALE, { downloadNotice() { throw new Error("no second card"); } });
   const w = win(undefined);
   w.getFromUrl = getFromUrl;
-  w._zipSettle = settle;
   w._zipSource = () => ({ nid: "n", hub_id: "h" });
-  w.mget = () => undefined;
   w.goodbye = () => { w.gone = 1; };
   w.__nativeGet = (url) => { w.native = url; };
   w.getFromUrl({ zipid: "big", zipname: "drumee-2026-10-09-0223" });
-  await new Promise((r) => setTimeout(r, 0));
   assert.match(w.native, /media\.zip\?hub_id=h&nid=n&id=big/);
   assert.equal(w.gone, undefined, "the card stays");
-  assert.equal(w.main.dataset.state, "done");
-  assert.deepEqual(w.__btnStatus.calls, [["set", { content: "drumee-2026-10-09-0223.zip" }]]);
-  assert.deepEqual(w.bar.calls.at(-1), ["label", "Saving to your browser's downloads"]);
-  assert.deepEqual(w.bar.calls.find((c) => c[0] === "update"), ["update", 100]);
+  // Its row checked; no bar (the skin hides it on data-state=browser).
+  assert.equal(w.el.row.dataset.status, "done");
+  assert.equal(w.el.row.parts["item-name"].textContent, "drumee-2026-10-09-0223.zip");
+  assert.equal(w.el.main.dataset.state, "browser");
+  assert.deepEqual(titles(w), ["Downloading in your browser"]);
   assert.equal(w._running, 0);
   assert.deepEqual(w.posted, [], "not released: the browser is still fetching it");
 });
 
-// ---- The number beside the bar: one ascending percentage, on the right ------
-test("the right label is the percentage, and it only goes up", async () => {
+// ---- The percentage: one number, only going up ------------------------------
+test("the percentage only goes up, and a new transfer starts again", () => {
   const w = win(undefined);
-  w.__progress = w.bar;
-  w._progress("restart", 1000, 0);
-  assert.equal(w.bar.__total.text, "0%");
-  w._progress("update", { loaded: 250, total: 1000 }); // fetchFile bytes
-  assert.equal(w.bar.__total.text, "25%");
-  w._progress("update", 60); // server archive phase
-  assert.equal(w.bar.__total.text, "60%");
-  w._progress("update", 40); // never backwards
-  assert.equal(w.bar.__total.text, "60%");
-  w._progress("update", 150);
-  assert.equal(w.bar.__total.text, "100%");
-  w._progress("restart", 1000, 0); // a new transfer starts again
-  assert.equal(w.bar.__total.text, "0%");
-});
-
-test("the in-page fetch reports through _progress", async () => {
-  let progress;
-  const w = win(() => {
-    progress.update({ loaded: 30, total: 120 });
-    return Promise.resolve();
-  });
-  const dz = w.download_zip;
-  w.download_zip = function (o) { progress = o.progress; return dz.call(this, o); };
-  await w.downloadZip(data);
-  assert.ok(w.bar.calls.some((c) => c[0] === "update" && c[1] && c[1].loaded === 30));
-  assert.equal(w.bar.__total.text, "100%", "and ends full");
+  w._zipPaint({ loaded: 0, total: 1000 }, true);
+  assert.equal(pct(w), "0%");
+  w._zipPaint({ loaded: 250, total: 1000 });
+  assert.equal(pct(w), "25%");
+  w._zipPaint(60);
+  assert.equal(pct(w), "60%");
+  w._zipPaint(40); // never backwards
+  assert.equal(pct(w), "60%");
+  w._zipPaint(150);
+  assert.equal(pct(w), "100%");
+  w._zipPaint({ loaded: 0, total: 1000 }, true);
+  assert.equal(pct(w), "0%");
 });
 
 // ---- The worker's two 0→100 runs, on one rising scale -----------------------
 // offline/media/download.js reports IN_PREPARATION (fast, per linked file) and
 // then BEING_CREATED (7z, the long part), each 0→100. Straight to the bar, the
 // label sat on 100% for the whole compression.
-test("archive progress rises once across preparation and compression", async () => {
-  const archivePercent = new Function(
-    "ARCHIVE_PREP_SHARE", `return ${sliceFunction(SRC, "_archivePercent(progress, message)")}`,
-  )(10);
-  const handleDownload = new Function(
-    "LOCALE", "_e", `return ${sliceFunction(SRC, "async handleDownload(data)")}`,
-  )({}, {});
+test("archive progress rises once across preparation and compression; the row spins", async () => {
   const w = win(undefined);
-  w.__progress = w.bar;
-  w._archivePercent = archivePercent;
-  w.handleDownload = handleDownload;
-  w.__btnStatus = part();
   const shown = [];
   const run = [
     ...[25, 50, 75, 100].map((p) => ({ phase: "archive", message: "IN_PREPARATION", progress: p })),
@@ -288,9 +289,19 @@ test("archive progress rises once across preparation and compression", async () 
   ];
   for (const d of run) {
     await w.handleDownload(d);
-    shown.push(w.bar.__total.text);
+    shown.push(pct(w));
   }
   assert.deepEqual(shown, ["2%", "5%", "7%", "10%", "12%", "46%", "82%", "100%"]);
-  const widths = w.bar.calls.filter((c) => c[0] === "update").map((c) => c[1]);
-  assert.ok(widths.every((v, i) => i === 0 || v >= widths[i - 1]), `bar never goes back: ${widths}`);
+  assert.equal(w.el.row.dataset.status, "waiting");
+  assert.equal(bytes(w), "", "no byte count while the server builds it");
+  assert.deepEqual(titles(w), ["IN_PREPARATION", "BEING_CREATED"], "the phase text, once each");
+});
+
+test("the archive ready, the fetch starts again from 0 with its bytes", async () => {
+  const w = win(() => new Promise(() => {})); // still fetching
+  await w.handleDownload({ phase: "archive", message: "BEING_CREATED", progress: 100 });
+  assert.equal(pct(w), "100%");
+  await w.handleDownload({ phase: "exit", zipid: "z1", zipname: "abc" });
+  assert.deepEqual([pct(w), bytes(w), w.el.row.dataset.status], ["0%", "0B / 1000B", "downloading"]);
+  assert.equal(w.el.row.parts["item-name"].textContent, "abc.zip");
 });

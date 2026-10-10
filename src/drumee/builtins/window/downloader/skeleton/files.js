@@ -16,73 +16,38 @@ const __window_downloader_files = function(_ui_) {
   const pfx = _ui_.fig.family;
   const list = (_ui_._files && _ui_._files.list) || [];
 
-  const aggregate = Skeletons.Box.Y({
-    className : `${pfx}__aggregate`,
-    kids      : [
-      Skeletons.Box.X({
-        className : `${pfx}__bar`,
-        kids      : [
-          Skeletons.Element({ className: `${pfx}__bar-fill`, content: '' })
-        ]}),
-      Skeletons.Box.X({
-        className : `${pfx}__meta`,
-        kids      : [
-          Skeletons.Element({ className: `${pfx}__meta-bytes`, content: '' }),
-          Skeletons.Element({ className: `${pfx}__meta-percent`, content: '' })
-        ]})
-    ]});
+  const { aggregate, row, fileIcon } = require('./rows');
 
-  // One row per file — the upload window's __progress-row (upload-progress
-  // index.js _buildProgressRow): a single-line tile, its file-type icon (the
-  // same getFileIcon) and the name on the left; on the right a small count —
-  // the size while pending, the percentage while downloading — and the status:
-  // a spinner, a check, or a warning. The skin shows the right ones off
-  // data-status, which _paintItem keeps. The name is escaped: Element content
-  // is HTML.
-  const { getFileIcon } = require("../../upload-progress/skeleton/helpers");
+  // One row per item: its file-type icon — or, for a folder or a workspace,
+  // the area-tinted folder art of the Files list and the breadcrumb
+  // (media/grid/template/folder) — personal, private, shared, public — with
+  // the area badge on a workspace. isAttachment: no kebab on a 24px glyph.
+  // The count is the size while pending; a folder's is known once zipped.
+  const folderArt = require("media/grid/template/folder");
+  const isTree = (v) => [_a.hub, _a.folder].includes(v.mget(_a.filetype));
   const item = (v, index) => {
     const name = String(v.mget(_a.filename) || '').replace(/\<.+\>/, '');
     const ext = String(v.mget(_a.extension) || v.mget(_a.ext) || '').toLowerCase();
     const full = ext ? `${name}.${ext}` : name;
     const size = Number(v.mget(_a.filesize)) || 0;
-    return Skeletons.Box.X({
-      className : `${pfx}__item`,
-      dataset   : { index: String(index), status: 'pending' },
-      kids      : [
-        Skeletons.Box.X({
-          className : `${pfx}__item-left`,
-          kids      : [
-            Skeletons.Button.Svg({
-              className : `${pfx}__item-icon`,
-              ico       : getFileIcon({ name: full }),
-              active    : 0
-            }),
-            Skeletons.Element({
-              className : `${pfx}__item-name`,
-              content   : _.escape(full)
-            })
-          ]}),
-        Skeletons.Box.X({
-          className : `${pfx}__item-right`,
-          kids      : [
-            Skeletons.Element({
-              className : `${pfx}__item-meta`,
-              content   : size ? filesize(size) : ''
-            }),
-            Skeletons.Box.X({ className: `${pfx}__item-spinner` }),
-            Skeletons.Button.Svg({
-              className : `${pfx}__item-check`,
-              ico       : 'checked-circle',
-              active    : 0
-            }),
-            Skeletons.Button.Svg({
-              className : `${pfx}__item-error`,
-              ico       : 'apps-warning',
-              active    : 0,
-              tooltips  : LOCALE.ERROR
-            })
-          ]})
-      ]});
+    const icon = isTree(v)
+      ? Skeletons.Element({
+        className : `${pfx}__item-icon ${pfx}__item-folder`,
+        content   : folderArt({
+          area      : v.mget(_a.area),
+          filetype  : v.mget(_a.filetype) === _a.hub ? _a.hub : _a.folder,
+          role      : v.mget(_a.filetype) === _a.hub ? 'desk' : '',
+          widgetId  : `dl-${_ui_._id}-${index}`,
+          isAttachment: 1
+        })
+      })
+      : fileIcon(pfx, full);
+    return row(pfx, {
+      index,
+      icon,
+      name : full,
+      meta : size && !isTree(v) ? filesize(size) : ''
+    });
   };
 
   const files = Skeletons.Box.Y({
@@ -96,7 +61,7 @@ const __window_downloader_files = function(_ui_) {
       className : `${pfx}__heading ${pfx}__files-title`,
       content   : LOCALE.DOWNLOADING
     }),
-    body  : [ aggregate, files ],
+    body  : [ aggregate(pfx), files ],
     cancel: { service: 'abort-files', sys_pn: 'files-cancel', content: LOCALE.CANCEL_ALL || LOCALE.CANCEL },
     done  : { sys_pn: 'files-action' },
     text  : LOCALE.X_FILES.format(list.length)

@@ -3286,5 +3286,8 @@
   "DOWNLOADING_X_OF_Y": "Downloading {0} of {1}",
   "DOWNLOAD_COMPLETE": "Download complete",
   "DOWNLOAD_X_FAILED": "{0} file(s) couldn't be downloaded",
+  "PREPARING_DOWNLOAD": "Preparing download…",
+  "ALLOW_DOWNLOADS_TO_START": "Allow downloads to start",
+  "DOWNLOADING_IN_BROWSER": "Downloading in your browser",
   "DOWNLOAD_FAILED": "Download failed"
 }

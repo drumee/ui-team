@@ -3080,6 +3080,9 @@
   "DOWNLOADING_X_OF_Y": "Загрузка {0} из {1}",
   "DOWNLOAD_COMPLETE": "Загрузка завершена",
   "DOWNLOAD_X_FAILED": "Не удалось скачать файлов: {0}",
+  "PREPARING_DOWNLOAD": "Подготовка загрузки…",
+  "ALLOW_DOWNLOADS_TO_START": "Разрешите загрузки",
+  "DOWNLOADING_IN_BROWSER": "Загрузка в браузере",
   "DOWNLOAD_FAILED": "Не удалось скачать",
   "DOWNLOAD_SAVING_IN_BROWSER": "Файл сохраняется в загрузки браузера — можно продолжать работу."
 }

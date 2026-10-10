@@ -6,6 +6,7 @@ const { filesize } = require("@drumee/ui-essentials")
  */
 const mfsInteract = require('../interact');
 const MAX_BLOB_SIZE = 100000000;
+const { saveHeld } = require("libs/save-held");
 // Motion (ms): the card appearing, docking, and closing — _animateShow,
 // _animateSwitch, goodbye.
 const DL_SHOW_MS = 200;
@@ -14,6 +15,14 @@ const DL_CLOSE_MS = 180;
 // Share of the archive bar given to the worker's quick preparation run, ahead
 // of compression (_archivePercent).
 const ARCHIVE_PREP_SHARE = 10;
+// The most a folder's background zip is waited for (_awaitTreeZip).
+const TREE_TIMEOUT_MS = 10 * 60 * 1000;
+// The browser's "allow multiple downloads" prompt (_gateFirstTwo): how often
+// the server is asked for the answer, how long it is waited for, and the gap
+// between the first item and the second that raises the prompt.
+const GATE_POLL_MS = 600;
+const GATE_WAIT_MS = 3 * 60 * 1000;
+const GATE_SECOND_MS = 300;
 class __window_downloader extends mfsInteract {
 
   /**
@@ -42,6 +51,8 @@ class __window_downloader extends mfsInteract {
    * 
    */
   onBeforeDestroy() {
+    // Closed while the browser's prompt is up: the parked item ends empty.
+    this._gateCancel();
     let nodes = this.mget(_a.nodes);
     for (let node of nodes) {
       node.unselect();
@@ -108,41 +119,308 @@ class __window_downloader extends mfsInteract {
   downloadFiles() {
     if (this.started) return;
     this.started = 1;
-    const nodes = (this.mget(_a.nodes) || []).slice();
-    // Folders and workspaces have no byte stream to follow: media download()
-    // has the server zip them (download_tree) and a notification hands the
-    // archive over. They keep that path; only files are fetched here.
-    const isTree = (v) => [_a.hub, _a.folder].includes(v.mget(_a.filetype));
-    const files = nodes.filter((v) => !isTree(v));
-    nodes.filter(isTree).forEach((v) => v.download());
-    if (!files.length) {
+    // Files AND folders, one queue, all reported in this window. Folders used
+    // to run their row's own download() — ui-core mounts a progress bar inside
+    // the row (media-row__container) and the row saved the zip itself; here
+    // the window zips, fetches and saves each folder, with its own row in the
+    // list (_saveTree).
+    let list = (this.mget(_a.nodes) || []).slice();
+    if (!list.length) {
       this.goodbye();
       return;
     }
-    const sizeOf = (v) => Number(v.mget(_a.filesize)) || 0;
+    if (this._canGate(list)) list = this._gateOrder(list);
+    const sizeOf = (v) => (this._isTree(v) ? 0 : Number(v.mget(_a.filesize)) || 0);
     this._files = {
-      list: files,
+      list,
       index: 0,
-      // Bytes of the files already finished, and of the one in flight.
+      // Bytes of the items already finished, and of the one in flight.
       done: 0,
       loaded: 0,
-      // From the listing, not content-length: fetchFile's total comes back 0
-      // when the response has none, and a bar needs the whole up front.
-      total: files.reduce((n, v) => n + sizeOf(v), 0),
+      // Files only, from the listing: a folder's size is known once zipped.
+      total: list.reduce((n, v) => n + sizeOf(v), 0),
       failed: 0,
       cancelled: 0,
       current: null,
     };
     this.feed(require('./skeleton/files')(this));
     this._dock();
-    this._nextFile();
+    if (!this._canGate(list)) return this._nextFile();
+    this._gateFirstTwo().then((r) => {
+      if (r === false) return this._nextFile(); // could not gate: as before
+      if (r) this._nextFile();
+    });
   }
 
   /**
-   * Fetch the next file through the ROW'S fetchFile (ui-core mfs.js) — its
-   * own url, auth and abort controller, and getBlob saves it — but with this
-   * window's progress instead of the progress widget the row's download()
-   * mounts inside media-row__container.
+   * Nothing is saved before the user has answered the browser's "allow
+   * multiple downloads" prompt; on yes everything is, on no nothing is.
+   *
+   * A page may start ONE download on its own, and the browser holds every
+   * further one behind that prompt. So the first two items go to the browser
+   * through media.download_gate (server-team lib/download-gate):
+   *  - the first is parked on the server — the browser lists nothing yet, but
+   *    the page's one free download is spent;
+   *  - the second raises the prompt, and is requested only on yes, which opens
+   *    the gate: the server sends both to their file.
+   * The server is polled for the answer; the rest of the queue then goes on
+   * here, with its progress. Cancel, or no answer, closes it all.
+   * @returns {Promise<true|false|null>} true: allowed, go on; false: could not
+   * gate (go on as before); null: closed.
+   */
+  async _gateFirstTwo() {
+    const s = this._files;
+    const service = SERVICE.media.download_gate;
+    const closed = () => !this._files || s.cancelled || this.isDestroyed();
+    const paintAll = (status) => s.list.forEach((v, i) => this._paintItem(i, status, 0));
+    this._gateTitle(LOCALE.PREPARING_DOWNLOAD);
+    // Every item waits on the answer, not just the two that ask for it.
+    paintAll('waiting');
+    const targets = [];
+    for (const i of [0, 1]) {
+      // One after the other: a background zip is awaited one at a time.
+      const t = await this._itemTarget(s.list[i], i);
+      if (closed()) return null;
+      if (!t || t.error) {
+        paintAll('pending');
+        return false;
+      }
+      targets.push(t);
+    }
+    const gate = `dl${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+    const { svc, keysel } = bootstrap();
+    const sst = this._token ? `&token=${encodeURIComponent(this._token)}` : '';
+    const url = (t, role) => `${svc}${service}?hub_id=${t.hub_id}&nid=${t.nid}&gate=${gate}` +
+      `&role=${role}&to=${encodeURIComponent(t.to)}&keysel=${keysel}${sst}`;
+    this._gate = { gate, hub_id: targets[0].hub_id, nid: targets[0].nid };
+    this._saveNative(url(targets[0], 'hold'), targets[0].name);
+    setTimeout(() => {
+      if (!closed()) this._saveNative(url(targets[1], 'open'), targets[1].name);
+    }, GATE_SECOND_MS);
+    this._gateTitle(LOCALE.ALLOW_DOWNLOADS_TO_START);
+    const until = Date.now() + GATE_WAIT_MS;
+    let state = '';
+    while (!state && Date.now() < until) {
+      await new Promise((r) => setTimeout(r, GATE_POLL_MS));
+      if (closed()) return null;
+      state = await this._gateState(0);
+    }
+    if (state !== 'open') {
+      // No, or no answer: the parked first item ends empty, nothing is saved.
+      this._gateCancel();
+      if (!closed()) this.goodbye();
+      return null;
+    }
+    this._gate = null;
+    // Both are the browser's own downloads now — the smallest of the
+    // selection (_gateOrder), through in a moment: checked at once. The
+    // browser tells this page nothing of their bytes, so the bar leaves them
+    // out until the end (_filesDone) — it follows only what this window
+    // fetches, the rest of the queue.
+    paintAll('pending');
+    for (const i of [0, 1]) {
+      this._paintItem(i, 'done', 0);
+      s.total -= this._isTree(s.list[i]) ? 0 : Number(s.list[i].mget(_a.filesize)) || 0;
+    }
+    s.native = 2;
+    s.index = 2;
+    this._paintFiles();
+    return true;
+  }
+
+  _canGate(list) {
+    return list.length > 1 && !!SERVICE.media.download_gate && !!SERVICE.media.download_gate_state;
+  }
+
+  /**
+   * The two items the browser downloads itself (_gateFirstTwo) go first: the
+   * two smallest files — the browser reports no progress to this window, so
+   * the big ones are better left to it — then folders, whose size is known
+   * only once zipped. The rest keeps the selection's order.
+   */
+  _gateOrder(list) {
+    const rank = (v) => (this._isTree(v) ? Infinity : Number(v.mget(_a.filesize)) || 0);
+    const pair = list
+      .map((v, i) => ({ v, i }))
+      .sort((a, b) => rank(a.v) - rank(b.v) || a.i - b.i)
+      .slice(0, 2)
+      .sort((a, b) => a.i - b.i)
+      .map((x) => x.v);
+    return [...pair, ...list.filter((v) => !pair.includes(v))];
+  }
+
+  /**
+   * The gate's answer, or with cancel, give it up.
+   */
+  async _gateState(cancel) {
+    const g = this._gate;
+    if (!g) return '';
+    try {
+      const r = await this.postService({
+        service: SERVICE.media.download_gate_state,
+        hub_id: g.hub_id,
+        nid: g.nid,
+        gate: g.gate,
+        cancel: cancel ? 1 : 0,
+        token: this._token,
+      });
+      return (r && r.state) || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  _gateCancel() {
+    if (!this._gate) return;
+    this._gateState(1);
+    this._gate = null;
+  }
+
+  _gateTitle(text) {
+    if (!this.el || this.isDestroyed()) return;
+    const title = this.el.querySelector(`.${this.fig.family}__files-title`);
+    if (title && text) title.textContent = text;
+  }
+
+  /**
+   * Where the browser gets an item from itself: a folder's zip (made ready
+   * first), or a file's own url — a path on this origin, for the gate to
+   * send the browser to.
+   * @returns {Promise<{to, name, hub_id, nid}|{error}>}
+   */
+  async _itemTarget(v, index) {
+    let url, name, node;
+    if (this._isTree(v)) {
+      const z = await this._prepareTree(v, index);
+      if (!z || z.error) return z || { error: 1 };
+      ({ url, node } = z);
+      name = `${z.name}.zip`;
+    } else {
+      url = v.actualNode(_a.orig).url;
+      const base = String(v.mget(_a.filename) || "").replace(/\<.+\>/, "");
+      const ext = v.mget(_a.extension) || v.mget(_a.ext);
+      name = ext ? `${base}.${ext}` : base;
+      node = { nid: v.mget(_a.nid), hub_id: v.mget(_a.hub_id) };
+    }
+    let to;
+    try {
+      const u = new URL(url, location.href);
+      if (u.origin !== location.origin) return { error: "cross-origin" };
+      to = u.pathname + u.search;
+    } catch (e) {
+      return { error: "no url" };
+    }
+    return { to, name, hub_id: node.hub_id, nid: node.nid };
+  }
+
+  /**
+   * A folder or a workspace: zipped on the server before it is saved.
+   */
+  _isTree(v) {
+    return !!v && [_a.hub, _a.folder].includes(v.mget(_a.filetype));
+  }
+
+  /**
+   * A folder of the queue: zipped on the server (_prepareTree), then fetched
+   * by this window and saved. Over MAX_BLOB_SIZE the browser downloads the zip
+   * itself.
+   * @returns {Promise<{loaded}|{error}>}
+   */
+  async _saveTree(v, index, onProgress) {
+    const z = await this._prepareTree(v, index);
+    if (!z || z.error) return z || { error: "no archive" };
+    const { url, name, res } = z;
+    if (Number(res.size) > MAX_BLOB_SIZE) {
+      // Too big to hold in the page: the browser fetches it (no byte count).
+      this._saveNative(url, `${name}.zip`);
+      return { loaded: Number(res.size) };
+    }
+    const blob = await this.fetchFile({ url, progress: { update: ({ loaded }) => onProgress(loaded) } });
+    if (!blob || blob.error || typeof blob.size !== "number") {
+      return { error: (blob && blob.error) || "no archive" };
+    }
+    saveHeld.call(this, blob, `${name}.zip`);
+    this.postService({ service: SERVICE.media.zip_release, id: res.zipid, token: this._token })
+      .catch(() => {});
+    return { loaded: blob.size };
+  }
+
+  /**
+   * A folder zipped on the server and ready to fetch: media.download for this
+   * one node, on its own hub, waited for when the server builds it in the
+   * background (over 5 MB).
+   * @returns {Promise<{url, name, node, res}|{error}>}
+   */
+  async _prepareTree(v, index) {
+    const isHub = v.mget(_a.filetype) === _a.hub;
+    const node = {
+      nid: isHub ? v.mget(_a.actual_home_id) : v.mget(_a.nid),
+      hub_id: v.mget(_a.hub_id),
+    };
+    const name = String(v.mget(_a.filename) || "").replace(/\<.+\>/, "") || "folder";
+    const res = await this.postService({
+      service: SERVICE.media.download,
+      nodes: [node],
+      nid: 0,
+      hub_id: node.hub_id,
+      socket_id: Visitor.get(_a.socket_id),
+      mode: '',
+      filename: name,
+      token: this._token,
+    });
+    if (!res || !res.zipid) return { error: "no archive" };
+    if (res.wait != 0) {
+      const built = await this._awaitTreeZip(res.zipid, index);
+      if (built && built.error) return built;
+    }
+    const { svc, keysel } = bootstrap();
+    const sst = this._token ? `&token=${encodeURIComponent(this._token)}` : '';
+    const url = `${svc}media.zip?hub_id=${node.hub_id}&nid=${res.nid || node.nid}&id=${res.zipid}` +
+      `&keysel=${keysel}&zipname=${encodeURIComponent(res.zipname || name)}${sst}`;
+    return { url, name, node: { nid: res.nid || node.nid, hub_id: node.hub_id }, res };
+  }
+
+  /**
+   * A same-origin zip the browser downloads on its own (media.zip answers it
+   * as an attachment).
+   */
+  _saveNative(url, filename) {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => a.remove(), 1000);
+  }
+
+  /**
+   * A folder the server zips in the background: its progress and its end come
+   * over the socket as media.download pushes, which Wm routes to the item
+   * carrying that zipid (window/utils downloadContent) — so this window
+   * carries it while it waits; handleDownload settles the wait.
+   */
+  _awaitTreeZip(zipid, index) {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => this._settleTreeZip({ error: "timeout" }), TREE_TIMEOUT_MS);
+      this._treeZip = { zipid, index, resolve, timer };
+      this.mset({ zipid });
+    });
+  }
+
+  _settleTreeZip(result) {
+    const t = this._treeZip;
+    if (!t) return;
+    this._treeZip = null;
+    clearTimeout(t.timer);
+    t.resolve(result);
+  }
+
+  /**
+   * Fetch the next item. A file through the ROW'S fetchFile (ui-core mfs.js)
+   * — its own url, auth and abort controller; a folder by _saveTree. Either
+   * way the bytes are reported here and saved by saveHeld (libs/save-held),
+   * whose download survives the browser's "allow multiple downloads" prompt.
    */
   _nextFile() {
     const s = this._files;
@@ -151,11 +429,36 @@ class __window_downloader extends mfsInteract {
     if (!v) return this._filesDone();
     s.current = v;
     s.loaded = 0;
+    const index = s.index;
+    if (this._isTree(v)) {
+      this._paintItem(index, 'downloading', 0);
+      this._paintFiles();
+      const onProgress = (loaded) => {
+        s.loaded = loaded;
+        this._paintItem(index, 'downloading', loaded);
+        this._paintFiles();
+      };
+      Promise.resolve()
+        .then(() => this._saveTree(v, index, onProgress))
+        .catch((e) => ({ error: e }))
+        .then((r) => {
+          if (s.cancelled || this.isDestroyed()) return;
+          const failed = !!(r && r.error);
+          if (failed) {
+            s.failed++;
+            this.warn("downloader: folder not saved", v.mget(_a.filename), r.error);
+          }
+          this._paintItem(index, failed ? 'error' : 'done', s.loaded);
+          s.loaded = 0;
+          s.index++;
+          this._nextFile();
+        });
+      return;
+    }
     const size = Number(v.mget(_a.filesize)) || 0;
     const name = String(v.mget(_a.filename) || "").replace(/\<.+\>/, "");
     const ext = v.mget(_a.extension) || v.mget(_a.ext);
     const download = ext ? `${name}.${ext}` : name;
-    const index = s.index;
     const progress = {
       update: ({ loaded }) => {
         s.loaded = loaded;
@@ -167,8 +470,16 @@ class __window_downloader extends mfsInteract {
     this._paintFiles();
     let result;
     Promise.resolve()
-      .then(() => v.fetchFile({ url: v.actualNode(_a.orig).url, progress, download }))
-      .then((r) => (result = r), () => (result = { error: 1 }))
+      .then(() => v.fetchFile({ url: v.actualNode(_a.orig).url, progress }))
+      .then((r) => {
+        // Without `download`, fetchFile hands the blob back instead of saving.
+        if (r && typeof r.size === "number" && !r.error) {
+          saveHeld.call(this, r, download);
+          result = undefined;
+        } else {
+          result = r || { error: 1 };
+        }
+      }, () => (result = { error: 1 }))
       .then(() => {
         if (s.cancelled || this.isDestroyed()) return;
         // fetchFile answers { error } on an HTTP failure and swallows a network
@@ -190,7 +501,7 @@ class __window_downloader extends mfsInteract {
    * data-status — and its small count on the right: the size while pending,
    * the percentage while downloading, nothing once settled.
    * @param {Number} i row index in _files.list
-   * @param {String} status pending | downloading | done | error
+   * @param {String} status pending | waiting | downloading | done | error
    * @param {Number} bytes bytes received for this file
    */
   _paintItem(i, status, bytes = 0) {
@@ -206,10 +517,14 @@ class __window_downloader extends mfsInteract {
     const meta = row.querySelector(`.${fam}__item-meta`);
     if (meta) {
       let text = '';
-      if (status === 'downloading') {
+      if (status === 'downloading' && this._isTree(v)) {
+        text = bytes ? filesize(bytes) : ''; // zipping on the server: the spinner says it
+      } else if (status === 'downloading') {
         text = size ? `${Math.min(100, Math.round((bytes / size) * 100))}%` : filesize(bytes);
+      } else if (status === 'waiting') {
+        text = ''; // the spinner says it
       } else if (status === 'pending') {
-        text = size ? filesize(size) : '';
+        text = size && !this._isTree(v) ? filesize(size) : '';
       }
       meta.textContent = text;
     }
@@ -228,9 +543,23 @@ class __window_downloader extends mfsInteract {
     const q = (k) => this.el.querySelector(`.${this.fig.family}__${k}`);
     const n = s.list.length;
     const bytes = Math.min(s.done + s.loaded, s.total || Infinity);
-    const pct = s.total
-      ? Math.round((bytes / s.total) * 100)
-      : Math.round((Math.min(s.index, n) / n) * 100);
+    // Only what this window fetches is counted: the items the browser
+    // downloads itself (s.native, at the head of the list) are not.
+    const skip = s.native || 0;
+    const tracked = s.list.slice(skip);
+    // With folders in the queue, by item: a folder's size is only known once
+    // the server has zipped it. A file in flight counts its own fraction.
+    let pct;
+    if (!tracked.length) {
+      pct = 0;
+    } else if (tracked.some((v) => this._isTree(v)) || !s.total) {
+      const v = s.current;
+      const size = v && !this._isTree(v) ? Number(v.mget(_a.filesize)) || 0 : 0;
+      const part = size ? Math.min(1, s.loaded / size) : 0;
+      pct = Math.round(((Math.min(Math.max(s.index - skip, 0), tracked.length) + part) / tracked.length) * 100);
+    } else {
+      pct = Math.round((bytes / s.total) * 100);
+    }
     const fill = q('bar-fill');
     if (fill) fill.style.width = `${pct}%`;
     const title = q('files-title');
@@ -253,16 +582,27 @@ class __window_downloader extends mfsInteract {
     if (!s || this.isDestroyed()) return;
     s.index = s.list.length;
     s.current = null;
+    // Everything went to the browser: nothing here to call complete — it
+    // says where the files are, and shows no bar.
+    const allNative = !s.failed && (s.native || 0) >= s.list.length;
+    if (s.native && !allNative) {
+      // The browser had the two smallest files (_gateOrder) while this window
+      // fetched the rest: counted now, with everything else.
+      for (let i = 0; i < s.native; i++) {
+        s.total += this._isTree(s.list[i]) ? 0 : Number(s.list[i].mget(_a.filesize)) || 0;
+      }
+      s.native = 0;
+    }
     if (!s.failed) s.done = s.total;
     this._paintFiles();
     const main = this.el.querySelector(`.${this.fig.family}__files`);
-    if (main) main.dataset.state = s.failed ? 'failed' : 'done';
+    if (main) main.dataset.state = s.failed ? 'failed' : allNative ? 'browser' : 'done';
     const q = (k) => this.el.querySelector(`.${this.fig.family}__${k}`);
     const title = q('files-title');
     if (title) {
       title.textContent = s.failed
         ? LOCALE.DOWNLOAD_X_FAILED.format(s.failed)
-        : LOCALE.DOWNLOAD_COMPLETE;
+        : allNative ? LOCALE.DOWNLOADING_IN_BROWSER : LOCALE.DOWNLOAD_COMPLETE;
     }
     const fname = q('files-name');
     if (fname) fname.textContent = '';
@@ -412,6 +752,11 @@ class __window_downloader extends mfsInteract {
     const s = this._files;
     if (s) {
       s.cancelled = 1;
+      this._gateCancel();
+      this._settleTreeZip({ error: "aborted" });
+      try {
+        if (this.aborter) this.aborter.abort({ aborted: 1 });
+      } catch (e) { }
       const v = s.current;
       try {
         if (v && v.aborter) v.aborter.abort({ aborted: 1 });
@@ -440,14 +785,12 @@ class __window_downloader extends mfsInteract {
     // to close the card and open Wm.downloadNotice — a second window_info card
     // whose bar is simulated and parks near 90%, so the one download showed
     // two UIs and the second looked stuck.
-    this._ensureProgress().then(() => {
-      if (this.isDestroyed()) return;
-      this._zipSettle({
-        state: 'done',
-        title: `${opt.zipname || this.mget('zipname') || ''}.zip`,
-        label: LOCALE.DOWNLOAD_SAVING_IN_BROWSER,
-        full: true,
-      });
+    // Its row is checked; the bar goes — nothing of the browser's own
+    // transfer reaches this page to fill it.
+    this._zipItem('done', opt.zipname);
+    this._zipSettle({
+      state: 'browser',
+      title: LOCALE.DOWNLOADING_IN_BROWSER,
     });
   }
 
@@ -530,49 +873,60 @@ class __window_downloader extends mfsInteract {
   }
 
   /**
-   * 
+   * The archive's name, without .zip: the server's, once media.download has
+   * answered, else the one asked for (prepareZip).
    */
-  // The progress bar (kind 'progress_bar', a ui-core widget) is not registered
-  // in every context — e.g. the DMZ share bundle — so ensurePart('progress')
-  // can resolve to a failover view that lacks update/setLabel/restart. Guard
-  // every call so a missing progress widget never crashes the download; the
-  // card's title and Close still report the outcome (_zipSettle).
-  _progress(method, ...args) {
-    const p = this.__progress;
-    if (!p || typeof p[method] !== "function") return;
-    const r = p[method](...args);
-    if (method === "update") this._paintPercent(args[0]);
-    if (method === "restart") this._paintPercent(0, true);
-    return r;
+  _zipLabel() {
+    return this.mget('zipname') || (this._api && this._api.filename) ||
+      Dayjs().format("[drumee]-YYYY-MM-DD");
   }
 
   /**
-   * The one number beside the bar: the percentage, on the right, only ever
-   * going up. ui-core's progress_bar writes "loaded" at the left (the skin
-   * hides it) and, at the right, either the byte total or the bar's width
-   * depending on how update() was called — "0" … "100%" or "197.82 MB".
-   * Painted after it, over that right label.
-   * @param {Number|Object} v a percentage, or { loaded, total }
+   * The .zip step's bar, as the multiple-files step's (skeleton/rows.js): its
+   * fill, the percentage on the right — only ever going up — and, while the
+   * archive is fetched, the bytes on the left; the row's own count too.
+   * @param {Number|Object} v a percentage (the server building the archive),
+   * or { loaded, total } (fetchFile's bytes)
    * @param {Boolean} reset a new transfer: start again from 0
    */
-  _paintPercent(v, reset) {
-    const p = this.__progress;
-    const total = p && p.__total;
-    if (!total || (total.isDestroyed && total.isDestroyed())) return;
+  _zipPaint(v, reset) {
+    if (!this.el || this.isDestroyed()) return;
+    const q = (k) => this.el.querySelector(`.${this.fig.family}__${k}`);
     let pct = 0;
+    let bytes = '';
     if (v && typeof v === "object") {
-      pct = v.total ? (100 * v.loaded) / v.total : 0;
+      const total = Number(v.total) || this._zipsize || 0;
+      pct = total ? (100 * v.loaded) / total : 0;
+      if (total) bytes = `${filesize(Math.min(v.loaded, total))} / ${filesize(total)}`;
     } else {
       pct = Number(v) || 0;
     }
     pct = Math.max(0, Math.min(100, Math.floor(pct)));
     if (reset) this._pctShown = 0;
     this._pctShown = Math.max(this._pctShown || 0, pct);
-    total.set(_a.content, `${this._pctShown}%`);
+    const fill = q('bar-fill');
+    if (fill) fill.style.width = `${this._pctShown}%`;
+    const percent = q('meta-percent');
+    if (percent) percent.textContent = `${this._pctShown}%`;
+    const meta = q('meta-bytes');
+    if (meta && (bytes || reset)) meta.textContent = bytes;
+    const count = q('item-meta');
+    if (count) count.textContent = `${this._pctShown}%`;
   }
 
-  _hasProgress() {
-    return this.__progress && typeof this.__progress.update === "function";
+  /**
+   * The archive's row: waiting (the server builds it: a spinner), downloading
+   * (its percentage), done (a check) or error (a warning) — the skin keys off
+   * data-status — and its name once the server has given it.
+   */
+  _zipItem(status, zipname) {
+    if (!this.el || this.isDestroyed()) return;
+    const fam = this.fig.family;
+    const row = this.el.querySelector(`.${fam}__item`);
+    if (!row) return;
+    row.dataset.status = status;
+    const name = row.querySelector(`.${fam}__item-name`);
+    if (name && zipname) name.textContent = `${zipname}.zip`;
   }
 
   /**
@@ -584,10 +938,10 @@ class __window_downloader extends mfsInteract {
    *    triggers eod only when it is NOT saving (no `download` option); with
    *    one it hands the blob to getBlob and returns. So the archive was saved
    *    and the card never knew. The outcome is now download_zip()'s own.
-   *  - The progress bar was only resolved in handleDownload — the server's
-   *    progress pushes, which only come for an archive over 5 MB. Below that
-   *    the server answers wait:0 straight away, and every _progress() call
-   *    here found nothing. It is resolved here now, in both paths.
+   *  - Its progress bar, a ui-core widget, was only resolved in
+   *    handleDownload — the server's progress pushes, which only come for an
+   *    archive over 5 MB. The bar is now the card's own (skeleton/rows.js),
+   *    painted in place by _zipPaint, in both paths.
    */
   async downloadZip(data) {
     if (this._isDownloading) return;
@@ -596,19 +950,16 @@ class __window_downloader extends mfsInteract {
       return;
     }
     this._isDownloading = 1;
-    await this._ensureProgress();
     if (this.isDestroyed()) return;
-    this._progress('setLabel', data.zipname);
-    this._progress('restart', this._zipsize, 0);
+    this._setZipTitle(LOCALE.DOWNLOADING);
+    this._zipItem('downloading', data.zipname);
+    this._zipPaint({ loaded: 0, total: this._zipsize }, true);
     let res;
     try {
       res = await this.download_zip({
         ...data,
-        // Through _progress, so fetchFile's byte updates reach the
-        // percentage too (it calls progress.update({ loaded, total })).
-        progress: this._hasProgress()
-          ? { update: (o) => this._progress('update', o) }
-          : undefined,
+        // fetchFile's byte updates: progress.update({ loaded, total }).
+        progress: { update: (o) => this._zipPaint(o) },
       });
     } catch (e) {
       this.warn("GOT ERRO WHILE DOWNLOADING", e);
@@ -616,22 +967,6 @@ class __window_downloader extends mfsInteract {
     }
     if (this.isDestroyed()) return;
     this._zipDone(data, res);
-  }
-
-  /**
-   * The progress_bar part, resolved once. Bounded: ensurePart never settles
-   * for a part that does not mount (a DMZ bundle without progress_bar), and
-   * _progress() already copes with having none.
-   */
-  _ensureProgress() {
-    if (this._hasProgress()) return Promise.resolve(this.__progress);
-    if (!this._progressReady) {
-      this._progressReady = Promise.race([
-        this.ensurePart('progress').then((p) => (this.__progress = p)),
-        new Promise((r) => setTimeout(r, 1500)),
-      ]).catch(() => {});
-    }
-    return this._progressReady;
   }
 
   /**
@@ -644,17 +979,15 @@ class __window_downloader extends mfsInteract {
    */
   _zipDone(data, res) {
     const ok = !(res && res.error);
-    let label;
-    if (/aborted/.test(String(res && res.error))) {
-      label = LOCALE.CANCELED;
-    } else {
-      label = ok ? LOCALE.HAS_BEEN_SAVED.format(`${data.zipname}.zip`) : LOCALE.DOWNLOAD_FAILED;
+    const aborted = /aborted/.test(String(res && res.error));
+    if (ok) {
+      this._zipPaint({ loaded: this._zipsize || 1, total: this._zipsize || 1 });
+      this._zipPaint(100);
     }
+    this._zipItem(ok ? 'done' : 'error', data.zipname);
     this._zipSettle({
       state: ok ? 'done' : 'failed',
-      title: ok ? LOCALE.DOWNLOAD_COMPLETE : LOCALE.DOWNLOAD_FAILED,
-      label,
-      full: ok,
+      title: ok ? LOCALE.DOWNLOAD_COMPLETE : aborted ? LOCALE.CANCELED : LOCALE.DOWNLOAD_FAILED,
     });
     if (ok) {
       this.postService({ service: SERVICE.media.zip_release, id: data.zipid, token: this._token });
@@ -662,20 +995,15 @@ class __window_downloader extends mfsInteract {
   }
 
   /**
-   * End the .zip step in place: the bar (full when the archive got through),
-   * the title and the line under the bar, Close instead of Cancel (the frame
+   * End the .zip step in place: the title, Close instead of Cancel (the frame
    * swaps them off data-state), and the card no longer "running" so its ×
    * just closes. Shared by the in-page fetch (_zipDone) and the hand-off to
    * the browser's own download (getFromUrl).
-   * @param {{state: String, title: String, label: String, full: Boolean}} o
+   * @param {{state: String, title: String}} o state: done | failed | browser
    */
   _zipSettle(o) {
-    if (o.full) this._progress('update', 100);
-    this._progress('setLabel', o.label);
     if (this.__btnCancel && !this.__btnCancel.isDestroyed()) this.__btnCancel.suppress();
-    if (this.__btnStatus && !this.__btnStatus.isDestroyed()) {
-      this.__btnStatus.set({ content: o.title });
-    }
+    this._setZipTitle(o.title);
     if (this.__btnAction && !this.__btnAction.isDestroyed()) {
       this.__btnAction.mset({ service: _e.close });
     }
@@ -683,6 +1011,14 @@ class __window_downloader extends mfsInteract {
     if (main) main.dataset.state = o.state;
     this._running = 0;
     this.raise();
+  }
+
+  _setZipTitle(text) {
+    if (!text || this._prevText === text) return;
+    this._prevText = text;
+    if (this.__btnStatus && !this.__btnStatus.isDestroyed()) {
+      this.__btnStatus.set({ content: text });
+    }
   }
 
 
@@ -774,6 +1110,16 @@ class __window_downloader extends mfsInteract {
   }
 
   async handleDownload(data) {
+    const t = this._treeZip;
+    if (t && data && data.zipid === t.zipid) {
+      // A folder of the "Multiple files" queue being zipped (_awaitTreeZip).
+      if (data.phase === 'exit') {
+        this._settleTreeZip(data.exit ? { error: data.message || "zip failed" } : {});
+      } else if (data.phase === 'error') {
+        this._settleTreeZip({ error: data.message || "zip failed" });
+      }
+      return;
+    }
     const { phase, progress, message } = data;
     let text;
     if (message && LOCALE[message]) {
@@ -781,18 +1127,14 @@ class __window_downloader extends mfsInteract {
     } else {
       text = message || "...";
     }
-    if (this._prevText != text) {
-      this.__btnStatus.set({ content: text });
-      this._prevText = text;
-    }
-    await this._ensureProgress();
+    this._setZipTitle(text);
     switch (phase) {
       case 'archive':
-        this._progress('update', this._archivePercent(progress, message));
+        this._zipItem('waiting', data.zipname);
+        this._zipPaint(this._archivePercent(progress, message));
         break;
       case 'exit':
         this.downloadZip(data);
-        this._progress('setLabel', LOCALE.BACKUP_TIPS);
         break;
     }
   }
