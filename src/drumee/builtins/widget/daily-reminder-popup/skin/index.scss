@@ -172,6 +172,16 @@ $primary-hover: var(--primary-purple-60, #4642a9);
     padding: 12px;
     border: 1px solid #ecebf3;
     border-radius: 12px;
+    // Each tile opens its screen (Inbox / Personal Calendar). Colour only on
+    // hover, never `transform`: motion.js tweens the tile's own `y` on entry,
+    // and gsap leaves that inline transform behind.
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+      background: #f8f7ff;
+      border-color: #dcd9f5;
+    }
 
     &--chat { --dr-tile-bg: #efecff; --dr-tile-ink: #6c5ce7; }
     &--task { --dr-tile-bg: #e6f7ee; --dr-tile-ink: #2e9e62; }
@@ -377,6 +387,7 @@ $primary-hover: var(--primary-purple-60, #4642a9);
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .daily-reminder-popup__stat,
   .daily-reminder-popup__calrow,
   .daily-reminder-popup__calrow-arrow,
   .daily-reminder-popup__btn {

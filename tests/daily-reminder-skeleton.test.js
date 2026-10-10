@@ -83,6 +83,20 @@ test("stat tiles use the rail icons, numbers and plural labels", () => {
     ["unread messages", "due task", "meetings today"]);
 });
 
+test("stat tiles are click targets: messages → inbox, tasks and meetings → calendar", () => {
+  const t = skeleton(ui());
+  const tiles = byClass(t, `${P}__stat`);
+  assert.deepEqual(tiles.map((n) => n.service),
+    ["daily-reminder-inbox", "daily-reminder-calendar", "daily-reminder-calendar"]);
+  for (const tile of tiles) {
+    assert.notEqual(tile.active, 0);
+    assert.equal(tile.bubble, 0);
+    assert.equal(tile.uiHandler[0].fig.family, P);
+    // Everything inside stays inert, so a tap on the icon or text reaches the tile.
+    assert.deepEqual(walk(tile).slice(1).filter((n) => n.active !== 0).map((n) => n.className), []);
+  }
+});
+
 test("malformed counts render as non-negative integers", () => {
   const t = skeleton(ui({ counts: { unread_messages: "<b>", due_tasks: -3, meetings: 2.7 } }));
   assert.deepEqual(byClass(t, `${P}__stat-num`).map((n) => n.content), ["0", "0", "2"]);

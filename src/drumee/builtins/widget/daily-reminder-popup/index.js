@@ -21,6 +21,11 @@
  * help / Billing and the reload-restore all working: `toggle-calendar` is in
  * desk `_RESTORABLE_SCREENS`, and none of that would follow a hand-rolled open.
  *
+ * The three stat tiles are click targets too (Lexis, 2026-10-10): unread
+ * messages → the desk's `toggle-inbox`, due tasks and meetings today → the
+ * same Personal Calendar the button opens. Both go through _openDeskScreen,
+ * for the same reasons.
+ *
  * Maybe later and ✕ are the same action: close, write nothing. There is no
  * server-side "seen" state at all.
  */
@@ -203,40 +208,52 @@ class __daily_reminder_popup extends LetcBox {
       case "daily-reminder-close":
         return this._close();
 
-      // [My calendar] → the Personal Calendar. See the header for why this
-      // delegates instead of opening the panel itself.
-      case "daily-reminder-calendar": {
-        // CLOSE FIRST, then open — the same ordering the notice needed, for a
-        // different reason: _portalToBody moves this card to document.body at
-        // z 99998, ABOVE the settings-main-slot the calendar mounts into, so
-        // leaving it up would bury the screen the click just asked for.
-        //
-        // NOT `Wm.__wrapperModal`, which is what this comment used to claim.
-        // Wm.launch({explicit:1}) appends to getWindowsPool(kind) — the
-        // headless workspace LAYER — and that mistake is what made
-        // `parent.clear()` in _close look safe. See _close.
-        //
-        // Not merely relying on togglePanel's own _dismissWmModal() to sweep
-        // the card away: that would work today, but it makes this button's
-        // behaviour a side effect of someone else's cleanup. Closing here is
-        // the same explicit close Discard and ✕ already use.
-        this._close();
-        // `service` is passed in args, so Desk.onUiEvent never dereferences
-        // `cmd` — which matters because _close() above may already have
-        // destroyed this widget and the button inside it.
-        //
-        // `calendarView: "month"` — the button lands on the month grid of the
-        // current month (Lexis, 2026-09-29; DAY view before that). Named
-        // rather than omitted so a calendar left on week/day view, or on
-        // another month, still comes back to this month's grid. The desk owns
-        // the whole of that: it passes the view as a launch option AND
-        // re-states it on an instance that was only revealed. See desk
-        // `_openCalendar`.
-        if (window.Desk && _.isFunction(Desk.onUiEvent)) {
-          Desk.onUiEvent(cmd, { service: "toggle-calendar", calendarView: "month" });
-        }
-        return;
-      }
+      // [My calendar], the calendar row, and the due-tasks and meetings
+      // tiles → the Personal Calendar. See the header for why this delegates
+      // instead of opening the panel itself.
+      //
+      // `calendarView: "month"` — lands on the month grid of the current
+      // month (Lexis, 2026-09-29; DAY view before that). Named rather than
+      // omitted so a calendar left on week/day view, or on another month,
+      // still comes back to this month's grid. The desk owns the whole of
+      // that: it passes the view as a launch option AND re-states it on an
+      // instance that was only revealed. See desk `_openCalendar`.
+      case "daily-reminder-calendar":
+        return this._openDeskScreen(cmd, { service: "toggle-calendar", calendarView: "month" });
+
+      // The unread-messages tile → the Inbox (Lexis, 2026-10-10). The desk's
+      // `toggle-inbox` is open-only (togglePanel(…, true)), so an Inbox the
+      // reload already restored stays open rather than toggling shut.
+      case "daily-reminder-inbox":
+        return this._openDeskScreen(cmd, { service: "toggle-inbox" });
+    }
+  }
+
+  /**
+   * Close the card, then hand `args.service` to the desk — the same service
+   * the rail / topbar / phone go-to grid fire for that screen.
+   */
+  _openDeskScreen(cmd, args) {
+    // CLOSE FIRST, then open — the same ordering the notice needed, for a
+    // different reason: _portalToBody moves this card to document.body at
+    // z 99998, ABOVE the settings-main-slot the calendar and the Inbox mount
+    // into, so leaving it up would bury the screen the click just asked for.
+    //
+    // NOT `Wm.__wrapperModal`, which is what this comment used to claim.
+    // Wm.launch({explicit:1}) appends to getWindowsPool(kind) — the
+    // headless workspace LAYER — and that mistake is what made
+    // `parent.clear()` in _close look safe. See _close.
+    //
+    // Not merely relying on togglePanel's own _dismissWmModal() to sweep
+    // the card away: that would work today, but it makes this click's
+    // behaviour a side effect of someone else's cleanup. Closing here is
+    // the same explicit close Discard and ✕ already use.
+    this._close();
+    // `service` is passed in args, so Desk.onUiEvent never dereferences
+    // `cmd` for it — which matters because _close() above may already have
+    // destroyed this widget and the view inside it that was clicked.
+    if (window.Desk && _.isFunction(Desk.onUiEvent)) {
+      Desk.onUiEvent(cmd, args);
     }
   }
 }
