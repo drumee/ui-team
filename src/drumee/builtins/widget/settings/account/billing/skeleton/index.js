@@ -189,30 +189,16 @@ function subscriptionBanner(ui) {
 }
 
 /**
- * The countdown chip's text node.
- *
- * Exported because settings_billing._tickPromoCountdown() re-feeds it once a
- * second: one definition means the class and the formatting cannot drift
- * between the first render and every render after it.
- * @param {Object} ui - UI instance
- * @returns {Object} Skeletons component
- */
-function promoCountdownNote(ui) {
-  return Skeletons.Note({
-    className: `${ui.fig.family}__promo-banner-timer-text`,
-    content: ui._promoCountdownText(),
-  });
-}
-
-/**
- * September 2026 campaign strip: "50% OFF YEARLY PLAN" + a live countdown
- * (Figma "Drumee 2.0" node 692-128029).
+ * Campaign strip: "50% OFF YEARLY PLAN" (Figma "Drumee 2.0" node 692-128029).
  *
  * Rendered ONLY when settings_billing._promoYearlyActive() says the catalog is
  * really giving at least the advertised cut — the headline and the ticket
  * artwork both carry a hard "50%", so this must never appear on a deployment
- * whose Stripe yearly prices have not moved. It also self-retires at the end
- * of September without a deploy. See the constants in billing/index.js.
+ * whose Stripe yearly prices have not moved.
+ *
+ * No countdown chip: the design's "21 DAYS 06:48:00" belonged to the
+ * September run. The campaign is open-ended since 2026-10-10 (Lexis), so
+ * there is no deadline to count down to.
  *
  * Not shown on Checkout: that tab is a payment form for a plan already chosen,
  * and an advert for a different billing cycle belongs before the choice, not
@@ -244,23 +230,6 @@ function promoBanner(ui) {
         className: `${fig}-title`,
         content: (LOCALE.PROMO_YEARLY_OFF_TITLE || "{0}% OFF YEARLY PLAN")
           .format(ui._yearlySavingPct()),
-      }),
-      Skeletons.Box.X({
-        className: `${fig}-timer`,
-        kids: [
-          Skeletons.Image.Svg({ ico: "alarm", className: `${fig}-timer-icon` }),
-          // A CONTAINER, not the text itself: settings_billing ticks this once
-          // a second by feed()-ing a fresh Note into it (the framework's own
-          // update path), which is why it needs a sys_pn of its own. Writing
-          // into a Note's element directly would fight the note widget, whose
-          // content lives in an inner .note-content div it rebuilds itself.
-          Skeletons.Box.X({
-            className: `${fig}-timer-value`,
-            sys_pn: `${ui.fig.family}__promo-countdown`,
-            partHandler: ui,
-            kids: [promoCountdownNote(ui)],
-          }),
-        ],
       }),
     ],
   });
@@ -541,4 +510,4 @@ function billing(ui) {
 }
 
 export default billing;
-export { getContent, promoCountdownNote };
+export { getContent };

@@ -1,15 +1,19 @@
 const {
   canUpgradePlan, billingAvailable, planRank, planKey,
-  PROMO_YEARLY_PCT, promoYearlyEndsAt, promoYearlySecondsLeft, promoYearlyCountdown,
+  PROMO_YEARLY_PCT,
 } = require("libs/billing");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
 const TAB_CHECKOUT = 2;
 
-// The September 2026 campaign's window, percentage and countdown all live in
-// libs/billing.js: this page and the promo_yearly modal both count the same
-// campaign down and must never disagree about it.
+// The campaign's advertised percentage lives in libs/billing.js, beside the
+// September window and countdown that only the promo_yearly modal still uses.
+
+// The campaign modal is OFF (Lexis, 2026-10-10: the 50%-off-yearly campaign
+// runs again with no end date, banners only, no popup). The modal and its
+// once-a-day throttle are kept intact so it can be switched back on here.
+const PROMO_YEARLY_MODAL = false;
 
 // Where the campaign modal records that it has been shown today.
 //
@@ -105,7 +109,6 @@ class settings_billing extends LetcBox {
     this.unbindEvent(_a.live);
     clearTimeout(this._motionTimer);
     clearTimeout(this._orgIdentTimer);
-    this._stopPromoCountdown();
     if (this._onVisibility) {
       document.removeEventListener("visibilitychange", this._onVisibility);
       this._onVisibility = null;
@@ -1093,13 +1096,6 @@ class settings_billing extends LetcBox {
       case `${this.fig.family}__redeem-code-input`:
         this.__redeemCodeInput = child;
         break;
-      case `${this.fig.family}__promo-countdown`:
-        // Re-point at the freshly rendered chip (the old one's node is gone)
-        // and make sure exactly one interval is running — _startPromoCountdown
-        // is a no-op when it already is.
-        this.__promoCountdown = child;
-        this._startPromoCountdown();
-        break;
         // case `${this.fig.family}__checkout-storage-input`:
         //   this._setupInputChangeListener(child, "storage");
         //   this._restoreInputFocus(child, "storage");
@@ -1460,15 +1456,17 @@ class settings_billing extends LetcBox {
   }
 
   /**
-   * Is the September 50%-off-yearly campaign both LIVE and actually honoured?
+   * Is the 50%-off-yearly campaign actually honoured by the catalog?
    *
-   * Two independent gates, and the catalog one is the important half: the
-   * banner claims a specific number ("50% OFF YEARLY PLAN", and the ticket
-   * artwork has "50%" baked into it), so it may only appear once Stripe is
-   * really giving at least that much. Before the prices are changed the page
-   * simply shows no banner instead of a false one; after they are restored it
-   * disappears on its own. The date is the backstop that retires the campaign
-   * even if the prices are left in place.
+   * The banner claims a specific number ("50% OFF YEARLY PLAN", and the ticket
+   * artwork has "50%" baked into it), so it may only appear while Stripe is
+   * really giving at least that much. Without the discounted prices the page
+   * simply shows no banner instead of a false one; once they are restored it
+   * disappears on its own.
+   *
+   * No date gate any more. It ran for September 2026 only; Lexis (2026-10-10)
+   * brought it back as an open-ended campaign, so the catalog is now the ONE
+   * switch — the campaign ends when the yearly prices go back up.
    *
    * Until the catalog lands, _catPrice() answers from its offline fallback map
    * (the standing 10x prices), which scores 16% — so the first paint of a
@@ -1477,26 +1475,7 @@ class settings_billing extends LetcBox {
    * @returns {boolean}
    */
   _promoYearlyActive() {
-    if (Math.floor(Date.now() / 1000) >= promoYearlyEndsAt()) return false;
     return this._yearlySavingPct() >= PROMO_YEARLY_PCT;
-  }
-
-  /**
-   * Whole seconds left in the campaign, floored at 0.
-   * @returns {number}
-   */
-  _promoSecondsLeft() {
-    return promoYearlySecondsLeft();
-  }
-
-  /**
-   * The countdown chip's text — "21 DAYS 06:48:00" (Figma 692-128029).
-   * Drops the day count entirely on the last day rather than printing
-   * "0 DAYS", which reads as an expired offer.
-   * @returns {string}
-   */
-  _promoCountdownText() {
-    return promoYearlyCountdown();
   }
 
   /**
@@ -1553,6 +1532,7 @@ class settings_billing extends LetcBox {
    *    hold, which is the one thing it is not.
    */
   async _maybeShowPromoYearly() {
+    if (!PROMO_YEARLY_MODAL) return;
     if (this.isDestroyed()) return;
     if (!this._promoYearlyActive()) return;
     if (!this._mayCheckout()) return;
@@ -1591,51 +1571,6 @@ class settings_billing extends LetcBox {
     this.tab = TAB_YEARLY;
     this._armMotion();
     this.renderContent();
-  }
-
-  /**
-   * Drive the countdown chip once a second.
-   *
-   * ONE interval for the whole widget lifetime, never one per render: every
-   * surface on this page is rebuilt by a full feed() (the catalog landing, a
-   * WS plan_updated, a tab switch), so the chip is destroyed and recreated
-   * constantly and starting a timer per part would stack them silently.
-   * onPartReady just re-points _promoCountdown at the live part.
-   */
-  _startPromoCountdown() {
-    if (this._promoTimer) return;
-    this._promoTimer = setInterval(() => this._tickPromoCountdown(), 1000);
-  }
-
-  _stopPromoCountdown() {
-    clearInterval(this._promoTimer);
-    this._promoTimer = null;
-  }
-
-  /**
-   * One tick. Stops itself whenever the chip is no longer on screen (the
-   * Checkout tab, or any render that dropped the banner) so a hidden page
-   * costs nothing; onPartReady starts it again when the chip comes back.
-   */
-  _tickPromoCountdown() {
-    const part = this.__promoCountdown;
-    // isConnected, not a stored flag: the part object outlives its DOM node
-    // across a re-render, and the node is the only thing that knows.
-    if (this.isDestroyed() || !part?.el?.isConnected) {
-      this._stopPromoCountdown();
-      return;
-    }
-    // The campaign ran out while the page sat open. Re-render once so the
-    // banner and the tab badge go with it, rather than freezing on 00:00:00.
-    if (!this._promoYearlyActive()) {
-      this._stopPromoCountdown();
-      this.__promoCountdown = null;
-      this.fetchPlanData();
-      return;
-    }
-    const { promoCountdownNote } = require("./skeleton");
-    if (typeof part.softClear === "function") part.softClear();
-    part.feed(promoCountdownNote(this));
   }
 
   /**
