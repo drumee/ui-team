@@ -9482,6 +9482,25 @@ class desk_module extends LetcBox {
    *
    * localStorage "force-org-setup" shows it regardless (QA), and is consumed.
    */
+  /**
+   * ?org_view=1: the org-setup wizard finished on another address (a new
+   * organisation, or a changed one) and the desk lands on the organisation's
+   * view, as it does when the wizard ends in place.
+   */
+  _maybeOpenOrgViewFromUrl() {
+    let want = false;
+    try {
+      const params = new URLSearchParams(location.search);
+      want = params.get("org_view") === "1";
+      if (params.has("org_view")) {
+        params.delete("org_view");
+        const q = params.toString();
+        history.replaceState(null, "", `${location.pathname}${q ? `?${q}` : ""}${location.hash}`);
+      }
+    } catch (e) { /* no history API */ }
+    if (want && this._openOrgViewFromPopup) this._openOrgViewFromPopup();
+  }
+
   async _maybeShowOrgSetup() {
     if (!(require("libs/org-overview").orgFeature())) return;
     if (!(SERVICE.organization && SERVICE.organization.setup_state)) return;
@@ -9573,6 +9592,7 @@ class desk_module extends LetcBox {
       .then(() => this._maybeShowUpgradeNudge())
       .then(() => this._maybeAcceptJoinLink())
       .then(() => this._maybeShowOrgSetup())
+      .then(() => this._maybeOpenOrgViewFromUrl())
       .catch((e) => {
         this._hideInvitedWorkspaceLoader();
         this.warn && this.warn("[home] post-ready chain failed", e);
