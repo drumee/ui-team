@@ -2605,7 +2605,9 @@ class desk_module extends LetcBox {
         paneComing = !!(await this._openDefaultWorkspace());
       }
       landOrgHome();
-      if (saved.service && !(this.isDestroyed && this.isDestroyed())) {
+      // On the organisation's screen, the remembered screen is not reopened.
+      const orgHome = this._orgHomeAtBoot ? await this._orgHomeAtBoot : false;
+      if (!orgHome && saved.service && !(this.isDestroyed && this.isDestroyed())) {
         // Wait for the OPEN only. The restore flag below exists to keep a
         // late loadHome from wiping the screen being opened; the wait for the
         // screen's items (up to 6s more) needs no such guard, and holding the
