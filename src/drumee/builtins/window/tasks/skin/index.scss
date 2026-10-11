@@ -6900,8 +6900,21 @@ $theme-colors: (
       @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #fff);
     }
   }
+  // app-add draws its plus edge to edge (12/12 of the viewBox) where the
+  // "open" glyph fills ~60% of its own, so at the shared 11px the ＋ read as
+  // twice the size. Shrink the glyph only — the 11px hit box and the row
+  // spacing stay — and centre it in that box.
   &__list-row-add {
     opacity: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      display: block;
+      width: 8px !important;
+      height: 8px !important;
+    }
   }
   // The ＋ tooltip hangs below the pinned Task cell: let it out, and lift the
   // hovered row's cell over the next row's (also sticky, same z-index).
