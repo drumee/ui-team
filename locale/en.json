@@ -324,6 +324,7 @@
   "Q_RESTORE_TO_HOME": "Original folder no longer exists. Restore to home folder instead?",
   "Q_RESTORE_TO_WORKSPACE": "The original folder no longer exists. Restore to the top of its workspace instead?",
   "RESTORE_FAILED": "This item could not be restored. Please try again.",
+  "PURGE_FAILED": "This item could not be deleted. Please try again.",
   "REMOVE": "Remove",
   "RENAME": "Rename",
   "REPLACE": "Replace",

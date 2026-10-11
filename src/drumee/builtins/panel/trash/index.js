@@ -48,6 +48,11 @@ class __panel_trash extends mfsInteract {
     // Restores in flight, so a double click cannot send the same nid twice
     // (the second call finds the trash row gone and reads as parent_missing).
     this._restoring = new Set();
+    // Same idea for single-item purges: the row is dropped locally, so the
+    // media.purge job this panel started must not reload the list. Times of
+    // purges still owed an echo (see _takeLocalPurge).
+    this._localPurges = [];
+    this._purging = new Set();
 
   }
 
@@ -115,12 +120,37 @@ class __panel_trash extends mfsInteract {
         if (this._isLocalRestore(data)) break;
         this._wsRefresh();
         break;
+      case "media.purge":             // purged / bin emptied
+        // The purge job (server offline/media/purge.js) streams one
+        // "prepare", then "progress" ticks and a "completed" while it erases
+        // the files on disk. The bin rows are already gone from the DB before
+        // the job starts, so only "prepare" says anything new; the others
+        // spaced out past the debounce and restart()ed the list two or three
+        // times per delete — rows blanking, refetching, scroll jumping.
+        if (data && data.phase && data.phase !== "prepare") break;
+        // A delete made from this panel: its row is already removed.
+        if (this._takeLocalPurge()) break;
+        this._wsRefresh();
+        break;
       case "media.remove":            // node moved to trash (server echo of media.trash)
       case SERVICE.media.trash:       // local Wm echoes use the request name
-      case "media.purge":             // purged / bin emptied elsewhere
         this._wsRefresh();
         break;
     }
+  }
+
+  /**
+   * One purge job per non-empty media.purge answer, and one "prepare" per
+   * job. The echo carries no nid at that phase, so local purges are counted
+   * rather than matched; entries expire so a job that never reports cannot
+   * swallow a later purge made elsewhere for good.
+   */
+  _takeLocalPurge() {
+    const now = Date.now();
+    this._localPurges = this._localPurges.filter((t) => now - t <= 15000);
+    if (!this._localPurges.length) return false;
+    this._localPurges.shift();
+    return true;
   }
 
   /**
@@ -355,8 +385,10 @@ class __panel_trash extends mfsInteract {
     if (!nid || this._restoring.has(nid)) return;
     this._restoring.add(nid);
     this._markLocalRestore(nid);
+    if (media.setBusy) media.setBusy(true);
     try {
       const restored = await this._doRestore(media, nid, hub_id);
+      if (!restored && media.setBusy) media.setBusy(false);
       if (restored === null) return; // user cancelled the fallback prompt
       if (!restored) {
         // A failed request resolves undefined (doRequest swallows the throw),
@@ -495,17 +527,46 @@ class __panel_trash extends mfsInteract {
     });
   }
 
-  deleteFilePermanently(media) {
+  async deleteFilePermanently(media) {
     if (!media) return;
-    return this.postService({
-      service: SERVICE.media.purge,
-      list: [{ nid: media.mget(_a.nid), hub_id: media.mget(_a.hub_id) }],
-      hub_id: Visitor.id,
-    }).then(() => {
+    const nid = media.mget(_a.nid);
+    // A second click while the first purge is in flight would send it again.
+    if (!nid || this._purging.has(nid)) return;
+    this._purging.add(nid);
+    if (media.setBusy) media.setBusy(true);
+    // Owed before the request: the job's echo must not beat the bookkeeping.
+    const mark = Date.now();
+    this._localPurges.push(mark);
+    const forget = () => {
+      const i = this._localPurges.indexOf(mark);
+      if (i >= 0) this._localPurges.splice(i, 1);
+    };
+    try {
+      const data = await this.postService({
+        service: SERVICE.media.purge,
+        list: [{ nid, hub_id: media.mget(_a.hub_id) }],
+        hub_id: Visitor.id,
+      }).catch(() => null);
+      // A failed request resolves undefined (doRequest swallows the throw);
+      // the row used to be removed anyway and came back on the next open.
+      if (!data || data.error) {
+        forget();
+        if (media.setBusy) media.setBusy(false);
+        if (!require("libs/permission-denied").saidRecently()
+          && typeof Butler !== "undefined" && Butler.say) {
+          Butler.say(LOCALE.PURGE_FAILED);
+        }
+        return;
+      }
+      // Nothing matched (already purged elsewhere): no job, so no echo.
+      // A single-row list collapses to an object.
+      if (_.isEmpty(data)) forget();
       media.suppress();
       this._updateItemsCount();
       this._refreshStorageUsed();
-    });
+    } finally {
+      this._purging.delete(nid);
+    }
   }
 
   // Empty Trash confirmation. Renders our own dialog (skeleton/purge-confirm)
@@ -547,6 +608,14 @@ class __panel_trash extends mfsInteract {
     // still rendered by skeleton/index.js and is now unused — worth removing
     // along with skeleton/confirm.js and the __purge-* styles in a tidy-up.
     if (data) RADIO_MEDIA.trigger(_a.free, data);
+    // Emptied on the spot (no trash_expiry setting): the bin is already empty
+    // in the DB and the re-feed below shows it, so the purge job's "prepare"
+    // echo would only reload it again. That path spawns the job even for an
+    // empty list, so no isEmpty guard. A queued empty (`status: 'queued'`)
+    // has not touched the DB yet — that echo is the one that shows the result.
+    if (data && !data.error && data.status !== 'queued') {
+      this._localPurges.push(Date.now());
+    }
     // Full re-feed below IS the freshest state — drop any reload held back
     // while the prompt was open, including a debounce timer still
     // queued (a WS echo landing <400ms ago would otherwise re-feed AGAIN

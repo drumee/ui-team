@@ -19,6 +19,16 @@
   &__container {
     width: 100%;
     gap: 8px;
+    transition: opacity 0.15s ease;
+  }
+
+  // Restore / delete in flight (item/index.js setBusy).
+  &__ui[data-busy="1"] {
+    pointer-events: none;
+  }
+
+  &__ui[data-busy="1"] &__container {
+    opacity: 0.45;
   }
 
   // Every row carries its day; only a group's first row shows it
