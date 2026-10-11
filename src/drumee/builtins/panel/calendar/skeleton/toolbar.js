@@ -11,6 +11,8 @@
 // New menus.
 const { VIEWS, FILTERS, rangeLabel, day, ymd } = require("./helpers");
 
+const SHOW_NEW_BUTTON = false;
+
 module.exports = function (ui) {
   const pfx = ui.fig.family;
   const view = ui.getView();
@@ -297,7 +299,8 @@ module.exports = function (ui) {
     }),
     Skeletons.Box.X({
       className: `${pfx}__toolbar-right`,
-      kids: [viewPicker, filterBar, newButton],
+      // "+ New" hidden for now; flip SHOW_NEW_BUTTON to bring it back.
+      kids: [viewPicker, filterBar, SHOW_NEW_BUTTON ? newButton : null].filter(Boolean),
     }),
   ];
 };
