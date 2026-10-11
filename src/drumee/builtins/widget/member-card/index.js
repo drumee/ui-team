@@ -43,6 +43,10 @@ function startP2PCall(callee, opt = {}) {
 // A refusal is a SHOUT_CASE code; a contact record carries its lifecycle
 // status ("active", "memory"...), which is not one (same rule as the
 // Contacts page).
+// What is being typed in the phone field, per person, across repaints: a host
+// dialog (Edit member) redraws itself, and the card inside it, on every pick.
+const drafts = new Map();
+
 const refused = (res) => !res || (typeof res.status === "string" && /^[A-Z][A-Z0-9_]*$/.test(res.status));
 
 class __member_card extends LetcBox {
@@ -84,6 +88,12 @@ class __member_card extends LetcBox {
     this._phone = this._defaultPhone();
     this._loaded = true;
     this.feed(require("./skeleton")(this));
+    requestAnimationFrame(() => {
+      const input = this._input("phone");
+      if (!input) return;
+      if (drafts.has(this._uid)) input.value = drafts.get(this._uid);
+      input.addEventListener("input", () => drafts.set(this._uid, input.value));
+    });
   }
 
   /** The contact's default mobile number, as the Contacts page lists it. */
@@ -171,6 +181,11 @@ class __member_card extends LetcBox {
     if (ok) return this._close();
   }
 
+  /** Forget what was typed (the host dialog was cancelled). */
+  discard() {
+    drafts.delete(this._uid);
+  }
+
   /**
    * Save the phone field to the contact entry when it changed.
    * Public: a host dialog embedding the card (Edit member) calls it on its
@@ -181,7 +196,10 @@ class __member_card extends LetcBox {
     if (!this._loaded) return true;
     const input = this._input("phone");
     const phone = String((input && input.value) || "").trim();
-    if (phone === this._phone) return true;
+    if (phone === this._phone) {
+      drafts.delete(this._uid);
+      return true;
+    }
     const p = this._person || {};
     // The card shows (and edits) the FIRST number: contact_phone keeps no
     // default flag, so the rest are kept as they are, after it.
@@ -213,6 +231,7 @@ class __member_card extends LetcBox {
       return false;
     }
     this._phone = phone;
+    drafts.delete(this._uid);
     RADIO_BROADCAST.trigger("contact:changed", { uid: this._uid });
     return true;
   }
@@ -222,6 +241,7 @@ class __member_card extends LetcBox {
     switch (service) {
       case _e.close:
       case "member-card-cancel":
+        this.discard();
         return this._close();
       case "member-card-send":
         return this._send();
