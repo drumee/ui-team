@@ -218,7 +218,7 @@ module.exports = {
 
   // ── Commit ──────────────────────────────────────────────────────────────
   async _commitListField(id, field, value, { close = false } = {}) {
-    const task = this.getTask(id);
+    let task = this.getTask(id);
     if (!task) return;
     const plan = fieldPatch(task, field, value);
     if (!plan) {
@@ -229,6 +229,20 @@ module.exports = {
       // An empty title: say so and stay in edit mode.
       if (this._listEdit) this._listEdit.error = plan.error;
       return this._listRepaint();
+    }
+    // A status that completes a parent with open subtasks asks first
+    // (complete-parent.js); Cancel leaves the cell as it was.
+    const openKids =
+      field === "status" ? await this._confirmCompleteParent(task, plan.local.status) : [];
+    if (!openKids) {
+      if (close) this._closeListEdit();
+      return;
+    }
+    // Re-read after the dialog: a peer push meanwhile swaps the cached row,
+    // and `before` must snapshot the live one or a revert restores stale data.
+    if (openKids.length) {
+      task = this.getTask(id);
+      if (!task) return;
     }
     const before = { id };
     for (const k of Object.keys(plan.local)) before[k] = task[k];
@@ -252,6 +266,7 @@ module.exports = {
     }
     // Only the fields this call owns — see OWNED in live-sync.js.
     this._mergeTask(ownedPatch(plan.service, row));
+    if (openKids.length) await this._completeSubtasks(id, openKids, plan.local.status);
     if (row.parent) {
       // A status write can auto-complete the parent.
       this._mergeTask(row.parent);

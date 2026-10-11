@@ -14,6 +14,7 @@ const { restoreScroll } = require("./scroll-restore");
 const { titleTooLong } = require("./list-edit");
 const { stamp, reconcile } = require("./reconcile");
 const listInline = require("./list-inline");
+const completeParent = require("./complete-parent");
 const { killTaskToast } = require("./task-toast");
 const {
   markerRe,
@@ -1366,6 +1367,16 @@ class __tasks_panel extends LetcBox {
   }
 
   async _moveTaskTo(taskId, status, afterEl) {
+    const asked = this._tasks.find((t) => t.id === taskId);
+    if (!asked) return;
+    // Dropped into a done column with subtasks still open: ask first
+    // (complete-parent.js). Before any DOM lookup — the board can repaint
+    // while the dialog is up. Cancel leaves the card in its column (dragend
+    // already restored it).
+    const openKids =
+      asked.status === status ? [] : await this._confirmCompleteParent(asked, status);
+    if (!openKids) return;
+    // Re-read: a peer push during the dialog swaps the cached row.
     const task = this._tasks.find((t) => t.id === taskId);
     if (!task) return;
     const originalStatus = task.status;
@@ -1428,6 +1439,9 @@ class __tasks_panel extends LetcBox {
         status,
       });
       this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
+      if (openKids.length && rowOf(updated)) {
+        await this._completeSubtasks(taskId, openKids, status);
+      }
     } catch (err) {
       console.error("[tasks_panel] update_status (drag) failed:", err);
       task.status = originalStatus;
@@ -4243,7 +4257,7 @@ class __tasks_panel extends LetcBox {
   // re-render, persist via update_status, reconcile/revert on the response.
   async _toggleComplete(trigger) {
     const id = trigger.mget("taskId");
-    const task = this._tasks.find((t) => t.id === id);
+    let task = this._tasks.find((t) => t.id === id);
     if (!task) return;
     const originalStatus = task.status;
     const cols = this.getColumns();
@@ -4254,6 +4268,12 @@ class __tasks_panel extends LetcBox {
     // sensible to toggle to.
     if (!target || target.key === originalStatus) return;
     const next = target.key;
+    const openKids = await this._confirmCompleteParent(task, next);
+    if (!openKids) return;
+    // Re-read after the dialog: a peer push meanwhile swaps the cached row,
+    // and the flip (and its revert) must land on the live one.
+    task = this._tasks.find((t) => t.id === id);
+    if (!task || task.status !== originalStatus) return;
     task.status = next;
     this._refreshViewBody();
     try {
@@ -4266,6 +4286,7 @@ class __tasks_panel extends LetcBox {
       const row = Array.isArray(updated) ? updated[0] : updated;
       if (row && row.id) {
         this._mergeTask(row);
+        if (openKids.length) await this._completeSubtasks(id, openKids, next);
         // Parent auto-complete rides back on the same response when this was
         // the last outstanding subtask. Peers hear it on the broadcast; the
         // user who ticked the box only ever sees this payload.
@@ -4311,12 +4332,34 @@ class __tasks_panel extends LetcBox {
     // patch it in place while the card is open. Diffing the draft against
     // the cache alone wrote a colleague's change made meanwhile back over it.
     // A card with no base degrades to that old diff.
-    const fresh = snapshotTask(task, {
-      assignees: this.getKnownAssignees(task),
-      noStatus: this.getDefaultStatus(),
-    });
-    const base = this._detailBase || fresh;
-    const plan = planDetailCommit(base, draft, fresh);
+    // `base` is kept for advanceBase on a partial failure below.
+    let base;
+    const planNow = () => {
+      const cached = this._tasks.find((t) => t.id === id) || task;
+      const fresh = snapshotTask(cached, {
+        assignees: this.getKnownAssignees(cached),
+        noStatus: this.getDefaultStatus(),
+      });
+      base = this._detailBase || fresh;
+      return planDetailCommit(base, draft, fresh);
+    };
+    let plan = planNow();
+
+    // Completing a parent with open subtasks asks first (complete-parent.js).
+    // Cancel writes nothing — not the status, not the card's other edits — and
+    // leaves the card open with its draft.
+    let openKids = [];
+    if (plan.status) {
+      openKids = await this._confirmCompleteParent(task, plan.status);
+      if (!openKids) {
+        this._setSubmitting(".tasks-panel__detail-submit", false);
+        return;
+      }
+      // The dialog was an await: rebuild the merge on the cache as it is NOW,
+      // or a peer's edit that landed meanwhile would be written back over.
+      plan = planNow();
+      if (!plan.status) openKids = [];
+    }
 
     const calls = [];
     // Each call resolves a descriptor instead of rejecting: postService
@@ -4395,6 +4438,13 @@ class __tasks_panel extends LetcBox {
         this._mergeTask(r.parent);
         this._syncSubtaskBadges(r.parent.id);
       }
+    }
+    // Complete all: the parent's move landed, so take its open subtasks along.
+    if (
+      openKids.length &&
+      results.some((r) => r.kind === "row" && r.service === SERVICE.task.update_status && r.row)
+    ) {
+      await this._completeSubtasks(id, openKids, plan.status);
     }
     // Apply to the row as it is NOW, not the `task` read before the awaits:
     // peer pushes patch the cache in place mid-flight (and _mergeTask swaps
@@ -11696,5 +11746,7 @@ class __tasks_panel extends LetcBox {
   const { LIST_SERVICES, ...methods } = listInline;
   Object.assign(__tasks_panel.prototype, methods);
 }
+// Completing a parent with open subtasks asks first (complete-parent.js).
+Object.assign(__tasks_panel.prototype, completeParent);
 
 module.exports = __tasks_panel;
