@@ -16,7 +16,7 @@ $card-scale: 0.85;
   $primary: #433cc5; // Primary/50
   $primary-hover: #3730a3;
   $shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-  $font: "Geist", system-ui, sans-serif;
+  $font: var(--font-main);
 
   // Fills the overlay so a click outside the card lands on the backdrop.
   &__ui,

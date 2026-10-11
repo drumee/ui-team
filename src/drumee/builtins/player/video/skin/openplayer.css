@@ -9,7 +9,7 @@
 }
 .op-player {
     background: #000;
-    font-family: sans-serif;
+    font-family: var(--font-main);
     line-height: 1.15;
     min-height: 30px;
     position: relative;

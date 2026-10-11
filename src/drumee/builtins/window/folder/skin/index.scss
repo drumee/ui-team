@@ -354,7 +354,7 @@
     // Opacity (not a hardcoded rgba) so the muted shade follows
     // --normal-fg-10 when the dark theme inverts it.
     &__breadcrumb-crumb {
-      font-family: "Geist", sans-serif;
+      font-family: var(--font-main);
       font-weight: 500;
       font-size: 14px;
       line-height: 24px;
@@ -383,7 +383,7 @@
     }
 
     &__breadcrumb-sep {
-      font-family: "Geist", sans-serif;
+      font-family: var(--font-main);
       font-size: 14px;
       line-height: 24px;
       color: var(--normal-fg-10);
@@ -435,7 +435,7 @@
 
     &__title {
       // Buttons/Medium Button — Geist SemiBold 16/24, Primary/100 (#0B0A21)
-      font-family: "Geist", sans-serif;
+      font-family: var(--font-main);
       font-weight: 600;
       font-size: 16px;
       line-height: 24px;
@@ -553,7 +553,7 @@
         border: 0;
         border-radius: 8px;
         box-shadow: none;
-        font-family: "Inter", sans-serif;
+        font-family: var(--font-main);
         font-weight: 500;
         font-size: 14px;
         line-height: 16px;
@@ -831,7 +831,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: "Inter", "Geist", system-ui, sans-serif;
+      font-family: var(--font-main);
       font-size: 18px;
       font-weight: 300;
       line-height: 1;
@@ -1123,7 +1123,7 @@
       padding: 8px 10px;
       border-radius: 6px;
       cursor: pointer;
-      font-family: "Geist", sans-serif;
+      font-family: var(--font-main);
       font-size: 13px;
       font-weight: 500;
       line-height: 1.2;
@@ -1335,7 +1335,7 @@
     border-radius: 6px;
     box-sizing: border-box;
     color: var(--normal-fg-10);
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 12px;
     font-weight: 700;
     line-height: 1;
@@ -1436,7 +1436,7 @@
   }
 
   &__tab-filter-label {
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 12px;
     font-weight: 700;
     line-height: 1;
@@ -4446,7 +4446,7 @@ html[data-theme="dark"] {
     white-space: nowrap;
     // Figma 2216-168072: "Team Chat" in Geist Regular 14px, normal case —
     // overrides the shared .window__chat-label mono/uppercase section-label style.
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 14px;
     font-weight: 400;
     line-height: 1.4;
@@ -4616,7 +4616,7 @@ html[data-theme="dark"] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 14px;
     font-weight: 400;
     line-height: 1.4;
@@ -4631,7 +4631,7 @@ html[data-theme="dark"] {
     padding: 2px 8px;
     border-radius: 12px;
     background: var(--hover-bg-40);
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 10px;
     font-weight: 400;
     line-height: 1.4;
@@ -4821,7 +4821,7 @@ html[data-theme="dark"] {
   }
 
   .window__chat-gate-logo-text {
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 20px;
     font-weight: 700;
     color: var(--primary-50);

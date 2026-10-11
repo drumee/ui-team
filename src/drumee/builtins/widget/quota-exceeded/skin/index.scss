@@ -79,7 +79,7 @@
     border-radius: 8px;
     /* Reads as lifted off the blurred backdrop rather than pasted onto it. */
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-    font-family: var(--font-family, inherit);
+    font-family: var(--font-main);
 
     /* Inline: the host panel owns the surface, the width and the padding, so
        everything that would draw a card is unset. Left-aligned because it now

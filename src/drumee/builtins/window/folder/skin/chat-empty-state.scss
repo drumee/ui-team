@@ -62,7 +62,7 @@
 
 .window-folder .widget-chat__team-empty-title {
   justify-content: center;
-  font-family: "Geist", sans-serif;
+  font-family: var(--font-main);
   font-weight: 600;
   font-size: 24px;
   line-height: 1.1;
@@ -72,7 +72,7 @@
 .window-folder .widget-chat__team-empty-text {
   justify-content: center;
   max-width: 401px;
-  font-family: "Geist", sans-serif;
+  font-family: var(--font-main);
   font-weight: 400;
   font-size: 16px;
   line-height: 1.2;

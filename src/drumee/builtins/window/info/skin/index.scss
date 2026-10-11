@@ -1,6 +1,20 @@
 @use "mixins/drumee.scss";
 @use "skin/lib/button" as *;
 
+// Every piece of text in the card uses the main face. The typo mixin only
+// writes font-family for some weights (none for 600: the notice buttons and
+// __revoked-title), __logo-text never calls it, caller-supplied message
+// skeletons carry their own classes, and the shared `.btn` rules force
+// "Roboto-Regular" onto the button label span. Doubling the class (the root el
+// carries both) lifts this to (0,2,0) so it wins regardless of which lazily
+// loaded chunk's CSS lands last.
+.window-info.window-info__ui {
+  &,
+  & * {
+    font-family: var(--font-main);
+  }
+}
+
 .window-info {
   .dialog__wrapper {
     position: absolute;

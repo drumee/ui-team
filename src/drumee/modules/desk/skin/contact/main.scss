@@ -25,7 +25,7 @@
         color: #494949;
         -moz-osx-font-smoothing: grayscale;
         -webkit-font-smoothing: antialiased;
-        font-family: "Roboto-Light", sans-serif;
+        font-family: var(--font-main);
       }
     }
   }

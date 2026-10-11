@@ -33,7 +33,7 @@
 // tokens: Primary/100 #0b0a21, Grey/80 #65656c, Grey/70 #84848c, Grey/60
 // #aeaeb2, Grey/20 #f2f2f7, Primary/30 #847eff, Primary/20 #b1adff,
 // Signal/Error #d74e49; Primary/40 and /50 come from revamp.scss.
-$font: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+$font: var(--font-main);
 $ink: #0b0a21;
 $muted: #65656c;
 $line: rgba(0, 0, 0, 0.05);

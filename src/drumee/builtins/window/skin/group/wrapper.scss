@@ -7,7 +7,7 @@
   justify-content: center;
   background-color: #f7f7fa;
   border: 1px solid #f7f7fa;
-  font-family: "Roboto-Regular", sans-serif;      
+  font-family: var(--font-main);      
   letter-spacing: 0em;
   &--small{
     font-size: 12px;

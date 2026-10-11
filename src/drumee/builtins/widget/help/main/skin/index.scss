@@ -26,7 +26,7 @@
     height: 100%;
     overflow: hidden;
     background: var(--white);
-    font-family: "Geist", system-ui, sans-serif;
+    font-family: var(--font-main);
   }
 
   &__main {
