@@ -1894,7 +1894,14 @@ class __window_manager extends push {
       l.restart();
       this._prepareListPartition(l);
     });
-    this.ensurePart("wrapper-modal").then((p) => p.clear());
+    // The org-setup wizard is a full-screen flow of its own, not a dialog of
+    // the workspace being left: the boot restore opens a workspace a few
+    // seconds after load and was clearing a wizard opened from the org
+    // dropdown in the meantime.
+    this.ensurePart("wrapper-modal").then((p) => {
+      const held = p.collection && p.collection.some((m) => m.get("kind") === "org_setup");
+      if (!held) p.clear();
+    });
     // Sidebar nav reloads the desk container in-place; preserve open windows.
     this.updateBreadcrumb({ ...data, service: "change-workspace" }, this);
   }
