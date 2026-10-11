@@ -5383,6 +5383,16 @@ class desk_module extends LetcBox {
     // the only one there is, so "open whichever exists" and "open that one" are
     // the same answer and the descriptor is not needed. A create that asks to
     // be switched to is handled below, where it does have to be named.
+    // Created from the organisation screen ("+ New Workspace"): the desk
+    // stays on that screen, where the new workspace now shows in its
+    // department, instead of opening it.
+    const onOrgScreen = !!(this._pendingKinds
+      && this._pendingKinds["settings-main-slot"] === "desk_org_view");
+    if (onOrgScreen && !(payload && payload.personal)) {
+      RADIO_BROADCAST.trigger("org:refresh");
+      return;
+    }
+
     if (wasEmpty) {
       // NOTHING FOLLOWS THE FORM → open it now.
       //
