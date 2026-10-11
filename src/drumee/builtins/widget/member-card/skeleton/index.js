@@ -89,7 +89,7 @@ function message(ui, pfx) {
         kids: [
           icon(pfx, "ph-chat-teardrop-text", "member-card-chat", ui, LOCALE.CHAT || "Chat"),
           ui._contact ? null : icon(pfx, "meet-user-plus", "member-card-add-contact", ui, LOCALE.ADD_TO_CONTACTS || "Add to contacts"),
-          icon(pfx, "ph-phone", "member-card-call", ui, LOCALE.CALL || "Call"),
+          icon(pfx, "phone", "member-card-call", ui, LOCALE.CALL || "Call"),
         ].filter(Boolean),
       }),
     ],
@@ -113,7 +113,7 @@ function contact(ui, pfx) {
       Skeletons.Box.X({
         className: `${pfx}__line ${pfx}__phone`,
         kids: [
-          Skeletons.Image.Svg({ active: 0, ico: "ph-phone", className: `${pfx}__line-ico` }),
+          Skeletons.Image.Svg({ active: 0, ico: "phone", className: `${pfx}__line-ico` }),
           Skeletons.Entry({
             className: `${pfx}__phone-entry`,
             sys_pn: "phone",
