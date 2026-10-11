@@ -7,8 +7,10 @@
  *
  * Name, title and departments come from organization.member_card. Email and
  * phone are the viewer's CONTACT entry for that person (contact.of_user), the
- * very record the Contacts page edits, so a number changed here is the number
- * the Contacts page shows, and the other way round.
+ * very record the Contacts page edits, so what is changed here is what the
+ * Contacts page shows, and the other way round. With no entry yet, the email
+ * is their login email (910:81513 "auto sync with their login email"), and
+ * saving creates the entry.
  *
  * Hosted by Wm's wrapper-modal (Wm "member-card"), like the department form.
  * ==================================================================== */
@@ -40,14 +42,19 @@ function startP2PCall(callee, opt = {}) {
   return true;
 }
 
+// What is being typed in the contact fields, per person, across repaints: a
+// host dialog (Edit member) redraws itself, and the card inside it, on every
+// pick. { phone, email }
+const drafts = new Map();
+
 // A refusal is a SHOUT_CASE code; a contact record carries its lifecycle
 // status ("active", "memory"...), which is not one (same rule as the
 // Contacts page).
-// What is being typed in the phone field, per person, across repaints: a host
-// dialog (Edit member) redraws itself, and the card inside it, on every pick.
-const drafts = new Map();
-
 const refused = (res) => !res || (typeof res.status === "string" && /^[A-Z][A-Z0-9_]*$/.test(res.status));
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+const lower = (v) => String(v || "").trim().toLowerCase();
 
 class __member_card extends LetcBox {
 
@@ -83,27 +90,46 @@ class __member_card extends LetcBox {
     // Outside an organisation (or someone not in it) the card still shows the
     // person, from what the caller passed in and the contact entry.
     const given = this.mget("person") || {};
-    this._person = person && !person.status
+    this._person = person && !refused(person)
       ? person
       : { uid, fullname: given.fullname || given.display || "", email: given.email || "", departments: [] };
     this._contact = contact && contact.contact_id ? contact : null;
     this._phone = this._defaultPhone();
+    this._email = this._defaultEmail();
     this._loaded = true;
     this.feed(require("./skeleton")(this));
-    requestAnimationFrame(() => {
-      const input = this._input("phone");
-      if (!input) return;
-      if (drafts.has(this._uid)) input.value = drafts.get(this._uid);
-      input.addEventListener("input", () => drafts.set(this._uid, input.value));
-    });
+    requestAnimationFrame(() => this._bindDrafts());
   }
 
-  /** The contact's default mobile number, as the Contacts page lists it. */
+  /** Keep what is typed in phone / email across a host's repaint. */
+  _bindDrafts() {
+    for (const field of ["phone", "email"]) {
+      const input = this._input(field);
+      if (!input) continue;
+      const draft = drafts.get(this._uid);
+      if (draft && draft[field] != null) input.value = draft[field];
+      input.addEventListener("input", () => {
+        drafts.set(this._uid, { ...(drafts.get(this._uid) || {}), [field]: input.value });
+      });
+    }
+  }
+
+  /** The contact's first mobile number, as the Contacts page lists it. */
   _defaultPhone() {
     const list = (this._contact && Array.isArray(this._contact.mobile)) ? this._contact.mobile : [];
     const m = list[0];
     if (!m) return "";
     return [m.areacode, m.phone].filter(Boolean).join(" ").trim();
+  }
+
+  /**
+   * The contact's default email, else their login email (910:81513 "auto sync
+   * with their login email").
+   */
+  _defaultEmail() {
+    const list = (this._contact && Array.isArray(this._contact.email)) ? this._contact.email : [];
+    const e = list.find((x) => x && ~~x.is_default) || list[0];
+    return (e && e.email) || (this._person && this._person.email) || "";
   }
 
   _name() {
@@ -139,6 +165,12 @@ class __member_card extends LetcBox {
     });
   }
 
+  _refusal(res) {
+    const code = res && res.status;
+    return (code && LOCALE[code] && LOCALE[code] !== code && LOCALE[code])
+      || LOCALE.SOMETHING_WENT_WRONG || "Something went wrong.";
+  }
+
   async _send() {
     const input = this._input("message");
     const message = String((input && input.value) || "").trim();
@@ -167,19 +199,13 @@ class __member_card extends LetcBox {
     const res = await this.postService(SERVICE.contact.add, {
       hub_id: Visitor.id, invitee_id: this._uid,
     }).catch(() => null);
-    if (refused(res)) return this._note(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong.");
-    this._contact = res.id ? { ...res, contact_id: res.id } : this._contact;
+    if (refused(res)) return this._note(this._refusal(res));
     await this._load();
     return this._note(LOCALE.CONTACT_ADDED || "Added to your contacts", 1);
   }
 
-  /**
-   * Update: the phone number goes to the viewer's contact entry for this
-   * person (contact.update, the Contacts page's own save), created first
-   * (contact.add) when there is none yet.
-   */
   async _update() {
-    const ok = await this.savePhone();
+    const ok = await this.saveContact();
     if (ok) return this._close();
   }
 
@@ -188,51 +214,98 @@ class __member_card extends LetcBox {
     drafts.delete(this._uid);
   }
 
+  /** Former name, kept for hosts that still call it. */
+  savePhone() {
+    return this.saveContact();
+  }
+
   /**
-   * Save the phone field to the contact entry when it changed.
-   * Public: a host dialog embedding the card (Edit member) calls it on its
-   * own Update. Resolves true when there was nothing to do or it saved.
-   * @returns {Promise<Boolean>}
+   * Save phone and email to the viewer's contact entry for this person, when
+   * they changed: contact.update, the Contacts page's own save (created first
+   * with contact.add when there is no entry). Public: a host dialog embedding
+   * the card (Edit member) calls it on its own Update.
+   *
+   * The email edits the DEFAULT address; the person's login email is kept in
+   * the list beside it, so the entry stays theirs (contact.of_user finds it by
+   * that address too).
+   *
+   * @returns {Promise<Boolean>} true when there was nothing to do or it saved
    */
-  async savePhone() {
+  async saveContact() {
     if (!this._loaded) return true;
-    const input = this._input("phone");
-    const phone = String((input && input.value) || "").trim();
-    if (phone === this._phone) {
+    const phoneInput = this._input("phone");
+    const emailInput = this._input("email");
+    const phone = String((phoneInput && phoneInput.value) || "").trim();
+    const email = String((emailInput && emailInput.value) || "").trim();
+    const phoneChanged = phone !== this._phone;
+    const emailChanged = !!emailInput && lower(email) !== lower(this._email);
+    if (!phoneChanged && !emailChanged) {
       drafts.delete(this._uid);
       return true;
     }
+    if (emailChanged && !EMAIL_RE.test(email)) {
+      this._note(LOCALE.INVITE_EMAIL_INVALID || "Please enter a valid email address.");
+      return false;
+    }
+
+    // No entry yet: create it (by user id, the Contacts page's link to them).
+    if (!this._contact) {
+      const res = await this.postService(SERVICE.contact.add, {
+        hub_id: Visitor.id, invitee_id: this._uid,
+      }).catch(() => null);
+      if (refused(res)) {
+        this._note(this._refusal(res));
+        return false;
+      }
+      const fresh = await this.postService(SERVICE.contact.of_user, { hub_id: Visitor.id, uid: this._uid })
+        .catch(() => null);
+      if (!fresh || !fresh.contact_id) {
+        this._note(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong.");
+        return false;
+      }
+      this._contact = fresh;
+    }
+
+    const c = this._contact;
     const p = this._person || {};
     // The card shows (and edits) the FIRST number: contact_phone keeps no
     // default flag, so the rest are kept as they are, after it.
-    const others = ((this._contact && this._contact.mobile) || []).slice(1)
+    const keptPhones = (c.mobile || []).slice(1)
       .map((m) => ({ phone: m.phone, areacode: m.areacode || "", category: m.category || "priv" }));
-    const mobile = phone ? [{ phone, areacode: "", category: "priv", is_default: 1 }, ...others] : others;
-    let res;
-    if (this._contact) {
-      const c = this._contact;
-      res = await this.postService(SERVICE.contact.update, {
-        hub_id: Visitor.id,
-        contact_id: c.contact_id,
-        firstname: c.firstname || p.firstname || "",
-        lastname: c.lastname || p.lastname || "",
-        surname: c.surname || "",
-        email: c.email || [],
-        mobile,
-        address: c.address || [],
-      }).catch(() => null);
-    } else {
-      res = await this.postService(SERVICE.contact.add, {
-        hub_id: Visitor.id, invitee_id: this._uid, mobile,
-      }).catch(() => null);
+    const mobile = phoneChanged
+      ? (phone ? [{ phone, areacode: "", category: "priv", is_default: 1 }, ...keptPhones] : keptPhones)
+      : (c.mobile || []).map((m) => ({ phone: m.phone, areacode: m.areacode || "", category: m.category || "priv" }));
+
+    let emails = (c.email || []).map((e) => ({
+      email: e.email, category: e.category || "priv", is_default: ~~e.is_default ? 1 : 0,
+    }));
+    if (emailChanged) {
+      const shown = lower(this._email);
+      const rest = emails.filter((e) => lower(e.email) !== shown && lower(e.email) !== lower(email))
+        .map((e) => ({ ...e, is_default: 0 }));
+      emails = [{ email, category: "priv", is_default: 1 }, ...rest];
+      const login = lower(p.email);
+      if (login && !emails.some((e) => lower(e.email) === login)) {
+        emails.push({ email: p.email, category: "priv", is_default: 0 });
+      }
     }
+
+    const res = await this.postService(SERVICE.contact.update, {
+      hub_id: Visitor.id,
+      contact_id: c.contact_id,
+      firstname: c.firstname || p.firstname || "",
+      lastname: c.lastname || p.lastname || "",
+      surname: c.surname || "",
+      email: emails,
+      mobile,
+      address: c.address || [],
+    }).catch(() => null);
     if (refused(res)) {
-      const code = res && res.status;
-      this._note((code && LOCALE[code] && LOCALE[code] !== code && LOCALE[code])
-        || LOCALE.SOMETHING_WENT_WRONG || "Something went wrong.");
+      this._note(this._refusal(res));
       return false;
     }
     this._phone = phone;
+    if (emailChanged) this._email = email;
     drafts.delete(this._uid);
     RADIO_BROADCAST.trigger("contact:changed", { uid: this._uid });
     return true;

@@ -138,6 +138,7 @@
   }
 
   &__action {
+    position: relative;
     width: 32px;
     height: 32px;
     align-items: center;
@@ -150,6 +151,25 @@
     svg { width: 18px; height: 18px; }
 
     &:hover { color: var(--primary-50); }
+  }
+
+  // The tooltip bubble ui-core puts INSIDE the hovered button: dark, small,
+  // under it, never taking the button's width.
+  &__tip {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 30;
+    pointer-events: none;
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: #0b0a21;
+    color: #fff;
+    font-size: 10px;
+    line-height: 1.2;
+    font-weight: 400;
   }
 
   &__label {

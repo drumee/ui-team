@@ -11,7 +11,9 @@ function icon(pfx, ico, service, ui, tip) {
     className: `${pfx}__action`,
     service,
     uiHandler: [ui],
-    tooltips: tip ? { content: tip } : undefined,
+    // A dark bubble under the button (skin __tip): an object with a
+    // className, or ui-core prints the label unstyled inside the button.
+    tooltips: tip ? { content: tip, className: `${pfx}__tip` } : undefined,
     kids: [Skeletons.Image.Svg({ active: 0, ico, className: `${pfx}__action-ico` })],
   });
 }
@@ -97,17 +99,23 @@ function message(ui, pfx) {
 }
 
 function contact(ui, pfx) {
-  const p = ui._person || {};
-  const email = p.email || (ui._contact && ui._contact.email && ui._contact.email[0] && ui._contact.email[0].email) || "";
   return Skeletons.Box.Y({
     className: `${pfx}__block`,
     kids: [
       Skeletons.Note({ className: `${pfx}__label`, content: LOCALE.CONTACT || "Contact" }),
+      // 910:81513: the login email until edited -- click to edit, type.
       Skeletons.Box.X({
-        className: `${pfx}__line`,
+        className: `${pfx}__line ${pfx}__email`,
         kids: [
           Skeletons.Image.Svg({ active: 0, ico: "ph-envelope-simple", className: `${pfx}__line-ico` }),
-          Skeletons.Note({ className: `${pfx}__line-text`, content: email }),
+          Skeletons.Entry({
+            className: `${pfx}__phone-entry ${pfx}__email-entry`,
+            sys_pn: "email",
+            partHandler: ui,
+            value: ui._email || "",
+            placeholder: LOCALE.EMAIL || "Email",
+            require: "any",
+          }),
         ],
       }),
       Skeletons.Box.X({
