@@ -6867,13 +6867,13 @@ $theme-colors: (
   &__list-row-acts {
     flex: 0 0 auto;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
   }
 
   &__list-row-act {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
+    flex: 0 0 11px;
+    width: 11px;
+    height: 11px;
     cursor: pointer;
     position: relative;
     overflow: visible;
@@ -6881,8 +6881,8 @@ $theme-colors: (
     transition: opacity 0.12s;
 
     svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 11px !important;
+      height: 11px !important;
       fill: #65656c;
       color: #65656c;
     }
@@ -7198,16 +7198,16 @@ $theme-colors: (
   }
 
   // ── The floating editor ────────────────────────────────────────────────
-  // Popovers: white, radius 12, padding 12, gap 8, Light-mode shadow
+  // Popovers: white, radius 8, padding 8, gap 4, Light-mode shadow
   // 0 1 11 rgba(0,0,0,.13). Hidden until placed so it never flashes at 0,0.
   &__list-pop {
     position: absolute;
     z-index: 20;
     top: 0;
     left: 0;
-    gap: 6px;
-    padding: 10px;
-    border-radius: 10px;
+    gap: 4px;
+    padding: 8px;
+    border-radius: 8px;
     background: #fff;
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     box-sizing: border-box;
@@ -7220,25 +7220,25 @@ $theme-colors: (
 
     &[data-kind="priority"],
     &[data-kind="status"] {
-      width: 132px;
+      width: 112px;
       gap: 0;
     }
     &[data-kind="start_date"],
     &[data-kind="due_date"] {
-      // 7 day cells of 30 + 2 × 10 padding.
-      width: 230px;
+      // 7 day cells of 26 + 2 × 8 padding.
+      width: 198px;
     }
     &[data-kind="files"] {
-      width: 216px;
+      width: 184px;
     }
     &[data-kind="assignees"],
     &[data-kind="reporter"] {
-      width: 204px;
+      width: 172px;
     }
     // Text editors are the cell itself, outlined in Primary/40.
     &[data-kind="title"],
     &[data-kind="description"] {
-      padding: 6px 10px;
+      padding: 4px 8px;
       border: 1px solid #5950ff;
       border-radius: 8px;
       box-shadow: none;
@@ -7247,12 +7247,12 @@ $theme-colors: (
   }
 
   &__list-pop-title {
-    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
+    @include drumee.typo($size: 11px, $weight: 400, $line: 14px, $color: #0b0a21);
   }
 
   &__list-pop-text {
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
 
   &__list-pop-input {
@@ -7282,14 +7282,14 @@ $theme-colors: (
 
   &__list-pop-btns {
     flex: 0 0 auto;
-    gap: 6px;
+    gap: 4px;
   }
 
   &__list-pop-btn {
-    flex: 0 0 26px;
-    width: 26px;
-    height: 26px;
-    padding: 5px;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    padding: 4px;
     border-radius: 6px;
     border: 1px solid rgba(0, 0, 0, 0.05);
     background: #fff;
@@ -7298,8 +7298,8 @@ $theme-colors: (
     cursor: pointer;
 
     svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 12px !important;
+      height: 12px !important;
       fill: #0b0a21;
       color: #0b0a21;
     }
@@ -7325,8 +7325,8 @@ $theme-colors: (
   &__list-pop-item {
     flex: 0 0 auto;
     align-items: center;
-    gap: 6px;
-    padding: 6px;
+    gap: 5px;
+    padding: 4px 5px;
     border-radius: 6px;
     cursor: pointer;
 
@@ -7340,16 +7340,16 @@ $theme-colors: (
   }
 
   &__list-pop-dot {
-    flex: 0 0 10px;
-    width: 10px;
-    height: 10px;
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
   }
 
   &__list-pop-label {
     flex: 1 1 auto;
     min-width: 0;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
+    @include drumee.typo($size: 11px, $weight: 400, $line: 14px, $color: #0b0a21);
 
     .note-content {
       overflow: hidden;
@@ -7362,20 +7362,20 @@ $theme-colors: (
   &__list-pop-search {
     flex: 0 0 auto;
     align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 10px;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 8px;
     background: rgba(0, 0, 0, 0.05);
   }
 
   &__list-pop-search-ico {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
 
     svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 12px !important;
+      height: 12px !important;
       fill: #84848c;
       color: #84848c;
     }
@@ -7401,7 +7401,7 @@ $theme-colors: (
 
   &__list-pop-list {
     flex: 0 1 auto;
-    max-height: 176px;
+    max-height: 148px;
     overflow-y: auto;
     gap: 2px;
     scrollbar-width: thin;
@@ -7426,26 +7426,26 @@ $theme-colors: (
   }
 
   &__list-pop-member {
-    padding: 3px 4px;
+    padding: 2px 4px;
   }
 
   &__list-pop-avatar {
-    flex: 0 0 24px;
-    width: 24px;
-    height: 24px;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     overflow: hidden;
   }
 
   &__list-pop-tick {
-    flex: 0 0 12px;
-    width: 12px;
-    height: 12px;
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
     visibility: hidden;
 
     svg {
-      width: 12px !important;
-      height: 12px !important;
+      width: 10px !important;
+      height: 10px !important;
       fill: #5950ff;
       color: #5950ff;
     }
@@ -7456,7 +7456,7 @@ $theme-colors: (
 
   // Link-files rows: paperclip, name, checkbox (Primary/50 when linked).
   &__list-pop-file {
-    padding: 4px;
+    padding: 3px 4px;
     gap: 4px;
 
     &[data-selected="1"] {
@@ -7471,13 +7471,13 @@ $theme-colors: (
   }
 
   &__list-pop-file-ico {
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
 
     svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 12px !important;
+      height: 12px !important;
       margin: 2px;
       fill: #65656c;
       color: #65656c;
@@ -7485,9 +7485,9 @@ $theme-colors: (
   }
 
   &__list-pop-box {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
     border-radius: 3px;
     border: 1px solid rgba(0, 0, 0, 0.2);
     box-sizing: border-box;
@@ -7500,10 +7500,10 @@ $theme-colors: (
       &::after {
         content: "";
         position: absolute;
-        left: 3.75px;
-        top: 1px;
-        width: 3.5px;
-        height: 7px;
+        left: 3.25px;
+        top: 0.75px;
+        width: 3px;
+        height: 6px;
         border: solid #fff;
         border-width: 0 1.5px 1.5px 0;
         transform: rotate(45deg);
@@ -7515,14 +7515,14 @@ $theme-colors: (
   &__list-date-field {
     flex: 0 0 auto;
     align-items: center;
-    gap: 6px;
-    padding: 8px 10px;
+    gap: 4px;
+    padding: 6px 8px;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.05);
 
     .tasks-panel__list-date-ico svg {
-      width: 12px !important;
-      height: 12px !important;
+      width: 11px !important;
+      height: 11px !important;
       fill: #65656c;
       color: #65656c;
     }
@@ -7544,24 +7544,24 @@ $theme-colors: (
   }
 
   &__list-cal-head {
-    flex: 0 0 36px;
+    flex: 0 0 30px;
     align-items: center;
     justify-content: space-between;
   }
 
   &__list-cal-nav {
-    flex: 0 0 24px;
-    width: 24px;
-    height: 24px;
-    padding: 7px;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    padding: 6px;
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.05);
     box-sizing: border-box;
     cursor: pointer;
 
     svg {
-      width: 10px !important;
-      height: 10px !important;
+      width: 8px !important;
+      height: 8px !important;
       fill: #65656c;
       color: #65656c;
     }
@@ -7571,31 +7571,31 @@ $theme-colors: (
   }
 
   &__list-cal-month {
-    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #433cc5);
+    @include drumee.typo($size: 11px, $weight: 600, $line: 14px, $color: #433cc5);
     font-weight: 600;
   }
 
   &__list-cal-wds {
     border-top: 1px solid rgba(0, 0, 0, 0.05);
-    padding-top: 6px;
+    padding-top: 4px;
   }
 
   &__list-cal-week {
-    flex: 0 0 30px;
+    flex: 0 0 26px;
     justify-content: space-between;
   }
 
   &__list-cal-wd,
   &__list-cal-day {
-    flex: 0 0 30px;
-    width: 30px;
-    height: 30px;
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     box-sizing: border-box;
     justify-content: center;
     align-items: center;
     text-align: center;
-    @include drumee.typo($size: 11px, $weight: 400, $line: 30px, $color: #84848c);
+    @include drumee.typo($size: 10px, $weight: 400, $line: 26px, $color: #84848c);
   }
 
   &__list-cal-day {
@@ -7624,19 +7624,19 @@ $theme-colors: (
   &__list-cal-foot {
     flex: 0 0 auto;
     justify-content: flex-end;
-    gap: 8px;
-    padding-top: 6px;
+    gap: 6px;
+    padding-top: 4px;
     border-top: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   &__list-cal-cancel,
   &__list-cal-done {
-    height: 28px;
-    padding: 0 10px;
-    border-radius: 10px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 8px;
     align-items: center;
     cursor: pointer;
-    @include drumee.typo($size: 11px, $weight: 600, $line: 28px, $color: #65656c);
+    @include drumee.typo($size: 11px, $weight: 600, $line: 24px, $color: #65656c);
     font-weight: 600;
   }
 
@@ -7649,7 +7649,7 @@ $theme-colors: (
   }
 
   &__list-cal-done {
-    gap: 6px;
+    gap: 4px;
     background: #5950ff;
     color: #fff;
 
@@ -7659,13 +7659,13 @@ $theme-colors: (
   }
 
   &__list-cal-done-ico {
-    flex: 0 0 14px;
-    width: 14px;
-    height: 14px;
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
 
     svg {
-      width: 14px !important;
-      height: 14px !important;
+      width: 12px !important;
+      height: 12px !important;
       fill: #fff;
       color: #fff;
     }
