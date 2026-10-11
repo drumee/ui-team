@@ -139,5 +139,15 @@
     &:hover {
       background-color: var(--primary-40);
     }
+
+    // Button.Label's own label stretched across the button and its text sat
+    // right of centre: the text is centred in the button, as on the
+    // "Create new workspace" dialog.
+    .label {
+      flex: 0 1 auto;
+      width: auto;
+      text-align: center;
+      margin: 0;
+    }
   }
 }
