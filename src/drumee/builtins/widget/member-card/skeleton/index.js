@@ -12,7 +12,7 @@ function icon(pfx, ico, service, ui, tip) {
     service,
     uiHandler: [ui],
     tooltips: tip ? { content: tip } : undefined,
-    kids: [Skeletons.Button.Svg({ active: 0, ico, className: `${pfx}__action-ico` })],
+    kids: [Skeletons.Image.Svg({ active: 0, ico, className: `${pfx}__action-ico` })],
   });
 }
 
@@ -42,7 +42,7 @@ function person(ui, pfx) {
             ? Skeletons.Box.X({
                 className: `${pfx}__dept`,
                 kids: [
-                  Skeletons.Button.Svg({ active: 0, ico: "ph-cube", className: `${pfx}__dept-ico` }),
+                  Skeletons.Image.Svg({ active: 0, ico: "ph-cube", className: `${pfx}__dept-ico` }),
                   Skeletons.Note({ className: `${pfx}__dept-name`, content: dept }),
                 ],
               })
@@ -80,7 +80,7 @@ function message(ui, pfx) {
             className: `${pfx}__send`,
             service: "member-card-send",
             uiHandler: [ui],
-            kids: [Skeletons.Button.Svg({ active: 0, ico: "send", className: `${pfx}__send-ico` })],
+            kids: [Skeletons.Image.Svg({ active: 0, ico: "send", className: `${pfx}__send-ico` })],
           }),
         ],
       }),
@@ -106,14 +106,14 @@ function contact(ui, pfx) {
       Skeletons.Box.X({
         className: `${pfx}__line`,
         kids: [
-          Skeletons.Button.Svg({ active: 0, ico: "ph-envelope-simple", className: `${pfx}__line-ico` }),
+          Skeletons.Image.Svg({ active: 0, ico: "ph-envelope-simple", className: `${pfx}__line-ico` }),
           Skeletons.Note({ className: `${pfx}__line-text`, content: email }),
         ],
       }),
       Skeletons.Box.X({
         className: `${pfx}__line ${pfx}__phone`,
         kids: [
-          Skeletons.Button.Svg({ active: 0, ico: "ph-phone", className: `${pfx}__line-ico` }),
+          Skeletons.Image.Svg({ active: 0, ico: "ph-phone", className: `${pfx}__line-ico` }),
           Skeletons.Entry({
             className: `${pfx}__phone-entry`,
             sys_pn: "phone",
