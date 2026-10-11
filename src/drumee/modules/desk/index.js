@@ -2541,6 +2541,16 @@ class desk_module extends LetcBox {
     const deepLink = this._bootDeepLink;
     const saved = this._bootSavedState;
     const hasSaved = this._savedStateIsRestorable(saved);
+    // Inside an organisation, for those who may see it, the desk opens on the
+    // organisation's screen (as Files does). Started FIRST and not awaited:
+    // the screen goes up while the workspace below it loads, instead of the
+    // workspace showing and the screen landing on it a moment later.
+    if (!deepLink) {
+      this._orgHomeAtBoot = this._filesHome().then((org) => {
+        if (org && !(this.isDestroyed && this.isDestroyed())) this._openOrgView();
+        return org;
+      });
+    }
 
     if (!deepLink && !hasSaved) {
       // Nothing to restore — land on a workspace rather than an empty desk.
@@ -9501,7 +9511,8 @@ class desk_module extends LetcBox {
     if (want && this._openOrgViewFromPopup) return this._openOrgViewFromPopup();
     // A plain load inside an organisation lands on its screen, as Files does
     // (_filesHome); a link to a workspace or file keeps where it points.
-    if (this._bootDeepLink) return;
+    // A plain load already landed there (_restoreDeskState).
+    if (this._bootDeepLink || this._orgHomeAtBoot) return;
     this._filesHome().then((org) => {
       if (org && !(this.isDestroyed && this.isDestroyed())) this._openOrgView();
     });
