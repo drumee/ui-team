@@ -829,17 +829,81 @@ class __invite_popup extends LetcBox {
    * nothing — a fake link there would be shared by real users and lead
    * nowhere. Same gate as the mock departments.
    */
-  _requestLink() {
-    if (!__invite_popup._mocksEnabled()) return;
-    // Same rule as Send: a link invites INTO workspaces, so it needs one.
+  /**
+   * Public link (Figma 998:85923, the org-setup wizard's step 3): a join link
+   * into the DEPARTMENTS of the ticked workspaces (organization.
+   * join_link_create, the wizard's own service). Whoever opens it signed in
+   * joins those departments and gets their workspaces on the access rules of
+   * their title. A ticked workspace outside any department cannot travel in a
+   * link; with none in a department there is nothing to link to.
+   *
+   * A server without join links keeps the development mock, as before.
+   */
+  async _requestLink() {
     if (!this._checked.size) {
       this._setWorkspaceError(
         LOCALE.INVITE_WORKSPACE_REQUIRED || "Please select at least one workspace.",
       );
       return;
     }
+    if (!(SERVICE.organization && SERVICE.organization.join_link_create)) {
+      if (!__invite_popup._mocksEnabled()) return;
+      this._setWorkspaceError(null);
+      return this._setLink(__invite_popup._mockLinkUrl());
+    }
+    const departments = new Set();
+    for (const id of this._checked) {
+      const d = this._tree && T.deptOf(this._tree, id);
+      if (d) departments.add(String(d));
+    }
+    if (!departments.size) {
+      this._setWorkspaceError(
+        LOCALE.INVITE_LINK_NEEDS_DEPARTMENT
+          || "A public link invites into departments: tick a workspace that belongs to one.",
+      );
+      return;
+    }
     this._setWorkspaceError(null);
-    this._setLink(__invite_popup._mockLinkUrl());
+    if (this._linkBusy) return;
+    this._linkBusy = true;
+    // The switch off means no expiry; a custom date is not drawn here, so
+    // "Custom" keeps the wizard's default of 30 days.
+    const l = this._link || {};
+    const expires_in = !l.expiry ? 0
+      : ({ "1h": 3600, "24h": 86400, "7d": 7 * 86400 })[l.preset] || 30 * 86400;
+    let res = null;
+    try {
+      res = await this.postService(SERVICE.organization.join_link_create, {
+        hub_id: Visitor.id,
+        departments: [...departments],
+        expires_in,
+      });
+    } catch (e) {
+      res = null;
+    }
+    this._linkBusy = false;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const token = res && !res.status && res.token;
+    if (!token) {
+      this._setWorkspaceError(
+        (res && res.status && LOCALE[res.status])
+          || LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.",
+      );
+      return;
+    }
+    this._linkToken = token;
+    this._setLink(`${location.origin}${location.pathname}?join=${encodeURIComponent(token)}`);
+  }
+
+  /** Revoke: the link stops working for everyone, then the row goes. */
+  async _revokeLink() {
+    const token = this._linkToken;
+    if (token && SERVICE.organization && SERVICE.organization.join_link_revoke) {
+      await this.postService(SERVICE.organization.join_link_revoke, { hub_id: Visitor.id, token })
+        .catch(() => null);
+    }
+    this._linkToken = null;
+    this._setLink(null);
   }
 
   _setLink(url) {
@@ -1088,7 +1152,7 @@ class __invite_popup extends LetcBox {
         return this._copyLink();
 
       case "revoke-link":
-        return this._setLink(null);
+        return this._revokeLink();
 
       case "send-invitation":
         return this._sendInvitation();
