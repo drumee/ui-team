@@ -6655,6 +6655,12 @@ class __window_folder extends mfsInteract {
     // demotion leaves a working create/upload menu on a view-only member's
     // screen (and a promotion leaves them without one until they reopen).
     this.syncNewCtrlVisibility();
+    // The task panel got `may_write` once, at mount. Left stale, a demoted
+    // member's edits went past its write guard to a server 403.
+    const tasks = this._taskPanel;
+    if (tasks && !(tasks.isDestroyed && tasks.isDestroyed())) {
+      tasks.mset("may_write", !!(this.canUpload && this.canUpload()));
+    }
   }
 
   // Chat is granted at the "View & chat" tier and above — i.e. any privilege

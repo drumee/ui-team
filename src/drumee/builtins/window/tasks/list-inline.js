@@ -247,7 +247,7 @@ module.exports = {
       // Never leave an unsaved value on screen: back to the last good one.
       this._mergeTask(before);
       this._repaintBoard();
-      Wm.alert(LOCALE.ERROR_NETWORK);
+      this._alertWriteFailed();
       return;
     }
     // Only the fields this call owns — see OWNED in live-sync.js.
@@ -315,7 +315,7 @@ module.exports = {
     if (!resp) {
       this._mergeTask({ id, linked_files: files });
       this._repaintBoard();
-      Wm.alert(LOCALE.ERROR_NETWORK);
+      this._alertWriteFailed();
       return;
     }
     // link_file answers with the task's full list as of the insert.
@@ -410,7 +410,7 @@ module.exports = {
       this._listSelected.delete(id);
     }
     this._repaintBoard();
-    if (failed) Wm.alert(LOCALE.ERROR_NETWORK);
+    if (failed) this._alertWriteFailed();
   },
 
   // ── Paint, placement, keyboard ──────────────────────────────────────────

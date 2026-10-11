@@ -850,6 +850,29 @@ class __tasks_panel extends LetcBox {
   }
 
   /**
+   * The generic "network error" for a write that did not land — unless it
+   * failed because it was refused. A refusal (the mutation guard above, or a
+   * server 403 via onServerComplain) has already said so, and postService
+   * resolves undefined either way, so without this check the caller stacked
+   * "network error" over the permission popup.
+   */
+  _alertWriteFailed() {
+    if (require("libs/permission-denied").saidRecently()) return;
+    Wm.alert(LOCALE.ERROR_NETWORK);
+  }
+
+  /**
+   * A 403 here was a silent `undefined`: the panel is not a window, so
+   * window/core's hook never ran, and the caller then reported a network
+   * error. A demoted member whose panel still holds may_write (opened before
+   * the change) reaches the server and lands here.
+   */
+  onServerComplain(xhr) {
+    super.onServerComplain(xhr);
+    require("libs/permission-denied").notifyServerDenied(this, xhr);
+  }
+
+  /**
    * Task mutations, as declared `src: "write"` in acl/task.json. A view (3) or
    * chat (7) member is refused server-side, so every one of these was a silent
    * revert: the card moved, the field accepted text, and reopening showed the
@@ -902,15 +925,18 @@ class __tasks_panel extends LetcBox {
           this.constructor.TASK_MUTATIONS.includes(`${name}`)
           && !this._mayWriteTasks()
         ) {
-          if (typeof Butler !== "undefined" && Butler.say) {
-            // The panel holds no privilege of its own (see _mayWriteTasks);
-            // read it from the workspace window it is mounted for.
-            const PD = require("libs/permission-denied");
-            Butler.say(PD.weakPrivilegeMessage(
+          // The panel holds no privilege of its own (see _mayWriteTasks);
+          // read it from the workspace window it is mounted for.
+          // sayWeakPrivilege, not Butler.say: it stamps saidRecently(), which
+          // is what keeps the caller's own "network error" (_alertWriteFailed)
+          // from stacking on top. One Update sends several writes — say it once.
+          const PD = require("libs/permission-denied");
+          if (!PD.saidRecently()) {
+            PD.sayWeakPrivilege(
               LOCALE.PERMISSION_ACTION_EDIT_TASKS,
               PD.workspacePrivilege(this.mget(_a.hub_id)),
               _K.permission.write,
-            ));
+            );
           }
           // postService resolves UNDEFINED when a call does not complete, and
           // every caller here already tolerates that — so refusing this way
@@ -1638,7 +1664,7 @@ class __tasks_panel extends LetcBox {
           this._renderOverlays();
           // Say so: a commit that fails silently is indistinguishable from a
           // dead button, which makes it needlessly hard to diagnose.
-          Wm.alert(LOCALE.ERROR_NETWORK);
+          this._alertWriteFailed();
         });
 
       case "cancel-add":
@@ -2034,7 +2060,7 @@ class __tasks_panel extends LetcBox {
           this._renderOverlays();
           // Say so: a commit that fails silently is indistinguishable from a
           // dead button, which makes it needlessly hard to diagnose.
-          Wm.alert(LOCALE.ERROR_NETWORK);
+          this._alertWriteFailed();
         });
 
       case "cancel-detail":
@@ -4087,13 +4113,13 @@ class __tasks_panel extends LetcBox {
         this._pickerOpen = null;
         this._resetFileSearch();
         this._repaintBoard();
-        if (subtasksFailed) Wm.alert(LOCALE.ERROR_NETWORK);
+        if (subtasksFailed) this._alertWriteFailed();
       } else {
-        Wm.alert(LOCALE.ERROR_NETWORK);
+        this._alertWriteFailed();
       }
     } catch (err) {
       console.error("[tasks_panel] task.create failed:", err);
-      Wm.alert(LOCALE.ERROR_NETWORK);
+      this._alertWriteFailed();
     } finally {
       // finally, not a trailing statement: a throw inside the catch above
       // (Wm.alert) would otherwise skip the reset and leave _submitting stuck
@@ -4130,7 +4156,7 @@ class __tasks_panel extends LetcBox {
         // is legitimately > 1; the `resp.id !== id` arm is what carries the
         // check for a parent with children.
         this._markTaskEls(id, "pending", false);
-        Wm.alert(LOCALE.ERROR_NETWORK);
+        this._alertWriteFailed();
         return;
       }
       // Play the card's exit before the rows go, so it fades out in place and
@@ -4408,7 +4434,7 @@ class __tasks_panel extends LetcBox {
     if (this._detailId !== id || this._detailDraft !== draft) {
       // A deleted task is already announced; "network error" would mislead.
       if (failed && this._tasks.some((t) => t.id === id)) {
-        Wm.alert(LOCALE.ERROR_NETWORK);
+        this._alertWriteFailed();
       }
       return;
     }
@@ -4441,7 +4467,7 @@ class __tasks_panel extends LetcBox {
       // and pressing Update again retries. The cache already holds whatever
       // DID land, so a retry only re-sends what still differs.
       if (files) this._refreshAttachments(id).then(() => this._refreshAttachmentsList());
-      Wm.alert(LOCALE.ERROR_NETWORK);
+      this._alertWriteFailed();
       return;
     }
 
@@ -11301,7 +11327,7 @@ class __tasks_panel extends LetcBox {
       const row = Array.isArray(created) ? created[0] : created;
       if (!row || !row.id) {
         // postService resolves falsy on failure rather than rejecting.
-        Wm.alert(LOCALE.ERROR_NETWORK);
+        this._alertWriteFailed();
         return;
       }
       this._mergeTask(row);
