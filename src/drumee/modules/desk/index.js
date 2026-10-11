@@ -2541,15 +2541,21 @@ class desk_module extends LetcBox {
     const deepLink = this._bootDeepLink;
     const saved = this._bootSavedState;
     const hasSaved = this._savedStateIsRestorable(saved);
+
     // Inside an organisation, for those who may see it, the desk opens on the
-    // organisation's screen (as Files does). Asked FIRST, in parallel; the
-    // screen goes up right after the workspace below it is SENT for (opening
-    // a workspace closes that slot, so not before), instead of the workspace
-    // painting and the screen landing on it a moment later.
-    if (!deepLink) this._orgHomeAtBoot = this._filesHome();
-    const landOrgHome = () => this._orgHomeAtBoot && this._orgHomeAtBoot.then((org) => {
-      if (org && !(this.isDestroyed && this.isDestroyed())) this._openOrgView();
-    });
+    // organisation's screen (as Files does) and on nothing else: no workspace
+    // is restored under it, so none can show before it (a workspace opening
+    // also closes that screen). A workspace opens when a card is pressed, or
+    // when a rail tab needs one (_railTab).
+    if (!deepLink) {
+      const org = await this._filesHome();
+      this._orgHomeAtBoot = org;
+      if (org && !(this.isDestroyed && this.isDestroyed())) {
+        this._openOrgView();
+        this._clearRestoreInFlight(2500);
+        return;
+      }
+    }
 
     if (!deepLink && !hasSaved) {
       // Nothing to restore — land on a workspace rather than an empty desk.
@@ -2558,7 +2564,6 @@ class desk_module extends LetcBox {
       // Keep the restore flag up across the open, or the breadcrumb's
       // mount-time loadHome() fires Wm.reload() and wipes it.
       const opened = await this._openDefaultWorkspace();
-      landOrgHome();
       this._clearRestoreInFlight(opened ? 2500 : 0);
       // Nothing opened — either the account has none (home-empty is up, and
       // settleHomeGrid sees it) or the list could not be read, which is the
@@ -2604,10 +2609,7 @@ class desk_module extends LetcBox {
         // remembered screen still ends up on top.
         paneComing = !!(await this._openDefaultWorkspace());
       }
-      landOrgHome();
-      // On the organisation's screen, the remembered screen is not reopened.
-      const orgHome = this._orgHomeAtBoot ? await this._orgHomeAtBoot : false;
-      if (!orgHome && saved.service && !(this.isDestroyed && this.isDestroyed())) {
+      if (saved.service && !(this.isDestroyed && this.isDestroyed())) {
         // Wait for the OPEN only. The restore flag below exists to keep a
         // late loadHome from wiping the screen being opened; the wait for the
         // screen's items (up to 6s more) needs no such guard, and holding the
@@ -7061,7 +7063,20 @@ class desk_module extends LetcBox {
     const w = this._railWorkspace();
     // BEFORE the tab is shown, and on both branches — see _leaveSectionScreen.
     this._leaveSectionScreen(w);
-    if (!w) return this._openDefaultWorkspace();
+    if (!w) {
+      // Nothing open yet (the desk landed on the organisation's screen):
+      // open one, then the tab that was pressed.
+      return this._openDefaultWorkspace().then((opened) => {
+        if (!opened || tab === "files") return;
+        let tries = 0;
+        const show = () => {
+          const pane = this._railWorkspace();
+          if (pane && _.isFunction(pane.showFolderTab)) return pane.showFolderTab(tab);
+          if (++tries < 50) setTimeout(show, 100);
+        };
+        show();
+      });
+    }
     w.showFolderTab(tab);
     return w.raise && w.raise();
   }
