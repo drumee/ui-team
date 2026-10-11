@@ -6019,6 +6019,7 @@ class desk_module extends LetcBox {
     // the one that shows up when the user enters Drumee), else the first row.
     const first = rows && (
       workspacePins.firstPinned(rows, this._pinnedKeys(), (r) => this._workspaceKey(r))
+      || (await this._firstDepartmentWorkspace(rows))
       || rows[0]
     );
     await this._showEmptyWorkspaceScreen(!first);
@@ -6200,6 +6201,27 @@ class desk_module extends LetcBox {
    * Kept as the name six call sites already use. Step 1 + step 2 both live in
    * _openWorkspaceOrEmptyScreen; this is the plain entry point.
    */
+  /**
+   * On an organisation, land in one of its departments' workspaces rather
+   * than whatever sorts first: the primary org's list also holds workspaces
+   * other people share from outside it, and opening one of those hides the
+   * department the person just set up. Null when there is none (or no org).
+   * @param {Array} rows the workspace list
+   */
+  async _firstDepartmentWorkspace(rows) {
+    try {
+      const data = await require("libs/org-departments").myDepartments(this);
+      const ids = new Set();
+      for (const d of (data && data.departments) || []) {
+        for (const w of d.workspaces || []) ids.add(String(w.hub_id || w.id));
+      }
+      if (!ids.size) return null;
+      return rows.find((r) => ids.has(String(r.hub_id || r.id))) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   async _openDefaultWorkspace(opt = {}) {
     return this._openWorkspaceOrEmptyScreen(opt);
   }
