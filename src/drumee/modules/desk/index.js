@@ -9570,6 +9570,8 @@ class desk_module extends LetcBox {
     require("libs/office-warmup").schedule(this);
     // Over-limit outranks the promo/reward flows: a locked workspace needs
     // its popup first, and a locked org is not eligible for either promo.
+    // A page, not a popup: opened at once, the popups below come over it.
+    this._maybeOpenOrgViewFromUrl();
     return this._maybeShowOverLimit()
       .then(() => this._maybeStartRewardFlow())
       // After the reward flow, and skipped entirely when that one mounted: both
@@ -9592,7 +9594,6 @@ class desk_module extends LetcBox {
       .then(() => this._maybeShowUpgradeNudge())
       .then(() => this._maybeAcceptJoinLink())
       .then(() => this._maybeShowOrgSetup())
-      .then(() => this._maybeOpenOrgViewFromUrl())
       .catch((e) => {
         this._hideInvitedWorkspaceLoader();
         this.warn && this.warn("[home] post-ready chain failed", e);
