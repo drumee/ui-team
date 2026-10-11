@@ -2542,15 +2542,14 @@ class desk_module extends LetcBox {
     const saved = this._bootSavedState;
     const hasSaved = this._savedStateIsRestorable(saved);
     // Inside an organisation, for those who may see it, the desk opens on the
-    // organisation's screen (as Files does). Started FIRST and not awaited:
-    // the screen goes up while the workspace below it loads, instead of the
-    // workspace showing and the screen landing on it a moment later.
-    if (!deepLink) {
-      this._orgHomeAtBoot = this._filesHome().then((org) => {
-        if (org && !(this.isDestroyed && this.isDestroyed())) this._openOrgView();
-        return org;
-      });
-    }
+    // organisation's screen (as Files does). Asked FIRST, in parallel; the
+    // screen goes up right after the workspace below it is SENT for (opening
+    // a workspace closes that slot, so not before), instead of the workspace
+    // painting and the screen landing on it a moment later.
+    if (!deepLink) this._orgHomeAtBoot = this._filesHome();
+    const landOrgHome = () => this._orgHomeAtBoot && this._orgHomeAtBoot.then((org) => {
+      if (org && !(this.isDestroyed && this.isDestroyed())) this._openOrgView();
+    });
 
     if (!deepLink && !hasSaved) {
       // Nothing to restore — land on a workspace rather than an empty desk.
@@ -2559,6 +2558,7 @@ class desk_module extends LetcBox {
       // Keep the restore flag up across the open, or the breadcrumb's
       // mount-time loadHome() fires Wm.reload() and wipes it.
       const opened = await this._openDefaultWorkspace();
+      landOrgHome();
       this._clearRestoreInFlight(opened ? 2500 : 0);
       // Nothing opened — either the account has none (home-empty is up, and
       // settleHomeGrid sees it) or the list could not be read, which is the
@@ -2604,6 +2604,7 @@ class desk_module extends LetcBox {
         // remembered screen still ends up on top.
         paneComing = !!(await this._openDefaultWorkspace());
       }
+      landOrgHome();
       if (saved.service && !(this.isDestroyed && this.isDestroyed())) {
         // Wait for the OPEN only. The restore flag below exists to keep a
         // late loadHome from wiping the screen being opened; the wait for the
