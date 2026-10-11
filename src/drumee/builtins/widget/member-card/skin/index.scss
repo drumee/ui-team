@@ -19,6 +19,19 @@
     box-sizing: border-box;
   }
 
+  // Embedded (Edit member): part of the host dialog, not a card on it.
+  &__ui[data-embedded="1"] {
+    width: 100%;
+    border-radius: 0;
+    background-color: transparent;
+    box-shadow: none;
+    overflow: visible;
+
+    .member-card__main {
+      padding: 0;
+    }
+  }
+
   &__loading {
     @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg-50));
     padding: 12px 0;

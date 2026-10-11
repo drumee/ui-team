@@ -62,6 +62,8 @@ class __member_card extends LetcBox {
   }
 
   onDomRefresh() {
+    // Embedded in a host dialog: no frame of its own (skin).
+    if (this.mget("embedded")) this.el.dataset.embedded = "1";
     this.feed(require("./skeleton")(this));
     this._load();
   }
