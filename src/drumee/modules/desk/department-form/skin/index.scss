@@ -140,14 +140,11 @@
       background-color: var(--primary-40);
     }
 
-    // Button.Label's own label stretched across the button and its text sat
-    // right of centre: the text is centred in the button, as on the
-    // "Create new workspace" dialog.
-    .label {
-      flex: 0 1 auto;
-      width: auto;
-      text-align: center;
-      margin: 0;
+    // Button.Label draws an icon slot even with no icon (an empty svg 220px
+    // wide), which pushed the label right of centre. No icon here: drop it,
+    // so the label is centred as on the "Create new workspace" dialog.
+    > svg {
+      display: none;
     }
   }
 }
