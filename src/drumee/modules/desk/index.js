@@ -9935,6 +9935,22 @@ class desk_module extends LetcBox {
       .catch(() => false);
   }
 
+  /**
+   * The department picked in the topbar: its first workspace, or its screen
+   * when it has none.
+   * @param {String} departmentId
+   */
+  async _switchDepartment(departmentId) {
+    let ws = null;
+    try {
+      const data = await require("libs/org-departments").myDepartments(this);
+      const dept = ((data && data.departments) || []).find((d) => String(d.id) === String(departmentId));
+      ws = dept && (dept.workspaces || [])[0];
+    } catch (e) { /* the screen below */ }
+    if (ws) return this._switchWorkspaceRow(ws);
+    return this.onUiEvent(this, { service: "open-department-screen", departmentId });
+  }
+
   _openOrgView(opt) {
     if (!require("libs/org-overview").orgFeature()) return;
     // See _railUnlight. This screen fills settings-main-slot, which is
@@ -12057,6 +12073,14 @@ class desk_module extends LetcBox {
       // split: mount it with the department, or, when it is already the
       // screen the user is on, tell it.
       case "open-department-view": {
+        const departmentId = args.departmentId || (cmd && cmd.mget && cmd.mget("deptId"));
+        // Switching department goes straight to its first workspace, on the
+        // tab already open -- the bar then reads <department> / <workspace>.
+        // Only a department with no workspace yet opens its screen instead.
+        return this._switchDepartment(departmentId);
+      }
+
+      case "open-department-screen": {
         const departmentId = args.departmentId || (cmd && cmd.mget && cmd.mget("deptId"));
         if (
           this._pendingKinds
