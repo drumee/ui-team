@@ -145,8 +145,12 @@
     border: 1px solid var(--border-muted);
   }
 
+  // Takes the row, text to the left, with or without the rename pencil: a
+  // member (no pencil) reads the same header as an admin.
   &__head-name {
     @include drumee.typo($color: var(--normal-fg), $size: 12px, $line: 17px);
+    flex: 1 1 auto;
+    text-align: left;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

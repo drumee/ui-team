@@ -73,7 +73,7 @@ function head(pfx, ui, dept, canManage) {
                 uiHandler: [ui],
               })
             : null,
-        ],
+        ].filter(Boolean),
       }),
     ],
   });
