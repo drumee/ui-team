@@ -1,0 +1,77 @@
+@use "mixins/drumee";
+
+// org_setup_done -- the CTA after the organisation setup (Figma 900:150473).
+// Same dialog family as the department form: r-12, light shadow, one
+// full-width primary button.
+.org-setup-done {
+  &__ui {
+    width: 380px;
+    border-radius: 12px;
+    background-color: var(--normal-bg);
+    box-shadow: 0px 1px 11px 0px rgba(0, 0, 0, 0.13);
+    overflow: hidden;
+  }
+
+  &__main {
+    width: 100%;
+    gap: 16px;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+
+  &__head {
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__title {
+    @include drumee.typo($size: 20px, $weight: 600, $line: 24px, $color: var(--normal-fg));
+  }
+
+  &__close {
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    cursor: pointer;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      color: var(--normal-fg);
+    }
+  }
+
+  &__body {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+  }
+
+  &__actions {
+    gap: 8px;
+  }
+
+  &__btn {
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: var(--normal-bg-90, #f2f2f5);
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px, $color: var(--normal-fg));
+
+    &--primary {
+      background-color: var(--primary-50);
+      color: var(--white);
+
+      &:hover {
+        background-color: var(--primary-40);
+      }
+    }
+  }
+}

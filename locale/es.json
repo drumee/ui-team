@@ -3216,5 +3216,8 @@
   "SEND_A_QUICK_MESSAGE": "Enviar un mensaje rápido",
   "CONTACT_ADDED": "Añadido a tus contactos",
   "ADD_TO_CONTACTS": "Añadir a contactos",
-  "ADD_PHONE_NUMBER": "Añadir un número de teléfono"
+  "ADD_PHONE_NUMBER": "Añadir un número de teléfono",
+  "ORG_READY_TITLE": "Tu organización está lista",
+  "ORG_READY_BODY": "Los departamentos y los espacios de trabajo están listos. Ahora, indica quién reporta a quién.",
+  "ORG_CHART_CTA": "Empezar el organigrama ahora"
 }

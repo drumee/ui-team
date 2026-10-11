@@ -4278,6 +4278,25 @@ class __window_manager extends push {
       // "Create new department" (B2B Org Structure). Same wrapper-modal host
       // and the same close-when-empty hook as "new-workspace" above, so the
       // overlay comes and goes exactly as it does for the other create forms.
+      // The organisation was just set up (Figma 900:150473): fireworks and
+      // the org chart CTA.
+      case "org-setup-done":
+        return this.ensurePart("wrapper-modal").then((p) => {
+          p.clear();
+          p.el.dataset.state = "open";
+          p.el.dataset.overlay = "none";
+          p.feed({ kind: "org_setup_done" });
+          if (!p._closeWhenEmpty) {
+            p._closeWhenEmpty = () => {
+              if (p.collection && p.collection.length === 0) {
+                p.el.dataset.state = "closed";
+                delete p.el.dataset.overlay;
+              }
+            };
+            p.collection.on("update reset", p._closeWhenEmpty);
+          }
+        });
+
       // A person's card (Figma 978:125420): from an avatar anywhere, with
       // args.uid (and args.person for what the caller already knows).
       case "member-card":

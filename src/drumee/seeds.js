@@ -178,6 +178,9 @@ module.exports = {
   member_card: function () {
     return import("./builtins/widget/member-card");
   },
+  org_setup_done: function () {
+    return import("./builtins/widget/org-setup-done");
+  },
   workspace_item: function () {
     return import("./modules/desk/workspace-item");
   },

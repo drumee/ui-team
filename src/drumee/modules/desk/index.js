@@ -328,6 +328,9 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.on("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.on("desk:open-home", this._openHomeFromPopup);
     RADIO_BROADCAST.on("desk:open-org-view", this._openOrgViewFromPopup);
+    // The org-setup wizard finished here (onboarding org_setup._finish).
+    this._onOrgSetupDone = () => this._celebrateOrgSetup();
+    RADIO_BROADCAST.on("desk:org-setup-done", this._onOrgSetupDone);
     RADIO_BROADCAST.on("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.on(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     // The topbar action cluster (Add new / Upload / Search / Invite) is
@@ -835,6 +838,7 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off("desk:open-trash", this._openTrashPanel);
     RADIO_BROADCAST.off("desk:open-home", this._openHomeFromPopup);
     RADIO_BROADCAST.off("desk:open-org-view", this._openOrgViewFromPopup);
+    if (this._onOrgSetupDone) RADIO_BROADCAST.off("desk:org-setup-done", this._onOrgSetupDone);
     RADIO_BROADCAST.off("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
@@ -9521,21 +9525,36 @@ class desk_module extends LetcBox {
    * localStorage "force-org-setup" shows it regardless (QA), and is consumed.
    */
   /**
+   * The organisation was just set up: fireworks and the org chart CTA
+   * (Figma 900:150473), in the window manager's modal.
+   */
+  _celebrateOrgSetup() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const wm = window.Wm;
+    if (wm && _.isFunction(wm.onUiEvent)) wm.onUiEvent(this, { service: "org-setup-done" });
+  }
+
+  /**
    * ?org_view=1: the org-setup wizard finished on another address (a new
    * organisation, or a changed one) and the desk lands on the organisation's
    * view, as it does when the wizard ends in place.
    */
   _maybeOpenOrgViewFromUrl() {
     let want = false;
+    let done = false;
     try {
       const params = new URLSearchParams(location.search);
       want = params.get("org_view") === "1";
-      if (params.has("org_view")) {
+      done = params.get("org_setup_done") === "1";
+      if (params.has("org_view") || params.has("org_setup_done")) {
         params.delete("org_view");
+        params.delete("org_setup_done");
         const q = params.toString();
         history.replaceState(null, "", `${location.pathname}${q ? `?${q}` : ""}${location.hash}`);
       }
     } catch (e) { /* no history API */ }
+    // The wizard finished on another address: celebrate there.
+    if (done) setTimeout(() => this._celebrateOrgSetup(), 400);
     if (want && this._openOrgViewFromPopup) return this._openOrgViewFromPopup();
     // A plain load inside an organisation lands on its screen, as Files does
     // (_filesHome); a link to a workspace or file keeps where it points.

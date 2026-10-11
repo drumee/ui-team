@@ -3215,5 +3215,8 @@
   "SEND_A_QUICK_MESSAGE": "Send a quick message",
   "CONTACT_ADDED": "Added to your contacts",
   "ADD_TO_CONTACTS": "Add to contacts",
-  "ADD_PHONE_NUMBER": "Add a phone number"
+  "ADD_PHONE_NUMBER": "Add a phone number",
+  "ORG_READY_TITLE": "Your organization is ready",
+  "ORG_READY_BODY": "Departments and workspaces are in place. Next, map who reports to whom.",
+  "ORG_CHART_CTA": "Start setting up your org chart now"
 }

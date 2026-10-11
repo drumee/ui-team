@@ -3447,5 +3447,8 @@
   "SEND_A_QUICK_MESSAGE": "Envoyer un message rapide",
   "CONTACT_ADDED": "Ajouté à vos contacts",
   "ADD_TO_CONTACTS": "Ajouter aux contacts",
-  "ADD_PHONE_NUMBER": "Ajouter un numéro de téléphone"
+  "ADD_PHONE_NUMBER": "Ajouter un numéro de téléphone",
+  "ORG_READY_TITLE": "Votre organisation est prête",
+  "ORG_READY_BODY": "Les départements et les espaces de travail sont en place. Ensuite, indiquez qui rend compte à qui.",
+  "ORG_CHART_CTA": "Commencer l'organigramme maintenant"
 }
