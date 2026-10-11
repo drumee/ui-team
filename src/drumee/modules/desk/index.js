@@ -9955,6 +9955,12 @@ class desk_module extends LetcBox {
       // never a section would leave the bar reading nothing.
       hideAddress: 1,
     });
+    // Already on screen (togglePanel would return early and keep it as it
+    // was): show what was asked -- one department, or, from "Open" and the
+    // org-setup wizard, every department rather than the one last picked.
+    if (this._pendingKinds && this._pendingKinds["settings-main-slot"] === "desk_org_view") {
+      return RADIO_BROADCAST.trigger("org:show-department", (opt && opt.departmentId) || null);
+    }
     return this.togglePanel("desk_org_view", "settings-main-slot", true, opt);
   }
 
