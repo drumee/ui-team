@@ -1,6 +1,7 @@
 const { colorFromName, copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
 const nodeIconHtml = require("./node-icon");
 const { chatEmptyState } = require("./skeleton/empty-state");
+const { fileListSkip, isScheduleNode } = require("window/skeleton/toolkit/list-skip");
 require("./skin");
 
 /**
@@ -1720,6 +1721,10 @@ class __widget_chat extends LetcBox {
             sys_pn: "desk-picker-list",
             partHandler: this,
             api,
+            // Same rows as the workspace grid: no meeting `schedule` nodes
+            // (no bytes — sending one hangs at 0%), dotfiles only under
+            // showHidden. See window/skeleton/toolkit/list-skip.
+            skip: fileListSkip(),
             // List.Smart merges the function's result into each item before
             // the row is built, so every row is a full skeleton of its own.
             itemsOpt: (list, item) => this._deskPickerRow(item, current),
@@ -4321,7 +4326,13 @@ class __widget_chat extends LetcBox {
         if (!item) continue;
         const nid = item.nid || item.id;
         const filetype = item.filetype || item.ftype;
-        if (!nid || filetype === _a.hub || filetype === "root" || seen.has(`${nid}`)) {
+        if (
+          !nid ||
+          filetype === _a.hub ||
+          filetype === "root" ||
+          isScheduleNode(item) ||
+          seen.has(`${nid}`)
+        ) {
           continue;
         }
         seen.add(`${nid}`);
@@ -4434,7 +4445,7 @@ class __widget_chat extends LetcBox {
         pageFingerprints.add(fingerprint);
 
         for (const item of pageRows) {
-          if (!item || item.filetype === _a.hub) continue;
+          if (!item || item.filetype === _a.hub || isScheduleNode(item)) continue;
           const filename = item.filename || item.user_filename || "";
           const mentionPath = folder.path
             ? `${folder.path}/${filename}`
@@ -4671,7 +4682,7 @@ class __widget_chat extends LetcBox {
           rows: contacts.map(mentionMemberDebugRow),
         });
 
-        files = files.filter((f) => f.filetype !== _a.hub);
+        files = files.filter((f) => f.filetype !== _a.hub && !isScheduleNode(f));
 
         // One row per person. contact_rooms answers one row per CONTACT
         // record, and a person can be in the address book twice (imported and
