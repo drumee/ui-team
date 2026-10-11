@@ -9498,7 +9498,13 @@ class desk_module extends LetcBox {
         history.replaceState(null, "", `${location.pathname}${q ? `?${q}` : ""}${location.hash}`);
       }
     } catch (e) { /* no history API */ }
-    if (want && this._openOrgViewFromPopup) this._openOrgViewFromPopup();
+    if (want && this._openOrgViewFromPopup) return this._openOrgViewFromPopup();
+    // A plain load inside an organisation lands on its screen, as Files does
+    // (_filesHome); a link to a workspace or file keeps where it points.
+    if (this._bootDeepLink) return;
+    this._filesHome().then((org) => {
+      if (org && !(this.isDestroyed && this.isDestroyed())) this._openOrgView();
+    });
   }
 
   async _maybeShowOrgSetup() {
