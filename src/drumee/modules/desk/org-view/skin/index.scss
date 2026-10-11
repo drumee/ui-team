@@ -291,6 +291,18 @@
     background-color: var(--normal-bg);
   }
 
+  // Drag and drop (org view _bindDrag): the department a card is held over,
+  // and the card being moved.
+  &__section.drop-over,
+  &__grid--ungrouped.drop-over {
+    outline: 2px dashed var(--primary-50, #5950ff);
+    outline-offset: -2px;
+    background-color: var(--primary-95, #f2f1ff);
+  }
+
+  &__card[draggable="true"] { cursor: grab; }
+  &__card.dragging { opacity: 0.5; }
+
   &__section-head {
     align-items: flex-start;
     justify-content: space-between;

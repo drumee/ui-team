@@ -71,7 +71,8 @@ function card(pfx, ui, ws) {
     // attrOpt, not dataset: a skeleton's `dataset` is dropped at render unless
     // an `attribute`/`attrOpt` map is passed too, so the area tint would never
     // have reached the DOM.
-    attrOpt: { "data-area": ws.area || "" },
+    // data-hub: the drag-and-drop handle (org view _bindDrag).
+    attrOpt: { "data-area": ws.area || "", "data-hub": ws.hub_id || "" },
     wsHubId: ws.hub_id,
     service: "open-workspace",
     uiHandler: [ui],
@@ -132,6 +133,8 @@ function departmentSection(pfx, ui, section, canManage) {
   const count = workspaces.length;
   return Skeletons.Box.Y({
     className: `${pfx}__section`,
+    // data-dept: a drop target for workspace cards (org view _bindDrag).
+    attrOpt: { "data-dept": d.id },
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__section-head`,
@@ -248,6 +251,8 @@ function sections(pfx, ui, grouped, canManage) {
     kids.push(
       Skeletons.Box.G({
         className: `${pfx}__grid ${pfx}__grid--ungrouped`,
+        // Dropping a card here takes it out of its department.
+        attrOpt: { "data-dept": "" },
         kids: ungrouped.map((w) => card(pfx, ui, w)),
       }),
     );

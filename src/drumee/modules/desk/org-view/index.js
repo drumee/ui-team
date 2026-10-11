@@ -129,6 +129,76 @@ class __desk_org_view extends LetcBox {
   }
 
   /**
+   * Drag a workspace card onto a department to move it there, or onto the
+   * ungrouped grid to take it out (department_assign). Admins only -- the
+   * sections are drawn with can_manage. Native drag and drop, bound once on
+   * the sections root (delegated, so repaints need nothing more); cards are
+   * marked draggable after each paint.
+   * @param {HTMLElement} root the "sections" part's element
+   */
+  _bindDrag(root) {
+    if (!root) return;
+    const pfx = this.fig.family;
+    root.querySelectorAll(`.${pfx}__card[data-hub]`).forEach((c) => {
+      if (c.dataset.hub) c.setAttribute("draggable", "true");
+    });
+    if (root.dataset.dnd) return;
+    root.dataset.dnd = "1";
+    const target = (e) => e.target && e.target.closest && e.target.closest("[data-dept]");
+    const clear = () => root.querySelectorAll(".drop-over").forEach((n) => n.classList.remove("drop-over"));
+    root.addEventListener("dragstart", (e) => {
+      const card = e.target && e.target.closest && e.target.closest(`.${pfx}__card[data-hub]`);
+      if (!card) return;
+      this._dragHub = card.dataset.hub;
+      this._dragFrom = (card.closest("[data-dept]") || {}).dataset ? card.closest("[data-dept]").dataset.dept : null;
+      e.dataTransfer.effectAllowed = "move";
+      try { e.dataTransfer.setData("text/plain", card.dataset.hub); } catch (err) { /* old browsers */ }
+      card.classList.add("dragging");
+    });
+    root.addEventListener("dragend", (e) => {
+      const card = e.target && e.target.closest && e.target.closest(`.${pfx}__card`);
+      if (card) card.classList.remove("dragging");
+      clear();
+      this._dragHub = null;
+    });
+    root.addEventListener("dragover", (e) => {
+      const t = this._dragHub && target(e);
+      if (!t) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (!t.classList.contains("drop-over")) {
+        clear();
+        t.classList.add("drop-over");
+      }
+    });
+    root.addEventListener("dragleave", (e) => {
+      const t = target(e);
+      if (t && !t.contains(e.relatedTarget)) t.classList.remove("drop-over");
+    });
+    root.addEventListener("drop", (e) => {
+      const t = this._dragHub && target(e);
+      clear();
+      if (!t) return;
+      e.preventDefault();
+      const hub = this._dragHub;
+      const to = t.dataset.dept || "";
+      this._dragHub = null;
+      if (String(to) === String(this._dragFrom || "")) return;
+      this.postService(SERVICE.organization.department_assign, {
+        hub_id: Visitor.id,
+        nid: hub,
+        department_id: to,
+      })
+        .catch(() => null)
+        .then(() => {
+          require("libs/org-departments").invalidate();
+          RADIO_BROADCAST.trigger("org:refresh");
+          return this._render(1);
+        });
+    });
+  }
+
+  /**
    * Draw the sections from what is already in hand.
    *
    * Separate from _render so the search filter can repaint without a round
@@ -163,6 +233,7 @@ class __desk_org_view extends LetcBox {
         !!data.can_manage,
       ),
     );
+    if (data.can_manage) requestAnimationFrame(() => this._bindDrag(part.el));
   }
 
   /**
