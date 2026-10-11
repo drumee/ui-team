@@ -12,7 +12,33 @@
  *
  * Hosted by Wm's wrapper-modal (Wm "member-card"), like the department form.
  * ==================================================================== */
-const { startP2PCall } = require("libs/p2p-call");
+
+/**
+ * Ring one person (1:1 "Drumee connect" call) -- the Contacts panel's Call:
+ * libs/p2p-call's startP2PCall, kept here so the card does not depend on a
+ * module every branch may not carry.
+ */
+function startP2PCall(callee, opt = {}) {
+  const guest_id = callee && (callee.drumate_id || callee.entity_id || callee.uid || callee.id);
+  if (!guest_id) return false;
+  if (Wm.getItemByKind("window_connect") || Wm.getItemByKind("window_meeting")) {
+    Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
+    return false;
+  }
+  const name = callee.fullname || callee.display
+    || `${callee.firstname || ""} ${callee.lastname || ""}`.trim();
+  Wm.launch({
+    kind: "window_connect",
+    hub_id: Visitor.id,
+    nid: Visitor.get(_a.home_id) || Visitor.get(_a.nid),
+    filename: name,
+    display: name,
+    callee: { ...callee, drumate_id: guest_id },
+    video: opt.video === 0 ? 0 : 1,
+    audio: 1,
+  }, { explicit: 1, singleton: 1 });
+  return true;
+}
 
 class __member_card extends LetcBox {
 
