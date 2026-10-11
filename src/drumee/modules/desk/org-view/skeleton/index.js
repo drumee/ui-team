@@ -195,15 +195,20 @@ function departmentSection(pfx, ui, section, canManage) {
               }),
             ],
           }),
-          Skeletons.Button.Label({
-            ico: "ph-plus",
-            className: `${pfx}__section-new`,
-            label: LOCALE.NEW_WORKSPACE,
-            service: "new-workspace-in-department",
-            deptId: d.id,
-            uiHandler: [ui],
-          }),
-        ],
+          // For whoever may put a workspace in this department: an org admin,
+          // or Edit / Admin on one of its workspaces (server-side
+          // can_add_workspace). Anyone else's would land outside it.
+          canManage || d.can_add_workspace
+            ? Skeletons.Button.Label({
+                ico: "ph-plus",
+                className: `${pfx}__section-new`,
+                label: LOCALE.NEW_WORKSPACE,
+                service: "new-workspace-in-department",
+                deptId: d.id,
+                uiHandler: [ui],
+              })
+            : null,
+        ].filter(Boolean),
       }),
       count
         ? Skeletons.Box.G({
@@ -239,8 +244,10 @@ function sections(pfx, ui, grouped, canManage) {
     // sections — but an organisation that has never made a department has
     // nothing but that remainder, and a bare wall of tiles does not explain
     // itself or hint that grouping exists. Once one department is created this
-    // disappears and the row goes back to being the silent remainder.
-    if (!list.length) {
+    // disappears and the row goes back to being the silent remainder. Not for
+    // a member: no section above means none is THEIRS, not that the
+    // organisation has none (their own loose workspaces are listed here).
+    if (!list.length && canManage) {
       kids.push(
         Skeletons.Note({
           className: `${pfx}__ungrouped-hint`,

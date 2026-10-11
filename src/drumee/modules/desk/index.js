@@ -3672,13 +3672,21 @@ class desk_module extends LetcBox {
     // does not serve departments yet — the list is grouped as it always was.
     const depts = require("libs/org-departments");
     let dept = null;
-    let canManageDept = false;
+    let canAddInDept = false;
     if (depts.deptFeature()) {
       const ddata = await depts.myDepartments(this);
       dept = depts.departmentOf(ddata, depts.currentHubId());
-      canManageDept = !!ddata.can_manage;
+      // An org admin, or Edit / Admin on one of the department's workspaces
+      // (server-side can_add_workspace): their "New workspaces" lands in it.
+      canAddInDept = !!ddata.can_manage || !!(dept && dept.can_add_workspace);
     }
-    this._wsMenuDept = dept ? { id: dept.id, canManage: canManageDept } : null;
+    this._wsMenuDept = dept ? { id: dept.id, canAdd: canAddInDept } : null;
+    // Below that, the button goes while the list shows the department (skin):
+    // a workspace made from it would land outside the department it shows.
+    const menuEl = list && list.el && list.el.closest
+      ? list.el.closest(".desk-module-topbar__ws-menu")
+      : null;
+    if (menuEl) menuEl.dataset.canAdd = dept && !canAddInDept ? "0" : "1";
     // Which workspace this list was drawn for — _prepareSwitcherMode redraws
     // it when the open workspace has changed since.
     this._wsMenuRenderedFor = depts.currentHubId();
@@ -12274,9 +12282,9 @@ class desk_module extends LetcBox {
       case "new-workspace-form": {
         // From the switcher while it lists ONE department: the new workspace
         // belongs in that department (see _onWorkspaceCreated). Only for those
-        // who may assign — a member's create is not refused, it simply stays
-        // ungrouped, which is what it would have been anyway.
-        if (this._wsMenuDept && this._wsMenuDept.canManage
+        // who may put it there: an org admin, or Edit / Admin on one of the
+        // department's workspaces (the button is hidden for anyone else).
+        if (this._wsMenuDept && this._wsMenuDept.canAdd
           && cmd && cmd.el && cmd.el.closest
           && cmd.el.closest(".desk-module-topbar__ws-menu")) {
           require("libs/org-departments").armPending(this._wsMenuDept.id);

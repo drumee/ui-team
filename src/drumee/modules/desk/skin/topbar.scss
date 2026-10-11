@@ -2135,6 +2135,14 @@
     }
   }
 
+  // The switcher lists a department this viewer cannot add a workspace to
+  // (below Edit on all of its workspaces): no "New workspaces" there -- one
+  // made from it would land outside the department it shows.
+  // desk._renderWorkspaceMenu stamps data-can-add.
+  &__ws-menu[data-can-add="0"] &__ws-new {
+    display: none !important;
+  }
+
   // ── Avatar + user menu (Figma 59:55943) ───────────────────────────────────
   // Same menu shell as the workspace switcher; anchored to the right edge
   // since the avatar is the last item in the bar.
