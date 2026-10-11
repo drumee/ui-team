@@ -51,6 +51,7 @@ function fireworks(durationMs = 2600) {
 
   const start = performance.now();
   const tick = (now) => {
+    if (!canvas.isConnected) return;
     ctx.clearRect(0, 0, W, H);
     for (const p of parts) {
       p.age++;
@@ -72,6 +73,9 @@ function fireworks(durationMs = 2600) {
     else canvas.remove();
   };
   requestAnimationFrame(tick);
+  // A tab in the background pauses requestAnimationFrame: the canvas goes
+  // anyway, so no frozen sparks are left on the desk.
+  setTimeout(() => canvas.remove(), durationMs + 3000);
 }
 
 class __org_setup_done extends LetcBox {
