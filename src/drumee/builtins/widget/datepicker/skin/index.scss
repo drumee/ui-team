@@ -3,7 +3,7 @@
 // "set date" calendar card. Tokens come from revamp.scss with literal
 // fallbacks so the skin is correct even outside that compilation scope.
 
-$font: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+$font: var(--font-main);
 
 $brand: var(--primary-40, #5950ff); // ring / Done button
 $brand-deep: var(--primary-50, #433cc5); // month label, selected text

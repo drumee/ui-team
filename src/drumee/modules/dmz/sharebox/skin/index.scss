@@ -23,7 +23,7 @@
   --sb-banner-from: #6c5ce7;
   --sb-banner-to: #2900a0;
   --sb-card-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
-  --sb-font-body: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sb-font-body: var(--font-main);
   --sb-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
@@ -1483,7 +1483,7 @@
   }
 
   &__breadcrumb-crumb {
-    font-family: var(--sb-font-body, "Geist", sans-serif);
+    font-family: var(--font-main);
     font-weight: 500;
     font-size: 14px;
     line-height: 24px;
@@ -1506,7 +1506,7 @@
   }
 
   &__breadcrumb-sep {
-    font-family: var(--sb-font-body, "Geist", sans-serif);
+    font-family: var(--font-main);
     font-size: 14px;
     line-height: 24px;
     color: var(--normal-fg-10);

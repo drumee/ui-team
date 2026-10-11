@@ -34,6 +34,6 @@ $jse-box-shadow-inner: inset 0 0 10px rgba(128, 128, 128, 0.5);
 
 $jse-date: #a1a1a1;
 
-$jse-font: arial, sans-serif;
+$jse-font: var(--font-main);
 $jse-font-mono: "dejavu sans mono", "droid sans mono", consolas, monaco, "lucida console", "courier new", courier, monospace, sans-serif;
 $jse-font-size: 10pt;

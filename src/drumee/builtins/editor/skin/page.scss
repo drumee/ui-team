@@ -130,7 +130,7 @@
         font-size: 9.5px;
         line-height: 25px;
         color: rgb(43, 80, 99);
-        font-family: "SourceSansPro-Regular";
+        font-family: var(--font-main);
         .fa {
             margin-right: 10px;
         }
@@ -224,7 +224,7 @@
             border: none;
             //border-bottom: 1px dashed white;
             color: white;
-            font-family: "Roboto", sans-serif;
+            font-family: var(--font-main);
             font-size: 11px;
             letter-spacing: 0.05em;
             min-height: 0;
@@ -291,7 +291,7 @@
         bottom: 0;
         color: white;
         display: flex;
-        font-family: drumee.$main-typo;
+        font-family: var(--font-main);
         font-size: 11px;
         height: 100%;
         letter-spacing: 0.05em;
@@ -378,7 +378,7 @@
         font-size: 12px;
         line-height: 24px;
         letter-spacing: 0.1em;
-        font-family: "SourceSansPro-Regular";
+        font-family: var(--font-main);
         cursor: pointer;
         padding-bottom: 30px;
     }
@@ -515,7 +515,7 @@
     .change-page__list.change-page__list--drafts, .change-page__search-results.change-page__search-results--drafts {
         .change-page__item {
             color: var(--egrey-89);
-            font-family: 'HappyMonkey-Regular', cursive;
+            font-family: var(--font-main);
             // &.change-page__item--drafts {
             //     color: var(--egrey-89);  
             // }
@@ -532,7 +532,7 @@
                 background-color: #FBFBFB;
                 box-shadow: inset 0 1px 1px 0 rgba(0,0,0,0.1);
                 color: var(--egrey-89);
-                font-family: cursive;
+                font-family: var(--font-main);
             }
         }
     }
@@ -665,7 +665,7 @@
                 background-color: #FBFBFB;
                 input {
                     color: var(--egrey-78);
-                    font-family: cursive;
+                    font-family: var(--font-main);
                 }
             }
             .entry-btn {

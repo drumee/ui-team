@@ -53,7 +53,7 @@ $drumee-link-purple: #b1adff;
   // used.
   &__items.reconnect,
   &__items.oauth {
-    $otp-font: "Geist", system-ui, sans-serif;
+    $otp-font: var(--font-main);
 
     // Transparent centering wrapper — the popup container provides the
     // backdrop; this just centers the card.
@@ -279,7 +279,7 @@ $drumee-link-purple: #b1adff;
     // typo() maps $weight to a font-family and only knows 300/400/500/700, so
     // 600 emits nothing — same as __social-label above, the semibold face has
     // to be named explicitly.
-    font-family: var(--font-bold);
+    font-family: var(--font-main);
     text-align: center;
     cursor: pointer;
     padding: 8px 16px;
@@ -743,7 +743,7 @@ $drumee-link-purple: #b1adff;
       $color: $drumee-primary
     );
     width: auto;
-    font-family: var(--font-bold);
+    font-family: var(--font-main);
   }
 
   &__footer-links {
@@ -916,7 +916,7 @@ font-family: var(--font-main);
       $weight: 600,
       $color: $drumee-grey-90
     );
-    font-family: var(--font-bold);
+    font-family: var(--font-main);
     width: 100%;
     justify-content: center;
     text-align: center;

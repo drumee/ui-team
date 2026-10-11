@@ -12,7 +12,7 @@
 // font-weight explicitly — the old card rendered in Times New Roman once.
 // Figma specifies Geist, but only Armin Grotesk is actually loaded, so the
 // brand face is the fallback rather than a generic sans.
-$font: "Geist", var(--font-main), sans-serif;
+$font: var(--font-main);
 $ink: #1b1a3a;
 $muted: #8a88a6;
 $accent: #6c5ce7;

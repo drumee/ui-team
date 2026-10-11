@@ -234,12 +234,12 @@ textarea {
 
   &--thiner {
     &::placeholder {
-      font-family: var(--main-typo-light)
+      font-family: var(--font-main)
     }
 
     input {
       border-bottom: 2px solid #F1F1F6;
-      font-family: var(--main-typo-light)
+      font-family: var(--font-main)
     }
   }
 }

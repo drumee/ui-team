@@ -9520,7 +9520,7 @@ html[data-theme="dark"] .tasks-panel {
   border-radius: 10px;
   border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
   box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.18);
-  font-family: Manrope, system-ui, sans-serif;
+  font-family: var(--font-main);
 
   // Day markers (hover, picked, in-range, adjacent-month) come from the shared
   // date_picker skin (`.dp-skin`), drawn as a circle on ::before. Don't paint
