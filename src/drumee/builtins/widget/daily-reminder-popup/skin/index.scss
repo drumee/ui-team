@@ -172,6 +172,16 @@ $primary-hover: var(--primary-purple-60, #4642a9);
     padding: 12px;
     border: 1px solid #ecebf3;
     border-radius: 12px;
+    // Each tile opens its screen (Inbox / Personal Calendar). Colour only on
+    // hover, never `transform`: motion.js tweens the tile's own `y` on entry,
+    // and gsap leaves that inline transform behind.
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    &:hover {
+      background: #f8f7ff;
+      border-color: #dcd9f5;
+    }
 
     &--chat { --dr-tile-bg: #efecff; --dr-tile-ink: #6c5ce7; }
     &--task { --dr-tile-bg: #e6f7ee; --dr-tile-ink: #2e9e62; }
@@ -304,14 +314,80 @@ $primary-hover: var(--primary-purple-60, #4642a9);
   }
 }
 
-// Phone: stack the stat tiles.
+// Phone: the same card, compacted to fit the screen. Spacing and the hero's
+// scale only — no copy, colour or type size changes.
+//
+// 🚨 Box selectors need the card AND `[data-flow]`: the framework's
+// `.drumee-box[data-flow="x"]` (container.scss) sets `flex-direction: row`
+// at 0,2,0 and beats a bare BEM class (0,1,0).
+//
+// The three tiles keep their desktop row; inside each tile the icon moves
+// above the number, which is what lets the labels fit ~95px tiles instead of
+// spilling out of them. Stacking the tiles instead made the card fill the
+// whole phone screen.
 @media (max-width: 480px) {
+  .daily-reminder-popup__card {
+    padding: 16px;
+    gap: 12px;
+    // Short phones: scroll rather than clip the centred card top and
+    // bottom. Inert while it fits.
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+  }
+
+  // Scaled as one piece so the confetti keeps its place around the art; the
+  // negative margins give back the 24px the scale frees.
+  .daily-reminder-popup__hero-wrap {
+    flex: 0 0 auto;
+    margin: -12px 0;
+    transform: scale(0.75);
+  }
+
   .daily-reminder-popup__stats {
+    gap: 8px;
+  }
+
+  .daily-reminder-popup__card .daily-reminder-popup__stat[data-flow] {
     flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .daily-reminder-popup__stat-tile {
+    width: 32px;
+    height: 32px;
+  }
+
+  // A single long word (ru "непрочитанных") breaks rather than overflows.
+  .daily-reminder-popup__stat-text {
+    max-width: 100%;
+  }
+
+  .daily-reminder-popup__stat-label {
+    overflow-wrap: anywhere;
+  }
+
+  .daily-reminder-popup__calrow {
+    padding: 10px 12px;
+  }
+
+  // "Open my calendar" (longer still in fr/ru/km) can wrap at this width —
+  // grow with the text instead of spilling out of the fixed 44px. A one-line
+  // label still measures exactly 44px.
+  .daily-reminder-popup__btn {
+    height: auto;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 10px 0;
+    line-height: 20px;
+    text-align: center;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .daily-reminder-popup__stat,
   .daily-reminder-popup__calrow,
   .daily-reminder-popup__calrow-arrow,
   .daily-reminder-popup__btn {

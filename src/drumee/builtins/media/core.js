@@ -167,6 +167,12 @@ class __media_core extends DrumeeMFS {
       return [_a.download];
     }
 
+    // Several items selected, this one among them (media/row onToggle keeps
+    // the selection on a right-click on a ticked row): only the rows that act
+    // on the whole selection.
+    const selection = this._menuSelection();
+    if (selection.length > 1) return this.contextmenuItemsForSelection(selection);
+
     const fileType = this.mget(_a.filetype);
     // `share_qrcode` predates the sectioned menus (added unconditionally
     // 2025-12-04 `37a6681d`, gated by area 2026-06-09 `1f984155`) and is
@@ -288,6 +294,52 @@ class __media_core extends DrumeeMFS {
     } catch (e) {
       return _a.trash;
     }
+  }
+
+  /**
+   * The selection a right-click on this item acts on: every selected item
+   * when this one is among them, else none. Never in the trash panel, whose
+   * rows restore or delete for good.
+   * @returns {Array} media items
+   */
+  _menuSelection() {
+    if (this.mget(_a.status) == _a.deleted) return [];
+    const wm = window.Wm;
+    if (!wm || !_.isFunction(wm.getGlobalSelection)) return [];
+    const selected = wm.getGlobalSelection() || [];
+    return selected.includes(this) ? selected : [];
+  }
+
+  /**
+   * The menu of a multi-selection: Download · Make a copy, Organize, Move to
+   * trash — each the handler of the whole selection (_downloadFromMenu,
+   * _duplicateFromMenu, move, Wm.removeMediaSelection). A row is offered only
+   * when every selected item allows it, so the action never half-runs.
+   * @param {Array} selection media items, this one among them
+   * @returns {Array} keys of builtins/contextmenu/skeleton/items
+   */
+  contextmenuItemsForSelection(selection) {
+    const every = (fn) => selection.every((m) => {
+      try {
+        return !!fn(m);
+      } catch (e) {
+        return false;
+      }
+    });
+    const editable = (m) => m.canOrganize() || m.isMediaOwner();
+    const sections = [];
+    const files = [];
+    if (every((m) => editable(m) || m.canDownload())) files.push(_a.download);
+    if (every(editable)) files.push('makeACopy');
+    if (files.length) sections.push(files);
+    if (every(editable)) sections.push(['organize']);
+    if (every((m) => editable(m) || m.canRemove())) sections.push([_a.trash]);
+    const items = [];
+    sections.forEach((s, i) => {
+      if (i) items.push(_a.separator);
+      items.push(...s);
+    });
+    return items;
   }
 
   contextmenuItemsForHub() {

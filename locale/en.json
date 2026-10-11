@@ -3280,5 +3280,14 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "delete this workspace",
   "PERMISSION_ACTION_MANAGE_SHARE": "manage share links",
   "X_ITEMS": "{0} items",
-  "ONE_ITEM": "1 item"
+  "ONE_ITEM": "1 item",
+  "X_SELECTED": "{0} selected",
+  "CLEAR_SELECTION": "Clear selection",
+  "DOWNLOADING_X_OF_Y": "Downloading {0} of {1}",
+  "DOWNLOAD_COMPLETE": "Download complete",
+  "DOWNLOAD_X_FAILED": "{0} file(s) couldn't be downloaded",
+  "PREPARING_DOWNLOAD": "Preparing download…",
+  "ALLOW_DOWNLOADS_TO_START": "Allow downloads to start",
+  "DOWNLOADING_IN_BROWSER": "Downloading in your browser",
+  "DOWNLOAD_FAILED": "Download failed"
 }

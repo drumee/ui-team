@@ -20,7 +20,8 @@
     width: 100%;
 
     // Hover and selection are both a background-colour swap on this element
-    // (`&:hover, &[data-radio="on"]` below; setState writes data-radio). With
+    // (`&:hover, &[data-radio="on"]` below; setState writes data-radio, and
+    // a right-click writes data-current — media/row onToggle). With
     // nothing to ease them they landed in a single frame, so a marquee swept
     // down the list flicked each row on hard. Same 0.15s the grid cell's fill
     // uses, so the two views read as one gesture.
@@ -42,7 +43,8 @@
     }
 
     &:hover,
-    &[data-radio="on"] {
+    &[data-radio="on"],
+    &[data-current="1"] {
       background-color: var(--default-bg-hover);
       // Hover bg is light (--neutral-200 #ebecf0); the previous
       // --default-text-reverse / --default-text-hover are both white and
@@ -66,7 +68,8 @@
       }
     }
 
-    &[data-radio="on"] {
+    &[data-radio="on"],
+    &[data-current="1"] {
       & .filename {
         color: var(--default-text-color);
       }
@@ -163,6 +166,92 @@
       .icon.web {
         padding: 3.5px;
       }
+
+      // File-type glyph (template/index.js chipGlyph) — the chat attachment
+      // chip's icon, at row size. Same two colour rules as the chip
+      // (widget/chat/skin/attachment.scss): the normalized glyphs take the
+      // text colour, since lib/svg.scss only sets currentcolor for
+      // .svg-wrapper / .drumee-picto and they would otherwise paint black; the
+      // office icons come from the raw sprite, whose page body alone has no
+      // fill, so paint that one white behind the coloured detail.
+      &.chip-glyph {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: none;
+
+        .preview-icon {
+          width: 24px;
+          height: 24px;
+          color: var(--normal-fg-10, #0b0a21);
+          fill: currentColor;
+
+          &[data-ext="doc"],
+          &[data-ext="docx"],
+          &[data-ext="xls"],
+          &[data-ext="xlsx"],
+          &[data-ext="ppt"],
+          &[data-ext="pptx"] {
+            color: var(--white, #ffffff);
+            fill: var(--white, #ffffff);
+          }
+        }
+      }
+
+      // Folders and workspaces: the breadcrumb's folder art
+      // (desk/breadcrumb/item/skin .breadcrumb-item__icon), at the row's icon
+      // size. The art is an HTML string from media/grid/template/folder: its
+      // AREA CLASS supplies the fill (the colour IS the fill, never a
+      // currentColor tint), the SVG is authored at 105x86 and renders at that
+      // size unless pinned, and a workspace adds an absolutely placed badge.
+      // Same 5:4 shape as the crumb's 20x16, scaled to the 24px file glyphs.
+      &.folder-art {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: visible;
+        background: none;
+
+        .media-grid__folder-art {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          position: relative;
+          width: 24px;
+          height: 20px;
+        }
+
+        .folder-shape {
+          width: 24px;
+          height: 20px;
+          fill: #885eff;
+
+          &.personal,
+          &.inner-folder {
+            fill: var(--area-personal);
+          }
+          &.public {
+            fill: var(--area-public);
+          }
+          &.share,
+          &.dmz {
+            fill: var(--area-share);
+          }
+          &.private {
+            fill: var(--area-private);
+          }
+        }
+
+        // The area badge rides the folder body, as on the crumb.
+        .badge {
+          position: absolute;
+          bottom: -2px;
+          left: -2px;
+          width: 15px !important;
+          height: 15px !important;
+          color: var(--grid-color-folder-badge);
+        }
+      }
     }
 
     .icon--shortcut {
@@ -243,6 +332,7 @@
           background: var(--btn-commit-background-hover);
         }
       }
+
     }
 
     &-preview {

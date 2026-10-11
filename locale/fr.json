@@ -3281,5 +3281,14 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "supprimer cet espace de travail",
   "PERMISSION_ACTION_MANAGE_SHARE": "gérer les liens de partage",
   "X_ITEMS": "{0} éléments",
-  "ONE_ITEM": "1 élément"
+  "ONE_ITEM": "1 élément",
+  "X_SELECTED": "{0} sélectionné(s)",
+  "CLEAR_SELECTION": "Effacer la sélection",
+  "DOWNLOADING_X_OF_Y": "Téléchargement {0} sur {1}",
+  "DOWNLOAD_COMPLETE": "Téléchargement terminé",
+  "DOWNLOAD_X_FAILED": "{0} fichier(s) n'ont pas pu être téléchargé(s)",
+  "PREPARING_DOWNLOAD": "Préparation du téléchargement…",
+  "ALLOW_DOWNLOADS_TO_START": "Autorisez les téléchargements",
+  "DOWNLOADING_IN_BROWSER": "Téléchargement dans le navigateur",
+  "DOWNLOAD_FAILED": "Échec du téléchargement"
 }

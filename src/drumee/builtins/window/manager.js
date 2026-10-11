@@ -777,11 +777,22 @@ class __window_manager extends mfsInteract {
       return;
     }
 
-    this.getWindowsPool().append({
+    // Load the kind BEFORE appending, as launch()'s explicit path does. Appended
+    // cold, window_downloader mounts ui-core's lazy placeholder, which swaps
+    // itself out with View.renew(): collection.remove() then add(). On a layer
+    // with sortWithCollection:false a remove-only update re-appends EVERY
+    // child (Marionette: `_addedViews = changes.added.length && …` is 0, so
+    // `_renderChildren` falls back to all views) — and while a workspace is
+    // open that layer holds the docked pane, so its split body was detached
+    // and re-inserted: entrance animations replayed, scroll reset. Only on the
+    // first download of a session; afterwards the kind is cached.
+    const item = {
       kind: "window_downloader",
       token: this.mget(_a.token),
       nodes: s,
-    });
+    };
+    const append = () => this.getWindowsPool().append(item);
+    Promise.resolve(Kind.waitFor(item.kind)).then(append, append);
   }
 
   /**

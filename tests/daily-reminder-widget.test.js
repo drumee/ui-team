@@ -82,3 +82,36 @@ test("destroy kills the live animation", () => {
   w.onBeforeDestroy();
   assert.equal(alive().length, 0);
 });
+
+// Every click that leaves the card closes it first, then hands the desk the
+// service the rail / topbar fire for that screen.
+function dispatched(service) {
+  const calls = [];
+  global.window = { Desk: { onUiEvent: (cmd, args) => calls.push({ cmd, args }) } };
+  global.Desk = global.window.Desk;
+  global._ = { isFunction: (f) => typeof f === "function" };
+  const w = widget();
+  const cmd = { mget: () => service };
+  w.onUiEvent(cmd, { service });
+  return { w, cmd, calls };
+}
+
+test("messages tile closes the card and opens the Inbox", () => {
+  const { w, cmd, calls } = dispatched("daily-reminder-inbox");
+  assert.equal(w.closed, true);
+  assert.deepEqual(calls, [{ cmd, args: { service: "toggle-inbox" } }]);
+});
+
+test("calendar (button, row, tasks + meetings tiles) still opens the month view", () => {
+  const { w, cmd, calls } = dispatched("daily-reminder-calendar");
+  assert.equal(w.closed, true);
+  assert.deepEqual(calls, [{ cmd, args: { service: "toggle-calendar", calendarView: "month" } }]);
+});
+
+test("discard and close never reach the desk", () => {
+  for (const service of ["daily-reminder-discard", "daily-reminder-close"]) {
+    const { w, calls } = dispatched(service);
+    assert.equal(w.closed, true);
+    assert.deepEqual(calls, []);
+  }
+});

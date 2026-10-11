@@ -1240,6 +1240,7 @@ class __window_interact extends windowCore {
         } catch (error) { }
       });
     }
+    this._scheduleRowSelectSync();
 
     if (!all) {
       return;

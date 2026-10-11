@@ -140,6 +140,8 @@ class __webrtc_room extends __room {
     this._peerSeenAt = {};
     this._droppedPeerWatch = {};
     this._socketDroppedPeers = new Set();
+    // Participants whose vouch-or-kick check has started (_scheduleVerify).
+    this._verifying = new Set();
     // Start fetching the conference widget chunks the moment ANY room window
     // exists (dialing, ringing, opening a meeting) so they're already loaded
     // by the time prepareConference needs them — instead of five serialized
@@ -1349,8 +1351,23 @@ class __webrtc_room extends __room {
     // Let remote-user widgets attach without waiting for ENDPOINT_STATS_RECEIVED.
     this.trigger("TRACK_ADDED", track);
 
-    // A peer is vouched for by its HELLO broadcast or by the attendee lookup.
-    // Give both time to land before treating it as an intruder.
+    this._scheduleVerify(participant_id);
+  }
+
+  /**
+   * Start the vouch-or-kick check for a participant, once per participant.
+   * Called on USER_JOINED as well as on TRACK_ADDED: a participant that never
+   * publishes a track — notably our own previous session, left in the MUC by
+   * Prosody's stream-management hibernation after a crash or network loss —
+   * would otherwise never be checked, and its stale tile (a duplicate of a
+   * real member) stayed for the rest of the call.
+   *
+   * A peer is vouched for by its HELLO broadcast or by the attendee lookup.
+   * Give both time to land before treating it as an intruder.
+   */
+  _scheduleVerify(participant_id) {
+    if (this._verifying.has(participant_id)) return;
+    this._verifying.add(participant_id);
     this._lookupAttendee(participant_id);
     setTimeout(() => this._verifyParticipant(participant_id, 1), 5000);
   }
@@ -1393,6 +1410,7 @@ class __webrtc_room extends __room {
   _verifyParticipant(participant_id, retries = 0) {
     if (this.isDestroyed() || !this.room) return;
     if (this._guests.get(participant_id)) return;
+    if (this._kicked[participant_id]) return;
     if (this.mget(_a.role) != "host") return;
     if (!this.room.getParticipantById(participant_id)) return;
     if (retries > 0) {
@@ -1840,6 +1858,7 @@ class __webrtc_room extends __room {
     endpoint.once("audio:ready", () => { this.stateMessage() });
     this.endpoints[id] = endpoint;
     this._scheduleHello();
+    this._scheduleVerify(id);
     this.responsive();
     if (this.__peerContainer && !this.__peerContainer.isEmpty()) {
       this.__peerContainer.clear();
@@ -2001,6 +2020,7 @@ class __webrtc_room extends __room {
     let endpoint = this.endpoints[id];
     this._stopWatchingPeer(id);
     this._socketDroppedPeers.delete(id);
+    this._verifying.delete(id);
     delete this._peerSeenAt[id];
     this.trigger("user-left", { id });
     const name = this._partyNames && this._partyNames[id];

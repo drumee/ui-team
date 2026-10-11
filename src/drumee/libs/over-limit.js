@@ -78,6 +78,15 @@ function current() {
  */
 function setCurrent(next) {
   _initialized = true;
+  // An endpoint with enforcement off never locks, whatever reaches it. UAT
+  // and PROD share one DB and one Redis live-update channel, so a push fanned
+  // out by an endpoint that HAS enforcement lands on sockets of one that
+  // doesn't — without this gate it would lock that UI client-side while its
+  // server clamp stays off. Same gate current() applies to the boot block.
+  if (!enforcementOn()) {
+    _current = null;
+    return;
+  }
   if (!next || !next.state || next.state === "ok") {
     const had = !!_current;
     _current = null;

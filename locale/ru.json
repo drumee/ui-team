@@ -3074,5 +3074,15 @@
   "PERMISSION_ACTION_DELETE_WORKSPACE": "удалить это пространство",
   "PERMISSION_ACTION_MANAGE_SHARE": "управлять ссылками для общего доступа",
   "X_ITEMS": "Элементов: {0}",
-  "ONE_ITEM": "1 элемент"
+  "ONE_ITEM": "1 элемент",
+  "X_SELECTED": "Выбрано: {0}",
+  "CLEAR_SELECTION": "Снять выделение",
+  "DOWNLOADING_X_OF_Y": "Загрузка {0} из {1}",
+  "DOWNLOAD_COMPLETE": "Загрузка завершена",
+  "DOWNLOAD_X_FAILED": "Не удалось скачать файлов: {0}",
+  "PREPARING_DOWNLOAD": "Подготовка загрузки…",
+  "ALLOW_DOWNLOADS_TO_START": "Разрешите загрузки",
+  "DOWNLOADING_IN_BROWSER": "Загрузка в браузере",
+  "DOWNLOAD_FAILED": "Не удалось скачать",
+  "DOWNLOAD_SAVING_IN_BROWSER": "Файл сохраняется в загрузки браузера — можно продолжать работу."
 }
