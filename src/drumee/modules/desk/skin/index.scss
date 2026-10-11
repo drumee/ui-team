@@ -1021,9 +1021,14 @@ html {
 // cancel/switch-plan confirms) painted over the workspace pane instead of the
 // page the user clicked from. settings_billing is not in
 // KEEP_ALIVE_MAIN_KINDS either, so present means showing here too.
+//
+// And the organisation screen (desk_org_view): its "+ New department" and
+// "+ New Workspace" open their dialogs in the same modal, and with a
+// workspace open behind it the dialog landed over that workspace's chat.
 .desk-module[data-wm-modal="open"]:has(
     .desk-module__settings-main-slot > [data-kind="apps_main"]:not([data-anim="out"]),
-    .desk-module__settings-main-slot > [data-kind="settings_billing"]:not([data-anim="out"])
+    .desk-module__settings-main-slot > [data-kind="settings_billing"]:not([data-anim="out"]),
+    .desk-module__settings-main-slot > [data-kind="desk_org_view"]:not([data-anim="out"])
   ) {
   .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer) {
     z-index: 1300 !important;
