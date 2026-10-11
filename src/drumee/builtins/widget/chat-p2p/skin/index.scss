@@ -92,7 +92,8 @@
   }
 
   &__close-btn {
-    // Hidden at every width, like the chat-header __chat-close-btn.
+    // Sidebar close button is tablet/mobile only — the media query below
+    // reveals it. On desktop the X sits top-right in the chat header.
     display: none;
     color: var(--normal-fg-50);
     cursor: pointer;
@@ -999,13 +1000,6 @@
     }
   }
 
-  // No close button at any width: the Inbox is a full-canvas screen left
-  // through the rail. Declared after __header-btn (same specificity) so it
-  // beats that rule's display:flex. The sidebar __close-btn is hidden too.
-  &__chat-close-btn {
-    display: none;
-  }
-
   // Back button is mobile/tablet only — the media query below reveals it.
   &__back-btn {
     display: none;
@@ -1267,6 +1261,16 @@
 
     &__back-btn {
       display: flex;
+    }
+
+    // One pane at a time here, so the X moves into the sidebar header:
+    // reveal the sidebar one, hide the chat-header one.
+    &__close-btn {
+      display: flex;
+    }
+
+    &__chat-close-btn {
+      display: none;
     }
 
     // Compose popup adapts to small screens: widen toward the available
