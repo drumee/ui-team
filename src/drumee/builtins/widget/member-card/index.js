@@ -89,7 +89,7 @@ class __member_card extends LetcBox {
   /** The contact's default mobile number, as the Contacts page lists it. */
   _defaultPhone() {
     const list = (this._contact && Array.isArray(this._contact.mobile)) ? this._contact.mobile : [];
-    const m = list.find((x) => x && ~~x.is_default) || list[0];
+    const m = list[0];
     if (!m) return "";
     return [m.areacode, m.phone].filter(Boolean).join(" ").trim();
   }
@@ -183,7 +183,10 @@ class __member_card extends LetcBox {
     const phone = String((input && input.value) || "").trim();
     if (phone === this._phone) return true;
     const p = this._person || {};
-    const others = ((this._contact && this._contact.mobile) || []).filter((m) => m && !~~m.is_default);
+    // The card shows (and edits) the FIRST number: contact_phone keeps no
+    // default flag, so the rest are kept as they are, after it.
+    const others = ((this._contact && this._contact.mobile) || []).slice(1)
+      .map((m) => ({ phone: m.phone, areacode: m.areacode || "", category: m.category || "priv" }));
     const mobile = phone ? [{ phone, areacode: "", category: "priv", is_default: 1 }, ...others] : others;
     let res;
     if (this._contact) {
