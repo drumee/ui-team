@@ -9916,6 +9916,19 @@ class desk_module extends LetcBox {
    *
    * @param {Object} [opt] merged into the mounted widget (e.g. armNewDepartment)
    */
+  /**
+   * Does Files open the organisation's screen here? Only inside an
+   * organisation and for someone the overview lets browse it.
+   * @returns {Promise<Boolean>}
+   */
+  _filesHome() {
+    const lib = require("libs/org-overview");
+    if (!lib.orgFeature() || !lib.inOrganization()) return Promise.resolve(false);
+    return lib.orgOverview(this)
+      .then((data) => !!(data && data.can_browse))
+      .catch(() => false);
+  }
+
   _openOrgView(opt) {
     if (!require("libs/org-overview").orgFeature()) return;
     // See _railUnlight. This screen fills settings-main-slot, which is
@@ -11745,7 +11758,12 @@ class desk_module extends LetcBox {
         // BEFORE the tab, not after — see _railTabWithTour. The Files pane
         // this tour introduces used to render first, and the tour then
         // appeared on top of it.
-        return this._railTabWithTour("files", "migrate");
+        // In an organisation, for those who may see it, Files is the
+        // organisation's screen (Figma 900:151138 "view multi dept in org",
+        // Files lit): its departments and their workspaces. A member below
+        // admin is refused that screen, so Files stays the workspace's files.
+        return this._filesHome().then((org) =>
+          org ? this._openOrgView() : this._railTabWithTour("files", "migrate"));
       }
       case "rail-chat": {
         // Contextual tour, on the first press of Chat in the rail.
