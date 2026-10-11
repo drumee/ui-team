@@ -40,6 +40,11 @@ function startP2PCall(callee, opt = {}) {
   return true;
 }
 
+// A refusal is a SHOUT_CASE code; a contact record carries its lifecycle
+// status ("active", "memory"...), which is not one (same rule as the
+// Contacts page).
+const refused = (res) => !res || (typeof res.status === "string" && /^[A-Z][A-Z0-9_]*$/.test(res.status));
+
 class __member_card extends LetcBox {
 
   initialize(opt = {}) {
@@ -131,7 +136,7 @@ class __member_card extends LetcBox {
       hub_id: Visitor.id, entity_id: this._uid, message,
     }).catch(() => null);
     this._sending = 0;
-    if (!res || res.status) return this._note(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong.");
+    if (refused(res)) return this._note(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong.");
     if (input) input.value = "";
     return this._note(LOCALE.MESSAGE_SENT || "Message sent", 1);
   }
@@ -150,7 +155,7 @@ class __member_card extends LetcBox {
     const res = await this.postService(SERVICE.contact.add, {
       hub_id: Visitor.id, invitee_id: this._uid,
     }).catch(() => null);
-    if (!res || res.status) return this._note(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong.");
+    if (refused(res)) return this._note(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong.");
     this._contact = res.id ? { ...res, contact_id: res.id } : this._contact;
     await this._load();
     return this._note(LOCALE.CONTACT_ADDED || "Added to your contacts", 1);
@@ -179,7 +184,7 @@ class __member_card extends LetcBox {
     if (phone === this._phone) return true;
     const p = this._person || {};
     const others = ((this._contact && this._contact.mobile) || []).filter((m) => m && !~~m.is_default);
-    const mobile = phone ? [{ phone, areacode: "", category: "mobile", is_default: 1 }, ...others] : others;
+    const mobile = phone ? [{ phone, areacode: "", category: "priv", is_default: 1 }, ...others] : others;
     let res;
     if (this._contact) {
       const c = this._contact;
@@ -198,8 +203,10 @@ class __member_card extends LetcBox {
         hub_id: Visitor.id, invitee_id: this._uid, mobile,
       }).catch(() => null);
     }
-    if (!res || res.status) {
-      this._note(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong.");
+    if (refused(res)) {
+      const code = res && res.status;
+      this._note((code && LOCALE[code] && LOCALE[code] !== code && LOCALE[code])
+        || LOCALE.SOMETHING_WENT_WRONG || "Something went wrong.");
       return false;
     }
     this._phone = phone;
