@@ -689,6 +689,7 @@ function datePicker(ui, edit, task, pfx) {
           bubble: 0,
           service: "list-date-done",
           uiHandler: [ui],
+          kidsOpt: { active: 0 },
           kids: [
             Skeletons.Image.Svg({ ico: "app-check", className: `${pfx}__list-cal-done-ico` }),
             Skeletons.Note({ className: `${pfx}__list-pill-label`, content: LOCALE.DONE }),

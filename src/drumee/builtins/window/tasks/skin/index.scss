@@ -7658,12 +7658,17 @@ $theme-colors: (
     }
   }
 
+  // The svg is inline by default, so inside the button's 24px line-height it
+  // sat on a 24px text line and hung below the label. Block + line-height 0
+  // keeps it inside its 12px box, centred by the row's align-items.
   &__list-cal-done-ico {
     flex: 0 0 12px;
     width: 12px;
     height: 12px;
+    line-height: 0;
 
     svg {
+      display: block;
       width: 12px !important;
       height: 12px !important;
       fill: #fff;
