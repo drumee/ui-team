@@ -3442,5 +3442,9 @@
   "ORG_NAME_REQUIRED": "Give your organization a name.",
   "INVALID_IDENT": "Use 2 to 40 lowercase letters, numbers or dashes (not at the start or end).",
   "IDENT_NOT_AVAILABLE": "This address is already taken. Please pick another one.",
-  "IDENT_RESERVED": "This address is reserved. Please pick another one."
+  "IDENT_RESERVED": "This address is reserved. Please pick another one.",
+  "SEND_A_QUICK_MESSAGE": "Send a quick message",
+  "CONTACT_ADDED": "Added to your contacts",
+  "ADD_TO_CONTACTS": "Add to contacts",
+  "ADD_PHONE_NUMBER": "Add a phone number"
 }

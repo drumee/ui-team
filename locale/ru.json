@@ -3217,5 +3217,9 @@
   "ORG_NAME_REQUIRED": "Укажите название организации.",
   "INVALID_IDENT": "От 2 до 40 строчных букв, цифр или дефисов (не в начале и не в конце).",
   "IDENT_NOT_AVAILABLE": "Этот адрес уже занят. Выберите другой.",
-  "IDENT_RESERVED": "Этот адрес зарезервирован. Выберите другой."
+  "IDENT_RESERVED": "Этот адрес зарезервирован. Выберите другой.",
+  "SEND_A_QUICK_MESSAGE": "Send a quick message",
+  "CONTACT_ADDED": "Added to your contacts",
+  "ADD_TO_CONTACTS": "Add to contacts",
+  "ADD_PHONE_NUMBER": "Add a phone number"
 }

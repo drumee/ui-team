@@ -3212,5 +3212,9 @@
   "ORG_NAME_REQUIRED": "Dale un nombre a tu organización.",
   "INVALID_IDENT": "Usa de 2 a 40 letras minúsculas, números o guiones (no al principio ni al final).",
   "IDENT_NOT_AVAILABLE": "Esta dirección ya está en uso. Elige otra.",
-  "IDENT_RESERVED": "Esta dirección está reservada. Elige otra."
+  "IDENT_RESERVED": "Esta dirección está reservada. Elige otra.",
+  "SEND_A_QUICK_MESSAGE": "Enviar un mensaje rápido",
+  "CONTACT_ADDED": "Añadido a tus contactos",
+  "ADD_TO_CONTACTS": "Añadir a contactos",
+  "ADD_PHONE_NUMBER": "Añadir un número de teléfono"
 }

@@ -3211,5 +3211,9 @@
   "ORG_NAME_REQUIRED": "请为你的组织命名。",
   "INVALID_IDENT": "请使用 2 到 40 个小写字母、数字或连字符（不能在开头或结尾）。",
   "IDENT_NOT_AVAILABLE": "该地址已被占用，请换一个。",
-  "IDENT_RESERVED": "该地址为保留地址，请换一个。"
+  "IDENT_RESERVED": "该地址为保留地址，请换一个。",
+  "SEND_A_QUICK_MESSAGE": "Send a quick message",
+  "CONTACT_ADDED": "Added to your contacts",
+  "ADD_TO_CONTACTS": "Add to contacts",
+  "ADD_PHONE_NUMBER": "Add a phone number"
 }

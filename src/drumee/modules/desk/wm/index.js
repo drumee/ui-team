@@ -61,6 +61,22 @@ class __window_manager extends push {
     // Post-Checkout return (?checkout=success|cancel) → payment result modal.
     // Deferred so the wrapper-modal slot exists before we feed it.
     setTimeout(() => this.checkCheckoutReturn(), 1200);
+    // Another person's avatar marked data-member-card="<uid>" (Access panel,
+    // folder members, chat authors) opens their member card. Capture phase,
+    // and the click stops there: the rows those avatars sit in have actions
+    // of their own that the avatar must not trigger.
+    if (!window.__memberCardClick) {
+      window.__memberCardClick = (e) => {
+        const el = e.target && e.target.closest && e.target.closest("[data-member-card]");
+        if (!el) return;
+        const uid = el.getAttribute("data-member-card");
+        if (!uid || uid === "undefined" || String(uid) === String(Visitor.id)) return;
+        e.stopPropagation();
+        e.preventDefault();
+        this.openMemberCard(uid);
+      };
+      document.addEventListener("click", window.__memberCardClick, true);
+    }
   }
 
   /**
@@ -399,6 +415,15 @@ class __window_manager extends push {
   /**
    *
    */
+  /**
+   * Open a person's member card (avatar click). Usable from any widget:
+   * Wm.openMemberCard(uid, { fullname, email }).
+   */
+  openMemberCard(uid, person) {
+    if (!uid) return;
+    return this.onUiEvent(this, { service: "member-card", uid: String(uid), person: person || null });
+  }
+
   changeModalState(s) {
     this.ensurePart("wrapper-modal").then((p) => {
       p.el.dataset.state = s;
@@ -4253,6 +4278,26 @@ class __window_manager extends push {
       // "Create new department" (B2B Org Structure). Same wrapper-modal host
       // and the same close-when-empty hook as "new-workspace" above, so the
       // overlay comes and goes exactly as it does for the other create forms.
+      // A person's card (Figma 978:125420): from an avatar anywhere, with
+      // args.uid (and args.person for what the caller already knows).
+      case "member-card":
+        if (!args.uid) return;
+        return this.ensurePart("wrapper-modal").then((p) => {
+          p.clear();
+          p.el.dataset.state = "open";
+          p.el.dataset.overlay = "none";
+          p.feed({ kind: "member_card", uid: args.uid, person: args.person || null });
+          if (!p._closeWhenEmpty) {
+            p._closeWhenEmpty = () => {
+              if (p.collection && p.collection.length === 0) {
+                p.el.dataset.state = "closed";
+                delete p.el.dataset.overlay;
+              }
+            };
+            p.collection.on("update reset", p._closeWhenEmpty);
+          }
+        });
+
       case "new-department-form":
         return this.ensurePart("wrapper-modal").then((p) => {
           p.clear();

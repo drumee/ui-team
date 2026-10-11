@@ -3443,5 +3443,9 @@
   "ORG_NAME_REQUIRED": "Donnez un nom à votre organisation.",
   "INVALID_IDENT": "Utilisez 2 à 40 lettres minuscules, chiffres ou tirets (pas au début ni à la fin).",
   "IDENT_NOT_AVAILABLE": "Cette adresse est déjà prise. Choisissez-en une autre.",
-  "IDENT_RESERVED": "Cette adresse est réservée. Choisissez-en une autre."
+  "IDENT_RESERVED": "Cette adresse est réservée. Choisissez-en une autre.",
+  "SEND_A_QUICK_MESSAGE": "Envoyer un message rapide",
+  "CONTACT_ADDED": "Ajouté à vos contacts",
+  "ADD_TO_CONTACTS": "Ajouter aux contacts",
+  "ADD_PHONE_NUMBER": "Ajouter un numéro de téléphone"
 }

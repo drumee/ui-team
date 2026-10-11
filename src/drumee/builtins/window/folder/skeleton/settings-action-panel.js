@@ -175,6 +175,9 @@ function memberAvatar(pfx, member) {
     className: `${pfx}-avatar`,
     auto_color: 0,
     id: member.id,
+    // Click opens the member card (Wm data-member-card listener).
+    active: 0,
+    attrOpt: { "data-member-card": member.id },
     firstname: member.firstname,
     lastname: member.lastname,
     fullname: member.fullname,

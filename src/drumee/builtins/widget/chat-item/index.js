@@ -296,6 +296,9 @@ class ___widget_chatItem extends LetcBox {
           Skeletons.UserProfile({
             className: `${fig}__profile other`,
             id: this.mget(_a.author_id),
+            // Click opens the author's member card (Wm data-member-card).
+            active: 0,
+            attrOpt: { "data-member-card": this.mget(_a.author_id) },
           }),
         );
       }

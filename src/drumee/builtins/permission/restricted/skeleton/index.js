@@ -146,6 +146,10 @@ function memberAvatar(pfx, member) {
     id: member.id,
     // Keys the photo carried across repaints (index.js _feedKeepingAvatars).
     dataset: { uid: member.id },
+    // Click opens the member card (Wm.openMemberCard via data-member-card);
+    // inert itself so the click reaches that listener.
+    active: 0,
+    attrOpt: { "data-member-card": member.id },
     firstname: member.firstname,
     lastname: member.lastname,
     fullname: member.fullname,

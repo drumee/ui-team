@@ -1645,3 +1645,8 @@ html {
     pointer-events: none;
   }
 }
+
+// An avatar that opens the member card (Wm data-member-card listener).
+[data-member-card] {
+  cursor: pointer;
+}

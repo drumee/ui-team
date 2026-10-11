@@ -175,6 +175,9 @@ module.exports = {
   desk_department_form: function () {
     return import("./modules/desk/department-form");
   },
+  member_card: function () {
+    return import("./builtins/widget/member-card");
+  },
   workspace_item: function () {
     return import("./modules/desk/workspace-item");
   },
