@@ -20,7 +20,7 @@ const { showChatToast, killChatToast } = require('./chat-toast');
 // Round 3 Phase 3: which popups the user has switched off. Read once here and
 // refreshed from every mute_set — never per message. Suppresses the CARD only:
 // the feed, the badge and the tab counts are untouched by design.
-const { loadMuteState } = require('./mute');
+const { loadMuteState, muteState } = require('./mute');
 const { hubCounts, latestTime } = require('./hub-counts');
 require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
@@ -84,11 +84,6 @@ class __panel_activity extends LetcBox {
     document.addEventListener("visibilitychange", this.onVisibilityChange);
     this.onWsMessage = this.onWsMessage.bind(this)
     this._last_notified = 0;
-    // Fire and forget: the panel must come up whether or not this answers, and
-    // it never rejects. Until it lands nothing is muted, which is the safe
-    // direction — a failed read shows a popup that should have been silenced,
-    // where the opposite default would silence one that should have shown.
-    loadMuteState(this);
   }
 
   /**
@@ -204,6 +199,17 @@ class __panel_activity extends LetcBox {
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_CLICK.on(_e.click, this._onOutsideClick)
     this.visible = !document.hidden;
+    // Fire and forget: the panel must come up whether or not this answers, and
+    // it never rejects. Until it lands nothing is muted, which is the safe
+    // direction — a failed read shows a popup that should have been silenced,
+    // where the opposite default would silence one that should have shown.
+    //
+    // Here, NOT in initialize: ui-core's Box binds this.fetchService only
+    // after super() returns, and initialize runs inside super(). Called from
+    // there, loadMuteState found no fetchService and returned without asking,
+    // so the cache never loaded — popups ignored a saved mute after a reload
+    // and the account menu always read "Mute notifications".
+    if (!muteState().loaded) loadMuteState(this);
     this.feed(require('./skeleton')(this));
     this.ensurePart(_a.list).then((p) => {
       this.refreshActivity()

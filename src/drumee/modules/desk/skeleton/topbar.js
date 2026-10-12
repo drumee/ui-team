@@ -347,6 +347,19 @@ function utilityCluster(pfx, ui) {
 }
 
 /**
+ * How the account menu's mute row reads for a given GLOBAL mute state. Shared
+ * with the desk, which repaints the row in place (_paintMuteRow) when the
+ * state changes, so the built row and the repainted one cannot disagree.
+ *
+ * @param {Boolean} muted
+ */
+function muteRowLook(muted) {
+  return muted
+    ? { ico: "bell-simple", label: LOCALE.UNMUTE, modifier: "muted" }
+    : { ico: "bell-simple-slash", label: LOCALE.MUTE_NOTIFICATIONS, modifier: null };
+}
+
+/**
  * Avatar + its dropdown — Figma 59:55943. Sits last in the utility cluster.
  *
  * This is where Settings, Get Help and Log out live in the new shell: the
@@ -406,7 +419,7 @@ function userMenu(pfx, ui) {
     label: LOCALE[code] || code.toUpperCase(),
   }));
 
-  const row = ({ ico, label, service, on_click, modifier }) =>
+  const row = ({ ico, label, service, on_click, modifier, sys_pn }) =>
     Skeletons.Button.Label({
       ico,
       className: `${pfx}__account-menu-item${modifier ? ` ${pfx}__account-menu-item--${modifier}` : ""}`,
@@ -414,6 +427,7 @@ function userMenu(pfx, ui) {
       service,
       on_click,
       uiHandler: [ui],
+      ...(sys_pn ? { sys_pn, partHandler: ui } : {}),
     });
 
   // ── Language ─────────────────────────────────────────────────────────────
@@ -548,10 +562,12 @@ function userMenu(pfx, ui) {
         // Hidden when the endpoint is absent — see the note above.
         muteService("mute_set")
           ? row({
-              ico: muted ? "bell-simple" : "bell-simple-slash",
-              label: muted ? LOCALE.UNMUTE : LOCALE.MUTE_NOTIFICATIONS,
+              ...muteRowLook(muted),
               service: "toggle-mute-all",
-              modifier: muted ? "muted" : null,
+              // Named so the desk can repaint it in place (_paintMuteRow):
+              // the state is read after this menu is built, and the menu is
+              // not rebuilt when the row is pressed.
+              sys_pn: "account-mute-row",
             })
           : null,
         row({
@@ -726,3 +742,4 @@ function workspaceSwitcher(pfx, ui) {
 // desk still owns the MOBILE search card, which is global on purpose and builds
 // its own field in skeleton/index.js.
 
+module.exports.muteRowLook = muteRowLook;

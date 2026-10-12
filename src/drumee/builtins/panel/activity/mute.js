@@ -26,6 +26,11 @@
 // `peers` holds the people whose DM popups are muted (activity.mute_peer_set).
 const STATE = { loaded: 0, global: 0, hubs: new Set(), peers: new Set() };
 
+// Broadcast whenever the cache takes a server answer. The account menu's
+// "Mute notifications" row is built with the desk, before the boot read
+// lands, and is not rebuilt after a write — so it has to be told to repaint.
+const MUTE_CHANGED = 'notification-mute:changed';
+
 /**
  * Fold a server payload into the cache. Shared by the initial load and by
  * every mute_set, so the two can never disagree about how a payload is read.
@@ -37,6 +42,9 @@ function applyMuteState(d) {
   // An older server answers no `peers`: nobody is muted as a person.
   STATE.peers = new Set((Array.isArray(d.peers) ? d.peers : []).map((p) => String(p)));
   STATE.loaded = 1;
+  try {
+    if (typeof RADIO_BROADCAST !== 'undefined') RADIO_BROADCAST.trigger(MUTE_CHANGED, STATE);
+  } catch (e) {}
   return STATE;
 }
 
@@ -223,6 +231,7 @@ function resetWorkspaceCount() {
 }
 
 module.exports = {
+  MUTE_CHANGED,
   loadMuteState,
   isPopupMuted,
   setMute,
