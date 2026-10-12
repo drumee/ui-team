@@ -492,7 +492,19 @@ function showChatToast(host, model = {}, url = "") {
  *                          chooser at all.
  */
 function mountCard(host, build, ms) {
-  const layer = typeof Wm !== "undefined" && Wm && Wm.windowsLayer;
+  // NOT windowsLayer — the same trap the meeting toast fell into (wm/push.js
+  // _showMeetingToast, wm/skeleton meeting-toast-layer). While a workspace
+  // pane is open the headless layer takes the active-window lift (wm/skin
+  // __layer, z 50001) over windowsLayer (50000); the two are sibling stacking
+  // contexts, so the card's own z-index could not lift it out and every
+  // direct message landed as a card painted UNDER the Task board / file
+  // grid — "I only find out when I open the Notification Center". The
+  // dedicated toast layer sits above both panes; it falls back to
+  // windowsLayer where there is no desk.
+  const layer =
+    typeof Wm !== "undefined" && Wm
+      ? (_.isFunction(Wm.getMeetingToastPool) && Wm.getMeetingToastPool()) || Wm.windowsLayer
+      : null;
   if (!layer || !layer.append) return null;
 
   const replacing = !!(
