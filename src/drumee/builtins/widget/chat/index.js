@@ -2879,6 +2879,9 @@ class __widget_chat extends LetcBox {
             attachment: attachments,
             hub_id: this.hubId,
           };
+          // A thread belongs to the topic it is started from (the server
+          // reads it on the first message only).
+          this._withTopic(api);
           break;
         }
         api = {

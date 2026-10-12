@@ -122,3 +122,28 @@ test("group option: an Inbox (chat-p2p) host builds the window__ classes, handle
   assert.match(b, /window__thread-menu__badge/);
   assert.doesNotMatch(b, /chat-p2p__ft/);
 });
+
+test("bar dropdown: chat threads (# General + topics) above the file threads", () => {
+  const items = [{ file_nid: "f1", filename: "doc" }];
+  const [, list] = fileThreadsBar(ui, { open: true, items, topics: TOPICS, topicId: "t1" });
+  const heads = list.kids.filter((k) => /__ft-section\b/.test(k.className || "")).map((k) => k.content);
+  assert.deepEqual(heads, [en.CHAT_THREADS, en.FILE_THREADS]);
+  const rows = list.kids.filter((k) => k.service);
+  assert.deepEqual(rows.map((k) => k.service), ["thread-menu-general", "topic-menu-topic", "thread-menu-file"]);
+  assert.equal(rows[0].topic_scope, "general");
+  assert.equal(rows[1].topic_id, "t1");
+  assert.match(rows[1].className, /is-active/);
+  assert.doesNotMatch(rows[0].className, /is-active/);
+  // A file scope leaves no chat-thread row active.
+  const [, scoped] = fileThreadsBar(ui, { open: true, items, topics: TOPICS, scopedNid: "f1" });
+  assert.deepEqual(scoped.kids.filter((k) => k.service).map((k) => /is-active/.test(k.className)), [false, false, true]);
+  // Without topics (the Inbox) the list is the file threads alone.
+  const [, inbox] = fileThreadsBar(ui, { open: true, items });
+  assert.deepEqual(inbox.kids.map((k) => k.service), ["thread-menu-file"]);
+});
+
+test("bar label: Threads with topics, File threads in the Inbox", () => {
+  const label = (opt) => text(fileThreadsBar(ui, opt)[0]);
+  assert.equal(label({ topics: TOPICS }), en.THREADS);
+  assert.equal(label({}), en.FILE_THREADS_BAR);
+});

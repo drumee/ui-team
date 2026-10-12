@@ -5,16 +5,15 @@
 // window/skeleton/toolkit chatPanel, fed by window/folder/topics.js and
 // window/folder/file-threads-bar.js.
 .window-folder {
-  // Only where the Chat-tab rail is not: hidden on the wide Chat tab (the
-  // rail lists topics and file threads), back on the compact one.
-  &__split-body[data-view="chat"] .window__topic-strip,
-  &__split-body[data-view="chat"] .window__ft-bar {
+  // The topic strip only where the Chat-tab rail is not: hidden on the wide
+  // Chat tab (the rail lists the topics), back on the compact one. The File
+  // threads bar shows on both tabs — the rail lists no file threads.
+  &__split-body[data-view="chat"] .window__topic-strip {
     display: none;
   }
 
   @container window-folder-w (max-width: 700px) {
-    &__split-body[data-view="chat"] .window__topic-strip,
-    &__split-body[data-view="chat"] .window__ft-bar {
+    &__split-body[data-view="chat"] .window__topic-strip {
       display: flex;
     }
   }

@@ -536,6 +536,7 @@
   "MISSING_SOCKET_ID": "Conexión no lista. Por favor, actualiza la página e inténtalo de nuevo.",
   "SEE_CHAT_THREADS": "Ver hilos de chat",
   "CHAT_THREADS": "Hilos de chat",
+  "THREADS": "Hilos",
   "VIEW_CHAT_THREADS": "Ver hilos de chat",
   "DOWNLOAD_CHAT_THREADS": "Descargar hilos de chat",
   "REPLY_IN_THREAD": "Responder en el hilo",

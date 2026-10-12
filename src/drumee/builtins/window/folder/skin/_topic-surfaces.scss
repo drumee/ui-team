@@ -146,6 +146,14 @@
     gap: 8px;
   }
 
+  // Decoration must never be the click target: every LETC view binds its own
+  // onclick and stops propagation, so a click on the label / icons (nested
+  // below kidsOpt's reach) was swallowed and the bar did not open.
+  .window__ft-bar-card *,
+  .window__ft-row * {
+    pointer-events: none;
+  }
+
   .window__ft-bar-badge {
     width: 24px;
     height: 24px;
@@ -220,6 +228,18 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: var(--normal-fg-10, #0b0a21));
+  }
+
+  // "Chat threads" / "File threads" headings of the dropdown.
+  .window__ft-section {
+    padding: 4px 8px 0;
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 500, $color: #65656c);
+  }
+
+  .window__ft-row-emoji {
+    flex: 0 0 17px;
+    text-align: center;
+    @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: #5950ff);
   }
 
   .window__ft-empty {

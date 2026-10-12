@@ -136,7 +136,9 @@ module.exports = function threadMenu(ui, opt = {}) {
     }),
   ];
 
-  if (fileRows.length) {
+  // The Chat-tab rail lists topics only: its file threads are in the chat's
+  // File threads bar, as on the Files tab.
+  if (fileRows.length && opt.variant !== "rail") {
     kids.push(
       Skeletons.Box.Y({
         className: `${pfx}__section ${pfx}__section--threads`,

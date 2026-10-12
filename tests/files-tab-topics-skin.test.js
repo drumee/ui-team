@@ -49,10 +49,10 @@ test("bar card and dropdown tokens", () => {
   assert.match(l, /box-shadow: 0 1px 5\.5px rgba\(0, 0, 0, 0\.13\)/);
 });
 
-test("hidden on the wide Chat tab (the rail has both), back on the compact one; hidden when gated", () => {
-  const wide = ".window-folder__split-body[data-view=chat] .window__topic-strip, .window-folder__split-body[data-view=chat] .window__ft-bar";
-  assert.match(rule(wide), /display: none/);
-  assert.match(css, /@container window-folder-w \(max-width: 700px\) \{[^@]*\.window-folder__split-body\[data-view=chat\] \.window__topic-strip, \.window-folder__split-body\[data-view=chat\] \.window__ft-bar \{ display: flex/);
+test("strip hidden on the wide Chat tab (the rail has the topics), back on the compact one; the bar on both; hidden when gated", () => {
+  assert.match(rule(".window-folder__split-body[data-view=chat] .window__topic-strip"), /display: none/);
+  assert.match(css, /@container window-folder-w \(max-width: 700px\) \{[^@]*\.window-folder__split-body\[data-view=chat\] \.window__topic-strip \{ display: flex/);
+  assert.doesNotMatch(css, /\[data-view=chat\] \.window__ft-bar/);
   assert.match(rule('.window-folder .window__chat-panel[data-chat_gated="1"] .window__topic-strip, .window-folder .window__chat-panel[data-chat_gated="1"] .window__ft-bar'), /display: none !important/);
 });
 

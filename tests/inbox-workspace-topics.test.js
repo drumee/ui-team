@@ -184,7 +184,7 @@ test("file threads bar: toggle fetches the root folder's threads and opens; a ro
   const win = fakeInbox();
   await WT.sync(win);
   await WT.toggleBar(win);
-  assert.deepEqual(win.calls.at(-1), ["channel.file_thread_list_by_folder", { hub_id: "H1", folder_nid: "home-H1", page: 1 }]);
+  assert.deepEqual(win.calls.at(-1), ["channel.file_thread_list_by_folder", { hub_id: "H1", folder_nid: "home-H1", topic_id: "general", page: 1 }]);
   assert.equal(win.parts["ft-bar"].el.dataset.open, "1");
   assert.match(classes(lastFeed(win, "ft-bar")), /window__ft-row/);
   await WT.pickFile(win, "f1", "Q2");

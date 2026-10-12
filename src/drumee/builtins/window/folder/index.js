@@ -5254,10 +5254,13 @@ class __window_folder extends mfsInteract {
     const svc =
       (SERVICE.channel && SERVICE.channel.file_thread_list_by_folder) ||
       "channel.file_thread_list_by_folder";
+    // File threads follow the chat's topic: # General lists the threads
+    // started outside any topic, a topic the ones started in it.
+    const topic_id = Topics.current(this);
     // Keyed at request time: the folder can change while this is in flight.
     const cacheKey = this._threadListCacheKey();
     return this.fetchService(
-      { service: svc, folder_nid, hub_id, page: 1 },
+      { service: svc, folder_nid, hub_id, topic_id, page: 1 },
       { async: 1 },
     )
       .then((res) => {
@@ -5270,7 +5273,7 @@ class __window_folder extends mfsInteract {
 
   _threadListCacheKey() {
     const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
-    return `channel.threads:${hub_id || ""}:${this.mget(_a.nid)}`;
+    return `channel.threads:${hub_id || ""}:${this.mget(_a.nid)}:${Topics.current(this)}`;
   }
 
   // ── Full Chat-tab thread rail (Figma 2328-115485) ─────────────────────

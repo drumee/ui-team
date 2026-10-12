@@ -184,7 +184,12 @@ function toggleBar(win) {
   if (s.ftOpen) return closeBar(win);
   const { hub_id, folder_nid } = where(p);
   return Promise.resolve(
-    win.fetchService(svc("file_thread_list_by_folder"), { hub_id, folder_nid, page: 1 }, { async: 1 }),
+    win.fetchService(
+      svc("file_thread_list_by_folder"),
+      // The threads of the topic on screen (# General: started outside any topic).
+      { hub_id, folder_nid, topic_id: s.topicId || "general", page: 1 },
+      { async: 1 },
+    ),
   )
     .then(rowsOf)
     .catch(() => [])

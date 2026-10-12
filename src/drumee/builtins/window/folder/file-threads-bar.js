@@ -1,9 +1,10 @@
 /**
- * Files-tab chat "File threads" bar (Figma 869:189953) — the folder window's
- * side. The bar lives in the chat panel's "ft-bar" part (toolkit chatPanel);
- * clicking it opens a dropdown of the folder's file threads (the Chat-tab
- * rail's File Threads, as a dropdown). A row fires the rail's
- * "thread-menu-file" service (window/folder/index.js scopes the chat to that
+ * Folder chat "File threads" bar (Figma 869:189953) — the folder window's
+ * side, on the Files tab's chat and the Chat tab alike. Lists the threads of
+ * the chat's topic (# General: those started outside any topic). The bar lives in the chat panel's "ft-bar" part (toolkit chatPanel);
+ * clicking it opens a dropdown of the chat threads (# General + topics) and
+ * the folder's file threads. A topic row fires the rail's topic services; a
+ * file row fires "thread-menu-file" (window/folder/index.js scopes the chat to that
  * file in place) and closes the list.
  *
  * Plain functions of the window (`win`), tested with a fake
@@ -55,6 +56,8 @@ function paint(win, { open = false } = {}) {
         items: Array.isArray(win._ftBarItems) ? win._ftBarItems : [],
         open,
         scopedNid: win._scopedFileNid || "",
+        topics: Array.isArray(win._topics) ? win._topics : [],
+        topicId: win._topicId,
       }),
     );
     part.el.dataset.open = open ? "1" : "0";
@@ -68,7 +71,8 @@ function toggle(win) {
   if (win._ftBarOpen) return close(win);
   if (!enabled(win)) return Promise.resolve();
   const folder = `${win.mget(_a.nid)}`;
-  return Promise.resolve(win._fetchThreadList()).then((items) => {
+  const topics = require("./topics").fetchTopics(win);
+  return Promise.all([win._fetchThreadList(), topics]).then(([items]) => {
     // Navigated away meanwhile: do not open a stale list.
     if (`${win.mget(_a.nid)}` !== folder) return undefined;
     win._ftBarItems = Array.isArray(items) ? items : [];
@@ -89,4 +93,9 @@ function onFolderChange(win) {
   return close(win);
 }
 
-module.exports = { paint, toggle, close, onFolderChange, unbind };
+/** Topic switch: the list is per topic — closed, list forgotten. */
+function onTopicChange(win) {
+  return onFolderChange(win);
+}
+
+module.exports = { paint, toggle, close, onFolderChange, onTopicChange, unbind };

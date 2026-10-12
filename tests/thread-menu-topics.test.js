@@ -72,8 +72,14 @@ test("skin: section head row, emoji cell, labels at the Figma 14/1.2 dark", () =
 
 // Rail: Topics and File Threads share the height equally and each scrolls
 // its own rows under a fixed heading.
-test("sections are marked and their rows sit in a scrollable box", () => {
+test("the rail lists topics only (file threads are in the chat's bar)", () => {
   const t = threadMenu(ui, { topics: TOPICS, items: [{ file_nid: "f1", filename: "Q2" }], variant: "rail", canCreateTopic: 1 });
+  assert.ok(t.kids.some((k) => /__section--topics/.test(k.className || "")));
+  assert.ok(!t.kids.some((k) => /__section--threads/.test(k.className || "")));
+});
+
+test("sections are marked and their rows sit in a scrollable box", () => {
+  const t = threadMenu(ui, { topics: TOPICS, items: [{ file_nid: "f1", filename: "Q2" }], canCreateTopic: 1 });
   const topics = t.kids.find((k) => /__section--topics/.test(k.className || ""));
   const threads = t.kids.find((k) => /__section--threads/.test(k.className || ""));
   assert.ok(topics && threads);

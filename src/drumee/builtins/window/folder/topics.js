@@ -93,6 +93,8 @@ function scopeChatToTopic(win, topicId) {
   if (next !== "general" && Array.isArray(win._topics)) {
     win._topics = win._topics.map((t) => (`${t.id}` === next ? { ...t, unread: 0 } : t));
   }
+  // File threads follow the topic: the bar's list was the old topic's.
+  require("./file-threads-bar").onTopicChange(win);
   const wide = win.activeTab === _a.chat && !(win._isCompactChat && win._isCompactChat());
   win._updateChatHeader(null, "", wide);
   win._setThreadRailActive("");
@@ -199,6 +201,7 @@ function onFolderChange(win) {
 module.exports = {
   slot,
   fetchTopics,
+  current,
   menuOpts,
   headerTitle,
   scopeChatToTopic,
