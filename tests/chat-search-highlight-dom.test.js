@@ -90,3 +90,75 @@ test("a short query clears and marks nothing", { skip }, () => {
   });
   assert.deepEqual(r, { n: 0, left: 0 });
 });
+
+// The page-side twin of ITEM, for fn bodies that render rows mid-test.
+const PAGE_ITEM = `<script>window.ITEM_HTML = ${ITEM.toString()};</script>`;
+
+test("live: rows and cards that render later are marked; stop clears and detaches", { skip }, () => {
+  const r = runInChromium({
+    modules: { H: MOD },
+    body: `${PAGE_ITEM}<div id="chat">${ITEM("i1", "budget one", "plan")}</div>`,
+    fn: async ({ H }, document) => {
+      const flush = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
+      const root = document.getElementById("chat");
+      const win = { ensurePart: () => Promise.resolve({ el: root }) };
+      const count = () => root.querySelectorAll("mark.chat-search-hit").length;
+      await H.start(win, "budget");
+      const first = count();
+      // an older page / incoming message renders
+      root.insertAdjacentHTML("afterbegin", ITEM_HTML("i0", "old budget", "x"));
+      await flush();
+      const afterRow = count();
+      // an attachment card lands later inside an existing row
+      root.querySelector("#i1 .widget-chatItem__attachment-wrapper-list")
+        .insertAdjacentHTML("beforeend", '<div class="media-grid__content"><div class="filename">budget.xlsx</div></div>');
+      await flush();
+      const afterCard = count();
+      H.markCurrent(win, root.querySelector("#i1"));
+      const current = root.querySelectorAll('[data-search-current="1"]').length;
+      // a new query re-marks and drops the old "current" message
+      await H.start(win, "one");
+      const newQuery = count();
+      const currentAfterNewQuery = root.querySelectorAll("[data-search-current]").length;
+      H.markCurrent(win, root.querySelector("#i1"));
+      H.stop(win);
+      const afterStop = count();
+      const currentAfterStop = root.querySelectorAll("[data-search-current]").length;
+      root.insertAdjacentHTML("beforeend", ITEM_HTML("i2", "budget again", "y"));
+      await flush();
+      return {
+        first, afterRow, afterCard, current, newQuery, currentAfterNewQuery,
+        afterStop, currentAfterStop, detached: count(),
+      };
+    },
+  });
+  assert.deepEqual(r, {
+    first: 1, afterRow: 2, afterCard: 3, current: 1, newQuery: 1, currentAfterNewQuery: 0,
+    afterStop: 0, currentAfterStop: 0, detached: 0,
+  });
+});
+
+test("live: a start resolving after stop, or after a newer start, does not paint", { skip }, () => {
+  const r = runInChromium({
+    modules: { H: MOD },
+    body: `${PAGE_ITEM}<div id="chat">${ITEM("i1", "budget plan", "plan")}</div>`,
+    fn: async ({ H }, document) => {
+      const root = document.getElementById("chat");
+      let release;
+      const gate = new Promise((res) => (release = res));
+      const win = { ensurePart: () => gate.then(() => ({ el: root })) };
+      const p1 = H.start(win, "budget");
+      H.stop(win);
+      release();
+      await p1;
+      const afterStop = root.querySelectorAll("mark").length;
+      const pa = H.start(win, "budget");
+      const pb = H.start(win, "plan");
+      await Promise.all([pa, pb]);
+      const texts = [...root.querySelectorAll("mark")].map((m) => m.textContent);
+      const short = await H.start(win, "p").then(() => root.querySelectorAll("mark").length);
+      return { afterStop, texts, short };
+    },
+  });
+  assert.deepEqual(r, { afterStop: 0, texts: ["plan", "plan"], short: 0 });
+});

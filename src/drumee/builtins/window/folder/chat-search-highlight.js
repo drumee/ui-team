@@ -120,4 +120,82 @@ function highlightChat(root, query) {
   return count;
 }
 
-module.exports = { HIT, foldRanges, markText, unmark, highlightChat };
+// ── Live controller ────────────────────────────────────────────────────
+// Rows (older pages, incoming messages) and attachment cards (fetched after
+// their row mounts) render while the search is open; the observer re-paints
+// on every change under the folder-chat element. Painting disconnects first,
+// so our own <mark> edits never re-trigger it.
+const OBSERVE = { childList: true, subtree: true };
+const CURRENT = "data-search-current";
+
+function paint(state) {
+  state.observer.disconnect();
+  highlightChat(state.root, state.query);
+  state.observer.takeRecords();
+  state.observer.observe(state.root, OBSERVE);
+}
+
+function clearCurrent(win) {
+  const cur = win._chatSearchCurrentEl;
+  win._chatSearchCurrentEl = null;
+  if (cur && cur.removeAttribute) cur.removeAttribute(CURRENT);
+}
+
+function stop(win) {
+  win._chatHighlightQuery = "";
+  clearCurrent(win);
+  const state = win._chatHighlight;
+  if (!state) return;
+  win._chatHighlight = null;
+  state.observer.disconnect();
+  unmark(state.root);
+}
+
+function start(win, query) {
+  const q = `${query || ""}`.trim();
+  if (foldWithMap(q).out.length < MIN_QUERY) {
+    stop(win);
+    return Promise.resolve();
+  }
+  win._chatHighlightQuery = q;
+  return Promise.resolve(win.ensurePart("folder-chat")).then((chat) => {
+    // Stopped, or a newer query took over, while the part resolved.
+    if (win._chatHighlightQuery !== q) return;
+    const root = chat && chat.el;
+    if (!root) return;
+    let state = win._chatHighlight;
+    if (state && state.root !== root) {
+      state.observer.disconnect();
+      unmark(state.root);
+      state = null;
+    }
+    if (!state) {
+      state = { root, query: q, observer: null };
+      state.observer = new MutationObserver(() => paint(state));
+      win._chatHighlight = state;
+    }
+    // The jumped-to message belonged to the previous query.
+    if (state.query !== q) clearCurrent(win);
+    state.query = q;
+    paint(state);
+  });
+}
+
+// The message a result row jumped to gets the stronger highlight (skin).
+function markCurrent(win, el) {
+  const prev = win._chatSearchCurrentEl;
+  if (prev && prev !== el && prev.removeAttribute) prev.removeAttribute(CURRENT);
+  win._chatSearchCurrentEl = el || null;
+  if (el && el.setAttribute) el.setAttribute(CURRENT, "1");
+}
+
+module.exports = {
+  HIT,
+  foldRanges,
+  markText,
+  unmark,
+  highlightChat,
+  start,
+  stop,
+  markCurrent,
+};
