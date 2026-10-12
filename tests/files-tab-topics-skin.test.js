@@ -52,8 +52,24 @@ test("bar card and dropdown tokens", () => {
 test("strip hidden on the wide Chat tab (the rail has the topics), back on the compact one; the bar on both; hidden when gated", () => {
   assert.match(rule(".window-folder__split-body[data-view=chat] .window__topic-strip"), /display: none/);
   assert.match(css, /@container window-folder-w \(max-width: 700px\) \{[^@]*\.window-folder__split-body\[data-view=chat\] \.window__topic-strip \{ display: flex/);
-  assert.doesNotMatch(css, /\[data-view=chat\] \.window__ft-bar/);
+  assert.doesNotMatch(css, /\[data-view=chat\] \.window__ft-bar[ ,{]/);
   assert.match(rule('.window-folder .window__chat-panel[data-chat_gated="1"] .window__topic-strip, .window-folder .window__chat-panel[data-chat_gated="1"] .window__ft-bar'), /display: none !important/);
+});
+
+// The bar's face follows the strip: where the strip shows (Files view,
+// compact Chat tab) it is the old "File threads" bar, file threads only; on
+// the wide Chat tab "Threads", the topics above the file threads.
+test("bar face: File threads where the strip shows, Threads on the wide Chat tab", () => {
+  for (const cls of ["ft-bar-clip--threads", "ft-bar-label--threads", "ft-section", "ft-row--topic"]) {
+    assert.match(css, new RegExp(`\\.window-folder__split-body:not\\(\\[data-view=chat\\]\\) \\.window__${cls}[ ,{][^}]*display: none`));
+    assert.match(css, new RegExp(`@container window-folder-w \\(max-width: 700px\\) \\{[^@]*\\[data-view=chat\\] \\.window__${cls}[ ,{][^}]*display: none`));
+  }
+  const wide = css.match(/@container window-folder-w \(width > 700px\) \{([^@]*)\}/);
+  assert.ok(wide, "missing the wide Chat tab rules");
+  assert.match(wide[1], /\[data-view=chat\] \.window__ft-bar-label--files[ ,{][^}]*display: none/);
+  assert.match(wide[1], /\[data-view=chat\] \.window__ft-bar-clip--files[ ,{][^}]*display: none/);
+  assert.doesNotMatch(wide[1], /--threads|ft-section|ft-row--topic/);
+  assert.match(wide[1], /\[data-view=chat\] \.window__ft-list \{ max-height: 420px/);
 });
 
 test("chatPanel mounts topic-strip and ft-bar for the workspace folder window only", () => {

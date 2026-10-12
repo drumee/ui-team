@@ -130,6 +130,8 @@ test("bar dropdown: chat threads (# General + topics) above the file threads", (
   assert.deepEqual(heads, [en.CHAT_THREADS, en.FILE_THREADS]);
   const rows = list.kids.filter((k) => k.service);
   assert.deepEqual(rows.map((k) => k.service), ["thread-menu-general", "topic-menu-topic", "thread-menu-file"]);
+  // Topic rows carry --topic: the small face hides them (the strip has them).
+  assert.deepEqual(rows.map((k) => /__ft-row--topic\b/.test(k.className)), [true, true, false]);
   assert.equal(rows[0].topic_scope, "general");
   assert.equal(rows[1].topic_id, "t1");
   assert.match(rows[1].className, /is-active/);
@@ -142,8 +144,19 @@ test("bar dropdown: chat threads (# General + topics) above the file threads", (
   assert.deepEqual(inbox.kids.map((k) => k.service), ["thread-menu-file"]);
 });
 
-test("bar label: Threads with topics, File threads in the Inbox", () => {
-  const label = (opt) => text(fileThreadsBar(ui, opt)[0]);
-  assert.equal(label({ topics: TOPICS }), en.THREADS);
-  assert.equal(label({}), en.FILE_THREADS_BAR);
+test("bar: both faces with topics (the skin shows one), File threads alone in the Inbox", () => {
+  const bar = (opt) => walk(fileThreadsBar(ui, opt)[0]);
+  const labels = (opt) => bar(opt).filter((k) => k.type === "Note").map((k) => [k.className, k.content]);
+  const clips = (opt) => bar(opt).filter((k) => /__ft-bar-clip\b/.test(k.className || "")).map((k) => [k.className, k.ico]);
+  assert.deepEqual(labels({ topics: TOPICS }), [
+    ["window__ft-bar-label window__ft-bar-label--files", en.FILE_THREADS_BAR],
+    ["window__ft-bar-label window__ft-bar-label--threads", en.THREADS],
+  ]);
+  assert.deepEqual(clips({ topics: TOPICS }), [
+    ["window__ft-bar-clip window__ft-bar-clip--files", "app-attachment"],
+    ["window__ft-bar-clip window__ft-bar-clip--threads", "ctxmenu-chat-thread"],
+  ]);
+  // The Inbox: the bar as it always was.
+  assert.deepEqual(labels({}), [["window__ft-bar-label", en.FILE_THREADS_BAR]]);
+  assert.deepEqual(clips({}), [["window__ft-bar-clip", "app-attachment"]]);
 });

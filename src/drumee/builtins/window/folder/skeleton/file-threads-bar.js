@@ -6,8 +6,12 @@
  * the chat panel's "ft-bar" part by window/folder/file-threads-bar.js.
  *
  * @param {Object} ui folder window
- * With `topics` (the folder window) the dropdown lists the chat threads
- * (# General + topics, the rail's rows and services) above the file threads.
+ * With `topics` (the folder window) the bar is built with two faces, and the
+ * skin (files-chat-topics.scss) shows one by the same rule as the topic strip:
+ * where the strip shows (Files tab, compact Chat tab) the bar stays as it was,
+ * "File threads" listing the file threads only; on the wide Chat tab it is
+ * "Threads", the chat threads (# General + topics, the rail's rows and
+ * services) above the file threads.
  *
  * @param {{ items?: Array, open?: boolean, scopedNid?: string, group?: string,
  *           topics?: Array, topicId?: string }} opt
@@ -27,9 +31,11 @@ module.exports = function fileThreadsBar(ui, opt = {}) {
       ? Skeletons.Note({ className: `${grp}__thread-menu__badge`, content: `${n}` })
       : null;
 
-  // With topics the list holds chat and file threads: "Threads", a chat
-  // glyph. The Inbox bar (file threads only) keeps "File threads", the clip.
+  // With topics: both faces, "File threads" + clip and "Threads" + chat
+  // glyph (--files / --threads, one shown by the skin). The Inbox bar (file
+  // threads only) has the first face alone.
   const both = Array.isArray(opt.topics);
+  const face = (cls, name) => (both ? `${cls} ${cls}--${name}` : cls);
   const bar = Skeletons.Box.X({
     className: `${pfx}-bar-card`,
     service: "ft-bar-toggle",
@@ -42,10 +48,21 @@ module.exports = function fileThreadsBar(ui, opt = {}) {
         kids: [
           Skeletons.Box.X({
             className: `${pfx}-bar-badge`,
-            kids: [Skeletons.Image.Svg({ className: `${pfx}-bar-clip`, ico: both ? "ctxmenu-chat-thread" : "app-attachment" })],
+            kids: [
+              Skeletons.Image.Svg({ className: face(`${pfx}-bar-clip`, "files"), ico: "app-attachment" }),
+              both
+                ? Skeletons.Image.Svg({ className: face(`${pfx}-bar-clip`, "threads"), ico: "ctxmenu-chat-thread" })
+                : null,
+            ].filter(Boolean),
           }),
-          Skeletons.Note({ className: `${pfx}-bar-label`, content: both ? LOCALE.THREADS : LOCALE.FILE_THREADS_BAR || "File threads" }),
-        ],
+          Skeletons.Note({
+            className: face(`${pfx}-bar-label`, "files"),
+            content: LOCALE.FILE_THREADS_BAR || "File threads",
+          }),
+          both
+            ? Skeletons.Note({ className: face(`${pfx}-bar-label`, "threads"), content: LOCALE.THREADS })
+            : null,
+        ].filter(Boolean),
       }),
       Skeletons.Image.Svg({ className: `${pfx}-bar-ico`, ico: "ph-list-magnifying-glass" }),
     ],
@@ -78,13 +95,14 @@ module.exports = function fileThreadsBar(ui, opt = {}) {
     return [bar, Skeletons.Box.Y({ className: `${pfx}-list`, kids: fileRows })];
   }
 
-  // Chat threads: # General + the folder's topics, the rail's Topics rows
-  // (same services). Nothing is active while a file thread is the scope.
+  // Chat threads (wide Chat tab face only): # General + the folder's topics,
+  // the rail's Topics rows (same services). Nothing is active while a file
+  // thread is the scope.
   const topicId = opt.topicId && opt.topicId !== "all" ? `${opt.topicId}` : "general";
   const active = (id) => (!scopedNid && topicId === id ? " is-active" : "");
   const topicRow = ({ id, label, emoji, unread, ...model }) =>
     Skeletons.Box.X({
-      className: `${pfx}-row${active(id)}`,
+      className: `${pfx}-row ${pfx}-row--topic${active(id)}`,
       uiHandler: [ui],
       kidsOpt: { active: 0 },
       ...model,
