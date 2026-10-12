@@ -226,6 +226,13 @@ class desk_module extends LetcBox {
     this._onWindowTutorial = this._onWindowTutorial.bind(this);
     RADIO_BROADCAST.on("window-tutorial:mount", this._onWindowTutorial);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
+    // The account menu's mute row is built before the mute state is read, and
+    // is not rebuilt when it is pressed — repaint it whenever the cache moves.
+    RADIO_BROADCAST.on(
+      require("builtins/panel/activity/mute").MUTE_CHANGED,
+      this._paintMuteRow,
+      this,
+    );
     // Rail Files / Chat / Task / Meet pills: new counts, or another workspace in front.
     RADIO_BROADCAST.on("workspace-unread", this._writeRailCounts, this);
     RADIO_BROADCAST.on("workspace:focus", this._writeRailCounts, this);
@@ -679,6 +686,28 @@ class desk_module extends LetcBox {
     }
   }
 
+  /**
+   * Repaint the account menu's "Mute notifications" row from the mute cache.
+   *
+   * In place, rather than by re-feeding the topbar: the row is built once with
+   * the desk — before the panel's first mute_state read lands — and pressing
+   * it does not rebuild the menu, so without this it kept reading "Mute
+   * notifications" after a successful mute and for a user already muted.
+   * Silent no-op when the row is absent (endpoint missing, mobile sheet).
+   */
+  _paintMuteRow() {
+    const row = _.isFunction(this.getPart) ? this.getPart("account-mute-row") : null;
+    if (!row || !row.el || (_.isFunction(row.isDestroyed) && row.isDestroyed())) return;
+    const { muteState } = require("builtins/panel/activity/mute");
+    const look = require("./skeleton/topbar").muteRowLook(!!(muteState() || {}).global);
+    row.model.set({ label: look.label, chartId: look.ico });
+    row.render();
+    row.el.classList.toggle(
+      `${this.fig.family}-topbar__account-menu-item--muted`,
+      look.modifier === "muted",
+    );
+  }
+
   _onWmMinimize(event, winInstance) {
     if (!winInstance || !winInstance.isFolder) return;
     const entry = this._openFolders.get(winInstance.cid);
@@ -845,6 +874,11 @@ class desk_module extends LetcBox {
       );
     }
     RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
+    RADIO_BROADCAST.off(
+      require("builtins/panel/activity/mute").MUTE_CHANGED,
+      this._paintMuteRow,
+      this,
+    );
     RADIO_BROADCAST.off("workspace-unread", this._writeRailCounts, this);
     RADIO_BROADCAST.off("workspace:focus", this._writeRailCounts, this);
     RADIO_BROADCAST.off("chat:read", this._writeRailCounts, this);
@@ -10962,8 +10996,9 @@ class desk_module extends LetcBox {
         const next = !(muteState() || {}).global;
         return setMute(this, "", next).then(({ ok }) => {
           if (!ok) return Wm.alert(LOCALE.MUTE_FAILED);
-          // Rebuild the topbar so the row reflects the new state; the menu has
-          // already closed itself (persistence: once) by the time this lands.
+          // The row itself is repainted by _paintMuteRow, which listens for
+          // the cache change setMute just broadcast; the menu has already
+          // closed itself (persistence: once) by the time this lands.
           if (_.isFunction(this._syncWorkspaceTopbar)) this._syncWorkspaceTopbar();
           return RADIO_BROADCAST.trigger("breadcrumb:content");
         });
