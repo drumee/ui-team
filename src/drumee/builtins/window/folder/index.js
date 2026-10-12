@@ -17,6 +17,8 @@ const {
 const readCache = require("libs/read-cache");
 const CDHost = require("./chat-details-host");
 const FilesSearch = require("./files-search");
+const ChatSearchHighlight = require("./chat-search-highlight");
+const ResultsPanel = require("./search-results-panel");
 const IconsLoading = require("./icons-loading");
 const { iconsSkeleton, searchStatus } = require("../skeleton/toolkit/icons-skeleton");
 const ChatExportOverlay = require("./chat-export-overlay");
@@ -38,10 +40,13 @@ const {
   gridFilesBrowser,
   chatHeaderBar,
   chatSearchBar,
-  searchResults,
   fileThreadPanelContent,
   fileThreadInfoCard,
 } = require("../skeleton/toolkit");
+const {
+  searchResults,
+  searchResultsLoading,
+} = require("../skeleton/toolkit/search-results");
 
 require("./skin");
 
@@ -764,6 +769,8 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._chatSearchTimer);
       this._chatSearchTimer = null;
     }
+    // Chat-header search highlight: its observer watches the folder chat.
+    ChatSearchHighlight.stop(this);
     // Search timer, Esc listener and the loading stamp's list listeners.
     FilesSearch.teardown(this);
     if (this._mmInviteeBlurTimer) {
@@ -4638,6 +4645,8 @@ class __window_folder extends mfsInteract {
         this._chatSearchRestore = null;
         this._hideChatSearchResults();
       }
+      // Never leave a header stuck mid slide-out (see _closeChatSearch).
+      delete bar.el.dataset.closing;
       bar.el.dataset.scope = fileNid ? "file" : general ? "general" : "folder";
       // Stamp the active file so a slow hydrate can't paint into a re-scoped header.
       bar.el.dataset.ftNid = fileNid ? `${fileNid}` : "";
@@ -4701,29 +4710,55 @@ class __window_folder extends mfsInteract {
     });
   }
 
-  // Back arrow → tear down the results overlay and restore the pre-search header.
+  // Back arrow → tear down the results and restore the pre-search header once
+  // the field has slid back out (skin data-closing; at once with reduced
+  // motion).
   _closeChatSearch() {
     this._hideChatSearchResults();
     const r =
       this._chatSearchRestore || { fileNid: "", label: "", general: false };
     this._chatSearchRestore = null;
-    return this._updateChatHeader(r.fileNid, r.label, r.general);
+    return this.ensurePart("chat-header-bar").then((bar) => {
+      if (!bar || !bar.el || (bar.isDestroyed && bar.isDestroyed())) return;
+      const input = bar.el.querySelector(`.${this.fig.group}__chat-search-input`);
+      if (bar.el.dataset.scope !== "search" || !input) {
+        return this._updateChatHeader(r.fileNid, r.label, r.general);
+      }
+      if (bar.el.dataset.closing === "1") return; // already sliding out
+      bar.el.dataset.closing = "1";
+      return new Promise((done) =>
+        ResultsPanel.afterAnimation(input, done),
+      ).then(() => {
+        // A scope switch re-fed the header meanwhile: it wins.
+        if (bar.el.dataset.scope !== "search") return;
+        return this._updateChatHeader(r.fileNid, r.label, r.general);
+      });
+    });
   }
 
   // Run a backend message search over the FULL history of the conversation the
   // search bar sits above (folder-chat): #General team chat when not file-scoped,
-  // else the open file thread. Debounced; queries < 2 chars hide the overlay
-  // (the server returns [] anyway). A monotonic token discards stale responses
-  // so a slower earlier query cannot overwrite a newer one.
+  // else the open file thread. Show AND close follow the debounced change, so
+  // clearing and retyping quickly never flickers the card: a settled query
+  // < 2 chars (empty included) closes it (the server returns [] anyway), a
+  // settled query opens it at once with placeholders until the reply lands.
+  // A monotonic token discards stale responses so a slower earlier query
+  // cannot overwrite a newer one.
   _runChatSearch(text) {
     const q = `${text || ""}`.trim();
     if (this._chatSearchTimer) clearTimeout(this._chatSearchTimer);
-    if (q.length < 2) {
-      this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
-      return this._hideChatSearchResults();
-    }
+    this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
     this._chatSearchTimer = setTimeout(() => {
+      this._chatSearchTimer = null;
+      if (q.length < 2) return this._hideChatSearchResults();
       const token = (this._chatSearchToken = (this._chatSearchToken || 0) + 1);
+      this._showChatSearchLoading(token);
+      // The results replace the skeleton no sooner than SKELETON_MIN_MS after
+      // it appeared (search-results-panel holdSkeleton).
+      const shownAt = Date.now();
+      // Mark the query in the conversation behind the overlay (all loaded
+      // messages + attachment filenames), independent of the server reply.
+      ChatSearchHighlight.start(this, q);
       // Scope = the folder-chat's current file thread (empty = team chat). Pass
       // file_nid too: the thread id resolves asynchronously, so on an in-place
       // file thread it can still be empty here — the server then resolves the
@@ -4748,57 +4783,76 @@ class __window_folder extends mfsInteract {
           },
           { async: 1 },
         )
-          .then((res) => {
-            // Drop stale / superseded responses.
-            if (token !== this._chatSearchToken) return;
-            const rows = _.isArray(res)
-              ? res
-              : (res && (res.data || res.rows)) || [];
-            this._showChatSearchResults(rows);
-          })
-          .catch(() => {
-            if (token !== this._chatSearchToken) return;
-            this._showChatSearchResults([]);
-          });
+          .then(
+            (res) =>
+              _.isArray(res) ? res : (res && (res.data || res.rows)) || [],
+            () => [],
+          )
+          .then((rows) =>
+            ResultsPanel.holdSkeleton(shownAt).then(() => {
+              // Drop stale / superseded responses (also those that went stale
+              // while the skeleton was held).
+              if (token !== this._chatSearchToken) return;
+              this._showChatSearchResults(rows, token);
+            }),
+          );
       });
     }, 250);
   }
 
-  _showChatSearchResults(rows) {
+  // Open the card with placeholder rows while channel.search is in flight.
+  _showChatSearchLoading(token) {
     return this.ensurePart("search-results").then((panel) => {
+      // Closed or superseded while the part resolved.
+      if (token !== this._chatSearchToken) return;
       if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
         return;
-      panel.feed(searchResults(this, rows));
-      panel.el.dataset.open = "1";
+      panel.feed(searchResultsLoading(this));
+      ResultsPanel.open(panel.el);
     });
   }
 
+  _showChatSearchResults(rows, token) {
+    return this.ensurePart("search-results").then((panel) => {
+      if (token !== this._chatSearchToken) return;
+      if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
+        return;
+      panel.feed(searchResults(this, rows));
+      ResultsPanel.open(panel.el);
+    });
+  }
+
+  // Shared search teardown (short query, back arrow, header re-feed, revoked
+  // thread): drops the results AND the highlight in the conversation.
   _hideChatSearchResults() {
     if (this._chatSearchTimer) {
       clearTimeout(this._chatSearchTimer);
       this._chatSearchTimer = null;
     }
     this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
+    ChatSearchHighlight.stop(this);
     const panel = this._searchResultsPart;
     if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
-      panel.el.dataset.open = "0";
-      panel.feed([]);
+      // Animated; the rows stay while the card fades and the next query
+      // re-feeds them.
+      ResultsPanel.close(panel.el);
     }
   }
 
-  // A result row → close the search and scroll to the message if it is currently
-  // loaded in the conversation list (older/unloaded messages just close search).
+  // A result row → scroll the conversation below the results to the message if
+  // it is loaded, giving it the stronger "current" highlight. The results stay
+  // open (pick another one); the back arrow or an emptied field closes them.
+  // Older, unloaded messages do nothing.
   _jumpToSearchResult(cmd) {
     const messageId = cmd && cmd.mget && cmd.mget("message_id");
-    this._closeChatSearch();
     if (!messageId) return;
     return this.ensurePart("folder-chat").then((chat) => {
       const list = chat && chat.__list;
       if (!list || !_.isFunction(list.getItemsByAttr)) return;
       const hit = list.getItemsByAttr("message_id", `${messageId}`)[0];
-      if (hit && hit.el && _.isFunction(hit.el.scrollIntoView)) {
-        hit.el.scrollIntoView({ block: "center" });
-      }
+      if (!hit || !hit.el) return;
+      ChatSearchHighlight.markCurrent(this, hit.el);
+      ChatSearchHighlight.scrollToHit(list.__container, hit.el);
     });
   }
 
