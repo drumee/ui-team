@@ -477,7 +477,7 @@ $theme-colors: (
     padding: 8px;
     // Overrides the global .drumee-box bar (see every-box scrollbar note).
     scrollbar-width: thin;
-    scrollbar-color: var(--border-default, rgba(0, 0, 0, 0.18)) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
     animation: tasks-filter-page-in 0.16s cubic-bezier(0.2, 0, 0, 1);
 
     &[data-page="root"] {
@@ -924,7 +924,7 @@ $theme-colors: (
     scrollbar-gutter: stable;
     border-radius: 8px;
     scrollbar-width: thin;
-    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
     transition:
       background-color 0.15s,
       outline-color 0.15s;
@@ -1993,12 +1993,12 @@ $theme-colors: (
     margin: -2px; // keep focus rings from clipping against the scroll edge
 
     scrollbar-width: thin;
-    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
     &::-webkit-scrollbar {
       width: 6px;
     }
     &::-webkit-scrollbar-thumb {
-      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+      background-color: var(--scrollbar-thumb);
       border-radius: 6px;
     }
   }
@@ -2057,12 +2057,12 @@ $theme-colors: (
     // sitting flush against it (the default wide scrollbar overran the 8px).
     padding-right: 12px;
     scrollbar-width: thin;
-    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
     &::-webkit-scrollbar {
       width: 6px;
     }
     &::-webkit-scrollbar-thumb {
-      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+      background-color: var(--scrollbar-thumb);
       border-radius: 6px;
     }
   }
@@ -5879,7 +5879,7 @@ $theme-colors: (
 
     &:hover,
     &[data-overflow="1"] {
-      scrollbar-color: var(--border-strong) transparent;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
     }
   }
 
@@ -6576,13 +6576,13 @@ $theme-colors: (
     margin: 12px 12px 0;
     // Same thin neutral bar as the detail panel's columns.
     scrollbar-width: thin;
-    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
     &::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
     &::-webkit-scrollbar-thumb {
-      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+      background-color: var(--scrollbar-thumb);
       border-radius: 6px;
     }
     &::-webkit-scrollbar-track,
@@ -7418,13 +7418,13 @@ $theme-colors: (
     overflow-y: auto;
     gap: 2px;
     scrollbar-width: thin;
-    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
     &::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
     &::-webkit-scrollbar-thumb {
-      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+      background-color: var(--scrollbar-thumb);
       border-radius: 6px;
     }
     &::-webkit-scrollbar-track,

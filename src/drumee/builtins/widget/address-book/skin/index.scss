@@ -250,12 +250,12 @@
     padding: 0 16px 16px;
 
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
     &::-webkit-scrollbar {
       width: 4px;
     }
     &::-webkit-scrollbar-thumb {
-      background-color: rgba(0, 0, 0, 0.15);
+      background-color: var(--scrollbar-thumb);
       border-radius: 4px;
     }
   }

@@ -20,7 +20,7 @@
 // "+N" as its standing overflow signal. A region with no such label (the
 // all-day strip) keeps the bar inked, because then it is the only thing saying
 // "there is more below".
-@mixin quiet-scroll($thumb: var(--primary-40), $rest: transparent) {
+@mixin quiet-scroll($thumb: var(--scrollbar-thumb), $rest: transparent) {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -496,10 +496,10 @@
     // old 5px orange. That reads as a foreign object on a screen whose accent
     // is indigo, and it left the calendar wearing three unrelated scrollbars.
     scrollbar-width: thin;
-    scrollbar-color: var(--border-strong) transparent;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
 
     &:hover {
-      scrollbar-color: var(--primary-40) transparent;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
     }
   }
 
@@ -656,7 +656,7 @@
     // told the region moves. The "+N" says there is more; the bar says how
     // to reach it without leaving the month.
     &[data-overflow="1"] {
-      scrollbar-color: var(--primary-40) transparent;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
     }
   }
 
@@ -1413,7 +1413,7 @@
       }
 
       &::-webkit-scrollbar-thumb {
-        background-color: rgba(60, 60, 67, 0.3);
+        background-color: var(--scrollbar-thumb);
         // Transparent border + padding-box clip = a 6px thumb inset in the
         // 10px gutter, with fully rounded ends.
         border: 2px solid transparent;
@@ -1452,7 +1452,7 @@
 
       @supports not selector(::-webkit-scrollbar) {
         scrollbar-width: thin;
-        scrollbar-color: rgba(60, 60, 67, 0.3) transparent;
+        scrollbar-color: var(--scrollbar-thumb) transparent;
       }
     }
   }

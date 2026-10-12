@@ -519,8 +519,8 @@
     min-width: 0;
     overflow: auto;
     &::-webkit-scrollbar { width: 4px; } ;
-    &::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); } ;
-    &::-webkit-scrollbar-thumb { background: var(--primary-40); border-radius: 4px; };
+    &::-webkit-scrollbar-track { background: var(--scrollbar-track); } ;
+    &::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; };
   }
 
   &__folder-tab {
@@ -1932,18 +1932,18 @@
     // DEFAULT grey while Chrome gets the brand colour. Both halves are needed
     // for the thumb to be --primary-70 in both engines.
     scrollbar-width: thin;
-    scrollbar-color: var(--primary-70) rgba(0, 0, 0, 0.05);
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 
     &::-webkit-scrollbar {
       width: 4px;
     }
 
     &::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.05);
+      background: var(--scrollbar-track);
     }
 
     &::-webkit-scrollbar-thumb {
-      background: var(--primary-70);
+      background: var(--scrollbar-thumb);
       border-radius: 4px;
     }
   }

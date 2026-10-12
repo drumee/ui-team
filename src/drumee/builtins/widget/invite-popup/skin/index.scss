@@ -488,7 +488,7 @@ $tint: rgba(89, 80, 255, 0.1);
     // falls back to a default bar with stepper arrows.
     @supports not selector(::-webkit-scrollbar) {
       scrollbar-width: thin;
-      scrollbar-color: #847eff $line;
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
     }
 
     // An OPEN ROLE MENU LIFTS THE CLIP. The menu is absolutely positioned
@@ -506,12 +506,12 @@ $tint: rgba(89, 80, 255, 0.1);
     }
 
     &::-webkit-scrollbar-track {
-      background: $line;
+      background: var(--scrollbar-track);
       border-radius: 22px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: #847eff;
+      background: var(--scrollbar-thumb);
       border-radius: 28px;
     }
 

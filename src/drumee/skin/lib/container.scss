@@ -39,11 +39,11 @@
     max-width: 10px;
     height: 100%;
     cursor: pointer;
-    background-color: rgba(0, 0, 0, .1);
+    background-color: var(--scrollbar-track, transparent);
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: var(--default-scrollbar-color); //$desk-scrollbar-color;
+    background-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22));
     cursor: pointer;
   }
 

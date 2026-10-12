@@ -517,7 +517,7 @@
 
     &::-webkit-scrollbar-thumb {
       border-radius: 2px;
-      background: rgba(0, 0, 0, 0.18);
+      background: var(--scrollbar-thumb);
     }
 
     &:first-child {
