@@ -103,6 +103,7 @@ const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
 const {
   mayCreateTask,
   subtaskBadge,
+  assigneeUids,
   formatDue: formatDueDate,
   FILTER_DIMS,
   FILTER_DUE,
@@ -1095,8 +1096,9 @@ const make = function (ui) {
       kids: buildAttachmentRowsContent(ui, attachments, detail.id),
     });
 
-    // "Child task items" — the metadata sidebar, under Due date (Figma
-    // 58471:222398). A re-feedable part of its own (see
+    // "Subtasks" — the main column, between Files and the Activity feed
+    // (Figma 692:100991, "Child task items-desktop-detail"). A re-feedable
+    // part of its own (see
     // buildSubtaskRowsContent) so adding or ticking a child never rebuilds the
     // panel around the user's edits.
     //
@@ -1400,7 +1402,12 @@ const make = function (ui) {
                   // Description, then Attachments beneath it, then the Activity
                   // feed — a single stacked column (Attachments no longer sits
                   // to the right of the Description).
-                  kids: [descriptionRow, attachmentsList, commentsSection],
+                  kids: [
+                    descriptionRow,
+                    attachmentsList,
+                    subtasksSection,
+                    commentsSection,
+                  ].filter(Boolean),
                 }),
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-side`,
@@ -1410,9 +1417,6 @@ const make = function (ui) {
                     assigneeRow,
                     reporterRow,
                     dueRow,
-                    // Figma 58471:222398 puts "Child task items" here, in the
-                    // metadata column directly under Due date.
-                    subtasksSection,
                   ].filter(Boolean),
                 }),
               ],
@@ -1743,6 +1747,19 @@ const make = function (ui) {
                   descControl,
                   `${pfx}__create-field-grow`,
                 ),
+                // "Subtasks", same block the detail panel carries, between the
+                // description and the files (Figma "New task") — here it
+                // queues children on the draft instead of posting them, and
+                // _commitTask creates them once the parent has an id. Its own
+                // re-feedable part for the same reason as the detail one:
+                // adding a child must not rebuild the title / description
+                // editors the user is typing into.
+                Skeletons.Box.Y({
+                  className: `${pfx}__subtasks`,
+                  sys_pn: "create-subtask-rows",
+                  partHandler: ui,
+                  kids: buildSubtaskRowsContent(ui, null, "create"),
+                }),
                 // Pinned to the column foot (see skin __create-files) so the
                 // search/upload bar lines up with the actions in the right column.
                 field(
@@ -1772,18 +1789,6 @@ const make = function (ui) {
                   sys_pn: "create-due-section",
                   partHandler: ui,
                   kids: buildDueSectionContent(ui, "create"),
-                }),
-                // "Child task items", same block the detail panel carries —
-                // here it queues children on the draft instead of posting them,
-                // and _commitTask creates them once the parent has an id. Its
-                // own re-feedable part for the same reason as the detail one:
-                // adding a child must not rebuild the title / description
-                // editors the user is typing into.
-                Skeletons.Box.Y({
-                  className: `${pfx}__subtasks`,
-                  sys_pn: "create-subtask-rows",
-                  partHandler: ui,
-                  kids: buildSubtaskRowsContent(ui, null, "create"),
                 }),
                 // Pinned to the column foot (see skin __create-actions) so it
                 // lines up with the file search/upload bar in the left column.
@@ -4141,6 +4146,10 @@ const SUBTASK_SERVICES = {
     priority: "set-subtask-priority",
     status: "set-subtask-status",
     toggleDone: "toggle-subtask-complete",
+    rowMenu: "toggle-subtask-row-menu",
+    rowPriority: "set-subtask-row-priority",
+    rowStatus: "set-subtask-row-status",
+    rowAssignee: "toggle-subtask-row-assignee",
     open: "open-detail",
     remove: "remove-task",
     titleField: "subtask-title",
@@ -4154,6 +4163,10 @@ const SUBTASK_SERVICES = {
     priority: "set-create-subtask-priority",
     status: "set-create-subtask-status",
     toggleDone: "toggle-create-subtask-done",
+    rowMenu: "toggle-create-subtask-row-menu",
+    rowPriority: "set-create-subtask-row-priority",
+    rowStatus: "set-create-subtask-row-status",
+    rowAssignee: "toggle-create-subtask-row-assignee",
     // A queued child has no id yet, so there is nothing to open.
     open: null,
     remove: "remove-create-subtask",
@@ -4163,12 +4176,15 @@ const SUBTASK_SERVICES = {
 };
 
 /**
- * "Child task items" block — Figma 58471:222398 / 58471:222650.
+ * "Subtasks" block — Figma 692:100991 ("Child task items-desktop-detail").
  *
- * Lives in the RIGHT sidebar, under Due date (that is where the design puts it;
- * the earlier written spec had said between Description and Attachments).
- * Header, then the existing children, then the inline creator card when one is
- * open.
+ * Lives in the MAIN column: between Files and Activity on the detail card,
+ * between Description and Files on the create modal. Header with the + button,
+ * the done-share progress rail, then one card per child — title, a Priority
+ * chip, a Status chip, the assignee avatar and ✕ — and the inline creator card
+ * when one is open. Each chip and the avatar open their own menu on that row;
+ * a pick on an existing child goes through the List view's inline write path
+ * (_commitListField), a pick on a queued child edits the draft row.
  *
  * Two scopes share it:
  *  - "detail" (default) — the children of the open task, straight from the
@@ -4210,43 +4226,28 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
   const metaOf = (list, key) => list.find((x) => x.key === key) || null;
 
   // ── Header: label + "Add child work item" caption + the ＋ ──────────────
+  const rowMenu = ui.getSubtaskRowMenu(scope);
+  const members = ui.getMembers() || [];
+  // A queued child keeps its people on `assignees`; a saved one answers
+  // through the panel (unknown members dropped, as on the board).
+  const assigneesOf = (t) =>
+    isCreate ? (Array.isArray(t.assignees) ? t.assignees : []) : assigneeUids(t, ui);
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
   const header = Skeletons.Box.X({
     className: `${pfx}__subtask-header`,
     kids: [
-      Skeletons.Box.Y({
-        className: `${pfx}__subtask-header-text`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__subtask-heading`,
-            content: LOCALE.SUBTASKS,
-          }),
-          Skeletons.Note({
-            className: `${pfx}__subtask-subheading`,
-            content: LOCALE.ADD_SUBTASK,
-          }),
-        ],
+      Skeletons.Note({
+        className: `${pfx}__subtask-heading`,
+        content: LOCALE.SUBTASKS,
       }),
-      // done/total is not in the Figma frames, but the written spec calls for a
-      // count and the header is the only place it fits in this column.
-      total
-        ? Skeletons.Note({
-            className: `${pfx}__subtask-count`,
-            content: `${done}/${total}`,
-            attrOpt: { "data-complete": done === total ? "1" : "0" },
-          })
-        : null,
       canAdd
         ? Skeletons.Button.Svg({
             className: `${pfx}__subtask-add`,
-            // app-add, NOT "plus": that glyph is a filled disc with the plus
-            // knocked out of it, so colouring the svg painted a solid black
-            // circle. app-add is the bare 12px plus stroke.
             ico: "app-add",
             bubble: 0,
             service: svc.add,
             uiHandler: [ui],
-            // See gantt.js: the bare string form renders the tooltip as
-            // inline text inside the button and hides the icon.
             tooltips: {
               content: LOCALE.CREATE_SUBTASK,
               className: `${pfx}__tip`,
@@ -4256,94 +4257,54 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
     ].filter(Boolean),
   });
 
-  // ── An existing child ───────────────────────────────────────────────────
-  // Not specified in the Figma frames (they only show the creator), so this
-  // keeps the earlier design, compacted for the ~220px sidebar column: the
-  // status toggle, the title, and a priority dot rather than a full pill.
-  const subRow = (t) => {
-    const isDone = ui.isDoneStatus(t.status);
-    const pm = metaOf(priorities, t.priority || "medium");
-    const due = t.due_date ? formatDueDate(t.due_date) : "";
-    // Overdue only while still open — a finished child is never late.
-    const overdue =
-      !!t.due_date && !isDone && Dayjs(t.due_date).isBefore(Dayjs(), "day");
-    return Skeletons.Box.X({
-      className: `${pfx}__subtask-row`,
-      bubble: 0,
-      // Queued rows have nowhere to open to, so create scope leaves the row
-      // itself inert — its ✕ and its checkbox are the only controls.
-      service: svc.open,
-      uiHandler: svc.open ? [ui] : null,
-      taskId: t.id,
-      attrOpt: { "data-done": isDone ? "1" : "0" },
-      kids: [
-        Skeletons.Button.Svg({
-          className: `${pfx}__subtask-check`,
-          ico: "upload-checked",
-          bubble: 0,
-          service: svc.toggleDone,
-          uiHandler: [ui],
-          taskId: t.id,
-          attrOpt: { "data-done": isDone ? "1" : "0" },
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__subtask-text`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__subtask-title`,
-              content: t.title || "",
-            }),
-            due
-              ? Skeletons.Note({
-                  className: `${pfx}__subtask-meta`,
-                  content: due,
-                  attrOpt: { "data-overdue": overdue ? "1" : "0" },
-                })
-              : null,
-          ].filter(Boolean),
-        }),
-        // Priority as a text chip (was a bare dot): the label on the
-        // priority's own colour, like the List view's priority pill.
-        t.priority && pm
-          ? Skeletons.Note({
-              className: `${pfx}__subtask-dot`,
-              content: LOCALE[pm.label] || pm.key,
-              attrOpt: { "data-priority": pm.key },
-              styleOpt: { background: pm.color },
-            })
-          : null,
-        // Same one-click remove the board card, gantt row and calendar chip
-        // already carry, so a child is deletable from where it is listed
-        // instead of only after opening it.
-        Skeletons.Button.Svg({
-          className: `${pfx}__subtask-del`,
-          ico: "cross",
-          bubble: 0,
-          service: svc.remove,
-          uiHandler: [ui],
-          taskId: t.id,
-        }),
-      ].filter(Boolean),
-    });
-  };
+  // Figma "progress bar": a 4px rail with the done share filled in, "N% Done"
+  // at its right. Only once there is something to measure.
+  const progress = total
+    ? Skeletons.Box.X({
+        className: `${pfx}__subtask-progress`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${pfx}__subtask-progress-track`,
+            kids: [
+              Skeletons.Box.X({
+                className: `${pfx}__subtask-progress-fill`,
+                styleOpt: { width: `${pct}%` },
+                attrOpt: { "data-complete": done === total ? "1" : "0" },
+              }),
+            ],
+          }),
+          Skeletons.Note({
+            className: `${pfx}__subtask-progress-label`,
+            content: `${pct}% ${LOCALE.DONE}`,
+          }),
+        ],
+      })
+    : null;
 
-  // ── Creator card (Figma) ────────────────────────────────────────────────
-  // Bordered card: title + ✕ on the first row, then the Priority / Status
-  // chips, the Due date field on its own row, then Create. The Figma frame has no Create button — it
-  // assumes Enter — but the panel's own Update sits right below the card, so
-  // "fill it in and press save" hit Update, which commits the PARENT and closes
-  // the panel. Enter still commits; the button is the discoverable path.
-  const chip = (kind, label, dot, extraClass) =>
+  // Which menu is open: the creator card's lives on its draft, a row's is
+  // {id, kind} per scope (see getSubtaskRowMenu).
+  const menuOpenFor = (row, kind) =>
+    row
+      ? !!rowMenu && rowMenu.id === row.id && rowMenu.kind === kind
+      : !!draft && draft.menu === kind;
+
+  // One chip for the creator card (`row` null → the draft) and for every
+  // existing child (`row` → that child): same look, same menu, different
+  // service so the panel knows whether to write to the server or the draft.
+  const chip = (kind, label, dot, extraClass, row) =>
     Skeletons.Box.X({
-      className: `${pfx}__subtask-chip${extraClass ? " " + extraClass : ""}`,
+      className: `${pfx}__subtask-chip${row ? ` ${pfx}__subtask-row-chip` : ""}${
+        extraClass ? " " + extraClass : ""
+      }`,
       attrOpt: {
         "data-kind": kind,
-        "data-open": draft && draft.menu === kind ? "1" : "0",
+        "data-open": menuOpenFor(row, kind) ? "1" : "0",
       },
       bubble: 0,
-      service: svc.menu,
+      service: row ? svc.rowMenu : svc.menu,
       uiHandler: [ui],
       menuKind: kind,
+      ...(row ? { taskId: row.id } : {}),
       kids: [
         dot
           ? Skeletons.Note({
@@ -4359,30 +4320,35 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
           ico: "apps-caret-down",
           className: `${pfx}__subtask-chip-ico`,
         }),
-        // The dropdown is a child of the chip that opened it, not of the card:
-        // absolutely positioned against the card it dropped below the WHOLE
-        // form, nowhere near the control that was clicked. __subtask-chip is
-        // position:relative, so anchoring here puts it under its own chip.
-        draft && draft.menu === kind ? menu(kind) : null,
+        menuOpenFor(row, kind) ? menu(kind, row) : null,
       ].filter(Boolean),
     });
 
-  const menu = (kind) => {
-    if (!draft || !kind) return null;
+  const menu = (kind, row) => {
+    const sel = row || draft;
+    if (!sel || !kind) return null;
+    if (kind === "assignee") return assigneeMenu(row);
     const isPriority = kind === "priority";
     const items = isPriority
       ? priorities.map((p) => ({
           key: p.key,
           label: LOCALE[p.label] || p.key,
           color: p.color,
-          selected: draft.priority === p.key,
+          selected: sel.priority === p.key,
         }))
       : cols.map((c) => ({
           key: c.key,
           label: c.name || LOCALE[c.label] || c.key,
           color: c.color,
-          selected: draft.status === c.key,
+          selected: sel.status === c.key,
         }));
+    const pick = row
+      ? isPriority
+        ? svc.rowPriority
+        : svc.rowStatus
+      : isPriority
+        ? svc.priority
+        : svc.status;
     return Skeletons.Box.Y({
       className: `${pfx}__subtask-menu`,
       attrOpt: { "data-kind": kind },
@@ -4392,10 +4358,11 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
           className: `${pfx}__subtask-menu-item`,
           attrOpt: { "data-selected": i.selected ? "1" : "0" },
           bubble: 0,
-          service: isPriority ? svc.priority : svc.status,
+          service: pick,
           uiHandler: [ui],
           taskPriority: i.key,
           taskStatus: i.key,
+          ...(row ? { taskId: row.id } : {}),
           kids: [
             Skeletons.Note({
               className: `${pfx}__subtask-menu-dot`,
@@ -4408,6 +4375,137 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
           ],
         }),
       ),
+    });
+  };
+
+  // The avatar's menu: every workspace member, ticked when assigned. A click
+  // toggles that one person; the menu stays up for a second pick.
+  const assigneeMenu = (row) => {
+    if (!row || !members.length) return null;
+    const current = assigneesOf(row).map(String);
+    return Skeletons.Box.Y({
+      className: `${pfx}__subtask-menu ${pfx}__subtask-menu--people`,
+      attrOpt: { "data-kind": "assignee" },
+      bubble: 0,
+      kids: members.map((m) => {
+        const uid = m.id != null ? m.id : m.uid;
+        return Skeletons.Box.X({
+          className: `${pfx}__subtask-menu-item`,
+          attrOpt: { "data-selected": current.includes(String(uid)) ? "1" : "0" },
+          bubble: 0,
+          service: svc.rowAssignee,
+          uiHandler: [ui],
+          taskId: row.id,
+          memberUid: uid,
+          kids: [
+            Skeletons.UserProfile({
+              className: `${pfx}__subtask-menu-avatar`,
+              id: uid,
+              firstname: m.firstname,
+              lastname: m.lastname,
+              auto_color: 1,
+              live_status: 0,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__subtask-menu-label`,
+              content: fullName(m) || m.email || "",
+            }),
+          ],
+        });
+      }),
+    });
+  };
+
+  // Figma: a 32px circle — the first assignee's avatar, or the user glyph on a
+  // grey disc when nobody is assigned; "+N" beside it for the rest.
+  const assigneeButton = (t) => {
+    const uids = assigneesOf(t);
+    const first = uids.length ? ui.getMember(uids[0]) : null;
+    const open = menuOpenFor(t, "assignee");
+    return Skeletons.Box.X({
+      className: `${pfx}__subtask-assignee`,
+      attrOpt: {
+        "data-open": open ? "1" : "0",
+        "data-set": uids.length ? "1" : "0",
+      },
+      bubble: 0,
+      service: svc.rowMenu,
+      uiHandler: [ui],
+      menuKind: "assignee",
+      taskId: t.id,
+      kids: [
+        first
+          ? Skeletons.UserProfile({
+              className: `${pfx}__subtask-assignee-avatar`,
+              id: uids[0],
+              firstname: first.firstname,
+              lastname: first.lastname,
+              auto_color: 1,
+              live_status: 0,
+            })
+          : Skeletons.Image.Svg({
+              ico: "apps-user-circle",
+              className: `${pfx}__subtask-assignee-ico`,
+            }),
+        uids.length > 1
+          ? Skeletons.Note({
+              className: `${pfx}__subtask-assignee-more`,
+              content: `+${uids.length - 1}`,
+            })
+          : null,
+        open ? menu("assignee", t) : null,
+      ].filter(Boolean),
+    });
+  };
+
+  const subRow = (t) => {
+    const isDone = ui.isDoneStatus(t.status);
+    const pm = metaOf(priorities, t.priority || "medium");
+    const sm = metaOf(cols, t.status);
+    return Skeletons.Box.X({
+      className: `${pfx}__subtask-row`,
+      bubble: 0,
+      attrOpt: { "data-done": isDone ? "1" : "0" },
+      kids: [
+        // The title is the way INTO the child (detail only); the controls
+        // beside it act on the row in place.
+        Skeletons.Note({
+          className: `${pfx}__subtask-title`,
+          content: t.title || "",
+          bubble: 0,
+          service: svc.open,
+          uiHandler: svc.open ? [ui] : null,
+          taskId: t.id,
+        }),
+        chip(
+          "priority",
+          pm ? LOCALE[pm.label] || pm.key : LOCALE.PRIORITY,
+          pm && pm.color,
+          null,
+          t,
+        ),
+        chip(
+          "status",
+          sm ? sm.name || LOCALE[sm.label] || sm.key : LOCALE.STATUS,
+          sm && sm.color,
+          null,
+          t,
+        ),
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-row-end`,
+          kids: [
+            assigneeButton(t),
+            Skeletons.Button.Svg({
+              className: `${pfx}__subtask-del`,
+              ico: "cross",
+              bubble: 0,
+              service: svc.remove,
+              uiHandler: [ui],
+              taskId: t.id,
+            }),
+          ],
+        }),
+      ],
     });
   };
 
@@ -4539,6 +4637,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
 
   return [
     header,
+    progress,
     ...subs.map(subRow),
     draft && canAdd ? creator() : null,
     // Only when there is genuinely nothing: with the creator open the block is

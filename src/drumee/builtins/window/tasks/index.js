@@ -11,7 +11,7 @@ const {
   settlePendingFiles,
 } = require("./detail-commit");
 const { restoreScroll } = require("./scroll-restore");
-const { titleTooLong } = require("./list-edit");
+const { titleTooLong, toggleUid } = require("./list-edit");
 const { stamp, reconcile } = require("./reconcile");
 const listInline = require("./list-inline");
 const completeParent = require("./complete-parent");
@@ -307,6 +307,12 @@ class __tasks_panel extends LetcBox {
     // no id until Create is pressed. Separate field so the two overlays cannot
     // clobber each other's half-typed row.
     this._createSubtaskDraft = null;
+    // The one open chip menu on an EXISTING child row, {id, kind} with kind
+    // priority | status | assignee — one per scope (the open task's children /
+    // the children queued on the create draft). The creator card keeps its
+    // own on its draft.
+    this._subtaskRowMenu = null;
+    this._createSubtaskRowMenu = null;
     this._attachments = {};
     this._pickerOpen = null;
     // Member filter — empty = show all. Uids stored as strings. Shared across
@@ -1939,6 +1945,39 @@ class __tasks_panel extends LetcBox {
         return;
       }
 
+      // Chips on an EXISTING child row. A pick goes through the List view's
+      // inline write path (_commitListField): same services, same rights
+      // check, same optimistic patch and reconcile — then the block re-feeds
+      // from the patched row.
+      case "toggle-subtask-row-menu": {
+        const id = trigger.mget("taskId");
+        const kind = trigger.mget("menuKind");
+        const cur = this._subtaskRowMenu;
+        this._subtaskRowMenu =
+          cur && cur.id === id && cur.kind === kind ? null : { id, kind };
+        return this._refreshSubtaskSection();
+      }
+
+      case "set-subtask-row-priority":
+      case "set-subtask-row-status": {
+        const id = trigger.mget("taskId");
+        const field = service === "set-subtask-row-priority" ? "priority" : "status";
+        const value = trigger.mget(field === "priority" ? "taskPriority" : "taskStatus");
+        this._subtaskRowMenu = null;
+        await this._commitListField(id, field, value);
+        return this._refreshSubtaskSection();
+      }
+
+      case "toggle-subtask-row-assignee": {
+        const id = trigger.mget("taskId");
+        const uid = trigger.mget("memberUid");
+        const task = this.getTask(id);
+        if (!task || uid == null) return;
+        const next = toggleUid(this.getKnownAssignees(task), uid);
+        await this._commitListField(id, "assignees", next);
+        return this._refreshSubtaskSection();
+      }
+
       // ── Subtasks queued on the create modal ─────────────────────
       // Same block, same skin, but the parent does not exist yet: these edit
       // _createDefaults.subtasks, and _commitTask posts them once it has an id.
@@ -1979,6 +2018,38 @@ class __tasks_panel extends LetcBox {
         if (!this._createSubtaskDraft) return;
         this._createSubtaskDraft.status = trigger.mget("taskStatus");
         this._createSubtaskDraft.menu = null;
+        return this._refreshCreateSubtaskSection();
+      }
+
+      // Chips on a child QUEUED on the create draft: edit the queued row; it
+      // is posted with these values once the parent exists.
+      case "toggle-create-subtask-row-menu": {
+        const id = trigger.mget("taskId");
+        const kind = trigger.mget("menuKind");
+        const cur = this._createSubtaskRowMenu;
+        this._createSubtaskRowMenu =
+          cur && cur.id === id && cur.kind === kind ? null : { id, kind };
+        return this._refreshCreateSubtaskSection();
+      }
+
+      case "set-create-subtask-row-priority":
+      case "set-create-subtask-row-status": {
+        const row = this._pendingSubtaskRow(trigger.mget("taskId"));
+        if (!row) return;
+        if (service === "set-create-subtask-row-priority") {
+          row.priority = trigger.mget("taskPriority");
+        } else {
+          row.status = trigger.mget("taskStatus");
+        }
+        this._createSubtaskRowMenu = null;
+        return this._refreshCreateSubtaskSection();
+      }
+
+      case "toggle-create-subtask-row-assignee": {
+        const row = this._pendingSubtaskRow(trigger.mget("taskId"));
+        const uid = trigger.mget("memberUid");
+        if (!row || uid == null) return;
+        row.assignees = toggleUid(row.assignees, uid);
         return this._refreshCreateSubtaskSection();
       }
 
@@ -10862,6 +10933,15 @@ class __tasks_panel extends LetcBox {
     return (draft && Array.isArray(draft.subtasks) && draft.subtasks) || [];
   }
 
+  _pendingSubtaskRow(id) {
+    return id ? this.getPendingSubtasks().find((t) => t.id === id) || null : null;
+  }
+
+  /** The open chip menu on an existing child row, per scope — see initialize. */
+  getSubtaskRowMenu(scope = "detail") {
+    return scope === "create" ? this._createSubtaskRowMenu : this._subtaskRowMenu;
+  }
+
   // List / Gantt chevron. Local-only toggle, but it changes how many rows the
   // view has, so it re-feeds rather than flipping an attribute.
   //
@@ -11308,6 +11388,7 @@ class __tasks_panel extends LetcBox {
           priority: sub.priority || "medium",
           status: sub.status || undefined,
           due_date: sub.due_date || null,
+          assignee_uids: Array.isArray(sub.assignees) ? sub.assignees : [],
         });
         const row = rowOf(created);
         // postService resolves falsy on failure rather than rejecting.

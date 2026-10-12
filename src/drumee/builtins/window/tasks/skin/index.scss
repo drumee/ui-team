@@ -8710,51 +8710,58 @@ $theme-colors: (
   // ── Child task items (Figma 58471:222398 / 58471:222650) ────────
   // Lives in the detail panel's metadata sidebar, so everything here is sized
   // for that narrow column rather than the main content width.
+  // Figma 692:100991 "Child task items-desktop-detail": heading row, the
+  // progress rail, then one card per child (12px apart).
   &__subtasks {
-    gap: 8px;
+    gap: 12px;
     margin-top: 4px;
   }
 
   &__subtask-header {
-    align-items: flex-start;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
   }
 
-  &__subtask-header-text {
+  &__subtask-heading {
     flex: 1;
     min-width: 0;
-    gap: 2px;
-  }
-
-  &__subtask-heading {
-    font-weight: 600;
     @include drumee.typo(
-      $size: 14px,
-      $line: 20px,
+      $size: 16px,
+      $line: 22px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
-  // "Add child work item" — the caption under the heading.
-  &__subtask-subheading {
-    @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
-      $color: var(--normal-fg-50, #65656c)
-    );
+  // The done share: a 4px rail, brand fill, "N% Done" at its right.
+  &__subtask-progress {
+    align-items: center;
+    gap: 8px;
   }
 
-  // done/total — white on the brand primary, whether or not every child is
-  // done (the header's count, unlike the card/list badges, has no green
-  // all-done state).
-  &__subtask-count {
+  &__subtask-progress-track {
+    flex: 1;
+    min-width: 0;
+    height: 4px;
+    border-radius: 14px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    overflow: hidden;
+  }
+
+  &__subtask-progress-fill {
+    height: 4px;
+    border-radius: 18px;
+    background: var(--primary-50, #433cc5);
+    transition: width 0.2s;
+  }
+
+  &__subtask-progress-label {
     flex-shrink: 0;
-    height: 18px;
-    padding: 0 7px;
-    border-radius: 100px;
-    background: var(--col-primary-40, #5950ff);
-    font-weight: 700;
-    @include drumee.typo($size: 10px, $line: 18px, $color: #fff);
+    @include drumee.typo(
+      $size: 12px,
+      $line: 17px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
   }
 
   &__subtask-add {
@@ -8796,61 +8803,147 @@ $theme-colors: (
   }
 
   // ── An existing child ───────────────────────────────────────────
+  // One child: white card, hairline border, 12px corners, 8px padding —
+  // title | Priority chip | Status chip | avatar + ✕.
   &__subtask-row {
     align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: 10px;
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
+    gap: 12px;
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
     background: var(--normal-bg-100, #fff);
-    cursor: pointer;
     transition:
       border-color 0.15s,
       box-shadow 0.15s,
       background 0.15s;
 
     &:hover {
-      border-color: rgba(89, 80, 255, 0.35);
       box-shadow: 0 2px 8px rgba(11, 10, 33, 0.06);
     }
-    // Dimmed rather than hidden: this is a checklist, and a disappearing row
-    // loses the done/total context. No strike-through — the ticked box and
-    // the grey title already say it is done.
     &[data-done="1"] {
       background: var(--normal-bg-90, #fafafc);
 
       .tasks-panel__subtask-title {
         color: var(--normal-fg-50, #8a8aa3);
       }
-      .tasks-panel__subtask-dot,
-      .tasks-panel__subtask-meta {
-        opacity: 0.5;
-      }
     }
   }
 
-  // One-click remove, styled exactly like the board card's __task-remove:
-  // hidden until the row is hovered, red on its own hover.
+  &__subtask-row-end {
+    flex-shrink: 0;
+    align-items: center;
+    gap: 12px;
+  }
+
+  // The chips on a row are the design's 32px pills; the creator card keeps
+  // the compact ones.
+  &__subtask-row-chip {
+    height: 32px;
+    padding: 2px 12px;
+    box-sizing: border-box;
+    border-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+
+    .tasks-panel__subtask-chip-label {
+      @include drumee.typo(
+        $size: 14px,
+        $line: 17px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+    }
+    .tasks-panel__subtask-chip-ico,
+    .tasks-panel__subtask-chip-ico svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  // The assignee: a 32px disc — the first assignee's avatar, or the user
+  // glyph on grey when nobody is assigned. Its menu hangs off it like a chip's.
+  &__subtask-assignee {
+    position: relative;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 32px;
+    min-width: 32px;
+    border-radius: 100px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    cursor: pointer;
+
+    &[data-open="1"] {
+      box-shadow: 0 0 0 1px var(--col-primary-100, #5950ff);
+    }
+
+    .tasks-panel__subtask-menu {
+      left: auto;
+      right: 0;
+    }
+  }
+
+  &__subtask-assignee-ico {
+    width: 14px;
+    height: 14px;
+    margin: 0 9px;
+
+    svg {
+      display: block;
+      width: 14px;
+      height: 14px;
+      fill: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  &__subtask-assignee-avatar,
+  &__subtask-assignee-avatar img,
+  &__subtask-assignee-avatar > * {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  &__subtask-assignee-more {
+    padding-right: 8px;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
+  }
+
+  &__subtask-menu--people {
+    min-width: 200px;
+  }
+
+  &__subtask-menu-avatar,
+  &__subtask-menu-avatar img,
+  &__subtask-menu-avatar > * {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
   &__subtask-del {
     flex-shrink: 0;
     width: 16px;
     height: 16px;
     padding: 2px;
     border-radius: 4px;
-    color: var(--normal-fg-50, #84848c);
-    opacity: 0;
+    color: var(--normal-fg-10, #0b0a21);
     cursor: pointer;
     overflow: hidden;
     font-size: 0;
     transition:
-      opacity 0.15s,
       color 0.15s,
       background 0.15s;
 
     svg {
       display: block;
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
     }
 
     &:hover {
@@ -8859,76 +8952,20 @@ $theme-colors: (
     }
   }
 
-  &__subtask-row:hover &__subtask-del {
-    opacity: 1;
-  }
-
-  &__subtask-check {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    border-radius: 6px;
-    border: 1.5px solid var(--normal-fg-30, #c4c4d0);
-    box-sizing: border-box;
-    // Explicit, as on __list-check: a Button.Svg is display:block, so the
-    // centring below did nothing and the tick sat 2px up-left.
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition:
-      border-color 0.15s,
-      background 0.15s;
-
-    // Same tick and fill as the List's __list-check. upload-checked is a
-    // STROKED path and the icon build strips fill/stroke, so it is drawn as a
-    // line here, never filled.
-    svg {
-      display: block;
-      flex-shrink: 0;
-      width: 14px;
-      height: 14px;
-      fill: none;
-      stroke: transparent;
-    }
-
-    &:hover {
-      border-color: #433cc5;
-
-      svg {
-        stroke: rgba(67, 60, 197, 0.5);
-      }
-    }
-
-    &[data-done="1"] {
-      background: #433cc5;
-      border-color: #433cc5;
-      svg {
-        stroke: #fff;
-      }
-    }
-  }
-
-  &__subtask-text {
+  &__subtask-title {
     flex: 1;
     min-width: 0;
-    gap: 2px;
-  }
-
-  &__subtask-title {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-weight: 500;
+    cursor: pointer;
     @include drumee.typo(
-      $size: 13px,
-      $line: 18px,
+      $size: 14px,
+      $line: 17px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
-  // Due date, with a calendar glyph drawn as a mask so it takes the text colour
-  // (red when overdue) without a second icon.
   &__subtask-meta {
     align-items: center;
     gap: 4px;
