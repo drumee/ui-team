@@ -102,11 +102,17 @@ function isWorkingFile(view) {
  * Meeting tabs hand that same area to another panel — Tasks and Meeting even
  * re-feed the body, removing the files panel outright — so there is no frame to
  * dock into and the viewer hides until Files comes back.
+ *
+ * Nor while the rail's Access overlay is up (data-access, window/folder/
+ * access-column). It used to be a tab of its own, which the test above already
+ * covered; it now overlays Files with data-view left on "files", and a viewer
+ * docked over the file grid would cover the members panel.
  */
 function targetEl(view) {
   const host = hostEl(view);
   if (!host || !host.isConnected) return null;
   if (host.dataset.view !== "files") return null;
+  if (host.dataset.access === "1") return null;
   if (isWorkingFile(view)) return host;
   return host.querySelector(FILES_SELECTOR);
 }
@@ -267,7 +273,7 @@ function track(view, opt = {}) {
   view._frameMo = new MutationObserver(schedule);
   view._frameMo.observe(host, {
     attributes: true,
-    attributeFilter: ["data-view", "style"],
+    attributeFilter: ["data-view", "data-access", "style"],
     childList: true,
   });
   refit(opt);

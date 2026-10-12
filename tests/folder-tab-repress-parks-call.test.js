@@ -19,7 +19,14 @@ const SRC = fs.readFileSync(
   path.join(__dirname, "../src/drumee/builtins/window/folder/index.js"),
   "utf8",
 );
-const showFolderTab = new Function(`return ${sliceFunction(SRC, "showFolderTab(tab)")}`)();
+// The module-level names the method reads, handed in from the real module
+// (it loads under plain node — see its header).
+const { ACCESS_TAB, hideAccessOverlay } = require("../src/drumee/builtins/window/folder/access-column");
+const showFolderTab = new Function(
+  "ACCESS_TAB",
+  "hideAccessOverlay",
+  `return ${sliceFunction(SRC, "showFolderTab(tab)")}`,
+)(ACCESS_TAB, hideAccessOverlay);
 
 function folder(activeTab) {
   const self = { activeTab, parked: 0, synced: 0 };
@@ -29,11 +36,20 @@ function folder(activeTab) {
 }
 
 test("the same tab again parks the live call before the desk raises the pane", () => {
-  const w = folder("access");
-  showFolderTab.call(w, "access");
+  const w = folder("task");
+  showFolderTab.call(w, "task");
   assert.equal(w.parked, 1);
   assert.equal(w.synced, 1);
-  assert.equal(w.activeTab, "access");
+  assert.equal(w.activeTab, "task");
+});
+
+test("Access is not a tab: it goes to the overlay and leaves activeTab alone", () => {
+  const w = folder("task");
+  let opened = 0;
+  w._openAccessOverlay = () => { opened++; };
+  showFolderTab.call(w, "access");
+  assert.equal(opened, 1);
+  assert.equal(w.activeTab, "task");
 });
 
 test("the unchanged-tab path is still the short one: nothing else is touched", () => {

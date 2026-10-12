@@ -1423,8 +1423,8 @@ class __permission_restricted extends DrumeeMFS {
       case _e.close:
         // Column mode: a view of the folder split body, mounted once
         // (window/folder/access-column) — sliding it out and suppress()ing it
-        // would leave that view empty for good. The folder window switches the
-        // column back to the chat panel and lights the rail's Files instead.
+        // would leave that view empty for good. The folder window takes the
+        // overlay down instead and lights the rail on the tab underneath.
         if (this.mget("mode") === "column") {
           return this.triggerHandlers({ service: "close-access-view" });
         }

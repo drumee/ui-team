@@ -1,11 +1,14 @@
 /**
- * The desk rail's Access, as a view of the folder window's split body.
+ * The desk rail's Access, as an OVERLAY on the folder window's split body.
  *
  * Access used to open the members panel (permission_restricted) as a drawer in
- * the window's dialog wrapper, over the split body. It is a view now, like
- * Files / Chat / Task: the file grid and its drag gutter stay, and the members
- * panel takes the chat panel's column. The skin does the layout off
- * `data-view="access"` (skin/index.scss &__split-body[data-view="access"]).
+ * the window's dialog wrapper, then became a view of its own (`data-view` =
+ * "access"), which always put the file grid under it. Lexis, 2026-10-12: from
+ * Task, Meet or Chat it must open OVER THAT TAB, not jump to Files. So it is
+ * no longer a tab: `win.activeTab` keeps the tab the user is on, and the panel
+ * is stacked over it while the split body carries `data-access="1"`
+ * (skin/index.scss &__split-body[data-access="1"]). Over Files it keeps the
+ * look it had as a view — the chat column steps aside for it.
  *
  * Mounted once and never re-fed, like the task board: showFolderTab's
  * switchView appends it on first entry and only reveals it after that.
@@ -20,7 +23,8 @@ const { SECURE_SHARE_TAB } = require("./secure-share-column");
 const ACCESS_TAB = "access";
 const ACCESS_PANEL_PN = "folder-access-panel";
 // The service the members panel's ✕ sends its uiHandler (the folder window) in
-// column mode — see permission/restricted/index.js `_e.close`.
+// column mode — see permission/restricted/index.js `_e.close`. The rail's
+// Access sends it too when the overlay is already up (a toggle).
 const ACCESS_CLOSE = "close-access-view";
 
 /** The members panel, in column mode, for this window's workspace. */
@@ -96,27 +100,127 @@ function showAccessColumn(win, view) {
 }
 
 /**
- * The members panel's ✕: hide the panel and put the chat panel back in its
- * column — i.e. the Files view — and light the rail's Files item to match.
+ * Is the Access overlay up on this window?
+ *
+ * @param {Object} win  the folder window
+ * @returns {Boolean}
+ */
+function accessOpen(win) {
+  return !!(win && win._accessOpen);
+}
+
+/**
+ * Put the overlay up over whatever tab the window is on. The stamp goes on at
+ * once — it is what the skin and accessOpen() read — and the panel itself is
+ * mounted (or refreshed) by showAccessColumn.
+ *
+ * Display:none drops a scroller's position, and over Files (and on a compact
+ * window, over every tab) the panels underneath are hidden, so their scroll is
+ * noted first and put back by hideAccessOverlay — the same pair a tab switch
+ * uses.
+ *
+ * `opt.stash: false` when the caller has just switched tab in the same
+ * handler (secure-share -> Files): the panels it revealed have not been laid
+ * out at their saved offsets yet, and a stash now would overwrite those with 0.
+ *
+ * @param {Object} win   the folder window
+ * @param {Object} view  the split body (part "folder-view")
+ * @param {Object} [opt]
+ * @param {Boolean} [opt.stash=true]
+ * @returns {Object|null} see showAccessColumn
+ */
+function showAccessOverlay(win, view, opt) {
+  if (!view || !view.el) return null;
+  if (!win._accessOpen) {
+    if (!(opt && opt.stash === false) && typeof win._stashPanelScroll === "function") {
+      win._stashPanelScroll();
+    }
+    // Chat details stands in for the Files-view chat column, which steps
+    // aside for the panel — the same close a tab switch makes.
+    if (showsFileGrid(win.activeTab) && typeof win._closeChatDetails === "function") {
+      win._closeChatDetails();
+    }
+    win._accessOpen = 1;
+    view.el.dataset.access = "1";
+  }
+  return showAccessColumn(win, view);
+}
+
+/**
+ * Take the overlay down, leaving the tab underneath exactly as it was. A no-op
+ * when it is not up.
+ *
+ * `opt.restore: false` is for showFolderTab switching to ANOTHER tab: it has
+ * already noted the scroll offsets (with the overlay still up, so the panels
+ * hidden under it kept their saved values) and puts them back itself after
+ * the switch. Restoring here as well would run a frame later, on the panels
+ * of the tab that has just been left.
+ *
+ * @param {Object} win  the folder window
+ * @param {Object} [opt]
+ * @param {Boolean} [opt.restore=true]
+ * @returns {Boolean} whether it was up
+ */
+function hideAccessOverlay(win, opt) {
+  if (!win || !win._accessOpen) return false;
+  const restore = !(opt && opt.restore === false);
+  // Note the panels still on screen BEFORE the hidden ones come back: on a
+  // desktop window the tab beside the card stays usable while it is up, and
+  // restoring the offsets taken at open would jump whatever was scrolled
+  // since. The stash skips hidden panels, so those keep their saved values.
+  if (restore && typeof win._stashPanelScroll === "function") win._stashPanelScroll();
+  win._accessOpen = 0;
+  const view = win.__folderView;
+  const el = view && !(typeof view.isDestroyed === "function" && view.isDestroyed())
+    ? view.el
+    : null;
+  if (el && el.dataset) {
+    delete el.dataset.access;
+    // Over Files the chat column comes back from the left, as it did when
+    // Access was a view (skin: [data-view="files"][data-from-view="access"]).
+    if (showsFileGrid(win.activeTab)) el.dataset.fromView = ACCESS_TAB;
+  }
+  if (restore && typeof win._restorePanelScroll === "function") {
+    win._restorePanelScroll();
+  }
+  // The card covered the team chat (Chat tab), so a message that came in
+  // under it was not read; with the chat back in view it is — the same check
+  // showFolderTab makes on entering Chat, a frame later once laid out.
+  if (win.activeTab === "chat" && typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => {
+      if (typeof win.isDestroyed === "function" && win.isDestroyed()) return;
+      const chat = typeof win.getPart === "function" ? win.getPart("folder-chat") : null;
+      if (chat && typeof chat.readIfInView === "function") chat.readIfInView();
+    });
+  }
+  return true;
+}
+
+/**
+ * The members panel's ✕ (and a second press of the rail's Access): take the
+ * overlay down and light the rail on the tab that is under it — Files, Chat,
+ * Task or Meet, whichever the user was on.
  *
  * The rail has to be told. Its highlight moves on a rail CLICK (the radio
  * behaviour on the item pressed), and the ✕ is not one, so Access would stay
- * lit over a Files screen. Desk._railHighlight is the hook the window manager
+ * lit over the tab. Desk._railHighlight is the hook the window manager
  * already uses for the same job (wm/index.js, after a workspace loads).
  *
  * @param {Object} win  the folder window
  */
 function closeAccessColumn(win) {
-  if (win.activeTab !== ACCESS_TAB) return undefined;
-  const r = win.showFolderTab("files");
+  if (!hideAccessOverlay(win)) return undefined;
   const desk = typeof window !== "undefined" ? window.Desk : null;
-  if (desk && typeof desk._railHighlight === "function") desk._railHighlight("files");
-  return r;
+  if (desk && typeof desk._railHighlight === "function") {
+    desk._railHighlight(win.activeTab || "files");
+  }
+  return undefined;
 }
 
 /** Views that keep the file grid on screen — and so its toolbar. The
- *  secure-share view (./secure-share-column) takes the same column Access
- *  does, beside the same grid. */
+ *  secure-share view (./secure-share-column) takes the chat column, beside
+ *  the same grid. Access is no tab any more (it overlays the one that is up),
+ *  but a carried "access" still lands on Files, so it keeps its answer. */
 function showsFileGrid(tab) {
   return !tab || tab === "files" || tab === ACCESS_TAB || tab === SECURE_SHARE_TAB;
 }
@@ -125,8 +229,11 @@ module.exports = {
   ACCESS_TAB,
   ACCESS_PANEL_PN,
   ACCESS_CLOSE,
+  accessOpen,
   closeAccessColumn,
   accessPanelSpec,
+  hideAccessOverlay,
   showAccessColumn,
+  showAccessOverlay,
   showsFileGrid,
 };
