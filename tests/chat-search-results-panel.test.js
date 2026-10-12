@@ -92,7 +92,7 @@ test("loading placeholders: three rows of pulsing bars with real size", { skip }
   const ph = (n) =>
     '<div class="window__search-result-ph"><div class="window__search-result-ph-top">' +
     '<div id="name' + n + '" class="window__search-result-ph-name"></div><div class="window__search-result-ph-time"></div></div>' +
-    '<div class="window__search-result-ph-preview"></div></div>';
+    '<div class="window__search-result-ph-preview"></div><div class="window__search-result-ph-preview"></div></div>';
   const r = runInChromium({
     body: body.replace('<div id="row">row</div>',
       `<div class="window__search-results-loading"><div aria-hidden="true">${ph(0)}${ph(1)}${ph(2)}</div></div>`),
@@ -102,17 +102,78 @@ test("loading placeholders: three rows of pulsing bars with real size", { skip }
       const rows = [...document.querySelectorAll(".window__search-result-ph")];
       return {
         bars: bars.length,
-        sized: bars.every((b) => b.getBoundingClientRect().height >= 8 && b.getBoundingClientRect().width >= 20),
+        // layout size: the rows' entrance animation scales the rects
+        sized: bars.every((b) => b.offsetHeight >= 8 && b.offsetWidth >= 20),
+        previews: [...rows[0].querySelectorAll(".window__search-result-ph-preview")].map((b) => b.offsetWidth),
+        separated: getComputedStyle(rows[1]).borderTopStyle,
         pulse: [...new Set(bars.map((b) => getComputedStyle(b).animationName))],
         rowHeight: Math.round(rows[0].getBoundingClientRect().height),
+        gradient: /gradient/.test(getComputedStyle(bars[0]).backgroundImage),
+        staggered: getComputedStyle(rows[0].querySelector(".window__search-result-ph-name")).animationDelay !==
+          getComputedStyle(rows[1].querySelector(".window__search-result-ph-name")).animationDelay,
         nameWider: document.getElementById("name0").getBoundingClientRect().width >
           document.querySelector(".window__search-result-ph-time").getBoundingClientRect().width,
       };
     },
   });
-  assert.equal(r.bars, 9);
+  assert.equal(r.bars, 12);
   assert.equal(r.sized, true);
-  assert.deepEqual(r.pulse, ["drumee-skeleton-pulse"]);
+  // a shimmer sweeping across each bar, rows out of step
+  assert.deepEqual(r.pulse, ["window-folder__search-skeleton-shimmer"]);
+  assert.equal(r.gradient, true);
+  // the second preview line is the short one, like a wrapped message
+  assert.ok(r.previews[1] < r.previews[0] * 0.75, `previews ${r.previews}`);
+  assert.equal(r.separated, "solid");
+  assert.equal(r.staggered, true);
   assert.ok(r.rowHeight >= 40 && r.rowHeight <= 72, `row ${r.rowHeight}`);
   assert.equal(r.nameWider, true);
+});
+
+test("hits: white text on the primary colour; the jumped-to message a darker primary", { skip }, () => {
+  const r = runInChromium({
+    body: `<style>${BASE}${css}</style><div class="window-folder">
+      <p>a <mark id="hit" class="chat-search-hit">budget</mark></p>
+      <div data-search-current="1"><mark id="cur" class="chat-search-hit">budget</mark></div></div>`,
+    fn: async (m, document) => {
+      const cs = (id) => getComputedStyle(document.getElementById(id));
+      return [cs("hit").color, cs("hit").backgroundColor, cs("cur").color, cs("cur").backgroundColor];
+    },
+  });
+  assert.deepEqual(r, ["rgb(255, 255, 255)", "rgb(89, 80, 255)", "rgb(255, 255, 255)", "rgb(70, 66, 169)"]);
+});
+
+const header = (closing) => `<style>${BASE}${css}</style><div class="window-folder">
+  <div class="window__chat-header box" data-flow="x" data-scope="search"${closing ? ' data-closing="1"' : ""} style="width:360px;height:44px">
+    <div id="back" class="window__chat-header-back"></div>
+    <div id="input" class="window__chat-search-input"><input></div>
+  </div></div>`;
+
+test("search field slides in horizontally, and slides back out while closing", { skip }, () => {
+  const fn = async (m, document) => {
+    const cs = getComputedStyle(document.getElementById("input"));
+    return [cs.animationName, cs.animationFillMode];
+  };
+  assert.deepEqual(runInChromium({ body: header(false), fn }), ["window-folder__chat-search-in", "none"]);
+  assert.deepEqual(runInChromium({ body: header(true), fn }), ["window-folder__chat-search-out", "forwards"]);
+});
+
+test("afterAnimation waits for the element's own animation end; none → at once", { skip }, () => {
+  const r = runInChromium({
+    modules: { P: MOD },
+    body: header(true),
+    fn: async ({ P }, document) => {
+      const input = document.getElementById("input");
+      const log = [];
+      P.afterAnimation(input, () => log.push("input"));
+      input.querySelector("input").dispatchEvent(new AnimationEvent("animationend", { bubbles: true }));
+      log.push("child-ended");
+      input.dispatchEvent(new AnimationEvent("animationend"));
+      input.dispatchEvent(new AnimationEvent("animationend")); // once only
+      const plain = document.createElement("div");
+      document.body.appendChild(plain);
+      P.afterAnimation(plain, () => log.push("plain"));
+      return log;
+    },
+  });
+  assert.deepEqual(r, ["child-ended", "input", "plain"]);
 });

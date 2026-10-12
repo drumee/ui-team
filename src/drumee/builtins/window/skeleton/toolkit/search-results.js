@@ -97,8 +97,8 @@ function searchResults(ui, rows) {
 
 /**
  * Placeholder content for the search-results card while channel.search is in
- * flight: the same label + three rows shaped like a result (name, time,
- * preview bars; folder skin pulses them). Swapped for searchResults() when the
+ * flight: the same label + three rows shaped like a result (name + time,
+ * two preview lines; the folder skin sweeps a shimmer across them). Swapped for searchResults() when the
  * reply lands. Decorative — nothing in it is worth announcing.
  * @param {*} ui folder window
  */
@@ -111,6 +111,7 @@ function searchResultsLoading(ui) {
     `<div class="${c}-ph-name"></div>` +
     `<div class="${c}-ph-time"></div>` +
     `</div>` +
+    `<div class="${c}-ph-preview"></div>` +
     `<div class="${c}-ph-preview"></div>` +
     `</div>`;
   return [

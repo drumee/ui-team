@@ -66,6 +66,16 @@ test("results open and close through the animated panel; an emptied field closes
   assert.ok(!src.includes("_reopenChatSearchResults"));
 });
 
+test("closing the search lets the field slide out before the header comes back", () => {
+  const close = method("_closeChatSearch");
+  assert.match(close, /bar\.el\.dataset\.closing = "1";/);
+  assert.match(close, /ResultsPanel\.afterAnimation\(/);
+  assert.ok(close.indexOf("afterAnimation") < close.lastIndexOf("_updateChatHeader"), "header waits for the slide-out");
+  // a scope switch / header re-feed during the slide-out wins; the flag never sticks
+  assert.match(close, /if \(bar\.el\.dataset\.scope !== "search"\) return;/);
+  assert.match(method("_updateChatHeader"), /delete bar\.el\.dataset\.closing;/);
+});
+
 test("skin styles the hits and the current message", () => {
   const scss = fs.readFileSync(path.join(__dirname, "..", "src/drumee/builtins/window/folder/skin/index.scss"), "utf8");
   assert.match(scss, /mark\.chat-search-hit \{/);

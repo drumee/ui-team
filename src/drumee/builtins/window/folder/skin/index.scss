@@ -4556,6 +4556,74 @@ html[data-theme="dark"] {
   .window__chat-header[data-scope="search"] {
     justify-content: flex-start;
     gap: 8px;
+    overflow: hidden;
+
+    // Show / close: the field slides in from the right, where the magnifying
+    // glass sat, and back out before the normal header returns (folder
+    // _closeChatSearch sets data-closing and waits for this animation).
+    .window__chat-search-input {
+      animation: window-folder__chat-search-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .window__chat-header-back {
+      animation: window-folder__chat-search-fade 0.24s ease-out;
+    }
+
+    &[data-closing="1"] {
+      pointer-events: none;
+
+      .window__chat-search-input {
+        animation: window-folder__chat-search-out 0.18s ease-in forwards;
+      }
+
+      .window__chat-header-back {
+        animation: window-folder__chat-search-fade 0.18s ease-in reverse forwards;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .window__chat-search-input,
+      .window__chat-header-back,
+      &[data-closing="1"] .window__chat-search-input,
+      &[data-closing="1"] .window__chat-header-back {
+        animation: none;
+      }
+    }
+  }
+
+  @keyframes window-folder__chat-search-in {
+    from {
+      opacity: 0;
+      transform: translateX(48px);
+      clip-path: inset(0 0 0 100%);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+      clip-path: inset(0);
+    }
+  }
+
+  @keyframes window-folder__chat-search-out {
+    from {
+      opacity: 1;
+      transform: none;
+      clip-path: inset(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(48px);
+      clip-path: inset(0 0 0 100%);
+    }
+  }
+
+  @keyframes window-folder__chat-search-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   .window__chat-search-input {
@@ -4735,17 +4803,18 @@ html[data-theme="dark"] {
   }
 
   // Chat-header search hits (./chat-search-highlight) in message text and
-  // attachment filenames. Translucent so own (coloured) and peer bubbles both
-  // keep their text colour; the message a result jumped to gets a stronger one.
+  // attachment filenames: white on the primary colour, readable on own
+  // (coloured) and peer bubbles alike; the message a result jumped to gets a
+  // darker primary.
   mark.chat-search-hit {
-    background: rgba(255, 199, 0, 0.45);
-    color: inherit;
-    border-radius: 2px;
-    padding: 0;
+    background: var(--primary-40, #5950ff);
+    color: #fff;
+    border-radius: 3px;
+    padding: 0 1px;
   }
 
   [data-search-current="1"] mark.chat-search-hit {
-    background: rgba(255, 149, 0, 0.75);
+    background: var(--primary-60, #4642a9);
   }
 
   // "Need permission to chat" gate — shown over window__chat-panel for a
@@ -4979,27 +5048,58 @@ html[data-theme="dark"] {
 
   // Loading placeholders (toolkit/search-results searchResultsLoading) while
   // channel.search is in flight: a result row's geometry (8px padding, name +
-  // time line, preview line), pulsing like the chat panel's own skeleton.
+  // time line, two preview lines) with a shimmer sweeping across the bars,
+  // each row a beat behind the one above.
   .window__search-result-ph {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 8px;
+    gap: 7px;
+    padding: 10px 8px;
+    border-radius: 8px;
+    animation: window-folder__search-results-in 0.2s ease-out backwards;
+
+    // Not `& + &`: under .window-folder that expands to
+    // `.window-folder X + .window-folder X`, which never matches.
+    & + .window__search-result-ph {
+      border-top: 1px solid var(--border-muted, rgba(0, 0, 0, 0.05));
+    }
+
+    @for $i from 2 through 3 {
+      &:nth-child(#{$i}) {
+        animation-delay: #{($i - 1) * 0.06}s;
+
+        .window__search-result-ph-name,
+        .window__search-result-ph-time,
+        .window__search-result-ph-preview {
+          animation-delay: #{($i - 1) * 0.15}s;
+        }
+      }
+    }
   }
 
   .window__search-result-ph-top {
     display: flex;
+    align-items: center;
     justify-content: space-between;
     gap: 8px;
+    margin-bottom: 2px;
   }
 
   .window__search-result-ph-name,
   .window__search-result-ph-time,
   .window__search-result-ph-preview {
-    height: 10px;
-    border-radius: 5px;
+    height: 8px;
+    border-radius: 999px;
     background-color: var(--border-default, #e5e5ea);
-    animation: drumee-skeleton-pulse 1.2s ease-in-out infinite;
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: window-folder__search-skeleton-shimmer 1.3s ease-in-out infinite;
 
     @media (prefers-reduced-motion: reduce) {
       animation: none;
@@ -5007,15 +5107,30 @@ html[data-theme="dark"] {
   }
 
   .window__search-result-ph-name {
-    width: 40%;
+    height: 10px;
+    width: 38%;
   }
 
   .window__search-result-ph-time {
-    width: 18%;
+    width: 14%;
+    opacity: 0.7;
   }
 
   .window__search-result-ph-preview {
-    width: 85%;
+    width: 92%;
+
+    & + .window__search-result-ph-preview {
+      width: 58%;
+    }
+  }
+
+  @keyframes window-folder__search-skeleton-shimmer {
+    from {
+      background-position: 150% 0;
+    }
+    to {
+      background-position: -50% 0;
+    }
   }
 
   .window__thread-menu__card {

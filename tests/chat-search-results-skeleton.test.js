@@ -51,7 +51,8 @@ test("loading: the label + placeholder rows shaped like results, hidden from scr
   assert.match(ph.content, /^<div aria-hidden="true">/);
   // one placeholder per row: name, time and preview bars like a real result
   assert.equal((ph.content.match(/window__search-result-ph"/g) || []).length, 3);
-  for (const bar of ["ph-name", "ph-time", "ph-preview"]) {
-    assert.equal((ph.content.match(new RegExp(`window__search-result-${bar}`, "g")) || []).length, 3, bar);
+  // name + time on top, two preview lines under them
+  for (const [bar, n] of [["ph-name", 3], ["ph-time", 3], ["ph-preview", 6]]) {
+    assert.equal((ph.content.match(new RegExp(`window__search-result-${bar}"`, "g")) || []).length, n, bar);
   }
 });

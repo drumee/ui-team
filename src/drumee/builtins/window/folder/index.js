@@ -4645,6 +4645,8 @@ class __window_folder extends mfsInteract {
         this._chatSearchRestore = null;
         this._hideChatSearchResults();
       }
+      // Never leave a header stuck mid slide-out (see _closeChatSearch).
+      delete bar.el.dataset.closing;
       bar.el.dataset.scope = fileNid ? "file" : general ? "general" : "folder";
       // Stamp the active file so a slow hydrate can't paint into a re-scoped header.
       bar.el.dataset.ftNid = fileNid ? `${fileNid}` : "";
@@ -4708,13 +4710,30 @@ class __window_folder extends mfsInteract {
     });
   }
 
-  // Back arrow → tear down the results overlay and restore the pre-search header.
+  // Back arrow → tear down the results and restore the pre-search header once
+  // the field has slid back out (skin data-closing; at once with reduced
+  // motion).
   _closeChatSearch() {
     this._hideChatSearchResults();
     const r =
       this._chatSearchRestore || { fileNid: "", label: "", general: false };
     this._chatSearchRestore = null;
-    return this._updateChatHeader(r.fileNid, r.label, r.general);
+    return this.ensurePart("chat-header-bar").then((bar) => {
+      if (!bar || !bar.el || (bar.isDestroyed && bar.isDestroyed())) return;
+      const input = bar.el.querySelector(`.${this.fig.group}__chat-search-input`);
+      if (bar.el.dataset.scope !== "search" || !input) {
+        return this._updateChatHeader(r.fileNid, r.label, r.general);
+      }
+      if (bar.el.dataset.closing === "1") return; // already sliding out
+      bar.el.dataset.closing = "1";
+      return new Promise((done) =>
+        ResultsPanel.afterAnimation(input, done),
+      ).then(() => {
+        // A scope switch re-fed the header meanwhile: it wins.
+        if (bar.el.dataset.scope !== "search") return;
+        return this._updateChatHeader(r.fileNid, r.label, r.general);
+      });
+    });
   }
 
   // Run a backend message search over the FULL history of the conversation the
