@@ -440,6 +440,14 @@ class settings_billing extends LetcBox {
     // implication local instead of resting on a check thirty lines away.
     if (!mirrorPlan) return;
     const lost = planKey(mirrorPlan);
+    // A disowned mirror is only a LOST plan when the entitlement now sits
+    // BELOW it. One superseded by a higher tier -- a hand-granted Business
+    // over an old Pro receipt, live on prod 2026-10-12 (Lexis) -- lost
+    // nothing, and offering the old tier back is a downgrade nobody asked
+    // for: every "Plan" click opened Checkout on Pro. That caller gets the
+    // plans grid, like anyone else with nothing to win back.
+    const held = String((this._subscription || {}).entitlement_plan || "");
+    if (planRank(held) >= planRank(lost)) return;
     // Neither end of the ladder is a purchase: free has no checkout, and
     // sovereign is sales-led.
     if (!/^(pro|team|business)$/.test(lost)) return;
