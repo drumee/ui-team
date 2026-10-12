@@ -5768,6 +5768,16 @@ class __window_folder extends mfsInteract {
 
   showFolderTab(tab) {
     if (this.activeTab === tab) {
+      // The rail pressed for the pane that is already up. The desk raises the
+      // pane right after (_railTab / _railAccess), and a live call brought back
+      // from its tile meanwhile fills the canvas INSIDE the window manager at
+      // the same z as the pane — so the raise only hid the call behind the
+      // pane instead of parking it. The next thing to take the pane's focus (a
+      // confirm card, a role dropdown) dropped its lift and handed the whole
+      // canvas back to the call: every role change or removal in the Access
+      // matrix "jumped to the meeting". Park it here too, as a tab change does
+      // below; a no-op when nothing is live or the call is already docked.
+      this._parkLiveCall();
       this.syncNewCtrlVisibility();
       return;
     }
