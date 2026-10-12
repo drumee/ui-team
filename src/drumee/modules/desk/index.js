@@ -49,6 +49,10 @@ const {
   SECURE_SHARE_CLOSE,
   SECURE_SHARE_VIEW_EVENT,
 } = require("window/folder/secure-share-column");
+const {
+  ACCESS_CLOSE,
+  accessOpen: accessOverlayOpen,
+} = require("window/folder/access-column");
 
 const INBOX_SLOT = "settings-main-slot";
 
@@ -6870,10 +6874,18 @@ class desk_module extends LetcBox {
     // before it parked, and the _endWindowTourUnlessAbout below is what would
     // otherwise set that off.
     this._navigated();
-    if (this.el) this.el.dataset.mtab = "access";
     // Same as _railTab, and for the same reason: an open-but-unraised pane is
     // not "no workspace". See _railWorkspace.
     const w = this._railWorkspace();
+    // A TOGGLE (Lexis, 2026-10-12): pressed while the members overlay is on
+    // screen, the rail's Access closes it exactly as the panel's ✕ does — the
+    // tab underneath stays and the rail is lit on it again. At once, before
+    // the section-screen exit and the tour wait below, which only an OPEN
+    // needs (same shape as the header's "workspace-access" toggle).
+    if (opt && opt.members && this._accessOverlayOnScreen(w)) {
+      return w.onUiEvent(w, { service: ACCESS_CLOSE });
+    }
+    if (this.el) this.el.dataset.mtab = "access";
     // Same as _railTab: Access is workspace content, so it cannot be reached
     // from behind a section screen either.
     this._leaveSectionScreen(w);
@@ -6915,6 +6927,32 @@ class desk_module extends LetcBox {
         members: opt && opt.members ? 1 : 0,
       });
     }
+  }
+
+  /**
+   * Is the rail's Access overlay up AND what the user is looking at — so that
+   * a press of Access means "close it"?
+   *
+   * Up but covered is not on screen: a section screen in settings-main-slot
+   * (Calendar, Inbox, Settings…), the Invite popup, or a popup window raised
+   * over the pane. A press then is the user asking to SEE Access, and the
+   * open path brings it back to the front (_leaveSectionScreen, raise).
+   *
+   * @param {Object} [w] the workspace window the rail acts on
+   * @returns {Boolean}
+   */
+  _accessOverlayOnScreen(w) {
+    if (!w || (w.isDestroyed && w.isDestroyed())) return false;
+    if (!accessOverlayOpen(w) || !_.isFunction(w.onUiEvent)) return false;
+    if (this._invitePopup && !(this._invitePopup.isDestroyed && this._invitePopup.isDestroyed())) {
+      return false;
+    }
+    const crumb = _.isFunction(this.getPart) ? this.getPart("breadcrumb") : null;
+    if (crumb && _.isFunction(crumb.isSectionMode) && crumb.isSectionMode()) return false;
+    // The same "is the pane raised" test Wm.loadWorkspace makes before it
+    // lifts the pane on a re-click.
+    if (w.el && w.el.dataset && w.el.dataset.state !== "1") return false;
+    return true;
   }
 
   /** Keep the topbar actions enabled when the breadcrumb context changes. */

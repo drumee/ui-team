@@ -15,7 +15,14 @@ const {
   showSeatLimitReached,
 } = require("libs/billing");
 const readCache = require("libs/read-cache");
-const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
+const {
+  ACCESS_TAB,
+  ACCESS_CLOSE,
+  showAccessOverlay,
+  hideAccessOverlay,
+  closeAccessColumn,
+  showsFileGrid,
+} = require("./access-column");
 const {
   SECURE_SHARE_TAB,
   SECURE_SHARE_CLOSE,
@@ -5819,7 +5826,15 @@ class __window_folder extends mfsInteract {
   }
 
   showFolderTab(tab) {
+    // Access is not a tab: it overlays the one that is up (./access-column),
+    // so it leaves `activeTab` — and everything keyed on it — alone.
+    if (tab === ACCESS_TAB) return this._openAccessOverlay();
+    // …and a tab pressed while one is still waiting for the split body wins.
+    this._accessOpenId = null;
     if (this.activeTab === tab) {
+      // The rail pressed for the tab that is under an Access overlay: the
+      // overlay goes, the tab stays.
+      hideAccessOverlay(this);
       this.syncNewCtrlVisibility();
       return;
     }
@@ -5829,6 +5844,10 @@ class __window_folder extends mfsInteract {
     // after those writes — where it used to be, inside switchView — it forced
     // a synchronous style+layout flush of the window on every rail click.
     this._stashPanelScroll();
+    // Any other tab takes an Access overlay down. AFTER the stash, so the
+    // panels it hid keep the offsets they were saved with; switchView below
+    // restores them.
+    hideAccessOverlay(this, { restore: false });
     const prevTab = this.activeTab;
     this.activeTab = tab;
     // Opening Task, Meet or Files clears that rail pill (panel_activity marks what is
@@ -5950,11 +5969,6 @@ class __window_folder extends mfsInteract {
           this._schedRefresh = this._refreshSchedule({ quiet: !this._schedStale });
           this._schedStale = 0;
           return;
-        case ACCESS_TAB:
-          // The rail's Access: the file grid and its gutter stay, and the
-          // members panel takes the chat panel's column (./access-column).
-          showAccessColumn(this, view);
-          return;
         case SECURE_SHARE_TAB:
           // "Manage access" on a share-area workspace: the same column, with
           // the secure-share panel in it (./secure-share-column).
@@ -6017,6 +6031,48 @@ class __window_folder extends mfsInteract {
         return;
       this.__folderView = view;
       return switchView(view);
+    });
+  }
+
+  /**
+   * The rail's Access: the members panel over the tab that is up — Files,
+   * Chat, Task or Meet — which stays the window's tab underneath
+   * (./access-column). Lexis, 2026-10-12: it used to switch the window to
+   * Files first.
+   *
+   * The secure-share view is the exception: it is an access panel of its own
+   * in the chat column, so it gives way to Files first, exactly as it did when
+   * Access was a tab of its own.
+   *
+   * A live call is parked as on any rail press (see the same-tab branch of
+   * showFolderTab): the desk raises the pane right after.
+   *
+   * @returns {Object|null|Promise} the mounted panel on re-entry, null on
+   *   first mount, a promise while the split body is still mounting
+   */
+  _openAccessOverlay() {
+    // Switched in this same handler: the switch has stashed and will restore
+    // the scroll itself, so the overlay must not stash again (see there).
+    const fromSecureShare = this.activeTab === SECURE_SHARE_TAB;
+    if (fromSecureShare) this.showFolderTab("files");
+    const overlayOpt = fromSecureShare ? { stash: false } : undefined;
+    this._parkLiveCall();
+    this.syncNewCtrlVisibility();
+    const view = this.__folderView;
+    if (view && !(view.isDestroyed && view.isDestroyed())) {
+      return showAccessOverlay(this, view, overlayOpt);
+    }
+    // Not mounted yet (a carried "access" on a fresh pane). A tab press
+    // meanwhile wins: showFolderTab clears the id.
+    const openId = _.uniqueId("folder-access-");
+    this._accessOpenId = openId;
+    return this.ensurePart("folder-view").then((v) => {
+      if (this._accessOpenId !== openId || !v || (v.isDestroyed && v.isDestroyed())) {
+        return null;
+      }
+      this._accessOpenId = null;
+      this.__folderView = v;
+      return showAccessOverlay(this, v, overlayOpt);
     });
   }
 

@@ -2475,7 +2475,7 @@
     // once and never feeds the split body again), so each tab is revealed by
     // its data-view below rather than rebuilt. Hidden here by default.
     // The rail's Access members panel too (window/folder/access-column): it
-    // is mounted once and revealed by [data-view="access"] below.
+    // is mounted once and revealed by [data-access="1"] below.
     .tasks-panel__ui,
     .window-folder__meeting-schedule,
     .permission-restricted__ui,
@@ -2525,12 +2525,12 @@
   //
   // 🚨 ACCESS IS NO LONGER IN THIS BLOCK. It used to share the layout, with the
   // members panel standing in the chat panel's column on the right. Figma
-  // 85:36439 moves it to a fixed-width panel anchored to the LEFT, floating
-  // over the file grid instead of squeezing it into the remaining third — see
-  // the [data-view="access"] block below, which needs the plain one-column
-  // grid and no drag gutter. Leaving it listed here would hand it a
-  // three-column template and a visible splitter that its own rules would then
-  // have to fight with !important.
+  // 85:36439 moves it to a fixed-width panel floating over the file grid
+  // instead of squeezing it into the remaining third — see the
+  // [data-access="1"] blocks below. The members panel must not be listed here
+  // either: Access now overlays the Files view itself (data-view stays
+  // "files"), and the `width: auto !important` below would undo the overlay's
+  // 512px width.
   &__split-body[data-view="files"],
   &__split-body[data-view="secure-share"] {
     grid-template-columns: var(--files-w, 66.667%) 12px minmax(0, 1fr);
@@ -2538,7 +2538,6 @@
     > .window-folder__files-panel,
     > .window__files-panel,
     > .window__chat-panel,
-    > .permission-restricted__ui,
     > .window-secure-share {
       margin: 0 !important;
       max-width: none !important;
@@ -2550,7 +2549,6 @@
       flex: 2 1 0 !important;
     }
     > .window__chat-panel,
-    > .permission-restricted__ui,
     > .window-secure-share {
       flex: 1 1 0 !important;
     }
@@ -2566,9 +2564,8 @@
     }
   }
 
-  // Access draws the members panel as a LEFT-ANCHORED OVERLAY over the file
-  // grid — Figma 85:36439, where the panel is an absolutely placed 512px card
-  // at x=80 (immediately right of the 64px rail) and the board is unchanged
+  // Access draws the members panel as an OVERLAY — Figma 85:36439, where the
+  // panel is an absolutely placed 512px card and the board is unchanged
   // underneath it.
   //
   // WHY AN OVERLAY AND NOT A COLUMN. As a column the panel took a third of the
@@ -2578,25 +2575,13 @@
   // grid exactly as the user left it and makes Access a thing you open and
   // close over your work, which is what the design draws.
   //
-  // The file grid keeps the whole body: the grid is back to ONE column here
-  // (the block above no longer lists access) and the drag gutter is hidden,
-  // since there is no second column left to drag against.
-  &__split-body[data-view="access"] {
-    grid-template-columns: minmax(0, 1fr);
+  // OVER WHATEVER TAB IS UP (Lexis, 2026-10-12). It used to be a view of its
+  // own (data-view="access"), which always put the file grid under it — from
+  // Task or Meet, Access jumped to Files. It is a stamp now, beside data-view
+  // (window/folder/access-column), so Chat, Task and Meet stay as they are
+  // underneath it.
+  &__split-body[data-access="1"] {
     position: relative;
-
-    .window__chat-panel,
-    .window__thread-rail,
-    .window__file-thread-panel {
-      display: none;
-    }
-
-    // !important to beat the shared Files/secure-share rule's own !important —
-    // that block sets the gutter to display:flex and this one has equal
-    // specificity, so the declaration has to win on weight rather than order.
-    > .window-folder__files-splitter {
-      display: none !important;
-    }
 
     > .permission-restricted__ui {
       display: flex;
@@ -2620,7 +2605,10 @@
       // the panel's centre returned the file list while the panel's own box
       // reported the right geometry and full opacity, which is the shape this
       // bug hides in — everything says visible and nothing is.
-      z-index: 120;
+      // 121, not 120: it now also opens over Meet, whose date picker and menu
+      // (meeting-schedule.scss) sit at 120 in the same stacking context and
+      // would win on DOM order when the schedule was mounted after the panel.
+      z-index: 121;
       border-radius: 8px;
       border: 1px solid rgba(0, 0, 0, 0.05);
       // Grey/white in the frame, and the same token the panel's own __main
@@ -2630,6 +2618,26 @@
       overflow: hidden;
       // It floats now, so it needs to read as lifted off the grid behind it.
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    }
+  }
+
+  // Over FILES it keeps the look it had as a view: the file grid takes the
+  // whole body — ONE column, the chat column steps aside and the drag gutter
+  // goes, since there is no second column left to drag against. Chat, Task
+  // and Meet are left exactly as they are under the card.
+  &__split-body[data-view="files"][data-access="1"] {
+    grid-template-columns: minmax(0, 1fr);
+
+    .window__chat-panel,
+    .window__thread-rail,
+    .window__file-thread-panel {
+      display: none;
+    }
+
+    // !important to beat the shared Files/secure-share rule's own !important,
+    // which sets the gutter to display:flex; this selector is the stronger one.
+    > .window-folder__files-splitter {
+      display: none !important;
     }
   }
 
@@ -2680,11 +2688,12 @@
     }
   }
 
-  // The members card enters on the switch, with its loading skeleton inside
-  // (permission/restricted skin); its rows fade in when they land.
-  // From the RIGHT, the edge it is anchored to — sliding in from the left
-  // would have it cross the file grid it sits over.
-  &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui {
+  // The members card enters every time it opens (display:none -> flex restarts
+  // the animation), with its loading skeleton inside (permission/restricted
+  // skin); its rows fade in when they land. From the RIGHT, the edge it is
+  // anchored to — sliding in from the left would have it cross the tab it
+  // sits over.
+  &__split-body[data-access="1"] > .permission-restricted__ui {
     animation: window-folder__column-in-from-right 0.2s ease-out backwards;
   }
 
@@ -2694,7 +2703,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui,
+    &__split-body[data-access="1"] > .permission-restricted__ui,
     &__split-body[data-view="files"][data-from-view="access"] > .window__chat-panel,
     &__split-body[data-view="files"][data-from-view="secure-share"] > .window__chat-panel {
       animation: none;
@@ -2790,12 +2799,6 @@
     &[data-view="meeting"] .window-folder__meeting-schedule {
       animation: window-folder__column-in-from-right 0.2s ease-out backwards;
     }
-
-    // The members panel is anchored to the RIGHT edge, so it enters from that
-    // side like the switch animation does.
-    &[data-view="access"] > .permission-restricted__ui {
-      animation: window-folder__column-in-from-right 0.2s ease-out backwards;
-    }
   }
 
   // The SAME selectors as the entrance above, so reduced motion wins on
@@ -2819,8 +2822,7 @@
       }
 
       &[data-view="task"] .tasks-panel__ui[data-painted="1"],
-      &[data-view="meeting"] .window-folder__meeting-schedule,
-      &[data-view="access"] > .permission-restricted__ui {
+      &[data-view="meeting"] .window-folder__meeting-schedule {
         animation: none;
       }
     }
@@ -4429,13 +4431,19 @@
         }
       }
 
-      &[data-view="access"] {
-        // Compact: no room for the file grid beside the members panel — it
-        // goes full width, as the chat does on the Chat tab.
+      // Doubled class for (0,4,0): Access now stamps data-access BESIDE the
+      // tab's data-view, and the Files rule above shows the chat panel at
+      // (0,4,0), the Task / Meet desktop rules show their panels at (0,3,0).
+      &.window__split-body[data-access="1"] {
+        // Compact: no room for anything beside the members panel — it goes
+        // full width over whichever tab is up, as the chat does on the Chat
+        // tab.
         .window__files-panel,
         .window__chat-panel,
         .window__meeting-panel,
         .window__tasks-panel,
+        .tasks-panel__ui,
+        .window-folder__meeting-schedule,
         .window__thread-rail,
         .window__file-thread-panel {
           display: none;

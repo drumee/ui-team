@@ -1123,11 +1123,17 @@ class __window_manager extends push {
    * (loadWorkspace's feed, the desk's rail highlight) that this is a plain
    * arrival. Anything else unrecognised answers null for the same reason.
    *
+   * Access is an overlay now, not a tab (window/folder/access-column), so it
+   * is read off its own flag: a switch made with it up still lands the next
+   * workspace on Access, as it did when Access was a tab — over Files there,
+   * the tab a fresh pane starts on.
+   *
    * @returns {String|null} "chat" | "task" | "meeting" | "access", or null for
    *   Files
    */
   paneTabToCarry() {
     const pane = this.headlessPane();
+    if (require("window/folder/access-column").accessOpen(pane)) return "access";
     const tab = pane && pane.activeTab;
     return [_a.chat, _a.task, "meeting", "access"].includes(tab) ? tab : null;
   }
