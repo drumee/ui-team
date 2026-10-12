@@ -987,6 +987,18 @@ export function chatPanel(ui) {
       topicSurfaces
         ? Skeletons.Box.Y({ className: `${grp}__ft-bar`, sys_pn: "ft-bar", partHandler: ui, dataset: { open: "0" } })
         : null,
+      // Backend message-search results (channel.search): a card in the File
+      // threads bar's slot, which hides while it is open (skin :has). Fed by
+      // the folder window (_runChatSearch), toggled via data-open; hidden
+      // until data-open="1". Folder team chat only.
+      isFolderChat
+        ? Skeletons.Box.Y({
+            className: `${grp}__search-results`,
+            sys_pn: "search-results",
+            partHandler: ui,
+            dataset: { open: 0 },
+          })
+        : null,
       // File-thread info card slot (Figma 2216-165656) — the in-place (Files
       // tab) file-thread view pins the same card the side panel shows. Empty +
       // hidden until the folder window feeds it on file scope; stays empty for
@@ -1000,18 +1012,6 @@ export function chatPanel(ui) {
           })
         : null,
       chat,
-      // Backend message-search results overlay (channel.search). Covers the
-      // message list while the header search bar is open and has a query; the
-      // folder window feeds it matching previews (_runChatSearch) and toggles
-      // data-open. Hidden by SCSS until data-open="1". Folder team chat only.
-      isFolderChat
-        ? Skeletons.Box.Y({
-            className: `${grp}__search-results`,
-            sys_pn: "search-results",
-            partHandler: ui,
-            dataset: { open: 0 },
-          })
-        : null,
       // Thread-switch dropdown overlay — populated on open (see folder
       // _toggleThreadMenu); absolute-positioned under the header, hidden until
       // data-open="1".

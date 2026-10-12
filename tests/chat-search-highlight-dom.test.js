@@ -190,3 +190,38 @@ test("live: an unrelated change (composer) repaints nothing; a re-rendered bubbl
   });
   assert.deepEqual(r, { count: 3, untouched: true, reMarked: ["budget"], otherKept: true });
 });
+
+test("jump scrolls only the chat's own scroller, never the clipped ancestors", { skip }, () => {
+  const r = runInChromium({
+    modules: { H: MOD },
+    body: `<div id="desk" style="height:300px;overflow:hidden">
+      <div style="height:40px"></div>
+      <div id="list" style="height:200px;overflow-y:auto">
+        ${Array.from({ length: 30 }, (_, i) => `<div id="m${i}" style="height:50px">m${i}</div>`).join("")}
+      </div>
+      <div style="height:400px"></div>
+    </div>`,
+    fn: async ({ H }, document) => {
+      const desk = document.getElementById("desk");
+      const list = document.getElementById("list");
+      const jump = (id) => {
+        const hit = document.getElementById(id);
+        H.scrollToHit(list, hit);
+        const l = list.getBoundingClientRect();
+        const h = hit.getBoundingClientRect();
+        return {
+          deskScroll: desk.scrollTop,
+          centreGap: Math.round((h.top + h.height / 2) - (l.top + l.height / 2)),
+          visible: h.top >= l.top && h.bottom <= l.bottom,
+        };
+      };
+      // mid-list: centred; last message: cannot be centred, and the leftover
+      // must NOT spill into the clipped ancestors (scrollIntoView moved the
+      // whole desk up by 65px here)
+      return { mid: jump("m20"), last: jump("m29") };
+    },
+  });
+  assert.deepEqual(r.mid, { deskScroll: 0, centreGap: 0, visible: true });
+  assert.equal(r.last.deskScroll, 0);
+  assert.equal(r.last.visible, true);
+});

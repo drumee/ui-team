@@ -4667,18 +4667,18 @@ html[data-theme="dark"] {
   // Backend message-search results overlay (channel.search). Fills the chat
   // panel below the header (same 44px anchor as the thread dropdown) and covers
   // the conversation while a query is active. Toggled via data-open.
-  // Drops down from the header search bar as a card, the File threads
-  // dropdown's look (_topic-surfaces .window__ft-list); the conversation stays
-  // visible below it. Capped and scrolling: up to 45 results.
+  // A card in the File threads bar's slot (toolkit chatPanel puts it right
+  // after the bar, which hides while it is open): under the topic strip, the
+  // bar's inset, the File threads dropdown's look. In flow, so the
+  // conversation shrinks below it instead of being covered. Capped and
+  // scrolling: up to 45 results.
   .window__search-results {
-    position: absolute;
-    top: 48px;
-    left: 12px;
-    right: 12px;
-    z-index: 25;
+    flex: 0 1 auto;
+    margin: 8px 12px;
     gap: 6px;
     padding: 8px;
-    max-height: min(360px, calc(100% - 120px));
+    max-height: min(360px, 50%);
+    min-height: 0;
     overflow-y: auto;
     border-radius: 12px;
     background: var(--normal-bg-elevated, #fff);

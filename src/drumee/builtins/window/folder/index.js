@@ -4834,9 +4834,7 @@ class __window_folder extends mfsInteract {
       const hit = list.getItemsByAttr("message_id", `${messageId}`)[0];
       if (!hit || !hit.el) return;
       ChatSearchHighlight.markCurrent(this, hit.el);
-      if (_.isFunction(hit.el.scrollIntoView)) {
-        hit.el.scrollIntoView({ block: "center" });
-      }
+      ChatSearchHighlight.scrollToHit(list.__container, hit.el);
     });
   }
 

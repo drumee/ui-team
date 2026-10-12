@@ -227,7 +227,22 @@ function markCurrent(win, el) {
   if (el && el.setAttribute) el.setAttribute(CURRENT, "1");
 }
 
+// Centre a jumped-to message in the chat's OWN scroller. Not scrollIntoView:
+// when the message cannot be centred (the last ones), it scrolls the leftover
+// into every clipped ancestor and shifts the whole desk up.
+function scrollToHit(scroller, el) {
+  if (!scroller || !el) return;
+  const s = scroller.getBoundingClientRect();
+  const h = el.getBoundingClientRect();
+  const offset = h.top - s.top + scroller.scrollTop;
+  scroller.scrollTop = Math.max(
+    0,
+    offset - (scroller.clientHeight - h.height) / 2,
+  );
+}
+
 module.exports = {
+  scrollToHit,
   HIT,
   foldRanges,
   markText,

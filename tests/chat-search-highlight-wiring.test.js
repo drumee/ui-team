@@ -34,6 +34,9 @@ test("jumping to a result keeps the search open and marks the message", () => {
   assert.doesNotMatch(m, /_closeChatSearch/);
   assert.match(m, /this\._dismissChatSearchResults\(\);/);
   assert.match(m, /ChatSearchHighlight\.markCurrent\(this, hit\.el\);/);
+  // scrollIntoView shifts the whole desk when the message cannot be centred
+  assert.doesNotMatch(m, /scrollIntoView/);
+  assert.match(m, /ChatSearchHighlight\.scrollToHit\(list\.__container, hit\.el\);/);
 });
 
 test("results are remembered and re-open when the field is focused again", () => {

@@ -1,7 +1,7 @@
-// chat-search-results-skin.test.js — the chat-header search results drop down
-// from the header as a card (the File threads dropdown's look), the
-// conversation stays visible below it, and the File threads bar hides while it
-// is open. Real layout: the compiled folder skin, measured in headless Chromium.
+// chat-search-results-skin.test.js — the chat-header search results take the
+// File threads bar's slot (under the topic strip, same inset, card look), the
+// conversation stays visible below them, and the File threads bar hides while
+// they are open. Real layout: the compiled folder skin, measured in headless Chromium.
 //
 //   node --test tests/chat-search-results-skin.test.js
 const test = require("node:test");
@@ -24,11 +24,12 @@ const page = (open, rows) => `<style>${BASE}${css}</style>
   <div id="panel" class="window__chat-panel box" data-flow="y" style="width:360px;height:640px">
     <div class="window__chat-header box" data-flow="x" data-scope="search" style="height:44px;flex:0 0 44px"></div>
     <div class="window__topic-strip box" data-flow="x" style="height:36px;flex:0 0 36px"></div>
-    <div id="ftbar" class="window__ft-bar box" data-flow="y"><div class="window__ft-bar-card box" data-flow="x" style="height:40px"></div></div>
-    <div id="chat" class="window__chat-widget box" data-flow="y" style="flex:1 1 auto"></div>
+    <div id="ftbar" class="window__ft-bar box" data-flow="y"><div id="ftcard" class="window__ft-bar-card box" data-flow="x" style="height:40px"></div></div>
     <div id="results" class="window__search-results box" data-flow="y" data-open="${open}">
       <div class="window__search-results-list box" data-flow="y">${'<div class="window__search-result box" data-flow="x" style="height:60px"></div>'.repeat(rows)}</div>
     </div>
+    <div class="window__chat-info-slot box" data-flow="y" data-open="0"></div>
+    <div id="chat" class="window__chat-widget box" data-flow="y" style="flex:1 1 auto;min-height:0"></div>
   </div>
 </div>`;
 
@@ -49,6 +50,8 @@ const measure = async (mods, document) => {
     right: panel.right - borderRight - r.right,
     height: r.height,
     panelHeight: panel.height,
+    ftCardTop: box("ftcard").top - panel.top - p.clientTop,
+    chatHeight: box("chat").height,
     overflowY: cs("results").overflowY,
     shadow: cs("results").boxShadow,
     radius: cs("results").borderTopLeftRadius,
@@ -57,19 +60,21 @@ const measure = async (mods, document) => {
 
 const skip = CHROMIUM ? false : "chromium not installed";
 
-test("open: a card under the header, inset, capped, scrolling; File threads bar hidden", { skip }, () => {
+test("open: a card in the File threads slot, inset, capped, scrolling; bar hidden", { skip }, () => {
+  const closed = runInChromium({ body: page(0, 3), fn: measure });
   const m = runInChromium({ body: page(1, 20), fn: measure });
   assert.equal(m.ftbarDisplay, "none");
   assert.equal(m.resultsDisplay, "flex");
-  assert.ok(m.top >= 44 && m.top <= 52, `top ${m.top}`);
+  // exactly where the File threads card sits when search is closed:
+  // under the topic strip, not over it
+  assert.equal(m.top, closed.ftCardTop);
   assert.equal(m.left, 12);
   assert.equal(m.right, 12);
   // 20 rows of 60px would be 1200px: the card caps and scrolls instead of
-  // covering the conversation down to the composer.
-  assert.ok(m.height <= 400, `height ${m.height}`);
-  assert.ok(m.height < m.panelHeight - 200, "conversation stays visible below the card");
+  // pushing the conversation out
+  assert.ok(m.height <= 360, `height ${m.height}`);
+  assert.ok(m.chatHeight >= 150, `conversation keeps ${m.chatHeight}px below the card`);
   assert.equal(m.overflowY, "auto");
-  assert.notEqual(m.shadow, "none");
   assert.equal(m.radius, "12px");
 });
 
