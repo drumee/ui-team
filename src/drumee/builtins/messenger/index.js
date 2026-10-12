@@ -123,17 +123,28 @@ class __lib_messenger extends LetcBox {
    * @returns 
    */
   resetMessage() {
-    this.__content.reset();
+    const editor = this.__content;
+    if (editor.content) {
+      // Empty the live contenteditable in place. The editable's reset()
+      // re-renders it, which drops the focus the user is typing with: it only
+      // came back on the editor's delayed autofocus (~1 s), and every key
+      // pressed right after Enter was lost. sync() keeps the model and the
+      // placeholder in step.
+      editor.content.innerHTML = "";
+      editor.sync();
+    } else {
+      editor.reset();
+      // The editable template renders whitespace ("\n    \n  ") inside the
+      // contenteditable when content is empty, which the browser briefly lays
+      // out as 3 lines (~72px). Strip it so the input stays at its single-line
+      // height during reset.
+      const inner = editor.el && editor.el.querySelector(".note-content");
+      if (inner && !inner.textContent.trim()) {
+        inner.innerHTML = "";
+      }
+    }
     this.__submit.el.dataset.state = _a.idle;
     this.__wrapperPopup.clear();
-    // The editable template renders whitespace ("\n    \n  ") inside the
-    // contenteditable when content is empty, which the browser briefly lays
-    // out as 3 lines (~72px). Strip it so the input stays at its single-line
-    // height during reset.
-    const inner = this.__content && this.__content.el && this.__content.el.querySelector(".note-content");
-    if (inner && !inner.textContent.trim()) {
-      inner.innerHTML = "";
-    }
   }
 
   /**
