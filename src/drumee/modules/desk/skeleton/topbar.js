@@ -9,28 +9,6 @@ const { createEntries } = require("./create-items");
 // means rather than a second copy that can disagree.
 const { muteState, muteService } = require("builtins/panel/activity/mute");
 
-const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
-  Skeletons.Button.Label({
-    ico,
-    label,
-    name,
-    className: `${pfx}__add-menu-item ${opts.iconClass || ""}`,
-    dataset: { highlight: opts.highlight ? 1 : 0 },
-    service,
-    uiHandler: [ui],
-  });
-
-// The tablet "more" menu splices these in. Rows come from ./create-items, the
-// one list this menu, the "+ New" dropdown below and the mobile drawer's
-// `create` mode all read — see that file for the mayWrite rule.
-const addItems = (pfx, ui, mayWrite) =>
-  createEntries(mayWrite).map((e) =>
-    addMenuItem(pfx, ui, e.ico, e.label, e.service, e.name, {
-      highlight: e.highlight,
-      iconClass: e.iconClass,
-    }),
-  );
-
 const newMenuRow = (pfx, ui, {
   ico,
   label,
@@ -152,15 +130,7 @@ const deskNewMenu = (pfx, ui, mayWrite) => {
 
 module.exports = function (ui) {
   const pfx = `${ui.fig.family}-topbar`;
-  // Same two questions the "+ New" dropdown asks, resolved once for the whole
-  // topbar: may this viewer create things in the workspace they are in, and may
-  // they manage its members? Both fail open when there is no workspace context
-  // (the user's own desk) or the privilege cannot be read.
   // (utilityCluster is defined below this component — hoisted function.)
-  const mayWrite =
-    typeof ui._curWorkspaceCanWrite === "function" ? ui._curWorkspaceCanWrite() : true;
-  const mayManage =
-    typeof ui._curWorkspaceCanManage === "function" ? ui._curWorkspaceCanManage() : true;
 
   return Skeletons.Box.X({
     debug: __filename,
@@ -261,44 +231,6 @@ module.exports = function (ui) {
           // "New workspace" — the one thing the old New menu offered that the
           // workspace toolbar does not — lives in the workspace switcher
           // dropdown instead.
-
-          // Tablet-only consolidated menu (768px ≤ width < 1024px).
-          // Flattened: nesting Skeletons.Menu inside another Menu's `items`
-          // breaks menu_topic's outside-click handling, so the six Add
-          // entries are spliced in at the top instead of behind a sub-menu.
-          Skeletons.Menu({
-            className: `${pfx}__more-wrapper`,
-            direction: _a.down,
-            opening: _e.click,
-            persistence: _a.once,
-            sys_pn: "moremenu",
-            partHandler: [ui],
-            trigger: Skeletons.Button.Label({
-              ico: "bars",
-              className: `${pfx}__more-btn`,
-            }),
-            items: require("libs/over-limit").isLocked()
-              // Read-only: creating, uploading and inviting are all paused —
-              // the consolidated tablet menu keeps nothing actionable.
-              ? []
-              : [
-                ...addItems(pfx, ui, mayWrite),
-                !mayWrite ? "" : Skeletons.Button.Label({
-                  ico: "app-upload",
-                  className: `${pfx}__more-menu-item`,
-                  label: LOCALE.UPLOAD,
-                  service: _e.upload,
-                  uiHandler: [ui],
-                }),
-                !mayManage ? "" : Skeletons.Button.Label({
-                  ico: "topbar-invite",
-                  className: `${pfx}__more-menu-item`,
-                  label: LOCALE.INVITE || "Invite",
-                  service: "invite-member",
-                  uiHandler: [ui],
-                }),
-              ],
-          }),
         ],
       }),
 
