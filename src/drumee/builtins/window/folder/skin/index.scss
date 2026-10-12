@@ -4298,6 +4298,14 @@
       grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
     }
 
+    // Fixed-width tracks leave the remainder (< one cell + gap) on the
+    // right; centre the tracks so the group's tiles sit balanced in a
+    // narrow window. The title spans 1 / -1, so it follows the tiles'
+    // left edge. No effect at ≤480px, where `1fr 1fr` fills the row.
+    .window__icons-scroll .group-section {
+      justify-content: center;
+    }
+
     .window__icons-scroll .media-grid__ui {
       width: var(--grid-cell-w);
       max-width: var(--grid-cell-w);
