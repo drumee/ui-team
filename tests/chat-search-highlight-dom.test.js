@@ -191,7 +191,7 @@ test("live: an unrelated change (composer) repaints nothing; a re-rendered bubbl
   assert.deepEqual(r, { count: 3, untouched: true, reMarked: ["budget"], otherKept: true });
 });
 
-test("jump scrolls only the chat's own scroller, never the clipped ancestors", { skip }, () => {
+test("jump smooth-scrolls only the chat's own scroller, never the clipped ancestors", { skip }, () => {
   const r = runInChromium({
     modules: { H: MOD },
     body: `<div id="desk" style="height:300px;overflow:hidden">
@@ -204,6 +204,13 @@ test("jump scrolls only the chat's own scroller, never the clipped ancestors", {
     fn: async ({ H }, document) => {
       const desk = document.getElementById("desk");
       const list = document.getElementById("list");
+      // A smooth scroll runs over frames the --dump-dom snapshot never sees:
+      // record the request, then land it at once to check the geometry.
+      const calls = [];
+      list.scrollTo = (opt) => {
+        calls.push(opt.behavior);
+        Element.prototype.scrollTo.call(list, { top: opt.top });
+      };
       const jump = (id) => {
         const hit = document.getElementById(id);
         H.scrollToHit(list, hit);
@@ -218,10 +225,16 @@ test("jump scrolls only the chat's own scroller, never the clipped ancestors", {
       // mid-list: centred; last message: cannot be centred, and the leftover
       // must NOT spill into the clipped ancestors (scrollIntoView moved the
       // whole desk up by 65px here)
-      return { mid: jump("m20"), last: jump("m29") };
+      const mid = jump("m20");
+      const last = jump("m29");
+      // reduced motion: jump at once
+      window.matchMedia = (q) => ({ matches: /reduce/.test(q) });
+      jump("m5");
+      return { mid, last, calls };
     },
   });
   assert.deepEqual(r.mid, { deskScroll: 0, centreGap: 0, visible: true });
   assert.equal(r.last.deskScroll, 0);
   assert.equal(r.last.visible, true);
+  assert.deepEqual(r.calls, ["smooth", "smooth", "auto"]);
 });

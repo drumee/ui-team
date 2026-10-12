@@ -227,18 +227,20 @@ function markCurrent(win, el) {
   if (el && el.setAttribute) el.setAttribute(CURRENT, "1");
 }
 
-// Centre a jumped-to message in the chat's OWN scroller. Not scrollIntoView:
-// when the message cannot be centred (the last ones), it scrolls the leftover
-// into every clipped ancestor and shifts the whole desk up.
+// Smooth-scroll a jumped-to message to the centre of the chat's OWN scroller.
+// Not scrollIntoView: when the message cannot be centred (the last ones), it
+// scrolls the leftover into every clipped ancestor and shifts the whole desk up.
 function scrollToHit(scroller, el) {
   if (!scroller || !el) return;
   const s = scroller.getBoundingClientRect();
   const h = el.getBoundingClientRect();
   const offset = h.top - s.top + scroller.scrollTop;
-  scroller.scrollTop = Math.max(
-    0,
-    offset - (scroller.clientHeight - h.height) / 2,
-  );
+  const top = Math.max(0, offset - (scroller.clientHeight - h.height) / 2);
+  // Glide to it, unless the user asked the system for reduced motion.
+  const reduce =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  scroller.scrollTo({ top, behavior: reduce ? "auto" : "smooth" });
 }
 
 module.exports = {
