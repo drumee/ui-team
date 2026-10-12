@@ -13,6 +13,7 @@ const { inviteWorkspaceScope } = require("libs/invite-scope");
 // with no session. Armed at module scope in index.web.js, consumed below.
 const fileDeepLink = require("libs/file-deep-link");
 const { openSupportMail } = require("libs/support");
+const { showToast, clearToast } = require("libs/toast");
 
 // Widgets that own a modal or panel Escape should close BEFORE the window that
 // hosts it. Opt-in: each implements onEscape() and returns true when it consumed
@@ -849,6 +850,7 @@ class desk_module extends LetcBox {
    *
    */
   onDestroy() {
+    clearToast(this);
     if (this._usageTimer) {
       clearInterval(this._usageTimer);
       this._usageTimer = null;
@@ -11686,7 +11688,14 @@ class desk_module extends LetcBox {
           if (!ok) return Wm.alert(LOCALE.MUTE_FAILED);
           // The row itself is repainted by _paintMuteRow, which listens for
           // the cache change setMute just broadcast; the menu has already
-          // closed itself (persistence: once) by the time this lands.
+          // closed itself (persistence: once) by the time this lands — so a
+          // small toast is the visible answer to the click. Worded from what
+          // the server now holds, not from what was asked.
+          const muted = !!(muteState() || {}).global;
+          showToast(this, {
+            part: this.getPart("desk-toast"),
+            message: muted ? LOCALE.MUTE_DONE_ALL : LOCALE.UNMUTE_DONE_ALL,
+          });
           if (_.isFunction(this._syncWorkspaceTopbar)) this._syncWorkspaceTopbar();
           return RADIO_BROADCAST.trigger("breadcrumb:content");
         });

@@ -9,7 +9,8 @@
  * clears it again. The timer lives on the host, so a second toast replaces
  * the first instead of being cut short by its timer.
  *
- * Consumers: widget/invite-popup (link Copy).
+ * Consumers: widget/invite-popup (link Copy), modules/desk (account menu
+ * Mute / Unmute).
  */
 
 const TOAST_MS = 3500;

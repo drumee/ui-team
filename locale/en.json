@@ -3057,6 +3057,7 @@
   "MUTE_ALL_WORKSPACES": "All workspaces",
   "MUTE_DONE_WORKSPACE": "Notifications muted for this workspace",
   "MUTE_DONE_ALL": "Notifications muted for all workspaces",
+  "UNMUTE_DONE_ALL": "Notifications turned back on for all workspaces",
   "MUTE_FAILED": "Could not mute notifications",
   "UNMUTE": "Unmute",
   "CREATE_CHILD_TASK": "Create child task items",

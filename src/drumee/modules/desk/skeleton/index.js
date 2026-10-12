@@ -539,6 +539,17 @@ const _desk_main = function (ui) {
     mainKids.push(_build_mobile_sheet_host(ui));
   }
 
+  // Empty until libs/toast feeds it: the desk's own small confirmations (the
+  // account menu's Mute / Unmute). libs/toast re-places it under the topbar's
+  // utility icons; the skin's top/right are only its fallback corner (phone).
+  mainKids.push(
+    Skeletons.Box.Y({
+      className: `${ui.fig.family}__toast-slot`,
+      sys_pn: "desk-toast",
+      partHandler: ui,
+    }),
+  );
+
   return Skeletons.Box.Y({
     className: `${ui.fig.family}__main`,
     debug: __filename,

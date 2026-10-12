@@ -18,6 +18,7 @@ html {
 @include meta.load-css("dialog");
 @include meta.load-css("sidebar");
 @include meta.load-css("meeting-toast");
+@include meta.load-css("desk-toast");
 
 .desk-module {
   // Where the padded canvas actually begins, published once so every
