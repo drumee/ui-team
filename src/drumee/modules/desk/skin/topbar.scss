@@ -1249,108 +1249,7 @@
     line-height: 1;
   }
 
-  // Tablet "more" menu — collapses Add / Upload / Invite into a single
-  // icon-only dropdown at 1024px and below (see media query at the
-  // bottom of this block).
-  &__more-wrapper {
-    display: none;
-    position: relative;
-    flex-shrink: 0;
-
-    .menu-topic-items {
-      background: var(--normal-bg);
-      border-radius: 4px;
-      padding: 8px;
-      gap: 4px;
-      min-width: 160px;
-      border: 1px solid var(--border-default);
-    }
-
-    .menu-topic-items__wrapper {
-      box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
-      border-radius: 4px;
-      right: 0;
-      min-width: 160px;
-      z-index: 99999;
-
-      &[data-direction="down"] {
-        top: calc(100% + 4px);
-      }
-    }
-
-    &:not([data-state="1"]) .menu-topic-items__wrapper {
-      visibility: hidden;
-    }
-  }
-
-  &__more-btn {
-    width: 28px;
-    height: 28px;
-    padding: 6px;
-    background-color: var(--white);
-    border-radius: 4px;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-
-    svg {
-      width: 16px;
-      height: 16px;
-      fill: var(--normal-fg-10);
-      color: var(--normal-fg-10);
-    }
-
-    &:hover {
-      background-color: var(--normal-bg-80);
-    }
-  }
-
-  &__more-menu-item {
-    display: flex !important;
-    flex-direction: row !important;
-    padding: 6px 8px;
-    gap: 8px;
-    border-radius: 4px;
-    align-items: center !important;
-    cursor: pointer;
-    white-space: nowrap;
-    width: 100%;
-    box-sizing: border-box;
-
-    > * {
-      display: inline-flex;
-      align-items: center;
-    }
-
-    .svg-wrapper,
-    .drumee-svg,
-    svg {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
-      color: var(--normal-fg-10);
-      fill: currentColor;
-    }
-
-    span.label,
-    section.label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--normal-fg);
-      white-space: nowrap;
-      line-height: 1;
-      display: inline-flex;
-      align-items: center;
-    }
-
-    &:hover {
-      background: rgba(89, 80, 255, 0.1);
-    }
-  }
-
-  // Tablet & narrower (≤ 1024px): swap the three primary actions for the
-  // consolidated menu. This covers narrow desktop-browser widths below 768px
+  // Tablet & narrower (≤ 1024px): hide the three primary actions. This covers narrow desktop-browser widths below 768px
   // too — there `data-device` is not "mobile" so the desktop topbar stays
   // mounted and the inline Add / Upload / Invite buttons would otherwise
   // reappear and overflow.
@@ -1360,18 +1259,6 @@
     &__add-wrapper,
     &__upload-btn,
     &__invite-btn {
-      display: none !important;
-    }
-
-    &__more-wrapper {
-      display: flex !important;
-    }
-  }
-
-  // Desktop: never show the consolidated "more" button — the three primary
-  // actions are displayed inline above 1024px.
-  @media (min-width: 1025px) {
-    &__more-btn {
       display: none !important;
     }
   }
@@ -2394,9 +2281,9 @@
     //
     // Nothing escapes: `.desk-module__topbar` is its own stacking context, so
     // every number in this file — the tip, and the 99999 on `__add-wrapper`,
-    // `__more-wrapper`, `__ws-wrapper`, `__account-wrapper` and
-    // `__search-suggestions` — is only ever compared with its siblings here.
-    // This is deliberately above all five, since any of them can overlap a
+    // `__ws-wrapper`, `__account-wrapper` and `__search-suggestions` — is
+    // only ever compared with its siblings here.
+    // This is deliberately above all four, since any of them can overlap a
     // bubble depending on how the row lays out, and a tooltip is
     // `pointer-events: none` (below) — it can cover a menu visually for the
     // moment it is shown, but it can never swallow a click meant for one.
@@ -2508,40 +2395,6 @@ html[data-theme="dark"] {
 
       &:hover {
         background-color: var(--normal-bg-40);
-      }
-    }
-
-    &__more-btn {
-      background-color: var(--normal-bg-elevated);
-
-      svg {
-        fill: var(--normal-fg);
-        color: var(--normal-fg);
-      }
-
-      &:hover {
-        background-color: var(--normal-bg-40);
-      }
-    }
-
-    &__more-wrapper .menu-topic-items {
-      background-color: var(--normal-bg-elevated);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    }
-
-    &__more-menu-item {
-      svg {
-        color: var(--normal-fg);
-        fill: var(--normal-fg);
-      }
-
-      span.label,
-      section.label {
-        color: var(--normal-fg);
-      }
-
-      &:hover {
-        background: rgba(89, 80, 255, 0.2);
       }
     }
 

@@ -4134,6 +4134,44 @@
         display: none !important;
       }
 
+      // Files tab keeps Team Chat beside the file grid instead of dropping
+      // it. Both columns hold a usable floor, and whatever no longer fits
+      // scrolls sideways inside the split body — scrollbar hidden, same
+      // recipe as __tab-bar-tabs above (trackpad / touch / shift+wheel still
+      // scroll it). No drag gutter here (hidden above), so the user's
+      // --files-w is not read; the plain 2:1 split takes over.
+      //
+      // `.window__split-body` is doubled in for (0,3,0): with !important that
+      // beats this block's `1fr !important` (0,1,0) AND the group body's
+      // ≤650px `.window .window__split-body` one (0,2,0) — a tie there would
+      // be settled by bundle order. Chat details still takes the chat's
+      // cell: chat-details.scss hides the chat panel with !important while
+      // [data-details="open"].
+      &.window__split-body[data-view="files"] {
+        grid-template-columns: minmax(360px, 2fr) minmax(300px, 1fr) !important;
+        column-gap: 12px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+
+        > .window__chat-panel {
+          display: flex;
+        }
+
+        // The generic gutter hide above is (0,2,0) and loses to the desktop
+        // Files rule's `[data-view="files"] > __files-splitter` (0,3,0)
+        // display:flex !important — the gutter then auto-places into the
+        // chat's column and pushes the chat onto a second row.
+        > .window-folder__files-splitter {
+          display: none !important;
+        }
+      }
+
       &[data-view="chat"] {
         // Compact (≤700px): no room for the rail/side panel beside the chat —
         // chat goes full width, the docked thread list + file-thread panel stay
@@ -4258,6 +4296,14 @@
     .window__icons-scroll .file-section,
     .window__icons-scroll .group-section {
       grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+    }
+
+    // Fixed-width tracks leave the remainder (< one cell + gap) on the
+    // right; centre the tracks so the group's tiles sit balanced in a
+    // narrow window. The title spans 1 / -1, so it follows the tiles'
+    // left edge. No effect at ≤480px, where `1fr 1fr` fills the row.
+    .window__icons-scroll .group-section {
+      justify-content: center;
     }
 
     .window__icons-scroll .media-grid__ui {
