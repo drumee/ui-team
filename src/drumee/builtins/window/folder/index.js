@@ -4753,6 +4753,9 @@ class __window_folder extends mfsInteract {
       if (q.length < 2) return this._hideChatSearchResults();
       const token = (this._chatSearchToken = (this._chatSearchToken || 0) + 1);
       this._showChatSearchLoading(token);
+      // The results replace the skeleton no sooner than SKELETON_MIN_MS after
+      // it appeared (search-results-panel holdSkeleton).
+      const shownAt = Date.now();
       // Mark the query in the conversation behind the overlay (all loaded
       // messages + attachment filenames), independent of the server reply.
       ChatSearchHighlight.start(this, q);
@@ -4780,18 +4783,19 @@ class __window_folder extends mfsInteract {
           },
           { async: 1 },
         )
-          .then((res) => {
-            // Drop stale / superseded responses.
-            if (token !== this._chatSearchToken) return;
-            const rows = _.isArray(res)
-              ? res
-              : (res && (res.data || res.rows)) || [];
-            this._showChatSearchResults(rows, token);
-          })
-          .catch(() => {
-            if (token !== this._chatSearchToken) return;
-            this._showChatSearchResults([], token);
-          });
+          .then(
+            (res) =>
+              _.isArray(res) ? res : (res && (res.data || res.rows)) || [],
+            () => [],
+          )
+          .then((rows) =>
+            ResultsPanel.holdSkeleton(shownAt).then(() => {
+              // Drop stale / superseded responses (also those that went stale
+              // while the skeleton was held).
+              if (token !== this._chatSearchToken) return;
+              this._showChatSearchResults(rows, token);
+            }),
+          );
       });
     }, 250);
   }

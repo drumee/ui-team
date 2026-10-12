@@ -54,6 +54,10 @@ test("results open and close through the animated panel; an emptied field closes
   // a debounced query opens the card at once with placeholders, then the reply replaces them
   assert.match(debounced, /this\._showChatSearchLoading\(token\);[\s\S]*fetchService/);
   assert.match(debounced, /this\._showChatSearchResults\(rows, token\)/);
+  // the results wait until the skeleton has been up SKELETON_MIN_MS
+  assert.match(debounced, /const shownAt = Date\.now\(\);/);
+  assert.match(debounced, /ResultsPanel\.holdSkeleton\(shownAt\)/);
+  assert.ok(debounced.indexOf("holdSkeleton") < debounced.indexOf("_showChatSearchResults(rows, token)"), "hold before results");
   const loading = method("_showChatSearchLoading");
   assert.match(loading, /panel\.feed\(searchResultsLoading\(this\)\);/);
   assert.match(loading, /ResultsPanel\.open\(panel\.el\);/);

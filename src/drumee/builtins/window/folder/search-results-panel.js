@@ -5,8 +5,8 @@
 // animation to end, so the card fades out instead of vanishing (and the File
 // threads bar it replaces stays hidden until then).
 //
-// No requires and no timers: tests load this file in a plain <script> under
-// `chromium --dump-dom`.
+// No requires: tests load this file in a plain <script> under
+// `chromium --dump-dom`. Only holdSkeleton uses a timer (tested under node).
 
 // Run `cb` once `el`'s current animation ends (or is cancelled, e.g. its tab
 // hidden mid-way); at once when it has none (reduced motion, or no skin).
@@ -36,4 +36,16 @@ function close(el) {
   });
 }
 
-module.exports = { open, close, afterAnimation };
+// The loading skeleton stays up at least this long before the results
+// replace it, however fast channel.search answers.
+const SKELETON_MIN_MS = 2000;
+
+// Resolves once the skeleton shown at `shownAt` (Date.now()) has been on
+// screen SKELETON_MIN_MS; at once when it already has.
+function holdSkeleton(shownAt) {
+  const left = shownAt + SKELETON_MIN_MS - Date.now();
+  if (left <= 0) return Promise.resolve();
+  return new Promise((done) => setTimeout(done, left));
+}
+
+module.exports = { open, close, afterAnimation, holdSkeleton, SKELETON_MIN_MS };
