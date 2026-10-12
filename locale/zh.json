@@ -2800,6 +2800,7 @@
   "MUTE_ALL_WORKSPACES": "所有工作区",
   "MUTE_DONE_WORKSPACE": "已关闭此工作区的通知",
   "MUTE_DONE_ALL": "已关闭所有工作区的通知",
+  "UNMUTE_DONE_ALL": "已重新开启所有工作区的通知",
   "MUTE_FAILED": "无法关闭通知",
   "UNMUTE": "开启通知",
   "CREATE_CHILD_TASK": "创建子任务项",

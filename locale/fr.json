@@ -2806,6 +2806,7 @@
   "MUTE_ALL_WORKSPACES": "Tous les espaces de travail",
   "MUTE_DONE_WORKSPACE": "Notifications désactivées pour cet espace de travail",
   "MUTE_DONE_ALL": "Notifications désactivées pour tous les espaces de travail",
+  "UNMUTE_DONE_ALL": "Notifications réactivées pour tous les espaces de travail",
   "MUTE_FAILED": "Impossible de désactiver les notifications",
   "UNMUTE": "Réactiver les notifications",
   "CREATE_CHILD_TASK": "Créer des tâches enfants",
