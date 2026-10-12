@@ -975,7 +975,9 @@ class desk_module extends LetcBox {
     };
     const shown = showContactConnectedToast(
       { id, fullname: name },
-      id ? () => this.openPeerChat(peer) : null,
+      // openPeerChat ships with the Contacts multi-action panel; on a branch
+      // without it the card simply has no Message button.
+      id && typeof this.openPeerChat === "function" ? () => this.openPeerChat(peer) : null,
     );
     if (!shown && window.Wm && Wm.acknowledge) {
       Wm.acknowledge(LOCALE.CONTACT_INVITE_JOINED.format(_.escape(name)));
