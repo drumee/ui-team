@@ -38,7 +38,7 @@ function close(el) {
 
 // The loading skeleton stays up at least this long before the results
 // replace it, however fast channel.search answers.
-const SKELETON_MIN_MS = 2000;
+const SKELETON_MIN_MS = 1000;
 
 // Resolves once the skeleton shown at `shownAt` (Date.now()) has been on
 // screen SKELETON_MIN_MS; at once when it already has.
