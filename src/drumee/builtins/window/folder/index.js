@@ -39,10 +39,10 @@ const {
   gridFilesBrowser,
   chatHeaderBar,
   chatSearchBar,
-  searchResults,
   fileThreadPanelContent,
   fileThreadInfoCard,
 } = require("../skeleton/toolkit");
+const { searchResults } = require("../skeleton/toolkit/search-results");
 
 require("./skin");
 

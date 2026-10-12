@@ -4918,6 +4918,15 @@ html[data-theme="dark"] {
     -webkit-box-orient: vertical;
   }
 
+  // Filename-only hit: which attachment matched (channel.search match_filename).
+  .window__search-result-file {
+    font-size: 12px;
+    color: var(--normal-fg-50);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .window__thread-menu__card {
     gap: 8px;
     padding: 12px;
