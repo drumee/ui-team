@@ -219,6 +219,9 @@ module.exports = {
   image_viewer: function () {
     return import("./builtins/player/image");
   },
+  player_file_switcher: function () {
+    return import("./builtins/player/widget/file-switcher");
+  },
   locale_language: function () {
     return import("./modules/devel/locale/language");
   },

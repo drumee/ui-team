@@ -3431,5 +3431,8 @@
   "CONTACT_NOTE_PLACEHOLDER": "Note anything important for this person, such as their time zone, online hours or deadlines.",
   "CALL_NO_ANSWER": "No answer",
   "CONTACT_INVITE_JOINED": "You are now connected with {0}",
-  "CONTACT_CONNECTED_SAY_HELLO": "You are now connected. Say hello!"
+  "CONTACT_CONNECTED_SAY_HELLO": "You are now connected. Say hello!",
+  "CREATE_NEW_FILE": "Create new file",
+  "RECENTLY_VIEWED": "Recently viewed",
+  "OTHER_FILES": "Other files"
 }

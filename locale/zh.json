@@ -3200,5 +3200,8 @@
   "CONTACT_NOTE_PLACEHOLDER": "记录关于此人的重要信息，例如时区、在线时间或截止日期。",
   "CALL_NO_ANSWER": "无人接听",
   "CONTACT_INVITE_JOINED": "你现在已与 {0} 建立联系",
-  "CONTACT_CONNECTED_SAY_HELLO": "你们现在已建立联系，打个招呼吧！"
+  "CONTACT_CONNECTED_SAY_HELLO": "你们现在已建立联系，打个招呼吧！",
+  "CREATE_NEW_FILE": "新建文件",
+  "RECENTLY_VIEWED": "最近查看",
+  "OTHER_FILES": "其他文件"
 }

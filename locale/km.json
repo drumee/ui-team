@@ -3200,5 +3200,8 @@
   "CONTACT_NOTE_PLACEHOLDER": "កត់ត្រាអ្វីដែលសំខាន់អំពីមនុស្សនេះ ដូចជាតំបន់ម៉ោង ម៉ោងអនឡាញ ឬកាលកំណត់។",
   "CALL_NO_ANSWER": "គ្មានការឆ្លើយតប",
   "CONTACT_INVITE_JOINED": "ឥឡូវនេះអ្នកបានភ្ជាប់ជាមួយ {0}",
-  "CONTACT_CONNECTED_SAY_HELLO": "ឥឡូវនេះអ្នកបានភ្ជាប់គ្នាហើយ។ សូមស្វាគមន៍!"
+  "CONTACT_CONNECTED_SAY_HELLO": "ឥឡូវនេះអ្នកបានភ្ជាប់គ្នាហើយ។ សូមស្វាគមន៍!",
+  "CREATE_NEW_FILE": "បង្កើតឯកសារថ្មី",
+  "RECENTLY_VIEWED": "បានមើលថ្មីៗ",
+  "OTHER_FILES": "ឯកសារផ្សេងទៀត"
 }
