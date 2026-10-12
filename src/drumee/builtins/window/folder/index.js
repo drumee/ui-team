@@ -43,7 +43,10 @@ const {
   fileThreadPanelContent,
   fileThreadInfoCard,
 } = require("../skeleton/toolkit");
-const { searchResults } = require("../skeleton/toolkit/search-results");
+const {
+  searchResults,
+  searchResultsLoading,
+} = require("../skeleton/toolkit/search-results");
 
 require("./skin");
 
@@ -4716,18 +4719,21 @@ class __window_folder extends mfsInteract {
 
   // Run a backend message search over the FULL history of the conversation the
   // search bar sits above (folder-chat): #General team chat when not file-scoped,
-  // else the open file thread. Debounced; queries < 2 chars hide the overlay
-  // (the server returns [] anyway). A monotonic token discards stale responses
-  // so a slower earlier query cannot overwrite a newer one.
+  // else the open file thread. Show AND close follow the debounced change, so
+  // clearing and retyping quickly never flickers the card: a settled query
+  // < 2 chars (empty included) closes it (the server returns [] anyway), a
+  // settled query opens it at once with placeholders until the reply lands.
+  // A monotonic token discards stale responses so a slower earlier query
+  // cannot overwrite a newer one.
   _runChatSearch(text) {
     const q = `${text || ""}`.trim();
     if (this._chatSearchTimer) clearTimeout(this._chatSearchTimer);
-    if (q.length < 2) {
-      this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
-      return this._hideChatSearchResults();
-    }
+    this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
     this._chatSearchTimer = setTimeout(() => {
+      this._chatSearchTimer = null;
+      if (q.length < 2) return this._hideChatSearchResults();
       const token = (this._chatSearchToken = (this._chatSearchToken || 0) + 1);
+      this._showChatSearchLoading(token);
       // Mark the query in the conversation behind the overlay (all loaded
       // messages + attachment filenames), independent of the server reply.
       ChatSearchHighlight.start(this, q);
@@ -4761,18 +4767,31 @@ class __window_folder extends mfsInteract {
             const rows = _.isArray(res)
               ? res
               : (res && (res.data || res.rows)) || [];
-            this._showChatSearchResults(rows);
+            this._showChatSearchResults(rows, token);
           })
           .catch(() => {
             if (token !== this._chatSearchToken) return;
-            this._showChatSearchResults([]);
+            this._showChatSearchResults([], token);
           });
       });
     }, 250);
   }
 
-  _showChatSearchResults(rows) {
+  // Open the card with placeholder rows while channel.search is in flight.
+  _showChatSearchLoading(token) {
     return this.ensurePart("search-results").then((panel) => {
+      // Closed or superseded while the part resolved.
+      if (token !== this._chatSearchToken) return;
+      if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
+        return;
+      panel.feed(searchResultsLoading(this));
+      ResultsPanel.open(panel.el);
+    });
+  }
+
+  _showChatSearchResults(rows, token) {
+    return this.ensurePart("search-results").then((panel) => {
+      if (token !== this._chatSearchToken) return;
       if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
         return;
       panel.feed(searchResults(this, rows));

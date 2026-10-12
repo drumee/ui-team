@@ -45,8 +45,22 @@ test("clicking a result keeps the results open, marks and scrolls to the message
 test("results open and close through the animated panel; an emptied field closes them", () => {
   assert.match(method("_showChatSearchResults"), /ResultsPanel\.open\(panel\.el\);/);
   assert.match(method("_hideChatSearchResults"), /ResultsPanel\.close\(panel\.el\);/);
-  // emptying the field (or < 2 chars) goes straight to the shared teardown
-  assert.match(method("_runChatSearch"), /if \(q\.length < 2\) \{[^}]*return this\._hideChatSearchResults\(\);/);
+  // show AND close both follow the debounced change: nothing happens on a
+  // keystroke itself, so clearing and retyping quickly never flickers the card
+  const run = method("_runChatSearch");
+  const debounced = run.slice(run.indexOf("setTimeout("));
+  assert.ok(run.indexOf("_hideChatSearchResults") > run.indexOf("setTimeout("), "close is debounced");
+  assert.match(debounced, /if \(q\.length < 2\) return this\._hideChatSearchResults\(\);/);
+  // a debounced query opens the card at once with placeholders, then the reply replaces them
+  assert.match(debounced, /this\._showChatSearchLoading\(token\);[\s\S]*fetchService/);
+  assert.match(debounced, /this\._showChatSearchResults\(rows, token\)/);
+  const loading = method("_showChatSearchLoading");
+  assert.match(loading, /panel\.feed\(searchResultsLoading\(this\)\);/);
+  assert.match(loading, /ResultsPanel\.open\(panel\.el\);/);
+  // a part that resolves after the search was closed / superseded paints nothing
+  for (const m of ["_showChatSearchLoading", "_showChatSearchResults"]) {
+    assert.match(method(m), /if \(token !== this\._chatSearchToken\) return;/, m);
+  }
   // nothing dismisses / re-opens around a click any more
   assert.ok(!src.includes("_dismissChatSearchResults"));
   assert.ok(!src.includes("_reopenChatSearchResults"));
