@@ -97,7 +97,7 @@ function searchResults(ui, rows) {
 
 /**
  * Placeholder content for the search-results card while channel.search is in
- * flight: the same label + three rows shaped like a result (name + time,
+ * flight: the same label + one row shaped like a result (name + time,
  * two preview lines; the folder skin sweeps a shimmer across them). Swapped for searchResults() when the
  * reply lands. Decorative — nothing in it is worth announcing.
  * @param {*} ui folder window
@@ -121,7 +121,7 @@ function searchResultsLoading(ui) {
     }),
     Skeletons.Element({
       className: `${grp}__search-results-loading`,
-      content: `<div aria-hidden="true">${row.repeat(3)}</div>`,
+      content: `<div aria-hidden="true">${row}</div>`,
     }),
   ];
 }

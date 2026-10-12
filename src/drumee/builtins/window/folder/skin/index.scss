@@ -5048,8 +5048,7 @@ html[data-theme="dark"] {
 
   // Loading placeholders (toolkit/search-results searchResultsLoading) while
   // channel.search is in flight: a result row's geometry (8px padding, name +
-  // time line, two preview lines) with a shimmer sweeping across the bars,
-  // each row a beat behind the one above.
+  // time line, two preview lines) with a shimmer sweeping across the bars.
   // The placeholders' wrapper is a Skeletons.Element, whose `wrapper` kind
   // defaults to flow x: ui-styles makes it a ROW flexbox, the inner block
   // shrinks to its content and every %-wide bar collapses to a dot. Stack it
@@ -5072,24 +5071,6 @@ html[data-theme="dark"] {
     padding: 10px 8px;
     border-radius: 8px;
     animation: window-folder__search-results-in 0.2s ease-out backwards;
-
-    // Not `& + &`: under .window-folder that expands to
-    // `.window-folder X + .window-folder X`, which never matches.
-    & + .window__search-result-ph {
-      border-top: 1px solid var(--border-muted, rgba(0, 0, 0, 0.05));
-    }
-
-    @for $i from 2 through 3 {
-      &:nth-child(#{$i}) {
-        animation-delay: #{($i - 1) * 0.06}s;
-
-        .window__search-result-ph-name,
-        .window__search-result-ph-time,
-        .window__search-result-ph-preview {
-          animation-delay: #{($i - 1) * 0.15}s;
-        }
-      }
-    }
   }
 
   .window__search-result-ph-top {

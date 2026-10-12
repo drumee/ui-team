@@ -42,17 +42,17 @@ test("a text hit has no filename line; no rows → No results", () => {
   assert.equal(empty[0].className, "window__search-results-empty");
 });
 
-test("loading: the label + placeholder rows shaped like results, hidden from screen readers", () => {
+test("loading: the label + one placeholder row shaped like a result, hidden from screen readers", () => {
   const tree = searchResultsLoading(ui);
   assert.equal(tree[0].className, "window__search-results-label");
   const ph = tree[1];
   assert.equal(ph.kind, "Element");
   assert.equal(ph.className, "window__search-results-loading");
   assert.match(ph.content, /^<div aria-hidden="true">/);
-  // one placeholder per row: name, time and preview bars like a real result
-  assert.equal((ph.content.match(/window__search-result-ph"/g) || []).length, 3);
+  // a single placeholder row: name, time and preview bars like a real result
+  assert.equal((ph.content.match(/window__search-result-ph"/g) || []).length, 1);
   // name + time on top, two preview lines under them
-  for (const [bar, n] of [["ph-name", 3], ["ph-time", 3], ["ph-preview", 6]]) {
+  for (const [bar, n] of [["ph-name", 1], ["ph-time", 1], ["ph-preview", 2]]) {
     assert.equal((ph.content.match(new RegExp(`window__search-result-${bar}"`, "g")) || []).length, n, bar);
   }
 });

@@ -89,47 +89,41 @@ test("an element with no hide animation (reduced motion) closes at once", { skip
   assert.equal(r, "0");
 });
 
-test("loading placeholders: three rows of pulsing bars with real size", { skip }, () => {
-  const ph = (n) =>
+test("loading placeholder: one full-width row of shimmering bars", { skip }, () => {
+  const ph =
     '<div class="window__search-result-ph"><div class="window__search-result-ph-top">' +
-    '<div id="name' + n + '" class="window__search-result-ph-name"></div><div class="window__search-result-ph-time"></div></div>' +
+    '<div id="name0" class="window__search-result-ph-name"></div><div class="window__search-result-ph-time"></div></div>' +
     '<div class="window__search-result-ph-preview"></div><div class="window__search-result-ph-preview"></div></div>';
   const r = runInChromium({
     body: body.replace('<div id="row">row</div>',
       // As ui-core renders Skeletons.Element: the `wrapper` kind defaults to
-      // flow x, i.e. a row flexbox (the screenshot's collapsed dots).
-      `<div class="window__search-results-loading drumee-widget box" data-flow="x"><div aria-hidden="true">${ph(0)}${ph(1)}${ph(2)}</div></div>`),
+      // flow x, i.e. a row flexbox (bars collapsed to dots before the fix).
+      `<div class="window__search-results-loading drumee-widget box" data-flow="x"><div aria-hidden="true">${ph}</div></div>`),
     fn: async (mods, document) => {
       document.getElementById("results").dataset.open = "1";
       const bars = [...document.querySelectorAll('[class^="window__search-result-ph-"]:not(.window__search-result-ph-top)')];
-      const rows = [...document.querySelectorAll(".window__search-result-ph")];
+      const row = document.querySelector(".window__search-result-ph");
       return {
         bars: bars.length,
-        // layout size: the rows' entrance animation scales the rects
+        // layout size: the card's entrance animation scales the rects
         sized: bars.every((b) => b.offsetHeight >= 8 && b.offsetWidth >= 20),
-        previews: [...rows[0].querySelectorAll(".window__search-result-ph-preview")].map((b) => b.offsetWidth),
-        separated: getComputedStyle(rows[1]).borderTopStyle,
+        previews: [...row.querySelectorAll(".window__search-result-ph-preview")].map((b) => b.offsetWidth),
         pulse: [...new Set(bars.map((b) => getComputedStyle(b).animationName))],
-        rowHeight: Math.round(rows[0].getBoundingClientRect().height),
-        rowWidth: rows[0].offsetWidth,
         gradient: /gradient/.test(getComputedStyle(bars[0]).backgroundImage),
-        staggered: getComputedStyle(rows[0].querySelector(".window__search-result-ph-name")).animationDelay !==
-          getComputedStyle(rows[1].querySelector(".window__search-result-ph-name")).animationDelay,
-        nameWider: document.getElementById("name0").getBoundingClientRect().width >
-          document.querySelector(".window__search-result-ph-time").getBoundingClientRect().width,
+        rowHeight: row.offsetHeight,
+        rowWidth: row.offsetWidth,
+        nameWider: document.getElementById("name0").offsetWidth >
+          document.querySelector(".window__search-result-ph-time").offsetWidth,
       };
     },
   });
-  assert.equal(r.bars, 12);
+  assert.equal(r.bars, 4);
   assert.equal(r.sized, true);
-  assert.ok(r.rowWidth > 250, `rows span the card (${r.rowWidth}px)`);
-  // a shimmer sweeping across each bar, rows out of step
+  assert.ok(r.rowWidth > 250, `the row spans the card (${r.rowWidth}px)`);
   assert.deepEqual(r.pulse, ["window-folder__search-skeleton-shimmer"]);
   assert.equal(r.gradient, true);
   // the second preview line is the short one, like a wrapped message
   assert.ok(r.previews[1] < r.previews[0] * 0.75, `previews ${r.previews}`);
-  assert.equal(r.separated, "solid");
-  assert.equal(r.staggered, true);
   assert.ok(r.rowHeight >= 40 && r.rowHeight <= 72, `row ${r.rowHeight}`);
   assert.equal(r.nameWider, true);
 });
