@@ -4684,6 +4684,20 @@ html[data-theme="dark"] {
     }
   }
 
+  // Chat-header search hits (./chat-search-highlight) in message text and
+  // attachment filenames. Translucent so own (coloured) and peer bubbles both
+  // keep their text colour; the message a result jumped to gets a stronger one.
+  mark.chat-search-hit {
+    background: rgba(255, 199, 0, 0.45);
+    color: inherit;
+    border-radius: 2px;
+    padding: 0;
+  }
+
+  [data-search-current="1"] mark.chat-search-hit {
+    background: rgba(255, 149, 0, 0.75);
+  }
+
   // "Need permission to chat" gate — shown over window__chat-panel for a
   // view-only member (no chat privilege). Covers the whole panel with a blurred
   // backdrop so the conversation behind is obscured but visible; a centered

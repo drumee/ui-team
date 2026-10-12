@@ -17,6 +17,7 @@ const {
 const readCache = require("libs/read-cache");
 const CDHost = require("./chat-details-host");
 const FilesSearch = require("./files-search");
+const ChatSearchHighlight = require("./chat-search-highlight");
 const IconsLoading = require("./icons-loading");
 const { iconsSkeleton, searchStatus } = require("../skeleton/toolkit/icons-skeleton");
 const ChatExportOverlay = require("./chat-export-overlay");
@@ -764,6 +765,8 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._chatSearchTimer);
       this._chatSearchTimer = null;
     }
+    // Chat-header search highlight: its observer watches the folder chat.
+    ChatSearchHighlight.stop(this);
     // Search timer, Esc listener and the loading stamp's list listeners.
     FilesSearch.teardown(this);
     if (this._mmInviteeBlurTimer) {
@@ -1645,7 +1648,13 @@ class __window_folder extends mfsInteract {
       let tries = 0;
       const focusInput = () => {
         const inputEl = child.el && child.el.querySelector("input");
-        if (inputEl) return inputEl.focus();
+        if (inputEl) {
+          // Back in the field after a jump → show the results again.
+          inputEl.addEventListener("focus", () =>
+            this._reopenChatSearchResults(),
+          );
+          return inputEl.focus();
+        }
         if (tries++ < 20) setTimeout(focusInput, 25);
       };
       focusInput();
@@ -4724,6 +4733,9 @@ class __window_folder extends mfsInteract {
     }
     this._chatSearchTimer = setTimeout(() => {
       const token = (this._chatSearchToken = (this._chatSearchToken || 0) + 1);
+      // Mark the query in the conversation behind the overlay (all loaded
+      // messages + attachment filenames), independent of the server reply.
+      ChatSearchHighlight.start(this, q);
       // Scope = the folder-chat's current file thread (empty = team chat). Pass
       // file_nid too: the thread id resolves asynchronously, so on an in-place
       // file thread it can still be empty here — the server then resolves the
@@ -4770,15 +4782,20 @@ class __window_folder extends mfsInteract {
         return;
       panel.feed(searchResults(this, rows));
       panel.el.dataset.open = "1";
+      this._chatSearchHasResults = true;
     });
   }
 
+  // Shared search teardown (short query, back arrow, header re-feed, revoked
+  // thread): drops the results AND the highlight in the conversation.
   _hideChatSearchResults() {
     if (this._chatSearchTimer) {
       clearTimeout(this._chatSearchTimer);
       this._chatSearchTimer = null;
     }
     this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
+    this._chatSearchHasResults = false;
+    ChatSearchHighlight.stop(this);
     const panel = this._searchResultsPart;
     if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
       panel.el.dataset.open = "0";
@@ -4786,17 +4803,38 @@ class __window_folder extends mfsInteract {
     }
   }
 
-  // A result row → close the search and scroll to the message if it is currently
-  // loaded in the conversation list (older/unloaded messages just close search).
+  // A result was picked: uncover the (highlighted) conversation but keep the
+  // rows, the query and the search bar — the field's focus brings them back.
+  _dismissChatSearchResults() {
+    const panel = this._searchResultsPart;
+    if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
+      panel.el.dataset.open = "0";
+    }
+  }
+
+  _reopenChatSearchResults() {
+    if (!this._chatSearchHasResults) return;
+    const panel = this._searchResultsPart;
+    if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
+      panel.el.dataset.open = "1";
+    }
+  }
+
+  // A result row → uncover the conversation (search stays open, every hit stays
+  // highlighted; the back arrow ends it) and scroll to the message if it is
+  // loaded, giving it the stronger "current" highlight. Older, unloaded
+  // messages just uncover the conversation.
   _jumpToSearchResult(cmd) {
     const messageId = cmd && cmd.mget && cmd.mget("message_id");
-    this._closeChatSearch();
+    this._dismissChatSearchResults();
     if (!messageId) return;
     return this.ensurePart("folder-chat").then((chat) => {
       const list = chat && chat.__list;
       if (!list || !_.isFunction(list.getItemsByAttr)) return;
       const hit = list.getItemsByAttr("message_id", `${messageId}`)[0];
-      if (hit && hit.el && _.isFunction(hit.el.scrollIntoView)) {
+      if (!hit || !hit.el) return;
+      ChatSearchHighlight.markCurrent(this, hit.el);
+      if (_.isFunction(hit.el.scrollIntoView)) {
         hit.el.scrollIntoView({ block: "center" });
       }
     });
