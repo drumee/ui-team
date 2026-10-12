@@ -5050,7 +5050,22 @@ html[data-theme="dark"] {
   // channel.search is in flight: a result row's geometry (8px padding, name +
   // time line, two preview lines) with a shimmer sweeping across the bars,
   // each row a beat behind the one above.
+  // The placeholders' wrapper is a Skeletons.Element, whose `wrapper` kind
+  // defaults to flow x: ui-styles makes it a ROW flexbox, the inner block
+  // shrinks to its content and every %-wide bar collapses to a dot. Stack it
+  // and stretch the rows. Three classes to beat `.drumee-widget[data-flow=x]`.
+  .window__search-results .window__search-results-loading {
+    display: flex;
+    flex-direction: column;
+
+    > div {
+      width: 100%;
+    }
+  }
+
   .window__search-result-ph {
+    width: 100%;
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     gap: 7px;

@@ -17,7 +17,8 @@ const css = sass.compile(path.join(SRC, "builtins/window/folder/skin/index.scss"
   silenceDeprecations: ["import", "global-builtin", "mixed-decls", "color-functions", "legacy-js-api"],
   logger: sass.Logger.silent,
 }).css;
-const BASE = '.box{position:relative}.box[data-flow="y"]{display:flex;flex-direction:column}';
+const BASE = '.box{position:relative}.box[data-flow="y"]{display:flex;flex-direction:column}' +
+  '.drumee-widget[data-flow="x"],.box[data-flow="x"]{display:flex;flex-direction:row}';
 const body = `<style>${BASE}${css}</style>
 <div class="window-folder">
   <div class="window__chat-panel box" data-flow="y" style="width:360px;height:640px">
@@ -95,7 +96,9 @@ test("loading placeholders: three rows of pulsing bars with real size", { skip }
     '<div class="window__search-result-ph-preview"></div><div class="window__search-result-ph-preview"></div></div>';
   const r = runInChromium({
     body: body.replace('<div id="row">row</div>',
-      `<div class="window__search-results-loading"><div aria-hidden="true">${ph(0)}${ph(1)}${ph(2)}</div></div>`),
+      // As ui-core renders Skeletons.Element: the `wrapper` kind defaults to
+      // flow x, i.e. a row flexbox (the screenshot's collapsed dots).
+      `<div class="window__search-results-loading drumee-widget box" data-flow="x"><div aria-hidden="true">${ph(0)}${ph(1)}${ph(2)}</div></div>`),
     fn: async (mods, document) => {
       document.getElementById("results").dataset.open = "1";
       const bars = [...document.querySelectorAll('[class^="window__search-result-ph-"]:not(.window__search-result-ph-top)')];
@@ -108,6 +111,7 @@ test("loading placeholders: three rows of pulsing bars with real size", { skip }
         separated: getComputedStyle(rows[1]).borderTopStyle,
         pulse: [...new Set(bars.map((b) => getComputedStyle(b).animationName))],
         rowHeight: Math.round(rows[0].getBoundingClientRect().height),
+        rowWidth: rows[0].offsetWidth,
         gradient: /gradient/.test(getComputedStyle(bars[0]).backgroundImage),
         staggered: getComputedStyle(rows[0].querySelector(".window__search-result-ph-name")).animationDelay !==
           getComputedStyle(rows[1].querySelector(".window__search-result-ph-name")).animationDelay,
@@ -118,6 +122,7 @@ test("loading placeholders: three rows of pulsing bars with real size", { skip }
   });
   assert.equal(r.bars, 12);
   assert.equal(r.sized, true);
+  assert.ok(r.rowWidth > 250, `rows span the card (${r.rowWidth}px)`);
   // a shimmer sweeping across each bar, rows out of step
   assert.deepEqual(r.pulse, ["window-folder__search-skeleton-shimmer"]);
   assert.equal(r.gradient, true);
