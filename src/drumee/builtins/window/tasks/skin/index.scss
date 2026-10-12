@@ -8829,9 +8829,18 @@ $theme-colors: (
     }
   }
 
-  &__subtask-row-end {
-    flex-shrink: 0;
+  // The three 110px columns of the Figma grid: a chip at the start of its
+  // cell, the avatar + ✕ at the end of theirs.
+  &__subtask-cell {
+    flex: 0 0 110px;
+    min-width: 0;
     align-items: center;
+  }
+
+  &__subtask-row-end {
+    flex: 0 0 110px;
+    align-items: center;
+    justify-content: flex-end;
     gap: 12px;
   }
 

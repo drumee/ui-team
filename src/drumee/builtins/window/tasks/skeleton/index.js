@@ -4477,20 +4477,32 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
           uiHandler: svc.open ? [ui] : null,
           taskId: t.id,
         }),
-        chip(
-          "priority",
-          pm ? LOCALE[pm.label] || pm.key : LOCALE.PRIORITY,
-          pm && pm.color,
-          null,
-          t,
-        ),
-        chip(
-          "status",
-          sm ? sm.name || LOCALE[sm.label] || sm.key : LOCALE.STATUS,
-          sm && sm.color,
-          null,
-          t,
-        ),
+        // Figma lays the row on a grid — title | 110 | 110 | 110 — so the
+        // chips line up down the list; each sits at the start of its cell.
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-cell`,
+          kids: [
+            chip(
+              "priority",
+              pm ? LOCALE[pm.label] || pm.key : LOCALE.PRIORITY,
+              pm && pm.color,
+              null,
+              t,
+            ),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-cell`,
+          kids: [
+            chip(
+              "status",
+              sm ? sm.name || LOCALE[sm.label] || sm.key : LOCALE.STATUS,
+              sm && sm.color,
+              null,
+              t,
+            ),
+          ],
+        }),
         Skeletons.Box.X({
           className: `${pfx}__subtask-row-end`,
           kids: [
