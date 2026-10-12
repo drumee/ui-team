@@ -8,11 +8,12 @@ const node = (kind) => (o = {}) => ({ kind, ...o });
 global.Skeletons = {
   Box: { X: node("Box.X"), Y: node("Box.Y") },
   Note: node("Note"),
+  Element: node("Element"),
 };
 global.LOCALE = new Proxy({}, { get: (t, k) => k });
 global.Dayjs = { unix: () => ({ fromNow: () => "now" }) };
 
-const { searchResults } = require("../src/drumee/builtins/window/skeleton/toolkit/search-results");
+const { searchResults, searchResultsLoading } = require("../src/drumee/builtins/window/skeleton/toolkit/search-results");
 const ui = { fig: { group: "window" } };
 const flat = (d, out = []) => {
   out.push(d);
@@ -39,4 +40,18 @@ test("a text hit has no filename line; no rows → No results", () => {
   assert.equal(byClass(tree, "window__search-result-file").length, 0);
   const empty = searchResults(ui, []);
   assert.equal(empty[0].className, "window__search-results-empty");
+});
+
+test("loading: the label + placeholder rows shaped like results, hidden from screen readers", () => {
+  const tree = searchResultsLoading(ui);
+  assert.equal(tree[0].className, "window__search-results-label");
+  const ph = tree[1];
+  assert.equal(ph.kind, "Element");
+  assert.equal(ph.className, "window__search-results-loading");
+  assert.match(ph.content, /^<div aria-hidden="true">/);
+  // one placeholder per row: name, time and preview bars like a real result
+  assert.equal((ph.content.match(/window__search-result-ph"/g) || []).length, 3);
+  for (const bar of ["ph-name", "ph-time", "ph-preview"]) {
+    assert.equal((ph.content.match(new RegExp(`window__search-result-${bar}`, "g")) || []).length, 3, bar);
+  }
 });

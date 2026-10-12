@@ -95,4 +95,34 @@ function searchResults(ui, rows) {
   ];
 }
 
-module.exports = { searchResults };
+/**
+ * Placeholder content for the search-results card while channel.search is in
+ * flight: the same label + three rows shaped like a result (name, time,
+ * preview bars; folder skin pulses them). Swapped for searchResults() when the
+ * reply lands. Decorative — nothing in it is worth announcing.
+ * @param {*} ui folder window
+ */
+function searchResultsLoading(ui) {
+  const grp = ui.fig.group;
+  const c = `${grp}__search-result`;
+  const row =
+    `<div class="${c}-ph">` +
+    `<div class="${c}-ph-top">` +
+    `<div class="${c}-ph-name"></div>` +
+    `<div class="${c}-ph-time"></div>` +
+    `</div>` +
+    `<div class="${c}-ph-preview"></div>` +
+    `</div>`;
+  return [
+    Skeletons.Note({
+      className: `${grp}__search-results-label`,
+      content: LOCALE.SEARCH_RESULTS || "Search results",
+    }),
+    Skeletons.Element({
+      className: `${grp}__search-results-loading`,
+      content: `<div aria-hidden="true">${row.repeat(3)}</div>`,
+    }),
+  ];
+}
+
+module.exports = { searchResults, searchResultsLoading };

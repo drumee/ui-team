@@ -4977,6 +4977,47 @@ html[data-theme="dark"] {
     white-space: nowrap;
   }
 
+  // Loading placeholders (toolkit/search-results searchResultsLoading) while
+  // channel.search is in flight: a result row's geometry (8px padding, name +
+  // time line, preview line), pulsing like the chat panel's own skeleton.
+  .window__search-result-ph {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .window__search-result-ph-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .window__search-result-ph-name,
+  .window__search-result-ph-time,
+  .window__search-result-ph-preview {
+    height: 10px;
+    border-radius: 5px;
+    background-color: var(--border-default, #e5e5ea);
+    animation: drumee-skeleton-pulse 1.2s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  .window__search-result-ph-name {
+    width: 40%;
+  }
+
+  .window__search-result-ph-time {
+    width: 18%;
+  }
+
+  .window__search-result-ph-preview {
+    width: 85%;
+  }
+
   .window__thread-menu__card {
     gap: 8px;
     padding: 12px;

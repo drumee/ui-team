@@ -87,3 +87,32 @@ test("an element with no hide animation (reduced motion) closes at once", { skip
   });
   assert.equal(r, "0");
 });
+
+test("loading placeholders: three rows of pulsing bars with real size", { skip }, () => {
+  const ph = (n) =>
+    '<div class="window__search-result-ph"><div class="window__search-result-ph-top">' +
+    '<div id="name' + n + '" class="window__search-result-ph-name"></div><div class="window__search-result-ph-time"></div></div>' +
+    '<div class="window__search-result-ph-preview"></div></div>';
+  const r = runInChromium({
+    body: body.replace('<div id="row">row</div>',
+      `<div class="window__search-results-loading"><div aria-hidden="true">${ph(0)}${ph(1)}${ph(2)}</div></div>`),
+    fn: async (mods, document) => {
+      document.getElementById("results").dataset.open = "1";
+      const bars = [...document.querySelectorAll('[class^="window__search-result-ph-"]:not(.window__search-result-ph-top)')];
+      const rows = [...document.querySelectorAll(".window__search-result-ph")];
+      return {
+        bars: bars.length,
+        sized: bars.every((b) => b.getBoundingClientRect().height >= 8 && b.getBoundingClientRect().width >= 20),
+        pulse: [...new Set(bars.map((b) => getComputedStyle(b).animationName))],
+        rowHeight: Math.round(rows[0].getBoundingClientRect().height),
+        nameWider: document.getElementById("name0").getBoundingClientRect().width >
+          document.querySelector(".window__search-result-ph-time").getBoundingClientRect().width,
+      };
+    },
+  });
+  assert.equal(r.bars, 9);
+  assert.equal(r.sized, true);
+  assert.deepEqual(r.pulse, ["drumee-skeleton-pulse"]);
+  assert.ok(r.rowHeight >= 40 && r.rowHeight <= 72, `row ${r.rowHeight}`);
+  assert.equal(r.nameWider, true);
+});
