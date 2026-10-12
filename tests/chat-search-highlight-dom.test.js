@@ -162,3 +162,31 @@ test("live: a start resolving after stop, or after a newer start, does not paint
   });
   assert.deepEqual(r, { afterStop: 0, texts: ["plan", "plan"], short: 0 });
 });
+
+test("live: an unrelated change (composer) repaints nothing; a re-rendered bubble is re-marked", { skip }, () => {
+  const r = runInChromium({
+    modules: { H: MOD },
+    body: `${PAGE_ITEM}<div id="chat">${ITEM("i1", "budget one", "budget.pdf")}${ITEM("i2", "budget two", "x")}<div class="composer" contenteditable="true"></div></div>`,
+    fn: async ({ H }, document) => {
+      const flush = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
+      const root = document.getElementById("chat");
+      const win = { ensurePart: () => Promise.resolve({ el: root }) };
+      await H.start(win, "budget");
+      const kept = [...root.querySelectorAll("mark.chat-search-hit")];
+      // typing in the composer / hover menus / typing indicator
+      root.querySelector(".composer").appendChild(document.createElement("span"));
+      await flush();
+      const untouched = kept.every((m) => m.isConnected);
+      // one bubble re-renders its content (reaction / edit / meeting card flip)
+      const bubble = root.querySelector("#i2 .widget-chatItem__conversation-content");
+      const otherMark = root.querySelector("#i1 mark");
+      bubble.innerHTML = "budget edited";
+      await flush();
+      const reMarked = [...bubble.querySelectorAll("mark")].map((m) => m.textContent);
+      const otherKept = otherMark.isConnected;
+      H.stop(win);
+      return { count: kept.length, untouched, reMarked, otherKept };
+    },
+  });
+  assert.deepEqual(r, { count: 3, untouched: true, reMarked: ["budget"], otherKept: true });
+});

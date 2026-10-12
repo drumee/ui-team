@@ -106,27 +106,63 @@ function skipInBubble(el) {
   );
 }
 
+const BUBBLE = `.${ITEM}__message-line .${ITEM}__conversation-content`;
+const FILENAME = `.${ITEM}__attachment-wrapper-list .media-grid__content .filename`;
+
 function highlightChat(root, query) {
   unmark(root);
   let count = 0;
-  const bubbles = root.querySelectorAll(
-    `.${ITEM}__message-line .${ITEM}__conversation-content`,
-  );
+  const bubbles = root.querySelectorAll(BUBBLE);
   for (const el of Array.from(bubbles)) count += markText(el, query, skipInBubble);
-  const names = root.querySelectorAll(
-    `.${ITEM}__attachment-wrapper-list .media-grid__content .filename`,
-  );
+  const names = root.querySelectorAll(FILENAME);
   for (const el of Array.from(names)) count += markText(el, query);
   return count;
 }
 
+// The bubbles / filenames an added node belongs to or contains. A node outside
+// every chat item (composer, hover menu, typing indicator) has none.
+function targetsOf(node, out) {
+  const el = node.nodeType === 1 ? node : node.parentElement;
+  if (!el || !el.isConnected) return;
+  for (const sel of [BUBBLE, FILENAME]) {
+    const up = el.closest(sel);
+    if (up) out.add(up);
+    if (node.nodeType === 1) {
+      for (const d of Array.from(node.querySelectorAll(sel))) out.add(d);
+    }
+  }
+}
+
 // ── Live controller ────────────────────────────────────────────────────
 // Rows (older pages, incoming messages) and attachment cards (fetched after
-// their row mounts) render while the search is open; the observer re-paints
-// on every change under the folder-chat element. Painting disconnects first,
-// so our own <mark> edits never re-trigger it.
+// their row mounts) render while the search is open; the observer re-marks the
+// bubbles / filenames that gained nodes (paintRecords). Painting disconnects
+// first, so our own <mark> edits never re-trigger it.
 const OBSERVE = { childList: true, subtree: true };
 const CURRENT = "data-search-current";
+
+// Re-mark only what the mutations touched, so unrelated changes (typing a
+// reply, hovering) neither cost a full repaint nor move the user's selection.
+function paintRecords(state, records) {
+  const targets = new Set();
+  for (const r of records) {
+    for (const n of Array.from(r.addedNodes)) targetsOf(n, targets);
+  }
+  if (!targets.size) return;
+  // Unmarking a bubble also clears the card filenames moved inside it.
+  for (const t of Array.from(targets)) {
+    if (t.matches(BUBBLE)) {
+      for (const f of Array.from(t.querySelectorAll(FILENAME))) targets.add(f);
+    }
+  }
+  state.observer.disconnect();
+  for (const t of targets) {
+    unmark(t);
+    markText(t, state.query, t.matches(BUBBLE) ? skipInBubble : undefined);
+  }
+  state.observer.takeRecords();
+  state.observer.observe(state.root, OBSERVE);
+}
 
 function paint(state) {
   state.observer.disconnect();
@@ -171,7 +207,9 @@ function start(win, query) {
     }
     if (!state) {
       state = { root, query: q, observer: null };
-      state.observer = new MutationObserver(() => paint(state));
+      state.observer = new MutationObserver((records) =>
+        paintRecords(state, records),
+      );
       win._chatHighlight = state;
     }
     // The jumped-to message belonged to the previous query.
