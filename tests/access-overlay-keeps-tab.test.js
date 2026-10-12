@@ -140,9 +140,10 @@ test("showFolderTab: another tab takes the overlay down, after the scroll stash"
   const { w, view } = folder("task");
   AC.showAccessOverlay(w, view);
   w._stashPanelScroll = () => order.push(`stash:${w._accessOpen ? "open" : "closed"}`);
-  // Stop right after the overlay is handled: the rest of the switch is not
-  // what this test is about, so the next call it makes throws.
-  w._closeChatDetails = () => { throw new Error("stop"); };
+  // Stop once the overlay is handled: the rest of the switch is not what this
+  // test is about, so the first tab-change hook it reaches throws.
+  w._closeChatDetails = () => {};
+  w._announceTabSeen = () => { throw new Error("stop"); };
   assert.throws(() => showFolderTab.call(w, "files"), /stop/);
   assert.deepEqual(order, ["stash:open"]);
   assert.equal(AC.accessOpen(w), false);
