@@ -17,7 +17,9 @@ const css = sass.compile(path.join(SRC, "builtins/window/folder/skin/index.scss"
   logger: sass.Logger.silent,
 }).css;
 // ui-styles container.scss: what every Skeletons.Box carries.
-const BASE = '.box{position:relative}.box[data-flow="y"]{display:flex;flex-direction:column}.box[data-flow="x"]{display:flex;flex-direction:row}';
+// Geometry only: the show keyframes (tests/chat-search-results-panel) would be
+// measured at their first frame.
+const BASE = '*{animation:none!important}.box{position:relative}.box[data-flow="y"]{display:flex;flex-direction:column}.box[data-flow="x"]{display:flex;flex-direction:row}';
 
 const page = (open, rows) => `<style>${BASE}${css}</style>
 <div class="window-folder">

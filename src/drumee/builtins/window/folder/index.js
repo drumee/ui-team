@@ -18,6 +18,7 @@ const readCache = require("libs/read-cache");
 const CDHost = require("./chat-details-host");
 const FilesSearch = require("./files-search");
 const ChatSearchHighlight = require("./chat-search-highlight");
+const ResultsPanel = require("./search-results-panel");
 const IconsLoading = require("./icons-loading");
 const { iconsSkeleton, searchStatus } = require("../skeleton/toolkit/icons-skeleton");
 const ChatExportOverlay = require("./chat-export-overlay");
@@ -1648,13 +1649,7 @@ class __window_folder extends mfsInteract {
       let tries = 0;
       const focusInput = () => {
         const inputEl = child.el && child.el.querySelector("input");
-        if (inputEl) {
-          // Back in the field after a jump → show the results again.
-          inputEl.addEventListener("focus", () =>
-            this._reopenChatSearchResults(),
-          );
-          return inputEl.focus();
-        }
+        if (inputEl) return inputEl.focus();
         if (tries++ < 20) setTimeout(focusInput, 25);
       };
       focusInput();
@@ -4781,8 +4776,7 @@ class __window_folder extends mfsInteract {
       if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
         return;
       panel.feed(searchResults(this, rows));
-      panel.el.dataset.open = "1";
-      this._chatSearchHasResults = true;
+      ResultsPanel.open(panel.el);
     });
   }
 
@@ -4794,39 +4788,21 @@ class __window_folder extends mfsInteract {
       this._chatSearchTimer = null;
     }
     this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
-    this._chatSearchHasResults = false;
     ChatSearchHighlight.stop(this);
     const panel = this._searchResultsPart;
     if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
-      panel.el.dataset.open = "0";
-      panel.feed([]);
+      // Animated; the rows stay while the card fades and the next query
+      // re-feeds them.
+      ResultsPanel.close(panel.el);
     }
   }
 
-  // A result was picked: uncover the (highlighted) conversation but keep the
-  // rows, the query and the search bar — the field's focus brings them back.
-  _dismissChatSearchResults() {
-    const panel = this._searchResultsPart;
-    if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
-      panel.el.dataset.open = "0";
-    }
-  }
-
-  _reopenChatSearchResults() {
-    if (!this._chatSearchHasResults) return;
-    const panel = this._searchResultsPart;
-    if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
-      panel.el.dataset.open = "1";
-    }
-  }
-
-  // A result row → uncover the conversation (search stays open, every hit stays
-  // highlighted; the back arrow ends it) and scroll to the message if it is
-  // loaded, giving it the stronger "current" highlight. Older, unloaded
-  // messages just uncover the conversation.
+  // A result row → scroll the conversation below the results to the message if
+  // it is loaded, giving it the stronger "current" highlight. The results stay
+  // open (pick another one); the back arrow or an emptied field closes them.
+  // Older, unloaded messages do nothing.
   _jumpToSearchResult(cmd) {
     const messageId = cmd && cmd.mget && cmd.mget("message_id");
-    this._dismissChatSearchResults();
     if (!messageId) return;
     return this.ensurePart("folder-chat").then((chat) => {
       const list = chat && chat.__list;

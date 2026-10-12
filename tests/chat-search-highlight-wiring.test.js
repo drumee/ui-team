@@ -29,21 +29,27 @@ test("a debounced query starts the highlight; every teardown path stops it", () 
   assert.match(method("onBeforeDestroy"), /ChatSearchHighlight\.stop\(this\);/);
 });
 
-test("jumping to a result keeps the search open and marks the message", () => {
+test("the results panel module is required once", () => {
+  assert.match(src, /const ResultsPanel = require\("\.\/search-results-panel"\);/);
+});
+
+test("clicking a result keeps the results open, marks and scrolls to the message", () => {
   const m = method("_jumpToSearchResult");
-  assert.doesNotMatch(m, /_closeChatSearch/);
-  assert.match(m, /this\._dismissChatSearchResults\(\);/);
+  assert.doesNotMatch(m, /_closeChatSearch|_hideChatSearchResults|_dismissChatSearchResults|ResultsPanel\.close/);
   assert.match(m, /ChatSearchHighlight\.markCurrent\(this, hit\.el\);/);
   // scrollIntoView shifts the whole desk when the message cannot be centred
   assert.doesNotMatch(m, /scrollIntoView/);
   assert.match(m, /ChatSearchHighlight\.scrollToHit\(list\.__container, hit\.el\);/);
 });
 
-test("results are remembered and re-open when the field is focused again", () => {
-  assert.match(method("_showChatSearchResults"), /this\._chatSearchHasResults = true;/);
-  assert.match(method("_hideChatSearchResults"), /this\._chatSearchHasResults = false;/);
-  assert.match(method("_reopenChatSearchResults"), /if \(!this\._chatSearchHasResults\) return;/);
-  assert.match(src, /inputEl\.addEventListener\("focus", \(\) =>\s*this\._reopenChatSearchResults\(\),?\s*\);/);
+test("results open and close through the animated panel; an emptied field closes them", () => {
+  assert.match(method("_showChatSearchResults"), /ResultsPanel\.open\(panel\.el\);/);
+  assert.match(method("_hideChatSearchResults"), /ResultsPanel\.close\(panel\.el\);/);
+  // emptying the field (or < 2 chars) goes straight to the shared teardown
+  assert.match(method("_runChatSearch"), /if \(q\.length < 2\) \{[^}]*return this\._hideChatSearchResults\(\);/);
+  // nothing dismisses / re-opens around a click any more
+  assert.ok(!src.includes("_dismissChatSearchResults"));
+  assert.ok(!src.includes("_reopenChatSearchResults"));
 });
 
 test("skin styles the hits and the current message", () => {

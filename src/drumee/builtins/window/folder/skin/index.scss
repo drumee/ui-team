@@ -4664,10 +4664,7 @@ html[data-theme="dark"] {
     }
   }
 
-  // Backend message-search results overlay (channel.search). Fills the chat
-  // panel below the header (same 44px anchor as the thread dropdown) and covers
-  // the conversation while a query is active. Toggled via data-open.
-  // A card in the File threads bar's slot (toolkit chatPanel puts it right
+  // Backend message-search results (channel.search): a card in the File threads bar's slot (toolkit chatPanel puts it right
   // after the bar, which hides while it is open): under the topic strip, the
   // bar's inset, the File threads dropdown's look. In flow, so the
   // conversation shrinks below it instead of being covered. Capped and
@@ -4683,14 +4680,56 @@ html[data-theme="dark"] {
     border-radius: 12px;
     background: var(--normal-bg-elevated, #fff);
     box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    transform-origin: top center;
+
+    // Show / hide (./search-results-panel): "closing" plays the hide keyframes,
+    // then the panel module sets "0".
+    &[data-open="1"] {
+      animation: window-folder__search-results-in 0.18s ease-out;
+    }
+
+    &[data-open="closing"] {
+      animation: window-folder__search-results-out 0.14s ease-in forwards;
+      pointer-events: none;
+    }
 
     &[data-open="0"] {
       display: none;
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      &[data-open="1"],
+      &[data-open="closing"] {
+        animation: none;
+      }
+    }
   }
 
-  // The card takes the File threads bar's place while it is open.
-  .window__chat-panel:has(> .window__search-results[data-open="1"])
+  @keyframes window-folder__search-results-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes window-folder__search-results-out {
+    from {
+      opacity: 1;
+      transform: none;
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+  }
+
+  // The card takes the File threads bar's place while it is open, and until
+  // its hide animation has finished (no bar popping in under a fading card).
+  .window__chat-panel:has(> .window__search-results:not([data-open="0"]))
     .window__ft-bar {
     display: none;
   }
