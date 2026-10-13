@@ -113,17 +113,23 @@
   &__body[data-phase="precall"],
   &__body[data-phase="ended"] {
     background-color: #ffffff;
-    padding: 0;
+    padding: var(--spacer-6) 0;
     gap: 0;
     min-height: 0;
+    // Identity, status line and actions read as ONE group, centred
+    // vertically in the panel (the stage used to grow and pin the footer to
+    // the bottom, leaving a gap between the name and "Incoming call").
+    justify-content: center;
   }
 
   // ── Identity panel (pre-call + terminal) ────────────────────────────────
   &__precall-stage {
-    flex: 1;
+    // Sized by its content (may still shrink in a short window), not by the
+    // free space.
+    flex: 0 1 auto;
     min-height: 0;
     box-sizing: border-box;
-    padding: var(--spacer-8) 0;
+    padding: 0;
     align-items: center;
     justify-content: center;
   }
@@ -235,8 +241,8 @@
     flex-shrink: 0;
     box-sizing: border-box;
     width: 100%;
-    padding: var(--spacer-5) var(--spacer-6) var(--spacer-9);
-    justify-content: flex-end;
+    padding: var(--spacer-8) var(--spacer-6) 0;
+    justify-content: flex-start;
     align-items: center;
     gap: var(--spacer-7);
   }
@@ -564,11 +570,6 @@
   .participants-manager__ui {
     background-color: #ffffff;
 
-    .endpoint-local,
-    .remote-user {
-      border-radius: var(--corner-radius-5);
-    }
-
     // Figma "meeting frame": the two participants sit SIDE BY SIDE — two
     // columns, one row. The shared meeting shell stacks a two-person call
     // vertically (`[data-remote="2"]` → 1 column / 2 rows), which is the team
@@ -687,7 +688,7 @@
     }
 
     .window-connect__precall-footer {
-      padding: var(--spacer-4) var(--spacer-5) var(--spacer-7);
+      padding: var(--spacer-6) var(--spacer-5) 0;
       gap: var(--spacer-6);
     }
 
@@ -732,16 +733,12 @@
   // fitting between header and footer. Shrink the avatar and tighten the
   // vertical rhythm rather than letting the footer get pushed out of view.
   &__ui[data-short="1"] {
-    .window-connect__precall-stage {
-      padding: var(--spacer-5) 0;
-    }
-
     .window-connect__identity {
       gap: var(--spacer-5);
     }
 
     .window-connect__precall-footer {
-      padding: var(--spacer-4) var(--spacer-6) var(--spacer-6);
+      padding: var(--spacer-6) var(--spacer-6) 0;
       gap: var(--spacer-5);
     }
 
