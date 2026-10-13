@@ -2,6 +2,7 @@ const { toggleState } = require("@drumee/ui-essentials")
 const PARTICIPANT_ID = "participant_id";
 const __stream = require("builtins/webrtc/endpoint");
 const { events: JEVENTS } = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
+const { settleVideoType } = require("builtins/webrtc/video-type-settle");
 
 class __remote_user extends __stream {
 
@@ -144,6 +145,10 @@ class __remote_user extends __stream {
    *
    */
   async onBeforeDestroy() {
+    if (this._unsettle) {
+      this._unsettle();
+      this._unsettle = null;
+    }
     this.logicalParent.off("TRACK_ADDED", this.handleTrackEvents);
 
     this.room.off(
@@ -350,30 +355,35 @@ class __remote_user extends __stream {
       v.el.oncanplay = (e) => {
         e.target.play();
       };
-      if (track.getVideoType() == _a.desktop) {
-        this.toggleAvatarVideo(1, 0);
-      } else {
-        setTimeout(() => {
-          /** Wait a few seconds to ensure video type is stable */
+      // Show the camera at once (it used to wait a fixed 3 s "to ensure video
+      // type is stable"); if the type then settles to desktop, take it back.
+      if (this._unsettle) this._unsettle();
+      this._unsettle = settleVideoType(track, {
+        changedEvent: JEVENTS.track.TRACK_VIDEOTYPE_CHANGED,
+        desktop: _a.desktop,
+        onDesktop: () => {
           if (this.isDestroyed && this.isDestroyed()) return;
-          if (track.getVideoType() == _a.desktop) {
-            this.toggleAvatarVideo(1, 0);
-            return;
-          }
+          this.toggleAvatarVideo(1, 0);
+          this.ensurePart(_a.video).then((cur) => {
+            if ((track.containers || []).includes(cur.el)) track.detach(cur.el);
+          });
+        },
+        onCamera: () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
           if (track.isMuted()) {
             this.toggleAvatarVideo(1, 0);
             return;
           }
-          // Re-resolve the <video> part: an onPropertyChanged re-feed during the
-          // settle delay rebuilds the element, so the captured `v` may be stale
-          // (attaching to it would leave the tile black). Attach to the live one.
+          // Re-resolve the <video> part: an onPropertyChanged re-feed can
+          // rebuild the element, so the captured `v` may be stale (attaching
+          // to it would leave the tile black). Attach to the live one.
           this.ensurePart(_a.video).then((cur) => {
             this.toggleAvatarVideo(0, 1);
             track.attach(cur.el);
             this.trigger("audio:ready");
           });
-        }, 3000);
-      }
+        },
+      });
     });
   }
 

@@ -1,6 +1,11 @@
+const { SCREEN_FPS } = require("../../screen-receiver-constraints");
+
 module.exports = function () {
 	return  {
 		useIPv6: true,
+		// ScreenObtainer reads the capture rate from init options only; without
+		// it getDisplayMedia captures at its 5 fps default.
+		desktopSharingFrameRate: { ...SCREEN_FPS },
 		disableSimulcast: false,
 		enableAnalyticsLogging: true,
 		// Offer SYSTEM audio in the getDisplayMedia picker (Chromium >104 reads

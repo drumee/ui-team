@@ -56,6 +56,8 @@ function detachWhenFaded(node) {
 const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
 const { withOwnWorkspaceName } = require("libs/workspace-label");
+const { acceptStartsCall } = require("builtins/window/connect/call-start");
+const { ringWhileOpen, toastRings } = require("./incoming-ring");
 
 class __push_manager extends winman {
 
@@ -817,7 +819,27 @@ class __push_manager extends winman {
         }),
       );
       this._meetingToasts.set(key, toast);
+      // Ring the "now" card like an incoming call (same tone, same stop rules
+      // as the switchcall prompt — see ./incoming-ring), unless a call is
+      // already live. Every way the card goes away runs kill(), so the ring
+      // ends there: Join, Cancel, ✕, and the MEETING_TOAST_MS auto-dismiss.
+      const inCall = !!(
+        (Wm.hasLiveCall && Wm.hasLiveCall()) ||
+        ["window_connect", "window_meeting"].some((k) =>
+          ((Wm.getItemsByKind && Wm.getItemsByKind(k)) || []).some(
+            (w) => w && !(w.isDestroyed && w.isDestroyed()),
+          ),
+        )
+      );
+      const stopRing = toastRings(variant, inCall)
+        ? ringWhileOpen(null, _K.ringtones.call, {
+            play: (url, loop) => Visitor.playSound(url, loop),
+            mute: () => Visitor.muteSound(),
+            current: () => Visitor._audio && Visitor._audio.src,
+          })
+        : () => {};
       const kill = () => {
+        stopRing();
         try {
           // Release the slot first — a card dismissed out of order must not
           // leave a gap that keeps pushing later ones further down.
@@ -1188,7 +1210,7 @@ class __push_manager extends winman {
       });
     } else {
       o = respawn;
-      Visitor.playSound();
+      Visitor.playSound(_K.ringtones.call);
       if (data.origin && data.origin.uid) {
         const title = LOCALE.X_IS_CALLING_YOU.format(data.origin.firstname);
         const notif = {
@@ -1282,7 +1304,20 @@ class __push_manager extends winman {
         respawn,
       };
 
-      this.addWindow(o);
+      const added = this.addWindow(o);
+      // Ring like an incoming call — but never over a call already in
+      // progress (the shared Audio would play through it).
+      if (!currentRoom || currentRoom.isDestroyed()) {
+        const prompt =
+          (added && typeof added.once === "function" && added) ||
+          Wm.getItemByKind("window_switchcall");
+        ringWhileOpen(prompt, _K.ringtones.call, {
+          play: (url, loop) => Visitor.playSound(url, loop),
+          mute: () => Visitor.muteSound(),
+          current: () => Visitor._audio && Visitor._audio.src,
+          destroyEvent: _e.destroy,
+        });
+      }
     });
   }
 
@@ -1301,10 +1336,12 @@ class __push_manager extends winman {
         break;
       case SERVICE.conference.accept:
         this.verbose("AAA:364", currentRoom, currentRoom.state, _a.invite, data)
+        // Two accepts arrive per call (the server's join() push, then the
+        // callee's own). Only a still-ringing window acts — the state moves
+        // past 'connect' within milliseconds, so the old invite/connect check
+        // let the second accept start the caller's conference again.
+        if (!acceptStartsCall(currentRoom.state)) return;
         state = "connect";
-        if (currentRoom.state == _a.invite || currentRoom.state == 'connect') {
-          return;
-        }
         break;
       case SERVICE.conference.revoke:
         currentRoom.goodbye();

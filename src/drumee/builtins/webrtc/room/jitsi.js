@@ -7,6 +7,9 @@ const { events: JEVENTS } = JitsiMeetJS;
 const { fitBoxes } = require("@drumee/ui-essentials")
 const AudioMixerEffect = require("./audio-mixer-effect");
 const DevicePrefs = require("builtins/webrtc/device-prefs");
+const { stopPresentationSequence } = require("builtins/webrtc/stop-presentation");
+const { shouldStopForPresenter } = require("builtins/webrtc/remote-screen-watch");
+const { screenOnStage } = require("builtins/webrtc/screen-receiver-constraints");
 // How long the local microphone may report a flat zero level, while unmuted,
 // before the user is told that nothing is coming from it (see
 // _checkMicSilence). Long enough for a normal pause, short enough that the
@@ -25,6 +28,8 @@ const PEER_WATCH_MS = 10000;
 // is the screen VIDEO track). unload() iterates localTracks, so parking it here
 // also means call teardown disposes it for free.
 const DESKTOP_AUDIO = "desktopAudio";
+// JitsiMeetJS.init is page-global; see _prepareMediaStack.
+let jitsiInitialised = false;
 
 const __room = require(".");
 
@@ -167,6 +172,28 @@ class __webrtc_room extends __room {
   }
 
   /**
+   * JitsiMeetJS.init — once per page — plus the slow-permission listener.
+   * Must run before the first createLocalTracks: track attach
+   * (RTCUtils.attachMediaStream), local audio stats and device ids all come
+   * from init. The 1:1 window requests media before bindConferenceRoom
+   * (window/connect/call-start beginEarlyMedia), so it calls this first.
+   */
+  _prepareMediaStack(initOptions) {
+    if (!jitsiInitialised) {
+      JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.WARN);
+      JitsiMeetJS.init(initOptions || require("./configs/init")());
+      jitsiInitialised = true;
+    }
+    if (!this._slowPromptListening) {
+      this._slowPromptListening = true;
+      JitsiMeetJS.mediaDevices.addEventListener(
+        JEVENTS.mediaDevices.USER_MEDIA_SLOW_PROMISE_TIMEOUT,
+        this.onPermissionPrompted
+      );
+    }
+  }
+
+  /**
    *
    */
   bindConferenceRoom(room = {}) {
@@ -186,8 +213,7 @@ class __webrtc_room extends __room {
         return resolve();
       }
 
-      JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.WARN);
-      JitsiMeetJS.init(options.init);
+      this._prepareMediaStack(options.init);
       try {
         this.connection = new JitsiMeetJS.JitsiConnection(
           null,
@@ -349,6 +375,7 @@ class __webrtc_room extends __room {
       JEVENTS.mediaDevices.USER_MEDIA_SLOW_PROMISE_TIMEOUT,
       this.onPermissionPrompted
     );
+    this._slowPromptListening = false;
     if (this.room) {
       this.room.off(JEVENTS.conference.TRACK_ADDED, this.onStreamReceived);
       this.room.off(JEVENTS.conference.TRACK_REMOVED, this.onTrackRemoved);
@@ -511,6 +538,17 @@ class __webrtc_room extends __room {
                     JEVENTS.track.LOCAL_TRACK_STOPPED,
                     this.stopPresentation
                   );
+                  // LOCAL_TRACK_STOPPED rides MediaStream.oninactive, which can
+                  // lag the OS bar by seconds; the raw track's `ended` is the
+                  // earliest signal. stop-presentation signals once per track.
+                  const raw = track.getTrack && track.getTrack();
+                  if (raw && typeof raw.addEventListener === "function") {
+                    raw.addEventListener("ended", () => {
+                      if (this.getLocalTrack(_a.desktop) === track) {
+                        this.stopPresentation(track);
+                      }
+                    }, { once: true });
+                  }
                 } else {
                   this.getLocalParts().then((parts) => {
                     let { video } = parts;
@@ -777,10 +815,14 @@ class __webrtc_room extends __room {
       this.onDeviceListChanged
     );
 
-    JitsiMeetJS.mediaDevices.addEventListener(
-      JEVENTS.mediaDevices.USER_MEDIA_SLOW_PROMISE_TIMEOUT,
-      this.onPermissionPrompted
-    );
+    // Registered once per window (it may already be, from _prepareMediaStack).
+    if (!this._slowPromptListening) {
+      this._slowPromptListening = true;
+      JitsiMeetJS.mediaDevices.addEventListener(
+        JEVENTS.mediaDevices.USER_MEDIA_SLOW_PROMISE_TIMEOUT,
+        this.onPermissionPrompted
+      );
+    }
 
     this.waitElement(this.el, () => {
       this.el.dataset.mode = this.mget(_a.mode) || _a.none;
@@ -808,7 +850,9 @@ class __webrtc_room extends __room {
     // _startupTracks before initJitsiConference/join, so local tracks still
     // ride the initial Jingle offer and a media failure still aborts the join
     // (via _startupMediaFailed).
-    this._startupTracks = this._createStartupTracks();
+    // The 1:1 window may already have asked at the click
+    // (window/connect/call-start beginEarlyMedia); the meeting never pre-sets it.
+    this._startupTracks = this._startupTracks || this._createStartupTracks();
     this.bindConferenceRoom(room)
       .then(() => {
         this.postOnlineState();
@@ -1257,6 +1301,18 @@ class __webrtc_room extends __room {
    */
   onTrackRemoved(track) {
     this.trigger("TRACK_REMOVED", track);
+    // The presenter's desktop track went away: nothing else would clear the
+    // stage (the display's own TRACK_REMOVED listener is long gone).
+    if (
+      track && !track.isLocal() &&
+      typeof track.getVideoType === "function" &&
+      track.getVideoType() == _a.desktop &&
+      this.presenterId &&
+      shouldStopForPresenter(this.presenterId, track.getParticipantId())
+    ) {
+      this.presenterId = null;
+      this.onRemoteScreenStop();
+    }
   }
 
   /**
@@ -1902,7 +1958,10 @@ class __webrtc_room extends __room {
     if (k.length) {
       this.presentation = k[0];
       if (this.presentation.__video) {
-        track.attach(this.presentation.__video.el);
+        const v = this.presentation.__video.el;
+        // Re-attaching resets srcObject: a black frame + spinner until the next
+        // keyframe. Only attach a track that isn't on this element yet.
+        if (!(track.containers || []).includes(v)) track.attach(v);
       }
       return;
     }
@@ -1938,8 +1997,12 @@ class __webrtc_room extends __room {
     }
     this.__presenter.feed(opt);
     let child = this.__presenter.children.last();
+    // Known from creation on. It used to be set only on a SECOND call, so the
+    // first stats event re-entered here and re-attached the track (black flash).
+    this.presentation = child;
     child.once(_e.destroy, () => {
       this.presenterId = null;
+      if (this.presentation === child) this.presentation = null;
     });
   }
 
@@ -1966,6 +2029,15 @@ class __webrtc_room extends __room {
       });
     }
     this.loadRemotePresentation(track, 1);
+    // Ask the bridge for the shared screen in HD; without this it is a
+    // thumbnail-priority source like any camera.
+    if (!track.isLocal() && this.room && typeof this.room.setReceiverConstraints === "function") {
+      try {
+        this.room.setReceiverConstraints(screenOnStage(track.getSourceName()));
+      } catch (e) {
+        this.warn("setReceiverConstraints failed", e);
+      }
+    }
   }
 
   /**
@@ -1975,7 +2047,7 @@ class __webrtc_room extends __room {
     if (p && typeof p.getId === "function") {
       this._peerSeenAt[p.getId()] = Date.now();
     }
-    if (this.presentation && !this.presentation.isDestroyed()) return;
+    const presenting = !!(this.presentation && !this.presentation.isDestroyed());
     for (let t of p.getTracks()) {
       if (t.getVideoType() != _a.desktop) continue;
       // Recover the presentation from the desktop track ITSELF — do NOT require
@@ -1983,11 +2055,15 @@ class __webrtc_room extends __room {
       // presenterId is unset; the old `if (!this.presenterId) continue` made
       // this catch-up path a no-op for exactly the case it exists to handle.
       if (t.isMuted()) {
+        // Checked even while a presentation is live — a muted desktop track is
+        // the sharer having stopped, and this is the catch-up for a lost
+        // STOP_REMOTE_SCREEN (it used to return early here, so a frozen
+        // presentation could never be cleared from stats).
         if (this.presenterId === t.getParticipantId()) {
           this.presenterId = null;
           this.onRemoteScreenStop();
         }
-      } else {
+      } else if (!presenting) {
         this._enterRemotePresentation(t);
       }
     }
@@ -2285,30 +2361,20 @@ class __webrtc_room extends __room {
    */
   async stopPresentation(track) {
     this._setService("ctrl-video", _a.settings);
-    // Unmix and drop the captured tab/system audio FIRST — this has to happen
-    // even when the desktop video track is already gone (the early return
-    // below), or the mixer would stay attached to the microphone.
-    await this._releaseDesktopAudio();
-    if (!track) {
-      track = this.getLocalTrack(_a.desktop);
+    if (!track) track = this.getLocalTrack(_a.desktop);
+    if (track && typeof track.removeEventListener === "function") {
+      track.removeEventListener(
+        JEVENTS.track.LOCAL_TRACK_STOPPED,
+        this.stopPresentation
+      );
     }
-
-    if (!track) {
-      this.warn("No track to stop");
-      return;
-    }
-    await this.stopLocalTrack(_a.desktop);
-    let payload = {
-      id: this.room.myUserId(),
-      srcId: this.room.myUserId(),
-    };
-    let event = "STOP_REMOTE_SCREEN";
-    await this.sendRoomSignaling(SERVICE.conference.update);
-    await this.sendRoomSignaling(SERVICE.conference.broadcast, { event, payload });
-    track.removeEventListener(
-      JEVENTS.track.LOCAL_TRACK_STOPPED,
-      this.stopPresentation
-    );
+    // Signals the viewer first, then releases the tab audio (which still runs
+    // when there is no desktop track). See builtins/webrtc/stop-presentation.
+    await stopPresentationSequence(this, track, {
+      desktop: _a.desktop,
+      broadcast: SERVICE.conference.broadcast,
+      update: SERVICE.conference.update,
+    });
   }
 
   /**
@@ -2402,15 +2468,13 @@ class __webrtc_room extends __room {
         this.prepareRemoteScreen(data);
         break;
       case "STOP_REMOTE_SCREEN":
-        // Ensure the presentation is actually closed
-        setTimeout(() => {
-          if (!this.presenterId) {
-            if (this.__presenter.isEmpty()) {
-              return;
-            }
-          }
-          this.onRemoteScreenStop();
-        }, 5000);
+        // Act now — the sharer signals first (builtins/webrtc/stop-presentation).
+        // Ignore a stop for a presenter we no longer show: the old 5 s timer here
+        // tore down a NEW share started in the meantime.
+        if (!shouldStopForPresenter(this.presenterId, data.id)) return;
+        if (!this.presenterId && this.__presenter.isEmpty()) return;
+        this.presenterId = null;
+        this.onRemoteScreenStop();
         break;
 
       case "BG_UPDATING":

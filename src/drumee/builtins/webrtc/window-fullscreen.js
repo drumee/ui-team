@@ -16,8 +16,16 @@
 // visible work area, which is what also makes it look unresizable.
 // window/core.js's own "fullscreen" service documents and solves exactly this;
 // a bare requestFullscreen() does not.
+// Chrome enters and instantly drops fullscreen for a <div> under a transformed
+// Wm ancestor (see screenshare._toggleScreenShareFullscreen). An exit this soon
+// after the ENTER event is that drop, not the user. Measured from the enter,
+// never from the request: macOS animates into a fullscreen Space and the enter
+// itself can land well after the click.
+const DROPPED_WITHIN_MS = 300;
+
 module.exports = {
   _toggleWindowFullscreen() {
+    if (this._maximiseRestore) return this._toggleWindowMaximise();
     const doc = document;
     if (doc.fullscreenElement || doc.webkitFullscreenElement) {
       (doc.exitFullscreen || doc.webkitExitFullscreen || function () {}).call(doc);
@@ -36,9 +44,19 @@ module.exports = {
     };
     // Fires for the header button, for ESC, and for anything else that drops us
     // out of fullscreen.
+    let enteredAt = null;
     el.onfullscreenchange = () => {
-      if (document.fullscreenElement === el) return;
+      const isFull = document.fullscreenElement === el;
+      this._syncFullscreenButton(isFull);
+      if (isFull) {
+        enteredAt = Date.now();
+        return;
+      }
       el.onfullscreenchange = null;
+      if (enteredAt !== null && Date.now() - enteredAt < DROPPED_WITHIN_MS && this._canMaximise()) {
+        this._toggleWindowMaximise();
+        return;
+      }
       const restore = this._fullscreenRestore;
       // Superseded — the user picked another geometry (Tile left/right,
       // Reframe) on the way out, so their choice wins over the old snapshot.
@@ -59,14 +77,70 @@ module.exports = {
       }, 50);
     };
     const p = req.call(el);
-    if (p && typeof p.catch === "function") {
-      p.catch(() => {
-        // The request never took (no user gesture, blocked by policy): drop the
-        // handler and the snapshot so neither can fire later out of context.
-        el.onfullscreenchange = null;
-        this._fullscreenRestore = null;
-      });
+    if (p && typeof p.then === "function") {
+      p.then(
+        () => {
+          // Resolved, yet nothing is fullscreen and the snapshot is still
+          // pending: dropped without even a change event.
+          if (document.fullscreenElement === el || !this._fullscreenRestore) return;
+          if (!this._canMaximise()) return;
+          el.onfullscreenchange = null;
+          this._toggleWindowMaximise();
+        },
+        () => {
+          // The request never took (no user gesture, blocked by policy): drop
+          // the handler and the snapshot so neither can fire later out of
+          // context.
+          el.onfullscreenchange = null;
+          this._fullscreenRestore = null;
+          this._syncFullscreenButton(false);
+        }
+      );
     }
+  },
+
+  // Mirror the fullscreen state on the header button (icon swap via its
+  // `icons` pair) and on the root (for CSS). Called on EVERY change — the
+  // button, Esc and a refused request all land here.
+  _syncFullscreenButton(isFull) {
+    const on = isFull ? 1 : 0;
+    if (this.el) this.el.dataset.fullscreen = String(on);
+    const btn = typeof this.getPart === "function" ? this.getPart("call-expand") : null;
+    if (btn && typeof btn.setState === "function") btn.setState(on);
+  },
+
+  // Only a floating window that knows its work area (window/connect) can be
+  // maximised in place; the meeting is already full-frame.
+  _canMaximise() {
+    return typeof this._workAreaBox === "function";
+  },
+
+  // In-window maximise: fill the WM work area; the same button puts back the
+  // pre-fullscreen snapshot.
+  _toggleWindowMaximise() {
+    const done = () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (typeof this.syncGeometry === "function") this.syncGeometry();
+    };
+    if (this._maximiseRestore) {
+      const r = this._maximiseRestore;
+      this._maximiseRestore = null;
+      this.change_size_to({ ...r }, done);
+      this._syncFullscreenButton(false);
+      return;
+    }
+    const area = this._workAreaBox();
+    this._maximiseRestore = this._fullscreenRestore || {
+      width: this.$el.width(),
+      height: this.$el.height(),
+      ...this.$el.position(),
+    };
+    this._fullscreenRestore = null;
+    this.change_size_to(
+      { left: 0, top: 0, width: area.width, height: area.height },
+      done
+    );
+    this._syncFullscreenButton(true);
   },
 
   // Drop a pending restore. Call this from any path that deliberately gives the

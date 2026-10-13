@@ -345,6 +345,9 @@
     max-height: calc(100% - 32px);
     pointer-events: none;
     z-index: 99999;
+    // The avatar below is sized in cq units. Without a size container they
+    // fall back to the VIEWPORT, so the avatar was always the 72px cap.
+    container-type: size;
 
     &:empty {
       display: none;
