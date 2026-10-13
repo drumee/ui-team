@@ -2951,6 +2951,8 @@
   "NO_DEPARTMENTS_YET": "Aucun département pour l'instant",
   "SEARCH_WORKSPACES": "Rechercher des espaces…",
   "DELETE_DEPARTMENT_CONFIRM": "Supprimer ce département ? Ses espaces sont conservés et deviennent hors département.",
+  "CREATE_DEPARTMENT": "Créer un département",
+  "DEPARTMENT_NAME_REQUIRED": "Saisissez un nom de département.",
   "NOT_ENOUGH_PRIVILEGE": "Vous n'avez pas l'autorisation de faire cela.",
   "INVALID_NAME": "Saisissez un nom.",
   "WORKSPACE_NOT_FOUND": "Cet espace n'existe plus.",

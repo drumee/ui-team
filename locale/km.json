@@ -2944,6 +2944,8 @@
   "NO_DEPARTMENTS_YET": "មិនទាន់មាននាយកដ្ឋានទេ",
   "SEARCH_WORKSPACES": "ស្វែងរកកន្លែងធ្វើការ…",
   "DELETE_DEPARTMENT_CONFIRM": "លុបនាយកដ្ឋាននេះ? កន្លែងធ្វើការរបស់វានឹងត្រូវរក្សាទុក ហើយក្លាយជាគ្មាននាយកដ្ឋាន។",
+  "CREATE_DEPARTMENT": "បង្កើតនាយកដ្ឋាន",
+  "DEPARTMENT_NAME_REQUIRED": "សូមបញ្ចូលឈ្មោះនាយកដ្ឋាន។",
   "NOT_ENOUGH_PRIVILEGE": "អ្នកគ្មានសិទ្ធិធ្វើដូច្នេះទេ។",
   "INVALID_NAME": "សូមបញ្ចូលឈ្មោះ។",
   "WORKSPACE_NOT_FOUND": "កន្លែងធ្វើការនេះលែងមានទៀតហើយ។",

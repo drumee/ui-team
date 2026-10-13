@@ -2950,6 +2950,8 @@
   "NO_DEPARTMENTS_YET": "Отделов пока нет",
   "SEARCH_WORKSPACES": "Поиск рабочих пространств…",
   "DELETE_DEPARTMENT_CONFIRM": "Удалить этот отдел? Его рабочие пространства сохранятся и останутся без отдела.",
+  "CREATE_DEPARTMENT": "Создать отдел",
+  "DEPARTMENT_NAME_REQUIRED": "Введите название отдела.",
   "NOT_ENOUGH_PRIVILEGE": "У вас нет прав на это действие.",
   "INVALID_NAME": "Введите название.",
   "WORKSPACE_NOT_FOUND": "Это рабочее пространство больше не существует.",
