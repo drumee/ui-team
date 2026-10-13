@@ -3129,6 +3129,8 @@
   "NO_BOOKMARKED_NOTIFICATIONS": "Нет уведомлений в закладках",
   "PRIORITY_LEVEL": "Уровень приоритета",
   "START_DATE": "Дата начала",
+  "END_DATE": "Дата окончания",
+  "DATE_PLACEHOLDER": "дд/мм/гггг",
   "LINK_FILES": "Привязать файлы",
   "REPORTERS": "Авторы",
   "SEARCH_DOTS": "Поиск...",

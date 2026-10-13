@@ -38,7 +38,7 @@ test("snapshotTask normalises defaults and copies arrays", () => {
   );
   assert.deepEqual(s, {
     title: "", description: "", due_date: "", start_date: "",
-    duration_on: false, status: "todo", priority: "medium",
+    status: "todo", priority: "medium",
     reporter_uid: "carol", assignees: ["u"], labels: ["a"],
   });
   const t = { label_ids: ["a"] };
@@ -137,12 +137,31 @@ test("reporter reassigned is sent", () => {
   assert.equal(plan.update.reporter_uid, "bob");
 });
 
-test("duration off clears start, sends my dates", () => {
+test("a start date picked on a single-date task is sent", () => {
+  const base = snap(TASK);
+  const plan = planDetailCommit(base, draftOf(base, { start_date: "2026-09-28" }), base);
+  assert.deepEqual(plan.update, { due_date: "2026-10-01", start_date: "2026-09-28" });
+});
+
+test("clearing only the start date keeps a peer's new end date", () => {
   const ranged = { ...TASK, start_date: "2026-09-25" };
   const base = snap(ranged);
   const fresh = snap({ ...ranged, due_date: "2026-11-11" });
-  const plan = planDetailCommit(base, draftOf(base, { duration_on: false }), fresh);
-  assert.deepEqual(plan.update, { due_date: "2026-10-01", start_date: null });
+  const plan = planDetailCommit(base, draftOf(base, { start_date: "" }), fresh);
+  assert.deepEqual(plan.update, { due_date: "2026-11-11", start_date: null });
+});
+
+test("a merge that reads end-before-start falls back to my own pair", () => {
+  const base = snap(TASK); // due 10-01
+  const fresh = snap({ ...TASK, due_date: "2026-09-20" }); // peer pulled End in
+  const plan = planDetailCommit(base, draftOf(base, { start_date: "2026-09-28" }), fresh);
+  assert.deepEqual(plan.update, { due_date: "2026-10-01", start_date: "2026-09-28" });
+});
+
+test("a start on the end day itself is sent as a single-date task", () => {
+  const base = snap(TASK);
+  const plan = planDetailCommit(base, draftOf(base, { start_date: "2026-10-01" }), base);
+  assert.equal(plan.update, null);
 });
 
 test("date touched but already equal to fresh: nothing sent", () => {

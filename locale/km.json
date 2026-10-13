@@ -3123,6 +3123,8 @@
   "NO_BOOKMARKED_NOTIFICATIONS": "គ្មានការជូនដំណឹងដែលបានរក្សាទុក",
   "PRIORITY_LEVEL": "កម្រិតអាទិភាព",
   "START_DATE": "កាលបរិច្ឆេទចាប់ផ្ដើម",
+  "END_DATE": "កាលបរិច្ឆេទបញ្ចប់",
+  "DATE_PLACEHOLDER": "dd/mm/yyyy",
   "LINK_FILES": "ភ្ជាប់ឯកសារ",
   "REPORTERS": "អ្នករាយការណ៍",
   "SEARCH_DOTS": "ស្វែងរក...",

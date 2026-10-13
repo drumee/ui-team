@@ -3338,6 +3338,8 @@
   "NO_BOOKMARKED_NOTIFICATIONS": "No bookmarked notifications",
   "PRIORITY_LEVEL": "Priority Level",
   "START_DATE": "Start date",
+  "END_DATE": "End date",
+  "DATE_PLACEHOLDER": "dd/mm/yyyy",
   "LINK_FILES": "Link files",
   "REPORTERS": "Reporters",
   "SEARCH_DOTS": "Search...",

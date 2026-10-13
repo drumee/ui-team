@@ -3339,6 +3339,8 @@
   "NO_BOOKMARKED_NOTIFICATIONS": "Aucune notification enregistrée",
   "PRIORITY_LEVEL": "Niveau de priorité",
   "START_DATE": "Date de début",
+  "END_DATE": "Date de fin",
+  "DATE_PLACEHOLDER": "jj/mm/aaaa",
   "LINK_FILES": "Lier des fichiers",
   "REPORTERS": "Rapporteurs",
   "SEARCH_DOTS": "Rechercher...",

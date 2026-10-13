@@ -1031,14 +1031,10 @@ const make = function (ui) {
       ],
     });
 
-    // Due-date section is a stable sub-part so the Duration toggle can re-feed
-    // just this block (swap single <-> range picker + flip the switch) without
-    // a full-panel _render() that flickers and steals focus. Content lives in
-    // buildDueSectionContent so the controller can re-feed it via ensurePart.
+    // Date section (Start → End pickers). Content lives in
+    // buildDueSectionContent, shared with the create modal.
     const dueRow = Skeletons.Box.Y({
       className: `${pfx}__detail-row`,
-      sys_pn: "due-section",
-      partHandler: ui,
       kids: buildDueSectionContent(ui),
     });
 
@@ -1795,12 +1791,9 @@ const make = function (ui) {
                 ),
                 assigneeField,
                 reporterField,
-                // Due-date section: same Duration UI as the detail panel. A
-                // stable sub-part so the toggle re-feeds only this block.
+                // Date section: same Start/End pickers as the detail panel.
                 Skeletons.Box.Y({
                   className: `${pfx}__create-field`,
-                  sys_pn: "create-due-section",
-                  partHandler: ui,
                   kids: buildDueSectionContent(ui, "create"),
                 }),
                 // Pinned to the column foot (see skin __create-actions) so it
@@ -3815,23 +3808,6 @@ function attachmentRowDescriptor(ui, f, taskId) {
   return fileCard(ui, f, { committed: true, taskId });
 }
 
-// Whole days a start..end span covers, inclusive (same day = 1); 0 if either
-// endpoint is missing/invalid.
-function dueDurationDays(startIso, endIso) {
-  if (!startIso || !endIso) return 0;
-  const s = new Date(startIso);
-  const e = new Date(endIso);
-  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
-  return Math.round((e - s) / 86400000) + 1;
-}
-
-// "N day(s)" readout for a range; "" when the range is incomplete.
-function dueSummaryText(startIso, endIso) {
-  if (!startIso || !endIso) return "";
-  const n = dueDurationDays(startIso, endIso);
-  return `${n} ${n === 1 ? LOCALE.DURATION_DAY : LOCALE.DURATION_DAYS}`;
-}
-
 // Custom flatpickr `position` (used because the calendar is appendTo:body and
 // the due-input lives in a narrow right rail): float the calendar to the LEFT
 // of the input, beside it, so it opens into the wide center area instead of
@@ -3880,15 +3856,6 @@ function positionDueCalendarLeft(instance) {
   cal.style.top = `${top + scrollY}px`;
 }
 
-// Kids for a Due-date section (shared by the detail panel and the create
-// modal — pass scope "detail" | "create"): the label row ("Due date" +
-// "Duration" toggle), the picker, and (range mode) a live duration readout.
-// Duration OFF → one date picker (due_date). ON → one range picker showing
-// "start → end" in a single field (per Figma), storing ISO (Y-m-d) while
-// displaying d/m/Y via altInput. New-user guidance: the range calendar shows a
-// step hint ("Select start date" → "Select end date"), and a live "N days"
-// readout beside the Duration label confirms the span. Kept standalone so the
-// Duration toggle can re-feed just this sub-part in place.
 /**
  * flatpickr `disable` rules: no day before today, EXCEPT the dates the field
  * already holds.
@@ -3912,164 +3879,150 @@ function noPastDaysExcept(...kept) {
   ];
 }
 
+/**
+ * flatpickr `disable` rules for one of the two date fields ("start_date" or
+ * "due_date"): no past day, and nothing the other field rules out — Start
+ * never after End, End never before Start. The field's OWN stored day stays
+ * enabled (see noPastDaysExcept): flatpickr drops a disabled starting date
+ * and the field would render empty over a saved value. Shared by the skeleton
+ * and the controller, which re-bounds the other picker after each pick.
+ */
+function dateFieldDisable(name, start, due) {
+  const isStart = name === "start_date";
+  const own = isStart ? start : due;
+  const other = isStart ? due : start;
+  const disable = noPastDaysExcept(own);
+  if (other) {
+    const day = (d) => Dayjs(d).format("YYYY-MM-DD");
+    const out = isStart
+      ? (d) => Dayjs(d).isAfter(Dayjs(other), "day")
+      : (d) => Dayjs(d).isBefore(Dayjs(other), "day");
+    disable.push((d) => day(d) !== own && out(d));
+  }
+  return disable;
+}
+
+// Kids for the date section (shared by the detail panel and the create modal —
+// pass scope "detail" | "create"), per Figma 741:96472: "Start date → End
+// date", two independent pickers. `start_date` is optional; the End date is
+// `due_date` and stays required (its __due-field carries the missing flag).
+// Each stores ISO (Y-m-d) and displays d/m/Y via altInput. Each calendar is
+// bounded by the other field's date (dateFieldDisable) so the pair can never
+// read end-before-start; the controller re-bounds the other picker after a
+// pick.
 function buildDueSectionContent(ui, scope = "detail") {
   const pfx = ui.fig.family;
   const isCreate = scope === "create";
   const draft = (isCreate ? ui.getCreateDraft() : ui.getDetailDraft()) || {};
-  // Days in the past can't be picked (both create and detail) — but the
-  // field's own stored dates stay enabled so an overdue task still shows its
-  // date (see noPastDaysExcept).
-  const disable = noPastDaysExcept(draft.start_date, draft.due_date);
-  // A reader without task write rights sees the date but cannot change it: the
-  // calendar never opens, and a click on the field says why (the picker posts
-  // through `task-input-changed`, which the panel's edit gate cannot refuse —
-  // the title types through it too).
+  const start = draft.start_date || "";
+  const due = draft.due_date || "";
+  // A reader without task write rights sees the dates but cannot change them:
+  // the calendars never open, and a click on a field says why (the pickers
+  // post through `task-input-changed`, which the panel's edit gate cannot
+  // refuse — the title types through it too).
   const locked = !isCreate && !mayCreateTask(ui);
 
-  // Tag the calendar for theming; when `withHint`, also inject a step hint that
-  // guides the two-click range pick. The hint updates via a pushed onChange
-  // hook (pushed, not assigned, so the widget's own publish still fires).
-  const onReady = (withHint) => (_d, _s, instance) => {
+  // Tag the calendar so it can be themed without bleeding into other pickers.
+  const onReady = (_d, _s, instance) => {
     const cc = instance && instance.calendarContainer;
-    if (!cc) return;
-    cc.classList.add("tasks-panel__flatpickr");
-    if (!withHint) return;
-    let hint = cc.querySelector(".tasks-panel__dp-hint");
-    if (!hint) {
-      hint = document.createElement("div");
-      hint.className = "tasks-panel__dp-hint";
-      cc.prepend(hint);
-    }
-    const sync = () => {
-      const n = instance.selectedDates.length;
-      hint.textContent =
-        n === 1
-          ? LOCALE.SELECT_END_DATE
-          : n === 0
-            ? LOCALE.SELECT_START_DATE
-            : "";
-    };
-    sync();
-    if (Array.isArray(instance.config.onChange)) {
-      instance.config.onChange.push(sync);
-    }
+    if (cc) cc.classList.add("tasks-panel__flatpickr");
   };
 
-  const picker = draft.duration_on
-    ? {
-        kind: "date_picker",
-        className: `${pfx}__due-input ${pfx}__due-input--range`,
-        innerClass: `${pfx}__due-input-inner`,
-        name: "due_range",
-        ranges: true,
-        placeholder: LOCALE.SELECT_START_DATE,
-        // Seed [start, end]; a lone due_date opens the range at that day.
-        value: [draft.start_date, draft.due_date].filter(Boolean),
-        service: "task-input-changed",
-        uiHandler: [ui],
-        vendorOpt: {
-          dateFormat: "Y-m-d",
-          altInput: true,
-          altFormat: "d/m/Y",
-          rangeSeparator: "  →  ",
-          disable,
-          appendTo: document.body,
-          position: positionDueCalendarLeft,
-          onReady: onReady(true),
-        },
-      }
-    : {
-        kind: "date_picker",
-        className: `${pfx}__due-input`,
-        innerClass: `${pfx}__due-input-inner`,
-        name: "due_date",
-        placeholder: LOCALE.SELECT_DATE,
-        // Empty (not today): a new task has no due date until one is picked —
-        // the widget reads an explicit empty `value` as "nothing selected".
-        value: draft.due_date || "",
-        service: "task-input-changed",
-        uiHandler: [ui],
-        // appendTo: body escapes the panel's overflow clip; onReady tags the
-        // calendar so it can be themed without bleeding into other pickers.
-        vendorOpt: {
-          dateFormat: "Y-m-d",
-          altInput: true,
-          altFormat: "d/m/Y",
-          // Spelled out (vendorOpt wins over the widget's own default): an
-          // unset due date stays unset. The panel reads this input back on
-          // commit, so a picker that seeded itself with today would silently
-          // stamp every new task with its creation date.
-          defaultDate: draft.due_date || null,
-          disable,
-          appendTo: document.body,
-          position: positionDueCalendarLeft,
-          onReady: onReady(false),
-        },
-      };
-  if (locked) picker.vendorOpt.clickOpens = false;
+  const picker = (name, value) => {
+    return {
+      kind: "date_picker",
+      className: `${pfx}__due-input`,
+      innerClass: `${pfx}__due-input-inner`,
+      name,
+      placeholder: LOCALE.DATE_PLACEHOLDER,
+      // Empty (not today): a field holds no date until one is picked — the
+      // widget reads an explicit empty `value` as "nothing selected".
+      value,
+      service: "task-input-changed",
+      uiHandler: [ui],
+      // appendTo: body escapes the panel's overflow clip.
+      vendorOpt: {
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d/m/Y",
+        // Spelled out (vendorOpt wins over the widget's own default): an unset
+        // date stays unset. The panel reads these inputs back on commit, so a
+        // picker that seeded itself with today would silently stamp the task.
+        defaultDate: value || null,
+        disable: dateFieldDisable(name, start, due),
+        appendTo: document.body,
+        position: positionDueCalendarLeft,
+        onReady,
+        ...(locked ? { clickOpens: false } : {}),
+      },
+    };
+  };
+
+  // Locked: the click goes to the panel's edit gate instead. The kids are
+  // inactive because ui-core binds onclick on every ACTIVE widget and
+  // __handleClick always stops propagation — an active picker would swallow
+  // the click before it reached this service.
+  const gate = locked
+    ? { bubble: 0, service: "due-date-locked", uiHandler: [ui], kidsOpt: { active: 0 } }
+    : {};
+  const label = (content) =>
+    Skeletons.Note({ className: `${pfx}__${scope}-label`, content });
 
   return [
     Skeletons.Box.X({
-      className: `${pfx}__due-head`,
+      className: `${pfx}__due-range`,
       kids: [
-        Skeletons.Note({
-          className: `${pfx}__${scope}-label`,
-          content: LOCALE.DUE_DATE,
-        }),
-        // The whole "Duration [N days] (switch)" group is the click target, so
-        // the label toggles too. Its kids are inactive (kidsOpt, and the switch
-        // passes it on to its knob): ui-core binds onclick on every ACTIVE
-        // widget and __handleClick always stops propagation, so an active
-        // child would swallow the click before it reached this service.
-        Skeletons.Box.X({
-          className: `${pfx}__due-duration`,
-          bubble: 0,
-          service: "toggle-duration",
-          uiHandler: [ui],
-          kidsOpt: { active: 0 },
+        Skeletons.Box.Y({
+          className: `${pfx}__due-col`,
           kids: [
-            Skeletons.Note({
-              className: `${pfx}__due-duration-label`,
-              content: LOCALE.DURATION,
-            }),
-            // Live duration readout sits beside the label (range mode only);
-            // the controller refreshes it on each pick.
-            ...(draft.duration_on
-              ? [
-                  Skeletons.Note({
-                    className: `${pfx}__due-summary`,
-                    content: dueSummaryText(draft.start_date, draft.due_date),
-                  }),
-                ]
-              : []),
-            Skeletons.Box.X({
-              className: `${pfx}__toggle`,
-              attrOpt: { "data-on": draft.duration_on ? "1" : "0" },
-              kidsOpt: { active: 0 },
-              kids: [Skeletons.Box.X({ className: `${pfx}__toggle-knob` })],
+            label(LOCALE.START_DATE),
+            Skeletons.Box.Y({
+              className: `${pfx}__due-slot`,
+              // "1" shows the clear button in place of the calendar glyph; the
+              // controller flips it as Start changes (_syncDateRow).
+              attrOpt: { "data-filled": start ? "1" : "0" },
+              ...gate,
+              kids: [
+                picker("start_date", start),
+                // × back to a single-date task. Figma draws no clear control;
+                // without one a pointer user could never drop a Start.
+                locked
+                  ? null
+                  : Skeletons.Button.Svg({
+                      className: `${pfx}__due-clear`,
+                      ico: "cross",
+                      bubble: 0,
+                      service: "clear-start-date",
+                      uiHandler: [ui],
+                      tooltips: LOCALE.CLEAR,
+                    }),
+              ].filter(Boolean),
             }),
           ],
         }),
-      ],
-    }),
-    // The picker and its required-field message share a wrapper, so the flag
-    // (draft._dueMissing, also stamped in place by the controller) outlines the
-    // field and reveals the message. Inside the fed content, so the Duration
-    // toggle's re-feed keeps it.
-    Skeletons.Box.Y({
-      className: `${pfx}__due-field`,
-      attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
-      // Locked: the click goes to the panel's edit gate instead. The kids are
-      // inactive for the same reason as the Duration group above — an active
-      // picker would swallow the click before it reached this service.
-      ...(locked
-        ? { bubble: 0, service: "due-date-locked", uiHandler: [ui], kidsOpt: { active: 0 } }
-        : {}),
-      kids: [
-        picker,
-        Skeletons.Note({
-          className: `${pfx}__due-missing`,
-          content: LOCALE.TASK_DUE_REQUIRED,
+        Skeletons.Image.Svg({ ico: "arrow-right", className: `${pfx}__due-arrow` }),
+        Skeletons.Box.Y({
+          className: `${pfx}__due-col`,
+          kids: [
+            label(LOCALE.END_DATE),
+            // Only the End field is a __due-field: _flagDueMissing flags the
+            // FIRST __due-field it finds, so the Start field must not be one.
+            // The picker and its required-field message share this wrapper, so
+            // the flag (draft._dueMissing, also stamped in place by the
+            // controller) outlines the field and reveals the message.
+            Skeletons.Box.Y({
+              className: `${pfx}__due-field`,
+              attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
+              ...gate,
+              kids: [
+                picker("due_date", due),
+                Skeletons.Note({
+                  className: `${pfx}__due-missing`,
+                  content: LOCALE.TASK_DUE_REQUIRED,
+                }),
+              ],
+            }),
+          ],
         }),
       ],
     }),
@@ -4817,6 +4770,6 @@ make.buildHistoryListContent = buildHistoryListContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;
 make.buildDueSectionContent = buildDueSectionContent;
+make.dateFieldDisable = dateFieldDisable;
 make.buildColumnMenuContent = buildColumnMenuContent;
-make.dueSummaryText = dueSummaryText;
 module.exports = make;

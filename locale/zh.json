@@ -3123,6 +3123,8 @@
   "NO_BOOKMARKED_NOTIFICATIONS": "没有已收藏的通知",
   "PRIORITY_LEVEL": "优先级",
   "START_DATE": "开始日期",
+  "END_DATE": "结束日期",
+  "DATE_PLACEHOLDER": "日/月/年",
   "LINK_FILES": "关联文件",
   "REPORTERS": "报告人",
   "SEARCH_DOTS": "搜索...",

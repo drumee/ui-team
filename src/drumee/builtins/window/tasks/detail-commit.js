@@ -18,8 +18,7 @@ const { applyLabelOps } = require("./live-sync");
 
 const trim = (v) => String(v == null ? "" : v).trim();
 const list = (v) => (Array.isArray(v) ? v.slice() : []);
-// The stored range start only counts while the Duration switch is on.
-const startOf = (s) => (s.duration_on ? trim(s.start_date) : "");
+const startOf = (s) => trim(s.start_date);
 
 function snapshotTask(task, { assignees, noStatus }) {
   return {
@@ -27,7 +26,6 @@ function snapshotTask(task, { assignees, noStatus }) {
     description: task.description || "",
     due_date: task.due_date || "",
     start_date: task.start_date || "",
-    duration_on: !!task.start_date,
     status: task.status || noStatus,
     priority: task.priority || "medium",
     // A task from before the reporter field reads as reported by its creator.
@@ -74,17 +72,33 @@ function planDetailCommit(base, draft, fresh) {
     update.reporter_uid = reporter;
   }
 
+  // Start and End are separate fields: each goes back as mine where I changed
+  // it and as the CURRENT value (fresh) where I did not — never the one the
+  // card opened with, which would undo a colleague's edit (the date half of
+  // the lost-update bug).
   const due = trim(draft.due_date);
   const start = startOf(draft);
-  const datesTouched = due !== trim(base.due_date) || start !== startOf(base);
-  const datesDiffer = due !== trim(fresh.due_date) || start !== startOf(fresh);
-  if (Object.keys(update).length || (datesTouched && datesDiffer)) {
+  const dueTouched = due !== trim(base.due_date);
+  const startTouched = start !== startOf(base);
+  let nextDue = dueTouched ? due : trim(fresh.due_date);
+  let nextStart = startTouched ? start : startOf(fresh);
+  if (dueTouched || startTouched) {
+    // A merge that reads end-before-start (a peer moved End before my new
+    // Start) falls back to my own pair, which the pickers kept in order.
+    if (nextStart && nextDue && nextStart > nextDue) {
+      nextDue = due;
+      nextStart = start;
+    }
+    // A one-day span is a single-date task (same rule as list-edit).
+    if (nextStart === nextDue) nextStart = "";
+  }
+  const datesDiffer =
+    nextDue !== trim(fresh.due_date) || nextStart !== startOf(fresh);
+  if (Object.keys(update).length || ((dueTouched || startTouched) && datesDiffer)) {
     // task_update writes BOTH dates unconditionally, so they ride along on
-    // every update. An untouched date goes back as the CURRENT value (fresh),
-    // never the one the card opened with — that was the date half of the
-    // lost-update bug.
-    update.due_date = (datesTouched ? due : trim(fresh.due_date)) || null;
-    update.start_date = (datesTouched ? start : startOf(fresh)) || null;
+    // every update.
+    update.due_date = nextDue || null;
+    update.start_date = nextStart || null;
   }
 
   const status =
@@ -125,7 +139,6 @@ function advanceBase(base, draft, landed) {
     if (draft.reporter_uid) next.reporter_uid = draft.reporter_uid;
     next.due_date = draft.due_date || "";
     next.start_date = draft.start_date || "";
-    next.duration_on = !!draft.duration_on;
   }
   if (landed.status && draft.status) next.status = draft.status;
   if (landed.assignees) next.assignees = list(draft.assignees);

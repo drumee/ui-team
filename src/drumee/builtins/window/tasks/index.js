@@ -113,6 +113,10 @@ const ROW_BUSY_SERVICES = [
 // land identically and both attach to THAT comment rather than a new one.
 const ROW_SCOPE = /^comment-row:(.+)$/;
 
+// The Start date / End date pickers of the create modal and the detail panel.
+// Each one's calendar is bounded by the other's date (buildDueSectionContent).
+const DATE_FIELDS = new Set(["start_date", "due_date"]);
+
 // Default width of an image dropped or pasted into an editor (resizable up via
 // the handle afterwards). Matches __inline-img-pending's CSS width.
 const INLINE_IMG_W = 220;
@@ -892,7 +896,7 @@ class __tasks_panel extends LetcBox {
       "commit-detail", "commit-description", "commit-due-date",
       "set-status", "set-priority", "set-assignee", "set-reporter",
       "reset-reporter", "toggle-assignee-list", "toggle-task-label",
-      "toggle-duration", "due-date-locked", "remove-task", "toggle-complete",
+      "due-date-locked", "clear-start-date", "remove-task", "toggle-complete",
       "add-subtask", "add-child-task", "create-subtask",
       "toggle-subtask-complete", "toggle-subtask-menu",
       "set-subtask-priority", "set-subtask-status", "toggle-subtask-row-menu",
@@ -1771,7 +1775,6 @@ class __tasks_panel extends LetcBox {
           priority: "medium",
           due_date: "",
           start_date: "",
-          duration_on: false,
           assignees: [],
           labels: [],
           pending_files: [],
@@ -2215,32 +2218,20 @@ class __tasks_panel extends LetcBox {
         }
         return;
 
-      // Read-only due date (buildDueSectionContent). The edit gate above has
+      // Read-only Start / End dates (buildDueSectionContent). The edit gate above has
       // already refused it; a member who can write never draws this service.
       case "due-date-locked":
         return;
 
-      case "toggle-duration": {
-        // Duration switch (derive-from-start_date model). ON reveals the range
-        // picker seeded from the due date; OFF clears start_date. Shared by the
-        // create modal and detail panel (mutually exclusive) — pick the open one.
-        const inCreate = this.el.querySelector(".tasks-panel__create-modal");
-        const isCreate = !!(this._creating && inCreate);
-        const draft = isCreate ? this._createDefaults : this._detailDraft;
-        if (!draft) return;
-        // Persist any in-flight date edits before the DOM is rebuilt.
-        if (isCreate) this._captureCreateDraft();
-        else this._captureDetailDraft();
-        draft.duration_on = !draft.duration_on;
-        if (draft.duration_on) {
-          if (!draft.start_date) draft.start_date = draft.due_date || "";
-        } else {
-          draft.start_date = "";
-        }
-        // Re-feed ONLY the due-date sub-part (create modal or detail panel) —
-        // a full _render() would flicker the whole panel, rebuild every picker,
-        // and steal focus.
-        return this._refreshDueSection(isCreate ? "create" : "detail");
+      // × on the Start field. Clearing the picker posts task-input-changed
+      // with "", which empties the draft's start_date and syncs the row.
+      case "clear-start-date": {
+        const root =
+          trigger.el &&
+          trigger.el.closest(".tasks-panel__create-modal, .tasks-panel__detail-panel");
+        const input = root && root.querySelector('input[name="start_date"]');
+        if (input && input._flatpickr) input._flatpickr.clear();
+        return;
       }
 
       case "commit-detail":
@@ -2393,7 +2384,6 @@ class __tasks_panel extends LetcBox {
           priority: "medium",
           due_date: day,
           start_date: "",
-          duration_on: false,
           assignees: [],
           labels: [],
           pending_files: [],
@@ -3755,7 +3745,7 @@ class __tasks_panel extends LetcBox {
       result.due_date = due;
     }
 
-    // Same coercion for the optional range start (Duration toggle).
+    // Same coercion for the optional Start date.
     if (has("start_date")) {
       let start = row.start_date;
       if (start) {
@@ -3935,16 +3925,6 @@ class __tasks_panel extends LetcBox {
     // description syncs live from the contenteditable editor (_onDescInput).
   }
 
-  // Format a Date (or date-like value) to a local ISO "YYYY-MM-DD" string.
-  // Empty string for null/invalid so callers can treat it like a cleared field.
-  _isoDate(d) {
-    if (!d) return "";
-    const dt = d instanceof Date ? d : new Date(d);
-    if (isNaN(dt.getTime())) return "";
-    const p = (n) => String(n).padStart(2, "0");
-    return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
-  }
-
   // Push every keystroke straight into the active draft. The Entry widget
   // sets _input.value asynchronously (~200ms), so a pre-feed DOM read after
   // a re-render would blank typed text before the value is rebound.
@@ -3977,50 +3957,6 @@ class __tasks_panel extends LetcBox {
       scopeEl = trigger.el;
     }
     if (!name || !scopeEl) return;
-
-    // Range picker (Duration ON): the widget carries both endpoints as Date
-    // objects. Store them as ISO start_date/due_date on whichever draft owns
-    // the field (create modal or detail panel).
-    if (name === "due_range") {
-      if (!trigger || !trigger.mget) return;
-      const inCreate = this.el.querySelector(".tasks-panel__create-modal");
-      const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
-      let draft = null;
-      if (this._creating && inCreate && scopeEl && inCreate.contains(scopeEl)) {
-        draft = this._createDefaults;
-      } else if (
-        this._detailDraft &&
-        inDetail &&
-        scopeEl &&
-        inDetail.contains(scopeEl)
-      ) {
-        draft = this._detailDraft;
-      }
-      if (!draft) return;
-      const start = this._isoDate(trigger.mget("startDate"));
-      const end = this._isoDate(trigger.mget("endDate"));
-      draft.start_date = start;
-      draft.due_date = end || start;
-      if (draft.due_date) {
-        this._clearDueMissing(draft === this._createDefaults ? "create" : "detail");
-      }
-      // Live-refresh the duration readout without a re-feed that would close /
-      // rebuild the calendar mid-interaction.
-      const summary = require("./skeleton").dueSummaryText(
-        draft.start_date,
-        draft.due_date,
-      );
-      const scopeSel =
-        draft === this._createDefaults
-          ? ".tasks-panel__create-modal"
-          : ".tasks-panel__detail-panel";
-      const root = this.el.querySelector(scopeSel);
-      if (root) {
-        const sumEl = root.querySelector(".tasks-panel__due-summary");
-        if (sumEl) sumEl.textContent = summary;
-      }
-      return;
-    }
 
     if (value == null) value = "";
 
@@ -4079,11 +4015,13 @@ class __tasks_panel extends LetcBox {
       if (name === "title" && value.trim()) this._clearTitleMissing("create");
       if (name === "title" && !titleTooLong(value)) this._clearTitleTooLong("create");
       if (name === "due_date" && value) this._clearDueMissing("create");
+      if (DATE_FIELDS.has(name)) this._syncDateRow("create", name);
     } else if (this._detailDraft && inDetail && inDetail.contains(scopeEl)) {
       this._detailDraft[name] = value;
       if (name === "title" && value.trim()) this._clearTitleMissing("detail");
       if (name === "title" && !titleTooLong(value)) this._clearTitleTooLong("detail");
       if (name === "due_date" && value) this._clearDueMissing("detail");
+      if (DATE_FIELDS.has(name)) this._syncDateRow("detail", name);
     }
   }
 
@@ -4151,7 +4089,7 @@ class __tasks_panel extends LetcBox {
   /**
    * The due date is required too: same in-place flag as the title, on the
    * __due-field wrapper (outline + message), riding on the draft so a re-feed
-   * of the due section — the Duration toggle — keeps it.
+   * of the date section — after a Start/End pick — keeps it.
    */
   _flagDueMissing(scope) {
     const { draft, root } = this._titleScope(scope);
@@ -4183,8 +4121,11 @@ class __tasks_panel extends LetcBox {
     const draft = this._createDefaults || {};
     const title = String(draft.title || "").trim();
     const dueRaw = String(draft.due_date || "").trim();
-    // start_date only when the Duration toggle is on; OFF sends null (single-date).
-    const startRaw = draft.duration_on ? String(draft.start_date || "").trim() : "";
+    // An empty Start date is sent as null (a single-date task), and so is a
+    // Start on the End day itself — a one-day span is a single-date task
+    // (same rule as list-edit).
+    let startRaw = String(draft.start_date || "").trim();
+    if (startRaw === dueRaw) startRaw = "";
     // Already in marker form (chips serialize to "[@Name](user:uid)").
     const description = String(draft.description || "").trim();
 
@@ -4743,8 +4684,6 @@ class __tasks_panel extends LetcBox {
           _mentioned_before: seededMentions,
           due_date: task.due_date || "",
           start_date: task.start_date || "",
-          // Toggle state is derived from the stored range start.
-          duration_on: !!task.start_date,
           status: task.status || this.getDefaultStatus(),
           priority: task.priority || "medium",
           // Editable reporter. Falls back to created_by so a task from before
@@ -7757,21 +7696,34 @@ class __tasks_panel extends LetcBox {
     }
   }
 
-  // Re-feeds just the Due-date sub-part (Duration toggle) of the detail panel
-  // or the create modal, so switching single <-> range picker doesn't trigger
-  // a full-panel _render() that flickers, rebuilds every picker, steals focus.
-  _refreshDueSection(scope = "detail") {
+  // After a Start/End pick or clear (`changed`), bring the date row in line
+  // with the draft in place: the Start clear button shows only while Start
+  // holds a date, and the OTHER picker's calendar is re-bounded to the new
+  // pair (Start never after End, End never before Start). In place rather
+  // than a re-feed: rebuilding the row would destroy the input the user is on
+  // and drop keyboard focus to <body>.
+  _syncDateRow(scope, changed) {
     const isCreate = scope === "create";
-    if (isCreate ? !this._creating : !this._detailId) return;
-    const partName = isCreate ? "create-due-section" : "due-section";
-    this._withPart(partName)
-      .then((part) => {
-        if (!part || part.isDestroyed?.()) return;
-        part.feed(require("./skeleton").buildDueSectionContent(this, scope));
-      })
-      .catch(() => {
-        /* part not mounted yet */
-      });
+    const draft = isCreate ? this._createDefaults : this._detailDraft;
+    const root =
+      this.el &&
+      this.el.querySelector(
+        isCreate ? ".tasks-panel__create-modal" : ".tasks-panel__detail-panel",
+      );
+    if (!draft || !root) return;
+    if (changed === "start_date") {
+      const slot = root.querySelector(".tasks-panel__due-slot");
+      if (slot) slot.dataset.filled = draft.start_date ? "1" : "0";
+    }
+    const other = changed === "start_date" ? "due_date" : "start_date";
+    const input = root.querySelector(`input[name="${other}"]`);
+    const fp = input && input._flatpickr;
+    if (!fp) return;
+    const { dateFieldDisable } = require("./skeleton");
+    fp.set(
+      "disable",
+      dateFieldDisable(other, draft.start_date || "", draft.due_date || ""),
+    );
   }
 
   // Re-feeds just the attachment-rows part of the detail panel.
@@ -11772,7 +11724,6 @@ class __tasks_panel extends LetcBox {
       priority: "medium",
       due_date: "",
       start_date: "",
-      duration_on: false,
       assignees: [],
       labels: [],
       pending_files: [],

@@ -3124,6 +3124,8 @@
   "NO_BOOKMARKED_NOTIFICATIONS": "No hay notificaciones guardadas",
   "PRIORITY_LEVEL": "Nivel de prioridad",
   "START_DATE": "Fecha de inicio",
+  "END_DATE": "Fecha de fin",
+  "DATE_PLACEHOLDER": "dd/mm/aaaa",
   "LINK_FILES": "Vincular archivos",
   "REPORTERS": "Informadores",
   "SEARCH_DOTS": "Buscar...",

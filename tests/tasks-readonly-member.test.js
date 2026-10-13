@@ -303,7 +303,7 @@ test("the due date is locked on a read-only card, and its click is refused", () 
   const start = SKEL.indexOf("\nfunction buildDueSectionContent(");
   const body = SKEL.slice(start, SKEL.indexOf("\n}\n", start));
   assert.match(body, /const locked = !isCreate && !mayCreateTask\(ui\);/);
-  assert.match(body, /if \(locked\) picker\.vendorOpt\.clickOpens = false;/);
+  assert.match(body, /\.\.\.\(locked \? \{ clickOpens: false \} : \{\}\),/);
   assert.match(body, /service: "due-date-locked", uiHandler: \[ui\], kidsOpt: \{ active: 0 \}/);
   assert.ok(editServices().has("due-date-locked"));
 });
