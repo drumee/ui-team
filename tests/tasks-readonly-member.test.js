@@ -228,3 +228,90 @@ test("the read-only card drops Update, the composer and the file picker", () => 
   assert.match(SKEL, /readOnly\s*\? null\s*: filePickerBlock\("detail"/);
   assert.match(SKEL, /\.\.\.\(readOnly \? \{ readonly: 1 \} : \{\}\)/);
 });
+
+// ── drag a card / column without write rights (Thomas, round 2) ─────────────
+function dragHarness(mayWrite) {
+  const fn = new Function(`return ${sliceFunction(SRC, "_installDragRefusal()")}`)();
+  const listeners = [];
+  const said = [];
+  const el = {
+    addEventListener: (type, h, capture) => listeners.push({ type, h, capture }),
+    contains: () => true,
+  };
+  const p = {
+    el,
+    _mayWriteTasks: () => (typeof mayWrite === "function" ? mayWrite() : mayWrite),
+    _sayCannotEditTasks: () => said.push(1),
+  };
+  fn.call(p);
+  fn.call(p); // idempotent
+  const ev = (match) => {
+    const e = { prevented: 0, stopped: 0, preventDefault() { this.prevented++; }, stopPropagation() { this.stopped++; } };
+    e.target = { closest: (sel) => (match && sel.includes(match) ? { el: match } : null) };
+    return e;
+  };
+  return { listeners, said, ev };
+}
+
+test("Chat member: dragging a card is refused at dragstart, with the popup", () => {
+  const { listeners, said, ev } = dragHarness(false);
+  assert.equal(listeners.length, 1, "installed once");
+  assert.equal(listeners[0].type, "dragstart");
+  assert.equal(listeners[0].capture, true, "capture: runs before the board's own dragstart");
+  const e = ev(".tasks-panel__task-card");
+  listeners[0].h(e);
+  assert.equal(e.prevented, 1);
+  assert.equal(e.stopped, 1);
+  assert.equal(said.length, 1);
+});
+
+test("Chat member: dragging a custom column header is refused too", () => {
+  const { listeners, said, ev } = dragHarness(false);
+  const e = ev("[data-coldrag]");
+  listeners[0].h(e);
+  assert.equal(e.prevented, 1);
+  assert.equal(said.length, 1);
+});
+
+test("a drag of anything else in the panel is left alone", () => {
+  const { listeners, said, ev } = dragHarness(false);
+  const e = ev(null);
+  listeners[0].h(e);
+  assert.equal(e.prevented, 0);
+  assert.equal(said.length, 0);
+});
+
+test("Editor (or a member promoted since): the drag goes through untouched", () => {
+  let may = false;
+  const { listeners, said, ev } = dragHarness(() => may);
+  may = true;
+  const e = ev(".tasks-panel__task-card");
+  listeners[0].h(e);
+  assert.equal(e.prevented, 0);
+  assert.equal(said.length, 0);
+});
+
+test("the refusal is installed for every member, before the write-only wiring", () => {
+  const dnd = sliceFunction(SRC, "_installDnd()");
+  const refusal = dnd.indexOf("this._installDragRefusal()");
+  const gate = dnd.indexOf("if (!this._mayWriteTasks()) return;");
+  assert.ok(refusal > -1 && gate > -1 && refusal < gate);
+});
+
+// ── the due date on a read-only card ────────────────────────────────────────
+test("the due date is locked on a read-only card, and its click is refused", () => {
+  const start = SKEL.indexOf("\nfunction buildDueSectionContent(");
+  const body = SKEL.slice(start, SKEL.indexOf("\n}\n", start));
+  assert.match(body, /const locked = !isCreate && !mayCreateTask\(ui\);/);
+  assert.match(body, /if \(locked\) picker\.vendorOpt\.clickOpens = false;/);
+  assert.match(body, /service: "due-date-locked", uiHandler: \[ui\], kidsOpt: \{ active: 0 \}/);
+  assert.ok(editServices().has("due-date-locked"));
+});
+
+test("a click on the locked due date gives the popup and changes nothing", async () => {
+  const draft = { due_date: "2026-10-20" };
+  const p = makePanel(false, { _detailDraft: draft });
+  await onUiEvent.call(p, trig("due-date-locked"));
+  assert.equal(p.said.length, 1);
+  assert.equal(draft.due_date, "2026-10-20");
+});

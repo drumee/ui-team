@@ -3920,6 +3920,11 @@ function buildDueSectionContent(ui, scope = "detail") {
   // field's own stored dates stay enabled so an overdue task still shows its
   // date (see noPastDaysExcept).
   const disable = noPastDaysExcept(draft.start_date, draft.due_date);
+  // A reader without task write rights sees the date but cannot change it: the
+  // calendar never opens, and a click on the field says why (the picker posts
+  // through `task-input-changed`, which the panel's edit gate cannot refuse —
+  // the title types through it too).
+  const locked = !isCreate && !mayCreateTask(ui);
 
   // Tag the calendar for theming; when `withHint`, also inject a step hint that
   // guides the two-click range pick. The hint updates via a pushed onChange
@@ -4001,6 +4006,7 @@ function buildDueSectionContent(ui, scope = "detail") {
           onReady: onReady(false),
         },
       };
+  if (locked) picker.vendorOpt.clickOpens = false;
 
   return [
     Skeletons.Box.X({
@@ -4053,6 +4059,12 @@ function buildDueSectionContent(ui, scope = "detail") {
     Skeletons.Box.Y({
       className: `${pfx}__due-field`,
       attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
+      // Locked: the click goes to the panel's edit gate instead. The kids are
+      // inactive for the same reason as the Duration group above — an active
+      // picker would swallow the click before it reached this service.
+      ...(locked
+        ? { bubble: 0, service: "due-date-locked", uiHandler: [ui], kidsOpt: { active: 0 } }
+        : {}),
       kids: [
         picker,
         Skeletons.Note({

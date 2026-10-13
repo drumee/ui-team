@@ -892,7 +892,7 @@ class __tasks_panel extends LetcBox {
       "commit-detail", "commit-description", "commit-due-date",
       "set-status", "set-priority", "set-assignee", "set-reporter",
       "reset-reporter", "toggle-assignee-list", "toggle-task-label",
-      "toggle-duration", "remove-task", "toggle-complete",
+      "toggle-duration", "due-date-locked", "remove-task", "toggle-complete",
       "add-subtask", "add-child-task", "create-subtask",
       "toggle-subtask-complete", "toggle-subtask-menu",
       "set-subtask-priority", "set-subtask-status", "toggle-subtask-row-menu",
@@ -1044,9 +1044,38 @@ class __tasks_panel extends LetcBox {
     };
   }
 
+  /**
+   * A card or a custom column header is draggable for everyone (the skeleton
+   * does not know the role), so without write rights the drag used to lift the
+   * card and then land nowhere, silently. Refuse it as it starts, with the same
+   * popup as every other task edit. Installed for every member and read live,
+   * in the CAPTURE phase so it runs before _installDnd's own dragstart — which
+   * a member demoted after mount still has wired.
+   */
+  _installDragRefusal() {
+    if (!this.el || this._dragRefusalInstalled) return;
+    this._dragRefusalInstalled = true;
+    this.el.addEventListener(
+      "dragstart",
+      (e) => {
+        if (this._mayWriteTasks()) return;
+        let t = e.target;
+        if (t && !t.closest) t = t.parentElement;
+        const src =
+          t && t.closest && t.closest(".tasks-panel__task-card, [data-coldrag]");
+        if (!src || !this.el.contains(src)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this._sayCannotEditTasks();
+      },
+      true,
+    );
+  }
+
   // Delegated drag-and-drop on this.el — survives every _render()'s feed() rebuild.
   _installDnd() {
     if (!this.el || this._dndInstalled) return;
+    this._installDragRefusal();
     // Dragging a card between columns is task.update_status, and reordering a
     // column header is task.column_reorder — both `src: write`, so the server
     // refuses them for a view or chat member and the board snapped back. Don't
@@ -1087,12 +1116,6 @@ class __tasks_panel extends LetcBox {
 
     root.addEventListener("dragstart", (e) => {
       const colHead = findColHeader(e.target);
-      // Wired while this member could write; a demotion since must stop a card
-      // or column moving exactly as if the drag had never been installed.
-      if ((colHead || findCard(e.target)) && !this._mayWriteTasks()) {
-        e.preventDefault();
-        return;
-      }
       if (colHead) {
         this._dragColKey = colHead.dataset.coldrag;
         const colEl = colHead.closest("[data-column]");
@@ -2190,6 +2213,11 @@ class __tasks_panel extends LetcBox {
             this._detailDraft.labels,
           );
         }
+        return;
+
+      // Read-only due date (buildDueSectionContent). The edit gate above has
+      // already refused it; a member who can write never draws this service.
+      case "due-date-locked":
         return;
 
       case "toggle-duration": {
