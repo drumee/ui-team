@@ -9,6 +9,7 @@ const AudioMixerEffect = require("./audio-mixer-effect");
 const DevicePrefs = require("builtins/webrtc/device-prefs");
 const { stopPresentationSequence } = require("builtins/webrtc/stop-presentation");
 const { shouldStopForPresenter } = require("builtins/webrtc/remote-screen-watch");
+const { screenOnStage } = require("builtins/webrtc/screen-receiver-constraints");
 // How long the local microphone may report a flat zero level, while unmuted,
 // before the user is told that nothing is coming from it (see
 // _checkMicSilence). Long enough for a normal pause, short enough that the
@@ -1927,7 +1928,10 @@ class __webrtc_room extends __room {
     if (k.length) {
       this.presentation = k[0];
       if (this.presentation.__video) {
-        track.attach(this.presentation.__video.el);
+        const v = this.presentation.__video.el;
+        // Re-attaching resets srcObject: a black frame + spinner until the next
+        // keyframe. Only attach a track that isn't on this element yet.
+        if (!(track.containers || []).includes(v)) track.attach(v);
       }
       return;
     }
@@ -1963,8 +1967,12 @@ class __webrtc_room extends __room {
     }
     this.__presenter.feed(opt);
     let child = this.__presenter.children.last();
+    // Known from creation on. It used to be set only on a SECOND call, so the
+    // first stats event re-entered here and re-attached the track (black flash).
+    this.presentation = child;
     child.once(_e.destroy, () => {
       this.presenterId = null;
+      if (this.presentation === child) this.presentation = null;
     });
   }
 
@@ -1991,6 +1999,15 @@ class __webrtc_room extends __room {
       });
     }
     this.loadRemotePresentation(track, 1);
+    // Ask the bridge for the shared screen in HD; without this it is a
+    // thumbnail-priority source like any camera.
+    if (!track.isLocal() && this.room && typeof this.room.setReceiverConstraints === "function") {
+      try {
+        this.room.setReceiverConstraints(screenOnStage(track.getSourceName()));
+      } catch (e) {
+        this.warn("setReceiverConstraints failed", e);
+      }
+    }
   }
 
   /**

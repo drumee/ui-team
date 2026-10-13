@@ -15,6 +15,7 @@
 // connect, which doesn't define them (_setMemberPresenting / _updateFloatFocus /
 // _clearFloatFocus / _uidForParticipant).
 const __room = require("builtins/webrtc/room/jitsi");
+const { noScreenOnStage } = require("builtins/webrtc/screen-receiver-constraints");
 
 module.exports = {
   // Render our own screen on the presenter stage (Jitsi never echoes our own
@@ -118,6 +119,14 @@ module.exports = {
     this._dockParticipants(false);
     this._setShareLocked(false);
     this._presenterName = null;
+    // Nobody is on stage any more: drop the HD pin _enterRemotePresentation set.
+    if (this.room && typeof this.room.setReceiverConstraints === "function") {
+      try {
+        this.room.setReceiverConstraints(noScreenOnStage());
+      } catch (e) {
+        if (this.warn) this.warn("reset receiver constraints failed", e);
+      }
+    }
     if (this._currentPresenterUid) {
       if (this._setMemberPresenting) {
         this._setMemberPresenting(this._currentPresenterUid, false);

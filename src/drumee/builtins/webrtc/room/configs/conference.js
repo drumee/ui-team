@@ -1,3 +1,5 @@
+const { SCREEN_FPS } = require("../../screen-receiver-constraints");
+
 module.exports = function (opt = {}) {
 	const { domain, stunServers } = opt;
 	let configs = {
@@ -38,10 +40,9 @@ module.exports = function (opt = {}) {
 			sendMultipleVideoStreams: true,
 			receiveMultipleVideoStreams: true
 		},
-		desktopSharingFrameRate: {
-			min: 5,
-			max: 5
-		},
+		// Above 5: a max of 5 makes lib-jitsi-meet cap the share to a single
+		// 500 kbps layer (see screen-receiver-constraints).
+		desktopSharingFrameRate: { ...SCREEN_FPS },
 		startAudioOnly: false,
 		startAudioMuted: 10,
 		startWithAudioMuted: false,
@@ -82,11 +83,12 @@ module.exports = function (opt = {}) {
 		testing: {
 			octo: {
 				probability: 0
-			},
-			capScreenshareBitrate: 1
+			}
 		},
 		videoQuality: {
 			codecPreferenceOrder: ['VP9', 'VP8', 'H264'],
+			// Screen-share send bitrate (lib-jitsi-meet's default is 500 kbps).
+			desktopbitrate: 2500000,
 			maxBitratesVideo: {
 				H264: {
 					low: 200000,
