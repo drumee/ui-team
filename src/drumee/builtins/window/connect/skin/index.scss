@@ -129,7 +129,10 @@
     flex: 0 1 auto;
     min-height: 0;
     box-sizing: border-box;
-    padding: 0;
+    // Room for the 16px ringing pulse (drumee-call-pulse): the stage clips
+    // (overflow: hidden below), so without it the ring is cut flat at the top.
+    // Symmetric, so the group stays centred.
+    padding: var(--spacer-5) 0;
     align-items: center;
     justify-content: center;
   }
@@ -241,7 +244,7 @@
     flex-shrink: 0;
     box-sizing: border-box;
     width: 100%;
-    padding: var(--spacer-8) var(--spacer-6) 0;
+    padding: var(--spacer-6) var(--spacer-6) var(--spacer-5);
     justify-content: flex-start;
     align-items: center;
     gap: var(--spacer-7);
@@ -688,7 +691,7 @@
     }
 
     .window-connect__precall-footer {
-      padding: var(--spacer-6) var(--spacer-5) 0;
+      padding: var(--spacer-4) var(--spacer-5) var(--spacer-5);
       gap: var(--spacer-6);
     }
 
@@ -733,12 +736,13 @@
   // fitting between header and footer. Shrink the avatar and tighten the
   // vertical rhythm rather than letting the footer get pushed out of view.
   &__ui[data-short="1"] {
+    // 24px, not 16: the 16px pulse ring would otherwise reach the name.
     .window-connect__identity {
-      gap: var(--spacer-5);
+      gap: var(--spacer-6);
     }
 
     .window-connect__precall-footer {
-      padding: var(--spacer-6) var(--spacer-6) 0;
+      padding: var(--spacer-4) var(--spacer-6) var(--spacer-5);
       gap: var(--spacer-5);
     }
 

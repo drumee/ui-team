@@ -46,16 +46,16 @@ test("the footer stacks from its top, right under the identity", () => {
   assert.doesNotMatch(b, /justify-content: flex-end/);
 });
 
-// Any bottom padding on the footer (mobile / short variants included) would
-// shift the centred group upward.
-test("no footer variant pads its bottom", () => {
+// The stage pads 16px above the avatar for the pulse ring; the footer pads
+// the same 16px below the buttons, so the centred group stays balanced.
+test("every footer variant pads its bottom like the stage pads its top", () => {
   const rules = [...css.matchAll(/__precall-footer \{([^}]*)\}/g)].map((m) => m[1]);
   assert.ok(rules.length >= 3, "expected base + mobile + short footer rules");
   for (const r of rules) {
     const pad = r.match(/padding: ([^;]+);/);
     if (!pad) continue;
     const parts = pad[1].trim().split(/\s+/);
-    assert.equal(parts.length === 3 ? parts[2] : parts.length === 4 ? parts[2] : "0", "0", `footer padding ${pad[1]}`);
+    assert.equal(parts[2], "var(--spacer-5)", `footer padding ${pad[1]}`);
   }
 });
 
@@ -67,4 +67,33 @@ test("short window: the avatar root shrinks with its circle", () => {
   assert.ok(m, "missing short-window avatar root rule");
   assert.match(m[1], /width: 88px/);
   assert.match(m[1], /height: 88px/);
+});
+
+// The ringing pulse spreads a 16px box-shadow ring around the avatar, and
+// __precall-stage clips (overflow: hidden). The stage must keep >= 16px
+// above and below the avatar, or the ring is cut flat at the top and runs
+// into the name below.
+test("the stage leaves room for the 16px pulse ring, in every size", () => {
+  const ring = css.match(/50% \{ box-shadow: 0 0 0 (\d+)px/);
+  assert.ok(ring, "pulse keyframe not found");
+  const spread = Number(ring[1]);
+  // The parked 300x180 dock tile deliberately has no room for it.
+  const pads = [...css.matchAll(/([^{}]*)__precall-stage \{([^}]*)\}/g)]
+    .filter((m) => !/data-call-tile/.test(m[1]))
+    .map((m) => (m[2].match(/padding: ([^;]+);/) || [])[1])
+    .filter(Boolean);
+  assert.ok(pads.length > 0, "no stage padding rule");
+  for (const p of pads) {
+    const v = p.trim().split(/\s+/)[0];
+    const px = /^var\(--spacer-(\d)\)$/.test(v)
+      ? { 4: 12, 5: 16, 6: 24, 7: 32, 8: 40 }[RegExp.$1]
+      : parseFloat(v);
+    assert.ok(px >= spread, `stage padding ${p} is under the ${spread}px ring`);
+  }
+});
+
+test("short window: avatar-to-name gap clears the ring", () => {
+  const m = css.match(/\.window-connect__ui\[data-short="?1"?\] \.window-connect__identity \{([^}]*)\}/);
+  assert.ok(m, "missing short identity rule");
+  assert.match(m[1], /gap: var\(--spacer-6\)/);
 });
