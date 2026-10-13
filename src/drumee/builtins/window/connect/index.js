@@ -1,6 +1,7 @@
 const __room = require('builtins/webrtc/room/jitsi');
 
 const { timestamp } = require("@drumee/ui-essentials")
+const { startOnce } = require("./call-start");
 
 // The floating call frame. Was the Figma 734x600; a 1:1 call is one or two
 // faces and a row of controls, and at that size it covered most of the desk
@@ -354,11 +355,18 @@ class __window_connect extends __room {
 
 
   /**
+   * Join the conference — once, however many pushes ask. See ./call-start.
+   */
+  startConnection(args = {}) {
+    if (this.isOnine) return Promise.resolve();
+    return startOnce(this, () => this._startConnection(args));
+  }
+
+  /**
    *
    */
-  async startConnection(args = {}) {
+  async _startConnection(args = {}) {
     //let user = this.callee || this.caller;
-    if (this.isOnine) return;
     let isCallee = 0;
     if (this.caller) {
       isCallee = 1;

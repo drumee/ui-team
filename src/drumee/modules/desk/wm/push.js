@@ -56,6 +56,7 @@ function detachWhenFaded(node) {
 const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
 const { withOwnWorkspaceName } = require("libs/workspace-label");
+const { acceptStartsCall } = require("builtins/window/connect/call-start");
 
 class __push_manager extends winman {
 
@@ -1301,10 +1302,12 @@ class __push_manager extends winman {
         break;
       case SERVICE.conference.accept:
         this.verbose("AAA:364", currentRoom, currentRoom.state, _a.invite, data)
+        // Two accepts arrive per call (the server's join() push, then the
+        // callee's own). Only a still-ringing window acts — the state moves
+        // past 'connect' within milliseconds, so the old invite/connect check
+        // let the second accept start the caller's conference again.
+        if (!acceptStartsCall(currentRoom.state)) return;
         state = "connect";
-        if (currentRoom.state == _a.invite || currentRoom.state == 'connect') {
-          return;
-        }
         break;
       case SERVICE.conference.revoke:
         currentRoom.goodbye();
