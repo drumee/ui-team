@@ -822,7 +822,9 @@ class __webrtc_room extends __room {
     // _startupTracks before initJitsiConference/join, so local tracks still
     // ride the initial Jingle offer and a media failure still aborts the join
     // (via _startupMediaFailed).
-    this._startupTracks = this._createStartupTracks();
+    // The 1:1 window may already have asked at the click
+    // (window/connect/call-start beginEarlyMedia); the meeting never pre-sets it.
+    this._startupTracks = this._startupTracks || this._createStartupTracks();
     this.bindConferenceRoom(room)
       .then(() => {
         this.postOnlineState();

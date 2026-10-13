@@ -19,4 +19,32 @@ function startOnce(host, start) {
   return host._startPromise;
 }
 
-module.exports = { acceptStartsCall, startOnce };
+// Ask for camera/mic at the click instead of after conference.join + the
+// in-call skeleton. prepareConference reuses host._startupTracks.
+function beginEarlyMedia(host) {
+  if (!host._startupTracks) {
+    // Called synchronously so getUserMedia is in flight BEFORE the join POST.
+    let p;
+    try {
+      p = Promise.resolve(host._createStartupTracks());
+    } catch (e) {
+      p = Promise.reject(e);
+    }
+    host._startupTracks = p;
+    p.catch(() => {}); // surfaced by the caller
+  }
+  return host._startupTracks;
+}
+
+// conference.join runs alongside the media request; if the media request
+// fails (permission denied), don't use the room — we can't speak in it.
+async function joinAfterEarlyMedia(host, join) {
+  const media = host._startupTracks
+    ? host._startupTracks.then(() => true, () => false)
+    : Promise.resolve(true);
+  const [ok, room] = await Promise.all([media, join()]);
+  if (!ok || host._startupMediaFailed) return null;
+  return room;
+}
+
+module.exports = { acceptStartsCall, startOnce, beginEarlyMedia, joinAfterEarlyMedia };

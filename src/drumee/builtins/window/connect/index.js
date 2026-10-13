@@ -1,7 +1,7 @@
 const __room = require('builtins/webrtc/room/jitsi');
 
 const { timestamp } = require("@drumee/ui-essentials")
-const { startOnce } = require("./call-start");
+const { startOnce, beginEarlyMedia, joinAfterEarlyMedia } = require("./call-start");
 
 // The floating call frame. Was the Figma 734x600; a 1:1 call is one or two
 // faces and a row of controls, and at that size it covered most of the desk
@@ -371,8 +371,23 @@ class __window_connect extends __room {
     if (this.caller) {
       isCallee = 1;
     }
-    let room = await this.join({ isCallee, ...args });
+    // Camera/mic are requested NOW, alongside conference.join, instead of
+    // after the join round trip and the in-call skeleton (prepareConference
+    // reuses this request). See ./call-start.
+    beginEarlyMedia(this);
+    let room = await joinAfterEarlyMedia(this, () => this.join({ isCallee, ...args }));
+    if (!room && this._startupMediaFailed) {
+      // The server join may have gone through: tell the server we left, but
+      // keep the window open on the reason (prepareConference's own message
+      // never runs on this path; leaveRoom() would close it unread).
+      this.sendRoomSignaling(SERVICE.conference.leave).catch(() => {});
+      this.stateMessage(this.mediaErrorMessage(this._mediaError));
+      this.defaultState(_a.cancel);
+      return;
+    }
     if (!room || !room.user) {
+      // The early media request may have opened the camera/mic: release it.
+      Promise.resolve(this.unload && this.unload()).catch(() => {});
       this.stateMachine('permissionDenied');
       return;
     }
