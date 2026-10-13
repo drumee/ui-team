@@ -10,6 +10,7 @@ const STUBS = {
   "./skeleton": () => ({}),
   "libs/over-limit": { isLocked: () => false },
   "libs/gdrive-sa-import": require(path.join(SRC, "libs/gdrive-sa-import.js")),
+  "libs/progress-fill": require(path.join(SRC, "libs/progress-fill.js")),
 };
 const load = Module._load;
 Module._load = function (r, p, m) {

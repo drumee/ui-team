@@ -12,6 +12,12 @@
  */
 
 const POLL_INTERVAL_MS = 2000;
+// A small import is over before the first poll answers, so the running view
+// flashed past and the bar never showed. A finished job runs the bar to 100%
+// and holds it DONE_HOLD_MS, the running view staying up MIN_PROGRESS_MS in
+// all, before the result.
+const DONE_HOLD_MS = 700;
+const MIN_PROGRESS_MS = 1200;
 const RUNNING = ['queued', 'running'];
 const FINISHED = ['done', 'failed', 'cancelled'];
 // Reported through `errors` but not failures: a Drive shortcut is deliberately
@@ -59,7 +65,7 @@ function progressOf(job = {}) {
   const bytesTotal = job.bytes_total || 0;
   const bytesSeen = Math.min(bytesTotal, (job.bytes_done || 0) + (job.bytes_in_flight || 0));
   let pct;
-  if (total > 0 && done >= total) pct = 100;
+  if (job.status === 'done' || (total > 0 && done >= total)) pct = 100;
   else if (bytesTotal > 0) pct = Math.min(99, Math.round((bytesSeen / bytesTotal) * 100));
   else pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
   return { pct, done, total, bytesSeen, bytesTotal };
@@ -127,7 +133,10 @@ function createSaImport(opt = {}) {
   const timers = opt.timers || {
     setInterval: (fn, ms) => setInterval(fn, ms),
     clearInterval: (id) => clearInterval(id),
+    setTimeout: (fn, ms) => setTimeout(fn, ms),
+    clearTimeout: (id) => clearTimeout(id),
   };
+  const now = opt.now || (() => Date.now());
   // The account asking — get_state / sa_check / get_status / cancel / ack are
   // keyed on the user, not on the destination hub.
   const me = () => opt.account_id || (typeof Visitor !== 'undefined' ? Visitor.id : undefined);
@@ -143,6 +152,8 @@ function createSaImport(opt = {}) {
   let finishedFor = null;
   let starting = false;
   let disposed = false;
+  let shownAt = 0;
+  let hold = null;
 
   function snapshot() {
     return {
@@ -165,6 +176,29 @@ function createSaImport(opt = {}) {
       poll = null;
     }
   }
+  function stopHold() {
+    if (hold) {
+      if (timers.clearTimeout) timers.clearTimeout(hold);
+      hold = null;
+    }
+  }
+
+  /** Move to the job's final state and report it, once per job. */
+  function finish(r, job_id) {
+    if (disposed || !s.job || s.job.job_id !== job_id) return;
+    s.state = r.status;
+    // Cancel was pressed but the job finished first (a small import is over
+    // in about a second, before the request lands). The result is a real
+    // "done", and the view says the cancel came too late instead of leaving
+    // the user to think it was ignored.
+    s.cancelLate = (r.status === 'done' && s.cancelRequested) ? 1 : 0;
+    s.cancelRequested = 0;
+    emit();
+    if (finishedFor !== job_id) {
+      finishedFor = job_id;
+      onFinished(snapshot().job);
+    }
+  }
 
   async function tick() {
     if (disposed || !s.job) return;
@@ -180,8 +214,9 @@ function createSaImport(opt = {}) {
     if (disposed || !r || !s.job || s.job.job_id !== job_id) return;
     // Two ticks can overlap on a slow server. Once one of them has seen the
     // job finish, an older answer saying "running" must not bring it back —
-    // polling has stopped, so nothing would ever correct it.
-    if (FINISHED.includes(s.state)) return;
+    // polling has stopped, so nothing would ever correct it. The same holds
+    // while the full bar is shown before the result.
+    if (FINISHED.includes(s.state) || hold) return;
     const sig = [r.status, r.processed_files, r.total_files, r.errors_count,
       r.current_filename, r.bytes_done, r.bytes_in_flight].join('|');
     const changed = sig !== lastSig;
@@ -190,18 +225,17 @@ function createSaImport(opt = {}) {
     s.fileLog = trackFileLog(s.fileLog, r);
     if (FINISHED.includes(r.status)) {
       stopPoll();
-      s.state = r.status;
-      // Cancel was pressed but the job finished first (a small import is over
-      // in about a second, before the request lands). The result is a real
-      // "done", and the view says the cancel came too late instead of leaving
-      // the user to think it was ignored.
-      s.cancelLate = (r.status === 'done' && s.cancelRequested) ? 1 : 0;
-      s.cancelRequested = 0;
-      emit();
-      if (finishedFor !== job_id) {
-        finishedFor = job_id;
-        onFinished(snapshot().job);
+      if (r.status === 'done' && timers.setTimeout) {
+        // Still the running view, now at 100% (progressOf), held a moment.
+        emit();
+        const wait = Math.max(DONE_HOLD_MS, MIN_PROGRESS_MS - (now() - shownAt));
+        hold = timers.setTimeout(() => {
+          hold = null;
+          finish(r, job_id);
+        }, wait);
+        return;
       }
+      finish(r, job_id);
       return;
     }
     s.state = 'in-progress';
@@ -212,6 +246,8 @@ function createSaImport(opt = {}) {
   function attach(job_id, job) {
     if (disposed || !job_id) return;
     stopPoll();
+    stopHold();
+    shownAt = now();
     lastSig = null;
     s.job = { status: 'queued', ...(job || {}), job_id };
     s.state = 'in-progress';
@@ -357,6 +393,7 @@ function createSaImport(opt = {}) {
   function reset() {
     if (disposed) return;
     stopPoll();
+    stopHold();
     lastSig = null;
     finishedFor = null;
     s = blank('idle', s.saEmail);
@@ -366,6 +403,7 @@ function createSaImport(opt = {}) {
   function dispose() {
     disposed = true;
     stopPoll();
+    stopHold();
   }
 
   return { load, seed, verify, start, attach, cancel, ack, reset, dispose, snapshot };
@@ -373,6 +411,8 @@ function createSaImport(opt = {}) {
 
 module.exports = {
   POLL_INTERVAL_MS,
+  DONE_HOLD_MS,
+  MIN_PROGRESS_MS,
   RUNNING,
   FINISHED,
   errorText,

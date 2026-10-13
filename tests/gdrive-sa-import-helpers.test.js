@@ -90,3 +90,8 @@ test("trackFileLog: capped at 12, input untouched", () => {
   G.trackFileLog(before, { current_filename: "y", status: "running" });
   assert.deepEqual(before, [{ name: "x", status: "uploading" }]);
 });
+
+test("progressOf: a done job reads 100% even with nothing counted", () => {
+  assert.equal(G.progressOf({ status: "done" }).pct, 100);
+  assert.equal(G.progressOf({ status: "running" }).pct, 0);
+});

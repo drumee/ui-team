@@ -29,6 +29,7 @@ const STUBS = {
   "libs/gdrive-sa-import": {
     createSaImport: (opt) => { const r = fakeRun(); r.opt = opt; made.push(r); return r; },
   },
+  "libs/progress-fill": require(path.join(SRC, "libs/progress-fill.js")),
 };
 const load = Module._load;
 Module._load = function (r, p, m) {

@@ -350,6 +350,11 @@ class __tutorial_migrate extends LetcBox {
     // OAuth, this card cannot.
     if (snap.state === 'unavailable') return this._toHost('window-tutorial:fallback-popup');
     this.feed(liveSkeleton(this, snap, this._live.dest, { link: this._live.link }));
+    // Each render brings a new fill: run it from where the last one stood.
+    if (this.el && this.fig) {
+      this._barMemo = this._barMemo || {};
+      require('libs/progress-fill').animateFill(this.el, `.${this.fig.family}__live-fill`, this._barMemo);
+    }
   }
 
   /** What the link field holds now, remembered so a re-render keeps it. */

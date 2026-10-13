@@ -271,3 +271,85 @@ test("an honoured cancel ends 'cancelled', not cancelLate; no cancel → no flag
   assert.equal(b.run.snapshot().cancelLate, 0);
   b.run.dispose();
 });
+
+// Timers that also take one-shot timeouts, fired by hand like the intervals.
+function holdTimers() {
+  const t = fakeTimers();
+  t.timeouts = [];
+  t.setTimeout = (fn, ms) => { t.timeouts.push({ fn, ms }); return t.timeouts.length; };
+  t.clearTimeout = (id) => { if (t.timeouts[id - 1]) t.timeouts[id - 1].fn = null; };
+  t.fireTimeouts = async () => { for (const x of t.timeouts) if (x.fn) { const f = x.fn; x.fn = null; await f(); } await flush(); };
+  return t;
+}
+
+test("a job over before the first poll shows the full bar, held, then the result", async () => {
+  const { progressOf } = require(path.join(__dirname, "../src/drumee/libs/gdrive-sa-import.js"));
+  const timers = holdTimers();
+  let clock = 1000;
+  const { run, finished } = make(
+    { "google_drive.get_status": { status: "done", processed_files: 1, total_files: 1 } },
+    { timers, now: () => clock },
+  );
+  run.attach(9);
+  clock = 1300;                       // the first poll answers 300 ms later
+  await flush();
+  const held = run.snapshot();
+  assert.equal(held.state, "in-progress", "still the running view");
+  assert.equal(progressOf(held.job).pct, 100, "bar full");
+  assert.equal(finished.length, 0, "result not reported yet");
+  assert.equal(timers.timeouts.length, 1);
+  assert.equal(timers.timeouts[0].ms, 900, "running view up 1200 ms in all");
+  await timers.fireTimeouts();
+  assert.equal(run.snapshot().state, "done");
+  assert.equal(finished.length, 1);
+  run.dispose();
+});
+
+test("a long job still holds the full bar a moment; failed and cancelled do not", async () => {
+  const timers = holdTimers();
+  let clock = 0;
+  const a = make({ "google_drive.get_status": { status: "done", processed_files: 3, total_files: 3 } },
+    { timers, now: () => clock });
+  a.run.attach(10);
+  clock = 60000;
+  await flush();
+  assert.equal(timers.timeouts[0].ms, 700);
+  a.run.dispose();
+
+  for (const status of ["failed", "cancelled"]) {
+    const t = holdTimers();
+    const b = make({ "google_drive.get_status": { status } }, { timers: t, now: () => 0 });
+    b.run.attach(11);
+    await flush();
+    assert.equal(b.run.snapshot().state, status);
+    assert.equal(t.timeouts.length, 0);
+    b.run.dispose();
+  }
+});
+
+test("a late 'running' answer cannot pull the held bar back", async () => {
+  const timers = holdTimers();
+  let status = { status: "done", processed_files: 2, total_files: 2 };
+  const { run } = make({ "google_drive.get_status": () => status }, { timers, now: () => 0 });
+  run.attach(12);
+  await flush();
+  status = { status: "running", processed_files: 1, total_files: 2 };
+  await timers.fire();                // an interval tick that was already queued
+  assert.equal(run.snapshot().job.status, "done");
+  await timers.fireTimeouts();
+  assert.equal(run.snapshot().state, "done");
+  run.dispose();
+});
+
+test("reset or dispose during the hold drops the pending result", async () => {
+  const timers = holdTimers();
+  const { run, finished } = make({ "google_drive.get_status": { status: "done", processed_files: 1, total_files: 1 } },
+    { timers, now: () => 0 });
+  run.attach(13);
+  await flush();
+  run.reset();
+  await timers.fireTimeouts();
+  assert.equal(run.snapshot().state, "idle");
+  assert.equal(finished.length, 0);
+  run.dispose();
+});
