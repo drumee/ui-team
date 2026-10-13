@@ -3349,11 +3349,6 @@ $theme-colors: (
       color: var(--normal-fg-40, #84848c);
       pointer-events: none;
     }
-
-    // A read-only card (no task write rights) has nothing to invite.
-    &[contenteditable="false"]:empty::before {
-      content: none;
-    }
   }
 
   // Description box matches the Figma filled input (grey fill, no border,

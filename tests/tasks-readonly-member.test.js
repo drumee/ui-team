@@ -2,11 +2,12 @@
 //
 //   node --test tests/tasks-readonly-member.test.js
 //
-// Thomas (2026-10-12): a member demoted Edit → Chat could still edit a task
-// card; Update saved nothing and stacked "network error" over the permission
-// popup. The edit has to stop at the click, with ONE popup, and the panel has
-// to follow a live role change both ways. Runs the REAL panel methods, sliced
-// out of index.js, against a stub `this`.
+// Thomas (2026-10-12): a member demoted Edit → Chat edited a task card; Update
+// saved nothing and stacked "network error" over the permission popup.
+// Natrix (2026-10-13): the card stays editable — it is Update (or any click
+// that writes at once) that is refused, with ONE popup, and the stored task is
+// left as it was. The panel follows a live role change both ways. Runs the
+// REAL panel methods, sliced out of index.js, against a stub `this`.
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -24,10 +25,15 @@ function editServices() {
   return new Set(new Function(`return ${m[1]}`)());
 }
 
+const isTaskEditClick = new Function("ROW_SCOPE", "_e",
+  `return ${sliceFunction(SRC, "_isTaskEditClick(service, trigger)")}`,
+)(/^comment-row:(.+)$/, { upload: "upload" });
+
 function makePanel(mayWrite, extra = {}) {
   const said = [];
   const p = {
     constructor: { TASK_EDIT_SERVICES: editServices() },
+    _isTaskEditClick: isTaskEditClick,
     _mayWriteTasks: () => (typeof mayWrite === "function" ? mayWrite() : mayWrite),
     _sayCannotEditTasks: () => said.push(1),
     _refuseWhileRowBusy: () => false,
@@ -72,12 +78,46 @@ test("reading stays open to a View/Chat member", () => {
   }
 });
 
-test("Chat member: a status pill click is refused once, the draft is untouched", async () => {
+test("editing the card's draft is not refused (Natrix: only Update is)", () => {
+  const set = editServices();
+  for (const s of [
+    "set-status", "set-priority", "set-assignee", "set-reporter",
+    "reset-reporter", "toggle-assignee-list", "toggle-task-label",
+    "toggle-duration", "commit-description", "commit-due-date",
+    "add-subtask", "toggle-subtask-menu", "set-subtask-priority",
+    "set-subtask-status", "link-search-result",
+    "pick-attachment", "remove-pending-file", "file-search-input",
+  ]) {
+    assert.ok(!set.has(s), `${s} must not be refused`);
+  }
+});
+
+test("Chat member: a status pill click lands in the draft, no popup", async () => {
   const draft = { status: "todo" };
-  const p = makePanel(false, { _detailDraft: draft });
+  const p = makePanel(false, { _detailDraft: draft, _updateStatusPills() {} });
   await onUiEvent.call(p, trig("set-status", { taskStatus: "done" }));
-  assert.equal(p.said.length, 1);
-  assert.equal(draft.status, "todo");
+  assert.equal(p.said.length, 0);
+  assert.equal(draft.status, "done");
+});
+
+test("clicks that write at once are still refused", () => {
+  const set = editServices();
+  for (const s of [
+    "commit-detail", "commit-task", "remove-task", "toggle-complete",
+    "create-subtask", "toggle-subtask-complete", "unlink-attachment", "comment-submit", "comment-delete",
+  ]) {
+    assert.ok(set.has(s), `${s} must be refused`);
+  }
+});
+
+test("a card paperclip queues a file (allowed); a comment-row paperclip uploads at once (refused)", () => {
+  const p = makePanel(false);
+  assert.equal(p._isTaskEditClick("pick-attachment", trig("pick-attachment", { searchScope: "detail" })), false);
+  assert.equal(p._isTaskEditClick("pick-attachment", trig("pick-attachment", { searchScope: "comment" })), false);
+  assert.equal(p._isTaskEditClick("pick-attachment", trig("pick-attachment", { searchScope: "comment-row:42" })), true);
+  assert.equal(p._isTaskEditClick("upload", trig("upload", { searchScope: "comment-row:42" })), true);
+  assert.equal(p._isTaskEditClick("open-detail", trig("open-detail")), false);
+  assert.equal(p._isTaskEditClick("commit-detail", trig("commit-detail")), true);
 });
 
 test("Chat member: Update never reaches _commitDetail", async () => {
@@ -175,23 +215,18 @@ function live(mayWrite, extra = {}) {
   };
 }
 
-test("demoted: the create form closes, the open card re-seeds, the board redraws", () => {
+test("demoted: the board redraws; an open card and create form keep their drafts", () => {
   const p = live(false, { _creating: true, _detailId: 5, _detailReturnTo: 2 });
   onMayWriteChanged.call(p);
-  assert.deepEqual(p.log, ["discard", "open:5", "render"]);
-  assert.equal(p._detailReturnTo, 2, "the way back to the parent survives");
+  assert.deepEqual(p.log, ["render"]);
+  assert.equal(p._creating, true);
+  assert.equal(p._detailReturnTo, 2);
 });
 
 test("promoted: the drag wiring is installed and the board redraws", () => {
   const p = live(true);
   onMayWriteChanged.call(p);
   assert.deepEqual(p.log, ["dnd", "render"]);
-});
-
-test("a card whose task is gone is not re-opened", () => {
-  const p = live(false, { _detailId: 99 });
-  onMayWriteChanged.call(p);
-  assert.deepEqual(p.log, ["render"]);
 });
 
 test("a destroyed panel ignores the change", () => {
@@ -204,28 +239,23 @@ test("the panel listens for the folder window's may_write flip", () => {
   assert.match(SRC, /listenTo\(this\.model, "change:may_write", this\._onMayWriteChanged\)/);
 });
 
-// ── the read-only card ──────────────────────────────────────────────────────
-test("the description editor is not editable when read-only", () => {
+// ── the card is the same for every role ─────────────────────────────────────
+test("the card always offers Update, the composer and the file picker", () => {
+  assert.doesNotMatch(SKEL, /readOnly/);
+  assert.match(SKEL, /\n        Skeletons\.Note\(\{\s*className: `\$\{pfx\}__detail-submit`/);
+  assert.match(SKEL, /\n        Skeletons\.Box\.X\(\{\s*className: `\$\{pfx\}__comment-composer`/);
+  assert.match(SKEL, /\n        filePickerBlock\("detail"/);
+});
+
+test("the description editor is always editable", () => {
   const start = SKEL.indexOf("\nfunction mentionField(");
   const end = SKEL.indexOf("\n}\n", start);
-  const nodes = [];
-  const rec = (type) => (o) => (nodes.push({ type, ...o }), { type, ...o });
+  const rec = (type) => (o) => ({ type, ...o });
   const mentionField = new Function("Skeletons", "LOCALE", "mentionDropdown", "linkPrompt",
     `${SKEL.slice(start, end + 2)}\nreturn mentionField;`)(
     { Box: { Y: rec("Box.Y") }, Element: rec("Element") }, {}, () => null, () => null);
   const ui = { fig: { family: "tasks-panel" } };
-  const editor = (opt) => mentionField(ui, "detail", opt).kids[0].attrOpt.contenteditable;
-  assert.equal(editor({ readonly: true }), "false");
-  assert.equal(editor({ readonly: false }), "true");
-  assert.equal(editor(undefined), "true", "every other caller stays editable");
-});
-
-test("the read-only card drops Update, the composer and the file picker", () => {
-  assert.match(SKEL, /const readOnly = !mayCreateTask\(ui\);/);
-  assert.match(SKEL, /readOnly \? null : Skeletons\.Note\(\{\s*className: `\$\{pfx\}__detail-submit`/);
-  assert.match(SKEL, /readOnly \? null : Skeletons\.Box\.X\(\{\s*className: `\$\{pfx\}__comment-composer`/);
-  assert.match(SKEL, /readOnly\s*\? null\s*: filePickerBlock\("detail"/);
-  assert.match(SKEL, /\.\.\.\(readOnly \? \{ readonly: 1 \} : \{\}\)/);
+  assert.equal(mentionField(ui, "detail").kids[0].attrOpt.contenteditable, "true");
 });
 
 // ── drag a card / column without write rights (Thomas, round 2) ─────────────
@@ -297,20 +327,11 @@ test("the refusal is installed for every member, before the write-only wiring", 
   assert.ok(refusal > -1 && gate > -1 && refusal < gate);
 });
 
-// ── the due date on a read-only card ────────────────────────────────────────
-test("the due date is locked on a read-only card, and its click is refused", () => {
+// ── the dates are pickable by every member ──────────────────────────────────
+test("the due date picker is never locked; the pick only reaches the draft", () => {
   const start = SKEL.indexOf("\nfunction buildDueSectionContent(");
   const body = SKEL.slice(start, SKEL.indexOf("\n}\n", start));
-  assert.match(body, /const locked = !isCreate && !mayCreateTask\(ui\);/);
-  assert.match(body, /if \(locked\) picker\.vendorOpt\.clickOpens = false;/);
-  assert.match(body, /service: "due-date-locked", uiHandler: \[ui\], kidsOpt: \{ active: 0 \}/);
-  assert.ok(editServices().has("due-date-locked"));
-});
-
-test("a click on the locked due date gives the popup and changes nothing", async () => {
-  const draft = { due_date: "2026-10-20" };
-  const p = makePanel(false, { _detailDraft: draft });
-  await onUiEvent.call(p, trig("due-date-locked"));
-  assert.equal(p.said.length, 1);
-  assert.equal(draft.due_date, "2026-10-20");
+  assert.doesNotMatch(body, /clickOpens|due-date-locked|due-lock|locked/);
+  assert.match(body, /service: "task-input-changed"/);
+  assert.ok(!SRC.includes('case "due-date-locked"'));
 });

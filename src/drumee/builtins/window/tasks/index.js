@@ -848,31 +848,43 @@ class __tasks_panel extends LetcBox {
   }
 
   /**
-   * The UI actions that START or MAKE a task change. Refused in onUiEvent for
-   * a member without write rights, so the edit is stopped at the click — not
-   * accepted into a draft and then refused at Update, which is what Thomas
-   * reported (Chat member: the card took every edit, Update saved nothing).
+   * The UI actions that SAVE a task change. Refused in onUiEvent for a member
+   * without write rights, with the one permission popup, at the moment the
+   * change would be sent.
    *
-   * Reading stays open: opening a card or attachment, the Comments/History
-   * tabs, expanding subtasks, filters, views and column watches are not here.
+   * Editing a draft is NOT here (Natrix): a member may still type a title, pick
+   * a status, a date, people, labels or files on the card; it is the card's
+   * Update (commit-detail) that is refused, and the stored task is left as it
+   * was. Every action listed writes the moment it is clicked, so it is refused
+   * the same way. Reading stays open too: opening a card or attachment, the
+   * Comments/History tabs, expanding subtasks, filters, views and column
+   * watches.
    */
   static get TASK_EDIT_SERVICES() {
     return new Set([
       "add-task", "commit-task", "cal-add", "add-board", "board-submit",
-      "commit-detail", "commit-description", "commit-due-date",
-      "set-status", "set-priority", "set-assignee", "set-reporter",
-      "reset-reporter", "toggle-assignee-list", "toggle-task-label",
-      "toggle-duration", "due-date-locked", "remove-task", "toggle-complete",
-      "add-subtask", "add-child-task", "create-subtask",
-      "toggle-subtask-complete", "toggle-subtask-menu",
-      "set-subtask-priority", "set-subtask-status", "gantt-toggle-select",
+      "commit-detail", "remove-task", "toggle-complete",
+      "add-child-task", "create-subtask", "toggle-subtask-complete",
+      "gantt-toggle-select",
       "gantt-delete-selected", "col-menu", "col-rename-submit", "col-theme-set",
       "col-done-toggle", "col-delete", "comment-submit", "comment-edit",
       "comment-save", "comment-delete", "comment-reply", "comment-reply-submit",
       "comment-react-add", "comment-react-remove", "comment-react-toggle",
-      "comment-react-more", "comment-unlink-attachment", "link-search-result",
-      "pick-attachment", "unlink-attachment", "retry-pending-file",
+      "comment-react-more", "comment-unlink-attachment", "unlink-attachment",
+      "retry-pending-file",
     ]);
+  }
+
+  /**
+   * Is this click a task write? TASK_EDIT_SERVICES, plus the paperclip on a
+   * comment row: every other paperclip queues the file on a draft, but a row
+   * has no submit, so its pick uploads and links at once (_onAttachmentPicked).
+   */
+  _isTaskEditClick(service, trigger) {
+    if (this.constructor.TASK_EDIT_SERVICES.has(`${service}`)) return true;
+    if (service !== "pick-attachment" && service !== _e.upload) return false;
+    const scope = trigger && trigger.mget ? trigger.mget("searchScope") : null;
+    return ROW_SCOPE.test(scope || "");
   }
 
   // Close the create form's state (its DOM is the caller's business).
@@ -886,26 +898,14 @@ class __tasks_panel extends LetcBox {
 
   /**
    * An admin changed this member's role while the panel was open. The board's
-   * add buttons, menus and the open card were all drawn for the old role, so
-   * redraw them; a promotion also needs the drag wiring _installDnd skipped.
+   * add buttons and menus were drawn for the old role, so redraw them; a
+   * promotion also needs the drag wiring _installDnd skipped. An open card or
+   * create form is left as it is, draft included: whether it may be saved is
+   * decided, live, when Update / Create is pressed.
    */
   _onMayWriteChanged() {
     if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
-    if (this._mayWriteTasks()) {
-      this._installDnd();
-    } else {
-      // Demoted mid-edit: nothing half-typed here can be saved any more.
-      if (this._creating) this._discardCreateForm();
-    }
-    // Re-seed an open card from the saved task, so a demoted member sees what
-    // is stored rather than an unsaved draft — and the card redraws in its new
-    // mode. _openDetail forgets the way back to a parent; keep it.
-    const id = this._detailId;
-    if (id && this._tasks.some((t) => t.id === id)) {
-      const back = this._detailReturnTo;
-      this._openDetail(id);
-      this._detailReturnTo = back;
-    }
+    if (this._mayWriteTasks()) this._installDnd();
     this._render();
   }
 
@@ -1697,10 +1697,7 @@ class __tasks_panel extends LetcBox {
     if (this._refuseWhileRowBusy(service, trigger)) return;
     // Read live, not at render: a role change can land between the paint and
     // the click.
-    if (
-      this.constructor.TASK_EDIT_SERVICES.has(`${service}`) &&
-      !this._mayWriteTasks()
-    ) {
+    if (this._isTaskEditClick(service, trigger) && !this._mayWriteTasks()) {
       return this._sayCannotEditTasks();
     }
     switch (service) {
@@ -2092,11 +2089,6 @@ class __tasks_panel extends LetcBox {
             this._detailDraft.labels,
           );
         }
-        return;
-
-      // Read-only due date (buildDueSectionContent). The edit gate above has
-      // already refused it; a member who can write never draws this service.
-      case "due-date-locked":
         return;
 
       case "toggle-duration": {
