@@ -124,8 +124,8 @@
     min-width: 0;
   }
 
-  /* Card header — one line: the name ellipsizes, the SHARED badge and the
-     action buttons keep their size, and the buttons go icon-only. */
+  /* Card header — one line: the name ellipsizes, the SHARED badge keeps its
+     size. */
   .dmz-sharebox__header.dmz__header {
     padding: 0 12px;
 
@@ -161,19 +161,6 @@
     .topbar-folder-icon {
       flex-shrink: 0;
     }
-
-    .dmz-button__buttons-wrapper {
-      flex-shrink: 0;
-      gap: 8px;
-    }
-
-    .dmz-button__label-button {
-      padding: 8px 10px;
-
-      .label {
-        display: none;
-      }
-    }
   }
 
   /* Tab bar */
@@ -193,8 +180,32 @@
     }
   }
 
-  .dmz-sharebox-topbar__view-toggle-seg {
-    padding: 0 8px;
+  /* File toolbar (dmz/wm _toolbar) — filters on their own line, scrolling
+     sideways if a language makes them wider than the phone; the actions and
+     the view toggle on the line below, actions icon-only. */
+  .dmz__files-panel.dmz-sharebox__files-panel .dmz-wm__toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+
+    .dmz-wm__filter-track {
+      flex: 1 1 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .dmz-wm__filter-tab-main {
+      flex-shrink: 0;
+      padding: 0 12px;
+    }
+
+    .dmz-button__label-button {
+      padding: 0 10px;
+
+      .label {
+        display: none;
+      }
+    }
   }
 
   /* File grid — the scroll (24px) and each section (24px) both pad the sides,
@@ -205,7 +216,8 @@
 
     .workspace-section,
     .folder-section,
-    .file-section {
+    .file-section,
+    .group-section {
       justify-content: center;
       padding: 8px 0;
     }
