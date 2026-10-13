@@ -71,7 +71,7 @@ export function breadcrumbs(ui, opt) {
   });
 }
 
-function fileViewToggle(ui, opt = {}) {
+export function fileViewToggle(ui, opt = {}) {
   const cnTopbar = `${ui.fig.family}-topbar`;
   const modes = opt.modes || [
     { mode: "list", ico: "view-list" },
@@ -434,13 +434,6 @@ export function tabBar(ui, opt = {}) {
   // folder window's toggle-task-filter / task-filter-state handlers remain but
   // are simply no longer wired to a button here.
 
-  // The folder's New + layout controls now live in its file filter row. Keep
-  // the shared DMZ layout toggle here because DMZ does not render that row.
-  const splitBtn =
-    !isFolder && ui.fig.family === "dmz-sharebox"
-      ? fileViewToggle(ui)
-      : "";
-
   // The strip is the scroller for the mobile carousel (folder skin's
   // @container block pages it two tabs at a time), so it needs to be reachable
   // from JS — the scroll listener that tracks the current page lives in
@@ -489,7 +482,9 @@ export function tabBar(ui, opt = {}) {
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     dataset: isFolder ? { area: ui.mget(_a.area) } : {},
-    kids: [tabStrip, splitBtn, tabDots],
+    // The folder's New + layout controls live in its file filter row, and the
+    // DMZ share builds the same row (dmz/wm skeleton) — no toggle here.
+    kids: [tabStrip, tabDots],
   });
 }
 
@@ -668,13 +663,10 @@ export function dropdownMenuButton(ui, opt = {}) {
 }
 
 function getChatLabel(ui) {
-  if (ui.fig.family === "window-folder") {
-    return LOCALE.FOLDER_SCOPED_CHAT || LOCALE.CHAT;
-  }
-  // DMZ recipient view: the docked panel is labelled "CONVERSATION" (Figma 3.1),
+  // The DMZ recipient view reads like the desk folder window's ("Team Chat"),
   // not "<file> - Chat".
-  if (ui.fig.family === "dmz-sharebox") {
-    return LOCALE.SECURE_SHARE_CONVERSATION || LOCALE.CHAT;
+  if (ui.fig.family === "window-folder" || ui.fig.family === "dmz-sharebox") {
+    return LOCALE.FOLDER_SCOPED_CHAT || LOCALE.CHAT;
   }
   const name = ui.mget(_a.filename) || ui.mget(_a.name) || "";
   return name ? `${name} - ${LOCALE.CHAT}` : LOCALE.CHAT;

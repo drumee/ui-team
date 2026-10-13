@@ -17,12 +17,14 @@ const {
 
 const { isSharedArea } = require("../area");
 
-function dmzTopbar(ui) {
+/**
+ * "+ Add new" / Upload / Download for the share's file filter row (built by the
+ * dmz/wm skeleton, which places them like the desk folder window's toolbar).
+ * They used to sit in the card header. Handlers stay on the sharebox (`ui`).
+ * @param {*} ui sharebox
+ */
+export function dmzFileActions(ui) {
   const cnWindowButton = `${ui.fig.group}-button`;
-  const cnTopbarTitle = `${ui.fig.group}-topbar-title`;
-  const figname = "topbar";
-  const area = ui.mget(_a.area);
-  const name = ui.mget(_a.title) || ui.mget(_a.filename) || ui.mget(_a.name) || "";
   const canUpload = ui.havePermission(_K.permission.upload, ui.mget(_a.privilege));
   const canEdit = ui.havePermission(_K.permission.write, ui.mget(_a.privilege));
   // A single-FILE share exposes only the shared file: the recipient may open/edit it,
@@ -32,43 +34,7 @@ function dmzTopbar(ui) {
   // stops offering actions that would 403. (Download stays — it targets the shared file.)
   const isFileShare = !!ui.mget('file_nid');
 
-  const titleWrapper = Skeletons.Box.X({
-    className: `${cnTopbarTitle}__wrapper`,
-    kids: [
-      require("../../../../builtins/window/skeleton/topbar/folder-icon")(area),
-      // Header breadcrumb for in-place sub-folder navigation (Cases 3+4), mirroring
-      // the desk folder window's `folder-breadcrumb-path`: ancestors render here as
-      // clickable crumbs (+ a trailing "›") and the current folder is the title
-      // (ref-window-name). Empty at the share root. Fed by sharebox._refreshBreadcrumb.
-      Skeletons.Box.X({
-        className: `${ui.fig.family}__breadcrumb-path`,
-        sys_pn: "dmz-breadcrumb-path",
-        partHandler: ui,
-        dataset: { state: 0 },
-      }),
-      Skeletons.Note({
-        sys_pn: "ref-window-name",
-        className: _a.name,
-        content: name,
-      }),
-      Skeletons.Box.X({
-        className: `${ui.fig.family}__badge`,
-        kids: [
-          Skeletons.Note({
-            // Public/shared/dmz links show the "SHARED" badge; only true
-            // restricted workspaces fall back to their own (e.g. "RESTRICTED")
-            // label. Keeps prod (area='public') matching test (area='share').
-            content: isSharedArea(area)
-              ? (LOCALE.SHARED || "Shared")
-              : (getAreaLabel(area) || LOCALE.SHARED || "Shared"),
-          }),
-        ],
-      }),
-    ],
-  });
-
-  
-  const buttons = Skeletons.Box.X({
+  return Skeletons.Box.X({
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       // visioMenu(ui),
@@ -117,6 +83,48 @@ function dmzTopbar(ui) {
         : null,
     ],
   });
+}
+
+function dmzTopbar(ui) {
+  const cnTopbarTitle = `${ui.fig.group}-topbar-title`;
+  const figname = "topbar";
+  const area = ui.mget(_a.area);
+  const name = ui.mget(_a.title) || ui.mget(_a.filename) || ui.mget(_a.name) || "";
+
+  const titleWrapper = Skeletons.Box.X({
+    className: `${cnTopbarTitle}__wrapper`,
+    kids: [
+      require("../../../../builtins/window/skeleton/topbar/folder-icon")(area),
+      // Header breadcrumb for in-place sub-folder navigation (Cases 3+4), mirroring
+      // the desk folder window's `folder-breadcrumb-path`: ancestors render here as
+      // clickable crumbs (+ a trailing "›") and the current folder is the title
+      // (ref-window-name). Empty at the share root. Fed by sharebox._refreshBreadcrumb.
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__breadcrumb-path`,
+        sys_pn: "dmz-breadcrumb-path",
+        partHandler: ui,
+        dataset: { state: 0 },
+      }),
+      Skeletons.Note({
+        sys_pn: "ref-window-name",
+        className: _a.name,
+        content: name,
+      }),
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__badge`,
+        kids: [
+          Skeletons.Note({
+            // Public/shared/dmz links show the "SHARED" badge; only true
+            // restricted workspaces fall back to their own (e.g. "RESTRICTED")
+            // label. Keeps prod (area='public') matching test (area='share').
+            content: isSharedArea(area)
+              ? (LOCALE.SHARED || "Shared")
+              : (getAreaLabel(area) || LOCALE.SHARED || "Shared"),
+          }),
+        ],
+      }),
+    ],
+  });
 
   return Skeletons.Box.X({
     className: `${ui.fig.group}-${figname}__container ${area || ""}`,
@@ -126,7 +134,7 @@ function dmzTopbar(ui) {
     kids: [
       Skeletons.Box.X({
         className: `${ui.fig.group}-${figname}__title`,
-        kids: [titleWrapper, buttons],
+        kids: [titleWrapper],
       }),
       Skeletons.Wrapper.Y({
         className: `${ui.fig.group}__wrapper--context dialog__wrapper--context`,
