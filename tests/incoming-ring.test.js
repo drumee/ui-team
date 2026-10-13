@@ -63,3 +63,17 @@ test("the call ringtone points at the new asset", () => {
   const k = K.default || K;
   assert.equal(k.ringtones.call, "musics/ringtones/ringtone.mp3");
 });
+
+// Caller and callee hear the same tone: the caller's ring-back (dial state,
+// window/connect) plays _K.ringtones.call — the callee's incoming ring — not
+// the old dialtones.rinback.
+test("caller and callee ring with the same call ringtone", () => {
+  const fs = require("node:fs");
+  const SRC = path.join(__dirname, "..", "src/drumee");
+  const connect = fs.readFileSync(path.join(SRC, "builtins/window/connect/index.js"), "utf8");
+  const push = fs.readFileSync(path.join(SRC, "modules/desk/wm/push.js"), "utf8");
+  assert.doesNotMatch(connect, /dialtones\.rinback/);
+  const callerPlays = connect.match(/Visitor\.playSound\(_K\.ringtones\.call\b/g) || [];
+  assert.equal(callerPlays.length, 2, "dial + offline-ring paths");
+  assert.match(push, /Visitor\.playSound\(_K\.ringtones\.call\)/);
+});

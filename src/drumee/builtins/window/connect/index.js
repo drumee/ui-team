@@ -583,7 +583,8 @@ class __window_connect extends __room {
           // Ring an offline callee like any phone would: ring-back on our
           // side while the invite is retried, so they get the call if they
           // come online in time. See _ringOffline.
-          Visitor.playSound(_K.dialtones.rinback, 10);
+          // Same tone the callee hears (push.js) — one call ringtone.
+          Visitor.playSound(_K.ringtones.call, 10);
           this._ringOffline(callee);
           break;
         }
@@ -591,7 +592,7 @@ class __window_connect extends __room {
           this.stateMachine('offline');
           return;
         }
-        Visitor.playSound(_K.dialtones.rinback, 10);
+        Visitor.playSound(_K.ringtones.call, 10);
         try {
           console.log("[ROOMDBG] dial: invite returned", {
             guest_room_id: guest && guest.room_id, guest_nid: guest && guest.nid,
