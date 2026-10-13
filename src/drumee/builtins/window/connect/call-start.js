@@ -26,7 +26,17 @@ function beginEarlyMedia(host) {
     // Called synchronously so getUserMedia is in flight BEFORE the join POST.
     let p;
     try {
-      p = Promise.resolve(host._createStartupTracks());
+      // JitsiMeetJS.init first: track attach, local audio stats and device
+      // ids all depend on it, and it used to run (bindConferenceRoom) before
+      // any track existed.
+      if (typeof host._prepareMediaStack === "function") host._prepareMediaStack();
+      p = Promise.resolve(host._createStartupTracks()).then((tracks) => {
+        // A camera that failed fell back to audio only before the in-call
+        // skeleton existed to switch its button off; the skeleton reads the
+        // model, so put the truth there.
+        if (!host.isVideo && typeof host.mset === "function") host.mset({ video: 0 });
+        return tracks;
+      });
     } catch (e) {
       p = Promise.reject(e);
     }

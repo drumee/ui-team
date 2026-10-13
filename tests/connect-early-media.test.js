@@ -29,3 +29,32 @@ test("denied media returns no room", async () => {
   const room = await joinAfterEarlyMedia(host, async () => ({ user: { permission: 1 } }));
   assert.equal(room, null);
 });
+
+// Final review #1: lib-jitsi-meet's RTCUtils.attachMediaStream, local audio
+// stats and device ids only exist after JitsiMeetJS.init — which used to run
+// (in bindConferenceRoom) before any track was created.
+test("the media stack is initialised before tracks are requested", async () => {
+  const log = [];
+  const host = {
+    _prepareMediaStack: () => log.push("init"),
+    _createStartupTracks: () => { log.push("gum"); return Promise.resolve(["a"]); },
+  };
+  beginEarlyMedia(host);
+  await host._startupTracks;
+  assert.deepEqual(log, ["init", "gum"]);
+});
+
+// Final review #2: the startup camera failed and the call fell back to audio
+// only. The in-call skeleton builds its camera button from mget(video), so the
+// model must say "off" — __ctrlVideo did not exist yet to be switched off.
+test("a camera that failed at startup leaves the model's video off", async () => {
+  const set = {};
+  const host = {
+    isVideo: true,
+    mset: (o) => Object.assign(set, o),
+    _createStartupTracks: () => { host.isVideo = false; return Promise.resolve(["mic"]); },
+  };
+  beginEarlyMedia(host);
+  await host._startupTracks;
+  assert.equal(set.video, 0);
+});

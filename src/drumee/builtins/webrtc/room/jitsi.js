@@ -28,6 +28,8 @@ const PEER_WATCH_MS = 10000;
 // is the screen VIDEO track). unload() iterates localTracks, so parking it here
 // also means call teardown disposes it for free.
 const DESKTOP_AUDIO = "desktopAudio";
+// JitsiMeetJS.init is page-global; see _prepareMediaStack.
+let jitsiInitialised = false;
 
 const __room = require(".");
 
@@ -170,6 +172,28 @@ class __webrtc_room extends __room {
   }
 
   /**
+   * JitsiMeetJS.init — once per page — plus the slow-permission listener.
+   * Must run before the first createLocalTracks: track attach
+   * (RTCUtils.attachMediaStream), local audio stats and device ids all come
+   * from init. The 1:1 window requests media before bindConferenceRoom
+   * (window/connect/call-start beginEarlyMedia), so it calls this first.
+   */
+  _prepareMediaStack(initOptions) {
+    if (!jitsiInitialised) {
+      JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.WARN);
+      JitsiMeetJS.init(initOptions || require("./configs/init")());
+      jitsiInitialised = true;
+    }
+    if (!this._slowPromptListening) {
+      this._slowPromptListening = true;
+      JitsiMeetJS.mediaDevices.addEventListener(
+        JEVENTS.mediaDevices.USER_MEDIA_SLOW_PROMISE_TIMEOUT,
+        this.onPermissionPrompted
+      );
+    }
+  }
+
+  /**
    *
    */
   bindConferenceRoom(room = {}) {
@@ -189,8 +213,7 @@ class __webrtc_room extends __room {
         return resolve();
       }
 
-      JitsiMeetJS.setLogLevel(JitsiMeetJS.logLevels.WARN);
-      JitsiMeetJS.init(options.init);
+      this._prepareMediaStack(options.init);
       try {
         this.connection = new JitsiMeetJS.JitsiConnection(
           null,
@@ -352,6 +375,7 @@ class __webrtc_room extends __room {
       JEVENTS.mediaDevices.USER_MEDIA_SLOW_PROMISE_TIMEOUT,
       this.onPermissionPrompted
     );
+    this._slowPromptListening = false;
     if (this.room) {
       this.room.off(JEVENTS.conference.TRACK_ADDED, this.onStreamReceived);
       this.room.off(JEVENTS.conference.TRACK_REMOVED, this.onTrackRemoved);
@@ -791,10 +815,14 @@ class __webrtc_room extends __room {
       this.onDeviceListChanged
     );
 
-    JitsiMeetJS.mediaDevices.addEventListener(
-      JEVENTS.mediaDevices.USER_MEDIA_SLOW_PROMISE_TIMEOUT,
-      this.onPermissionPrompted
-    );
+    // Registered once per window (it may already be, from _prepareMediaStack).
+    if (!this._slowPromptListening) {
+      this._slowPromptListening = true;
+      JitsiMeetJS.mediaDevices.addEventListener(
+        JEVENTS.mediaDevices.USER_MEDIA_SLOW_PROMISE_TIMEOUT,
+        this.onPermissionPrompted
+      );
+    }
 
     this.waitElement(this.el, () => {
       this.el.dataset.mode = this.mget(_a.mode) || _a.none;
