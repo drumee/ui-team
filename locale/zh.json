@@ -196,6 +196,7 @@
   "MIGRATE_GDRIVE_SUMMARY_ERRORS": "{0} 个错误。",
   "DETAILS": "详细信息",
   "MODIFIED": "修改时间",
+  "MODIFIED_BY": "修改者",
   "DELETE_WORKSPACE_FAILED": "无法删除工作区，列表已恢复。",
   "LEAVE_WORKSPACE_FAILED": "无法退出工作区，列表已恢复。",
   "LEAVE_WORKSPACE": "退出工作区",

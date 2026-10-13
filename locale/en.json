@@ -115,6 +115,7 @@
   "DESCRIPTION": "Description",
   "DETAILS": "Details",
   "MODIFIED": "Modified",
+  "MODIFIED_BY": "Modified by",
   "DESIGN_BUTTONS": "Design buttons",
   "DESIGN_PAGE_TIP": "Drag and drop here components the page you want to set up",
   "DESKTOP": "Desktop",

@@ -196,6 +196,7 @@
   "MIGRATE_GDRIVE_SUMMARY_ERRORS": "{0} erreurs.",
   "DETAILS": "Détails",
   "MODIFIED": "Modifié",
+  "MODIFIED_BY": "Modifié par",
   "DELETE_WORKSPACE_FAILED": "Impossible de supprimer l'espace de travail. La liste a été restaurée.",
   "LEAVE_WORKSPACE_FAILED": "Impossible de quitter l'espace de travail. La liste a été restaurée.",
   "LEAVE_WORKSPACE": "Quitter l'espace de travail",

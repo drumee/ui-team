@@ -1602,6 +1602,9 @@ class __media_interact extends media_core {
     const item = Wm.getWindowPreset(this);
     item.kind = "window_media_details";
     item.wm_unique_id = `window_media_details-${item.nid}`;
+    // Already up: the WM only raises a singleton, so refetch the dates here.
+    const card = Wm.getItemsByAttr("wm_unique_id", item.wm_unique_id)[0];
+    if (card && !card.isDestroyed() && _.isFunction(card.refresh)) card.refresh();
     return Wm.launch(item, { explicit: 1, singleton: 1 });
   }
 

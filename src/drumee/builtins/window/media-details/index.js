@@ -3,7 +3,7 @@ const mfsInteract = require('../interact');
 
 /**
  * "Get info" details window for a regular file (spec 2026-06-10) — name,
- * type, size, dates, owner, location. Opened from the media context menu
+ * type, size, dates, who modified it last, location. Opened from the media context menu
  * (media/interact.js openDetailsWindow), singleton per node.
  */
 // This panel's own geometry. `height` is only the opening guess — the real
@@ -112,23 +112,58 @@ class __window_media_details extends mfsInteract {
   }
 
   async onDomRefresh() {
-    // Refresh node attributes so size/dates are current; the preset copied
-    // from the grid item may be stale. Render from the local model on failure.
+    await this.refresh();
+    this.raise();
+    this.setupInteract();
+  }
+
+  /**
+   * Fetch the node again and redraw. Also called when Get info is asked for
+   * while this card is still up (media/interact.js openDetailsWindow): the WM
+   * only raises a singleton, so the card kept the dates of its first open and
+   * an edit made since did not show in Modified.
+   */
+  async refresh() {
+    // The preset copied from the grid item may be stale. Render from the
+    // local model on failure.
     try {
       const data = await this.fetchService(SERVICE.media.get_node_attr, {
         nid: this.mget(_a.nid),
         hub_id: this.mget(_a.hub_id),
+        modifier: 1,
       });
       if (data && !data.error) this.mset(data);
     } catch (e) {
       this.warn('media-details: get_node_attr failed', e);
     }
+    if (this.isDestroyed()) return;
     this.feed(require('./skeleton')(this));
     // One frame, so the rows the feed just queued are laid out and
     // `scrollHeight` reports the real content height rather than 0.
     requestAnimationFrame(() => this._fitToContent());
-    this.raise();
-    this.setupInteract();
+  }
+
+  /**
+   * Redraw when the server reports a new version of this file. An office save
+   * lands a few seconds after the editor closes (the document server waits for
+   * the last user to leave), so a card opened in between kept the old Modified
+   * until it was opened again.
+   */
+  handleWsEvent(args = {}) {
+    const { data, options = {} } = args || {};
+    const changes = [
+      SERVICE.media.replace,
+      SERVICE.media.save,
+      SERVICE.media.rotate,
+      SERVICE.media.rename,
+      'media.update',
+    ];
+    if (options.service && changes.includes(options.service)) {
+      const nid = `${this.mget(_a.nid)}`;
+      const rows = _.isArray(data) ? data : [data];
+      if (rows.some((r) => r && `${r.nid || r.id}` === nid)) this.refresh();
+    }
+    if (super.handleWsEvent) return super.handleWsEvent(args);
   }
 
   onUiEvent(cmd, args = {}) {
