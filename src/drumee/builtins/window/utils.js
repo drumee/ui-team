@@ -1602,9 +1602,14 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
-   *
+   * @param {Object} source a media widget, or { nid, hub_id, filetype, … }
+   * @param {Object} [known]
+   * @param {Object} [known.node] media.attributes the caller already resolved
+   *   for this nid (a Designation link probes it first) — the player is then
+   *   launched from it instead of asking the server again. Ignored unless its
+   *   nid is the one being opened.
    */
-  async openFileLocation(source) {
+  async openFileLocation(source, { node: knownNode = null } = {}) {
     let data;
     let media;
     let cid;
@@ -1687,8 +1692,12 @@ class __window_mfs extends DrumeeMFS {
     if (opt.kind && !node && !highlight) {
       // Fetch the node, give the player a media to read its content through,
       // launch — shared with openers that are not windows (libs/open-media).
+      const known =
+        knownNode && knownNode.nid && `${knownNode.nid}` === `${nid}`
+          ? knownNode
+          : node;
       return launchPlayer(
-        { opt, node, nid, hub_id, media },
+        { opt, node: known, nid, hub_id, media },
         { fetchService: this.fetchService, warn: this.warn && this.warn.bind(this) },
       );
     }

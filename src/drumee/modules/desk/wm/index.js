@@ -201,6 +201,9 @@ class __window_manager extends push {
       return this._openDesignationFolder(payload);
     }
     const hub_id = payload && payload.hub_id;
+    // The node's media.attributes as the probe below resolved it — handed to
+    // openFileLocation so it does not ask the server the same question again.
+    let node = null;
     // Already standing in it (warm click from inside the workspace) — mounting
     // again would destroy and rebuild the pane for nothing.
     if (hub_id && !this._findWorkspaceWindow(hub_id)) {
@@ -209,7 +212,14 @@ class __window_manager extends push {
       if (this._isPlainDesignationTarget(payload)) {
         const holdCanvas = !this._curWorkspace && !this.headlessPane();
         if (holdCanvas) this._syncHomeGrid(1);
-        if (await this._refusedDesignationTarget(payload, holdCanvas)) return;
+        // Both read-only requests at once — see _prefetchWorkspaceRoot.
+        const probe = this._fetchDesignationNode(payload);
+        const root = this._prefetchWorkspaceRoot(hub_id);
+        if (await this._refusedDesignationTarget(payload, holdCanvas, probe)) {
+          return;
+        }
+        node = await probe;
+        await root;
       }
       try {
         // nid 0 is the server's "this hub's root" shortcut (_rootNid), exactly
@@ -222,7 +232,58 @@ class __window_manager extends push {
         this.warn("openDesignationLink: could not dock the workspace", e);
       }
     }
-    return this.openFileLocation(payload);
+    return this.openFileLocation(payload, { node });
+  }
+
+  /**
+   * media.attributes for a Designation link's node — the probe
+   * _refusedDesignationTarget reads. Never rejects: a failure is null, which
+   * that method reads as "did not resolve", exactly as before.
+   *
+   * @param {Object} target { hub_id, nid }
+   * @returns {Promise<Object|null>}
+   */
+  _fetchDesignationNode({ hub_id, nid } = {}) {
+    return Promise.resolve(
+      this.fetchService(SERVICE.media.attributes, { hub_id, nid }),
+    ).catch(() => null);
+  }
+
+  /**
+   * Ask for the workspace root WHILE the link's own node is being probed,
+   * instead of after it.
+   *
+   * A Designation link used to pay its round trips one after the other: the
+   * node probe, then loadWorkspace's own media.attributes for the root (the
+   * pane mounts only once that answers), then — in openFileLocation — the
+   * node's attributes a second time. Measured on drumee.in for a file link:
+   * ~840 ms from the click to the player launching, ~400 ms of it those
+   * serial and repeated requests.
+   *
+   * This is the SAME request loadWorkspace makes (media.attributes, nid 0) and
+   * its answer is stored under the SAME key loadWorkspace reads, so the pane
+   * mounts at once from it — the path a workspace switched back to already
+   * takes (libs/read-cache) — and loadWorkspace still revalidates it as it
+   * always does. Only a resolvable root is stored; anything else stores
+   * nothing and loadWorkspace fetches exactly as before. Skipped when this
+   * session already remembers the root (loadWorkspace mounts from it anyway).
+   *
+   * @param {String} hub_id
+   * @returns {Promise<void>} never rejects
+   */
+  _prefetchWorkspaceRoot(hub_id) {
+    const nid = this._rootNid(0);
+    const key = `wm:attrs:${hub_id}:${nid}`;
+    if (!hub_id || readCache.peek(key)) return Promise.resolve();
+    return Promise.resolve(
+      this.fetchService(SERVICE.media.attributes, { hub_id, nid }),
+    )
+      .then((attrs) => {
+        if (attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid)) {
+          readCache.set(key, { ...attrs });
+        }
+      })
+      .catch(() => { });
   }
 
   /**
@@ -253,14 +314,20 @@ class __window_manager extends push {
     // seen on drumee.in as 1-2 s of home behind the alert.
     const holdCanvas = !this._curWorkspace && !this.headlessPane();
     if (holdCanvas) this._syncHomeGrid(1);
-    if (await this._refusedDesignationTarget({ hub_id, nid }, holdCanvas)) {
+    // Both read-only requests at once — see _prefetchWorkspaceRoot.
+    const probe = this._fetchDesignationNode({ hub_id, nid });
+    const root = this._prefetchWorkspaceRoot(hub_id);
+    if (await this._refusedDesignationTarget({ hub_id, nid }, holdCanvas, probe)) {
       return;
     }
-    const win = await this.openNotificationLocation({
-      hub_id,
-      nid,
-      filetype: _a.folder,
-    });
+    const folder = await probe;
+    await root;
+    // The folder's attributes, just resolved, so openNotificationLocation does
+    // not fetch them a second time before navigating into it.
+    const win = await this.openNotificationLocation(
+      { hub_id, nid, filetype: _a.folder },
+      { targetAttrs: folder },
+    );
     // Nothing mounted after all — give the claim back so the canvas is decided
     // by settleHomeGrid instead of staying blank.
     if (holdCanvas && !win && !this._curWorkspace) this._releaseCanvas();
@@ -309,13 +376,12 @@ class __window_manager extends push {
    *
    * @param {Object} target { hub_id, nid }
    * @param {Boolean} holdCanvas the caller claimed an empty canvas
+   * @param {Promise<Object|null>} [probe] the node's attributes, already
+   *   requested by the caller (_fetchDesignationNode); asked here when absent
    * @returns {Promise<Boolean>} true when refused (and handled)
    */
-  async _refusedDesignationTarget({ hub_id, nid } = {}, holdCanvas = false) {
-    const attrs = await this.fetchService(SERVICE.media.attributes, {
-      hub_id,
-      nid,
-    }).catch(() => null);
+  async _refusedDesignationTarget({ hub_id, nid } = {}, holdCanvas = false, probe = null) {
+    const attrs = await (probe || this._fetchDesignationNode({ hub_id, nid }));
     if (attrs && attrs.nid) return false;
     const home = await this.fetchService(SERVICE.media.home, { hub_id })
       .catch(() => null);
@@ -863,7 +929,14 @@ class __window_manager extends push {
     this.alert(LOCALE.WORKSPACE_NO_ACCESS || LOCALE.WEAK_PRIVILEGE);
     return false;
   }
-  async openNotificationLocation(args = {}) {
+  /**
+   * @param {Object} args the notification / link payload
+   * @param {Object} [known]
+   * @param {Object} [known.targetAttrs] media.attributes the caller already
+   *   holds for the folder to land on; used only when its nid IS that folder,
+   *   otherwise the folder is fetched as usual
+   */
+  async openNotificationLocation(args = {}, { targetAttrs = null } = {}) {
     const {
       hub_id,
       nid,
@@ -948,7 +1021,11 @@ class __window_manager extends push {
       `${win.mget(_a.nid)}` !== `${targetNid}` &&
       _.isFunction(win.refreshContent)
     ) {
-      const attrs = await this.fetchService(SERVICE.media.attributes, {
+      const known =
+        targetAttrs && targetAttrs.nid && `${targetAttrs.nid}` === `${targetNid}`
+          ? targetAttrs
+          : null;
+      const attrs = known || await this.fetchService(SERVICE.media.attributes, {
         hub_id,
         nid: targetNid,
       }).catch((e) => {
