@@ -317,9 +317,6 @@ class __address_book extends LetcBox {
       case "delete-tag":
         return this._deleteTag(trigger);
 
-      case "close-panel":
-        return Desk.togglePanel("address_book", "chat-panel");
-
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);
     }
