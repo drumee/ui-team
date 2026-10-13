@@ -93,11 +93,40 @@ test("a dropped request maximises in-window and lights the button", async (t) =>
   // fullscreen and no change event arrives.
   el.requestFullscreen = () => Promise.resolve();
   self._toggleWindowFullscreen();
-  t.mock.timers.tick(300);
+  // Decided when the request settles (not by a timer).
+  await Promise.resolve(); await Promise.resolve();
   assert.equal(btn.state, 1);
   assert.deepEqual(self.sizes.at(-1), { left: 0, top: 0, width: 1200, height: 700 });
   // The same button puts the window back.
   self._toggleWindowFullscreen();
   assert.equal(btn.state, 0);
   assert.deepEqual(self.sizes.at(-1), { width: 640, height: 520, left: 10, top: 20 });
+});
+
+// Final review #3: macOS Chrome animates into a fullscreen Space; the enter
+// event can land well after 300 ms. That is a SUCCESS, not a drop.
+test("a slow but successful enter (macOS animation) never falls back", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const { self, btn, el } = host();
+  self._workAreaBox = () => ({ width: 1200, height: 700 });
+  el.requestFullscreen = () => new Promise((res) => {
+    setTimeout(() => {
+      global.document.fullscreenElement = el;
+      el.onfullscreenchange();
+      res();
+    }, 600);
+  });
+  self._toggleWindowFullscreen();
+  t.mock.timers.tick(300);
+  await Promise.resolve();
+  assert.equal(self.sizes.length, 0, "maximised while fullscreen was still entering");
+  t.mock.timers.tick(300);
+  await Promise.resolve(); await Promise.resolve();
+  assert.equal(btn.state, 1);
+  assert.equal(self.sizes.length, 0);
+  // Esc much later: a normal exit, button back off.
+  t.mock.timers.tick(5000);
+  global.document.fullscreenElement = null;
+  el.onfullscreenchange();
+  assert.equal(btn.state, 0);
 });

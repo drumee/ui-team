@@ -18,7 +18,9 @@
 // a bare requestFullscreen() does not.
 // Chrome enters and instantly drops fullscreen for a <div> under a transformed
 // Wm ancestor (see screenshare._toggleScreenShareFullscreen). An exit this soon
-// after the request is that drop, not the user.
+// after the ENTER event is that drop, not the user. Measured from the enter,
+// never from the request: macOS animates into a fullscreen Space and the enter
+// itself can land well after the click.
 const DROPPED_WITHIN_MS = 300;
 
 module.exports = {
@@ -42,13 +44,16 @@ module.exports = {
     };
     // Fires for the header button, for ESC, and for anything else that drops us
     // out of fullscreen.
-    const askedAt = Date.now();
+    let enteredAt = null;
     el.onfullscreenchange = () => {
       const isFull = document.fullscreenElement === el;
       this._syncFullscreenButton(isFull);
-      if (isFull) return;
+      if (isFull) {
+        enteredAt = Date.now();
+        return;
+      }
       el.onfullscreenchange = null;
-      if (Date.now() - askedAt < DROPPED_WITHIN_MS && this._canMaximise()) {
+      if (enteredAt !== null && Date.now() - enteredAt < DROPPED_WITHIN_MS && this._canMaximise()) {
         this._toggleWindowMaximise();
         return;
       }
@@ -72,23 +77,26 @@ module.exports = {
       }, 50);
     };
     const p = req.call(el);
-    if (p && typeof p.catch === "function") {
-      p.catch(() => {
-        // The request never took (no user gesture, blocked by policy): drop the
-        // handler and the snapshot so neither can fire later out of context.
-        el.onfullscreenchange = null;
-        this._fullscreenRestore = null;
-        this._syncFullscreenButton(false);
-      });
+    if (p && typeof p.then === "function") {
+      p.then(
+        () => {
+          // Resolved, yet nothing is fullscreen and the snapshot is still
+          // pending: dropped without even a change event.
+          if (document.fullscreenElement === el || !this._fullscreenRestore) return;
+          if (!this._canMaximise()) return;
+          el.onfullscreenchange = null;
+          this._toggleWindowMaximise();
+        },
+        () => {
+          // The request never took (no user gesture, blocked by policy): drop
+          // the handler and the snapshot so neither can fire later out of
+          // context.
+          el.onfullscreenchange = null;
+          this._fullscreenRestore = null;
+          this._syncFullscreenButton(false);
+        }
+      );
     }
-    // Dropped without even a change event: nothing is fullscreen and the
-    // snapshot is still pending.
-    setTimeout(() => {
-      if (document.fullscreenElement === el || !this._fullscreenRestore) return;
-      if (!this._canMaximise()) return;
-      el.onfullscreenchange = null;
-      this._toggleWindowMaximise();
-    }, DROPPED_WITHIN_MS);
   },
 
   // Mirror the fullscreen state on the header button (icon swap via its
