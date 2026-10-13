@@ -221,6 +221,9 @@ class __tasks_panel extends LetcBox {
     require("./skin");
     super.initialize(opt);
     this.declareHandlers();
+    // The folder window flips may_write when an admin changes this member's
+    // role (window/folder _applyLivePrivilege) — follow it without a reopen.
+    this.listenTo(this.model, "change:may_write", this._onMayWriteChanged);
     // LetcBox auto-binds fetchService/postService but not uploadFile.
     this.uploadFile = uploadFile.bind(this);
     this._hubId = this.mget(_a.hub_id) || Host.get(_a.id);
@@ -857,6 +860,91 @@ class __tasks_panel extends LetcBox {
   }
 
   /**
+   * The one refusal for a task edit: "You can't edit tasks because your current
+   * permission level is <role>…". The panel holds no privilege of its own, so
+   * the level is read from the workspace window it is mounted for.
+   * sayWeakPrivilege stamps saidRecently(), which is what keeps a caller's own
+   * "network error" (_alertWriteFailed) from stacking on top — and one Update
+   * sends several writes, so it is said once.
+   */
+  _sayCannotEditTasks() {
+    const PD = require("libs/permission-denied");
+    if (PD.saidRecently()) return;
+    PD.sayWeakPrivilege(
+      LOCALE.PERMISSION_ACTION_EDIT_TASKS,
+      PD.workspacePrivilege(this.mget(_a.hub_id)),
+      _K.permission.write,
+    );
+  }
+
+  /**
+   * The UI actions that START or MAKE a task change. Refused in onUiEvent for
+   * a member without write rights, so the edit is stopped at the click — not
+   * accepted into a draft and then refused at Update, which is what Thomas
+   * reported (Chat member: the card took every edit, Update saved nothing).
+   *
+   * Reading stays open: opening a card or attachment, the Comments/History
+   * tabs, expanding subtasks, filters, views and column watches are not here.
+   */
+  static get TASK_EDIT_SERVICES() {
+    return new Set([
+      "add-task", "commit-task", "cal-add", "add-board", "board-submit",
+      "commit-detail", "commit-description", "commit-due-date",
+      "set-status", "set-priority", "set-assignee", "set-reporter",
+      "reset-reporter", "toggle-assignee-list", "toggle-task-label",
+      "toggle-duration", "remove-task", "toggle-complete",
+      "add-subtask", "add-child-task", "create-subtask",
+      "toggle-subtask-complete", "toggle-subtask-menu",
+      "set-subtask-priority", "set-subtask-status", "toggle-subtask-row-menu",
+      "set-subtask-row-priority", "set-subtask-row-status",
+      "toggle-subtask-row-assignee", "gantt-toggle-select",
+      "gantt-delete-selected", "col-menu", "col-rename-submit", "col-theme-set",
+      "col-done-toggle", "col-delete", "comment-submit", "comment-edit",
+      "comment-save", "comment-delete", "comment-reply", "comment-reply-submit",
+      "comment-react-add", "comment-react-remove", "comment-react-toggle",
+      "comment-react-more", "comment-unlink-attachment", "link-search-result",
+      "pick-attachment", "unlink-attachment", "retry-pending-file",
+    ]);
+  }
+
+  // Close the create form's state (its DOM is the caller's business).
+  _discardCreateForm() {
+    // Leaving the form: its unfinished uploads have nowhere to be linked.
+    this._cancelUnfinishedUploads("create", this._createDefaults);
+    this._creating = false;
+    this._createDefaults = null;
+    this._createSubtaskDraft = null;
+    this._pickerOpen = null;
+    this._resetFileSearch();
+  }
+
+  /**
+   * An admin changed this member's role while the panel was open. The board's
+   * add buttons, menus and the open card were all drawn for the old role, so
+   * redraw them; a promotion also needs the drag wiring _installDnd skipped.
+   */
+  _onMayWriteChanged() {
+    if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
+    if (this._mayWriteTasks()) {
+      this._installDnd();
+    } else {
+      // Demoted mid-edit: nothing half-typed here can be saved any more.
+      if (this._creating) this._discardCreateForm();
+      this._listEdit = null;
+    }
+    // Re-seed an open card from the saved task, so a demoted member sees what
+    // is stored rather than an unsaved draft — and the card redraws in its new
+    // mode. _openDetail forgets the way back to a parent; keep it.
+    const id = this._detailId;
+    if (id && this._tasks.some((t) => t.id === id)) {
+      const back = this._detailReturnTo;
+      this._openDetail(id);
+      this._detailReturnTo = back;
+    }
+    this._render();
+  }
+
+  /**
    * The generic "network error" for a write that did not land — unless it
    * failed because it was refused. A refusal (the mutation guard above, or a
    * server 403 via onServerComplain) has already said so, and postService
@@ -932,19 +1020,7 @@ class __tasks_panel extends LetcBox {
           this.constructor.TASK_MUTATIONS.includes(`${name}`)
           && !this._mayWriteTasks()
         ) {
-          // The panel holds no privilege of its own (see _mayWriteTasks);
-          // read it from the workspace window it is mounted for.
-          // sayWeakPrivilege, not Butler.say: it stamps saidRecently(), which
-          // is what keeps the caller's own "network error" (_alertWriteFailed)
-          // from stacking on top. One Update sends several writes — say it once.
-          const PD = require("libs/permission-denied");
-          if (!PD.saidRecently()) {
-            PD.sayWeakPrivilege(
-              LOCALE.PERMISSION_ACTION_EDIT_TASKS,
-              PD.workspacePrivilege(this.mget(_a.hub_id)),
-              _K.permission.write,
-            );
-          }
+          this._sayCannotEditTasks();
           // postService resolves UNDEFINED when a call does not complete, and
           // every caller here already tolerates that — so refusing this way
           // reproduces a shape they handle rather than adding a rejection path.
@@ -1011,6 +1087,12 @@ class __tasks_panel extends LetcBox {
 
     root.addEventListener("dragstart", (e) => {
       const colHead = findColHeader(e.target);
+      // Wired while this member could write; a demotion since must stop a card
+      // or column moving exactly as if the drag had never been installed.
+      if ((colHead || findCard(e.target)) && !this._mayWriteTasks()) {
+        e.preventDefault();
+        return;
+      }
       if (colHead) {
         this._dragColKey = colHead.dataset.coldrag;
         const colEl = colHead.closest("[data-column]");
@@ -1638,6 +1720,14 @@ class __tasks_panel extends LetcBox {
     // After the service has been resolved (the walk above is what turns a click
     // on a Note into its ancestor's service), before any case can act on it.
     if (this._refuseWhileRowBusy(service, trigger)) return;
+    // Read live, not at render: a role change can land between the paint and
+    // the click.
+    if (
+      this.constructor.TASK_EDIT_SERVICES.has(`${service}`) &&
+      !this._mayWriteTasks()
+    ) {
+      return this._sayCannotEditTasks();
+    }
     // List view inline editing (list-inline.js).
     if (listInline.LIST_SERVICES.has(service)) {
       return this._onListUiEvent(service, trigger, args);
@@ -1688,13 +1778,7 @@ class __tasks_panel extends LetcBox {
         });
 
       case "cancel-add":
-        // Leaving the form: its unfinished uploads have nowhere to be linked.
-        this._cancelUnfinishedUploads("create", this._createDefaults);
-        this._creating = false;
-        this._createDefaults = null;
-        this._createSubtaskDraft = null;
-        this._pickerOpen = null;
-        this._resetFileSearch();
+        this._discardCreateForm();
         // State is already cleared above, so the modal is shut as far as every
         // handler is concerned; only its DOM waits for the exit to play.
         return this._dismissOverlay("create-backdrop", () =>
