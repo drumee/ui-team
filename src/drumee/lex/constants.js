@@ -11,7 +11,9 @@ const a = {
     rinback: `musics/dialtones/ring-back.mp3`
   },
   ringtones: {
-    incoming: `musics/ringtones/piano.mp3`
+    incoming: `musics/ringtones/piano.mp3`,
+    // Incoming 1:1 call (window_connect) and meeting (window_switchcall).
+    call: `musics/ringtones/ringtone.mp3`
   },
   notifications: {
     std: `musics/notifications/owl.mp3`,

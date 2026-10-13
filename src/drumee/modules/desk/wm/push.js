@@ -57,6 +57,7 @@ const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
 const { withOwnWorkspaceName } = require("libs/workspace-label");
 const { acceptStartsCall } = require("builtins/window/connect/call-start");
+const { ringWhileOpen } = require("./incoming-ring");
 
 class __push_manager extends winman {
 
@@ -1189,7 +1190,7 @@ class __push_manager extends winman {
       });
     } else {
       o = respawn;
-      Visitor.playSound();
+      Visitor.playSound(_K.ringtones.call);
       if (data.origin && data.origin.uid) {
         const title = LOCALE.X_IS_CALLING_YOU.format(data.origin.firstname);
         const notif = {
@@ -1283,7 +1284,20 @@ class __push_manager extends winman {
         respawn,
       };
 
-      this.addWindow(o);
+      const added = this.addWindow(o);
+      // Ring like an incoming call — but never over a call already in
+      // progress (the shared Audio would play through it).
+      if (!currentRoom || currentRoom.isDestroyed()) {
+        const prompt =
+          (added && typeof added.once === "function" && added) ||
+          Wm.getItemByKind("window_switchcall");
+        ringWhileOpen(prompt, _K.ringtones.call, {
+          play: (url, loop) => Visitor.playSound(url, loop),
+          mute: () => Visitor.muteSound(),
+          current: () => Visitor._audio && Visitor._audio.src,
+          destroyEvent: _e.destroy,
+        });
+      }
     });
   }
 
