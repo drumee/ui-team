@@ -325,17 +325,6 @@ function sections(pfx, ui, grouped, canManage, personal) {
     );
   }
 
-  // Where the inline "New department" entry is fed. A row rather than a
-  // dialog: the topbar's menu item and this screen's "+ New" both arm the same
-  // entry, so there is one way to name a department however it was started.
-  kids.push(
-    Skeletons.Box.Y({
-      className: `${pfx}__new-dept`,
-      sys_pn: "new-dept",
-      partHandler: ui,
-    }),
-  );
-
   // After the empty note, so an organisation with nothing in it still says
   // so: the personal workspaces are not the organisation's.
   if (personal) kids.push(personalSection(pfx, ui, personal));

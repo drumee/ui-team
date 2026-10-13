@@ -2941,6 +2941,8 @@
   "NO_DEPARTMENTS_YET": "暂无部门",
   "SEARCH_WORKSPACES": "搜索工作区…",
   "DELETE_DEPARTMENT_CONFIRM": "删除该部门？其工作区会被保留并变为未分配部门。",
+  "CREATE_DEPARTMENT": "创建部门",
+  "DEPARTMENT_NAME_REQUIRED": "请输入部门名称。",
   "NOT_ENOUGH_PRIVILEGE": "您没有执行此操作的权限。",
   "INVALID_NAME": "请输入名称。",
   "WORKSPACE_NOT_FOUND": "该工作区已不存在。",
