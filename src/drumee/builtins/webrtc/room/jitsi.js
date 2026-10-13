@@ -7,6 +7,7 @@ const { events: JEVENTS } = JitsiMeetJS;
 const { fitBoxes } = require("@drumee/ui-essentials")
 const AudioMixerEffect = require("./audio-mixer-effect");
 const DevicePrefs = require("builtins/webrtc/device-prefs");
+const { stopPresentationSequence } = require("builtins/webrtc/stop-presentation");
 // How long the local microphone may report a flat zero level, while unmuted,
 // before the user is told that nothing is coming from it (see
 // _checkMicSilence). Long enough for a normal pause, short enough that the
@@ -511,6 +512,17 @@ class __webrtc_room extends __room {
                     JEVENTS.track.LOCAL_TRACK_STOPPED,
                     this.stopPresentation
                   );
+                  // LOCAL_TRACK_STOPPED rides MediaStream.oninactive, which can
+                  // lag the OS bar by seconds; the raw track's `ended` is the
+                  // earliest signal. stop-presentation signals once per track.
+                  const raw = track.getTrack && track.getTrack();
+                  if (raw && typeof raw.addEventListener === "function") {
+                    raw.addEventListener("ended", () => {
+                      if (this.getLocalTrack(_a.desktop) === track) {
+                        this.stopPresentation(track);
+                      }
+                    }, { once: true });
+                  }
                 } else {
                   this.getLocalParts().then((parts) => {
                     let { video } = parts;
@@ -2285,30 +2297,20 @@ class __webrtc_room extends __room {
    */
   async stopPresentation(track) {
     this._setService("ctrl-video", _a.settings);
-    // Unmix and drop the captured tab/system audio FIRST — this has to happen
-    // even when the desktop video track is already gone (the early return
-    // below), or the mixer would stay attached to the microphone.
-    await this._releaseDesktopAudio();
-    if (!track) {
-      track = this.getLocalTrack(_a.desktop);
+    if (!track) track = this.getLocalTrack(_a.desktop);
+    if (track && typeof track.removeEventListener === "function") {
+      track.removeEventListener(
+        JEVENTS.track.LOCAL_TRACK_STOPPED,
+        this.stopPresentation
+      );
     }
-
-    if (!track) {
-      this.warn("No track to stop");
-      return;
-    }
-    await this.stopLocalTrack(_a.desktop);
-    let payload = {
-      id: this.room.myUserId(),
-      srcId: this.room.myUserId(),
-    };
-    let event = "STOP_REMOTE_SCREEN";
-    await this.sendRoomSignaling(SERVICE.conference.update);
-    await this.sendRoomSignaling(SERVICE.conference.broadcast, { event, payload });
-    track.removeEventListener(
-      JEVENTS.track.LOCAL_TRACK_STOPPED,
-      this.stopPresentation
-    );
+    // Signals the viewer first, then releases the tab audio (which still runs
+    // when there is no desktop track). See builtins/webrtc/stop-presentation.
+    await stopPresentationSequence(this, track, {
+      desktop: _a.desktop,
+      broadcast: SERVICE.conference.broadcast,
+      update: SERVICE.conference.update,
+    });
   }
 
   /**
