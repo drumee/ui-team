@@ -1,4 +1,11 @@
 const winman = require('window/manager');
+const {
+  VIEW_STATES,
+  setGrouped,
+  clearGrouped,
+  groupViewState,
+  nextGroupViewState,
+} = require('builtins/window/skeleton/toolkit/file-group');
 const WS_EVENT = "ws:event";
 const EOD = "end:of:data";
 
@@ -53,6 +60,58 @@ class __dmz_wm extends winman {
       home_id: opt.home_id,
       hub_id: opt.hub_id
     });
+    // Same default as the desk folder window (window/folder initialize): the
+    // secure-share grid opens in Group view, titled sections per file type.
+    // Window-local view mode — never the process-wide ViewMode default.
+    if (this.shareboxDesk()) {
+      setGrouped(this, true);
+      this.setViewMode(_a.icon, false);
+    }
+  }
+
+  /**
+   * The secure-share sharebox this grid belongs to, or null for any other DMZ
+   * use of this window manager (those keep the plain filter bar and flat grid).
+   */
+  shareboxDesk() {
+    const desk = this.mget('desk');
+    return desk && desk.fig && desk.fig.family === 'dmz-sharebox' ? desk : null;
+  }
+
+  /**
+   * Group | list | grid toggle of the share toolbar — the desk folder window's
+   * toggleFilesLayout, minus its content re-feed: here the list is restarted so
+   * tiles re-create with the new kind (media-row ↔ media-grid, _getKind) and the
+   * partition observer re-sections them.
+   * @param {LetcBox} cmd the pressed segment
+   */
+  _toggleFilesLayout(cmd) {
+    if (window.pointerDragged) return;
+    const viewMode = this.getViewMode && this.getViewMode();
+    const picked = cmd && cmd.mget && cmd.mget(_a.value);
+    const state = VIEW_STATES.includes(picked)
+      ? picked
+      : nextGroupViewState(this, viewMode);
+    if (state === groupViewState(this, viewMode)) return;
+    setGrouped(this, state === "group");
+    const mode = state === "list" ? _a.row : _a.icon;
+    this.setViewMode(mode, false);
+    // data-view-mode drives the single-column row layout (wm-main.scss).
+    const scroll = this.el.querySelector(`.${this.fig.family}__icons-scroll`);
+    if (scroll) scroll.dataset.viewMode = mode;
+    // The active-segment CSS keys off data-state on the toggle BOX.
+    const toggleBox = cmd && cmd.el && cmd.el.closest &&
+      cmd.el.closest(`.${this.fig.family}-topbar__view-toggle`);
+    if (toggleBox) toggleBox.dataset.state = state;
+    this.ensurePart(_a.list).then((l) => { if (l && l.restart) l.restart(); });
+  }
+
+  /**
+   *
+   */
+  onBeforeDestroy(opt) {
+    clearGrouped(this);
+    if (super.onBeforeDestroy) super.onBeforeDestroy(opt);
   }
 
   /**
@@ -474,6 +533,9 @@ class __dmz_wm extends winman {
       case _e.download:
         return this.download();
 
+      case "toggle-files-layout":
+        return this._toggleFilesLayout(cmd);
+
       case _e.upload:
         return this.__fileselector.open(this._upload.bind(this));
 
@@ -488,6 +550,9 @@ class __dmz_wm extends winman {
           (cmd.mget && cmd.mget(_a.value)) ||
           (cmd.options && cmd.options.value) ||
           args.value;
+        // Kept like the desk folder window's: the Media tab then splits into
+        // Images / Videos / Audio sections (file-group sectionsFor).
+        this._filterType = value && value !== "all" ? value : null;
         this.ensurePart(_a.list).then((l) => {
           l.setApi(this.getCurrentApi(value));
           l.restart();
