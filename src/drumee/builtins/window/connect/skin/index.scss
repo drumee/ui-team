@@ -742,12 +742,18 @@
       gap: var(--spacer-5);
     }
 
+    // The ROOT shrinks with the circle: sizing only the children left an 88px
+    // circle in the top-left corner of the 120px box — off the name's centre
+    // line, with a gap below it.
     .window-connect__avatar.user-profile {
+      width: 88px;
+      height: 88px;
+
       .user-profile__icon,
       .user-profile__main,
       .user-profile__initiales {
-        width: 88px;
-        height: 88px;
+        width: 100%;
+        height: 100%;
       }
 
       .user-profile__initiales .note-content {

@@ -58,3 +58,13 @@ test("no footer variant pads its bottom", () => {
     assert.equal(parts.length === 3 ? parts[2] : parts.length === 4 ? parts[2] : "0", "0", `footer padding ${pad[1]}`);
   }
 });
+
+// Short windows (data-short) shrink the avatar circle to 88px. The ROOT must
+// shrink with it: shrinking only the children left an 88px circle in the
+// top-left corner of a 120px box — 16px left of the name, with a gap below.
+test("short window: the avatar root shrinks with its circle", () => {
+  const m = css.match(/\.window-connect__ui\[data-short="?1"?\] \.window-connect__avatar\.user-profile \{([^}]*)\}/);
+  assert.ok(m, "missing short-window avatar root rule");
+  assert.match(m[1], /width: 88px/);
+  assert.match(m[1], /height: 88px/);
+});
