@@ -485,9 +485,13 @@
  * dmz/wm skeleton _toolbar) and Group view, so other DMZ uses are untouched.
  * ---------------------------------------------------------------------- */
 .dmz-wm {
+  // Wraps when the files panel is narrower than filters + actions (a tablet
+  // with the chat column open): the actions drop to a second line, still
+  // right-aligned by __file-controls' margin-left:auto.
   &__toolbar {
+    flex-wrap: wrap;
     align-items: center;
-    gap: 24px;
+    gap: 8px 24px;
     padding: 12px;
     border-bottom: none;
     background: transparent;
@@ -495,10 +499,10 @@
   }
 
   // Grey pill holding the five filters; the active one is filled brand purple.
+  // Hugs its tabs and never shrinks (the toolbar wraps instead).
   &__filter-track {
     align-items: center;
-    flex: 0 1 auto;
-    min-width: 0;
+    flex: 0 0 auto;
     gap: 2px;
     padding: 4px;
     border-radius: 12px;

@@ -5,6 +5,42 @@
  * over the base ones by source order; most selectors also add one ancestor.
  * ---------------------------------------------------------------------- */
 
+/* Tablet / small laptop (768–1023px): the landing and gate banners keep the
+   desktop layout but their nowrap headlines pushed the CTA off-screen. */
+@media (max-width: 1023px) {
+  .dmz-sharebox {
+    .dmz-sharebox-footer__left {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .dmz-sharebox-footer__headline {
+      min-width: 0;
+      white-space: normal;
+    }
+
+    .dmz-sharebox-footer__right {
+      flex-shrink: 0;
+    }
+
+    .dmz-sharebox-footer__right .dmz-sharebox-footer__subline {
+      display: none;
+    }
+
+    .dmz-sharebox-footer__gate-banner {
+      gap: 16px;
+    }
+
+    .dmz-sharebox-footer__gate-headline {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 22px;
+      line-height: 26px;
+      white-space: normal;
+    }
+  }
+}
+
 @media (max-width: 767px) {
   /* Top app bar — logo keeps its size (it shrank to 0px), the marketing links
      drop out, and the account / Login + Join cluster stays on one line. */
