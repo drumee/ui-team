@@ -197,7 +197,7 @@ const make = function (ui) {
   // primitive Jira/Linear use. The panel owns the editor's content and events
   // via onPartReady; `scope` is "create" | "detail" so it targets the right
   // editor + dropdown.
-  const descEditor = (scope, opt) => mentionField(ui, scope, opt);
+  const descEditor = (scope) => mentionField(ui, scope);
 
   // ── Card pieces ───────────────────────────────────────────────
   // Title on the card is a plain Note: clicking it bubbles up to the card,
@@ -925,12 +925,6 @@ const make = function (ui) {
       ? dDraft.labels
       : detail.label_ids || [];
     const dLabelSet = new Set(dLabels);
-    // A view or chat member may READ a task but not change it (every task.*
-    // write is `src: write`). The card opens the same, minus the surfaces that
-    // only exist to edit it: the text fields lock, and Update, the file picker
-    // and the comment composer are left out. Any other edit control still
-    // drawn is refused at the panel's onUiEvent with the permission popup.
-    const readOnly = !mayCreateTask(ui);
 
     const statusSwitcher = Skeletons.Box.X({
       className: `${pfx}__detail-status`,
@@ -975,7 +969,7 @@ const make = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.TASK_DESCRIPTION,
         }),
-        descEditor("detail", { readonly: readOnly }),
+        descEditor("detail"),
       ],
     });
 
@@ -1129,18 +1123,16 @@ const make = function (ui) {
           ],
         }),
         attachmentRowsContainer,
-        readOnly
-          ? null
-          : filePickerBlock("detail", {
-              taskId: detail.id,
-              existingFiles: attachments,
-              // Detail pending list — files queued for upload/link on Update.
-              pendingFiles: dDraft.pending_files || [],
-            }),
+        filePickerBlock("detail", {
+          taskId: detail.id,
+          existingFiles: attachments,
+          // Detail pending list — files queued for upload/link on Update.
+          pendingFiles: dDraft.pending_files || [],
+        }),
         // Region overlay: this block IS the task drop zone now, so the
         // affordance belongs to it rather than to the whole panel.
-        readOnly ? null : dropOverlay(ui),
-      ].filter(Boolean),
+        dropOverlay(ui),
+      ],
     });
 
     // Comments: flat feed (a re-feedable part) + an @-mention composer.
@@ -1196,9 +1188,7 @@ const make = function (ui) {
         }),
         // Composer sits directly under the Activity tabs (Figma 2034-62457):
         // own avatar · "Write a comment…" field · paperclip / @ / send icons.
-        // Commenting is a task write (task.comment_create), so a read-only
-        // card has no composer.
-        readOnly ? null : Skeletons.Box.X({
+        Skeletons.Box.X({
           className: `${pfx}__comment-composer`,
           kids: [
             Skeletons.UserProfile({
@@ -1236,7 +1226,7 @@ const make = function (ui) {
         // Files queued on the composer (paperclip or drop), attached to the
         // comment once it is sent. Its own part, so queueing a file never
         // re-feeds the composer and drops the caret mid-sentence.
-        readOnly ? null : pendingStrip(ui, "comment"),
+        pendingStrip(ui, "comment"),
         // Each list sits in its own section so the caption can live OUTSIDE the
         // fed part — a comment or history reload replaces only the rows, never
         // the label. The active tab already names its run, so the captions are
@@ -1281,31 +1271,30 @@ const make = function (ui) {
             }),
           ],
         }),
-      ].filter(Boolean),
+      ],
     });
 
     // Footer: Cancel (closes the panel, discarding edits) beside the primary
     // Update; the header X mirrors Cancel. Sits as the panel's last row, not in
     // the metadata column — there it scrolled away with the fields.
-    // Read-only: nothing to update and nothing to discard, so a lone Close.
     const actions = Skeletons.Box.X({
       className: `${pfx}__detail-actions`,
       kids: [
         Skeletons.Note({
           className: `${pfx}__detail-cancel`,
-          content: readOnly ? LOCALE.CLOSE : LOCALE.CANCEL,
+          content: LOCALE.CANCEL,
           bubble: 0,
           service: "close-detail",
           uiHandler: [ui],
         }),
-        readOnly ? null : Skeletons.Note({
+        Skeletons.Note({
           className: `${pfx}__detail-submit`,
           content: LOCALE.UPDATE,
           bubble: 0,
           service: "commit-detail",
           uiHandler: [ui],
         }),
-      ].filter(Boolean),
+      ],
     });
 
     // A child opens in the SAME panel as its parent — without this the panel
@@ -1355,8 +1344,6 @@ const make = function (ui) {
               bubble: 0,
               watch: "task-input-changed",
               uiHandler: [ui],
-              // The entry template writes `readonly` on the <textarea>.
-              ...(readOnly ? { readonly: 1 } : {}),
             }),
             ...titleMissingNote(),
           ],
@@ -2647,9 +2634,7 @@ function mentionField(ui, scope, opt = {}) {
         partHandler: ui,
         flow: "none", // block flow for contenteditable, not flex
         attrOpt: {
-          // A reader without task write rights gets the same field, not
-          // editable: _renderEditorContent then draws its read-only form.
-          contenteditable: opt.readonly ? "false" : "true",
+          contenteditable: "true",
           "data-placeholder":
             opt.placeholder || LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
           // Which editor this is, for the drop zone (../drop-zones.js). It has
@@ -3916,11 +3901,6 @@ function buildDueSectionContent(ui, scope = "detail") {
   const draft = (isCreate ? ui.getCreateDraft() : ui.getDetailDraft()) || {};
   const start = draft.start_date || "";
   const due = draft.due_date || "";
-  // A reader without task write rights sees the dates but cannot change them:
-  // the calendars never open, and a click on a field says why (the pickers
-  // post through `task-input-changed`, which the panel's edit gate cannot
-  // refuse — the title types through it too).
-  const locked = !isCreate && !mayCreateTask(ui);
 
   // Tag the calendar so it can be themed without bleeding into other pickers.
   const onReady = (_d, _s, instance) => {
@@ -3953,18 +3933,10 @@ function buildDueSectionContent(ui, scope = "detail") {
         appendTo: document.body,
         position: positionDueCalendarLeft,
         onReady,
-        ...(locked ? { clickOpens: false } : {}),
       },
     };
   };
 
-  // Locked: the click goes to the panel's edit gate instead. The kids are
-  // inactive because ui-core binds onclick on every ACTIVE widget and
-  // __handleClick always stops propagation — an active picker would swallow
-  // the click before it reached this service.
-  const gate = locked
-    ? { bubble: 0, service: "due-date-locked", uiHandler: [ui], kidsOpt: { active: 0 } }
-    : {};
   const label = (content) =>
     Skeletons.Note({ className: `${pfx}__${scope}-label`, content });
 
@@ -3979,25 +3951,21 @@ function buildDueSectionContent(ui, scope = "detail") {
             Skeletons.Box.Y({
               className: `${pfx}__due-slot`,
               // "1" shows the clear button in place of the calendar glyph; the
-              // controller flips it as Start changes (_syncDateRow). Never on a
-              // locked field: it draws no clear button, so the glyph stays.
-              attrOpt: { "data-filled": start && !locked ? "1" : "0" },
-              ...gate,
+              // controller flips it as Start changes (_syncDateRow).
+              attrOpt: { "data-filled": start ? "1" : "0" },
               kids: [
                 picker("start_date", start),
                 // × back to a single-date task. Figma draws no clear control;
                 // without one a pointer user could never drop a Start.
-                locked
-                  ? null
-                  : Skeletons.Button.Svg({
-                      className: `${pfx}__due-clear`,
-                      ico: "cross",
-                      bubble: 0,
-                      service: "clear-start-date",
-                      uiHandler: [ui],
-                      tooltips: LOCALE.CLEAR,
-                    }),
-              ].filter(Boolean),
+                Skeletons.Button.Svg({
+                  className: `${pfx}__due-clear`,
+                  ico: "cross",
+                  bubble: 0,
+                  service: "clear-start-date",
+                  uiHandler: [ui],
+                  tooltips: LOCALE.CLEAR,
+                }),
+              ],
             }),
           ],
         }),
@@ -4014,7 +3982,6 @@ function buildDueSectionContent(ui, scope = "detail") {
             Skeletons.Box.Y({
               className: `${pfx}__due-field`,
               attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
-              ...gate,
               kids: [
                 picker("due_date", due),
                 Skeletons.Note({
