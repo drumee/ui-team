@@ -614,11 +614,6 @@ class __window_core extends __utils {
               c.unselect();
             } else if (!c.mget(_a.state)) {
               c.select();
-              // select() marks the row only; unselect() and tick() also
-              // repaint its checkbox.
-              if (_.isFunction(c._changeState)) {
-                c._changeState("checkbox", "selected", 1);
-              }
             }
           } catch (e) { }
         }
