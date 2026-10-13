@@ -1,5 +1,6 @@
 const { events:JEVENTS } = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
 const __stream = require("builtins/webrtc/endpoint");
+const { watchRemoteScreen } = require("builtins/webrtc/remote-screen-watch");
 class __remote_display extends __stream {
   initialize(opt) {
     require("./skin");
@@ -29,6 +30,10 @@ class __remote_display extends __stream {
    *
    */
   async onBeforeDestroy() {
+    if (this._unwatch) {
+      this._unwatch();
+      this._unwatch = null;
+    }
     if (this.track) {
       this.track.detach(this.__video.el);
     }
@@ -64,9 +69,10 @@ class __remote_display extends __stream {
    *
    */
   async onTrackMuteChange(track) {
-    if(track.getVideoType() != _a.desktop){
-      return
-    }
+    // Only OUR track, and only on mute — this listener is on the whole
+    // conference, and used to tear the screen down for any desktop track,
+    // including an unmute.
+    if (track !== this.track || !track.isMuted()) return;
     this.triggerHandlers({ service: "stop-remote-screen" });
   }
 
@@ -86,6 +92,17 @@ class __remote_display extends __stream {
       case _a.video:
         this.waitElement(child.el, () => {
           this.track.attach(child.el);
+          // The viewer's own check on the incoming screen: `ended` clears the
+          // stage even if the sharer's stop signal never arrives; a mute only
+          // dims it (a static screen may send nothing). See remote-screen-watch.
+          if (!this.track.isLocal() && !this._unwatch) {
+            const raw = this.track.getTrack ? this.track.getTrack() : this.track.track;
+            this._unwatch = watchRemoteScreen(raw, {
+              onEnded: () => this.triggerHandlers({ service: "stop-remote-screen" }),
+              onStall: () => { if (this.el) this.el.dataset.stalled = "1"; },
+              onResume: () => { if (this.el) this.el.dataset.stalled = "0"; },
+            });
+          }
           child.el.onloadeddata = () => {
             // First frame is in — hide the "loading screen" spinner overlay.
             const loader = this.el &&

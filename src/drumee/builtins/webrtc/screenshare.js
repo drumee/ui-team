@@ -139,6 +139,9 @@ module.exports = {
       __room.prototype.removePresenter.call(this, peer);
     }
     if (wasPresenter) {
+      // The presenter left mid-share: put the docked tiles back on the stage
+      // (only onRemoteScreenStop used to undock them).
+      this._dockParticipants(false);
       this._setShareLocked(false);
       this._currentPresenterUid = null;
       this._presenterName = null;

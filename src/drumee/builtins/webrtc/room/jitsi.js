@@ -8,6 +8,7 @@ const { fitBoxes } = require("@drumee/ui-essentials")
 const AudioMixerEffect = require("./audio-mixer-effect");
 const DevicePrefs = require("builtins/webrtc/device-prefs");
 const { stopPresentationSequence } = require("builtins/webrtc/stop-presentation");
+const { shouldStopForPresenter } = require("builtins/webrtc/remote-screen-watch");
 // How long the local microphone may report a flat zero level, while unmuted,
 // before the user is told that nothing is coming from it (see
 // _checkMicSilence). Long enough for a normal pause, short enough that the
@@ -1269,6 +1270,18 @@ class __webrtc_room extends __room {
    */
   onTrackRemoved(track) {
     this.trigger("TRACK_REMOVED", track);
+    // The presenter's desktop track went away: nothing else would clear the
+    // stage (the display's own TRACK_REMOVED listener is long gone).
+    if (
+      track && !track.isLocal() &&
+      typeof track.getVideoType === "function" &&
+      track.getVideoType() == _a.desktop &&
+      this.presenterId &&
+      shouldStopForPresenter(this.presenterId, track.getParticipantId())
+    ) {
+      this.presenterId = null;
+      this.onRemoteScreenStop();
+    }
   }
 
   /**
@@ -1987,7 +2000,7 @@ class __webrtc_room extends __room {
     if (p && typeof p.getId === "function") {
       this._peerSeenAt[p.getId()] = Date.now();
     }
-    if (this.presentation && !this.presentation.isDestroyed()) return;
+    const presenting = !!(this.presentation && !this.presentation.isDestroyed());
     for (let t of p.getTracks()) {
       if (t.getVideoType() != _a.desktop) continue;
       // Recover the presentation from the desktop track ITSELF — do NOT require
@@ -1995,11 +2008,15 @@ class __webrtc_room extends __room {
       // presenterId is unset; the old `if (!this.presenterId) continue` made
       // this catch-up path a no-op for exactly the case it exists to handle.
       if (t.isMuted()) {
+        // Checked even while a presentation is live — a muted desktop track is
+        // the sharer having stopped, and this is the catch-up for a lost
+        // STOP_REMOTE_SCREEN (it used to return early here, so a frozen
+        // presentation could never be cleared from stats).
         if (this.presenterId === t.getParticipantId()) {
           this.presenterId = null;
           this.onRemoteScreenStop();
         }
-      } else {
+      } else if (!presenting) {
         this._enterRemotePresentation(t);
       }
     }
@@ -2404,15 +2421,13 @@ class __webrtc_room extends __room {
         this.prepareRemoteScreen(data);
         break;
       case "STOP_REMOTE_SCREEN":
-        // Ensure the presentation is actually closed
-        setTimeout(() => {
-          if (!this.presenterId) {
-            if (this.__presenter.isEmpty()) {
-              return;
-            }
-          }
-          this.onRemoteScreenStop();
-        }, 5000);
+        // Act now — the sharer signals first (builtins/webrtc/stop-presentation).
+        // Ignore a stop for a presenter we no longer show: the old 5 s timer here
+        // tore down a NEW share started in the meantime.
+        if (!shouldStopForPresenter(this.presenterId, data.id)) return;
+        if (!this.presenterId && this.__presenter.isEmpty()) return;
+        this.presenterId = null;
+        this.onRemoteScreenStop();
         break;
 
       case "BG_UPDATING":
