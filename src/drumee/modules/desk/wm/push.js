@@ -57,7 +57,7 @@ const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
 const { withOwnWorkspaceName } = require("libs/workspace-label");
 const { acceptStartsCall } = require("builtins/window/connect/call-start");
-const { ringWhileOpen } = require("./incoming-ring");
+const { ringWhileOpen, toastRings } = require("./incoming-ring");
 
 class __push_manager extends winman {
 
@@ -819,7 +819,27 @@ class __push_manager extends winman {
         }),
       );
       this._meetingToasts.set(key, toast);
+      // Ring the "now" card like an incoming call (same tone, same stop rules
+      // as the switchcall prompt — see ./incoming-ring), unless a call is
+      // already live. Every way the card goes away runs kill(), so the ring
+      // ends there: Join, Cancel, ✕, and the MEETING_TOAST_MS auto-dismiss.
+      const inCall = !!(
+        (Wm.hasLiveCall && Wm.hasLiveCall()) ||
+        ["window_connect", "window_meeting"].some((k) =>
+          ((Wm.getItemsByKind && Wm.getItemsByKind(k)) || []).some(
+            (w) => w && !(w.isDestroyed && w.isDestroyed()),
+          ),
+        )
+      );
+      const stopRing = toastRings(variant, inCall)
+        ? ringWhileOpen(null, _K.ringtones.call, {
+            play: (url, loop) => Visitor.playSound(url, loop),
+            mute: () => Visitor.muteSound(),
+            current: () => Visitor._audio && Visitor._audio.src,
+          })
+        : () => {};
       const kill = () => {
+        stopRing();
         try {
           // Release the slot first — a card dismissed out of order must not
           // leave a gap that keeps pushing later ones further down.

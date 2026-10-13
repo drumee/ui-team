@@ -77,3 +77,31 @@ test("caller and callee ring with the same call ringtone", () => {
   assert.equal(callerPlays.length, 2, "dial + offline-ring paths");
   assert.match(push, /Visitor\.playSound\(_K\.ringtones\.call\)/);
 });
+
+// desk-meeting-toast: only the "now" card (a meeting started on the spot, or a
+// reminder that it is starting) rings — an invitation or an "in N minutes"
+// heads-up announces nothing happening yet. Never over a live call.
+test("meeting toast rings only for 'now', never during a call", () => {
+  const { toastRings } = require(path.join(__dirname, "..", "src/drumee/modules/desk/wm/incoming-ring.js"));
+  assert.equal(toastRings("now", false), true);
+  assert.equal(toastRings("now", true), false);
+  assert.equal(toastRings("invite", false), false);
+  assert.equal(toastRings("soon", false), false);
+});
+
+test("the returned stop ends the ring without any destroy event", () => {
+  const s = harness();
+  const stop = ringWhileOpen(null, "r.mp3", { ...s.audio, ...s.timer });
+  stop();
+  assert.equal(s.mutes, 1);
+  assert.equal(s.timers.length, 0);
+});
+
+test("the meeting toast wires the ring into its close path", () => {
+  const fs = require("node:fs");
+  const push = fs.readFileSync(path.join(__dirname, "..", "src/drumee/modules/desk/wm/push.js"), "utf8");
+  const toast = push.slice(push.indexOf("_showMeetingToast(data = {}, opt = {}) {"), push.indexOf("_canOpenMeetingInCalendar(data = {}) {"));
+  assert.match(toast, /toastRings\(variant,/);
+  assert.match(toast, /ringWhileOpen\(null, _K\.ringtones\.call/);
+  assert.match(toast, /const kill = \(\) => \{\s*stopRing\(\);/);
+});

@@ -32,4 +32,13 @@ function ringWhileOpen(view, url, io) {
   return stop;
 }
 
-module.exports = { ringWhileOpen, RING_MAX_MS };
+/**
+ * Does a desk-meeting-toast ring? Only the "now" card — a meeting started on
+ * the spot, or a reminder that it is starting. An invitation or an "in N
+ * minutes" heads-up announces nothing happening yet. Never over a live call.
+ */
+function toastRings(variant, inCall) {
+  return variant === "now" && !inCall;
+}
+
+module.exports = { ringWhileOpen, toastRings, RING_MAX_MS };
