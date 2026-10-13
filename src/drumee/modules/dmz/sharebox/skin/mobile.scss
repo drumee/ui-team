@@ -6,9 +6,23 @@
  * ---------------------------------------------------------------------- */
 
 /* Tablet / small laptop (768–1023px): the landing and gate banners keep the
-   desktop layout but their nowrap headlines pushed the CTA off-screen. */
+   desktop layout but their nowrap headlines pushed the CTA off-screen; the
+   page title steps down between desktop (20px) and phone (16px). */
 @media (max-width: 1023px) {
   .dmz-sharebox {
+    .dmz-sharebox-header__title-group,
+    .dmz-sharebox-header__title-block {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .dmz-sharebox-header__title-text {
+      min-width: 0;
+      font-size: 18px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
     .dmz-sharebox-footer__left {
       flex: 1 1 auto;
       min-width: 0;
@@ -128,7 +142,7 @@
 
     .dmz-sharebox-header__title-text {
       max-width: 100%;
-      font-size: 18px;
+      font-size: 16px;
       line-height: 1.25;
       white-space: normal;
       overflow-wrap: anywhere;

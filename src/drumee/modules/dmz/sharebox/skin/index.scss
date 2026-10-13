@@ -252,8 +252,8 @@
   }
 
   &__folder-icon {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     align-items: center;
     justify-content: center;
     background: var(--sb-accent-soft);
@@ -280,8 +280,10 @@
     gap: 4px;
   }
 
+  // 20px (Figma 3.1 drew 24px): the name already repeats in the card header
+  // and the breadcrumb, so the hero no longer outweighs the files below it.
   &__title-text {
-    @include drumee.typo($size: 24px, $line: 1.1, $weight: 600, $color: var(--sb-text));
+    @include drumee.typo($size: 20px, $line: 1.2, $weight: 600, $color: var(--sb-text));
     font-family: var(--sb-font-body);
     white-space: nowrap;
   }
