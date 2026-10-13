@@ -114,6 +114,8 @@ function makePanel({ opened = TASK, now = opened, edit = {}, fail = () => false 
     getKnownAssignees: (t) => t.assignee_uids || [],
     _captureDetailDraft() {},
     _setSubmitting() {},
+    // The real one yields to a permission popup just shown; none is, here.
+    _alertWriteFailed() { alerts.push(LOCALE.ERROR_NETWORK); },
     _resetFileSearch() {},
     _render() {},
     _renderOverlays() {},
