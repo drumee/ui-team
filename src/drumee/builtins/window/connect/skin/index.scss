@@ -550,6 +550,15 @@
     height: 99px;
     max-height: none;
     margin: -115px var(--spacer-5) var(--spacer-5) 0;
+
+    // 99px tall: a 72px avatar plus the ~24px name pill cannot both fit, and
+    // the pill sat on top of a clipped circle. Cap the avatar at 44% of the
+    // tile and lift it clear of the pill.
+    .participants-manager__ui .user-profile__ui {
+      width: min(44cqh, 44px) !important;
+      height: min(44cqh, 44px) !important;
+      margin-bottom: 28px !important;
+    }
   }
 
   .participants-manager__ui {
