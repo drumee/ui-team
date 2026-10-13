@@ -1,10 +1,13 @@
-// remote-display-stalled-skin.test.js — a stalled remote screen share (no
-// frames for a while) is dimmed, so it doesn't pass for a live one.
+// remote-display-stalled-skin.test.js — a remote screen share is NOT dimmed
+// when its track goes `mute`. Chrome's screenshare stops sending frames while
+// the content doesn't change — the normal state of a slide or document — so a
+// mute-driven dim washed out every static share (final review #5).
 //
 //   node --test tests/remote-display-stalled-skin.test.js
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
+const fs = require("node:fs");
 const sass = require("sass");
 
 const SRC = path.join(__dirname, "..", "src/drumee");
@@ -16,8 +19,12 @@ const css = sass
   })
   .css.replace(/\s+/g, " ");
 
-test("data-stalled=1 dims the shared screen's video", () => {
-  const m = css.match(/\.remote-display__ui\[data-stalled="1"\] video \{([^}]*)\}/);
-  assert.ok(m, "missing stalled rule");
-  assert.match(m[1], /opacity: 0\.45/);
+test("no stall dim on the shared screen", () => {
+  assert.doesNotMatch(css, /data-stalled/);
+});
+
+test("the display only reacts to the track ENDING, never to mute", () => {
+  const src = fs.readFileSync(path.join(SRC, "builtins/webrtc/endpoint/remote/display/index.js"), "utf8");
+  assert.match(src, /watchRemoteScreen\(/);
+  assert.doesNotMatch(src, /onStall|onResume|dataset\.stalled/);
 });

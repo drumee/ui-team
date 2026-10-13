@@ -10,13 +10,6 @@
   // but wrong for screen-share. We define our own video rules below
   // that preserve the source aspect ratio and don't mirror.
 
-  // No frames for a while (remote-screen-watch onStall): dim the last frame
-  // so a stalled share doesn't pass for a live one.
-  &__ui[data-stalled="1"] video {
-    opacity: 0.45;
-    transition: opacity 0.2s ease;
-  }
-
   &__ui {
     width: 100%;
     height: 100%;

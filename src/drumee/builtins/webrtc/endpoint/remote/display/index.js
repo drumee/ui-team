@@ -93,14 +93,14 @@ class __remote_display extends __stream {
         this.waitElement(child.el, () => {
           this.track.attach(child.el);
           // The viewer's own check on the incoming screen: `ended` clears the
-          // stage even if the sharer's stop signal never arrives; a mute only
-          // dims it (a static screen may send nothing). See remote-screen-watch.
+          // stage even if the sharer's stop signal never arrives. A `mute` is
+          // deliberately ignored — Chrome's screenshare sends nothing while the
+          // content doesn't change, the normal state of a slide or document.
+          // See remote-screen-watch.
           if (!this.track.isLocal() && !this._unwatch) {
             const raw = this.track.getTrack ? this.track.getTrack() : this.track.track;
             this._unwatch = watchRemoteScreen(raw, {
               onEnded: () => this.triggerHandlers({ service: "stop-remote-screen" }),
-              onStall: () => { if (this.el) this.el.dataset.stalled = "1"; },
-              onResume: () => { if (this.el) this.el.dataset.stalled = "0"; },
             });
           }
           child.el.onloadeddata = () => {
