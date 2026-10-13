@@ -1585,9 +1585,14 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
-   *
+   * @param {Object} source a media widget, or { nid, hub_id, filetype, … }
+   * @param {Object} [known]
+   * @param {Object} [known.node] media.attributes the caller already resolved
+   *   for this nid (a Designation link probes it first) — the player is then
+   *   launched from it instead of asking the server again. Ignored unless its
+   *   nid is the one being opened.
    */
-  async openFileLocation(source) {
+  async openFileLocation(source, { node: knownNode = null } = {}) {
     let data;
     let media;
     let cid;
@@ -1668,14 +1673,19 @@ class __window_mfs extends DrumeeMFS {
     /** Open the player if applicable. A reveal (highlight) skips the player and
      *  falls through to open the parent folder, where the file is highlighted. */
     if (opt.kind && !node && !highlight) {
-      node = await this.fetchService(
-        {
-          service: SERVICE.media.attributes,
-          nid,
-          hub_id,
-        },
-        { async: 1 },
-      );
+      // A caller that already resolved this node (a Designation link probes
+      // it first) hands it in; anything else is fetched exactly as before.
+      node =
+        knownNode && knownNode.nid && `${knownNode.nid}` === `${nid}`
+          ? knownNode
+          : await this.fetchService(
+            {
+              service: SERVICE.media.attributes,
+              nid,
+              hub_id,
+            },
+            { async: 1 },
+          );
       if (!node || !node.nid) {
         return Wm.alert(LOCALE.FILE_NOT_FOUND);
       }
