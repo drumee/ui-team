@@ -26,6 +26,17 @@ test("hub counts: team chat sums the unread messages of every folder rollup", ()
   assert.deepEqual(c.H2, { chat: 1, task: 0, meeting: 0, files: 0 });
 });
 
+test("hub counts: a muted workspace's meeting rollup adds nothing to its Chat pill", () => {
+  // activity.list keeps a meeting start/end posted in a muted workspace but
+  // flags it `muted`: its cnt also counts the chat messages that were hidden.
+  const c = hubCounts([
+    { category: "teamchat", hub_id: "H1", nid: "F1", cnt: 1, meeting_action: "start", muted: 1 },
+    { category: "teamchat", hub_id: "H2", nid: "F2", cnt: 4, meeting_action: "start" },
+  ]);
+  assert.equal((c.H1 || {}).chat || 0, 0);
+  assert.equal(c.H2.chat, 4);
+});
+
 test("hub counts: assigned, mentioned/replied and watched-column rows are one task each", () => {
   const c = hubCounts([
     { category: "contact_invite", event: "task_assigned", task_hub_id: "H1", key_id: "1" },
@@ -114,6 +125,7 @@ const STUBS = {
   "./node-icon": () => "",
   "./skin": {},
   "libs/hub-home": require(path.join(SRC, "libs/hub-home.js")),
+  "window/skeleton/toolkit/list-skip": require(path.join(SRC, "builtins/window/skeleton/toolkit/list-skip.js")),
 };
 const load = Module._load;
 Module._load = function (request, parent, isMain) {

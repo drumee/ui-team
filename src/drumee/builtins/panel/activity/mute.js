@@ -1,10 +1,11 @@
-// Notification popup mute — Round 3 Phase 3, the CHAT half (xlsx row 6).
+// Chat mute — a workspace, a person (DM) or everything.
 //
-// 🚨 THIS SUPPRESSES POPUPS AND NOTHING ELSE. A muted user keeps every row in
-// the Notification Center, keeps the unread badge and keeps the tab counts —
-// they simply stop being interrupted by a card. Muting is "stop talking to
-// me", not "stop recording". Nothing here may be consulted by the feed, by
-// `unread_counts`, or by any row-rendering path.
+// A muted chat raises no card, OS notification or sound (this module, read by
+// the panel), no mobile push (server worker), and since Aaron's 2026-10-13
+// call its rows leave the Notification Center and every badge too. That last
+// part is decided by the SERVER (activity._notificationRollups / get_feed),
+// not here: the panel only re-reads the feed after a mute lands
+// (`activity:refresh`, see setMute). Meeting start/end and bookmarks stay.
 //
 // WHY THE STATE IS CACHED HERE RATHER THAN ASKED FOR PER MESSAGE. A per-push
 // lookup would put a request on the chat path at typing rate, and — worse —
@@ -137,11 +138,26 @@ async function setMute(host, hub_id, muted = true) {
       muted: muted ? 1 : 0,
     });
     const ok = !!d && d.status === 'ok';
-    if (ok) applyMuteState(d);
+    if (ok) {
+      applyMuteState(d);
+      refreshFeed();
+    }
     return { ok, data: d };
   } catch (e) {
     return { ok: false };
   }
+}
+
+/**
+ * Ask the panel to re-read the feed and the counts: the server now leaves the
+ * newly (un)muted chats out of both, so the badges change at once rather than
+ * on the next push. Only after a write that landed — not from applyMuteState,
+ * which also runs at boot. The panel debounces the event.
+ */
+function refreshFeed() {
+  try {
+    if (typeof RADIO_BROADCAST !== 'undefined') RADIO_BROADCAST.trigger('activity:refresh');
+  } catch (e) {}
 }
 
 /** Whether DM popups from `peer_id` are muted (a global mute counts). */
@@ -165,7 +181,10 @@ async function setPeerMute(host, peer_id, muted = true) {
       muted: muted ? 1 : 0,
     });
     const ok = !!d && d.status === 'ok';
-    if (ok) applyMuteState(d);
+    if (ok) {
+      applyMuteState(d);
+      refreshFeed();
+    }
     return { ok, data: d };
   } catch (e) {
     return { ok: false };

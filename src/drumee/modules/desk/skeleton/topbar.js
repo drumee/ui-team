@@ -367,11 +367,10 @@ function muteRowLook(muted) {
  * this menu carries them. Every row fires a service the desk already handles,
  * so nothing here is new behaviour.
  *
- * "Mute notifications" mutes popup cards for EVERY workspace — an empty
- * hub_id is what activity/mute.js calls the global scope. It suppresses the
- * interrupting card and nothing else: a muted user keeps every row in the
- * Notification Center, keeps the unread badge and keeps the tab counts. Muting
- * is "stop talking to me", not "stop recording".
+ * "Mute notifications" mutes EVERY chat — an empty hub_id is what
+ * activity/mute.js calls the global scope: no card, OS notification or push,
+ * and the server leaves chat rows out of the Notification Center and the
+ * badges. Meeting start/end and bookmarks stay.
  *
  * The row reflects state, so it reads Unmute once muted. State comes from the
  * cache activity/mute.js already keeps (loaded at panel boot and refreshed

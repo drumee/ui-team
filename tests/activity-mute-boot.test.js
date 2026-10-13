@@ -30,11 +30,20 @@ test("a junk answer changes nothing and broadcasts nothing", () => {
   assert.equal(M.muteState().loaded, 0);
 });
 
-test("a successful global mute broadcasts, so the menu row can repaint", async () => {
+test("a successful global mute broadcasts, and the badges refresh at once", async () => {
+  // MUTE_CHANGED repaints the menu row; activity:refresh makes the panel
+  // re-read the feed and counts, which now leave the muted chats out.
   const host = { postService: async () => ({ status: "ok", global: 1, hubs: [] }) };
   const r = await M.setMute(host, "", true);
   assert.equal(r.ok, true);
-  assert.deepEqual(fired.map((f) => f[0]), [M.MUTE_CHANGED]);
+  assert.deepEqual(fired.map((f) => f[0]), [M.MUTE_CHANGED, "activity:refresh"]);
+});
+
+test("a mute that did not land refreshes nothing", async () => {
+  const host = { postService: async () => ({ status: "error" }) };
+  const r = await M.setMute(host, "h1", true);
+  assert.equal(r.ok, false);
+  assert.deepEqual(fired, []);
 });
 
 test("loadMuteState asks the server and fills the cache", async () => {

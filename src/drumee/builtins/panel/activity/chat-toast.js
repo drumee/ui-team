@@ -454,10 +454,10 @@ function showChatToast(host, model = {}, url = "") {
     // Never toast my own message. shouldNofity already drops these, but
     // _notify is also reachable from the activity:notify radio channel.
     if (model.author_id && model.author_id == Visitor.id) return;
-    // Muted: the popup is the ONLY thing this suppresses. The row is still
-    // being added to the Notification Center behind us and the badge still
-    // counts it — see mute.js. Placed last of the guards so that a mute can
-    // never mask one of the cheaper structural reasons not to show a card.
+    // Muted: no card. The server also leaves the chat out of the
+    // Notification Center and the badges — see mute.js. Placed last of the
+    // guards so that a mute can never mask one of the cheaper structural
+    // reasons not to show a card.
     if (isPopupMuted(model)) return;
 
     // Replace, never stack: the previous card goes before the new one lands,

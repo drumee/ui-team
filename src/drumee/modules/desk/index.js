@@ -11710,9 +11710,9 @@ class desk_module extends LetcBox {
       case "workspace-rename-save":
         return this._saveWorkspaceRename();
 
-      // Mute popup CARDS for every workspace — an empty hub_id is the global
-      // scope in activity/mute.js. It suppresses the interrupting card only:
-      // the Notification Center keeps every row, the badge and the counts.
+      // Mute every chat — an empty hub_id is the global scope in
+      // activity/mute.js: no card, OS notification or push, and the server
+      // leaves chat rows out of the Notification Center and the badges.
       //
       // The cache is refreshed from the server's own response inside setMute,
       // never from what we asked for, so it cannot drift from the database.

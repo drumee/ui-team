@@ -17,10 +17,9 @@ const { VIEW_FILTERS, buttonLabel: viewFilterLabel } = require('./skeleton/view-
 // Round 3 Phase 2: the real-time chat card. Built to Figma
 // (58208:83650) — see chat-toast.js for the measurements and the rules.
 const { showChatToast, killChatToast } = require('./chat-toast');
-// Round 3 Phase 3: which popups the user has switched off. Read once here and
-// refreshed from every mute_set — never per message. Suppresses the card, the
-// OS notification and its sound; the feed, the badge and the tab counts are
-// untouched by design.
+// Which chats the user muted. Read once here and refreshed from every
+// mute_set — never per message. Suppresses the card, the OS notification and
+// its sound; the server leaves muted chats out of the feed and the counts.
 const { loadMuteState, muteState, isPopupMuted } = require('./mute');
 const { hubCounts, latestTime } = require('./hub-counts');
 require('./skin');
