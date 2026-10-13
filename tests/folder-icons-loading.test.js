@@ -61,10 +61,56 @@ test("safety timeout clears a load that never answers", (t) => {
   assert.equal(list.panel.dataset.loading, undefined);
 });
 
-test("no panel (list not mounted in a files panel) is a no-op", () => {
+// A fresh pane (workspace switch) registers the list as a part in ui-core's
+// onBeforeRender — before it is attached under its files panel — so the first
+// closest() finds nothing. The stamp must land once it is attached, before the
+// next paint, or the pane shows nothing at all while the first page loads.
+function detachedList() {
+  const list = fakeList();
+  let attached = false;
+  list.el = { closest: (sel) => (attached && sel === ".window__files-panel" ? list.panel : null) };
+  list.attach = () => { attached = true; };
+  return list;
+}
+function fakeRaf() {
+  const q = [];
+  global.requestAnimationFrame = (f) => q.push(f);
+  global.cancelAnimationFrame = (id) => { q[id - 1] = null; };
+  return () => { const fs = q.splice(0); fs.forEach((f) => f && f()); };
+}
+
+test("a list not yet attached is stamped on the frame it is attached", () => {
+  const frame = fakeRaf();
+  const win = fakeWin(), list = detachedList();
+  L.begin(win, list);
+  assert.equal(L.isLoading(win), true);
+  assert.equal(list.panel.dataset.loading, undefined);
+  frame(); // still detached: keeps looking
+  assert.equal(list.panel.dataset.loading, undefined);
+  list.attach();
+  frame();
+  assert.equal(list.panel.dataset.loading, "1");
+  list.trigger("data");
+  assert.equal(list.panel.dataset.loading, undefined);
+  assert.equal(L.isLoading(win), false);
+});
+
+test("a list that answers before it is attached never stamps", () => {
+  const frame = fakeRaf();
+  const win = fakeWin(), list = detachedList();
+  L.begin(win, list);
+  list.trigger("eod");
+  list.attach();
+  frame();
+  assert.equal(list.panel.dataset.loading, undefined);
+});
+
+test("end() with no panel found yet is safe and idempotent", () => {
+  fakeRaf();
   const win = fakeWin();
   const list = { el: { closest: () => null }, once() {}, off() {} };
   L.begin(win, list);
+  L.end(win);
+  L.end(win);
   assert.equal(L.isLoading(win), false);
-  L.end(win); // idempotent
 });

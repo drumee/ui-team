@@ -766,6 +766,8 @@ class __window_mfs extends DrumeeMFS {
     setPartitionedStyle(scrollEl);
     this._partitionListPart = null;
     listPart.el.style.visibility = "visible";
+    // The container too — see the same line at the end of _doPartition.
+    scrollEl.style.visibility = "visible";
     return true;
   }
 
@@ -804,6 +806,17 @@ class __window_mfs extends DrumeeMFS {
 
     if (!items.length) {
       if (workspaceWrap || folderWrap || fileWrap) {
+        scrollEl.style.visibility = "visible";
+        scrollEl.dataset.partitioning = 0;
+        listPart.el.style.visibility = "visible";
+        return true;
+      }
+      // The listing came back empty: ui-core's emptyView (`.no-content`) is
+      // all there is, and it has no data-filetype, so it never counts as an
+      // item. Waiting for one hid it through every retry — the skeleton had
+      // already gone (icons-loading ends on eod), so the pane sat blank for
+      // ~3s before the empty state appeared. Nothing to sort: show it.
+      if (scrollEl.querySelector(":scope > .no-content")) {
         scrollEl.style.visibility = "visible";
         scrollEl.dataset.partitioning = 0;
         listPart.el.style.visibility = "visible";
@@ -869,6 +882,14 @@ class __window_mfs extends DrumeeMFS {
 
     this._partitionListPart = null;
     listPart.el.style.visibility = "visible";
+    // AND the scroll container, now — not at _schedulePartitionCleanup. That
+    // timer is 500ms and re-armed by every tile mutation, while the loading
+    // skeleton has already gone (icons-loading ends on the first `data`), so
+    // the pane sat blank in between. Safe to show early: a tile that lands
+    // unpartitioned later stays hidden by the skin's structural guard
+    // (`:not([data-partitioning="0"]) > [data-filetype]`) until the observer
+    // moves it into its section, which the cleanup still settles.
+    scrollEl.style.visibility = "visible";
     return true;
   }
 

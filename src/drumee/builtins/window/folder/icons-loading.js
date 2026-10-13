@@ -25,27 +25,59 @@ function end(win) {
   if (!s) return;
   win._iconsLoading = null;
   clearTimeout(s.timer);
+  if (s.raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(s.raf);
   for (const ev of s.events) s.list.off(ev, s.done);
-  delete s.panel.dataset.loading;
+  if (s.panel) delete s.panel.dataset.loading;
+}
+
+/**
+ * Stamp the files panel, or keep looking for it until the list is attached.
+ *
+ * A FRESH PANE (every workspace switch: Wm.loadWorkspace re-feeds the layer)
+ * reaches begin() from onPartReady, and ui-core registers a part in its
+ * onBeforeRender (letc/addons/letc.js) — before the list has rendered, let
+ * alone been appended under its files panel. closest() finds nothing there,
+ * and begin() used to give up: no stamp, so the list showed blank while its
+ * first page was in flight and the skeleton never appeared. In-place
+ * navigation (loadContent) never hit this, the list being attached by then.
+ *
+ * The panel is assembled synchronously with the window, so it is there by the
+ * next animation frame — which runs before that frame's paint, so the
+ * skeleton is up for the first frame the pane is drawn. Bounded by SAFETY_MS
+ * through end(), and an answer that lands first ends it without ever stamping.
+ */
+function stamp(win, s) {
+  s.raf = 0;
+  if (win._iconsLoading !== s) return;
+  const panel = panelOf(win, s.list);
+  if (panel) {
+    s.panel = panel;
+    panel.dataset.loading = "1";
+    return;
+  }
+  if (typeof requestAnimationFrame === "function") {
+    s.raf = requestAnimationFrame(() => stamp(win, s));
+  }
 }
 
 function begin(win, list) {
   end(win);
-  const panel = panelOf(win, list);
-  if (!panel) return;
-  panel.dataset.loading = "1";
+  if (!list) return;
   const done = () => end(win);
   const events = [_e.data, _e.eod, _e.error];
   for (const ev of events) list.once(ev, done);
-  win._iconsLoading = {
+  const s = {
     list,
-    panel,
+    panel: null,
+    raf: 0,
     done,
     events,
     // Never leave the skeleton up: a request that never answers (or a list
     // destroyed mid-load) would otherwise strand it forever.
     timer: setTimeout(done, SAFETY_MS),
   };
+  win._iconsLoading = s;
+  stamp(win, s);
 }
 
 function isLoading(win) {
