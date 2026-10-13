@@ -3979,8 +3979,9 @@ function buildDueSectionContent(ui, scope = "detail") {
             Skeletons.Box.Y({
               className: `${pfx}__due-slot`,
               // "1" shows the clear button in place of the calendar glyph; the
-              // controller flips it as Start changes (_syncDateRow).
-              attrOpt: { "data-filled": start ? "1" : "0" },
+              // controller flips it as Start changes (_syncDateRow). Never on a
+              // locked field: it draws no clear button, so the glyph stays.
+              attrOpt: { "data-filled": start && !locked ? "1" : "0" },
               ...gate,
               kids: [
                 picker("start_date", start),
