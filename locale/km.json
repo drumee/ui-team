@@ -3104,6 +3104,8 @@
   "PERMISSION_ACTION_CREATE_DOCUMENT": "បង្កើតឯកសារ",
   "PERMISSION_ACTION_INVITE": "អញ្ជើញសមាជិក",
   "PERMISSION_ACTION_EDIT_TASKS": "កែសម្រួលកិច្ចការ",
+  "PERMISSION_ACTION_SCHEDULE_MEETINGS": "កំណត់កាលវិភាគកិច្ចប្រជុំ",
+  "PERMISSION_ACTION_DELETE_MEETINGS": "លុបកិច្ចប្រជុំ",
   "PERMISSION_ACTION_SHARE": "បង្កើតតំណចែករំលែក",
   "PERMISSION_ACTION_MOVE": "ផ្លាស់ទីធាតុមកទីនេះ",
   "PERMISSION_ACTION_COPY": "ចម្លងធាតុមកទីនេះ",

@@ -3105,6 +3105,8 @@
   "PERMISSION_ACTION_CREATE_DOCUMENT": "crear documentos",
   "PERMISSION_ACTION_INVITE": "invitar a miembros",
   "PERMISSION_ACTION_EDIT_TASKS": "editar tareas",
+  "PERMISSION_ACTION_SCHEDULE_MEETINGS": "programar reuniones",
+  "PERMISSION_ACTION_DELETE_MEETINGS": "eliminar reuniones",
   "PERMISSION_ACTION_SHARE": "crear enlaces para compartir",
   "PERMISSION_ACTION_MOVE": "mover elementos aquí",
   "PERMISSION_ACTION_COPY": "copiar elementos aquí",

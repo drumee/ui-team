@@ -4081,8 +4081,49 @@ class __window_folder extends mfsInteract {
       : LOCALE.MEETING_SAVE_FAILED;
   }
 
+  /**
+   * May this viewer schedule (book/edit) meetings here? room.book/update ask
+   * for the write bit — the same canUpload() test that hides the Schedule
+   * button (meeting-schedule.js). Absent → allowed (fail-open, server gates).
+   */
+  _mayScheduleMeetings() {
+    return typeof this.canUpload !== "function" || !!this.canUpload();
+  }
+
+  /**
+   * The task tab's refusal, for meetings: "You can't schedule meetings because
+   * your current permission level is <role>…". The weekly slots open the form
+   * for anyone, and an admin's demotion can land while it is open, so the
+   * submit (or Delete) is where it is refused. Nothing in the form can be
+   * saved, so it closes behind the popup instead of offering a button that
+   * cannot work.
+   * @param {string} [action] LOCALE key of the refused verb phrase
+   */
+  _sayCannotScheduleMeetings(action = "PERMISSION_ACTION_SCHEDULE_MEETINGS") {
+    const PD = require("libs/permission-denied");
+    if (!PD.saidRecently()) {
+      PD.sayWeakPrivilege(
+        LOCALE[action],
+        PD.workspacePrivilege(this._meetingScope().hub_id) || this.mget(_a.privilege),
+        _K.permission.write,
+      );
+    }
+    this._mmSubmitting = 0;
+    this.closeMeetingModal();
+  }
+
+  // notifyServerDenied never speaks for these 403s — room.book/update are
+  // fetchService (GET) calls, and room.remove is not in its allowlist — which
+  // is what a member whose window still held the old role runs into.
+  _mmRefusedForPrivilege() {
+    const e = this._lastServiceError;
+    const status = e && (e.status || e.error_code);
+    return status == 403 && /room\.(book|update|remove)/.test((e && e.url) || "");
+  }
+
   submitMeetingModal() {
     if (this._mmSubmitting) return;
+    if (!this._mayScheduleMeetings()) return this._sayCannotScheduleMeetings();
     const form = this._readMeetingForm();
     if (!form) return; // no date → do nothing (field stays open)
     // An empty title does NOT create an untitled meeting: room.book substitutes
@@ -4137,6 +4178,7 @@ class __window_folder extends mfsInteract {
       this._refreshSchedule();
     };
     const fail = () => {
+      if (this._mmRefusedForPrivilege()) return this._sayCannotScheduleMeetings();
       this._mmSubmitting = 0;
       this._mmBanner(this._mmFailureMessage("save"));
     };
@@ -4206,7 +4248,13 @@ class __window_folder extends mfsInteract {
   deleteMeetingModal() {
     const nid = this._mmEditNid;
     if (!nid) return this.closeMeetingModal();
-    const fail = () => this._mmBanner(this._mmFailureMessage("delete"));
+    const refused = () => this._sayCannotScheduleMeetings("PERMISSION_ACTION_DELETE_MEETINGS");
+    // room.remove asks for the same write bit as booking.
+    if (!this._mayScheduleMeetings()) return refused();
+    const fail = () => {
+      if (this._mmRefusedForPrivilege()) return refused();
+      this._mmBanner(this._mmFailureMessage("delete"));
+    };
     // Stale reason from an earlier call must not colour this one's message.
     this._lastServiceError = null;
     return this.postService((SERVICE.room && SERVICE.room.remove) || "room.remove", {

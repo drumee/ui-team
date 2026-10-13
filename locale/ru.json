@@ -3110,6 +3110,8 @@
   "PERMISSION_ACTION_CREATE_DOCUMENT": "создавать документы",
   "PERMISSION_ACTION_INVITE": "приглашать участников",
   "PERMISSION_ACTION_EDIT_TASKS": "редактировать задачи",
+  "PERMISSION_ACTION_SCHEDULE_MEETINGS": "планировать встречи",
+  "PERMISSION_ACTION_DELETE_MEETINGS": "удалять встречи",
   "PERMISSION_ACTION_SHARE": "создавать ссылки для общего доступа",
   "PERMISSION_ACTION_MOVE": "перемещать элементы сюда",
   "PERMISSION_ACTION_COPY": "копировать элементы сюда",
