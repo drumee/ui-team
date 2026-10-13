@@ -50,8 +50,8 @@ module.exports = function (ui) {
               Skeletons.Button.Svg({
                 ico: "account_cross",
                 className: `${fig}__header-close-btn`,
-                service: "close-panel",
-                uiHandler: [ui],
+                service: "toggle-contacts",
+                uiHandler: [Desk],
               }),
             ],
           }),
@@ -107,8 +107,8 @@ module.exports = function (ui) {
       Skeletons.Button.Svg({
         ico: "account_cross",
         className: `${fig}__close-btn`,
-        service: "close-panel",
-        uiHandler: [ui],
+        service: "toggle-contacts",
+        uiHandler: [Desk],
       }),
       Skeletons.Wrapper.Y({
         className: `${fig}__modal-wrapper`,
