@@ -5,8 +5,12 @@
 #          builtins/window/skin/group/body/main.scss adapted for `.dmz-wm`
 # ===================================================================**/
 @use "mixins/drumee.scss";
+@use "mixins/file-list";
 
 .dmz-wm {
+  // List view: the desk folder window's column titles and file rows.
+  @include file-list.columns-and-rows;
+
   &__ui {
     background: transparent;
     // Fill the flex cell (.dmz__files-panel), NOT the viewport. The old
@@ -101,6 +105,20 @@
     &-container {
       width: 100%;
       height: 100%;
+    }
+  }
+
+  // List view column header (the desk's, dmz/wm skeleton _list_header; empty
+  // outside list mode). Lined up with the rows the scroll pads by 24px. Not
+  // below the app's mobile width: the desk header is at least 810px wide, and
+  // a Box sets its display inline, hence !important.
+  &__list-header {
+    &[data-view-mode="row"] {
+      padding: 12px 24px 0;
+    }
+
+    @media (max-width: 800px) {
+      display: none !important;
     }
   }
 
@@ -236,12 +254,17 @@
     &[data-view-mode="row"] {
       grid-template-columns: 1fr;
       grid-auto-rows: min-content;
+      // Rows sit flush under the column header, without the tiles' gap.
+      gap: 0;
+      padding-top: 0;
 
       .workspace-section,
       .folder-section,
       .file-section {
         grid-template-columns: 1fr;
         grid-auto-rows: min-content;
+        // No inset of their own: the rows' columns line up with the header's.
+        padding: 0;
       }
 
       .media-row__ui,

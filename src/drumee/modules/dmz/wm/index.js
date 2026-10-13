@@ -6,8 +6,13 @@ const {
   groupViewState,
   nextGroupViewState,
 } = require('builtins/window/skeleton/toolkit/file-group');
+const { reverseSortBy, modelComparator } = require("@drumee/ui-essentials");
 const WS_EVENT = "ws:event";
 const EOD = "end:of:data";
+// Item kinds of the share's file list per view mode (seeds: media = grid tile).
+const ROW_KIND = "media_row";
+const GRID_KIND = "media";
+const SORTABLE = [_a.filename, _a.mtime, _a.filesize, _a.ext];
 
 class __dmz_wm extends winman {
   constructor(...args) {
@@ -97,13 +102,57 @@ class __dmz_wm extends winman {
     const mode = state === "list" ? _a.row : _a.icon;
     this.setViewMode(mode, false);
     // data-view-mode drives the single-column row layout (wm-main.scss).
-    const scroll = this.el.querySelector(`.${this.fig.family}__icons-scroll`);
-    if (scroll) scroll.dataset.viewMode = mode;
+    for (const part of ["icons-scroll", "list-header"]) {
+      const el = this.el.querySelector(`.${this.fig.family}__${part}`);
+      if (el) el.dataset.viewMode = mode;
+    }
+    // The column header, in list mode only.
+    this.ensurePart("list-header").then((h) => {
+      if (h && !h.isDestroyed()) h.feed(require('./skeleton').listHeaderKids(this, mode));
+    });
     // The active-segment CSS keys off data-state on the toggle BOX.
     const toggleBox = cmd && cmd.el && cmd.el.closest &&
       cmd.el.closest(`.${this.fig.family}-topbar__view-toggle`);
     if (toggleBox) toggleBox.dataset.state = state;
-    this.ensurePart(_a.list).then((l) => { if (l && l.restart) l.restart(); });
+    this.ensurePart(_a.list).then((l) => {
+      if (!l) return;
+      // The kind is pinned in the list's itemsOpt (skeleton _icons_list), which
+      // is applied over each row, so a restart alone re-created GRID tiles in
+      // list mode — each stretched to the full width by the row layout, a
+      // giant grey square per file. Rows want the desk's media_row instead.
+      const { flow, ...opt } = l.mget(_a.itemsOpt) || {};
+      l.mset({
+        itemsOpt: mode === _a.row
+          ? { ...opt, kind: ROW_KIND, flow: _a.x }
+          : { ...opt, kind: GRID_KIND },
+      });
+      // A column sort belongs to the list view it was made in: the desk
+      // rebuilds its list on a layout switch, which drops it. Same here.
+      if (l.collection) l.collection.comparator = undefined;
+      if (l.restart) l.restart();
+    });
+  }
+
+  /**
+   * Column sort of the list view: order the loaded rows on the header column
+   * pressed, as the desk folder window's sortContent does (window/core),
+   * without its hand-arranged-folder rules — a share has none.
+   * @param {LetcBox} cmd the column button (name = field, state = direction)
+   */
+  _sortList(cmd) {
+    const name = cmd && cmd.mget && cmd.mget(_a.name);
+    if (!SORTABLE.includes(name)) return;
+    const order = cmd.mget(_a.state) ? "asc" : "desc";
+    this.ensurePart(_a.list).then((l) => {
+      if (!l || !l.collection) return;
+      const base = modelComparator(name);
+      const cmp = (model) => {
+        const v = model.get(name);
+        return v == null || v === "" ? "" : base(model);
+      };
+      l.collection.comparator = order === "desc" ? reverseSortBy(cmp) : cmp;
+      l.collection.sort();
+    });
   }
 
   /**
@@ -535,6 +584,9 @@ class __dmz_wm extends winman {
 
       case "toggle-files-layout":
         return this._toggleFilesLayout(cmd);
+
+      case _e.sort:
+        return this._sortList(cmd);
 
       case _e.upload:
         return this.__fileselector.open(this._upload.bind(this));
