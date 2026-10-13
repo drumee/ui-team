@@ -2982,6 +2982,8 @@
   "NO_DEPARTMENTS_YET": "Aún no hay departamentos",
   "SEARCH_WORKSPACES": "Buscar espacios…",
   "DELETE_DEPARTMENT_CONFIRM": "¿Eliminar este departamento? Sus espacios se conservan y quedan sin departamento.",
+  "CREATE_DEPARTMENT": "Crear departamento",
+  "DEPARTMENT_NAME_REQUIRED": "Introduce un nombre de departamento.",
   "NOT_ENOUGH_PRIVILEGE": "No tienes permiso para hacer eso.",
   "INVALID_NAME": "Introduce un nombre.",
   "WORKSPACE_NOT_FOUND": "Ese espacio ya no existe.",

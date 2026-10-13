@@ -261,17 +261,6 @@ function sections(pfx, ui, grouped, canManage) {
     );
   }
 
-  // Where the inline "New department" entry is fed. A row rather than a
-  // dialog: the topbar's menu item and this screen's "+ New" both arm the same
-  // entry, so there is one way to name a department however it was started.
-  kids.push(
-    Skeletons.Box.Y({
-      className: `${pfx}__new-dept`,
-      sys_pn: "new-dept",
-      partHandler: ui,
-    }),
-  );
-
   return kids;
 }
 
