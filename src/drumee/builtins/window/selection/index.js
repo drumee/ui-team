@@ -218,8 +218,18 @@ class desk_selection extends Rectangle {
     }
     this._window = t;
     this.media = t.iconsList.children.toArray();
-    // Tiles measure lazily (media/interact.js `get bbox`); take every stale
-    // box now, in one read pass, before this handler starts writing.
+    // Tiles measure lazily (media/interact.js `get bbox`) and are only marked
+    // stale on mount and on a scroll of their list. Rows also MOVE without
+    // either: the row view orders them by type with CSS (folders first,
+    // skin/group/body/main.scss) and its "Folders" / "Files" headings come
+    // and go with the content, so a box measured earlier can sit a row or a
+    // heading away from its tile, and the marquee then selects nothing (or
+    // the wrong rows). Mark every tile stale and measure them all now, in one
+    // read pass, before this handler starts writing.
+    for (let k = 0; k < this.media.length; k++) {
+      const m = this.media[k];
+      if (m && _.isFunction(m.invalidateBounds)) m.invalidateBounds();
+    }
     this._refreshStaleBounds();
     // MEASURE FIRST, THEN WRITE. These two lines used to sit AFTER the
     // `$rectangle.css(...)` below, which is the write/read order that forces a
@@ -460,6 +470,13 @@ class desk_selection extends Rectangle {
    * @returns 
    */
   _pointerup(e) {
+    // The rows the marquee ticked: the row view's header box and "N selected"
+    // chip follow the selection (window/core _syncRowSelectAll), but select()
+    // tells nobody — the checkbox's tick() is what broadcasts.
+    const w = this._window;
+    if (!this._idle && w && _.isFunction(w._scheduleRowSelectSync)) {
+      w._scheduleRowSelectSync();
+    }
     this.media = [];
     this._target = null;
     this._inband = {};

@@ -1696,6 +1696,9 @@ class __media_core extends DrumeeMFS {
   select(opt, hide) {
     this.setState(1);
     this.el.dataset.selected = this.mget(_a.state);
+    // Its checkbox too, as unselect() and tick() repaint it: a row picked by
+    // the marquee (window/selection) or by select-all showed no tick.
+    this._changeState("checkbox", "selected", this.mget(_a.state));
     return this.mset(opt);
   }
 

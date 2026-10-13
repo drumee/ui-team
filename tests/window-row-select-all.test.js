@@ -51,8 +51,10 @@ function row(state = 0, extra = {}) {
     mget(k) {
       return k === "state" ? this._s : undefined;
     },
+    // As media select(): marks the row and repaints its checkbox.
     select() {
       this._s = 1;
+      this._changeState("checkbox", "selected", 1);
     },
     unselect() {
       this._s = 0;
