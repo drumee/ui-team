@@ -186,7 +186,7 @@ const make = function (ui) {
   // primitive Jira/Linear use. The panel owns the editor's content and events
   // via onPartReady; `scope` is "create" | "detail" so it targets the right
   // editor + dropdown.
-  const descEditor = (scope) => mentionField(ui, scope);
+  const descEditor = (scope, opt) => mentionField(ui, scope, opt);
 
   // ── Card pieces ───────────────────────────────────────────────
   // Title on the card is a plain Note: clicking it bubbles up to the card,
@@ -913,6 +913,12 @@ const make = function (ui) {
       ? dDraft.labels
       : detail.label_ids || [];
     const dLabelSet = new Set(dLabels);
+    // A view or chat member may READ a task but not change it (every task.*
+    // write is `src: write`). The card opens the same, minus the surfaces that
+    // only exist to edit it: the text fields lock, and Update, the file picker
+    // and the comment composer are left out. Any other edit control still
+    // drawn is refused at the panel's onUiEvent with the permission popup.
+    const readOnly = !mayCreateTask(ui);
 
     const statusSwitcher = Skeletons.Box.X({
       className: `${pfx}__detail-status`,
@@ -957,7 +963,7 @@ const make = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.TASK_DESCRIPTION,
         }),
-        descEditor("detail"),
+        descEditor("detail", { readonly: readOnly }),
       ],
     });
 
@@ -1114,16 +1120,18 @@ const make = function (ui) {
           ],
         }),
         attachmentRowsContainer,
-        filePickerBlock("detail", {
-          taskId: detail.id,
-          existingFiles: attachments,
-          // Detail pending list — files queued for upload/link on Update.
-          pendingFiles: dDraft.pending_files || [],
-        }),
+        readOnly
+          ? null
+          : filePickerBlock("detail", {
+              taskId: detail.id,
+              existingFiles: attachments,
+              // Detail pending list — files queued for upload/link on Update.
+              pendingFiles: dDraft.pending_files || [],
+            }),
         // Region overlay: this block IS the task drop zone now, so the
         // affordance belongs to it rather than to the whole panel.
-        dropOverlay(ui),
-      ],
+        readOnly ? null : dropOverlay(ui),
+      ].filter(Boolean),
     });
 
     // Comments: flat feed (a re-feedable part) + an @-mention composer.
@@ -1179,7 +1187,9 @@ const make = function (ui) {
         }),
         // Composer sits directly under the Activity tabs (Figma 2034-62457):
         // own avatar · "Write a comment…" field · paperclip / @ / send icons.
-        Skeletons.Box.X({
+        // Commenting is a task write (task.comment_create), so a read-only
+        // card has no composer.
+        readOnly ? null : Skeletons.Box.X({
           className: `${pfx}__comment-composer`,
           kids: [
             Skeletons.UserProfile({
@@ -1217,7 +1227,7 @@ const make = function (ui) {
         // Files queued on the composer (paperclip or drop), attached to the
         // comment once it is sent. Its own part, so queueing a file never
         // re-feeds the composer and drops the caret mid-sentence.
-        pendingStrip(ui, "comment"),
+        readOnly ? null : pendingStrip(ui, "comment"),
         // Each list sits in its own section so the caption can live OUTSIDE the
         // fed part — a comment or history reload replaces only the rows, never
         // the label. The active tab already names its run, so the captions are
@@ -1262,30 +1272,31 @@ const make = function (ui) {
             }),
           ],
         }),
-      ],
+      ].filter(Boolean),
     });
 
     // Footer: Cancel (closes the panel, discarding edits) beside the primary
     // Update; the header X mirrors Cancel. Sits as the panel's last row, not in
     // the metadata column — there it scrolled away with the fields.
+    // Read-only: nothing to update and nothing to discard, so a lone Close.
     const actions = Skeletons.Box.X({
       className: `${pfx}__detail-actions`,
       kids: [
         Skeletons.Note({
           className: `${pfx}__detail-cancel`,
-          content: LOCALE.CANCEL,
+          content: readOnly ? LOCALE.CLOSE : LOCALE.CANCEL,
           bubble: 0,
           service: "close-detail",
           uiHandler: [ui],
         }),
-        Skeletons.Note({
+        readOnly ? null : Skeletons.Note({
           className: `${pfx}__detail-submit`,
           content: LOCALE.UPDATE,
           bubble: 0,
           service: "commit-detail",
           uiHandler: [ui],
         }),
-      ],
+      ].filter(Boolean),
     });
 
     // A child opens in the SAME panel as its parent — without this the panel
@@ -1335,6 +1346,8 @@ const make = function (ui) {
               bubble: 0,
               watch: "task-input-changed",
               uiHandler: [ui],
+              // The entry template writes `readonly` on the <textarea>.
+              ...(readOnly ? { readonly: 1 } : {}),
             }),
             titleMissingNote(),
           ],
@@ -2619,7 +2632,9 @@ function mentionField(ui, scope, opt = {}) {
         partHandler: ui,
         flow: "none", // block flow for contenteditable, not flex
         attrOpt: {
-          contenteditable: "true",
+          // A reader without task write rights gets the same field, not
+          // editable: _renderEditorContent then draws its read-only form.
+          contenteditable: opt.readonly ? "false" : "true",
           "data-placeholder":
             opt.placeholder || LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
           // Which editor this is, for the drop zone (../drop-zones.js). It has
