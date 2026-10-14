@@ -120,7 +120,6 @@
   "CHECK_AUDIO_DEVICES": "Comprobar dispositivos de audio",
   "TALKING_WHILE_MUTED": "Tu micrófono está silenciado.",
   "MICROPHONE_RECONNECTED": "Micrófono reconectado.",
-  "SPEAK_TO_TEST_MIC": "Habla para probar tu micrófono",
   "TRY_DRUMEE": "Accederá a su escritorio de prueba de Drumee. Simplemente ingrese su correo electrónico que se mantendrá totalmente {0}.",
   "INTRO_POPUP_TITLE": "¡Bienvenido a su mesa de pruebas de Drumee!",
   "DMZ_SHAREBOX_FOOTER_TITLE": "Tú también únete a la revolución de \"Nube Independiente\"",
