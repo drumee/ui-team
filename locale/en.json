@@ -3446,5 +3446,6 @@
   "CONTACT_CONNECTED_SAY_HELLO": "You are now connected. Say hello!",
   "CREATE_NEW_FILE": "Create new file",
   "RECENTLY_VIEWED": "Recently viewed",
-  "OTHER_FILES": "Other files"
+  "OTHER_FILES": "Other files",
+  "DESIGNATION_LINK_NO_ACCESS": "You can't open this link: the account you're signed in with is not a member of the workspace that contains it. Sign in with an account that is a member, or ask the workspace owner or an admin to add you."
 }

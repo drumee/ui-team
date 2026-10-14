@@ -3216,5 +3216,6 @@
   "CONTACT_CONNECTED_SAY_HELLO": "Ahora están conectados. ¡Saluda!",
   "CREATE_NEW_FILE": "Crear archivo nuevo",
   "RECENTLY_VIEWED": "Vistos recientemente",
-  "OTHER_FILES": "Otros archivos"
+  "OTHER_FILES": "Otros archivos",
+  "DESIGNATION_LINK_NO_ACCESS": "No puede abrir este enlace: la cuenta con la que ha iniciado sesión no es miembro del espacio de trabajo que lo contiene. Inicie sesión con una cuenta que sea miembro o pida al propietario o a un administrador del espacio de trabajo que le añada."
 }

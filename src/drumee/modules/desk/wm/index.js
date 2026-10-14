@@ -372,7 +372,11 @@ class __window_manager extends push {
    * exist" alert for a file that does exist.
    *
    * The second probe only picks the sentence: the workspace answers (a member,
-   * the node is gone) → not found; it does not → no access.
+   * the node is gone) → not found; it does not → no access. The no-access
+   * sentence is the link's own (Theo, 2026-10-13): signed in with an account
+   * that is not a member, "does not exist" read as a broken link, and the
+   * generic workspace sentence never says the link itself is fine — so it
+   * names the cause and both ways out (another account, or ask to be added).
    *
    * @param {Object} target { hub_id, nid }
    * @param {Boolean} holdCanvas the caller claimed an empty canvas
@@ -393,7 +397,9 @@ class __window_manager extends push {
     this.alert(
       home
         ? LOCALE.FILE_NOT_FOUND
-        : LOCALE.WORKSPACE_NO_ACCESS || LOCALE.WEAK_PRIVILEGE,
+        : LOCALE.DESIGNATION_LINK_NO_ACCESS ||
+          LOCALE.WORKSPACE_NO_ACCESS ||
+          LOCALE.WEAK_PRIVILEGE,
     );
     return true;
   }
