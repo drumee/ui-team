@@ -469,4 +469,9 @@ $rail-width: 64px;
   opacity: 1;
   pointer-events: auto;
   --pane-fit: 1;
+
+  // Edge to edge: the phone mock IS the screen, so none of the desk canvas's
+  // gutters or rounded content corners (the mobile tier above) apply.
+  .tutorial-main__body { padding: 0; gap: 0; }
+  .tutorial-main__content { border-radius: 0; }
 }

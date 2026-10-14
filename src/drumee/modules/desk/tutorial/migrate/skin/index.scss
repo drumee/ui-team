@@ -470,8 +470,8 @@
   }
 
   &-step-num {
-    flex: 0 0 24px;
-    padding-right: 4px;
+    flex: 0 0 20px;
+    padding-right: 5px;
     text-align: right;
   }
 
@@ -528,18 +528,22 @@
   }
 
   &-copy-ico {
-    display: none;
     width: 20px;
     height: 20px;
   }
+
+  // Hidden until copied. Scoped under the button: the icon is a ui-core
+  // Element, and `.drumee-widget[data-flow]`'s display (0,2,0) beats a single
+  // class — the check showed, faint, on the copy step.
+  &-copy &-copy-ico.tutorial-migrate__ph-copy-ico { display: none; }
 
   // Copied (386:55610 / 386:55759): green, a check.
   &-copy[data-done="1"] {
     background: #54b684;
     color: #fff;
-
-    .tutorial-migrate__ph-copy-ico { display: block; }
   }
+
+  &-copy[data-done="1"] &-copy-ico.tutorial-migrate__ph-copy-ico { display: block; }
 
   &-placeholder {
     color: #65656c;

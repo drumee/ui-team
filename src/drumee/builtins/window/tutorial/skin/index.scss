@@ -24,6 +24,19 @@
     pointer-events: auto;
   }
 
+  // PHONE: the whole viewport. _syncToWindow writes this inline, but its
+  // other branch writes the folder window's rect and radius, and on a phone
+  // that left the window's edges and shadow showing around the tour. The
+  // layout is a viewport question (host-kit layoutFor), so the skin enforces
+  // it rather than trusting whichever branch ran last.
+  &__ui.tutorial-main[data-layout="phone"] {
+    position: fixed !important;
+    inset: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+  }
+
   // The layout already gets its size, its overflow and its opaque background
   // from `.tutorial-main__layout`. No radius override is needed: the content slot
   // inherits `border-radius: 12px` from `.tutorial-main__content`, which is correct.

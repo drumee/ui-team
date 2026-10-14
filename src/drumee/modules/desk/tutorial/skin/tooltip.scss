@@ -475,6 +475,16 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
     text-align: center;
 
     .tutorial__bubble-body { gap: 12px; align-items: stretch; }
+
+    // A Note's copy sits in an inner .note-content that shrinks to its text in
+    // the Note's flex box, so text-align alone left a one-line title at the
+    // left edge (a wrapped desc looked centred only because it was full width).
+    .tutorial__bubble-title,
+    .tutorial__bubble-desc {
+      justify-content: center;
+
+      .note-content { width: 100%; }
+    }
   }
   .tutorial__bubble-next { background: #433cc5; color: #fff; }
 
