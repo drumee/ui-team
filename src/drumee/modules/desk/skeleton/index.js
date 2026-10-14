@@ -179,22 +179,6 @@ const _build_mobile_action_row = (ui) => {
           }),
         ],
       }),
-      // The folder's "+ New", brought up beside search while the folder's view
-      // toggle is hidden (an empty folder — files-empty-state.scss): the files
-      // row then holds nothing but that one pill. It opens the FOLDER's own
-      // new-ctrl menu (_openFolderNewMenu), and the skin shows it only in that
-      // state, swapping the folder's pill out (skin/mobile-topbar.scss).
-      // Over-limit: nothing can be created, so it is not offered at all.
-      require("libs/over-limit").isLocked() ? "" : Skeletons.Box.X({
-        className: `${fig}__mobile-new-ctrl`,
-        service: "mobile-new-ctrl",
-        uiHandler: [ui],
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Note({ className: `${fig}__mobile-new-ctrl-plus`, content: "+" }),
-          Skeletons.Note({ className: `${fig}__mobile-new-ctrl-label`, content: LOCALE.NEW }),
-        ],
-      }),
     ],
   });
 };
