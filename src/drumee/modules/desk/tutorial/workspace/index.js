@@ -280,10 +280,18 @@ class __tutorial_workspace extends LetcBox {
     const input = entry && entry.el && entry.el.querySelector('input');
     if (!input || input.dataset.tourBound) return;
     input.dataset.tourBound = '1';
-    input.addEventListener('change', () => {
-      const v = String(input.value || '').trim();
-      if (!v || this.isDestroyed()) return;
-      this._name = v;
+    // Kept as typed, so the name survives the screens after this one.
+    input.addEventListener('input', () => {
+      this._name = String(input.value || '').trim();
+    });
+    // Enter (or the keyboard's Go) moves on. NOT `change`: that also fires
+    // when the field loses focus, so typing and then tapping Next advanced
+    // twice and skipped the Internal screen.
+    input.addEventListener('keydown', (e) => {
+      if (!e || e.key !== 'Enter') return;
+      if (e.preventDefault) e.preventDefault();
+      this._name = String(input.value || '').trim();
+      if (!this._name || this.isDestroyed()) return;
       this._advance();
     });
   }
@@ -331,7 +339,18 @@ class __tutorial_workspace extends LetcBox {
     this._name = name;
     this._setNameError(null);
     if (!name) {
-      return this._setNameError(LOCALE.REQUIRE_THIS_FIELD || LOCALE.ENTER_A_NAME);
+      const msg = LOCALE.REQUIRE_THIS_FIELD || LOCALE.ENTER_A_NAME;
+      // Phone: the name field lives on an earlier screen (380:54800). Take the
+      // user back to it and say why there, rather than refusing on a screen
+      // with nothing to type into.
+      if (this._phoneLiveCreate()) {
+        const at = this._screens.findIndex((x) => x.phone && x.phone.lit === 'name');
+        if (at >= 0) {
+          this._screenIndex = at;
+          await this._showScreen();
+        }
+      }
+      return this._setNameError(msg);
     }
 
     // Mark the button, DO NOT re-render. _showScreen() rebuilds the whole

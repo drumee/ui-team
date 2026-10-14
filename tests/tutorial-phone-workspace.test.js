@@ -83,7 +83,8 @@ test("sheet screens: overlay + the Figma sheet with all six blocks", () => {
   for (const pn of ["wsp-head", "wsp-org", "wsp-dept", "wsd-name", "wsd-type", "wsd-create"]) {
     assert.ok(find(sheet, pn), pn);
   }
-  for (const k of ["internal", "external", "personal"]) assert.ok(find(sheet, `wsd-type-${k}`), k);
+  for (const k of ["internal", "external"]) assert.ok(find(sheet, `wsd-type-${k}`), k);
+  assert.equal(find(sheet, "wsd-type-personal"), null, "no Personal option on the phone");
 });
 
 test("each sheet screen stamps which block it is about (drives the Figma opacities)", () => {
@@ -150,4 +151,9 @@ test("home card has no top border", () => {
   const css = sass.compile(path.join(SRC, "modules/desk/tutorial/workspace/skin/index.scss"),
     { loadPaths: [SRC, path.join(SRC, "skin")] }).css.replace(/\s+/g, " ");
   assert.match(css, /\.tutorial-wsp__card \{[^}]*border-top: 0/);
+});
+
+test("the live create screen carries the inline error slot (a refusal must be visible over the tour)", () => {
+  const tree = view(ui, SCREENS[4], { live: true });
+  assert.ok(find(tree, "wsd-name-error"));
 });

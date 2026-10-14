@@ -33,11 +33,12 @@ const ASSET = {
   personal: require('assets/tutorial/ws-phone/folder-personal.png'),
 };
 
-// The three rows of 385:1226, in order.
+// The rows of 385:1226, in order. Personal is left out on the phone: the
+// tour creates shared workspaces, and the frames' Personal row led only to
+// the "you can't invite" dead end.
 const TYPES = [
   { key: 'internal', title: () => LOCALE.INTERNAL, desc: () => LOCALE.WS_TYPE_PHONE_INTERNAL_DESC },
   { key: 'external', title: () => LOCALE.EXTERNAL, desc: () => LOCALE.WS_TYPE_PHONE_EXTERNAL_DESC },
-  { key: 'personal', title: () => LOCALE.PERSONAL, desc: () => LOCALE.WS_TYPE_PERSONAL_HINT },
 ];
 
 const img = (src, className) => Skeletons.Element({
@@ -218,6 +219,12 @@ function sheet(ui, { lit, live, selected = 'internal', name, pending }) {
           ...TYPES.map((t) => typeRow(ui, t, { selected, live: live && lit === 'create' })),
         ],
       }),
+      // Where a refusal from Create is SAID. Without it _setNameError fell
+      // back to Wm.alert, which draws under this full-screen tour — so a
+      // refused create looked like a dead Next.
+      live && lit === 'create'
+        ? note('error', '', { sys_pn: 'wsd-name-error', partHandler: ui })
+        : null,
       Skeletons.Note({
         ...(live && lit === 'create' ? { service: 'wsd-create', uiHandler: [ui] } : { active: 0 }),
         className: `${W}__block ${W}__create`,
@@ -227,7 +234,7 @@ function sheet(ui, { lit, live, selected = 'internal', name, pending }) {
         dataset: { pending: pending ? 1 : 0 },
         attrOpt: { 'data-pending': pending ? 1 : 0 },
       }),
-    ],
+    ].filter(Boolean),
   });
 }
 
