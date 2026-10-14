@@ -57,7 +57,7 @@ for (const [label, screens] of [["live run", 7], ["preview/full", 5]]) {
     await s._showScreen();
     const t = focus(s).tooltip;
     assert.equal(t.hide_next, undefined);
-    assert.equal(t.hide_back, true);
+    assert.equal(t.hide_back, false, "Back on every phone screen but the first");
     assert.equal(t.align, "center");
   });
 

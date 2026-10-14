@@ -182,7 +182,7 @@ class __tutorial_share extends LetcBox {
         desc: s.desc(),
         ...stepProgress(this, this._screenIndex),
         progressStyle: 'dashes',
-        hide_back: true,
+        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
         done: isLastScreen(this, this._screenIndex, SCREENS.length),
       },
       owner: this,

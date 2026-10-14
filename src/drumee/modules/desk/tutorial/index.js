@@ -650,6 +650,7 @@ class tutorial_main extends LetcBox {
     if (this._migrateChained || !_.isFunction(this.once)) return;
     if (!pane || !_.isFunction(pane.showTutorial)) return;
     this._migrateChained = true;
+    const preview = !!this.mget('preview');
     this.once(_e.destroy, () => {
       // `this` is gone by now — deliberately nothing off it is touched. The
       // pane was captured above and is the only thing this needs.
@@ -659,7 +660,10 @@ class tutorial_main extends LetcBox {
         // throw the confetti on the migrate tour's first screen. A workspace
         // has just been made, opened and confirmed on screen; the same tour
         // raised from the rail has no such moment behind it.
-        pane.showTutorial('migrate', { celebrate: 1 });
+        // A preview run hands on as a preview: it is exempt from the seen-set
+        // and the phone gate on the way in, exactly as this tour was — without
+        // it a `?tutorial=workspace` / T.show() run on a phone ended here.
+        pane.showTutorial('migrate', { celebrate: 1, ...(preview ? { preview: 1 } : {}) });
       } catch (e) {
         // A chained tour is never load-bearing for the tour that chained it.
       }

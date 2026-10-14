@@ -236,15 +236,17 @@ class __tutorial_workspace extends LetcBox {
     if (live && phone.lit === 'name') this._bindPhoneName();
 
     const last = isLastScreen(this, this._screenIndex, this._screens.length);
+    // Back on every callout but the tour's very first screen — the desk rule.
+    const firstScreen = !!this.mget('is_first') && this._screenIndex === 0;
     let tooltip = null;
     if (phone.lit === 'internal' || phone.lit === 'external') {
       // 385:938 / 385:1090 — title, line, one full-width Next.
-      tooltip = { title: s.title(), desc: s.desc(), hide_back: true, done: last, align: 'center' };
+      tooltip = { title: s.title(), desc: s.desc(), hide_back: firstScreen, done: last, align: 'center' };
     } else if (phone.lit === 'name' || phone.lit === 'create') {
       // 380:54800 / 385:1226 — one line and a full-width Next. On the live
       // create screen that Next creates (see onUiEvent): nothing follows this
       // screen without a workspace, so it never reads Done there.
-      tooltip = { text: s.text(), hide_back: true, done: last && !live, align: 'center' };
+      tooltip = { text: s.text(), hide_back: firstScreen, done: last && !live, align: 'center' };
     }
     this.triggerHandlers({
       service: 'spotlight:focus',

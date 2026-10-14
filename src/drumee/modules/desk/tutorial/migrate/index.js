@@ -192,7 +192,12 @@ class __tutorial_migrate extends LetcBox {
     const tooltip = phoneFab
       // 385:55109: one line beside the +, no controls — pressing the + is the
       // way forward. Gone once the menu is open (385:55247).
-      ? (menuOpen ? null : { text: LOCALE.TUTORIAL_MIGRATE_FAB, hide_back: true, hide_next: true })
+      ? (menuOpen ? null : {
+        text: LOCALE.TUTORIAL_MIGRATE_FAB,
+        // Back only when there is somewhere to go (migrate inside `full`).
+        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
+        hide_next: true,
+      })
       : s.bare ? null : {
       title: s.title(),
       desc: s.desc(),
