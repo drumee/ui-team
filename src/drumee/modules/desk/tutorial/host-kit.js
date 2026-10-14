@@ -57,6 +57,92 @@ function tierFor(width, height) {
   return { size: tier.id, short: h > 0 && h < SHORT_HEIGHT ? '1' : '0' };
 }
 
+// ── Layout ───────────────────────────────────────────────────────────────────
+//
+// A second axis next to the size tier. The tier says how much room a mock has;
+// the layout says WHICH mock to draw. At `phone` every step draws the Drumee
+// Mobile frames (Figma WtPX8Cj8PO9sjD6TRLeOQL, section 380:53148) instead of a
+// shrunk desktop. Same boundary as the `mobile` tier, but read from the
+// VIEWPORT by both hosts — the window host's own box is a folder window, which
+// is not what decides whether the person is holding a phone.
+const PHONE_MAX = 759;
+
+/**
+ * @param {Number} viewportWidth
+ * @returns {'phone'|'desk'} an unmeasured (0) viewport is never a phone
+ */
+function layoutFor(viewportWidth) {
+  const w = ~~viewportWidth;
+  return w > 0 && w <= PHONE_MAX ? 'phone' : 'desk';
+}
+
+// The Figma phone callout: card = viewport − 2×16, flips VERTICALLY only. A
+// small target hugging a bottom corner (the FAB, the composer +) gets the card
+// beside it instead, with a side beak (Figma 385:55109, 386:56395).
+const PHONE_MARGIN = 16;
+const PHONE_GAP = 14;
+const PHONE_EDGE = 12;
+const BEAK_MIN = 24;
+const CORNER_TARGET = 72;
+const CORNER_REACH = 96;
+const SIDE_MAX = 336;
+
+function clamp(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+/**
+ * Where the phone callout sits.
+ *
+ * Every rect is a viewport rect; the result is relative to `host`, exactly as
+ * anchorFor's is. `direction` keeps anchorFor's meaning — the way the card
+ * REACHES OUT: north = below the target, south = above, west = on its right,
+ * east = on its left. `beakPx` is the beak's centre along the card edge,
+ * measured from the card's left (north/south) or top (east/west).
+ *
+ * @param {Object} target the lit element's rect
+ * @param {Object} host   the callout's containing block
+ * @param {{height: Number}} card the measured card
+ * @param {Object} [opt] margin / gap / sideMax overrides
+ * @returns {{style: Object, direction: String, beakPx: Number}}
+ */
+function phoneAnchor(target, host, card, opt = {}) {
+  const margin = opt.margin == null ? PHONE_MARGIN : opt.margin;
+  const gap = opt.gap == null ? PHONE_GAP : opt.gap;
+  const sideMax = opt.sideMax || SIDE_MAX;
+  const h = ~~(card && card.height);
+  const small = target.width <= CORNER_TARGET && target.height <= CORNER_TARGET;
+  const nearBottom = host.bottom - target.bottom < CORNER_REACH;
+
+  if (small && nearBottom) {
+    const roomLeft = target.left - host.left - margin - gap;
+    const roomRight = host.right - target.right - margin - gap;
+    const onLeft = roomLeft >= roomRight;
+    const width = Math.min(sideMax, onLeft ? roomLeft : roomRight);
+    const bottom = host.bottom - target.bottom;
+    const cardTop = host.bottom - bottom - h;
+    const beakPx = clamp(target.top + target.height / 2 - cardTop, BEAK_MIN, h - BEAK_MIN);
+    const style = onLeft
+      ? { right: `${host.right - target.left + gap}px`, bottom: `${bottom}px`, width: `${width}px` }
+      : { left: `${target.right - host.left + gap}px`, bottom: `${bottom}px`, width: `${width}px` };
+    return { style, direction: onLeft ? 'east' : 'west', beakPx };
+  }
+
+  const width = host.width - 2 * margin;
+  const below = host.bottom - target.bottom - gap - PHONE_EDGE;
+  const above = target.top - host.top - gap - PHONE_EDGE;
+  const beakPx = clamp(target.left + target.width / 2 - host.left - margin, BEAK_MIN, width - BEAK_MIN);
+  const base = { left: `${margin}px`, width: `${width}px` };
+
+  // Below when it fits; when neither side fits, whichever has more room.
+  if (h <= below || (h > above && below >= above)) {
+    const top = clamp(target.bottom - host.top + gap, PHONE_EDGE, host.height - PHONE_EDGE - h);
+    return { style: { ...base, top: `${top}px` }, direction: 'north', beakPx };
+  }
+  const bottom = clamp(host.bottom - target.top + gap, PHONE_EDGE, host.height - PHONE_EDGE - h);
+  return { style: { ...base, bottom: `${bottom}px` }, direction: 'south', beakPx };
+}
+
 /**
  * How many screens of a step actually run.
  *
@@ -92,10 +178,12 @@ function screensFor(step, canCreate) {
  * @param {Object} t a TOURS entry
  * @param {Object} [opt]
  * @param {Boolean} [opt.canCreate=false]
+ * @param {'phone'|'desk'} [opt.layout='desk']
  * @returns {Array<Object>}
  */
 function buildStepWidgets(ui, t, opt = {}) {
   const canCreate = !!opt.canCreate;
+  const layout = opt.layout === 'phone' ? 'phone' : 'desk';
   const steps = (t && t.steps) || [];
   const runs = (s) => screensFor(s, canCreate);
   const total = steps.reduce((n, s) => n + runs(s), 0);
@@ -116,6 +204,8 @@ function buildStepWidgets(ui, t, opt = {}) {
     tour_screens: total,
     is_first: i === 0,
     is_last: i === steps.length - 1,
+    // Which mock the step draws (layoutFor). The host re-stamps it on rotation.
+    layout,
     // What the tour is ABOUT, when the trigger knew and said so. Stamped on
     // every step rather than special-cased, because a step is not supposed to
     // know which tour it is in.
@@ -215,6 +305,9 @@ module.exports = {
   SHORT_HEIGHT,
   REFLOW_MS,
   tierFor,
+  PHONE_MAX,
+  layoutFor,
+  phoneAnchor,
   screensFor,
   buildStepWidgets,
   anchorFor,
