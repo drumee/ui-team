@@ -63,6 +63,9 @@ require("./skin");
 // own compact threshold, and the one meeting-schedule.scss already uses.
 const SCHED_NARROW_PX = 700;
 
+// Node types room.link_files skips (never attaches to a meeting).
+const NOT_ATTACHABLE = ["folder", "hub", "root", "schedule"];
+
 
 // The migrate tour has been raised by a phone's "Migrate from Google Drive"
 // tap this session (see "launch-gdrive-migration").
@@ -791,6 +794,8 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._mmInviteeBlurTimer);
       this._mmInviteeBlurTimer = null;
     }
+    // Uploads started from an open meeting modal go with the window.
+    this._mmAbandonUploads();
     if (this._meetingsChangedTimer) {
       clearTimeout(this._meetingsChangedTimer);
       this._meetingsChangedTimer = null;
@@ -2856,6 +2861,20 @@ class __window_folder extends mfsInteract {
       case "mm-set-recur":
         return this.setMeetingRecur(cmd);
 
+      // Files section: the Search file Entry's `watch`, a search result, the
+      // Upload button, a pending chip's ✕.
+      case "mm-file-typed":
+        return this._mmSearchFiles((args && args.value) || "");
+
+      case "mm-pick-file":
+        return this._mmPickFile(cmd);
+
+      case "mm-upload-files":
+        return this._mmPickUploads();
+
+      case "mm-remove-file":
+        return this._mmRemoveFile(cmd);
+
       case "mm-set-ampm":
         return this._setMeetingAmpm(cmd);
 
@@ -2951,6 +2970,7 @@ class __window_folder extends mfsInteract {
     if (!chat || _.isEmpty(chat._selectedMessages)) return;
     this.ensurePart("wrapper-dialog").then((wrapper) => {
       this.dialogWrapper = wrapper;
+      this._mmAbandonUploads();
       wrapper.clear();
       // chat-item-forward's closeOverlay does source.getItemsByKind('widget_chat'),
       // so source must be a container holding the chat widget — this window-folder.
@@ -3564,6 +3584,12 @@ class __window_folder extends mfsInteract {
       // .created_by). Legacy meetings predate it, so fall back to the node's
       // owner_id; both may be absent, which the UI treats as "unknown".
       created_by: content.created_by || m.owner_id || null,
+      // room.link_files compares against this one alone — no owner_id
+      // fallback — so it alone decides who may add files.
+      recorded_creator: content.created_by || null,
+      attachments: Array.isArray(content.attachments)
+        ? content.attachments.filter(Boolean).map(String)
+        : [],
       date_ymd: s ? Dayjs.unix(s).format("YYYY-MM-DD") : Dayjs().format("YYYY-MM-DD"),
       stime_hm: s ? Dayjs.unix(s).format("HH:mm") : "",
       etime_hm: e ? Dayjs.unix(e).format("HH:mm") : "",
@@ -3621,6 +3647,8 @@ class __window_folder extends mfsInteract {
         title: "",
         message: "",
         created_by: null,
+        recorded_creator: null,
+        attachments: [],
         date_ymd: opt.at.day,
         stime_hm: hm(startMin),
         etime_hm: hm(endMin),
@@ -3628,6 +3656,37 @@ class __window_folder extends mfsInteract {
         recur: { freq: "none", until: "" },
       };
     }
+    // A modal still open (its uploads included) gives way to this one.
+    this._mmAbandonUploads();
+    const scope = this._meetingScope();
+    // Everything the Files section needs, created per open and dropped on
+    // close: an upload callback compares against it and goes quiet once the
+    // modal it was started from is gone.
+    const st = {
+      scope,
+      hub_id: scope.hub_id,
+      // Creating needs the write bit (book refuses without it); editing, the
+      // creator room.link_files checks.
+      canAttach:
+        !prefill || !prefill.nid
+          ? this._mayScheduleMeetings()
+          : !!prefill.recorded_creator && String(prefill.recorded_creator) === String(Visitor.id),
+      // Named "Attachment" until _mmLoadFileNames answers.
+      files: (prefill ? prefill.attachments : []).map((nid) => ({
+        nid,
+        linked: 1,
+        status: "linked",
+        localKey: `nid:${nid}`,
+        filename: LOCALE.ATTACHMENT,
+        extension: "",
+      })),
+      uploadNid: null,
+      search: { seq: 0, rows: [], timer: null, blurTimer: null },
+    };
+    this._mmState = st;
+    // A save still in flight from a modal closed meanwhile no longer speaks
+    // for this one (its chain stops at the state check).
+    this._mmSubmitting = 0;
     // Working state the invitee chips + recurrence row read/mutate.
     this._mmAttendees = prefill ? prefill.attendees.slice() : [];
     this._mmRecur = prefill ? { ...prefill.recur } : { freq: "none", until: "" };
@@ -3652,8 +3711,12 @@ class __window_folder extends mfsInteract {
       .catch(() => {
         this._hubMembers = this._hubMembers || [];
       });
+    // The chips get their names as the answers come in; the modal does not
+    // wait for them.
+    this._mmLoadFileNames(st);
     return loadMembers.then(() =>
       this.ensurePart("wrapper-dialog").then((wrapper) => {
+        if (this._mmState !== st) return;
         this.dialogWrapper = wrapper;
         if (wrapper.el) {
           // Transparent backdrop (no blur/white wash — the content stays visible
@@ -3664,6 +3727,7 @@ class __window_folder extends mfsInteract {
         // Focus/blur wiring for the invitee combobox (delegated on the wrapper,
         // installed once — the wrapper element outlives each modal).
         this._installInviteeFocus();
+        this._installMeetingFiles();
         // Re-run the free/busy check when the time changes, and once on open
         // (edit mode arrives with attendees + a time already set).
         const root = wrapper.el;
@@ -3706,10 +3770,12 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._mmInviteeBlurTimer);
       this._mmInviteeBlurTimer = null;
     }
+    this._mmAbandonUploads();
     this._mmAttendees = [];
     this._mmRecur = { freq: "none", until: "" };
     this._mmEditNid = null;
     this._mmOccurrenceAt = null;
+    this._mmCreatedBy = null;
     this._mmBusy = {};
     this._mmCapNotice = 0;
     if (this.dialogWrapper) {
@@ -3719,6 +3785,418 @@ class __window_folder extends mfsInteract {
       }
       this.dialogWrapper.clear();
     }
+  }
+
+  // ── Meeting modal: Files section ─────────────────────────────────────────
+  //
+  // Files are picked from the workspace (task.search_files) or uploaded the
+  // moment they are chosen (upload-progress window, the Task tab's route) into
+  // the workspace's hidden task folder, so they never show in its Files list.
+  // The submit only links nids (room.link_files). Every async step checks that
+  // this._mmState is still the state it started from: the modal can close, or
+  // another one open, while bytes are in flight.
+
+  // Staging helpers shared with the Personal Calendar's modals.
+  _mmAttach() {
+    return require("builtins/panel/calendar/attachments");
+  }
+
+  // Drop the modal's state and cancel what it still has uploading. Called by
+  // every path that takes the modal off screen; a no-op when none is open.
+  _mmAbandonUploads() {
+    const st = this._mmState;
+    if (!st) return;
+    this._mmState = null;
+    clearTimeout(st.search.timer);
+    clearTimeout(st.search.blurTimer);
+    const A = this._mmAttach();
+    const doomed = A.abandonedPending(st.files);
+    if (doomed.length) require("window/upload-progress").dropEntries(A.itemsOf(doomed));
+  }
+
+  // The meeting stores bare nids; the chips need names. Each answer repaints
+  // the chips; a file this viewer can no longer reach keeps a generic chip
+  // rather than vanishing.
+  _mmLoadFileNames(st) {
+    const linked = st.files.filter((pf) => pf.linked);
+    return Promise.all(
+      linked.map((pf) =>
+        this.fetchService((SERVICE.media && SERVICE.media.get_node_attr) || "media.get_node_attr", {
+          ...st.scope,
+          nid: pf.nid,
+          // A GET is served from the HTTP cache; a renamed file must not come
+          // back under its old name.
+          _ts: Date.now(),
+        }).then(
+          (n) => {
+            const name = n && !n.error && (n.filename || n.user_filename);
+            pf.filename = name || LOCALE.ATTACHMENT;
+            pf.extension = (name && (n.ext || n.extension)) || "";
+            if (!name) pf.status = "missing";
+          },
+          () => {
+            pf.filename = LOCALE.ATTACHMENT;
+            pf.status = "missing";
+          },
+        )
+          .then(() => {
+            if (this._mmState === st) this._mmRenderFiles();
+          }),
+      ),
+    );
+  }
+
+  _mmRenderFiles() {
+    const part = this.getPart && this.getPart("mm-files");
+    // Not rendered yet (names can answer before the modal is on screen): the
+    // skeleton reads the state as it is then.
+    if (!part || !part.el || !part.el.isConnected || !this._mmState) return;
+    const pfx = `${this.fig.family}__meeting-modal`;
+    part.feed(require("./skeleton/meeting-modal").fileChips(this, pfx));
+    if (part.el) part.el.dataset.count = String(this._mmState.files.length);
+  }
+
+  // Search file: every keystroke (and focus) asks task.search_files for its
+  // first page — no task_id, so any file of the workspace the viewer can read
+  // (outside /__chat__ and /__trash__), best matches first.
+  _mmSearchFiles(query) {
+    const st = this._mmState;
+    if (!st || !st.canAttach) return;
+    const seq = ++st.search.seq;
+    clearTimeout(st.search.timer);
+    clearTimeout(st.search.blurTimer);
+    st.search.timer = setTimeout(async () => {
+      let rows;
+      try {
+        rows = await this.fetchService({
+          service: (SERVICE.task && SERVICE.task.search_files) || "task.search_files",
+          ...st.scope,
+          pattern: String(query || "").trim(),
+          page: 1,
+        });
+      } catch (e) {
+        rows = [];
+      }
+      if (this._mmState !== st || st.search.seq !== seq) return;
+      // One row comes back as an object, not a one-element array.
+      const list = Array.isArray(rows) ? rows : rows && rows.nid ? [rows] : [];
+      const taken = new Set(st.files.map((pf) => String(pf.nid || "")));
+      // The search lists folders and the workspace root too; room.link_files
+      // skips those, so they are not offered.
+      this._mmFeedFileResults(
+        list.filter(
+          (r) =>
+            r && r.nid && !taken.has(String(r.nid)) && !NOT_ATTACHABLE.includes(r.category),
+        ),
+      );
+    }, 200);
+  }
+
+  _mmFeedFileResults(rows) {
+    const st = this._mmState;
+    const part = this.getPart && this.getPart("mm-files-results");
+    if (!st || !part) return;
+    const pfx = `${this.fig.family}__meeting-modal`;
+    st.search.rows = rows || [];
+    part.feed(require("./skeleton/meeting-modal").fileResults(this, pfx, st.search.rows));
+    // A press on a row must not blur the search field first, or the focusout
+    // teardown closes the list mid-click and the pick is lost.
+    require("libs/pick-guard").keepListThroughClick(part.el, `.${pfx}-attach-option`);
+    if (part.el) part.el.dataset.open = st.search.rows.length ? 1 : 0;
+  }
+
+  _mmCloseFileResults() {
+    const part = this.getPart && this.getPart("mm-files-results");
+    if (!part) return;
+    part.feed([]);
+    if (part.el) part.el.dataset.open = 0;
+  }
+
+  _mmPickFile(cmd) {
+    const st = this._mmState;
+    const nid = cmd && cmd.mget && cmd.mget(_a.nid);
+    if (!st || !nid) return;
+    const row = st.search.rows.find((r) => String(r.nid) === String(nid));
+    if (row && !st.files.some((pf) => String(pf.nid) === String(nid))) {
+      if (st.files.length >= this._mmAttach().MAX_FILES) {
+        this._mmBanner(LOCALE.CAL_FILES_LIMIT);
+      } else {
+        st.files.push({
+          localKey: `pick:${nid}`,
+          nid: String(nid),
+          filename: row.filename || "",
+          extension: row.ext || row.extension || "",
+          status: "queued",
+        });
+      }
+    }
+    st.search.seq++;
+    const input =
+      this.dialogWrapper &&
+      this.dialogWrapper.el &&
+      this.dialogWrapper.el.querySelector('[name="mm-file-search"]');
+    if (input) input.value = "";
+    this._mmCloseFileResults();
+    this._mmRenderFiles();
+  }
+
+  // Upload: a throwaway <input type=file multiple>.
+  _mmPickUploads() {
+    const st = this._mmState;
+    if (!st || !st.canAttach) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.onchange = () => {
+      if (this._mmState === st) this._mmStageUploads(st, Array.from(input.files || []));
+    };
+    input.click();
+  }
+
+  async _mmStageUploads(st, files) {
+    if (!files || !files.length) return;
+    const A = this._mmAttach();
+    const { overflow } = A.stageFiles(st.files, files);
+    if (overflow.length) this._mmBanner(LOCALE.CAL_FILES_LIMIT);
+    const fresh = st.files.filter(
+      (pf) => pf.file && !pf.nid && !pf.bundleEntry && pf.status === "queued",
+    );
+    const Entry = require("media/bundle/entry");
+    const paired = A.pairEntries(fresh, Entry.entriesFromFileList(fresh.map((pf) => pf.file)));
+    paired.forEach((pf) => (pf.status = "uploading"));
+    this._mmRenderFiles();
+    if (!paired.length) return;
+    const dest = await this._mmUploadFolder(st);
+    if (this._mmState !== st) return;
+    if (!dest) {
+      paired.forEach((pf) => {
+        pf.bundleEntry = null;
+        pf.status = "error";
+      });
+      return this._mmRenderFiles();
+    }
+    await require("window/upload-progress")
+      .runBundle(
+        paired.map((pf) => pf.bundleEntry),
+        dest,
+        st.hub_id,
+        null,
+        {
+          onJob: (job) => paired.forEach((pf) => (pf.bundleJob = job)),
+          onFileDone: (node, _parent, entry) => this._mmOnFileDone(st, entry, node),
+          onDone: () => this._mmOnBatchDone(st, paired),
+        },
+      )
+      .catch(() => null);
+    // No window, or it refused the batch before making a job: nothing will
+    // ever report on these.
+    const orphaned = paired.filter(
+      (pf) => !pf.bundleJob && pf.bundleEntry && pf.bundleEntry.status !== "canceled",
+    );
+    if (orphaned.length) {
+      orphaned.forEach((pf) => (pf.bundleEntry.status = "error"));
+      this._mmOnBatchDone(st, orphaned);
+    }
+  }
+
+  // The workspace's /__chat__/__task__ (media.home → task_upload_id). Never
+  // the folder on screen: a file uploaded there would show in Files.
+  async _mmUploadFolder(st) {
+    if (st.uploadNid) return st.uploadNid;
+    try {
+      const home = await this.fetchService({
+        service: (SERVICE.media && SERVICE.media.home) || "media.home",
+        ...st.scope,
+      });
+      if (home && home.task_upload_id) st.uploadNid = home.task_upload_id;
+    } catch (e) {
+      st.uploadNid = null;
+    }
+    return st.uploadNid;
+  }
+
+  _mmOnFileDone(st, entry, node) {
+    const pf = st.files.find((f) => f.bundleEntry === entry);
+    if (!pf || !this._mmAttach().settleEagerFile(pf, node, st.hub_id)) return;
+    if (this._mmState === st) this._mmRenderFiles();
+  }
+
+  _mmOnBatchDone(st, pfs) {
+    // A failure is an error chip to remove (there is no upload at commit
+    // time); a cancel leaves the list.
+    const { fallback, dropped } = this._mmAttach().settleEagerBatch(pfs);
+    fallback.forEach((pf) => (pf.status = "error"));
+    if (dropped.length) {
+      const gone = new Set(dropped);
+      st.files = st.files.filter((f) => !gone.has(f));
+    }
+    if (this._mmState === st && (fallback.length || dropped.length)) this._mmRenderFiles();
+  }
+
+  // A pending chip's ✕. Files already on the meeting have no ✕.
+  _mmRemoveFile(cmd) {
+    const st = this._mmState;
+    const key = cmd && cmd.mget && cmd.mget("key");
+    const pf = st && st.files.find((f) => f.localKey === key);
+    if (!pf || pf.linked) return;
+    const A = this._mmAttach();
+    if (A.unfinishedPending([pf]).length) {
+      require("window/upload-progress").dropEntries(A.itemsOf([pf]));
+    }
+    st.files = st.files.filter((f) => f !== pf);
+    this._mmRenderFiles();
+  }
+
+  /**
+   * Delegated on the dialog wrapper, installed once (it outlives each modal).
+   * The Search file field opens its results on focus and closes them on blur.
+   * A computer file dropped on the open meeting modal is ours: on the Files
+   * section it uploads, in the description the editor inlines it, anywhere
+   * else it is refused out loud — the window's own drop handler would
+   * otherwise upload it into the folder on screen.
+   */
+  _installMeetingFiles() {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root || this._mmFilesInstalled) return;
+    this._mmFilesInstalled = true;
+    const pfx = `${this.fig.family}__meeting-modal`;
+    const isSearch = (t) => t && t.matches && t.matches('[name="mm-file-search"]');
+    root.addEventListener("focusin", (e) => {
+      if (isSearch(e.target)) this._mmSearchFiles(e.target.value || "");
+    });
+    root.addEventListener("focusout", (e) => {
+      const st = this._mmState;
+      if (!st || !isSearch(e.target)) return;
+      clearTimeout(st.search.blurTimer);
+      st.search.blurTimer = setTimeout(() => {
+        if (this._mmState !== st || isSearch(document.activeElement)) return;
+        st.search.seq++;
+        this._mmCloseFileResults();
+      }, 200);
+    });
+
+    const A = this._mmAttach();
+    const where = (t) => ({
+      editor: !!(t && t.closest && t.closest(`.${pfx}-desc-editor`)),
+      zone: !!(t && t.closest && t.closest(`.${pfx}-files`)),
+    });
+    root.addEventListener("dragover", (e) => {
+      if (!this._mmState || !A.isFileDrag(e)) return;
+      const at = where(e.target);
+      if (at.editor) return;
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        e.dataTransfer.dropEffect = at.zone && this._mmState.canAttach ? "copy" : "none";
+      } catch (_) {}
+    });
+    root.addEventListener("drop", (e) => {
+      const st = this._mmState;
+      if (!st || !A.isFileDrag(e)) return;
+      const at = where(e.target);
+      if (at.editor) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (!at.zone || !st.canAttach) {
+        if (window.Butler && Butler.say) Butler.say(LOCALE.WRONG_DROP_AREA);
+        return;
+      }
+      this._mmStageUploads(st, Array.from((e.dataTransfer && e.dataTransfer.files) || []));
+    });
+  }
+
+  /**
+   * Before a save. A failed upload must be removed first; one still on its
+   * way asks the upload-progress card (wait, or go without it). True = the
+   * save may go.
+   */
+  async _mmGateFiles(st) {
+    if (!st) return true;
+    const A = this._mmAttach();
+    if (A.failedFiles(st.files).length) {
+      this._mmBanner(LOCALE.MEETING_FILES_UPLOAD_FAILED);
+      return false;
+    }
+    const moving = A.unfinishedPending(st.files);
+    if (!moving.length) return true;
+    const choice = await require("window/upload-progress").confirmUnfinished({
+      items: A.itemsOf(moving),
+      action: this._mmEditNid ? "update" : "create",
+    });
+    if (this._mmState !== st || choice !== "skip") return false;
+    // "skip" has already cancelled them in their bundle; take them off the list.
+    const gone = new Set(A.abandonedPending(st.files));
+    st.files = st.files.filter((f) => !gone.has(f));
+    this._mmRenderFiles();
+    return true;
+  }
+
+  /**
+   * Link the pending files to the saved meeting and check the answer.
+   * room.link_files skips, without an error, a file it cannot find or the
+   * caller may not download, and reports only the ones past the 20-file cap
+   * (`overflow`) — so what was sent is compared with the `attachments` that
+   * came back, and every file left out is named.
+   * @returns {Promise<boolean|undefined>} true = nothing left over; false =
+   *   the dialog stays open on a message; undefined = the modal is gone
+   */
+  async _mmLinkFiles(nid, st, form) {
+    const A = this._mmAttach();
+    // A file the server already turned down is not sent again: it would be
+    // skipped again and keep the modal from closing.
+    const sent = st
+      ? A.nidsToLink(st.files.filter((pf) => pf.status !== "refused")).map(String)
+      : [];
+    if (!sent.length) return true;
+    const res = await this.postService({
+      service: (SERVICE.room && SERVICE.room.link_files) || "room.link_files",
+      hub_id: st.hub_id,
+      nid,
+      file_nids: sent,
+    });
+    if (this._mmState !== st) return;
+    this._mmSubmitting = 0;
+    if (!res || res.error || !Array.isArray(res.attachments)) {
+      if (this._mmRefusedForPrivilege()) {
+        this._sayCannotScheduleMeetings();
+        return;
+      }
+      const why = this._mmFailureMessage("save");
+      this._mmBanner(why === LOCALE.MEETING_NOT_OWNER ? why : LOCALE.CAL_FILES_NOT_ATTACHED);
+      return false;
+    }
+    const attached = new Set(res.attachments.map(String));
+    const over = new Set((res.overflow || []).map(String));
+    const { fileLabel } = require("./skeleton/meeting-modal");
+    const overNames = [];
+    const deniedNames = [];
+    for (const pf of st.files) {
+      if (!pf.nid || pf.linked || !sent.includes(String(pf.nid))) continue;
+      if (attached.has(String(pf.nid))) {
+        pf.linked = 1;
+        pf.status = "linked";
+        pf.localKey = `nid:${pf.nid}`;
+      } else if (over.has(String(pf.nid))) {
+        pf.status = "refused";
+        overNames.push(fileLabel(pf));
+      } else {
+        pf.status = "refused";
+        deniedNames.push(fileLabel(pf));
+      }
+    }
+    this._upsertLocalMeeting(nid, form, res.attachments);
+    if (!overNames.length && !deniedNames.length) return true;
+    this._mmRenderFiles();
+    this._mmBanner(
+      [
+        LOCALE.CAL_FILES_NOT_ATTACHED,
+        overNames.length ? LOCALE.MEETING_FILES_OVER_LIMIT.format(overNames.join(", ")) : "",
+        deniedNames.length ? LOCALE.MEETING_FILES_NOT_LINKED.format(deniedNames.join(", ")) : "",
+      ]
+        .filter(Boolean)
+        .join(" "),
+    );
+    return false;
   }
 
   _reFeedInviteeChips() {
@@ -4079,10 +4557,15 @@ class __window_folder extends mfsInteract {
   }
 
   // Optimistically upsert a meeting into this._meetings from the form so it
-  // shows immediately; a later room.list fetch overwrites it.
-  _upsertLocalMeeting(nid, form) {
+  // shows immediately; a later room.list fetch overwrites it. The files are
+  // not part of the form: `attachments` is room.link_files' answer, and
+  // without one the row keeps what it already had (room.update keeps them
+  // server-side too).
+  _upsertLocalMeeting(nid, form, attachments) {
     if (!nid) return;
     this._meetings = Array.isArray(this._meetings) ? this._meetings : [];
+    const i = this._meetings.findIndex((m) => m.id === nid);
+    const prev = i >= 0 ? this._prefillMeeting(this._meetings[i]) : null;
     const row = {
       id: nid,
       filename: form.title,
@@ -4099,11 +4582,11 @@ class __window_folder extends mfsInteract {
           recur: form.recur,
           attendees: form.attendees,
           created_by: form.created_by,
+          attachments: attachments || (prev ? prev.attachments : []),
           room_id: nid,
         },
       }),
     };
-    const i = this._meetings.findIndex((m) => m.id === nid);
     if (i >= 0) this._meetings[i] = row;
     else this._meetings.push(row);
   }
@@ -4148,7 +4631,8 @@ class __window_folder extends mfsInteract {
 
   // Why the meeting call failed, in the modal's words. Only a 400 from the
   // meeting endpoints themselves is the service refusing us — that is
-  // NOT_MEETING_OWNER, the one rejection room.book/update/remove raise. Being
+  // NOT_MEETING_OWNER, the one rejection room.book/update/remove/link_files
+  // raise (link_files on a meeting deleted meanwhile aside). Being
   // offline, a 5xx, or a route that isn't deployed must NOT be reported as an
   // ownership problem, and neither must the free/busy probe, which fires on
   // the very same click (the time field blurs) and would otherwise speak for
@@ -4157,7 +4641,7 @@ class __window_folder extends mfsInteract {
     const e = this._lastServiceError;
     const status = e && (e.status || e.error_code);
     const url = (e && e.url) || "";
-    if (status == 400 && /room\.(book|update|remove)/.test(url)) {
+    if (status == 400 && /room\.(book|update|remove|link_files)/.test(url)) {
       return LOCALE.MEETING_NOT_OWNER;
     }
     return action === "delete"
@@ -4202,7 +4686,7 @@ class __window_folder extends mfsInteract {
   _mmRefusedForPrivilege() {
     const e = this._lastServiceError;
     const status = e && (e.status || e.error_code);
-    return status == 403 && /room\.(book|update|remove)/.test((e && e.url) || "");
+    return status == 403 && /room\.(book|update|remove|link_files)/.test((e && e.url) || "");
   }
 
   submitMeetingModal() {
@@ -4253,6 +4737,19 @@ class __window_folder extends mfsInteract {
     }
 
     this._mmSubmitting = 1;
+    const st = this._mmState;
+    // A file still uploading asks first (wait, or go without it); a failed one
+    // has to be removed — this modal has no upload at commit time.
+    return this._mmGateFiles(st).then((go) => {
+      if (!go) {
+        if (this._mmState === st) this._mmSubmitting = 0;
+        return;
+      }
+      return this._mmSaveMeeting(form, st);
+    });
+  }
+
+  _mmSaveMeeting(form, st) {
     // Stale reason from an earlier call must not colour this one's message.
     this._lastServiceError = null;
     const nid = this._mmEditNid;
@@ -4262,9 +4759,21 @@ class __window_folder extends mfsInteract {
       this._refreshSchedule();
     };
     const fail = () => {
+      // Closed meanwhile: there is no dialog left to speak in (and a newer
+      // one is not this save's to close).
+      if (this._mmState !== st) return;
       if (this._mmRefusedForPrivilege()) return this._sayCannotScheduleMeetings();
       this._mmSubmitting = 0;
       this._mmBanner(this._mmFailureMessage("save"));
+    };
+    // The meeting itself is saved by now; only the files are left. The grid
+    // repaints in every case — the server's broadcast skips this socket, and
+    // the modal may have been closed mid-save. It closes only when nothing is
+    // left over and it is still the modal that saved; otherwise it stays open
+    // on its own message (_mmLinkFiles).
+    const finish = (linked) => {
+      if (linked === true && this._mmState === st) return done();
+      this._refreshSchedule();
     };
 
     if (nid) {
@@ -4280,18 +4789,20 @@ class __window_folder extends mfsInteract {
         etime: form.etime,
         recur: form.recur,
         attendees: form.attendees,
-      }).then((res) => {
-        // Keep the dialog open on a refusal instead of reporting a save that
-        // never happened — the calendar would snap back on the next fetch.
-        if (!this._mmSucceeded(res)) return fail();
-        this._upsertLocalMeeting(nid, form);
-        done();
-      }, fail);
+      })
+        .then((res) => {
+          // Keep the dialog open on a refusal instead of reporting a save that
+          // never happened — the calendar would snap back on the next fetch.
+          if (!this._mmSucceeded(res)) return fail();
+          this._upsertLocalMeeting(nid, form);
+          return this._mmLinkFiles(nid, st, form).then(finish);
+        }, fail);
     }
 
     // Create: book the node (with recurrence), then attach the invited members
-    // via update "member" (which notifies them in-app).
+    // via update "member" (which notifies them in-app), then the files.
     let createdNid = null;
+    let refused = false;
     return this.fetchService((SERVICE.room && SERVICE.room.book) || "room.book", {
       ...this._meetingScope(),
       title: form.title,
@@ -4302,9 +4813,21 @@ class __window_folder extends mfsInteract {
       recur: form.recur,
     })
       .then((node) => {
-        if (!this._mmSucceeded(node)) return fail();
+        if (!this._mmSucceeded(node)) {
+          refused = true;
+          return fail();
+        }
         createdNid = node && (node.id || node.nid);
-        if (createdNid && form.attendees.length) {
+        if (!createdNid) return;
+        // The meeting exists from here on. If anything after this fails and
+        // the organizer presses again, that press edits this meeting — it
+        // must not book a second one. Only while this modal is still the one
+        // open: a modal opened meanwhile has a meeting of its own.
+        if (this._mmState === st) {
+          this._mmEditNid = createdNid;
+          this._mmCreatedBy = Visitor.id;
+        }
+        if (form.attendees.length) {
           return this.fetchService((SERVICE.room && SERVICE.room.update) || "room.update", {
             flag: "member",
             nid: createdNid,
@@ -4314,18 +4837,17 @@ class __window_folder extends mfsInteract {
         }
       })
       .then(() => {
-        // book() refused: the first stage already reported it and cleared the
-        // submitting flag — don't close the dialog on top of that message.
-        // Anything else keeps the previous behaviour (close + refresh).
-        if (!this._mmSubmitting) return;
-        if (createdNid) {
-          this._upsertLocalMeeting(createdNid, form);
-          // Jump the calendar to the new meeting's week so it's visible even if
-          // it was scheduled outside the range currently in view.
-          const st = require("./skeleton/meeting-schedule").schedState(this);
-          st.anchor = Dayjs.unix(form.stime);
-        }
-        done();
+        // book() refused: the first stage already reported it — don't close
+        // the dialog on top of that message. A modal closed meanwhile still
+        // gets its meeting finished (members, files, repaint).
+        if (refused) return;
+        if (!createdNid) return finish(true);
+        this._upsertLocalMeeting(createdNid, form);
+        // Jump the calendar to the new meeting's week so it's visible even if
+        // it was scheduled outside the range currently in view.
+        const st2 = require("./skeleton/meeting-schedule").schedState(this);
+        st2.anchor = Dayjs.unix(form.stime);
+        return this._mmLinkFiles(createdNid, st, form).then(finish);
       }, fail);
   }
 
@@ -6386,11 +6908,13 @@ class __window_folder extends mfsInteract {
 
   closeFolderSettings() {
     this.isShowSettings = false;
+    this._mmAbandonUploads();
     return this.dialogWrapper.clear();
   }
 
   openFolderDialog(skeleton) {
     this.isShowSettings = false;
+    this._mmAbandonUploads();
     this.dialogWrapper.clear();
     return _.delay(() => this.dialogWrapper.feed(skeleton));
   }
@@ -7393,6 +7917,7 @@ class __window_folder extends mfsInteract {
 
   openAdvancedSettings(cmd) {
     this.isShowSettings = false;
+    this._mmAbandonUploads();
     this.dialogWrapper.clear();
     this.dialogWrapper.feed({
       kind: "settings_hub",
@@ -7422,6 +7947,7 @@ class __window_folder extends mfsInteract {
    * Toggle folder settings panel.
    */
   switchShowFolderSettings(cmd) {
+    this._mmAbandonUploads();
     if (this.isShowSettings) {
       this.isShowSettings = false;
       return this.dialogWrapper.clear();
@@ -7532,6 +8058,7 @@ class __window_folder extends mfsInteract {
     if (!members && !this._manageAccessIsInternal()) {
       return toggleSecureShareView(this);
     }
+    this._mmAbandonUploads();
     if (this.isShowSettings) {
       this.isShowSettings = false;
       return this.dialogWrapper.clear();
