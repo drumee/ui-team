@@ -206,7 +206,9 @@ module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
 
   return Skeletons.Box.Y({
     className: `${pfx}__stage ${pfx}__stage--live`,
-    kids: [filesPane(ui, {}), Skeletons.Box.Y({
+    // `opt.pane`: what sits behind the dialog. The phone layout passes its own
+    // pane (migrate/skeleton/phone.js) so the sheet rises over a phone screen.
+    kids: [(opt.pane || filesPane)(ui, {}), Skeletons.Box.Y({
       className: `${pfx}__overlay`,
       kids: [Skeletons.Box.Y({
         className: `${pfx}__backdrop`,

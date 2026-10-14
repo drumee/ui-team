@@ -97,12 +97,19 @@ function tabBar(ui, active) {
   });
 }
 
-/** The floating + above the bottom row's right end. */
-function fab() {
+/**
+ * The floating + above the bottom row's right end. Inert unless a step gives
+ * it a service (the migrate tour's + opens its menu, Figma 385:55247).
+ * @param {Object} ui
+ * @param {{service?: String, menu?: String}} [opt] `menu` is read back by the
+ *   step from data-menu, as the desk's + New buttons are
+ */
+function fab(ui, { service = null, menu = null } = {}) {
   return Skeletons.Box.X({
-    active: 0,
+    ...(service ? { service, uiHandler: [ui] } : { active: 0 }),
     className: `${P}__fab`,
     sys_pn: 'ph-fab',
+    ...(menu ? { dataset: { menu }, attrOpt: { 'data-menu': menu } } : {}),
     kids: [Skeletons.Image.Svg({ active: 0, ico: 'plus', className: `${P}__fab-ico` })],
   });
 }

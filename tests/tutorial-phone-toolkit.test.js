@@ -88,3 +88,12 @@ test("phone skin compiles into the tour skin", () => {
   assert.match(css, /\.tutorial-phone__tab\[data-active="1"\] \{[^}]*background: #eeedff/);
   assert.match(css, /\.tutorial-phone__fab \{[^}]*background: #5950ff/);
 });
+
+test("fab can be made live (a step's own control)", () => {
+  const f = ph.fab(ui, { service: "mg-toggle-menu", menu: "fab" });
+  assert.equal(f.service, "mg-toggle-menu");
+  assert.deepEqual(f.uiHandler, [ui]);
+  assert.notEqual(f.active, 0);
+  assert.equal(f.dataset.menu, "fab");
+  assert.equal(ph.fab(ui).active, 0, "inert by default");
+});

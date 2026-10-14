@@ -3227,5 +3227,6 @@
   "OTHER_FILES": "Otros archivos",
   "DESIGNATION_LINK_NO_ACCESS": "No puede abrir este enlace: esta cuenta no es miembro de su espacio de trabajo. Inicie sesión con una cuenta miembro o pida al administrador del espacio que le añada.",
   "TUTORIAL_SKIP": "Omitir el recorrido",
-  "MESSAGE_TO": "Mensaje para…"
+  "MESSAGE_TO": "Mensaje para…",
+  "TUTORIAL_MIGRATE_FAB": "Haz clic para añadir archivos"
 }

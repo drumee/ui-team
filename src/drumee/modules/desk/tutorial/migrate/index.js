@@ -63,101 +63,7 @@ const { isLastScreen, entryScreen } = require('../tours');
  * the same dialog becomes the real share-to-SA import — the popup is no longer
  * opened at the end of the tour.
  */
-const SCREENS = [
-  {
-    // 142:34981, drawn exactly as the frame has it: no callout, no scrim, and
-    // the three hero buttons live. `live` is what makes them controls (see
-    // ./skeleton/index.js); `bare` is what stops a card being raised over a
-    // frame that has none.
-    //
-    // A target is still named because the spotlight needs one to measure, and
-    // the CTA is the thing the screen is about. With `bare` it is only
-    // promoted, never ringed — nothing in spotlight/skin styles `.is-lit`.
-    key: 'pane',
-    pane: true,
-    live: true,
-    bare: true,
-    // The dropdown is drawn on this screen now, and its rows act. `+ New` and
-    // `Upload` are no longer screens of their own — see the note above the
-    // table.
-    menu: true,
-    live_menu: true,
-    target: 'fp-migrate',
-    anchor: 'fp-migrate',
-    direction: 'north',
-    beak: 'start',
-  },
-  {
-    // Back goes to the PANE, not to the screen before this one.
-    //
-    // Screen 2 is the `+ New` branch, and the only way into this screen is the
-    // Migrate CTA on screen 1 — so unwinding to index-1 would land the user on
-    // a dropdown they never opened. Both branches return to the fork.
-    key: 'copy',
-    back: 'pane',
-    dialog: true,
-    target: 'mg-dialog',
-    anchor: 'mg-address',
-    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
-    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
-    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
-    //
-    // Anchoring the placement on the row measured the gap from the wrong edge.
-    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
-    // gap from the row left the card 4px off the panel — all but touching it,
-    // on all three screens.
-    anchor_x: 'mg-dialog',
-    direction: 'west',
-    gap: 34,
-    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_COPY_DESC,
-  },
-  {
-    // The address has been copied; the link is still empty.
-    key: 'paste',
-    dialog: true,
-    copied: true,
-    target: 'mg-dialog',
-    anchor: 'mg-link',
-    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
-    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
-    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
-    //
-    // Anchoring the placement on the row measured the gap from the wrong edge.
-    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
-    // gap from the row left the card 4px off the panel — all but touching it,
-    // on all three screens.
-    anchor_x: 'mg-dialog',
-    direction: 'west',
-    gap: 34,
-    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_PASTE_DESC,
-  },
-  {
-    key: 'verify',
-    dialog: true,
-    copied: true,
-    linked: true,
-    target: 'mg-dialog',
-    anchor: 'mg-verify',
-    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
-    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
-    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
-    //
-    // Anchoring the placement on the row measured the gap from the wrong edge.
-    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
-    // gap from the row left the card 4px off the panel — all but touching it,
-    // on all three screens.
-    anchor_x: 'mg-dialog',
-    direction: 'west',
-    gap: 34,
-    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
-    // Its own line, not the paste screen's. This screen is reached with the
-    // link already in the field, so "Paste the link" described a step the user
-    // had just finished; the only thing left on it is the button.
-    desc: () => LOCALE.TUTORIAL_MIGRATE_VERIFY_DESC,
-  },
-];
+const SCREENS = require('./screens');
 
 class __tutorial_migrate extends LetcBox {
 
@@ -252,11 +158,18 @@ class __tutorial_migrate extends LetcBox {
     // each of the three dialog screens — read as a flicker, not a transition.
     const enter = !!s.dialog && !this._dialogUp;
     this._dialogUp = !!s.dialog;
-    this.feed(skeleton(this, s, { menuOpen: this._menuOpen || null, enter }));
+    // Phone layout (host-kit layoutFor): the Figma mobile frames. `phone` is
+    // null at desk. With the + menu open the menu is what is lit, uncarded,
+    // as in 385:55247.
+    const phone = this.mget('layout') === 'phone' ? s.phone : null;
+    const menuOpen = this._menuOpen || null;
+    const state = { menuOpen, enter };
+    this.feed(phone ? require('./skeleton/phone')(this, s, state) : skeleton(this, s, state));
+    const phoneTarget = phone && (menuOpen && phone.view === 'pane' ? 'ph-fab-menu' : phone.target);
     const [target, anchor, anchor_x] = await Promise.all([
-      this.ensurePart(s.target),
-      this.ensurePart(s.anchor),
-      s.anchor_x ? this.ensurePart(s.anchor_x) : null,
+      this.ensurePart(phone ? phoneTarget : s.target),
+      this.ensurePart(phone ? phoneTarget : s.anchor),
+      !phone && s.anchor_x ? this.ensurePart(s.anchor_x) : null,
     ]);
 
     // `bare` raises the screen with NO card: focus() feeds the callout null and
@@ -267,7 +180,12 @@ class __tutorial_migrate extends LetcBox {
     //
     // NO `stepProgress` on any screen: this tour draws no pill. Without
     // `step`/`steps` the callout renders no header row at all.
-    const tooltip = s.bare ? null : {
+    const phoneFab = phone && phone.view === 'pane';
+    const tooltip = phoneFab
+      // 385:55109: one line beside the +, no controls — pressing the + is the
+      // way forward. Gone once the menu is open (385:55247).
+      ? (menuOpen ? null : { text: LOCALE.TUTORIAL_MIGRATE_FAB, hide_back: true, hide_next: true })
+      : s.bare ? null : {
       title: s.title(),
       desc: s.desc(),
       // Back is live whenever a previous screen exists; hidden on screen 1 of
@@ -300,7 +218,8 @@ class __tutorial_migrate extends LetcBox {
       // gives on its `dim` param: a `[data-tour]` rule cannot give one flow two
       // answers, and it stops applying inside `full`, where the stamped id is
       // "full".
-      dim: !s.pane,
+      dim: phone ? true : !s.pane,
+      halo: !!(phoneFab && !menuOpen && phone.halo),
       owner: this,
     });
   }
@@ -349,7 +268,8 @@ class __tutorial_migrate extends LetcBox {
     // No key for share-to-SA on this server: the popup can still fall back to
     // OAuth, this card cannot.
     if (snap.state === 'unavailable') return this._toHost('window-tutorial:fallback-popup');
-    this.feed(liveSkeleton(this, snap, this._live.dest, { link: this._live.link }));
+    const pane = this.mget('layout') === 'phone' ? require('./skeleton/phone').pane : undefined;
+    this.feed(liveSkeleton(this, snap, this._live.dest, { link: this._live.link, pane }));
     // Each render brings a new fill: run it from where the last one stood.
     if (this.el && this.fig) {
       this._barMemo = this._barMemo || {};

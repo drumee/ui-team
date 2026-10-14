@@ -337,3 +337,76 @@
     animation: none;
   }
 }
+
+// PHONE (migrate/skeleton/phone.js; Figma 385:55109 → 386:55759).
+.tutorial-migrate__ph-filters {
+  padding: 4px 0 16px;
+}
+
+.tutorial-migrate__ph-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0b0a21;
+}
+
+// The + menu, above the FAB (385:55247): 233 wide, 33px rows.
+.tutorial-migrate__ph-menu {
+  position: absolute;
+  right: 16px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px + 66px + 16px + 54px + 12px);
+  width: 233px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+}
+
+.tutorial-migrate__ph-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 33px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #0b0a21;
+  cursor: pointer;
+
+  &:active { background: #eeedff; }
+}
+
+.tutorial-migrate__ph-row-ico {
+  width: 17px;
+  height: 17px;
+  flex: none;
+}
+
+.tutorial-migrate__ph-divider {
+  height: 1px;
+  margin: 6px 0;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+// The import dialog — the walkthrough's and the live one — is a bottom sheet
+// on a phone, as the frames draw it.
+.tutorial-main[data-layout="phone"] {
+  .tutorial-migrate__overlay,
+  .tutorial-migrate__backdrop {
+    position: absolute;
+    inset: 0;
+    justify-content: flex-end;
+    align-items: stretch;
+  }
+
+  .tutorial-migrate__dialog {
+    width: 100%;
+    max-width: none;
+    padding: 17px 17px calc(env(safe-area-inset-bottom, 0px) + 41px);
+    border: 0;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -2px 18px rgba(0, 0, 0, 0.12);
+  }
+}

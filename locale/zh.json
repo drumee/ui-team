@@ -3226,5 +3226,6 @@
   "OTHER_FILES": "其他文件",
   "DESIGNATION_LINK_NO_ACCESS": "无法打开此链接：当前账户不是其所在工作区的成员。请使用成员账户登录，或请工作区管理员将您添加为成员。",
   "TUTORIAL_SKIP": "跳过导览",
-  "MESSAGE_TO": "发消息给…"
+  "MESSAGE_TO": "发消息给…",
+  "TUTORIAL_MIGRATE_FAB": "点击添加新文件"
 }
