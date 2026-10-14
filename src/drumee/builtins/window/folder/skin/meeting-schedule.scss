@@ -426,6 +426,18 @@
     }
   }
 
+  // Day view, at every width: its one header cell reads "14 Wednesday" on a
+  // single line. The week layout (date stacked over the weekday, 72px tall)
+  // suits seven narrow columns; stretched across a single wide column it left
+  // a small block stranded in the corner of an empty strip (Lexis,
+  // 2026-10-14). !important: ui-core's Box.Y sets column at 0,2,0.
+  &__meeting-sched-days--day &__meeting-sched-day {
+    flex-direction: row !important;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
   &__meeting-sched-day-num {
     @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: #0b0a21);
   }
@@ -797,16 +809,6 @@
     &__meeting-sched-corner,
     &__meeting-sched-hour {
       width: 64px;
-    }
-
-    // Day view: the one header cell reads "14 Wednesday" on a single line
-    // instead of a 68px block with the date stacked over the weekday.
-    // !important for the same Box.Y reason as above.
-    &__meeting-sched-days--day &__meeting-sched-day {
-      flex-direction: row !important;
-      align-items: baseline;
-      gap: 8px;
-      padding: 8px 12px;
     }
 
     // Month view: full weekday names ran into each other ("WednesdayThursday")
