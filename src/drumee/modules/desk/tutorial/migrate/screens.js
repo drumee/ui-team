@@ -1,13 +1,19 @@
 /**
  * The migrate step's screens — moved out of index.js so a test can read the
  * table without mounting the widget. `phone` describes the phone mock
- * (skeleton/phone.js); everything else is the desk mock.
+ * (skeleton/phone.js, Figma 385:55398 / 386:55610 / 386:55759); everything
+ * else is the desk mock.
+ *
+ *   skip    not a step on a phone: the frames start on the import sheet
+ *   lit     the sheet block the step is about (drives the frames' fading)
+ *   prefer  'above' — the frames put that callout over its block
+ *   live    on a host that can (live_capable), this step IS the real import
  */
 const SCREENS = [
   {
     // Phone layout (Figma 385:55109 → 386:55759): what the phone mock
     // lifts out of the scrim. Dialog copy is the desk entry's.
-    phone: { view: 'pane', target: 'ph-fab', halo: true },
+    phone: { view: 'pane', target: 'ph-fab', skip: true },
     // 142:34981, drawn exactly as the frame has it: no callout, no scrim, and
     // the three hero buttons live. `live` is what makes them controls (see
     // ./skeleton/index.js); `bare` is what stops a card being raised over a
@@ -33,7 +39,7 @@ const SCREENS = [
   {
     // Phone layout (Figma 385:55109 → 386:55759): what the phone mock
     // lifts out of the scrim. Dialog copy is the desk entry's.
-    phone: { view: 'dialog', target: 'mg-address' },
+    phone: { view: 'sheet', lit: 'copy', target: 'mg-ph-address' },
     // Back goes to the PANE, not to the screen before this one.
     //
     // Screen 2 is the `+ New` branch, and the only way into this screen is the
@@ -61,7 +67,7 @@ const SCREENS = [
   {
     // Phone layout (Figma 385:55109 → 386:55759): what the phone mock
     // lifts out of the scrim. Dialog copy is the desk entry's.
-    phone: { view: 'dialog', target: 'mg-link' },
+    phone: { view: 'sheet', lit: 'paste', target: 'mg-ph-link', prefer: 'above' },
     // The address has been copied; the link is still empty.
     key: 'paste',
     dialog: true,
@@ -85,7 +91,7 @@ const SCREENS = [
   {
     // Phone layout (Figma 385:55109 → 386:55759): what the phone mock
     // lifts out of the scrim. Dialog copy is the desk entry's.
-    phone: { view: 'dialog', target: 'mg-verify' },
+    phone: { view: 'sheet', lit: 'verify', target: 'mg-ph-verify', prefer: 'above', live: true },
     key: 'verify',
     dialog: true,
     copied: true,

@@ -91,7 +91,7 @@ test("chrome is inert scenery (active: 0) except the CTA", () => {
 test("phone skin compiles into the tour skin", () => {
   const css = sass.compile(path.join(SRC, "modules/desk/tutorial/skin/index.scss"),
     { loadPaths: [SRC, path.join(SRC, "skin")] }).css.replace(/\s+/g, " ");
-  assert.match(css, /\.tutorial-phone__tab\[data-active="1"\] \{[^}]*background: #eeedff/);
+  assert.match(css, /\.tutorial-phone__tab\[data-active="1"\] \{[^}]*background: rgba\(89, 80, 255, 0\.1\)/);
   assert.match(css, /\.tutorial-phone__fab \{[^}]*background: #5950ff/);
 });
 

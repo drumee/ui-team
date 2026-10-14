@@ -44,9 +44,25 @@
     box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
   }
 
+  // 12px inside a 44px circle (206:5529): a 22px glyph.
   &__circle-ico {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
+  }
+
+  // The workspace's own folder icon in the title pill (206:5726): the pill's
+  // inner height, round.
+  &__title-art {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 65px;
+    overflow: hidden;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
   }
 
   &__avatar {
@@ -154,8 +170,11 @@
     box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
   }
 
+  // The workspace tab pill (206:5446): 4px inside, four equal 44px tabs.
   &__tabs {
-    min-height: 66px;
+    padding: 4px;
+    border-radius: 1000px;
+    justify-content: stretch;
   }
 
   // The pre-workspace Search pill (225:30747): 13/17 insets, a 26px glass.
@@ -179,19 +198,24 @@
   }
 
   &__tab {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 2px;
-    padding: 6px 12px;
-    border-radius: 30px;
-    font-size: 11px;
-    color: #65656c;
+    padding: 4px 15px;
+    border-radius: 40px;
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
   }
 
   &__tab[data-active="1"] {
-    background: #eeedff;
-    color: #433cc5;
+    background: rgba(89, 80, 255, 0.1);
   }
 
   &__fab {

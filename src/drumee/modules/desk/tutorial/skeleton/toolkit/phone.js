@@ -18,11 +18,14 @@ const P = 'tutorial-phone';
 const SQUARES_FOUR = require('assets/tutorial/ws-phone/squares-four.svg');
 const url = (m) => (m && m.default ? m.default : m);
 
+// The workspace tab pill of the Figma nav (206:5444): Phosphor Files,
+// ChatCircleDots, ListChecks, VideoCamera — none of them in the sprite, so the
+// frames' own SVGs.
 const TABS = [
-  { key: 'files', ico: 'rail-files', label: () => LOCALE.FILES },
-  { key: 'chat', ico: 'rail-chat', label: () => LOCALE.CHAT },
-  { key: 'task', ico: 'rail-task', label: () => LOCALE.TASK },
-  { key: 'meet', ico: 'rail-meet', label: () => LOCALE.MEET },
+  { key: 'files', src: require('assets/tutorial/mg-phone/files.svg'), label: () => LOCALE.FILES },
+  { key: 'chat', src: require('assets/tutorial/mg-phone/chat.svg'), label: () => LOCALE.CHAT },
+  { key: 'task', src: require('assets/tutorial/mg-phone/task.svg'), label: () => LOCALE.TASK },
+  { key: 'meet', src: require('assets/tutorial/mg-phone/meet.svg'), label: () => LOCALE.MEET },
 ];
 
 function circle(ico, pn) {
@@ -59,7 +62,7 @@ function avatar() {
  * @param {Object} ui
  * @param {{lead?: 'avatar'|'back', title?: String, ico?: String, actions?: Boolean}} opt
  */
-function topBar(ui, { lead = 'back', title = '', ico = null, actions = true } = {}) {
+function topBar(ui, { lead = 'back', title = '', ico = null, art = null, actions = true } = {}) {
   return Skeletons.Box.X({
     active: 0,
     className: `${P}__top`,
@@ -71,12 +74,15 @@ function topBar(ui, { lead = 'back', title = '', ico = null, actions = true } = 
         sys_pn: 'ph-title',
         kids: [
           ico ? Skeletons.Image.Svg({ active: 0, ico, className: `${P}__title-ico` }) : null,
+          // `art`: the workspace's own folder icon (media/grid/template/folder
+          // markup), as the frames draw it in the pill.
+          art ? Skeletons.Element({ active: 0, className: `${P}__title-art`, content: art }) : null,
           Skeletons.Note({ active: 0, className: `${P}__title-text`, content: title }),
           Skeletons.Image.Svg({ active: 0, ico: 'ph-caret-down', className: `${P}__title-caret` }),
         ].filter(Boolean),
       }),
       actions ? circle('ph-magnifying-glass', 'ph-search-btn') : null,
-      actions ? circle('app-dots-horizontal', 'ph-more') : null,
+      actions ? circle('ph-dots-three', 'ph-more') : null,
     ].filter(Boolean),
   });
 }
@@ -107,7 +113,9 @@ function tabBar(ui, active) {
         sys_pn: `ph-tab-${t.key}`,
         dataset: { active: t.key === active ? '1' : '0' },
         kids: [
-          Skeletons.Image.Svg({ active: 0, ico: t.ico, className: `${P}__tab-ico` }),
+          Skeletons.Element({
+            active: 0, tagName: 'img', className: `${P}__tab-ico`, attribute: { src: url(t.src), alt: '' },
+          }),
           Skeletons.Note({ active: 0, className: `${P}__tab-label`, content: t.label() }),
         ],
       })),

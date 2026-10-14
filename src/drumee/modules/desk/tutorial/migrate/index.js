@@ -170,14 +170,14 @@ class __tutorial_migrate extends LetcBox {
     // null at desk. With the + menu open the menu is what is lit, uncarded,
     // as in 385:55247.
     const phone = this.mget('layout') === 'phone' ? s.phone : null;
+    if (phone) return this._showPhone(s, phone);
     const menuOpen = this._menuOpen || null;
     const state = { menuOpen, enter };
-    this.feed(phone ? require('./skeleton/phone')(this, s, state) : skeleton(this, s, state));
-    const phoneTarget = phone && (menuOpen && phone.view === 'pane' ? 'ph-fab-menu' : phone.target);
+    this.feed(skeleton(this, s, state));
     const [target, anchor, anchor_x] = await Promise.all([
-      this.ensurePart(phone ? phoneTarget : s.target),
-      this.ensurePart(phone ? phoneTarget : s.anchor),
-      !phone && s.anchor_x ? this.ensurePart(s.anchor_x) : null,
+      this.ensurePart(s.target),
+      this.ensurePart(s.anchor),
+      s.anchor_x ? this.ensurePart(s.anchor_x) : null,
     ]);
 
     // `bare` raises the screen with NO card: focus() feeds the callout null and
@@ -188,17 +188,7 @@ class __tutorial_migrate extends LetcBox {
     //
     // NO `stepProgress` on any screen: this tour draws no pill. Without
     // `step`/`steps` the callout renders no header row at all.
-    const phoneFab = phone && phone.view === 'pane';
-    const tooltip = phoneFab
-      // 385:55109: one line beside the +, no controls — pressing the + is the
-      // way forward. Gone once the menu is open (385:55247).
-      ? (menuOpen ? null : {
-        text: LOCALE.TUTORIAL_MIGRATE_FAB,
-        // Back only when there is somewhere to go (migrate inside `full`).
-        hide_back: !!this.mget('is_first') && this._screenIndex === 0,
-        hide_next: true,
-      })
-      : s.bare ? null : {
+    const tooltip = s.bare ? null : {
       title: s.title(),
       desc: s.desc(),
       // Back is live whenever a previous screen exists; hidden on screen 1 of
@@ -231,10 +221,56 @@ class __tutorial_migrate extends LetcBox {
       // gives on its `dim` param: a `[data-tour]` rule cannot give one flow two
       // answers, and it stops applying inside `full`, where the stamped id is
       // "full".
-      dim: phone ? true : !s.pane,
-      halo: !!(phoneFab && !menuOpen && phone.halo),
+      dim: !s.pane,
       owner: this,
     });
+  }
+
+  /**
+   * The phone layout — Figma 385:55398 / 386:55610 / 386:55759, the import
+   * sheet walked in three steps. The blank workspace before them is not a
+   * step here (`skip`).
+   *
+   * The LAST step, on a host that can do it for real (live_capable — the
+   * folder-window host), is not a lesson: the host goes live at once (its
+   * _goLive applies the same gates as the product, clears the spotlight and
+   * hands this step goLive), and the sheet becomes the real import, plain.
+   * Elsewhere (a desk preview, `full`) it teaches with a Done.
+   */
+  async _showPhone(s, phone) {
+    if (phone.skip) {
+      this._screenIndex = Math.min(this._screenIndex + 1, SCREENS.length - 1);
+      return this._showScreen();
+    }
+    const last = isLastScreen(this, this._screenIndex, SCREENS.length);
+    if (phone.live && last && this.mget('live_capable')) {
+      return this.triggerHandlers({ service: 'window-tutorial:go-live' });
+    }
+    this.feed(require('./skeleton/phone')(this, s));
+    const target = await this.ensurePart(phone.target);
+    if (this.isDestroyed && this.isDestroyed()) return null;
+    // Back nowhere: the first step a phone shows, when the tour starts here.
+    const firstShown = SCREENS.slice(0, this._screenIndex).every((x) => x.phone && x.phone.skip);
+    this.triggerHandlers({
+      service: 'spotlight:focus',
+      target: target && target.el,
+      anchor: target && target.el,
+      tooltip: {
+        title: s.title(),
+        // The frames' line for the last step is the button's own label.
+        desc: phone.lit === 'verify' ? LOCALE.MIGRATE_PHONE_VERIFY_IMPORT : s.desc(),
+        hide_back: !!this.mget('is_first') && firstShown,
+        done: last,
+        align: 'center',
+      },
+      // The skeleton draws the frames' overlay and fading itself.
+      dim: false,
+      phone_margin: 17,
+      phone_gap: 26,
+      phone_prefer: phone.prefer,
+      owner: this,
+    });
+    return null;
   }
 
   /**
@@ -281,8 +317,11 @@ class __tutorial_migrate extends LetcBox {
     // No key for share-to-SA on this server: the popup can still fall back to
     // OAuth, this card cannot.
     if (snap.state === 'unavailable') return this._toHost('window-tutorial:fallback-popup');
-    const pane = this.mget('layout') === 'phone' ? require('./skeleton/phone').pane : undefined;
-    this.feed(liveSkeleton(this, snap, this._live.dest, { link: this._live.link, pane }));
+    if (this.mget('layout') === 'phone') {
+      this.feed(require('./skeleton/phone').live(this, snap, this._live.dest, { link: this._live.link }));
+    } else {
+      this.feed(liveSkeleton(this, snap, this._live.dest, { link: this._live.link }));
+    }
     // Each render brings a new fill: run it from where the last one stood.
     if (this.el && this.fig) {
       this._barMemo = this._barMemo || {};
@@ -447,6 +486,14 @@ class __tutorial_migrate extends LetcBox {
         // A screen may name where Back goes, because this tour BRANCHES at
         // screen 1 and index-1 is then the wrong answer — see `back` on the
         // copy screen. Everything else unwinds linearly.
+        // Phone: the screen before is not a step there (`skip`), so Back off
+        // the first phone step leaves the tour's step, like screen 1 does.
+        if (this.mget('layout') === 'phone') {
+          let i = this._screenIndex - 1;
+          while (i >= 0 && SCREENS[i].phone && SCREENS[i].phone.skip) i--;
+          if (i < 0) return this.triggerHandlers({ service: 'back-step' });
+          return this._transition(i);
+        }
         const back = (SCREENS[this._screenIndex] || {}).back;
         if (back) return this._goto(back);
         if (this._screenIndex <= 0) return this.triggerHandlers({ service: 'back-step' });

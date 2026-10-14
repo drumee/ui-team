@@ -3233,5 +3233,7 @@
   "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "ចុចឱ្យជាប់លើសារ ដើម្បីឆ្លើយក្នុងខ្សែសន្ទនា",
   "WS_TYPE_PHONE_INTERNAL_DESC": "ចែករំលែកជាមួយមនុស្សជាក់លាក់",
   "WS_TYPE_PHONE_EXTERNAL_DESC": "អ្នកណាដែលមានតំណតែមួយ",
-  "TUTORIAL_WS_IN_DEPARTMENT": "បង្កើតក្នុងនាយកដ្ឋាន"
+  "TUTORIAL_WS_IN_DEPARTMENT": "បង្កើតក្នុងនាយកដ្ឋាន",
+  "MIGRATE_PHONE_LINK_PLACEHOLDER": "បិទភ្ជាប់តំណ",
+  "MIGRATE_PHONE_VERIFY_IMPORT": "ផ្ទៀងផ្ទាត់ និងនាំចូល"
 }

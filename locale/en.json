@@ -3464,5 +3464,7 @@
   "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Press and hold a message to reply in a thread",
   "WS_TYPE_PHONE_INTERNAL_DESC": "Shared with specific people",
   "WS_TYPE_PHONE_EXTERNAL_DESC": "Anyone with the unique link",
-  "TUTORIAL_WS_IN_DEPARTMENT": "Create in department"
+  "TUTORIAL_WS_IN_DEPARTMENT": "Create in department",
+  "MIGRATE_PHONE_LINK_PLACEHOLDER": "Paste the link",
+  "MIGRATE_PHONE_VERIFY_IMPORT": "Verify & Import"
 }

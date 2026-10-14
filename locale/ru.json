@@ -3239,5 +3239,7 @@
   "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Удерживайте сообщение, чтобы ответить в ветке",
   "WS_TYPE_PHONE_INTERNAL_DESC": "Доступ для выбранных людей",
   "WS_TYPE_PHONE_EXTERNAL_DESC": "Любой, у кого есть уникальная ссылка",
-  "TUTORIAL_WS_IN_DEPARTMENT": "Создать в отделе"
+  "TUTORIAL_WS_IN_DEPARTMENT": "Создать в отделе",
+  "MIGRATE_PHONE_LINK_PLACEHOLDER": "Вставьте ссылку",
+  "MIGRATE_PHONE_VERIFY_IMPORT": "Проверить и импортировать"
 }

@@ -1,19 +1,22 @@
-// Migrate tour, phone layout (Figma flow "Files → Migrate").
+// Migrate tour, phone layout — Figma "Files → Migrate", the three import-sheet
+// frames only (385:55398 copy, 386:55610 paste, 386:55759 verify). The blank
+// workspace + menu screens are gone on a phone, and the last step is the REAL
+// Google Drive import (libs/gdrive-sa-import, as migrate-gdrive-popup uses).
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const fs = require("node:fs");
 const Module = require("node:module");
 const SRC = path.join(__dirname, "..", "src/drumee");
-const ALIASES = {
-  "media/grid/template/folder": () => ({ type: "folderArt" }),
-  "libs/billing": { planLabel: () => "Plan" },
-  "libs/gdrive-sa-import": require(path.join(SRC, "libs/gdrive-sa-import.js")),
-};
+const T = path.join(SRC, "modules/desk/tutorial");
 const load = Module._load;
 Module._load = function (r, p, m) {
-  if (/^assets\//.test(r)) return `asset:${r}`; // webpack asset modules
-  return Object.prototype.hasOwnProperty.call(ALIASES, r) ? ALIASES[r] : load.call(this, r, p, m);
+  if (/^assets\//.test(r)) return `asset:${r}`;
+  if (r === "media/grid/template/folder") return () => "<svg/>";
+  if (r === "libs/billing") return { planLabel: () => "Plan" };
+  if (r === "@drumee/ui-essentials") return { filesize: (n) => `${n}B` };
+  if (/^libs\//.test(r)) return load.call(this, path.join(SRC, r), p, m);
+  return load.call(this, r, p, m);
 };
 const mk = (type) => new Proxy(function (o = {}) { return { type, ...o }; }, {
   get: (t, k) => (k in t ? t[k] : mk(`${type}.${String(k)}`)),
@@ -23,77 +26,92 @@ global.LOCALE = new Proxy({}, { get: (_, k) => String(k) });
 global._a = new Proxy({}, { get: (_, k) => String(k) });
 global._e = { upload: "upload" };
 global._ = require("lodash");
-const SCREENS = require(path.join(SRC, "modules/desk/tutorial/migrate/screens.js"));
-const view = require(path.join(SRC, "modules/desk/tutorial/migrate/skeleton/phone.js"));
-test.after(() => { Module._load = load; for (const k of ["Skeletons", "LOCALE", "_a", "_e", "_"]) delete global[k]; });
+global.Visitor = { id: "u1", firstname: () => "A", lastname: () => "B" };
+const SCREENS = require(path.join(T, "migrate/screens.js"));
+const phone = require(path.join(T, "migrate/skeleton/phone.js"));
+test.after(() => {
+  Module._load = load;
+  for (const k of ["Skeletons", "LOCALE", "_a", "_e", "_", "Visitor"]) delete global[k];
+});
 
-const ui = { fig: { family: "tutorial-migrate", group: "tutorial" }, mget: (k) => (k === "import_dest" ? { name: "Docs" } : null) };
+const ui = {
+  fig: { family: "tutorial-migrate", group: "tutorial" },
+  mget: (k) => (k === "import_dest" ? { name: "Docs", area: "private" } : null),
+};
 const find = (t, pn) => {
   if (!t || typeof t !== "object") return null;
   if (t.sys_pn === pn) return t;
   for (const k of t.kids || []) { const r = find(k, pn); if (r) return r; }
   return null;
 };
-const all = (t, pred, out = []) => {
-  if (!t || typeof t !== "object") return out;
-  if (pred(t)) out.push(t);
-  for (const k of t.kids || []) all(k, pred, out);
+const has = (t, cls) => {
+  if (!t || typeof t !== "object") return false;
+  if (typeof t.className === "string" && t.className.split(/\s+/).includes(cls)) return true;
+  return (t.kids || []).some((k) => has(k, cls));
+};
+const services = (t, out = []) => {
+  if (t && typeof t === "object") { if (t.service) out.push(t.service); (t.kids || []).forEach((k) => services(k, out)); }
   return out;
 };
 
-test("every migrate screen has a phone entry", () => {
-  assert.equal(SCREENS.length, 4);
-  assert.ok(SCREENS.every((s) => s.phone && s.phone.target));
+test("the blank-workspace screen is skipped on a phone; three sheet steps remain", () => {
+  assert.equal(SCREENS[0].phone.skip, true);
+  assert.deepEqual(SCREENS.slice(1).map((s) => s.phone.lit), ["copy", "paste", "verify"]);
+  assert.equal(SCREENS[3].phone.live, true, "the last step is the real import");
 });
 
-for (const [i, s] of SCREENS.entries()) {
-  test(`migrate phone screen ${i + 1}: the target exists`, () => {
-    assert.ok(find(view(ui, s, {}), s.phone.target), s.phone.target);
+for (const [i, lit, target] of [[1, "copy", "mg-ph-address"], [2, "paste", "mg-ph-link"], [3, "verify", "mg-ph-verify"]]) {
+  test(`teaching step ${lit}: the frame's sheet over the workspace, ${target} named for the callout`, () => {
+    const tree = phone(ui, SCREENS[i], {});
+    assert.ok(has(tree, "tutorial-phone__overlay"), "20% overlay");
+    const sheet = find(tree, "mg-ph-sheet");
+    assert.equal(sheet.dataset.lit, lit);
+    assert.ok(find(sheet, target), target);
   });
 }
 
-test("pane: the FAB is live and opens the menu", () => {
-  const fab = find(view(ui, SCREENS[0], {}), "ph-fab");
-  assert.equal(fab.service, "mg-toggle-menu");
-  assert.equal(fab.dataset.menu, "fab");
+test("copy step shows the plain Copy; paste and verify show it done (green, check)", () => {
+  assert.equal(find(phone(ui, SCREENS[1], {}), "mg-ph-copy").dataset.done, "0");
+  assert.equal(find(phone(ui, SCREENS[2], {}), "mg-ph-copy").dataset.done, "1");
+  assert.equal(find(phone(ui, SCREENS[3], {}), "mg-ph-copy").dataset.done, "1");
 });
 
-test("pane with the menu open: device upload, Google Drive, then the + New rows", () => {
-  const tree = view(ui, SCREENS[0], { menuOpen: "fab" });
-  const menu = find(tree, "ph-fab-menu");
-  assert.ok(menu);
-  const services = all(menu, (n) => n.service).map((n) => n.service);
-  assert.deepEqual(services.slice(0, 2), ["mg-do-upload", "mg-open-dialog"]);
-  assert.ok(services.slice(2).every((s) => s === "mg-do-create"));
-  assert.equal(services.length, 6);
+test("Verify & Import is solid only on its own step", () => {
+  assert.equal(find(phone(ui, SCREENS[2], {}), "mg-ph-verify").dataset.ready, "0");
+  assert.equal(find(phone(ui, SCREENS[3], {}), "mg-ph-verify").dataset.ready, "1");
 });
 
-test("pane: the bottom row is the workspace tabs with Files lit", () => {
-  const tree = view(ui, SCREENS[0], {});
+test("the workspace behind: folder pill, search + more, All filter, view toggle, Files tab lit", () => {
+  const tree = phone(ui, SCREENS[1], {});
+  assert.ok(find(tree, "ph-search-btn") && find(tree, "ph-more"));
+  assert.ok(has(tree, "tutorial-migrate__ph-filter-all"));
+  assert.ok(has(tree, "tutorial-migrate__ph-view"));
   assert.equal(find(tree, "ph-tab-files").dataset.active, "1");
 });
 
-test("live skeleton accepts a pane override (the phone pane behind the sheet)", () => {
-  const live = require(path.join(SRC, "modules/desk/tutorial/migrate/skeleton/live.js"));
-  const tree = live(ui, { state: "idle" }, { name: "Docs" }, { pane: () => ({ sys_pn: "phone-pane" }) });
-  assert.ok(find(tree, "phone-pane"));
+test("live form: no overlay, no fading, the REAL controls", () => {
+  const tree = phone.live(ui, { state: "idle", saEmail: "sa@x.iam" }, { name: "Docs" }, { link: "" });
+  assert.equal(has(tree, "tutorial-phone__overlay"), false);
+  const sheet = find(tree, "mg-ph-sheet");
+  assert.equal((sheet.dataset || {}).lit, undefined);
+  assert.deepEqual(services(sheet).sort(), ["mg-live-close", "mg-live-copy", "mg-live-start", "mg-live-verify"].sort());
+  assert.equal(find(sheet, "mg-live-link").type, "S.Entry");
 });
 
-test("index wires the phone skeleton", () => {
-  const src = fs.readFileSync(path.join(SRC, "modules/desk/tutorial/migrate/index.js"), "utf8");
-  assert.match(src, /require\('\.\/screens'\)/);
-  assert.match(src, /require\('\.\/skeleton\/phone'\)/);
+test("live form: Verify & Import waits for the address", () => {
+  const tree = phone.live(ui, { state: "loading" }, {}, {});
+  assert.ok(!services(tree).includes("mg-live-start"));
 });
 
-test("phone skin turns the import dialog into a bottom sheet", () => {
-  const sass = require("sass");
-  const css = sass.compile(path.join(SRC, "modules/desk/tutorial/migrate/skin/index.scss"),
-    { loadPaths: [SRC, path.join(SRC, "skin")] }).css.replace(/\s+/g, " ");
-  assert.match(css, /\[data-layout=phone\] \.tutorial-migrate__dialog \{[^}]*width: 100%/);
+test("live progress and result keep the import's own content inside the phone sheet", () => {
+  const tree = phone.live(ui, { state: "in-progress", job: { total: 4, processed: 1 }, fileLog: [] }, {}, {});
+  assert.ok(find(tree, "mg-ph-sheet"));
+  assert.ok(has(tree, "tutorial-migrate__live-bar"));
 });
 
-test("every locale has TUTORIAL_MIGRATE_FAB", () => {
-  for (const l of ["en", "fr", "es", "ru", "zh", "km"]) {
-    assert.ok(require(path.join(__dirname, "..", "locale", `${l}.json`)).TUTORIAL_MIGRATE_FAB, l);
-  }
+test("index: phone skips to copy, goes live on verify, renders the phone live form", () => {
+  const src = fs.readFileSync(path.join(T, "migrate/index.js"), "utf8");
+  assert.match(src, /phone\.skip/);
+  assert.match(src, /service: 'window-tutorial:go-live'/);
+  assert.match(src, /require\('\.\/skeleton\/phone'\)\.live\(/);
 });

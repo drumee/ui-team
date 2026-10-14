@@ -3465,5 +3465,7 @@
   "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Appuyez longuement sur un message pour répondre dans une discussion",
   "WS_TYPE_PHONE_INTERNAL_DESC": "Partagé avec des personnes précises",
   "WS_TYPE_PHONE_EXTERNAL_DESC": "Toute personne disposant du lien unique",
-  "TUTORIAL_WS_IN_DEPARTMENT": "Créer dans un département"
+  "TUTORIAL_WS_IN_DEPARTMENT": "Créer dans un département",
+  "MIGRATE_PHONE_LINK_PLACEHOLDER": "Collez le lien",
+  "MIGRATE_PHONE_VERIFY_IMPORT": "Vérifier et importer"
 }
