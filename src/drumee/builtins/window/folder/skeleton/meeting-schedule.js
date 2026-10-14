@@ -352,6 +352,8 @@ function monthlyGrid(ui, pfx) {
           Skeletons.Note({
             className: `${pfx}-sched-day-name`,
             content: gridStart.add(i, "day").format("dddd"),
+            // Shown instead of the full name on a narrow panel (skin).
+            attrOpt: { "data-short": gridStart.add(i, "day").format("ddd") },
           }),
         ],
       }),
