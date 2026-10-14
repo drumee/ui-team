@@ -121,3 +121,10 @@ test("syncDeck: dots follow a native swipe, and it cleans up", () => {
   off();
   assert.equal(handlers.scroll, undefined);
 });
+
+test("the overlay flag is NOT data-dim (that is the .35-opacity row rule under .tutorial)", () => {
+  const s = ph.screen(ui, { dim: true, body: [] });
+  assert.equal(s.dataset.overlay, "1");
+  assert.equal(s.dataset.dim, undefined);
+  assert.equal((s.attrOpt || {})["data-dim"], undefined);
+});

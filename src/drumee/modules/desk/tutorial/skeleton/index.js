@@ -32,8 +32,6 @@ module.exports = function (ui) {
         ],
       }),
       { kind: 'tutorial_spotlight', sys_pn: 'spotlight', partHandler: ui },
-      // Last, so it paints above the scrim and the callout. Touch only (CSS).
-      require('./toolkit/skip')(ui),
     ],
   });
 };

@@ -54,8 +54,6 @@ module.exports = function (ui) {
         sys_pn: 'dialog',
         partHandler: ui,
       }),
-      // Touch has no Escape: the visible way out (CSS shows it on touch only).
-      require('../../../../modules/desk/tutorial/skeleton/toolkit/skip')(ui),
     ],
   });
 };

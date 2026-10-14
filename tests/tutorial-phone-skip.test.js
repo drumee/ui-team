@@ -6,42 +6,14 @@ const sass = require("sass");
 const SRC = path.join(__dirname, "..", "src/drumee");
 global.LOCALE = { TUTORIAL_SKIP: "Skip tour" };
 global.Skeletons = { Note: (o) => ({ type: "Note", ...o }) };
-const skip = require(path.join(SRC, "modules/desk/tutorial/skeleton/toolkit/skip.js"));
 test.after(() => { delete global.LOCALE; delete global.Skeletons; });
 
-test("skip raises end-tour on the host", () => {
-  const ui = { id: "host" };
-  const n = skip(ui);
-  assert.equal(n.service, "end-tour");
-  assert.deepEqual(n.uiHandler, [ui]);
-  assert.equal(n.content, "Skip tour");
-});
-
-const css = sass.compile(path.join(SRC, "modules/desk/tutorial/skin/index.scss"),
-  { loadPaths: [SRC, path.join(SRC, "skin")] }).css.replace(/\s+/g, " ");
-
-test("skip is hidden by default", () => {
-  assert.match(css, /\.tutorial-skip \{[^}]*display: none/);
-});
-test("skip is shown on touch", () => {
-  assert.match(css, /\[data-touch="1"\] \.tutorial-skip \{[^}]*display: flex/);
-});
-test("skip is hidden while a live screen is up", () => {
-  assert.match(css, /\[data-live="1"\] \.tutorial-skip \{[^}]*display: none/);
-});
-
-test("both shells mount the skip control", () => {
+test("no tour shell mounts a Skip control any more", () => {
   const fs = require("node:fs");
   for (const f of ["modules/desk/tutorial/skeleton/index.js", "builtins/window/tutorial/skeleton/index.js"]) {
-    assert.match(fs.readFileSync(path.join(SRC, f), "utf8"), /toolkit\/skip'\)\(ui\)/, f);
+    assert.doesNotMatch(fs.readFileSync(path.join(SRC, f), "utf8"), /toolkit\/skip/, f);
   }
-});
-
-test("every locale has TUTORIAL_SKIP", () => {
-  for (const l of ["en", "fr", "es", "ru", "zh", "km"]) {
-    const j = require(path.join(__dirname, "..", "locale", `${l}.json`));
-    assert.ok(j.TUTORIAL_SKIP, l);
-  }
+  assert.equal(fs.existsSync(path.join(SRC, "modules/desk/tutorial/skeleton/toolkit/skip.js")), false);
 });
 
 test("desk host stamps data-live from a step's step-live", () => {

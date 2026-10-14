@@ -247,8 +247,11 @@ function screen(ui, {
     className: `${P} ${ui.fig.family}__phone`,
     // `dim`: the Figma tour frames lay a 20% black overlay over the whole
     // screen and fade the top bar to 40%, then draw the sheet or modal above.
-    dataset: { dim: dim ? '1' : '0', ...(view ? { view } : {}) },
-    attrOpt: { 'data-dim': dim ? '1' : '0', ...(view ? { 'data-view': view } : {}) },
+    // Stamped as data-overlay, NEVER data-dim: `.tutorial [data-dim="1"]` is
+    // the 35%-opacity rule for held-back rows (skin/tooltip.scss), and on this
+    // root it faded the whole screen — highlighted block included.
+    dataset: { overlay: dim ? '1' : '0', ...(view ? { view } : {}) },
+    attrOpt: { 'data-overlay': dim ? '1' : '0', ...(view ? { 'data-view': view } : {}) },
     kids: [
       Skeletons.Element({ active: 0, className: `${P}__status` }),
       top,

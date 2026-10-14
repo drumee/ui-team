@@ -144,3 +144,10 @@ test("every locale has the phone workspace copy", () => {
     }
   }
 });
+
+test("home card has no top border", () => {
+  const sass = require("sass");
+  const css = sass.compile(path.join(SRC, "modules/desk/tutorial/workspace/skin/index.scss"),
+    { loadPaths: [SRC, path.join(SRC, "skin")] }).css.replace(/\s+/g, " ");
+  assert.match(css, /\.tutorial-wsp__card \{[^}]*border-top: 0/);
+});

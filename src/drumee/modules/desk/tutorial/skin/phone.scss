@@ -26,7 +26,7 @@
   }
 
   // Figma's tour frames fade the top bar to 40% behind the overlay.
-  &[data-dim="1"] &__top {
+  &[data-overlay="1"] &__top {
     opacity: 0.4;
   }
 

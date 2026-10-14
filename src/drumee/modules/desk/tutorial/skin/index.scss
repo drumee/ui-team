@@ -470,27 +470,3 @@ $rail-width: 64px;
   pointer-events: auto;
   --pane-fit: 1;
 }
-
-// SKIP (skeleton/toolkit/skip): touch has no Escape, so on a touch device the
-// tour shows its way out. Hidden while a live screen is up — those carry their
-// own exits (Create, Skip this step, Invite later, the import's Close).
-.tutorial-skip {
-  display: none;
-  position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 12px);
-  right: 16px;
-  z-index: 10020; // above the callout (10010)
-  min-height: 44px;
-  padding: 0 16px;
-  align-items: center;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #34343a;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
-  cursor: pointer;
-}
-
-.tutorial-main[data-touch="1"] .tutorial-skip { display: flex; }
-.tutorial-main[data-live="1"] .tutorial-skip { display: none; }
