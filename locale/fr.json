@@ -3448,5 +3448,5 @@
   "CREATE_NEW_FILE": "Créer un fichier",
   "RECENTLY_VIEWED": "Consultés récemment",
   "OTHER_FILES": "Autres fichiers",
-  "DESIGNATION_LINK_NO_ACCESS": "Impossible d'ouvrir ce lien : le compte avec lequel vous êtes connecté n'est pas membre de l'espace de travail qui le contient. Connectez-vous avec un compte membre, ou demandez au propriétaire ou à un administrateur de l'espace de travail de vous ajouter."
+  "DESIGNATION_LINK_NO_ACCESS": "Impossible d'ouvrir ce lien : ce compte n'est pas membre de son espace de travail. Connectez-vous avec un compte membre ou demandez à l'administrateur de l'espace de vous ajouter."
 }

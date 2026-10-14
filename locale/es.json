@@ -3217,5 +3217,5 @@
   "CREATE_NEW_FILE": "Crear archivo nuevo",
   "RECENTLY_VIEWED": "Vistos recientemente",
   "OTHER_FILES": "Otros archivos",
-  "DESIGNATION_LINK_NO_ACCESS": "No puede abrir este enlace: la cuenta con la que ha iniciado sesión no es miembro del espacio de trabajo que lo contiene. Inicie sesión con una cuenta que sea miembro o pida al propietario o a un administrador del espacio de trabajo que le añada."
+  "DESIGNATION_LINK_NO_ACCESS": "No puede abrir este enlace: esta cuenta no es miembro de su espacio de trabajo. Inicie sesión con una cuenta miembro o pida al administrador del espacio que le añada."
 }

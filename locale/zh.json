@@ -3216,5 +3216,5 @@
   "CREATE_NEW_FILE": "新建文件",
   "RECENTLY_VIEWED": "最近查看",
   "OTHER_FILES": "其他文件",
-  "DESIGNATION_LINK_NO_ACCESS": "无法打开此链接：您当前登录的账户不是该链接所在工作区的成员。请使用该工作区成员的账户登录，或请工作区所有者或管理员将您添加为成员。"
+  "DESIGNATION_LINK_NO_ACCESS": "无法打开此链接：当前账户不是其所在工作区的成员。请使用成员账户登录，或请工作区管理员将您添加为成员。"
 }
