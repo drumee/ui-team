@@ -26,6 +26,8 @@ module.exports = function (_ui_) {
           service: SERVICE.hub.get_members_by_type,
           type: "all",
           hub_id: _ui_.mget(_a.hub_id),
+          // Each member's own profile name, as the meeting tiles show it.
+          names: "profile",
           timer: 500,
         },
         itemsOpt: { kind: "widget_meeting_member", uiHandler: [_ui_] },

@@ -2304,6 +2304,9 @@ class __window_meeting extends __room {
       service: SERVICE.hub.get_members_by_type,
       type: "all",
       hub_id: this.mget(_a.hub_id),
+      // Each member's own profile name, not the viewer's contact-book copy —
+      // the video tile shows the profile name, so the roster must match it.
+      names: "profile",
       timer: 500,
     };
   }
