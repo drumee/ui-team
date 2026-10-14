@@ -112,6 +112,14 @@ const {
   filterLabels,
 } = require("./helpers");
 
+// The Personal Calendar's quick-open card for a member who may not write. Its
+// controls are locked and its fields read-only, while everything they show
+// (title, description, status, priority, people, dates, subtasks, reactions)
+// stays readable, scrollable and selectable. Never true on the board itself.
+function quickLockedOf(ui) {
+  return !!(ui.mget && ui.mget("quick_open")) && !mayCreateTask(ui);
+}
+
 const make = function (ui) {
   const pfx = ui.fig.family;
   // Always rendered, shown only while its `__title-field` carries
@@ -143,6 +151,13 @@ const make = function (ui) {
   const creating = ui.isCreating();
   const draft = ui.getCreateDraft();
   const detail = ui.getDetailTask();
+  // Quick-open card (mounted by the Personal Calendar with quick_open): only
+  // the detail card is drawn. Locked for a member who may not write (see
+  // quickLockedOf): `inert` goes on the blocks that hold nothing but controls,
+  // the fields become read-only, and the skin stops the clickable pills.
+  const quickOpen = !!ui.mget("quick_open");
+  const quickLocked = quickLockedOf(ui);
+  const lockOpt = quickLocked ? { attrOpt: { inert: "" } } : {};
   const priorities = ui.getPriorities();
   const members = ui.getMembers();
   const allLabels = ui.getLabels();
@@ -197,7 +212,8 @@ const make = function (ui) {
   // primitive Jira/Linear use. The panel owns the editor's content and events
   // via onPartReady; `scope` is "create" | "detail" so it targets the right
   // editor + dropdown.
-  const descEditor = (scope) => mentionField(ui, scope);
+  const descEditor = (scope) =>
+    mentionField(ui, scope, scope === "detail" && quickLocked ? { readOnly: true } : {});
 
   // ── Card pieces ───────────────────────────────────────────────
   // Title on the card is a plain Note: clicking it bubbles up to the card,
@@ -634,6 +650,7 @@ const make = function (ui) {
             Skeletons.Entry({
               className: `${pfx}__assignee-search`,
               name: `assignee-search-${scope}`,
+              ...(scope === "detail" || scope === "detail-reporter" ? lockOpt : {}),
               placeholder: LOCALE.SEARCH_PEOPLE,
               require: "any",
               bubble: 0,
@@ -691,6 +708,7 @@ const make = function (ui) {
             Skeletons.Entry({
               className: `${pfx}__assignee-search`,
               name: `assignee-search-${scope}`,
+              ...(scope === "detail" || scope === "detail-reporter" ? lockOpt : {}),
               placeholder: LOCALE.SEARCH_PEOPLE,
               require: "any",
               bubble: 0,
@@ -868,6 +886,7 @@ const make = function (ui) {
     // fields above (create modal) — all "file rows" land together.
     return Skeletons.Box.Y({
       className: `${pfx}__file-picker`,
+      ...(scope === "detail" ? lockOpt : {}),
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__file-pending-list`,
@@ -1190,6 +1209,7 @@ const make = function (ui) {
         // own avatar · "Write a comment…" field · paperclip / @ / send icons.
         Skeletons.Box.X({
           className: `${pfx}__comment-composer`,
+          ...lockOpt,
           kids: [
             Skeletons.UserProfile({
               className: `${pfx}__composer-avatar`,
@@ -1287,14 +1307,28 @@ const make = function (ui) {
           service: "close-detail",
           uiHandler: [ui],
         }),
-        Skeletons.Note({
-          className: `${pfx}__detail-submit`,
-          content: LOCALE.UPDATE,
-          bubble: 0,
-          service: "commit-detail",
-          uiHandler: [ui],
-        }),
-      ],
+        // Quick-open card only (Figma 1697:50129): leave for the workspace
+        // board, on this task.
+        quickOpen
+          ? Skeletons.Note({
+              className: `${pfx}__detail-open-board`,
+              content: LOCALE.OPEN_IN_BOARD,
+              bubble: 0,
+              service: "quick-open-board",
+              uiHandler: [ui],
+            })
+          : null,
+        // A member who may not write has nothing to save.
+        quickLocked
+          ? null
+          : Skeletons.Note({
+              className: `${pfx}__detail-submit`,
+              content: LOCALE.UPDATE,
+              bubble: 0,
+              service: "commit-detail",
+              uiHandler: [ui],
+            }),
+      ].filter(Boolean),
     });
 
     // A child opens in the SAME panel as its parent — without this the panel
@@ -1339,6 +1373,7 @@ const make = function (ui) {
               value: dDraft.title || "",
               placeholder: LOCALE.TASK_TITLE,
               require: "any",
+              ...(quickLocked ? { readonly: 1 } : {}),
               rows: 1,
               ignoreEnter: true,
               bubble: 0,
@@ -1383,7 +1418,11 @@ const make = function (ui) {
         Skeletons.Box.Y({
           className: `${pfx}__detail-panel`,
           // JS-stamped phone flag — see `isMobile` at the top of make().
-          attrOpt: { "data-mobile": isMobile ? "1" : "0" },
+          // The quick-open card also stamps whether the viewer may write; its
+          // skin hides the per-comment and per-file actions when not.
+          attrOpt: quickOpen
+            ? { "data-mobile": isMobile ? "1" : "0", "data-may-write": quickLocked ? "0" : "1" }
+            : { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
           kids: [
             parentCrumb,
@@ -2136,6 +2175,51 @@ const make = function (ui) {
     });
   };
 
+  const detailWrapper = () =>
+    Skeletons.Wrapper.Y({
+      className: `${pfx}__detail-wrapper`,
+      name: "task-detail",
+      partHandler: ui,
+      kids: detail ? [detailPanel()] : [],
+    });
+  // sys_pn is hardcoded to "fileselector" by Skeletons.FileSelector;
+  // ensurePart("fileselector") + onPartReady("fileselector") match it.
+  const fileSelector = () =>
+    Skeletons.FileSelector({
+      accept: "*/*",
+      partHandler: ui,
+      uiHandler: [ui],
+      bubble: 0,
+    });
+
+  // The quick-open card draws the detail card and the file input its Upload
+  // needs, and nothing of the board around it. Until the card opens (the
+  // workspace's rows are still loading) it shows the panel's spinner and a ×,
+  // so the overlay is never blank and never a dead end.
+  if (quickOpen) {
+    return Skeletons.Box.Y({
+      className: `${pfx}__root ${pfx}__root--quick`,
+      kids: [
+        detailWrapper(),
+        !ui.isQuickLoading()
+          ? null
+          : Skeletons.Box.Y({
+              className: `${pfx}__quick-loading`,
+              kids: [
+                Skeletons.Button.Svg({
+                  className: `${pfx}__quick-close`,
+                  ico: "cross",
+                  bubble: 0,
+                  service: "quick-open-cancel",
+                  uiHandler: [ui],
+                }),
+              ],
+            }),
+        fileSelector(),
+      ].filter(Boolean),
+    });
+  }
+
   // Sub-views over the same folder-scoped task set. Board is rendered inline
   // (its columns + DnD); List/Summary are separate modules fed the same data.
   const view = ui.getView();
@@ -2343,12 +2427,7 @@ const make = function (ui) {
       // Filter overlay (anchored top-right, below the tab bar's filter button).
       // Every view gets the same multi-dimension accordion.
       filterOpen ? filterDropdown() : null,
-      Skeletons.Wrapper.Y({
-        className: `${pfx}__detail-wrapper`,
-        name: "task-detail",
-        partHandler: ui,
-        kids: detail ? [detailPanel()] : [],
-      }),
+      detailWrapper(),
       Skeletons.Wrapper.Y({
         className: `${pfx}__create-wrapper`,
         name: "task-create",
@@ -2361,14 +2440,7 @@ const make = function (ui) {
         partHandler: ui,
         kids: ui.getBoardModalState().open ? [boardModal()] : [],
       }),
-      // sys_pn is hardcoded to "fileselector" by Skeletons.FileSelector;
-      // ensurePart("fileselector") + onPartReady("fileselector") match it.
-      Skeletons.FileSelector({
-        accept: "*/*",
-        partHandler: ui,
-        uiHandler: [ui],
-        bubble: 0,
-      }),
+      fileSelector(),
     ].filter(Boolean),
   });
 };
@@ -2634,7 +2706,7 @@ function mentionField(ui, scope, opt = {}) {
         partHandler: ui,
         flow: "none", // block flow for contenteditable, not flex
         attrOpt: {
-          contenteditable: "true",
+          contenteditable: opt.readOnly ? "false" : "true",
           "data-placeholder":
             opt.placeholder || LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
           // Which editor this is, for the drop zone (../drop-zones.js). It has
@@ -3898,6 +3970,8 @@ function dateFieldDisable(name, start, due) {
 function buildDueSectionContent(ui, scope = "detail") {
   const pfx = ui.fig.family;
   const isCreate = scope === "create";
+  // A locked quick-open card shows its dates but does not open the pickers.
+  const locked = !isCreate && quickLockedOf(ui);
   const draft = (isCreate ? ui.getCreateDraft() : ui.getDetailDraft()) || {};
   const start = draft.start_date || "";
   const due = draft.due_date || "";
@@ -3922,6 +3996,7 @@ function buildDueSectionContent(ui, scope = "detail") {
       uiHandler: [ui],
       // appendTo: body escapes the panel's overflow clip.
       vendorOpt: {
+        ...(locked ? { clickOpens: false } : {}),
         dateFormat: "Y-m-d",
         altInput: true,
         altFormat: "d/m/Y",

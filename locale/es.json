@@ -1721,6 +1721,7 @@
   "REPLY_TO": "Responder a",
   "SHOW_IN_FOLDER": "Mostrar en carpeta",
   "TASK_VIEW_BOARD": "Tablero",
+  "OPEN_IN_BOARD": "Abrir en el tablero",
   "TASK_VIEW_LIST": "Lista",
   "TASK_VIEW_SUMMARY": "Estado del proyecto",
   "TASK_VIEW_GANTT": "Gantt",

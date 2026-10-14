@@ -2567,6 +2567,67 @@ $theme-colors: (
     overflow: hidden;
   }
 
+  // Quick-open card while its rows load: the spinner of the view-switch veil
+  // above, centred over the calendar, and a × in the card's own corner.
+  &__quick-loading {
+    position: absolute;
+    inset: 0;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 28px;
+      height: 28px;
+      margin: -14px 0 0 -14px;
+      border-radius: 50%;
+      border: 3px solid rgba(89, 80, 255, 0.2);
+      border-top-color: var(--primary-40, #5950ff);
+      animation: tasks-panel-view-spin 0.7s linear infinite;
+    }
+  }
+
+  &__quick-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+  }
+
+  // Quick-open card (Personal Calendar, Figma 1697:50129): the same card,
+  // capped at the frame's 1272×739 instead of filling the host.
+  &__root--quick &__detail-panel {
+    max-width: 1272px;
+    max-height: 739px;
+  }
+
+  // Quick-open card for a member who may not write. The fields are read-only
+  // and the control-only blocks inert (skeleton); these clickable pills and
+  // chips stop responding but stay on screen and in the accessibility tree,
+  // and the existing reactions stay visible.
+  &__detail-panel[data-may-write="0"] &__detail-status-pill,
+  &__detail-panel[data-may-write="0"] &__priority-pill,
+  &__detail-panel[data-may-write="0"] &__assignee-caret,
+  &__detail-panel[data-may-write="0"] &__due-clear,
+  &__detail-panel[data-may-write="0"] &__subtask-chip,
+  &__detail-panel[data-may-write="0"] &__subtask-row-chip,
+  &__detail-panel[data-may-write="0"] &__subtask-assignee,
+  &__detail-panel[data-may-write="0"] &__react-chip {
+    pointer-events: none;
+  }
+  // Actions with nothing to show once refused are not offered at all.
+  &__detail-panel[data-may-write="0"] &__comment-actions,
+  &__detail-panel[data-may-write="0"] &__react-pick,
+  &__detail-panel[data-may-write="0"] &__react-more,
+  &__detail-panel[data-may-write="0"] &__subtask-add,
+  &__detail-panel[data-may-write="0"] &__subtask-del,
+  &__detail-panel[data-may-write="0"] &__attachment-unlink {
+    display: none;
+  }
+
   // The detail panel re-renders on every keystroke in its own form, so an
   // ungated entrance here flashed the whole panel on each one.
   &__detail-backdrop[data-entered="0"] &__detail-panel {
@@ -8651,7 +8712,10 @@ $theme-colors: (
     border-top: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
   }
 
-  &__detail-cancel {
+  // The quick-open card's "Open in board" is a second secondary action,
+  // drawn exactly like Cancel.
+  &__detail-cancel,
+  &__detail-open-board {
     flex: 0 0 auto;
     min-width: 132px;
     display: flex;
@@ -9855,6 +9919,7 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     padding-top: 12px;
   }
   .tasks-panel__detail-cancel,
+  .tasks-panel__detail-open-board,
   .tasks-panel__detail-submit {
     flex: 1 1 0;
     min-width: 0;

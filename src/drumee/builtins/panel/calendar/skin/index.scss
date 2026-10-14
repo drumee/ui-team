@@ -865,11 +865,12 @@
     // WHAT A CHIP DOES WHEN IT IS CLICKED decides the cursor, and these are
     // the two branches of _openItem, not one rule written twice:
     //
-    //   workspace scope        hands over to the workspace that owns the
-    //                          record (_openInWorkspace) — docks it, opens its
-    //                          Task/Meeting tab, opens the record. Both kinds,
-    //                          and regardless of can_write: the ACL is applied
-    //                          there, in the surface that owns it.
+    //   workspace scope        a task opens the board's own card right here
+    //                          (_openQuickTask), editable as far as the
+    //                          viewer's role in that workspace allows; a
+    //                          meeting hands over to the workspace that owns
+    //                          it (_openInWorkspace). Both kinds open, whatever
+    //                          can_write says.
     //   personal + task
     //   + writable             opens this screen's own editable modal.
     //
@@ -1389,6 +1390,23 @@
     &[data-form="task"] {
       width: min(1080px, calc(100vw - 32px));
       height: min(720px, 88vh);
+    }
+
+    // Workspace task quick-open: only a frame for the board's own panel, whose
+    // card (1697:50129) brings its own size, surface and backdrop. The box
+    // fills the wrapper so the board's absolutely placed backdrop has an area
+    // to centre its card in.
+    &[data-form="task-quick-open"] {
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      padding: 0;
+      overflow: visible;
+      background: none;
+      border: 0;
+      border-radius: 0;
+      box-shadow: none;
+      animation: none;
     }
   }
 

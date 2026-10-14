@@ -1752,6 +1752,7 @@
   "REPLY_TO": "Reply to",
   "SHOW_IN_FOLDER": "Show in folder",
   "TASK_VIEW_BOARD": "Board",
+  "OPEN_IN_BOARD": "Open in board",
   "TASK_VIEW_LIST": "List",
   "TASK_VIEW_SUMMARY": "Project Health",
   "TASK_VIEW_GANTT": "Gantt",

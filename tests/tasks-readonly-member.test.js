@@ -159,19 +159,20 @@ test("the gate reads the role at click time, not at render", async () => {
 });
 
 // ── the popup ───────────────────────────────────────────────────────────────
-function sayer(recent) {
+function sayer(recent, windowPrivilege = 7) {
   const calls = [];
   const PD = {
     saidRecently: () => recent,
     sayWeakPrivilege: (...a) => calls.push(a),
-    workspacePrivilege: () => 7,
+    workspacePrivilege: () => windowPrivilege,
   };
-  const fn = new Function("require", "LOCALE", "_a", "_K",
+  const fn = new Function("require", "LOCALE", "_a", "_K", "Visitor",
     `return ${sliceFunction(SRC, "_sayCannotEditTasks()")}`)(
     (m) => (m === "libs/permission-denied" ? PD : null),
     { PERMISSION_ACTION_EDIT_TASKS: "edit tasks" },
     { hub_id: "hub_id" },
     { permission: { write: 8 } },
+    { id: "me" },
   );
   return { fn, calls };
 }
@@ -180,6 +181,16 @@ test("the refusal names the member's level and the write right", () => {
   const { fn, calls } = sayer(false);
   fn.call({ mget: () => "h1" });
   assert.deepEqual(calls, [["edit tasks", 7, 8]]);
+});
+
+// The Personal Calendar's quick-open card has no workspace window to ask.
+test("outside a workspace window the level comes from the loaded member list", () => {
+  const { fn, calls } = sayer(false, 0);
+  fn.call({
+    mget: () => "h1",
+    getMember: (uid) => (uid === "me" ? { id: "me", privilege: 3 } : null),
+  });
+  assert.deepEqual(calls, [["edit tasks", 3, 8]]);
 });
 
 test("one popup only: a refusal said a moment ago is not repeated", () => {
@@ -240,9 +251,17 @@ test("the panel listens for the folder window's may_write flip", () => {
 });
 
 // ── the card is the same for every role ─────────────────────────────────────
-test("the card always offers Update, the composer and the file picker", () => {
-  assert.doesNotMatch(SKEL, /readOnly/);
-  assert.match(SKEL, /\n        Skeletons\.Note\(\{\s*className: `\$\{pfx\}__detail-submit`/);
+test("the board card offers Update, the composer and the file picker", () => {
+  // No read-only mode on the board; the only read-only fields are the quick-open
+  // card's, for a member who may not write.
+  for (const m of SKEL.matchAll(/readOnly: true|readonly: 1/g)) {
+    assert.match(SKEL.slice(m.index - 20, m.index), /quickLocked \? \{ $/);
+  }
+  // The one exception: the Personal Calendar's quick-open card, for a member
+  // who may not write, has nothing to save. Never the board itself.
+  assert.match(SKEL, /\n        quickLocked\n          \? null\n          : Skeletons\.Note\(\{\s*className: `\$\{pfx\}__detail-submit`/);
+  assert.match(SKEL, /const quickLocked = quickLockedOf\(ui\);/);
+  assert.match(SKEL, /return !!\(ui\.mget && ui\.mget\("quick_open"\)\) && !mayCreateTask\(ui\);/);
   assert.match(SKEL, /\n        Skeletons\.Box\.X\(\{\s*className: `\$\{pfx\}__comment-composer`/);
   assert.match(SKEL, /\n        filePickerBlock\("detail"/);
 });
@@ -328,10 +347,14 @@ test("the refusal is installed for every member, before the write-only wiring", 
 });
 
 // ── the dates are pickable by every member ──────────────────────────────────
-test("the due date picker is never locked; the pick only reaches the draft", () => {
+test("Start / End pickers are never locked on the board; the pick only reaches the draft", () => {
   const start = SKEL.indexOf("\nfunction buildDueSectionContent(");
   const body = SKEL.slice(start, SKEL.indexOf("\n}\n", start));
-  assert.doesNotMatch(body, /clickOpens|due-date-locked|due-lock|locked/);
+  // The only lock is the quick-open card's, for a member who may not write.
+  assert.match(body, /const locked = !isCreate && quickLockedOf\(ui\);/);
+  assert.equal((body.match(/clickOpens/g) || []).length, 1);
+  assert.match(body, /\.\.\.\(locked \? \{ clickOpens: false \} : \{\}\)/);
+  assert.doesNotMatch(body, /due-date-locked/);
   assert.match(body, /service: "task-input-changed"/);
   assert.ok(!SRC.includes('case "due-date-locked"'));
 });

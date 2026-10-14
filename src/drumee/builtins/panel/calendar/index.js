@@ -34,6 +34,7 @@ const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { modalKids } = require("./skeleton");
 const { recipientChips } = require("./skeleton/meeting-form");
 const A = require("./attachments");
+const hotkeys = require("libs/hotkeys");
 const { rowOf } = require("../../window/tasks/live-sync");
 const { fileChips, taskFileChips, fileResults } = require("./skeleton/attachments");
 const { subtaskBody } = require("./skeleton/task-form");
@@ -767,6 +768,9 @@ class __calendar_main extends LetcBox {
       clearTimeout(form.search.blurTimer);
     }
     this._form = null;
+    // Re-feeding the modal below destroys the embedded board panel, and its
+    // document listeners with it (tasks onBeforeDestroy).
+    this._quickPanel = null;
     if (this._subMenuDismiss) {
       document.removeEventListener("click", this._subMenuDismiss, true);
       this._subMenuDismiss = null;
@@ -1285,6 +1289,9 @@ class __calendar_main extends LetcBox {
    *   date picker, which takes the first Escape. On the document and in the
    *   capture phase, so focus anywhere counts and the check runs before
    *   flatpickr's own handler has closed the picker.
+   * - On a workspace task's quick-open card, Escape is the board's own
+   *   (onEscape: Cancel's path), never while the user is typing or composing,
+   *   and while the card is still loading it simply closes the modal.
    */
   _installFormKeys() {
     if (this._formKeys) return;
@@ -1299,13 +1306,28 @@ class __calendar_main extends LetcBox {
         return;
       }
       if (e.key !== "Escape" || !this._form) return;
-      if (this._form.kind !== "meeting" && this._form.kind !== "invite-link") return;
+      const quick = this._form.kind === "task-quick-open";
+      if (!quick && this._form.kind !== "meeting" && this._form.kind !== "invite-link") return;
       const root = this._modalEl();
       const picker = Array.from((root && root.querySelectorAll("input")) || [])
         .map((input) => input._flatpickr)
         .find((fp) => fp && fp.isOpen);
       if (picker) {
         picker.close();
+        return;
+      }
+      if (quick) {
+        // Escape typed into a field, or ending an IME composition, belongs to
+        // that field: the card's Entry, menu and mention popups answer it, and
+        // the desk's own Escape binding leaves it alone for the same reason.
+        if (hotkeys.isComposing(e) || hotkeys.inTextEntry(e.target)) return;
+        e.preventDefault();
+        const panel = this._quickPanel;
+        // Still loading: there is no card, and no draft, to discard yet.
+        if (!panel || !panel._detailId) return this._closeForm();
+        // The board's Escape, i.e. its Cancel: a subtask walks back to its
+        // parent, and the panel reports the close (task-quick-open-closed).
+        panel.onEscape();
         return;
       }
       e.preventDefault();
@@ -1316,6 +1338,14 @@ class __calendar_main extends LetcBox {
 
   _onDrop(e) {
     if (!this._form || !A.isFileDrag(e)) return;
+    // The quick-open card's drops are the board panel's: it claims those on its
+    // own zones and files them under that hub. One it left unclaimed stops
+    // here, so the desk does not upload it to the active window or home.
+    if (this._form.kind === "task-quick-open") {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     const pfx = this.fig.family;
@@ -2136,13 +2166,15 @@ class __calendar_main extends LetcBox {
    * A PERSONAL task is this screen's own record and opens the editable modal
    * right here — there is no workspace to go to.
    *
-   * A WORKSPACE task or meeting is owned by its folder, and the Calendar is
-   * only a renderer of it (see the note at the top of this file). So the click
-   * hands the user over to the surface that DOES own it: switch to that
-   * workspace, open its Task / Meeting tab, open that record's own panel. Which
-   * also settles the read-only question the earlier C-10 note left open — the
-   * item is fully editable, under its own ACL, in its own window, instead of
-   * half-editable in a preview card here.
+   * A WORKSPACE task opens right here too, as the board's own card: the
+   * workspace's tasks_panel mounted in quick-open mode (_openQuickTask). It
+   * writes to the owning hub through the board's own handlers, and only as far
+   * as the viewer's role in that workspace allows — calendar.list reads it on
+   * the hub side and answers can_write; the task ACL still checks every write.
+   * Its "Open in board" goes on to the workspace.
+   *
+   * A WORKSPACE meeting is handed over to the surface that owns it: switch to
+   * that workspace, open its Meeting tab, open that record's own panel.
    */
   _openItem(cmd) {
     const id = cmd.mget("itemId");
@@ -2183,10 +2215,23 @@ class __calendar_main extends LetcBox {
       this._openTaskForm(row);
       return;
     }
+    if (row.scope === "workspace" && row.kind === "task") return this._openQuickTask(row);
     // The occurrence's OWN start, so the workspace's Meeting tab anchors on
     // the date the user clicked rather than on the series origin.
     const stime = Number(cmd.mget("itemStime")) || 0;
     return this._openInWorkspace(row, { stime });
+  }
+
+  /**
+   * A workspace task's quick-open card: the board's tasks_panel for the row's
+   * hub, drawing only that task's card (quick_open). Edits stay the board's:
+   * its own handlers, its own Update, its own upload folder for the hub. The
+   * panel says when the card has gone (task-quick-open-closed / -board).
+   */
+  _openQuickTask(row) {
+    this._closeMenus();
+    this._form = { kind: "task-quick-open", row };
+    this._renderModal();
   }
 
   /**
@@ -2283,6 +2328,22 @@ class __calendar_main extends LetcBox {
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service);
     switch (service) {
+      // The quick-open card has gone (X, Cancel, Escape, a saved Update, or a
+      // task that is no longer on its board). Its writes carry this tab's
+      // socket_id, so none of them comes back as a push: reload on both exits,
+      // whatever was done, since comments, subtasks and files save at once.
+      case "task-quick-open-closed": {
+        if (!this._form || this._form.kind !== "task-quick-open") return;
+        return this._closeForm() || this._reload();
+      }
+      // Its "Open in board": the workspace board takes over, on this task.
+      case "task-quick-open-board": {
+        const form = this._form;
+        if (!form || form.kind !== "task-quick-open") return;
+        this._dirty = true;
+        this._closeForm();
+        return this._openInWorkspace(form.row);
+      }
       case "cal-prev":
         return this._step(-1);
       case "cal-next":
@@ -2587,6 +2648,8 @@ class __calendar_main extends LetcBox {
   // the wrapper's kids are declared by the skeleton — so this only exists to
   // keep unhandled parts flowing to the base class.
   onPartReady(child, pn) {
+    // The quick-open card's board panel, so Escape can be handed to it.
+    if (pn === "quick-open-panel") this._quickPanel = child;
     if (super.onPartReady) super.onPartReady(child, pn);
   }
 }

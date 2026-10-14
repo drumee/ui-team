@@ -42,6 +42,12 @@ const {
 // "click close → delay → popup finally disappears" this panel was already
 // bitten by once. See _dismissOverlay.
 const OVERLAY_EXIT_MS = 140;
+
+// Every mounted panel. The Personal Calendar's quick-open card is a second
+// panel in this tab, and its writes reach the board of the same hub as no push
+// (the server skips the sending socket, which they share), so on its way out
+// it asks that board to refetch (_quickOpenLeft).
+const LIVE_PANELS = new Set();
 // The child creator card's exit — matches `tasks-panel-subtask-out` in the skin.
 const SUBTASK_CARD_EXIT_MS = 160;
 // The card's entrance highlight (slide-in + glow), after which data-anim is
@@ -256,6 +262,13 @@ class __tasks_panel extends LetcBox {
     // Deep-link target from a task mention/assignment notification (forwarded by
     // the folder window). Consumed once after the initial load in onDomRefresh.
     this._openTaskId = this.mget("open_task_id") || null;
+    // Mounted by the Personal Calendar as a quick-open card: only that task's
+    // detail card is drawn, and the host is told when it goes (_quickOpenLeft).
+    // Off for the board itself, which never sets quick_open.
+    this._quickOpen = !!this.mget("quick_open");
+    LIVE_PANELS.add(this);
+    // Set by the card's "Open in board" so _quickOpenLeft names that exit.
+    this._quickToBoard = 0;
     this._tasks = [];
     this._members = [];
     this._labels = [];
@@ -408,6 +421,7 @@ class __tasks_panel extends LetcBox {
   }
 
   onBeforeDestroy() {
+    LIVE_PANELS.delete(this);
     // The panel is going; uploads still on their way have no task to join.
     this._cancelUnfinishedUploads("create", this._createDefaults);
     this._cancelUnfinishedUploads("detail", this._detailDraft);
@@ -723,15 +737,19 @@ class __tasks_panel extends LetcBox {
     // scroll around the DOM swap, which is what makes repainting safe at all.
     const seeded = this._seedFromCache();
     const core = Promise.all([this._loadTasks(), this._loadColumns()]);
-    const decorations = Promise.all([
-      this._loadColumnWatches(),
-      this._loadMembers(),
-      this._loadLabels(),
-    ]);
-    this._loadActivity().then(() => {
-      if (this.isDestroyed && this.isDestroyed()) return;
-      if (this.getView() === "summary" || this._detailId) this._render();
-    });
+    // The quick-open card draws no column bells, no label chips and no Health
+    // feed, so it loads only the members its assignee and reporter fields read.
+    const decorations = Promise.all(
+      this._quickOpen
+        ? [this._loadMembers()]
+        : [this._loadColumnWatches(), this._loadMembers(), this._loadLabels()],
+    );
+    if (!this._quickOpen) {
+      this._loadActivity().then(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (this.getView() === "summary" || this._detailId) this._render();
+      });
+    }
     let painted = null;
     if (seeded) {
       this._render();
@@ -754,15 +772,17 @@ class __tasks_panel extends LetcBox {
     if (this._openTaskId) {
       const id = this._openTaskId;
       this._openTaskId = null;
-      this.openTaskById(id);
+      // The rows just landed, so no second fetch unless the task is missing.
+      this.openTaskById(id, { loaded: true });
     }
   }
 
   // Same deep link as above, but for a panel that is ALREADY mounted: the
   // mount-time `open_task_id` is consumed once in onDomRefresh, so a second
   // notification click (folder already open) has to reach the detail this way.
-  // Called by the folder window's openTaskDeepLink.
-  async openTaskById(id) {
+  // Called by the folder window's openTaskDeepLink. `loaded` is the mount-time
+  // path's word that the rows have only just been fetched.
+  async openTaskById(id, { loaded = false } = {}) {
     if (!id) return;
     // Not rendered yet: hand it back to the mount-time path, which opens the
     // detail as soon as the first load lands.
@@ -776,15 +796,24 @@ class __tasks_panel extends LetcBox {
     // this panel last loaded is simply absent — it only appeared after a full
     // page reload, and the deep link below then found nothing to open. Refresh
     // once before concluding the task is not in this folder.
+    //
+    // A task the board DOES hold can be stale too. The Personal Calendar's
+    // quick-open card is another panel in this tab, and its writes never come
+    // back here as a push: the server skips the sending socket, which both
+    // panels share. So its "Open in board" would show the card as it was before
+    // the edit. Refetch on every deep link, then, unless the rows just landed.
     const seek = () =>
       Array.isArray(this._tasks)
         ? this._tasks.find((t) => `${t.id}` === `${id}`)
         : null;
-    if (!seek()) {
+    if (!loaded || !seek()) {
+      const before = this._boardSignature();
       await this._loadTasks();
       // The window can be closed while the refetch is in flight.
       if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
-      this._render();
+      // _openDetail below repaints the card anyway; the board only needs a
+      // render when the rows it draws actually changed.
+      if (this._boardSignature() !== before) this._render();
     }
     // Same guard as onDomRefresh — only open a task that really belongs to this
     // folder's list, never an empty detail panel.
@@ -803,7 +832,11 @@ class __tasks_panel extends LetcBox {
     // calendar row names a task that has since moved workspace or been
     // deleted; the meeting twin already refuses out loud (MEETING_NOT_FOUND).
     this.warn("tasks: deep-linked task is not on this board", id);
+    // The quick-open card has nothing to show, so its host must not be left
+    // holding an empty overlay.
+    if (this._quickOpen) this._quickOpenLeft();
   }
+
 
   // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not
   // native dataTransfer — register the panel as a droppable so they attach.
@@ -874,11 +907,15 @@ class __tasks_panel extends LetcBox {
   _sayCannotEditTasks() {
     const PD = require("libs/permission-denied");
     if (PD.saidRecently()) return;
-    PD.sayWeakPrivilege(
-      LOCALE.PERMISSION_ACTION_EDIT_TASKS,
-      PD.workspacePrivilege(this.mget(_a.hub_id)),
-      _K.permission.write,
-    );
+    let level = PD.workspacePrivilege(this.mget(_a.hub_id));
+    // Outside a workspace window (the Personal Calendar's quick-open card)
+    // there is no window to ask; the member list this panel loaded carries the
+    // viewer's own row.
+    if (!level) {
+      const own = this.getMember(Visitor.id);
+      level = (own && own.privilege) || 0;
+    }
+    PD.sayWeakPrivilege(LOCALE.PERMISSION_ACTION_EDIT_TASKS, level, _K.permission.write);
   }
 
   /**
@@ -2271,6 +2308,17 @@ class __tasks_panel extends LetcBox {
       case "open-detail":
         return this._openDetail(trigger.mget("taskId"));
 
+      // Quick-open card only (its footer's "Open in board"): leave the card the
+      // way Cancel does, dropping unsaved edits, and let the host open the
+      // workspace board on this task.
+      case "quick-open-board":
+        this._quickToBoard = 1;
+        return this._closeDetailSilently(() => this._renderOverlays());
+
+      // Quick-open card only: the × shown while the card is still loading.
+      case "quick-open-cancel":
+        return this._quickOpenLeft();
+
       case "set-view": {
         const v = trigger.mget("viewMode");
         if (v && v !== this._view) {
@@ -3428,6 +3476,36 @@ class __tasks_panel extends LetcBox {
     this._closeCommentReactionsPicker();
     this._resetFileSearch();
     this._dismissOverlay("detail-backdrop", done);
+    // The quick-open card has nothing else to show once its card goes, so the
+    // host is told: after the exit animation on a dismissal, on the next tick
+    // otherwise. A walk back to the parent reopens in that same tick, which is
+    // why the check waits for it.
+    if (this._quickOpen) {
+      this._quickLeaving = 1;
+      setTimeout(() => this._quickOpenLeft(), done ? OVERLAY_EXIT_MS : 0);
+    }
+  }
+
+  // Skeleton: the quick-open card is still loading — no card has opened yet,
+  // and none is on its way out.
+  isQuickLoading() {
+    return !!this._quickOpen && !this._detailId && !this._quickLeaving;
+  }
+
+  // Hand control back to the Personal Calendar that mounted this card, unless a
+  // card is open again by now or the panel has gone. The host reloads its own
+  // rows on either exit.
+  _quickOpenLeft() {
+    if (this._detailId || (this.isDestroyed && this.isDestroyed())) return;
+    // Coalesced, and held until shown when that board is out of sight.
+    for (const p of LIVE_PANELS) {
+      if (p !== this && !p._quickOpen && `${p._hubId}` === `${this._hubId}`) {
+        p._queueWsRefresh({ tasks: 1 });
+      }
+    }
+    this.triggerHandlers({
+      service: this._quickToBoard ? "task-quick-open-board" : "task-quick-open-closed",
+    });
   }
 
   // A peer deleted the task this user has open. Their edits can no longer be
@@ -7291,7 +7369,12 @@ class __tasks_panel extends LetcBox {
     const pending = unfinishedPending(draft && draft.pending_files);
     if (!pending.length) return true;
     // The card is non-modal; a second press must not stack a second question.
-    if (this._confirmingUploads) return false;
+    // It brings the upload window that is asking forward instead, so the press
+    // is not a silent no-op when that window sits behind something.
+    if (this._confirmingUploads) {
+      require("window/upload-progress").getOrCreate().then((win) => win && win.raise && win.raise());
+      return false;
+    }
     this._confirmingUploads = true;
     let choice = "keep";
     try {

@@ -89,8 +89,8 @@ function chip(ui, row, opt = {}) {
   // A native title on every item: the full name a narrow cell cuts short, and
   // the workspace of a meeting, which the frames draw without a pill (the
   // month chip is "time title", the hour block title and agenda). It costs no
-  // layout, and it is what tells the user where a click on a workspace item is
-  // about to take them (_openInWorkspace) before they make it.
+  // layout, and it is what tells the user which workspace a click on a
+  // workspace item opens (its task card, or its Meeting tab) before they make it.
   const originText = [
     row.title,
     row.scope === "personal" ? LOCALE.PERSONAL : row.origin_name,
