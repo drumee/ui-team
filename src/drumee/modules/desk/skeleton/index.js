@@ -179,19 +179,6 @@ const _build_mobile_action_row = (ui) => {
           }),
         ],
       }),
-      // Over-limit: creating, uploading and inviting are all paused, exactly
-      // as the tablet consolidated menu goes empty — so the button that opens
-      // the create sheet is not offered at all. "" is dropped by validChild.
-      require("libs/over-limit").isLocked() ? "" : Skeletons.Box.X({
-        className: `${fig}__mobile-new-btn`,
-        service: "mobile-new-sheet",
-        uiHandler: [ui],
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Note({ className: `${fig}__mobile-new-plus`, content: "+" }),
-          Skeletons.Note({ className: `${fig}__mobile-new-label`, content: LOCALE.NEW }),
-        ],
-      }),
     ],
   });
 };

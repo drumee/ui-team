@@ -302,34 +302,6 @@
     pointer-events: none;
   }
 
-  &__mobile-new-btn {
-    align-items: center;
-    gap: 6px;
-    height: 36px;
-    padding: 0 14px;
-    border-radius: 12px;
-    background: var(--primary-40);
-    color: var(--gray-white);
-    flex: 0 0 auto;
-    cursor: pointer;
-
-    &:active {
-      background: var(--primary-50);
-    }
-  }
-
-  &__mobile-new-plus {
-    @include drumee.typo($size: 17px, $line: 17px, $color: inherit);
-    font-weight: 500;
-    pointer-events: none;
-  }
-
-  &__mobile-new-label {
-    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
-    font-weight: 600;
-    pointer-events: none;
-  }
-
 }
 
 // ── Dark mode ─────────────────────────────────────────────────────────────
