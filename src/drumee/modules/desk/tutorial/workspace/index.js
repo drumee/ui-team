@@ -46,90 +46,7 @@ const SERVICE_TYPE = { internal: 'team', external: 'share', personal: 'personal'
 // dialog. Screen 1 raises no callout at all, so it is unaffected.
 const DIALOG_GAP = 40;
 
-const SCREENS = [
-  {
-    // Figma 140:22684 — the home EMPTY STATE the flow starts on: the
-    // "Your workspace starts here." hero and the CTA that opens the dialog.
-    // The tour used to open straight onto an already-open dialog, which
-    // skipped how the user got there.
-    home: true,
-    target: 'home-cta',
-    anchor: 'home-cta',
-    direction: 'north',
-    beak: 'end',
-    // NO callout. 140:22684 is the entry state the flow arrow leaves from and
-    // it carries none — the CTA is the whole instruction, and a card floating
-    // beside it was ours.
-    //
-    // Which leaves the screen with nothing to press Next on, so the CTA
-    // becomes the control: it is already the lit surface, it is already what
-    // the frame's arrow leaves from, and in the product it is what opens the
-    // dialog that screen 2 draws. See `home-cta` in skeleton/toolkit/home.js.
-    bare: true,
-  },
-  {
-    lit: BLOCKS.NAME,
-    anchor: BLOCKS.NAME,
-    text: () => LOCALE.TUTORIAL_WS_NAME,
-  },
-  {
-    lit: BLOCKS.type('internal'),
-    anchor: BLOCKS.type('internal'),
-    title: () => LOCALE.TUTORIAL_WS_INTERNAL_TITLE,
-    desc: () => LOCALE.INTERNAL_WORKSPACE_HINT,
-  },
-  {
-    lit: BLOCKS.type('external'),
-    anchor: BLOCKS.type('external'),
-    title: () => LOCALE.TUTORIAL_WS_EXTERNAL_TITLE,
-    desc: () => LOCALE.EXTERNAL_WORKSPACE_HINT,
-  },
-  {
-    // The closing screen lights the type list AND the now-enabled Create
-    // button, because it is about the pair.
-    lit: BLOCKS.CREATE,
-    anchor: BLOCKS.CREATE,
-    ready: true,
-    text: () => LOCALE.TUTORIAL_WS_CREATE,
-  },
-
-  // ── from here it is not a tour any more ────────────────────────────────────
-  //
-  // These two run ONLY on the post-signup pass — the host slices the table to
-  // `screen_count`, and _screensFor drops them for a preview or for the full
-  // tour (see ../index.js). Five screens of being shown the dialog, and then
-  // the dialog.
-  {
-    // Every section at full strength, because there is no longer one being
-    // taught: the user is filling it in.
-    //
-    // AND NO CALLOUT. Five screens have just explained this dialog field by
-    // field; a sixth card beside the filled-in version of it is the tour
-    // talking over the thing it spent those five screens introducing. The
-    // dialog carries Create, which is the only way forward this screen has.
-    live: true,
-    bare: true,
-    target: 'wsd-dialog',
-    anchor: 'wsd-dialog',
-    direction: 'west',
-  },
-  {
-    // NO CALLOUT HERE EITHER, and `bare` is what says so rather than the
-    // absence of `text`. Leaving the text off is not the same thing: feed(null)
-    // is a no-op in ui-core, so a screen that raises nothing INHERITS the
-    // previous screen's card — which is how this one once ended up telling the
-    // user to create a workspace they had just created. `bare` makes focus()
-    // feed the callout null, which clears it.
-    //
-    // The card itself carries Send and Skip, so nothing is lost by going
-    // quiet: it is already a complete screen with its own two ways out.
-    invite: true,
-    bare: true,
-    target: 'inv-card',
-    anchor: 'inv-card',
-    direction: 'west',
-  },
-];
+const SCREENS = require('./screens');
 
 class __tutorial_workspace extends LetcBox {
 
@@ -183,18 +100,25 @@ class __tutorial_workspace extends LetcBox {
     // a rebuilt Entry is an empty one — so read what is in the field first and
     // hand it back through the composer.
     this._name = this._readName() || this._name || '';
-    this.feed(skeleton(this, s, {
+    // Phone layout (host-kit layoutFor): the Figma mobile frames, built from
+    // the same dialog and invite builders. `phone` is null at desk.
+    const phone = this.mget('layout') === 'phone' ? s.phone : null;
+    const state = {
       selected: this._type,
       pending: !!this._pending,
       created: this._created,
       name: this._name,
-    }));
+    };
+    this.feed(phone ? require('./skeleton/phone')(this, s, state) : skeleton(this, s, state));
+    // Tell the host whether this screen is one the user fills in, so its Skip
+    // control can stand down there (those screens carry their own exits).
+    this.triggerHandlers({ service: 'step-live', live: this.isLive() });
     // The dialog screens light the whole dialog and point the beak at one row
     // inside it; the home screen lights the button and points at the same
     // thing, so the target is named per screen rather than assumed.
     const [target, anchor] = await Promise.all([
-      this.ensurePart(s.target || 'wsd-dialog'),
-      this.ensurePart(s.anchor),
+      this.ensurePart(phone ? phone.target : (s.target || 'wsd-dialog')),
+      this.ensurePart(phone ? phone.target : s.anchor),
     ]);
 
     // Back and Done are the same rules on every screen, bare or not — the
@@ -266,7 +190,9 @@ class __tutorial_workspace extends LetcBox {
       // give the chat flow one undimmed screen out of five, and it stopped
       // applying inside `full`, where the stamped id is "full" — so the rule
       // moved onto the focus call and this is its other caller.
-      dim: false,
+      // On a phone the frames DO dim (380:54800 on): the sheet's other rows
+      // fade and the lit one stands out. The home hero is drawn plain.
+      dim: phone ? phone.view !== 'home' : false,
       owner: this,
     });
   }
