@@ -508,7 +508,13 @@
     &__file-controls {
       align-items: center;
       gap: 8px;
-      flex: 0 0 auto;
+      // Takes the rest of the row beside the tabs and right-aligns its items
+      // in it. The 0% basis is what keeps it on the tabs' row: the filter bar
+      // breaks lines on the hypothetical size, which the automatic minimum
+      // lifts to this group's min-content (the search at its min-width), so
+      // the search box shrinks before the group ever wraps under the tabs.
+      flex: 1 1 0%;
+      justify-content: flex-end;
       margin-left: auto;
     }
 
@@ -2546,7 +2552,13 @@
   // 512px width.
   &__split-body[data-view="files"],
   &__split-body[data-view="secure-share"] {
-    grid-template-columns: var(--files-w, 66.667%) 12px minmax(0, 1fr);
+    // 400px floor on the files column, so its toolbar fits even in its
+    // last-resort wrapped form (__filter-bar). The wider wrapped row is the
+    // French controls (search at its 120px min, "Nouveau", the view toggle),
+    // 378px with the bar's padding; English needs 350. It only bites on a
+    // split body under 800px dragged toward 1:1: the handle stops there and
+    // the chat column keeps the rest.
+    grid-template-columns: max(var(--files-w, 66.667%), 400px) 12px minmax(0, 1fr);
 
     > .window-folder__files-panel,
     > .window__files-panel,
@@ -2947,7 +2959,9 @@
   &-topbar__search-container {
     position: relative;
     flex: 0 1 245px;
-    min-width: 160px;
+    // The first thing to give way in a narrow Files column (see __filter-bar):
+    // at 120px it still shows the glyph and a few characters of the query.
+    min-width: 120px;
     max-width: 245px;
   }
 
@@ -3001,6 +3015,21 @@
     padding: 12px;
     border-bottom: none;
     background: transparent;
+    // One row, and the view toggle is never cut off. This bar lives in the
+    // Files COLUMN, only a share of the window (2:1 by default, draggable to
+    // 1:1, see _wireFilesSplitter), while the compact rules further down only
+    // react to the WINDOW's width. So a narrow column in a wide window got the
+    // full desktop row (793px in English, 875px in French) and the row ran off
+    // the column's edge: dragging the chat to 1:1 on a 1512px screen cut away
+    // List and Grid, and a 1180px browser window lost Grid without any drag.
+    //
+    // As the column narrows the search box gives way first (__file-controls,
+    // down to its 120px min-width), then the tabs tighten (the files-col query
+    // after the tab rules). Only when even that cannot fit does the row wrap,
+    // as a last resort for small windows: wrap-REVERSE, so the controls land
+    // ABOVE the tabs, the order the compact layout draws.
+    flex-wrap: wrap-reverse;
+    row-gap: var(--spacer-4);
   }
 
   // The segmented control's ground — a grey pill holding the five tabs, with
@@ -3115,6 +3144,36 @@
           $weight: 500,
           $color: var(--white)
         );
+      }
+    }
+  }
+
+  // The Files column is a size container, so its toolbar answers to the
+  // COLUMN's width rather than the window's (see __filter-bar). Safe on this
+  // element: it is already position:relative + z-index:100 (a stacking
+  // context, and the containing block of its absolute children), holds no
+  // position:fixed descendant, the folder dialogs mount outside it in the
+  // window's wrapper-modal, and nothing inside sizes itself in cqw units. Its
+  // width comes from the split-body grid track, never from its content.
+  &__files-panel {
+    container-type: inline-size;
+    container-name: files-col;
+  }
+
+  // Narrow column in a desktop-width window: tighten the tabs (18 -> 10px a
+  // side) and the gap before the search, so the toolbar keeps one row. 800px
+  // is where French, the longer of the two shipped languages, needs it (its
+  // full row with the search at 120px is 795px). English then holds one row
+  // down to a 621px column, i.e. 1:1 on a 1366px screen. The compact layout
+  // (window <= 700px) keeps its own toolbar.
+  @container window-folder-w (width > 700px) {
+    @container files-col (max-width: 800px) {
+      &__filter-bar {
+        column-gap: 12px;
+      }
+
+      &__filter-track &__filter-tab-main {
+        padding: 0 10px;
       }
     }
   }
