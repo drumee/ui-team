@@ -117,7 +117,9 @@ function subtaskRow(ui, s, menu) {
             service: "cal-subtask-remove",
             uiHandler: [ui],
             calSubKey: key,
-            attrOpt: { "aria-label": LOCALE.REMOVE },
+            // Button.Svg is a plain div: focusable and announced here, pressed
+            // on Enter / Space by index.js _installFormKeys.
+            attrOpt: { "aria-label": LOCALE.REMOVE, role: "button", tabindex: "0" },
           }),
         ],
       }),
@@ -250,7 +252,7 @@ module.exports = function (ui) {
 
   return Skeletons.Box.Y({
     className: `${pfx}__modal`,
-    attrOpt: { "data-form": "task", "data-mode": editing ? "edit" : "create" },
+    attrOpt: { "data-form": "task" },
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__modal-head`,
@@ -265,6 +267,7 @@ module.exports = function (ui) {
             bubble: 0,
             service: "cal-close-form",
             uiHandler: [ui],
+            attrOpt: { "aria-label": LOCALE.CLOSE, role: "button", tabindex: "0" },
           }),
         ],
       }),
@@ -376,7 +379,6 @@ module.exports = function (ui) {
 
               Skeletons.Box.X({
                 className: `${pfx}__modal-foot`,
-                attrOpt: { "data-mode": editing ? "edit" : "create" },
                 kids: [
                   editing ? button("danger", LOCALE.DELETE, "cal-delete-task") : null,
                   button("neutral", LOCALE.CANCEL, "cal-close-form"),

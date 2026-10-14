@@ -1280,18 +1280,29 @@ class __calendar_main extends LetcBox {
   }
 
   /**
-   * Keyboard for the meeting modal, its invite-link card and the toast.
+   * Keyboard for this screen's forms and the toast.
    *
    * - Enter / Space on one of this screen's role="button" icons (the modal and
-   *   toast ×, the link's copy, the password eye) presses it: they are
-   *   Button.Svg divs, which have no keyboard behaviour of their own.
-   * - Escape closes the meeting form or the invite-link card — after an open
-   *   date picker, which takes the first Escape. On the document and in the
-   *   capture phase, so focus anywhere counts and the check runs before
-   *   flatpickr's own handler has closed the picker.
-   * - On a workspace task's quick-open card, Escape is the board's own
-   *   (onEscape: Cancel's path), never while the user is typing or composing,
-   *   and while the card is still loading it simply closes the modal.
+   *   toast ×, the link's copy, the password eye, the task card's × buttons)
+   *   presses it: they are Button.Svg divs, with no keyboard behaviour of
+   *   their own.
+   * - Escape, one rule for every form kind (task, meeting, invite link,
+   *   quick-open card):
+   *   1. an open date picker, then the task card's subtask menu, takes it;
+   *   2. typed into a field or ending an IME composition, it belongs to that
+   *      field (the Entry's cancel, the quick card's menus and mention
+   *      popups) — nothing closes and the draft stays;
+   *   3. otherwise the form closes through its own cancel path: Cancel / × for
+   *      the task, meeting and invite-link cards, the board's onEscape for the
+   *      quick card (a subtask walks back to its parent), a plain close while
+   *      that card is still loading.
+   *   A press handled in 1 or 3 is claimed (preventDefault + stopPropagation),
+   *   so it never reaches the desk's own Escape, which would close the window
+   *   under the calendar. In 2 it is left to the field, which needs it; the
+   *   desk skips text entry on its own.
+   *
+   *   On the document and in the capture phase, so focus anywhere counts and
+   *   the checks run before flatpickr's own handler has closed the picker.
    */
   _installFormKeys() {
     if (this._formKeys) return;
@@ -1305,32 +1316,37 @@ class __calendar_main extends LetcBox {
         }
         return;
       }
-      if (e.key !== "Escape" || !this._form) return;
-      const quick = this._form.kind === "task-quick-open";
-      if (!quick && this._form.kind !== "meeting" && this._form.kind !== "invite-link") return;
+      const form = this._form;
+      if (e.key !== "Escape" || !form) return;
+      const claim = () => {
+        e.preventDefault();
+        e.stopPropagation();
+      };
       const root = this._modalEl();
       const picker = Array.from((root && root.querySelectorAll("input")) || [])
         .map((input) => input._flatpickr)
         .find((fp) => fp && fp.isOpen);
       if (picker) {
+        claim();
         picker.close();
         return;
       }
-      if (quick) {
-        // Escape typed into a field, or ending an IME composition, belongs to
-        // that field: the card's Entry, menu and mention popups answer it, and
-        // the desk's own Escape binding leaves it alone for the same reason.
-        if (hotkeys.isComposing(e) || hotkeys.inTextEntry(e.target)) return;
-        e.preventDefault();
+      if (form.kind === "task" && form.subMenu) {
+        claim();
+        form.subMenu = null;
+        this._syncSubtaskMenuDismiss();
+        this._renderSubtasks();
+        return;
+      }
+      if (hotkeys.isComposing(e) || hotkeys.inTextEntry(e.target)) return;
+      claim();
+      if (form.kind === "task-quick-open") {
         const panel = this._quickPanel;
         // Still loading: there is no card, and no draft, to discard yet.
-        if (!panel || !panel._detailId) return this._closeForm();
-        // The board's Escape, i.e. its Cancel: a subtask walks back to its
-        // parent, and the panel reports the close (task-quick-open-closed).
+        if (!panel || panel.isQuickLoading()) return this._closeForm();
         panel.onEscape();
         return;
       }
-      e.preventDefault();
       this._closeForm();
     };
     document.addEventListener("keydown", this._formKeys, true);
@@ -2643,10 +2659,11 @@ class __calendar_main extends LetcBox {
     }
   }
 
-  // Wrapper.Y derives its part name from `name` as `wrapper-{name}`, so the
-  // modal slot arrives as "wrapper-cal-modal". Nothing needs wiring on arrival —
-  // the wrapper's kids are declared by the skeleton — so this only exists to
-  // keep unhandled parts flowing to the base class.
+  // One part is captured here: the quick-open card's board panel, which
+  // Escape is handed to (_installFormKeys). The modal slot itself
+  // ("wrapper-cal-modal" — Wrapper.Y names it `wrapper-{name}`) needs no
+  // wiring, its kids come from the skeleton; everything else flows to the
+  // base class.
   onPartReady(child, pn) {
     // The quick-open card's board panel, so Escape can be handed to it.
     if (pn === "quick-open-panel") this._quickPanel = child;

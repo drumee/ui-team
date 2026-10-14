@@ -133,7 +133,6 @@ function fileResults(ui, rows) {
   return (rows || []).map((r) =>
     Skeletons.Box.X({
       className: `${pfx}__fsearch-option`,
-      attrOpt: { "data-nid": r.nid },
       bubble: 0,
       service: "cal-pick-file",
       uiHandler: [ui],
