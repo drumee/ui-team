@@ -37,6 +37,21 @@
     border-radius: 0 !important;
   }
 
+  // NOT A WINDOW, though it wears `.window__ui`: ui-core takes the group from
+  // the kind name (window_tutorial → `window`). So every folder-window rule
+  // reached it — the 600x320 floor, the shadow, and at ≤650px
+  // (builtins/window/skin/window.scss) `max-height: calc(100dvh - 44px)` and
+  // `width: 90vw !important`, which left the mobile tour 44px short of the
+  // screen with the desk showing beneath. (0,3,0) beats that rule's (0,2,0);
+  // `[data-layout]` is stamped on every _applySize, phone or desk.
+  &__ui.tutorial-main[data-layout] {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    box-shadow: none;
+  }
+
   // The layout already gets its size, its overflow and its opaque background
   // from `.tutorial-main__layout`. No radius override is needed: the content slot
   // inherits `border-radius: 12px` from `.tutorial-main__content`, which is correct.
