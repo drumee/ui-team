@@ -43,10 +43,68 @@ test("re-entering Files lands on page 1 (the files panel)", () => {
   assert.match(src, /view\.el\.dataset\.view = tab;\s*\n\s*this\._firstSplitPage\(view\);/);
   const m = src.match(/\n {2}_firstSplitPage\(view\) \{\n([\s\S]*?)\n {2}\}\n/);
   assert.ok(m, "_firstSplitPage defined");
+  let synced = 0;
+  const ctx = { _syncSplitPage: () => { synced++; } };
   const el = { scrollLeft: 900, dataset: { view: "files" } };
-  new Function("view", m[1])({ el });
+  new Function("view", m[1]).call(ctx, { el });
   assert.equal(el.scrollLeft, 0);
+  assert.equal(synced, 1, "the footer follows the reset");
   const chat = { scrollLeft: 900, dataset: { view: "chat" } };
-  new Function("view", m[1])({ el: chat });
+  new Function("view", m[1]).call(ctx, { el: chat });
   assert.equal(chat.scrollLeft, 900, "other views untouched");
+});
+
+// ── carousel footer: one dot per page, under the split body ─────────────────
+const toolkit = fs.readFileSync(path.join(SRC, "builtins/window/skeleton/toolkit/index.js"), "utf8");
+const folderJs = fs.readFileSync(path.join(SRC, "builtins/window/folder/index.js"), "utf8");
+const method = (src, name, args) => {
+  const m = src.match(new RegExp(`\\n {2}${name}\\(${args}\\) \\{\\n([\\s\\S]*?)\\n {2}\\}\\n`));
+  assert.ok(m, `${name} defined`);
+  return m[1];
+};
+
+test("footer: two dots that page the split body; none for a no-chat share", () => {
+  const m = toolkit.match(/export function splitDots\(ui\) \{\n([\s\S]*?)\n\}\n/);
+  assert.ok(m, "splitDots exported from the toolkit");
+  const node = (type) => (o = {}) => ({ type, ...o });
+  const Sk = { Box: { X: node("X") } };
+  const ui = { fig: { family: "window-folder", group: "window" } };
+  const build = (noChat) => new Function("ui", "Skeletons", "_dmzShareWithoutChat", m[1])(ui, Sk, () => noChat);
+  const f = build(false);
+  assert.equal(f.sys_pn, "split-dots");
+  assert.equal(f.dataset.page, 0);
+  assert.equal(f.kids.length, 2);
+  assert.deepEqual(f.kids.map((k) => [k.service, k.dataset.page]), [["split-page", 0], ["split-page", 1]]);
+  assert.equal(build(true), "", "no chat page, no footer");
+});
+
+test("footer is mounted right after the split body, in the pane and in the window", () => {
+  const sk = fs.readFileSync(path.join(SRC, "builtins/window/folder/skeleton/index.js"), "utf8");
+  const after = sk.match(/splitBody\(ui\),\s*splitDots\(ui\)/g) || [];
+  assert.equal(after.length, 2);
+});
+
+test("footer follows the swipe: data-page from scrollLeft", () => {
+  const body = method(folderJs, "_syncSplitPage", "");
+  const ctx = {
+    __folderView: { el: { scrollLeft: 400, clientWidth: 390 } },
+    _splitDots: { el: { dataset: { page: "0" } } },
+  };
+  new Function(body).call(ctx);
+  assert.equal(ctx._splitDots.el.dataset.page, "1");
+});
+
+test("a dot press scrolls to its page", () => {
+  const body = method(folderJs, "_showSplitPage", "cmd");
+  let to = null;
+  const ctx = { __folderView: { el: { clientWidth: 390, scrollTo: (o) => { to = o; } } } };
+  new Function("cmd", body).call(ctx, { el: { dataset: { page: "1" } } });
+  assert.deepEqual(to, { left: 390, behavior: "smooth" });
+  assert.match(folderJs, /case "split-page":\s*\n\s*return this\._showSplitPage\(cmd\);/);
+});
+
+test("footer skin: hidden by default, shown only on the compact Files view (not over Access)", () => {
+  assert.match(css, /\.window-folder__split-dots \{[^}]*display: none/);
+  assert.match(compact, /\.window-folder__split-body\[data-view=files\]:not\(\[data-access="1"\]\) \+ \.window-folder__split-dots \{[^}]*display: flex/);
+  assert.match(compact, /\.window-folder__split-dots\[data-page="1"\] \.window-folder__split-dot:nth-child\(2\)/);
 });

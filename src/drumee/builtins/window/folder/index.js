@@ -1530,8 +1530,14 @@ class __window_folder extends mfsInteract {
       this.__cdWidget = child;
       return;
     }
+    if (pn === "split-dots") {
+      this._splitDots = child;
+      this._syncSplitPage();
+      return;
+    }
     if (pn === "folder-view") {
       this.__folderView = child;
+      this._wireSplitCarousel(child);
       // Restore the user's persisted Files-tab split ratio (default 2:1).
       this._applyFilesSplit();
       // First paint of the split body enters like every later view switch.
@@ -2132,6 +2138,9 @@ class __window_folder extends mfsInteract {
 
       case "tab-bar-page":
         return this._showTabCarouselPage(cmd);
+
+      case "split-page":
+        return this._showSplitPage(cmd);
 
       // Tap on the mobile dim layer behind the centred "+ New" card. Same
       // close a leaf row runs, so the card and its backdrop leave together.
@@ -6156,6 +6165,41 @@ class __window_folder extends mfsInteract {
   _firstSplitPage(view) {
     const el = view && view.el;
     if (el && el.dataset && el.dataset.view === "files") el.scrollLeft = 0;
+    this._syncSplitPage();
+  }
+
+  // ── Mobile split-body carousel footer ────────────────────────────────
+  // Same recipe as the tab-bar carousel above: the split body's own scroll is
+  // the one source of truth (swipe, dot press, the first-page reset), and the
+  // footer's data-page follows it, rAF-throttled.
+  _wireSplitCarousel(child) {
+    if (!child || !child.el) return;
+    let queued = 0;
+    child.el.addEventListener("scroll", () => {
+      if (queued) return;
+      queued = 1;
+      requestAnimationFrame(() => {
+        queued = 0;
+        this._syncSplitPage();
+      });
+    }, { passive: true });
+  }
+
+  _syncSplitPage() {
+    const view = this.__folderView;
+    const dots = this._splitDots;
+    if (!view || !view.el || !dots || !dots.el) return;
+    const w = view.el.clientWidth;
+    const page = w > 0 ? Math.round(view.el.scrollLeft / w) : 0;
+    if (`${page}` !== dots.el.dataset.page) dots.el.dataset.page = `${page}`;
+  }
+
+  // Dot press: scroll a whole page; the listener above then moves data-page.
+  _showSplitPage(cmd) {
+    const view = this.__folderView;
+    if (!view || !view.el || !cmd || !cmd.el) return;
+    const page = Number(cmd.el.dataset.page) || 0;
+    view.el.scrollTo({ left: page * view.el.clientWidth, behavior: "smooth" });
   }
 
   /**

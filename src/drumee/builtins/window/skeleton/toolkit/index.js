@@ -1411,6 +1411,34 @@ export function filesSplitter(ui) {
   });
 }
 
+/**
+ * Carousel footer for the split body: one dot per page. On a narrow folder
+ * window the Files view is two full-width pages — files, then Team Chat
+ * (folder skin, the compact `[data-view="files"]` rule) — and this says which
+ * one is showing. `page` is its only state: the folder window writes it from
+ * the split body's scroll, and the skin maps it to the active dot. Hidden by
+ * the skin everywhere but that layout.
+ *
+ * A share without chat has a single page, so it gets no footer at all.
+ */
+export function splitDots(ui) {
+  if (_dmzShareWithoutChat(ui)) return "";
+  return Skeletons.Box.X({
+    className: `${ui.fig.family}__split-dots ${ui.fig.group}__split-dots`,
+    sys_pn: "split-dots",
+    partHandler: ui,
+    dataset: { page: 0 },
+    kids: [0, 1].map((i) =>
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__split-dot ${ui.fig.group}__split-dot`,
+        service: "split-page",
+        dataset: { page: i },
+        uiHandler: [ui],
+      }),
+    ),
+  });
+}
+
 export function folderFilesView(ui) {
   const files =
     ui.getViewMode && ui.getViewMode() === _a.row
