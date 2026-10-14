@@ -734,6 +734,12 @@
     background: none;
   }
 
+  // The round buttons (back, search, more, the composer +) are bare on this
+  // tour's grey: no white fill.
+  .tutorial-phone__circle {
+    background: transparent;
+  }
+
   &[data-view="hero"] .tutorial-phone__body {
     padding: 24px;
   }
@@ -765,7 +771,6 @@
     min-height: 0;
     width: 100%;
     overflow: hidden;
-    border: 1px solid rgba(89, 80, 255, 0.1);
     border-radius: 20px;
     background: linear-gradient(180deg, rgba(93, 84, 255, 0.05) 0%, #5950ff 100%);
   }

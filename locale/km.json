@@ -3228,12 +3228,13 @@
   "TUTORIAL_SKIP": "រំលងការណែនាំ",
   "MESSAGE_TO": "សារទៅ…",
   "TUTORIAL_MIGRATE_FAB": "ចុចដើម្បីបន្ថែមឯកសារថ្មី",
-  "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "ប៉ះ + ដើម្បីភ្ជាប់ឯកសារ",
+  "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "ចុចដើម្បីភ្ជាប់ឯកសារ",
   "TUTORIAL_CHAT_PHONE_ATTACH_DESC": "ភ្ជាប់ឯកសារណាមួយក្នុងការជជែក ដើម្បីបើកខ្សែសន្ទនាអំពីវា។",
-  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "ចុចឱ្យជាប់លើសារ ដើម្បីឆ្លើយក្នុងខ្សែសន្ទនា",
+  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "ចុចឱ្យជាប់ ដើម្បីជ្រើសឆ្លើយក្នុងខ្សែសន្ទនា",
   "WS_TYPE_PHONE_INTERNAL_DESC": "ចែករំលែកជាមួយមនុស្សជាក់លាក់",
   "WS_TYPE_PHONE_EXTERNAL_DESC": "អ្នកណាដែលមានតំណតែមួយ",
   "TUTORIAL_WS_IN_DEPARTMENT": "បង្កើតក្នុងនាយកដ្ឋាន",
   "MIGRATE_PHONE_LINK_PLACEHOLDER": "បិទភ្ជាប់តំណ",
-  "MIGRATE_PHONE_VERIFY_IMPORT": "ផ្ទៀងផ្ទាត់ និងនាំចូល"
+  "MIGRATE_PHONE_VERIFY_IMPORT": "ផ្ទៀងផ្ទាត់ និងនាំចូល",
+  "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE": "ចាប់ផ្តើមពិភាក្សាអំពីឯកសារក្នុងខ្សែសន្ទនា"
 }

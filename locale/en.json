@@ -3459,12 +3459,13 @@
   "TUTORIAL_SKIP": "Skip tour",
   "MESSAGE_TO": "Message to…",
   "TUTORIAL_MIGRATE_FAB": "Click to add new files",
-  "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "Tap + to attach a file",
+  "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "Click to attach file",
   "TUTORIAL_CHAT_PHONE_ATTACH_DESC": "Attach any file in chat to open a thread about it. No more “which file are we talking about?”",
-  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Press and hold a message to reply in a thread",
+  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Press and hold to choose reply in threads",
   "WS_TYPE_PHONE_INTERNAL_DESC": "Shared with specific people",
   "WS_TYPE_PHONE_EXTERNAL_DESC": "Anyone with the unique link",
   "TUTORIAL_WS_IN_DEPARTMENT": "Create in department",
   "MIGRATE_PHONE_LINK_PLACEHOLDER": "Paste the link",
-  "MIGRATE_PHONE_VERIFY_IMPORT": "Verify & Import"
+  "MIGRATE_PHONE_VERIFY_IMPORT": "Verify & Import",
+  "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE": "Start to discuss about the file in chat thread"
 }

@@ -41,10 +41,11 @@ for (const [i, s] of SCREENS.entries()) {
   });
 }
 
-test("screen 2 lights the composer + with a halo and phone copy", () => {
+test("screen 2 lights the composer +, no halo, 18 clear, phone copy", () => {
   const p = SCREENS[1].phone;
   assert.equal(p.target, "ph-composer-plus");
-  assert.equal(p.halo, true);
+  assert.ok(!p.halo);
+  assert.equal(p.gap, 18);
   assert.equal(p.title(), "TUTORIAL_CHAT_PHONE_ATTACH_TITLE");
 });
 
@@ -68,7 +69,7 @@ test("index wires the phone skeleton", () => {
 test("every locale has the phone chat copy", () => {
   for (const l of ["en", "fr", "es", "ru", "zh", "km"]) {
     const j = require(path.join(__dirname, "..", "locale", `${l}.json`));
-    for (const k of ["TUTORIAL_CHAT_PHONE_ATTACH_TITLE", "TUTORIAL_CHAT_PHONE_ATTACH_DESC", "TUTORIAL_CHAT_PHONE_HOLD_TITLE"]) {
+    for (const k of ["TUTORIAL_CHAT_PHONE_ATTACH_TITLE", "TUTORIAL_CHAT_PHONE_ATTACH_DESC", "TUTORIAL_CHAT_PHONE_HOLD_TITLE", "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE"]) {
       assert.ok(j[k], `${l} ${k}`);
     }
   }
@@ -87,6 +88,7 @@ test("the last screen lights the whole composer row, the card above it", () => {
   const p = SCREENS[4].phone;
   assert.equal(p.target, "ph-composer-row");
   assert.equal(p.prefer, "above");
+  assert.equal(p.title(), "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE");
 });
 
 test("stream follows 386:56395: day pills, own reply first, no file message", () => {

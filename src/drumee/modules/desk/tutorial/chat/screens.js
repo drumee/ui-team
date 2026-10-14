@@ -31,8 +31,10 @@ const SCREENS = [
     phone: {
       view: 'stream',
       target: 'ph-composer-plus',
-      halo: true,
-      // Beside the +, bottoms level (386:56395): host-kit's corner placement.
+      // Beside the +, bottoms level, 18 clear (386:56395): host-kit's corner
+      // placement. No halo: the frame's soft-light ellipse is all but
+      // invisible, and the 32px white ring ran under the card's corner.
+      gap: 18,
       // A phone attaches with the +, it does not drag (386:56395).
       title: () => LOCALE.TUTORIAL_CHAT_PHONE_ATTACH_TITLE,
       desc: () => LOCALE.TUTORIAL_CHAT_PHONE_ATTACH_DESC,
@@ -100,7 +102,15 @@ const SCREENS = [
   },
   {
     // The whole composer row lit, the card over it (386:57195).
-    phone: { view: 'thread', target: 'ph-composer-row', replies: true, prefer: 'above', margin: 17, gap: 22 },
+    phone: {
+      view: 'thread',
+      target: 'ph-composer-row',
+      replies: true,
+      prefer: 'above',
+      margin: 17,
+      gap: 22,
+      title: () => LOCALE.TUTORIAL_CHAT_PHONE_DISCUSS_TITLE,
+    },
     // The thread, answered.
     pane: { thread: true, replies: true },
     target: 'thread',
