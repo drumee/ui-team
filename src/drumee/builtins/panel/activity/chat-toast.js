@@ -239,11 +239,16 @@ function buildCard(model, url, replacing) {
   const avatar = Skeletons.Box.Y({
     className: `${pfx}__avatar-wrap`,
     kids: [
-      Skeletons.Avatar(
-        (Visitor.avatar && Visitor.avatar(model.author_id)) || "default",
-        `${pfx}__avatar`,
-        senderLabel(model),
-      ),
+      // UserProfile, as the feed row draws its author: it shows the photo, or
+      // the initials when there is none. Avatar(Visitor.avatar(id)) is a bare
+      // background image, so a sender without a photo got an empty square.
+      Skeletons.UserProfile({
+        className: `${pfx}__avatar`,
+        id: model.author_id,
+        firstname: model.firstname,
+        lastname: model.lastname,
+        type: "thumb",
+      }),
       Skeletons.Box.X({
         className: `${pfx}__badge`,
         kids: [Skeletons.Image.Svg({ ico: "noti-chats-circle" })],
@@ -269,7 +274,6 @@ function buildCard(model, url, replacing) {
           Skeletons.Button.Svg({
             className: `${pfx}__close`,
             ico: _a.cross,
-            tooltips: LOCALE.CLOSE,
           }),
         ],
       }),
@@ -334,7 +338,6 @@ function buildScopePicker(model = {}, replacing, wsCount) {
             Skeletons.Button.Svg({
               className: `${pfx}__close`,
               ico: _a.cross,
-              tooltips: LOCALE.CLOSE,
             }),
           ],
         }),
@@ -385,7 +388,6 @@ function buildScopePicker(model = {}, replacing, wsCount) {
           Skeletons.Button.Svg({
             className: `${pfx}__close`,
             ico: _a.cross,
-            tooltips: LOCALE.CLOSE,
           }),
         ],
       }),

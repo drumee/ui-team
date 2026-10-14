@@ -1196,10 +1196,15 @@ html[data-theme="dark"] {
     height: 40px;
   }
 
+  // The chat toast draws a UserProfile here (photo or initials, clipped by
+  // overflow); the contact and task toasts still draw a background-image
+  // Avatar into the same class, hence background-size/position.
   &__avatar {
+    flex-shrink: 0;
     width: 40px;
     height: 40px;
     border-radius: 12px;
+    overflow: hidden;
     background-size: cover;
     background-position: center;
   }
