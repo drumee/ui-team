@@ -714,3 +714,159 @@
   .tutorial-chat__main { min-width: 0; }
   .tutorial-chat__bubble { max-width: 82%; }
 }
+
+// PHONE (chat/skeleton/phone.js; Figma 386:55913 → 386:57195).
+.tutorial-chat__ph {
+  &-msg {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+
+  &-msg[data-own="1"] {
+    align-items: flex-end;
+  }
+
+  &-from {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffd59e, #ffa8dc);
+  }
+
+  &-name {
+    font-size: 10px;
+    font-weight: 700;
+    color: #0b0a21;
+  }
+
+  &-bubble {
+    max-width: 85%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 16px;
+    background: #fff;
+    font-size: 14px;
+    line-height: 1.35;
+    color: #0b0a21;
+    white-space: pre-line;
+  }
+
+  &-msg[data-own="1"] &-bubble {
+    background: #ffa8dc;
+    border-top-right-radius: 4px;
+  }
+
+  &-time {
+    font-size: 10px;
+    color: #84848c;
+  }
+
+  &-attach {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+  }
+
+  &-attach-ico,
+  &-item-ico {
+    width: 18px;
+    height: 18px;
+    flex: none;
+  }
+
+  &-tiles {
+    display: flex;
+    gap: 8px;
+  }
+
+  &-tile {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 6px;
+    border-radius: 12px;
+    background: #f2f2f7;
+    font-size: 12px;
+    color: #0b0a21;
+  }
+
+  &-tile-ico {
+    width: 22px;
+    height: 22px;
+  }
+
+  &-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 40px;
+    font-size: 15px;
+    color: #0b0a21;
+  }
+
+  &-item[data-danger="1"] {
+    color: #e5484d;
+  }
+
+  &-thread-head {
+    display: flex;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 16px;
+    border-radius: 16px;
+    background: #fff;
+  }
+
+  &-thread-clip {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: #eeedff;
+  }
+
+  &-thread-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &-thread-file {
+    font-size: 15px;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &-thread-sum {
+    font-size: 12px;
+    color: #65656c;
+  }
+
+  &-thread-open {
+    font-size: 13px;
+    font-weight: 600;
+    color: #5950ff;
+  }
+
+  &-hero-card {
+    padding: 16px;
+    zoom: 0.8;
+  }
+}

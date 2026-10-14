@@ -3459,5 +3459,8 @@
   "DESIGNATION_LINK_NO_ACCESS": "Impossible d'ouvrir ce lien : ce compte n'est pas membre de son espace de travail. Connectez-vous avec un compte membre ou demandez à l'administrateur de l'espace de vous ajouter.",
   "TUTORIAL_SKIP": "Passer la visite",
   "MESSAGE_TO": "Message à…",
-  "TUTORIAL_MIGRATE_FAB": "Cliquez pour ajouter des fichiers"
+  "TUTORIAL_MIGRATE_FAB": "Cliquez pour ajouter des fichiers",
+  "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "Touchez + pour joindre un fichier",
+  "TUTORIAL_CHAT_PHONE_ATTACH_DESC": "Joignez un fichier dans le chat pour ouvrir une discussion à son sujet. Fini les « de quel fichier parle-t-on ? »",
+  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Appuyez longuement sur un message pour répondre dans une discussion"
 }

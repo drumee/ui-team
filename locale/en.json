@@ -3458,5 +3458,8 @@
   "DESIGNATION_LINK_NO_ACCESS": "You can't open this link: this account isn't a member of its workspace. Sign in with a member account, or ask the workspace admin to add you.",
   "TUTORIAL_SKIP": "Skip tour",
   "MESSAGE_TO": "Message to…",
-  "TUTORIAL_MIGRATE_FAB": "Click to add new files"
+  "TUTORIAL_MIGRATE_FAB": "Click to add new files",
+  "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "Tap + to attach a file",
+  "TUTORIAL_CHAT_PHONE_ATTACH_DESC": "Attach any file in chat to open a thread about it. No more “which file are we talking about?”",
+  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Press and hold a message to reply in a thread"
 }
