@@ -97,3 +97,21 @@ test("fab can be made live (a step's own control)", () => {
   assert.equal(f.dataset.menu, "fab");
   assert.equal(ph.fab(ui).active, 0, "inert by default");
 });
+
+test("syncDeck: dots follow a native swipe, and it cleans up", () => {
+  const handlers = {};
+  const deck = {
+    scrollLeft: 0, clientWidth: 300,
+    addEventListener: (n, f) => { handlers[n] = f; },
+    removeEventListener: (n) => { delete handlers[n]; },
+  };
+  const dots = { children: [{ dataset: {} }, { dataset: {} }, { dataset: {} }] };
+  const seen = [];
+  const off = ph.syncDeck(deck, dots, (i) => seen.push(i));
+  deck.scrollLeft = 610; // past the middle of card 2
+  handlers.scroll();
+  assert.deepEqual(seen, [2]);
+  assert.deepEqual(dots.children.map((d) => d.dataset.active), ["0", "0", "1"]);
+  off();
+  assert.equal(handlers.scroll, undefined);
+});

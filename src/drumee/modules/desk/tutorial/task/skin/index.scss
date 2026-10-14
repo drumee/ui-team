@@ -244,3 +244,30 @@
     background: var(--primary-purple-50);
   }
 }
+
+// PHONE (task/skeleton/phone.js; Figma 386:57322): a white card per view,
+// the gradient well holding the preview, a caption under it.
+.tutorial-task__ph-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 12px 16px;
+  border-radius: 24px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+}
+
+.tutorial-task__ph-well {
+  height: 300px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(93, 84, 255, 0.05), #5950ff);
+  zoom: 0.6;
+}
+
+.tutorial-task__ph-caption {
+  font-size: 18px;
+  text-align: center;
+  color: #000;
+}

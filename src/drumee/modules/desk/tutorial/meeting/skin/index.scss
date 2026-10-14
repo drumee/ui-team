@@ -234,3 +234,48 @@
     background: var(--primary-purple-50);
   }
 }
+
+// PHONE (meeting/skeleton/phone.js; Figma 386:58198 / 386:58622): the
+// preview well, then its feature row — a lilac icon tile, a title, a line.
+.tutorial-meeting__ph-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tutorial-meeting__ph-well {
+  height: 306px;
+  overflow: hidden;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(93, 84, 255, 0.05), #5950ff);
+  zoom: 0.6;
+}
+
+.tutorial-meeting__ph-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.tutorial-meeting__ph-feature-ico {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #eeedff;
+}
+
+.tutorial-meeting__ph-feature-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0b0a21;
+}
+
+.tutorial-meeting__ph-feature-desc {
+  font-size: 14px;
+  color: #65656c;
+}

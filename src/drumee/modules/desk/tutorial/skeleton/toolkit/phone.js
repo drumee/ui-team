@@ -222,4 +222,31 @@ function screen(ui, { top = null, body = [], bottom = null, fab: f = null, overl
   });
 }
 
-module.exports = { P, topBar, tabBar, fab, composer, sheet, swipeDeck, hero, screen };
+/**
+ * Keep a swipeDeck's dots on the card the user swiped to.
+ *
+ * The deck scrolls natively (scroll-snap), so the dots are the one thing that
+ * has to be told — on every scroll, from scrollLeft over one card's width.
+ *
+ * @param {Element} deck  the ph-deck element
+ * @param {Element} dots  the ph-dots element
+ * @param {Function} [onIndex] told the card index whenever it changes
+ * @returns {Function} removes the listener
+ */
+function syncDeck(deck, dots, onIndex) {
+  if (!deck || !dots || typeof deck.addEventListener !== 'function') return () => {};
+  let at = -1;
+  const onScroll = () => {
+    const w = deck.clientWidth || 1;
+    const n = dots.children ? dots.children.length : 0;
+    const i = Math.max(0, Math.min(n - 1, Math.round(deck.scrollLeft / w)));
+    if (i === at) return;
+    at = i;
+    for (let k = 0; k < n; k++) dots.children[k].dataset.active = k === i ? '1' : '0';
+    if (onIndex) onIndex(i);
+  };
+  deck.addEventListener('scroll', onScroll, { passive: true });
+  return () => deck.removeEventListener('scroll', onScroll);
+}
+
+module.exports = { P, topBar, tabBar, fab, composer, sheet, swipeDeck, hero, screen, syncDeck };
