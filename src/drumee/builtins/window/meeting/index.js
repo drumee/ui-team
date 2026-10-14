@@ -1,6 +1,7 @@
 const __room = require("builtins/webrtc/room/jitsi");
 const { planShareStrip } = require("builtins/webrtc/share-strip");
 const { canUpgradePlan } = require("libs/billing");
+const { MemberCalls, inviteRang } = require("./member-call");
 const {
   mediaDeviceLabel,
   isMediaPermissionError,
@@ -492,6 +493,8 @@ class __window_meeting extends __room {
     // raise the upsell card at someone who has already left.
     this._clearMeetingDeadline();
     this._unbindResizeObserver();
+    // Roster ring / outcome timers (member-call.js).
+    if (this._memberCalls) this._memberCalls.dispose();
     // Cancel any pending hand-raise auto-clear timers so they can't fire after
     // teardown.
     if (this._handTimers) {
@@ -966,7 +969,8 @@ class __window_meeting extends __room {
   }
 
   _markMemberJoined(drumate_id) {
-    if (!this._memberCallStates) this._memberCallStates = new Map();
+    // Joined ends any ring for them — stop its no-answer timer first.
+    this._calls().clear(drumate_id);
     this._memberCallStates.set(String(drumate_id), "joined");
     this._refreshMember(drumate_id);
   }
@@ -1005,6 +1009,7 @@ class __window_meeting extends __room {
     // No tile for them (joined without media, or already torn down) — the
     // roster entry can still be stale, so clear it on its own.
     if (this._memberCallStates && this._memberCallStates.has(key)) {
+      this._calls().clear(key);
       this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
@@ -1045,6 +1050,7 @@ class __window_meeting extends __room {
     if (super.onUserLeft) super.onUserLeft(id);
     if (uid != null) {
       const key = String(uid);
+      this._calls().clear(key);
       if (this._memberCallStates) this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
@@ -2040,23 +2046,47 @@ class __window_meeting extends __room {
       .catch(() => {});
   }
 
+  // The roster's ring state machine (member-call.js), bound to the Map the
+  // member skeleton reads. Rebuilt if that Map is ever replaced.
+  _calls() {
+    if (!this._memberCallStates) this._memberCallStates = new Map();
+    if (!this._memberCalls || this._memberCalls.states !== this._memberCallStates) {
+      if (this._memberCalls) this._memberCalls.dispose();
+      this._memberCalls = new MemberCalls(this._memberCallStates, {
+        refresh: (key) => {
+          if (!this.isDestroyed()) this._refreshMember(key);
+        },
+      });
+    }
+    return this._memberCalls;
+  }
+
+  // Ring a member from the roster. The row shows "Call in progress" until they
+  // join, decline (onInviteDeclined), or the ring times out — and an invite
+  // that reached none of their sessions says so at once instead of ringing
+  // nobody. Any outcome but "joined" leaves the row callable again.
   async _inviteToRoom(callee) {
     if (!callee) return;
     const guest_id = callee.drumate_id || callee.entity_id || callee.uid || callee.id;
     if (!guest_id) return;
-    const key = String(guest_id);
-    const state = this._memberCallStates && this._memberCallStates.get(key);
-    if (state === "calling" || state === "joined") return;
-    if (!this._memberCallStates) this._memberCallStates = new Map();
-    this._memberCallStates.set(key, "calling");
-    this._refreshMember(guest_id);
+    const calls = this._calls();
+    if (!calls.start(guest_id)) return;
+    let result;
     try {
-      await this.sendRoomSignaling(SERVICE.conference.invite, { guest_id });
+      result = await this.sendRoomSignaling(SERVICE.conference.invite, { guest_id });
     } catch (e) {
-      this._memberCallStates.delete(key);
-      this._refreshMember(guest_id);
       if (this.warn) this.warn("conference.invite failed", e);
+      if (!this.isDestroyed()) calls.fail(guest_id);
+      return;
     }
+    if (this.isDestroyed()) return;
+    if (!inviteRang(result)) calls.end(guest_id, "offline");
+  }
+
+  // conference.decline from a member we rang (push.js dispatchSignaling).
+  onInviteDeclined(uid) {
+    if (uid == null || this.isDestroyed()) return;
+    this._calls().end(uid, "declined");
   }
 
   // Re-render only the affected member row so call-state / hand-raise /

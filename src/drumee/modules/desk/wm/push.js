@@ -1325,6 +1325,16 @@ class __push_manager extends winman {
    *
    */
   dispatchSignaling(service, data) {
+    // A member we rang from a meeting roster declined: that ring belongs to the
+    // meeting window, not to a 1:1 call.
+    if (service === SERVICE.conference.decline && data && data.room_type == _a.meeting) {
+      for (const w of Wm.getItemsByKind("window_meeting") || []) {
+        if (!w || w.isDestroyed() || typeof w.onInviteDeclined !== "function") continue;
+        if (w.mget(_a.room_id) != data.room_id && w.mget(_a.hub_id) != data.hub_id) continue;
+        w.onInviteDeclined(data.uid);
+      }
+      return;
+    }
     const currentRoom = Wm.getItemByKind("window_connect");
     if (!currentRoom || currentRoom.isDestroyed()) {
       return;
