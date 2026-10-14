@@ -578,6 +578,23 @@ $card-scale: 0.85;
     opacity: 0.2;
   }
 
+  // Every button here is a Note: its label is an inner .note-content, and
+  // ui-core may lay the Note out as a flex row — text-align on the button
+  // alone then leaves the label hugging the left. Centre both ways.
+  &__create,
+  &__send,
+  &__skip,
+  &__modal-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .note-content {
+      width: 100%;
+      text-align: center;
+    }
+  }
+
   // ── 385:1364 invite ────────────────────────────────────────────────────────
   &__invite {
     position: absolute;

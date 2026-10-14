@@ -195,3 +195,13 @@ test("real create step has exactly one error slot", () => {
   (function walk(t) { if (t && typeof t === "object") { if (t.sys_pn === "wsd-name-error") n++; (t.kids || []).forEach(walk); } })(tree);
   assert.equal(n, 1);
 });
+
+test("buttons centre their label whatever display ui-core gives a Note", () => {
+  const sass = require("sass");
+  const css = sass.compile(path.join(SRC, "modules/desk/tutorial/workspace/skin/index.scss"),
+    { loadPaths: [SRC, path.join(SRC, "skin")] }).css.replace(/\s+/g, " ");
+  for (const b of ["create", "send", "skip", "modal-btn"]) {
+    assert.match(css, new RegExp(`\\.tutorial-wsp__${b}[^{]*\\{[^}]*justify-content: center`), `${b} justify`);
+    assert.match(css, new RegExp(`\\.tutorial-wsp__${b} \\.note-content[^{]*\\{[^}]*text-align: center`), `${b} label`);
+  }
+});
