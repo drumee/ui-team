@@ -116,6 +116,23 @@
     border-bottom: 1px solid var(--border-default);
   }
 
+  // The header is the drag handle (see _bindDrag). No text selection while
+  // dragging, and no browser panning so a touch drag reaches the handler.
+  // Desktop only: on mobile the card is a pinned sheet and does not move.
+  // Same 650px line as the mobile sheet below and _canDrag().
+  @media (min-width: 651px) {
+    &__ui:not([data-device="mobile"]) &__header {
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+
+    &__ui:not([data-device="mobile"])[data-dragging="1"] &__header {
+      cursor: grabbing;
+    }
+  }
+
   &__header-left {
     display: flex;
     align-items: center;
