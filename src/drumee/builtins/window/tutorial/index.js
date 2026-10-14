@@ -243,11 +243,16 @@ class __window_tutorial extends LetcBox {
     // real folder window is full-bleed there anyway (mobile-fullscreen-window).
     if (this._layout === 'phone' && this.el && this.el.style) {
       const st = this.el.style;
+      // All four edges, NOT 100vw/100dvh: the overlay this sits in is already
+      // the viewport (fixed, inset 0), and 100dvh measured 44px short of it
+      // on a 440x956 phone — the desk showed through below the tour.
       st.position = 'fixed';
       st.left = '0';
       st.top = '0';
-      st.width = '100vw';
-      st.height = '100dvh';
+      st.right = '0';
+      st.bottom = '0';
+      st.width = 'auto';
+      st.height = 'auto';
       st.borderRadius = '0';
       st.overflow = 'hidden';
       return true;
@@ -260,6 +265,9 @@ class __window_tutorial extends LetcBox {
     if (!box.width || !box.height) return false;
     const st = this.el.style;
     st.position = 'absolute';
+    // The phone branch pins all four edges; a rotation back to desk clears two.
+    st.right = '';
+    st.bottom = '';
     st.left = `${box.left - host.left}px`;
     st.top = `${box.top - host.top}px`;
     st.width = `${box.width}px`;
