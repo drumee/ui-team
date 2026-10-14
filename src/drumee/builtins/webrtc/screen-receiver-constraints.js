@@ -1,9 +1,13 @@
 // Screen-share quality knobs shared by the configs and the room.
 //
 // SCREEN_FPS: a max of 5 is not just "5 fps" in lib-jitsi-meet — max <= 5
-// switches on capScreenshareBitrate, a single 500 kbps layer the bridge can
-// only thin by dropping frames. Above 5 the share is sent as normal layers.
-const SCREEN_FPS = { min: 5, max: 15 };
+// switches on capScreenshareBitrate: one layer, degradationPreference
+// 'maintain-resolution', sent at videoQuality.desktopbitrate (500 kbps only
+// when that is unset). Above 5 the share becomes simulcast with
+// 'maintain-framerate': under CPU or bandwidth pressure the encoder drops the
+// resolution and climbs back, and the viewer's screen zooms in and out every
+// few seconds. Sharp, stable text beats frame rate for a shared screen.
+const SCREEN_FPS = { min: 5, max: 5 };
 
 // Ask the bridge for the shared screen in full and everything else small.
 // Without this the screen is a thumbnail-priority source like any camera.
