@@ -3456,5 +3456,6 @@
   "RECENTLY_VIEWED": "Recently viewed",
   "OTHER_FILES": "Other files",
   "DESIGNATION_LINK_NO_ACCESS": "You can't open this link: this account isn't a member of its workspace. Sign in with a member account, or ask the workspace admin to add you.",
-  "TUTORIAL_SKIP": "Skip tour"
+  "TUTORIAL_SKIP": "Skip tour",
+  "MESSAGE_TO": "Message to…"
 }

@@ -1,0 +1,285 @@
+// The phone mock (skeleton/toolkit/phone.js) — Drumee Mobile frames, Figma
+// WtPX8Cj8PO9sjD6TRLeOQL section 380:53148. Tokens are the frames' own; safe
+// areas come from env() rather than the iOS 48/32px drawn in the frames.
+@use "mixins/drumee";
+
+.tutorial-phone {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f2f2f7;
+  font-family: Geist, var(--font-family, sans-serif);
+  overflow: hidden;
+
+  &__status {
+    height: env(safe-area-inset-top, 0px);
+    flex: none;
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    flex: none;
+  }
+
+  &__circle,
+  &__avatar {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
+
+  &__circle-ico {
+    width: 20px;
+    height: 20px;
+  }
+
+  &__avatar {
+    background: linear-gradient(135deg, #ffa8dc, #5950ff);
+  }
+
+  &__title {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    border-radius: 40px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    font-size: 14px;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__title-ico,
+  &__title-caret {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+
+  &__title-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 24px 24px;
+  }
+
+  &__bottom {
+    flex: none;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 8px);
+  }
+
+  &__bottom > &__circle {
+    width: 54px;
+    height: 54px;
+  }
+
+  &__tabs,
+  &__search {
+    flex: 1;
+    height: 66px;
+    border-radius: 40px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 8px;
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
+
+  &__search {
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 0 20px;
+    color: #84848c;
+    font-size: 16px;
+  }
+
+  &__search-ico,
+  &__tab-ico {
+    width: 20px;
+    height: 20px;
+  }
+
+  &__tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-size: 11px;
+    color: #65656c;
+  }
+
+  &__tab[data-active="1"] {
+    background: #eeedff;
+    color: #433cc5;
+  }
+
+  &__fab {
+    position: absolute;
+    right: 16px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px + 66px + 16px);
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: #5950ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+
+  &__fab-ico {
+    width: 24px;
+    height: 24px;
+    color: #fff;
+  }
+
+  &__composer-row {
+    flex: none;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 16px calc(env(safe-area-inset-bottom, 0px) + 8px);
+  }
+
+  &__composer {
+    flex: 1;
+    height: 44px;
+    border-radius: 40px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 16px;
+    color: #84848c;
+  }
+
+  &__sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 17px 17px calc(env(safe-area-inset-bottom, 0px) + 41px);
+    background: #fff;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -2px 18px rgba(0, 0, 0, 0.12);
+  }
+
+  &__sheet-title {
+    font-size: 20px;
+    line-height: 1.1;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding-top: 24px;
+    text-align: center;
+  }
+
+  &__hero-title {
+    font-size: 32px;
+    line-height: 1.1;
+    font-weight: 600;
+    color: #34343a;
+  }
+
+  &__hero-desc {
+    font-size: 18px;
+    line-height: 1.2;
+    color: #34343a;
+  }
+
+  &__hero-cta {
+    height: 48px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    background: #433cc5;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    cursor: pointer;
+  }
+
+  &__deck-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__deck {
+    display: flex;
+    gap: 32px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    touch-action: pan-x pan-y;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__card {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(93, 84, 255, 0.05), #5950ff);
+    border: 1px solid rgba(89, 80, 255, 0.1);
+  }
+
+  &__dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  &__dot[data-active="1"] {
+    width: 24px;
+    background: #5950ff;
+  }
+}

@@ -3457,5 +3457,6 @@
   "RECENTLY_VIEWED": "Consultés récemment",
   "OTHER_FILES": "Autres fichiers",
   "DESIGNATION_LINK_NO_ACCESS": "Impossible d'ouvrir ce lien : ce compte n'est pas membre de son espace de travail. Connectez-vous avec un compte membre ou demandez à l'administrateur de l'espace de vous ajouter.",
-  "TUTORIAL_SKIP": "Passer la visite"
+  "TUTORIAL_SKIP": "Passer la visite",
+  "MESSAGE_TO": "Message à…"
 }
