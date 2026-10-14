@@ -329,6 +329,8 @@ function weeklyGrid(ui, pfx) {
 }
 
 // ── Monthly grid: weekday header + weeks of day cells ─────────────────────
+// Header and cell: Figma 1693:181977, the month cell the Personal and Task
+// calendars draw too.
 function monthlyGrid(ui, pfx) {
   const anchor = schedState(ui).anchor;
   const monthStart = anchor.startOf("month");
@@ -339,10 +341,11 @@ function monthlyGrid(ui, pfx) {
   // Scheduling is an edit-tier action: the same test toolbarKids uses to drop
   // the "Schedule" button (canUpload, absent → allowed).
   const mayStart = typeof ui.canUpload !== "function" ? true : !!ui.canUpload();
+  // 12-hour start ("1:30 PM"), as the schedule card in Figma writes it.
   const monthCard = (m) =>
     Skeletons.Note({
       className: `${pfx}-sched-mcard`,
-      content: `${m.start.format("HH:mm")} ${m.title}`,
+      content: `${m.start.format("h:mm A")} ${m.title}`,
       // Opens the meeting — and never also the day square behind it.
       bubble: 0,
       service: "open-meeting",
@@ -358,11 +361,11 @@ function monthlyGrid(ui, pfx) {
       Skeletons.Box.Y({
         className: `${pfx}-sched-day`,
         kids: [
+          // Short day names ("Sun") at every width, centred (skin) — the
+          // month header all three calendars draw (Figma 1697:48528).
           Skeletons.Note({
             className: `${pfx}-sched-day-name`,
-            content: gridStart.add(i, "day").format("dddd"),
-            // Shown instead of the full name on a narrow panel (skin).
-            attrOpt: { "data-short": gridStart.add(i, "day").format("ddd") },
+            content: gridStart.add(i, "day").format("ddd"),
           }),
         ],
       }),
@@ -387,12 +390,16 @@ function monthlyGrid(ui, pfx) {
           // on its 09:00 default. Only for a viewer who may schedule, the same
           // gate as the Schedule button.
           //
-          // The date is inert (`active: 0`), or it would take the click on its
-          // own line — ui-core stops propagation before triggerHandlers. The
-          // cards keep their own service and open their meeting instead.
+          // The date line is inert (`active: 0`), or it would take the click
+          // on its own area — ui-core stops propagation before triggerHandlers.
+          // The cards keep their own service and open their meeting instead,
+          // and the hover "+" schedules exactly as the square does.
           const addable = mayStart
             ? { bubble: 0, service: "sched-new-at", day: ds, uiHandler: [ui] }
             : {};
+          // Top-right, no leading zero, the first of a month naming its month
+          // ("Jun 1") — the date rule all three month grids share.
+          const dateText = d.date() === 1 ? d.format("MMM D") : d.format("D");
           return Skeletons.Box.Y({
             className: `${pfx}-sched-mcell`,
             ...addable,
@@ -403,10 +410,33 @@ function monthlyGrid(ui, pfx) {
               "data-add": mayStart ? "1" : "0",
             },
             kids: [
-              Skeletons.Note({
-                className: `${pfx}-sched-mnum`,
-                content: pad2(d.date()),
+              // Right-packed: the hover "+" (viewers who may schedule only),
+              // then the date. A text glyph, not the `plus` sprite, which
+              // cannot be recoloured across the <use> boundary.
+              Skeletons.Box.X({
+                className: `${pfx}-sched-mhead`,
                 active: 0,
+                kids: [
+                  mayStart
+                    ? Skeletons.Box.X({
+                        className: `${pfx}-sched-madd`,
+                        ...addable,
+                        // Inert glyph, or it takes the click and nothing fires.
+                        kidsOpt: { active: 0 },
+                        kids: [
+                          Skeletons.Note({
+                            className: `${pfx}-sched-madd-ico`,
+                            content: "+",
+                          }),
+                        ],
+                      })
+                    : null,
+                  Skeletons.Note({
+                    className: `${pfx}-sched-mnum`,
+                    content: dateText,
+                    active: 0,
+                  }),
+                ].filter(Boolean),
               }),
               ...dayMeetings(d).map(monthCard),
             ],

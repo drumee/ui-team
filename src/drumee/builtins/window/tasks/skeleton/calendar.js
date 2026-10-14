@@ -9,9 +9,11 @@
 // (window/folder/skeleton/meeting-schedule.js) are the three calendars a user
 // moves between, and the Meet tab's is the reference the other two follow: the
 // [ ‹ range › ] pill whose label opens a mini calendar, a Month / Week / Day
-// dropdown, the same locale keys (CAL_VIEW_*) and range wording, and the same
-// month cell — full day names over it, the date top-left as "07", today in
-// brand ink, one-line 19px cards.
+// dropdown, the same locale keys (CAL_VIEW_*) and range wording. The month
+// cell all three draw is Figma 1693:181977's: short day names centred over an
+// unruled header ("Sun"), the date top-right without a leading zero ("7",
+// "Jun 1" on the first of a month), a hover "+" beside it, outside-month
+// dates dimmed and today in brand ink.
 //
 // What deliberately stays its own: there is no hour canvas here. A task's
 // due_date is a calendar DATE with no time, so an hour grid would be 24 empty
@@ -31,8 +33,9 @@ const VIEWS = [
 
 // How many compact chips stand in a month cell at rest. It only LABELS the
 // "+N" — every task renders and the cell scrolls — so it has to agree with the
-// cell geometry in the skin (--tcal-cell-min, the 19px chip, the 2px gap), the
-// same coupling the Personal Calendar documents for its own MONTH_FIT.
+// cell geometry in the skin: --tcal-cell-min (139px) is three 19px chips on
+// 4px gaps plus the pinned 18px "+N", under the 12px padding and the 20px date
+// line with its 10px gap. The derivation is next to that token.
 const MONTH_FIT = 3;
 
 /** The active view, validated — anything unknown falls back to the month. */
@@ -330,10 +333,9 @@ module.exports = function (ui) {
     const k = ymd(d);
     const inMonth = mode !== "month" || d.month() === anchorMonth;
     const list = byDay[k] || [];
-    // Two digits, top-left, as the Meet tab's month cell draws it ("07"). The
-    // month boundary is carried by the dimmed outside-month dates, not by a
-    // "Jun 1" abbreviation on the first.
-    const numText = d.format("DD");
+    // Top-right, no leading zero ("7"); the first of a month names its month
+    // ("Jun 1"). Outside-month dates still dim.
+    const numText = d.date() === 1 ? d.format("MMM D") : d.format("D");
     // The whole square adds a task due that day — the month cell and the
     // week/day column alike, the way the Personal Calendar's squares do.
     //
@@ -365,15 +367,14 @@ module.exports = function (ui) {
           ? Skeletons.Box.X({
               className: `${pfx}__cal-day-head`,
               active: 0,
-              // The date where the Meet tab puts it (left), the hover "+"
-              // on the right.
+              // Right-packed: the hover "+", then the date in the corner.
               kids: [
+                addBtn(k),
                 Skeletons.Note({
                   className: `${pfx}__cal-day-num`,
                   content: numText,
                   active: 0,
                 }),
-                addBtn(k),
               ].filter(Boolean),
             })
           : null,
@@ -383,8 +384,9 @@ module.exports = function (ui) {
   };
 
   // ── Column header ───────────────────────────────────────────
-  // Month: full weekday names, left-aligned, in a ruled header row — the Meet
-  // tab's month header. Its week/day header names the day in full too.
+  // Month: short weekday names ("Sun"), centred, above the ruled grid — the
+  // month header all three calendars draw. The week/day header names the
+  // day in full.
   //
   // Week / day: the date itself, num over name — the Personal Calendar's and
   // the Meet tab's week/day header — with today marked by inking the NUMBER.
@@ -403,7 +405,7 @@ module.exports = function (ui) {
       mode === "month"
         ? Skeletons.Note({
             className: `${pfx}__cal-weekday`,
-            content: d.format("dddd"),
+            content: d.format("ddd"),
           })
         : Skeletons.Box.X({
             className: `${pfx}__cal-headday`,

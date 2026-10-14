@@ -5643,11 +5643,13 @@ $theme-colors: (
     animation: tasks-cal-fade 0.16s ease;
     // A month row's FLOOR (rows share the grid's height above it, as the Meet
     // tab's do). skeleton/calendar.js MONTH_FIT = 3 is measured against it:
-    // 16px of padding, a 20px date line and a 2px gap, then three 19px chips
-    // on 2px gaps (61px) and the pinned "+N" — 117px, so 118. The Personal
-    // Calendar's --cal-cell-min is the same number for the same reason. Change
-    // one, change the other.
-    --tcal-cell-min: 118px;
+    // 24px of padding, the 20px date line and its 10px gap (54px), then three
+    // 19px chips on the body's 4px gaps (65px), 2px (the 4px gap less the
+    // footer's -2px margin) and the pinned 18px "+N" — 139px. At that height
+    // the third chip ends 2px above the footer and the fourth starts under
+    // it, so "+N" counts exactly what is out of sight. Change the cell
+    // padding, the date line, the chip or the gap and this goes stale.
+    --tcal-cell-min: 139px;
   }
 
   // The fade above is for a view switch or a new range. The same range
@@ -5669,20 +5671,26 @@ $theme-colors: (
     border-bottom: 0;
   }
 
-  // Centred over its column, as the Personal Calendar and the Meet tab draw
-  // it (this one alone right-aligned its labels). Note is a flex row, so the
-  // centring is justify-content on the wrapper, not text-align.
-  // Full day names, left-aligned, 12px padding — the Meet tab's month header.
-  // A Note is a flex row, so the ellipsis has to be set on .note-content, not
-  // on the wrapper (note-widget-is-a-flex-row).
+  // The month header sits ABOVE the ruled grid (Figma 1697:48528), unruled;
+  // the grid's own border is its top rule. Week and day keep the ruled row.
+  &__calendar[data-mode="month"] &__cal-weekdays {
+    gap: 0;
+    background: none;
+    border: 0;
+  }
+
+  // Short day names, centred over the column, 14/1.2 grey, 12px above the
+  // grid — the month header all three calendars draw. A Note is a flex row,
+  // so the centring is justify-content and the ellipsis has to be set on
+  // .note-content, not on the wrapper (note-widget-is-a-flex-row).
   &__cal-weekday {
     flex: 1 1 0;
     min-width: 0;
-    padding: 12px;
+    padding: 0 4px 12px;
     box-sizing: border-box;
+    justify-content: center;
     overflow: hidden;
-    background: var(--normal-bg-elevated, #fff);
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
     font-weight: 400;
 
     .note-content {
@@ -5728,9 +5736,9 @@ $theme-colors: (
     overflow: hidden;
   }
 
-  // A white cell, no hover wash — the Meet tab's cells. Week and day keep the
-  // 12px their full cards need; the month cell is the Meet tab's 8px 10px with
-  // 2px between the date and its chips.
+  // A white cell, no hover wash. Week and day keep the 12px their full cards
+  // need; the month cell is Figma 1697:48545's 12px with 10px between the
+  // date line and its chips (the chips keep their own gap).
   &__cal-day {
     flex: 1 1 0;
     min-width: 0;
@@ -5742,8 +5750,8 @@ $theme-colors: (
   }
 
   &__calendar[data-mode="month"] &__cal-day {
-    padding: 8px 10px;
-    gap: 2px;
+    padding: 12px;
+    gap: 10px;
   }
 
   // The whole square adds a task (skeleton/calendar.js dayCell) — for a viewer
@@ -5819,20 +5827,38 @@ $theme-colors: (
     opacity: 1;
   }
 
+  // The month cell's 20px date line, packed right: the hover "+", 10px, then
+  // the date in the corner (Figma 1693:180986).
   &__cal-day-head {
     flex: 0 0 auto;
-    justify-content: space-between;
+    height: 20px;
+    justify-content: flex-end;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
-  // Hover-revealed "add task on this day" affordance (top-left of the cell) —
-  // the Personal Calendar's quick-add: a 26px box with a 22px glyph and a wash
-  // on hover. It was a bare 17px brand "+" that scaled itself on hover, which
-  // made the same control look and move differently in two tabs.
+  // In the month cell the "+" is Figma 1693:180987's 20px circle on the 5%
+  // wash. Scoped to the date line: the week/day column header shares
+  // __cal-day-add and keeps its 26px box.
+  &__cal-day-head &__cal-day-add {
+    margin: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--overlay-bg-05);
+  }
+
+  &__cal-day-head &__cal-day-add-ico {
+    @include drumee.typo($size: 18px, $line: 20px, $color: var(--normal-fg));
+  }
+
+  // Hover-revealed "add task on this day" affordance. This base is the
+  // week/day column header's: a 26px box with a 22px glyph and a wash on
+  // hover, beside the date. The month cell's date line restyles it as the
+  // 20px circle above.
   &__cal-day-add {
     flex: 0 0 auto;
-    // Kept from growing the 20px date line it shares a row with.
+    // Kept from growing the header's date row it shares a line with.
     margin: -3px -4px -3px 0;
     width: 26px;
     height: 26px;
@@ -5853,14 +5879,12 @@ $theme-colors: (
     user-select: none;
   }
 
-  // A plain label, as in the other two month grids. nowrap: the first cell of
-  // a month reads "Sep 1", and beside the 26px "+" a narrow cell broke it onto
-  // two lines and pushed the chips down a row.
-  // Top-left, two digits, in body ink — the Meet tab's month date.
+  // Top-right, 14/1.2 regular in grey ink, as in the other two month grids.
+  // nowrap: the first cell of a month reads "Sep 1", and beside the "+" a
+  // narrow cell broke it onto two lines and pushed the chips down a row.
   &__cal-day-num {
     white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
     font-weight: 400;
   }
 
@@ -9725,7 +9749,7 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     display: none;
   }
   .tasks-panel__cal-weekday {
-    padding: 8px;
+    padding: 0 4px 8px;
     font-size: 12px;
   }
 }
