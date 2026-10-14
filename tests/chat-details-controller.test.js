@@ -215,6 +215,11 @@ test("mute: posts this hub, repaints Unmute only when the server confirms", asyn
   w.muteReply = { status: "ok", global: 0, hubs: ["h1"] };
   await C.toggleMute(w);
   assert.ok(texts(w.panel.fed.at(-1)).includes(en.CD_UNMUTE));
+  // Unmute with no global mute: no question, just this hub's row.
+  w.muteReply = { status: "ok", global: 0, hubs: [] };
+  await C.toggleMute(w);
+  assert.deepEqual(w.posts.at(-1), ["activity.mute_set", { hub_id: "h1", muted: 0 }]);
+  assert.ok(!texts(w.panel.fed.at(-1)).includes(en.CD_UNMUTE));
 });
 
 // Clicking a tile / file / link row shows a loading state on THAT item until

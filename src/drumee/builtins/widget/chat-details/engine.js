@@ -184,10 +184,43 @@ function close(win) {
   }
 }
 
+/**
+ * Lift every mute that silences this chat. Besides its own row, the global
+ * "Mute notifications" (account menu) silences it too — isMuted counts that —
+ * so clearing only the chat's row left the tile on "Unmute" for good. The
+ * global mute covers every chat, so ask before turning it off.
+ * Resolves true when any write landed.
+ */
+async function unmute(win, m) {
+  let landed = false;
+  if (Mute.muteState().global) {
+    const go = await Wm.confirm({
+      title: LOCALE.CD_UNMUTE_ALL_TITLE,
+      message: LOCALE.CD_UNMUTE_ALL_MESSAGE,
+      confirm: LOCALE.CD_UNMUTE_ALL_CONFIRM,
+      cancel: LOCALE.CANCEL,
+      cancel_type: "secondary",
+      mode: "hbf",
+    }).then(() => true, () => false);
+    if (!go) return false;
+    landed = (await Mute.setMute(win, "", false)).ok;
+    // Asked and answered "yes": a write that did not land must say so, as the
+    // account menu's Mute notifications row does.
+    if (!landed) {
+      Wm.alert(LOCALE.MUTE_FAILED);
+      return false;
+    }
+    // The server also clears the person mutes with the global one; the chat's
+    // own row is only left on an older server.
+    if (!m.isMuted(win)) return true;
+  }
+  return (await m.set(win, false)).ok || landed;
+}
+
 async function toggleMute(win) {
   // What Mute acts on is the mode's: the workspace, or the person (modes).
   const m = modeOf(win).mute;
-  const { ok } = await m.set(win, !m.isMuted(win));
+  const ok = m.isMuted(win) ? await unmute(win, m) : (await m.set(win, true)).ok;
   // Repaint only from what the server confirmed (the setter folds the
   // response into the cache), never from what we asked for.
   if (!ok || !win.__cdOverview) return;

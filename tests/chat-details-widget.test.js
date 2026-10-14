@@ -292,3 +292,84 @@ test("workspace: Mute still mutes the workspace (mute_set)", async () => {
   await new Promise((r) => setTimeout(r, 400));
   assert.deepEqual(posted[0], ["activity.mute_set", { hub_id: "h1", muted: 1 }]);
 });
+
+// "Mute notifications" in the account menu silences every chat, and the tile
+// reads it (isPeerMuted / isPopupMuted count the global mute). Unmuting only
+// the chat's own row left the global one on, so the tile said "Unmute" for ever.
+function withMuteState(w, state) {
+  const base = w.fetchService;
+  w.fetchService = (args) => {
+    const service = typeof args === "string" ? args : args.service;
+    if (service === "activity.mute_state") return Promise.resolve(state);
+    return base(args);
+  };
+  return w;
+}
+
+test("direct: Unmute under a global mute asks, then lifts it (the server clears the person mutes too)", async () => {
+  const w = withMuteState(widget({ mode: "direct", peer_id: "peer" }), { global: 1, hubs: [], peers: ["peer"] });
+  const asked = [];
+  global.Wm = { confirm: async (o) => { asked.push(o); } };
+  const posted = [];
+  w.postService = async (svc, p) => (posted.push([svc, p]), { status: "ok", global: 0, hubs: [], peers: [] });
+  const o = w.open();
+  await flush();
+  w.pending.find((p) => p.args.service === "chat.p2p_details").resolve({ stats: {}, members: [] });
+  await o;
+  assert.ok(texts(w.fed.at(-1)).includes(en.CD_UNMUTE));
+  await w.onUiEvent(cmd({}), { service: "chat-details-mute" });
+  await new Promise((r) => setTimeout(r, 400));
+  delete global.Wm;
+  assert.equal(asked.length, 1);
+  assert.deepEqual(posted, [["activity.mute_set", { hub_id: "", muted: 0 }]]);
+  assert.ok(texts(w.fed.at(-1)).includes(en.MUTE));
+  assert.ok(!texts(w.fed.at(-1)).includes(en.CD_UNMUTE));
+});
+
+test("direct: declining the global-unmute question writes nothing", async () => {
+  const w = withMuteState(widget({ mode: "direct", peer_id: "peer" }), { global: 1, hubs: [], peers: [] });
+  global.Wm = { confirm: () => Promise.reject(new Error("cancel")) };
+  const posted = [];
+  w.postService = async (svc, p) => (posted.push([svc, p]), { status: "ok", global: 0, hubs: [], peers: [] });
+  const o = w.open();
+  await flush();
+  w.pending.find((p) => p.args.service === "chat.p2p_details").resolve({ stats: {}, members: [] });
+  await o;
+  await w.onUiEvent(cmd({}), { service: "chat-details-mute" });
+  await new Promise((r) => setTimeout(r, 400));
+  delete global.Wm;
+  assert.deepEqual(posted, []);
+  assert.ok(texts(w.fed.at(-1)).includes(en.CD_UNMUTE));
+});
+
+test("workspace: Unmute under a global mute lifts it; no workspace row to clear", async () => {
+  const w = withMuteState(widget({ mode: "workspace", hub_id: "h1", privilege: 7 }), { global: 1, hubs: [], peers: [] });
+  global.Wm = { confirm: async () => {} };
+  const posted = [];
+  w.postService = async (svc, p) => (posted.push([svc, p]), { status: "ok", global: 0, hubs: [], peers: [] });
+  const o = w.open();
+  await flush();
+  w.pending[0].resolve({ stats: {}, members: [] });
+  await o;
+  await w.onUiEvent(cmd({}), { service: "chat-details-mute" });
+  await new Promise((r) => setTimeout(r, 400));
+  delete global.Wm;
+  assert.deepEqual(posted, [["activity.mute_set", { hub_id: "", muted: 0 }]]);
+  assert.ok(!texts(w.fed.at(-1)).includes(en.CD_UNMUTE));
+});
+
+test("direct: a confirmed global unmute that fails says so and keeps Unmute", async () => {
+  const w = withMuteState(widget({ mode: "direct", peer_id: "peer" }), { global: 1, hubs: [], peers: [] });
+  const alerts = [];
+  global.Wm = { confirm: async () => {}, alert: (m) => alerts.push(m) };
+  w.postService = async () => ({ status: "failed" });
+  const o = w.open();
+  await flush();
+  w.pending.find((p) => p.args.service === "chat.p2p_details").resolve({ stats: {}, members: [] });
+  await o;
+  await w.onUiEvent(cmd({}), { service: "chat-details-mute" });
+  await new Promise((r) => setTimeout(r, 400));
+  delete global.Wm;
+  assert.deepEqual(alerts, [en.MUTE_FAILED]);
+  assert.ok(texts(w.fed.at(-1)).includes(en.CD_UNMUTE));
+});
