@@ -740,6 +740,13 @@
     background: transparent;
   }
 
+  // …except the one being taught: lit, it is the frame's white button with
+  // its hairline (the + on 386:56395), standing out of the scrim.
+  .tutorial-phone__circle.is-lit {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
   &[data-view="hero"] .tutorial-phone__body {
     padding: 24px;
   }

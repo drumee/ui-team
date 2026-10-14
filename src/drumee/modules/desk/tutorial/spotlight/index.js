@@ -1,6 +1,6 @@
 require('./skin');
 const { tooltipBubble } = require('../skeleton/toolkit');
-const { anchorFor, splitAnchor, phoneAnchor } = require('../host-kit');
+const { anchorFor, splitAnchor, phoneAnchor, phoneBeak } = require('../host-kit');
 
 // Card edge to target edge.
 //
@@ -156,10 +156,20 @@ class __tutorial_spotlight extends LetcBox {
     // card is 396 wide on 430); otherwise phoneAnchor's defaults.
     const a = this._args || {};
     const { style, direction, beakPx } = phoneAnchor(rect, host, { height: r.height }, { margin: a.phone_margin, gap: a.phone_gap, prefer: a.phone_prefer });
+    // No slide: the card was measured hidden at a placeholder spot, so the
+    // callout's 280ms move would only travel from nowhere — and the beak below
+    // is measured off where the card lands, which a slide would still be
+    // moving away from.
+    card.style.transition = 'none';
     for (const k of ['left', 'right', 'top', 'bottom', 'width']) card.style[k] = style[k] || 'auto';
     card.style.transform = 'none';
     card.style.setProperty('--beak-px', `${beakPx}px`);
     card.dataset.direction = direction;
+    // The beak again, off the card as it actually landed: the height above was
+    // measured before the card had its final width (see phoneBeak).
+    const placed = await waitForStableRect(card);
+    if (this._stale(ticket) || !card.isConnected) return;
+    card.style.setProperty('--beak-px', `${Math.round(phoneBeak(rect, placed, direction))}px`);
     card.style.visibility = '';
   }
 

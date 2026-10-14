@@ -79,3 +79,17 @@ test("phoneAnchor prefer:'above' falls back below when above does not fit", () =
   const a = hk.phoneAnchor(R(16, 60, 358, 40), HOST, { height: 200 }, { prefer: "above" });
   assert.equal(a.direction, "north");
 });
+
+test("phoneBeak: side card measured after it lands points at the target centre", () => {
+  // The chat composer + (16,854 44x44) and a card that came out a line
+  // shorter than guessed: the beak follows the card, not the guess.
+  const plus = R(16, 854, 44, 44);
+  const card = R(78, 660, 336, 240);
+  assert.equal(hk.phoneBeak(plus, card, "west"), 876 - 660);
+});
+
+test("phoneBeak: clamped inside the card's own edge", () => {
+  assert.equal(hk.phoneBeak(R(16, 890, 44, 44), R(78, 700, 336, 198), "west"), 198 - 24);
+  assert.equal(hk.phoneBeak(R(0, 0, 10, 10), R(16, 100, 358, 200), "north"), 24);
+  assert.equal(hk.phoneBeak(R(180, 0, 40, 10), R(16, 100, 358, 200), "south"), 184);
+});

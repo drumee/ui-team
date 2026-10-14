@@ -152,6 +152,29 @@ function phoneAnchor(target, host, card, opt = {}) {
 }
 
 /**
+ * Where the beak sits along the card's edge, from the card's FINAL rect.
+ *
+ * phoneAnchor has to guess the card's height before the card has its width,
+ * and a side card is pinned by its bottom edge, so one more or one fewer
+ * wrapped line between the guess and the result moved the beak by a line —
+ * off the target, and past the card's bottom corner (chat step 2). Measured
+ * after the card has settled, it lands on the target's centre.
+ *
+ * @param {DOMRect} target what the card points at
+ * @param {DOMRect} card the placed card
+ * @param {'north'|'south'|'east'|'west'} direction from phoneAnchor
+ * @returns {Number} px from the card's top (east/west) or left (north/south)
+ */
+function phoneBeak(target, card, direction) {
+  const side = direction === 'east' || direction === 'west';
+  const at = side
+    ? target.top + target.height / 2 - card.top
+    : target.left + target.width / 2 - card.left;
+  const span = side ? card.height : card.width;
+  return clamp(at, BEAK_MIN, Math.max(BEAK_MIN, span - BEAK_MIN));
+}
+
+/**
  * How many screens of a step actually run.
  *
  * A step may declare a `live_screens` tail — screens that stop being a mock and
@@ -316,6 +339,7 @@ module.exports = {
   PHONE_MAX,
   layoutFor,
   phoneAnchor,
+  phoneBeak,
   screensFor,
   buildStepWidgets,
   anchorFor,

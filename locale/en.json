@@ -3459,7 +3459,7 @@
   "TUTORIAL_SKIP": "Skip tour",
   "MESSAGE_TO": "Message to…",
   "TUTORIAL_MIGRATE_FAB": "Click to add new files",
-  "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "Click to attach file",
+  "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "Click to attached file",
   "TUTORIAL_CHAT_PHONE_ATTACH_DESC": "Attach any file in chat to open a thread about it. No more “which file are we talking about?”",
   "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Press and hold to choose reply in threads",
   "WS_TYPE_PHONE_INTERNAL_DESC": "Shared with specific people",
