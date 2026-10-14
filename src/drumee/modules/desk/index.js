@@ -2470,9 +2470,17 @@ class desk_module extends LetcBox {
     // so it never sweeps away a dialog already up (togglePanel dismisses the
     // WM modal — an invited-workspace prompt, a confirm). The workspace under
     // it stays the screen instead.
-    if (service === "open-org-view" && this.el && this.el.dataset
-      && this.el.dataset.wmModal === "open") {
-      throw new Error("a dialog is up");
+    if (service === "open-org-view") {
+      if (this.el && this.el.dataset && this.el.dataset.wmModal === "open") {
+        throw new Error("a dialog is up");
+      }
+      // DIRECT, not through onUiEvent — whose "open-org-view" case is exactly
+      // this call. onUiEvent drops EVERY service while window.pointerDragged
+      // is up, and ui-core's resize handler raises it until the next
+      // pointerup/keyup (letc/addons/dom/events-handler.js). At boot nobody
+      // has clicked yet, so one resize was enough to make the landing a
+      // silent no-op (seen on drumee.in).
+      return this._openOrgView();
     }
     // `intent` matters for ONE of these services: "upgrade-plan" opens the
     // billing page on checkout when it can tell which plan is meant, and a
