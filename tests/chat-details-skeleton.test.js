@@ -78,6 +78,27 @@ test("overview: title, three actions, threads, four counts, members", () => {
   assert.deepEqual(walk(t).filter((n) => n.kind === "profile").map((n) => n.id), ["a", "b"]);
 });
 
+test("overview: each member row opens that person; the viewer's own row is inert", () => {
+  global.Visitor = { id: "b" };
+  try {
+    const t = S.chatDetailsOverview(ui, data);
+    const rows = byService(t, "chat-details-member");
+    assert.deepEqual(rows.map((n) => n.uid), ["a"]);
+    assert.equal(rows[0].fullname, "Lucas Zoe");
+    assert.ok(rows[0].className.includes("member--link"));
+    assert.deepEqual(rows[0].uiHandler, [ui]);
+    const self = walk(t).find((n) => /-member\b/.test(n.className || "") && !n.service && walk(n).some((k) => k.id === "b"));
+    assert.ok(self && !self.className.includes("member--link"));
+    // Nothing below the row's direct kids (which kidsOpt deactivates) may be
+    // active: an active view binds its own click and swallows the row's.
+    const deep = rows[0].kids.flatMap((k) => walk(k.kids || []));
+    assert.ok(deep.length >= 2);
+    assert.ok(deep.every((n) => n.active === 0), "every nested kid is inert");
+  } finally {
+    delete global.Visitor;
+  }
+});
+
 test("overview: muted flips the label, no threads hides the section", () => {
   const t = S.chatDetailsOverview(ui, { ...data, muted: true, threads: [] });
   assert.ok(texts(t).includes(en.CD_UNMUTE));

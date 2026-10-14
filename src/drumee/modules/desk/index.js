@@ -2728,6 +2728,23 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Open the Contacts panel on one person's detail (a Chat details member
+   * row). Open-only, like openContactPanel: a Contacts panel already up just
+   * moves its selection.
+   *
+   * @param {String} uid drumate id
+   * @param {Object} [who] { name, email }: names the not-found screen when
+   *   they are no contact
+   */
+  async openContact(uid, who = {}) {
+    if (!uid) return;
+    await this.togglePanel("address_book", "chat-panel", true);
+    const p = await this.ensurePart("chat-panel");
+    const widget = p && p.children && p.children.last && p.children.last();
+    if (widget && widget.showContact) return widget.showContact(uid, who);
+  }
+
+  /**
    *
    */
   async onDomRefresh() {

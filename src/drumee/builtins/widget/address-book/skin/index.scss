@@ -1314,6 +1314,19 @@
     box-sizing: border-box;
   }
 
+  // Not in the book (showContact): empty-detail's layout, plus Add contact.
+  &__not-found-add {
+    margin-top: 6px;
+    align-items: center;
+    gap: 6px;
+  }
+  &__not-found-add-ico {
+    width: 14px;
+    height: 14px;
+    color: #fff;
+    fill: #fff;
+  }
+
   &__empty-detail-icon {
     width: 48px;
     height: 48px;
