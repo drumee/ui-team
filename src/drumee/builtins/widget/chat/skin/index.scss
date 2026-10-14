@@ -595,7 +595,7 @@
 
       .note-content {
         // Vietnamese stacked marks rise above the line box (14px, line-height
-        // 1.4: Ấ/Ố/Ế by 3.5px) and overflow-y clips at the padding edge, so a
+        // 1.4: Ấ/Ố/Ế ink 4px above it) and overflow-y clips at the padding edge, so a
         // capital "Ấ" read as "Â" while typing. 5px of vertical padding gives
         // them room; the negative margin keeps the composer's height.
         padding: 5px 0;
