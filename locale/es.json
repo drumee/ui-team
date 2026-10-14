@@ -277,6 +277,7 @@
   "PROHIBIT_CHANGE": "Prohibir cualquier cambio",
   "MUSIC_PLAYER": "Lector de música",
   "FOLDERS": "Carpeta",
+  "FOLDERS_IN": "En {0}",
   "GROUP_DOCUMENTATION": "Documentación",
   "GROUP_HTML": "HTML",
   "GROUP_JSON": "JSON",

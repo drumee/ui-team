@@ -242,6 +242,7 @@
   "FIRSTNAME": "名字",
   "FOLDER": "文件夹",
   "FOLDERS": "档案",
+  "FOLDERS_IN": "{0} 中",
   "GROUP_DOCUMENTATION": "文档",
   "GROUP_HTML": "HTML",
   "GROUP_JSON": "JSON",

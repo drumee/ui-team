@@ -241,6 +241,7 @@
   "FIRSTNAME": "ឈ្មោះដំបូង",
   "FOLDER": "ថតឯកសារ",
   "FOLDERS": "ថតឯកសារ",
+  "FOLDERS_IN": "ក្នុង {0}",
   "GROUP_DOCUMENTATION": "ឯកសារ",
   "GROUP_HTML": "HTML",
   "GROUP_JSON": "JSON",

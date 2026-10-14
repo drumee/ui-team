@@ -81,6 +81,9 @@ function siblingScope(path) {
     parentNid,
     currentNid,
     parentName: displayName(parent),
+    // The switcher's header names the open folder, as it names the open
+    // workspace in workspace mode.
+    currentName: displayName(current),
     parentFiletype,
     parentArea: parent.area || current.area || "",
     area: (current && current.area) || (parent && parent.area) || "",

@@ -347,11 +347,11 @@
 
   // FOLDER MODE — the address is deeper than the workspace, so the switcher
   // lists the open folder's siblings (desk._prepareSwitcherMode stamps
-  // data-ws-mode on this chip each time it opens). The current-workspace
-  // header and "New workspaces" belong to the workspace list and go with it.
+  // data-ws-mode on this chip each time it opens). The header stays and names
+  // the open folder (desk._feedFolderHead), as it names the open workspace;
+  // "New workspaces" belongs to the workspace list and goes with it.
   // !important: Box children are forced display:flex inline by the framework.
   &__crumb-group[data-ws-mode="folders"] {
-    .desk-module-topbar__ws-head,
     .desk-module-topbar__ws-new {
       display: none !important;
     }
@@ -1437,7 +1437,11 @@
       // the panel clears the whole chip rather than just the caret, and 0 is
       // the chip's left edge.
       top: calc(100% + 6px);
-      left: 0;
+      // Under the CURRENT crumb, not the chip's left edge: on a folder path the
+      // panel lists that folder's level (desk _placeSwitcherPanel sets this on
+      // __crumb-group, pulled back when it would run off the window). 0 on
+      // the workspace itself, as before.
+      left: var(--ws-panel-left, 0px);
       right: auto;
       width: max-content;
       min-width: 260px;
@@ -1560,6 +1564,12 @@
   // Group heading — "Workspaces" / "Personal". Small, uppercase and muted so
   // it labels the list without competing with the rows it introduces.
   &__ws-section {
+    // Sticks to the top of the scrolling list, so a long list keeps saying
+    // what it lists; the panel's own ground hides the rows passing under it.
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--normal-bg-elevated, #fff);
     padding: 10px 10px 4px;
     font-family: var(--font-main);
     font-size: 11px;
@@ -1572,57 +1582,6 @@
     &:first-child {
       padding-top: 2px;
     }
-  }
-
-  // FOLDER MODE's heading is the parent's CRUMB (desk._feedFolderSiblings):
-  // the same tab, glyph and name as breadcrumb-item__tab / __icon / __filename
-  // in breadcrumb/item/skin, so the panel opens under a copy of the crumb it
-  // lists. Values are that file's, through the same --crumb-* ramp; the class
-  // names are this file's own, because the panel lives inside __crumb-group
-  // and the breadcrumb's classes there mean "the address has loaded".
-  //
-  // The 6px side margin plus the tab's 4px inset lines the glyph up with the
-  // rows' icons (10px). No hover: the heading is not a control.
-  &__ws-section--crumb {
-    display: flex;
-    align-items: center;
-    gap: var(--crumb-gap, 6px);
-    min-width: 0;
-    height: calc(var(--crumb-height, 30px) - 6px);
-    box-sizing: border-box;
-    margin: 0 6px 4px;
-    padding: 0 var(--crumb-tab-pad, 4px);
-    border-radius: var(--crumb-radius, 8px);
-    text-transform: none;
-    letter-spacing: normal;
-
-    // Beats the label's own first-child padding: this is a tab, sized above.
-    &:first-child {
-      padding-top: 0;
-    }
-  }
-
-  &__ws-section-icon {
-    @include drumee.ws-folder-icon(20px, 16px);
-    min-width: 20px;
-
-    // The crumb's badge, not the switcher rows' larger one.
-    .badge {
-      bottom: -2px;
-      left: -2px;
-      width: 13px !important;
-      height: 13px !important;
-      filter: none;
-    }
-  }
-
-  &__ws-section-name {
-    @include drumee.typo($color: var(--normal-fg-10), $size: 13px, $line: 18px);
-    font-weight: 400;
-    max-width: 180px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   // Geometry and colours copied from __new-menu-item — the app's established
@@ -1761,10 +1720,12 @@
     width: 100%;
     box-sizing: border-box;
     gap: 12px;
-    max-height: 300px;
+    // Room for a long folder or workspace list on a tall window, never past
+    // the bottom of a short one (the panel opens ~50px down).
+    max-height: min(360px, calc(100vh - 120px));
     // Load-bearing. A flex item's default `min-height` is `auto`, i.e. its
     // content height, so __ws-list would refuse to shrink, this column would
-    // grow past 300px, and the max-height would quietly do nothing.
+    // grow past its max-height, and that limit would quietly do nothing.
     min-height: 0;
   }
 
@@ -2466,10 +2427,3 @@ html[data-theme="dark"] {
   }
 }
 
-// The crumb's dark-theme colour (breadcrumb/item/skin __filename), for the
-// folder-mode heading that copies it.
-html[data-theme="dark"] {
-  .desk-module-topbar__ws-section-name {
-    color: var(--normal-fg);
-  }
-}

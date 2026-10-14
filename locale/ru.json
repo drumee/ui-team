@@ -242,6 +242,7 @@
   "FIRSTNAME": "Имя",
   "FOLDER": "Папка",
   "FOLDERS": "Папки",
+  "FOLDERS_IN": "В {0}",
   "GROUP_DOCUMENTATION": "Документация",
   "GROUP_HTML": "HTML",
   "GROUP_JSON": "JSON",

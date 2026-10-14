@@ -26,6 +26,7 @@ test("two crumbs: parent is the workspace root, named by hub_name", () => {
     parentNid: "R1",
     currentNid: "F1",
     parentName: "aaaa",
+    currentName: "abc",
     parentFiletype: "hub",
     parentArea: "private",
     area: "private",

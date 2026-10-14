@@ -173,6 +173,7 @@
   "PRIVACY_POLICY": "Privacy policy",
   "FOLDER_SETTING": "Folder Setting",
   "FOLDERS": "Folders",
+  "FOLDERS_IN": "In {0}",
   "GROUP_DOCUMENTATION": "Documentation",
   "GROUP_HTML": "HTML",
   "GROUP_JSON": "JSON",

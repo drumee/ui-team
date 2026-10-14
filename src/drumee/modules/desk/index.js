@@ -3773,7 +3773,7 @@ class desk_module extends LetcBox {
     if (!list && !head) return;
     const rows = await this._fetchWorkspaces(force);
     if (!rows.length) {
-      if (head) head.clear();
+      if (head && this._wsMenuMode !== "folders") head.clear();
       // The list is about to hold the empty note, not folders.
       if (list && this._wsMenuMode !== "folders") this._folderFeedSig = null;
       // FOLDER MODE owns the list (_prepareSwitcherMode). A revalidation or a
@@ -3889,10 +3889,12 @@ class desk_module extends LetcBox {
         this._groupWorkspaces(rows).flatMap((g) => section(g.label, g.rows, g.pinned)),
       );
       this._bindPinnedDrag(list);
+      if (_.isFunction(this._afterPaint)) this._afterPaint(() => this._revealSwitcherCurrent());
     }
 
     // ── Header (Figma 48:36991) ──────────────────────────────────────────
-    if (head) this._feedWorkspaceHead(head, rows, cur);
+    // Folder mode heads the panel with the open FOLDER (_feedFolderHead).
+    if (head && this._wsMenuMode !== "folders") this._feedWorkspaceHead(head, rows, cur);
   }
 
   // ── Pinned workspaces (Lexis, 2026-10-07) ────────────────────────────────
@@ -4262,6 +4264,7 @@ class desk_module extends LetcBox {
     // The key is the PARENT; the open folder is tracked too, or a late answer
     // for abc would mark abc current after the user moved to test.
     this._folderScopeCur = scope.currentNid;
+    this._feedFolderHead(scope);
     const cache = this._folderSiblings || (this._folderSiblings = {});
     const cached = cache[scope.key];
     this._feedFolderSiblings(this._wsListPart, scope, cached || []);
@@ -4291,9 +4294,44 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * One heading (the parent's name — "aaaa") and one row per sibling, built
+   * FOLDER MODE'S HEADER: the open folder, in the same slot and the same
+   * shape (__ws-head) the workspace switcher heads with the open workspace,
+   * so the two panels read alike. Name and glyph only: the workspace header's
+   * link and ⋯ act on the workspace.
+   */
+  _feedFolderHead(scope) {
+    const head = this._wsHeadPart;
+    if (!head || !head.el || (head.isDestroyed && head.isDestroyed())) return;
+    const cn = "desk-module-topbar";
+    const area = scope.area || "";
+    head.feed([
+      Skeletons.Element({
+        className: `${cn}__ws-head-icon ${area}`,
+        content: folderIcon({
+          area,
+          filetype: _a.folder,
+          role: "",
+          widgetId: _.uniqueId("ws-head-icon-"),
+          isAttachment: 1,
+        }),
+      }),
+      Skeletons.Box.X({
+        className: `${cn}__ws-head-name`,
+        kids: [
+          Skeletons.Note({
+            className: `${cn}__ws-head-name-text`,
+            content: scope.currentName || "",
+          }),
+        ],
+      }),
+    ]);
+  }
+
+  /**
+   * One group label ("In aaaa", the parent) and one row per sibling, built
    * with the workspace rows' own classes so they look and hover the same.
-   * The open folder is marked data-current, like the open workspace is.
+   * The open folder is marked data-current, like the open workspace is; it
+   * also heads the panel (_feedFolderHead), as the open workspace does.
    */
   _feedFolderSiblings(list, scope, rows) {
     const cn = "desk-module-topbar";
@@ -4311,36 +4349,16 @@ class desk_module extends LetcBox {
         }),
       ]);
     }
-    // THE HEADING IS THE PARENT'S CRUMB, not a label: its folder glyph and
-    // name, drawn and sized as breadcrumb-item__tab draws them in the bar, so
-    // the panel reads as "the folders in <that crumb>". A workspace root is a
-    // hub with its area badge, as it is in the address.
-    //
-    // Its OWN classes (desk/skin/topbar __ws-section--crumb), never the
-    // breadcrumb's: this panel is a descendant of __crumb-group, where
-    // `.breadcrumb-item__icon` / `__filename` are what _crumbClickOpensSwitcher
-    // and the chip's `:has()` rules read as "the address has loaded".
-    const parentHub = scope.parentFiletype === _a.hub;
-    const parentArea = scope.parentArea || scope.area || "";
+    // A GROUP LABEL, like the workspace list's "INTERNAL": "In aaaa" says
+    // whose folders these are. It used to be the parent drawn as its crumb,
+    // full size with its glyph, and read as one more row to pick.
+    const label = scope.parentName
+      ? (LOCALE.FOLDERS_IN || "In {0}").format(scope.parentName)
+      : LOCALE.FOLDERS || "";
     list.feed([
-      Skeletons.Box.X({
-        className: `${cn}__ws-section ${cn}__ws-section--crumb`,
-        kids: [
-          Skeletons.Element({
-            className: `${cn}__ws-section-icon ${parentArea}`,
-            content: folderIcon({
-              area: parentArea,
-              filetype: parentHub ? _a.hub : _a.folder,
-              role: parentHub ? "desk" : "",
-              widgetId: _.uniqueId("ws-parent-icon-"),
-              isAttachment: 1,
-            }),
-          }),
-          Skeletons.Note({
-            className: `${cn}__ws-section-name`,
-            content: scope.parentName || LOCALE.FOLDERS || "",
-          }),
-        ],
+      Skeletons.Note({
+        className: `${cn}__ws-section`,
+        content: label,
       }),
       ...rows.map((row) => {
         const area = row.area || scope.area || "";
@@ -4376,6 +4394,8 @@ class desk_module extends LetcBox {
         });
       }),
     ]);
+    // Rows arrive after the panel opened: bring the open folder into view.
+    if (_.isFunction(this._afterPaint)) this._afterPaint(() => this._revealSwitcherCurrent());
   }
 
   /**
@@ -5803,11 +5823,11 @@ class desk_module extends LetcBox {
       || !chip.el.querySelector(".breadcrumb-item__filename")) {
       return false;
     }
-    // On a deeper path only the caret opens the switcher (above); the crumbs
-    // there are folders, and the current one is not the workspace.
-    if (chip.el.querySelector(".desk-breadcrumb__content > :nth-child(2)")) {
-      return false;
-    }
+    // On a deeper path the current crumb is a folder, and its NAME opens the
+    // switcher too, as the workspace's name does on the workspace: in folder
+    // mode the panel lists folders (_prepareSwitcherMode), so it is the same
+    // panel the caret beside it opens. The crumbs above it still navigate back
+    // (the data-current test below).
     if (!target || !_.isFunction(target.closest)) return true;
     // THE PANEL IS NOT THE CHIP, even though it is inside it.
     //
@@ -5861,8 +5881,68 @@ class desk_module extends LetcBox {
     // OPENING decides what it lists (_prepareSwitcherMode) — the same
     // open test _closeWorkspaceSwitcher uses. Closing leaves the list alone.
     const open = menu.isOpen || (menu.mget && menu.mget(_a.state));
-    if (!open) this._prepareSwitcherMode();
+    if (!open) {
+      this._prepareSwitcherMode();
+      this._placeSwitcherPanel();
+    }
     if (_.isFunction(menu._triggerToggle)) menu._triggerToggle();
+    if (!open) this._afterPaint(() => this._revealSwitcherCurrent());
+  }
+
+  // Two frames: one for the menu to open, one for its rows to lay out.
+  _afterPaint(fn) {
+    if (typeof requestAnimationFrame !== "function") return fn();
+    requestAnimationFrame(() => requestAnimationFrame(fn));
+  }
+
+  /**
+   * OPEN THE PANEL UNDER THE CRUMB IT IS ABOUT.
+   *
+   * The panel is absolute in __crumb-group and sat at its left edge, under the
+   * workspace, whatever it listed. On a folder path it lists the open folder's
+   * level, so on "abd / share-list-test / zz-folder-18 ⌄" it opened under
+   * "abd", a long way from the caret just pressed. It now starts under the
+   * current crumb (desk/skin/topbar --ws-panel-left), which on the workspace
+   * itself is the left edge as before, and is pulled back left when it would
+   * run off the window.
+   */
+  _placeSwitcherPanel() {
+    const chip = this._crumbGroupPart && this._crumbGroupPart.el;
+    if (!chip || !_.isFunction(chip.querySelector) || !chip.style) return;
+    const crumb = chip.querySelector('.breadcrumb-item__main[data-current="1"]');
+    let left = 0;
+    if (crumb && _.isFunction(crumb.getBoundingClientRect)) {
+      left = Math.max(0, crumb.getBoundingClientRect().left - chip.getBoundingClientRect().left);
+    }
+    chip.style.setProperty("--ws-panel-left", `${Math.round(left)}px`);
+    this._afterPaint(() => {
+      const panel = chip.querySelector(".desk-module-topbar__ws-wrapper .menu-topic-items__wrapper");
+      if (!panel || !_.isFunction(panel.getBoundingClientRect)) return;
+      const over = panel.getBoundingClientRect().right - (window.innerWidth - 12);
+      if (over > 0) {
+        chip.style.setProperty("--ws-panel-left", `${Math.round(Math.max(0, left - over))}px`);
+      }
+    });
+  }
+
+  /**
+   * SCROLL THE OPEN ROW INTO VIEW. The list scrolls inside a bounded panel and
+   * always opened at its top, so in a long one (22 folders, the open one 19th)
+   * the row the panel is about was out of sight. Centred, so the sticky
+   * heading cannot cover it; left alone when it is already in view. Called
+   * on open and again whenever the rows are fed, since folder rows arrive
+   * after the panel opens.
+   */
+  _revealSwitcherCurrent() {
+    const list = this._wsListPart && this._wsListPart.el;
+    if (!list || !_.isFunction(list.querySelector)) return;
+    const row = list.querySelector('.desk-module-topbar__ws-item[data-current="1"]');
+    if (!row) return;
+    const box = list.getBoundingClientRect();
+    if (!box.height) return;
+    const r = row.getBoundingClientRect();
+    if (r.top >= box.top && r.bottom <= box.bottom) return;
+    list.scrollTop += r.top - box.top - (box.height - r.height) / 2;
   }
 
   /**

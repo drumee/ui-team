@@ -242,6 +242,7 @@
   "FIRSTNAME": "Prénom ",
   "FOLDER": "Dossier",
   "FOLDERS": "Dossiers",
+  "FOLDERS_IN": "Dans {0}",
   "GROUP_DOCUMENTATION": "Documentation",
   "GROUP_HTML": "HTML",
   "GROUP_JSON": "JSON",
