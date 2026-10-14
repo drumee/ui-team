@@ -189,8 +189,11 @@ class __push_manager extends winman {
 
       // A scheduled meeting's start time has arrived (reminderWorker →
       // meeting_schedule_due). Show the same toast, flavoured as a reminder
-      // with a Join button that opens the meeting.
+      // with a Join button that opens the meeting. Not while that workspace's
+      // meeting window is open: its waiting room already says when, and goes
+      // in by itself.
       case "room.reminder":
+        if (this._inMeetingOf(data && data.hub_id)) return;
         return this._showMeetingToast(data, { reminder: 1 });
 
       // Someone STARTED a meeting in a workspace we belong to. conference.js
@@ -956,6 +959,21 @@ class __push_manager extends winman {
   }
 
   /**
+   * Is this workspace's meeting window open, waiting room included? Then a
+   * meeting card for it has nothing to offer, and a waiting room is told to
+   * go in (window/meeting joinNow, a no-op once in the call).
+   */
+  _inMeetingOf(hub_id) {
+    if (!hub_id || typeof Wm === "undefined" || !Wm.getItemsByKind) return false;
+    const w = (Wm.getItemsByKind("window_meeting") || []).find(
+      (m) => m && !(m.isDestroyed && m.isDestroyed()) && m.mget(_a.hub_id) == hub_id,
+    );
+    if (!w) return false;
+    if (typeof w.joinNow === "function") w.joinNow();
+    return true;
+  }
+
+  /**
    * Is a meeting card for this workspace already on screen?
    *
    * Used only to stop conference.start from doubling a card the reminder has
@@ -1007,6 +1025,11 @@ class __push_manager extends winman {
       // Name the workspace as this desk does, not by its shared name.
       data = withOwnWorkspaceName(data);
       if (data.uid && data.uid == Visitor.id) return;
+      // Already in this workspace's meeting window, its waiting room most of
+      // all: the host starting it is the waiting room's cue to go in. A card
+      // with a second Join on top of it was what led to "You are already on
+      // other call".
+      if (this._inMeetingOf(data.hub_id)) return;
       if (this._hasLiveMeetingToastFor(data.hub_id)) return;
 
       // Same derivation the switchcall popup uses for this very payload, so

@@ -4315,6 +4315,15 @@ class __window_folder extends mfsInteract {
         Wm.getItemByKind("window_meeting") || Wm.getItemByKind("window_connect");
       if (existing && !existing.isDestroyed()) {
         if (typeof existing.raise === "function") existing.raise();
+        // This workspace's own meeting is not "another call": bring it up,
+        // and a waiting room checks again now (window/meeting joinNow).
+        if (
+          typeof existing.joinNow === "function" &&
+          existing.mget(_a.hub_id) == this.mget(_a.hub_id)
+        ) {
+          existing.joinNow();
+          return;
+        }
         Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
         return;
       }

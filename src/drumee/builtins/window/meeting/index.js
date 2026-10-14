@@ -16,6 +16,9 @@ const PARTY_TOAST_MS = 4000;
 // enough to finish a thought and say goodbye, short enough that it is not
 // hanging over the whole call. Only armed when the server sends a deadline.
 const MEETING_LIMIT_WARN_MS = 5 * 60 * 1000;
+// Waiting room re-check for an invitee early to a scheduled meeting
+// (_armEarlyWait): how soon the organizer starting it early is noticed.
+const EARLY_WAIT_POLL_MS = 30 * 1000;
 // Below this window width the 420px side panel and the video stage can no
 // longer share the row, so the panel auto-collapses (see _applyChatAutoClose)
 // and switches to full-bleed overlay mode when opened by hand
@@ -278,7 +281,10 @@ class __window_meeting extends __room {
    *
    */
   async onDomRefresh() {
-    this.raise();
+    // A waiting-room re-check (_armEarlyWait) re-enters QUIETLY: no raise, no
+    // re-render, the "starts at" message stays up until the join goes through.
+    const recheck = this.state === "scheduledWait";
+    if (!recheck) this.raise();
     this._initIdleControls();
     this._bindResizeObserver();
     // "standalone" now means "this is the desk's full-frame call screen" —
@@ -292,7 +298,7 @@ class __window_meeting extends __room {
     // the launch geometry and the drag/resize affordances the window base class
     // installs, here and again from setupInteract below.
     this._lockGeometry();
-    if (this.el) this.el.dataset.ready = "0";
+    if (this.el && !recheck) this.el.dataset.ready = "0";
     // Lock the in-topbar controls for the whole pre-join phase: while the
     // startup state messages ("Connection in progress", "Waiting for camera &
     // microphone", "Waiting to join the conference") are showing, the meeting
@@ -304,8 +310,10 @@ class __window_meeting extends __room {
     // clear and the conference goes live. The Leave button is exempted in CSS
     // so the user always has an escape hatch. Mirrors the data-denied pattern.
     if (this.el) this.el.dataset.startingUp = "1";
-    this.feed(require("./skeleton/init")(this));
-    this.stateMachine("initializing");
+    if (!recheck) {
+      this.feed(require("./skeleton/init")(this));
+      this.stateMachine("initializing");
+    }
     // Any rejection from join() / prepareConference() (privilege denial that
     // surfaces as a thrown error, device permission denial, network/socket
     // failure, conference bind failure) must still flip data-ready to "1" —
@@ -315,6 +323,8 @@ class __window_meeting extends __room {
     try {
       room = await this.join();
       if (!room || !room.user) {
+        // Early for a scheduled meeting: join() showed when it starts.
+        if (this.state === "scheduledWait") return this._armEarlyWait();
         /**
          * join() has already reported the accurate reason: "unreachable" when
          * the request never came back, "permissionDenied" when the server
@@ -326,6 +336,17 @@ class __window_meeting extends __room {
         }
         return;
       }
+      // Out of the waiting room: the call takes over, behind the same spinner
+      // a first join shows (data-ready), with the waiting screen gone. Left
+      // stamped, data-waiting would hide the call's header and cover it.
+      if (this.el) {
+        this.el.dataset.waiting = "0";
+        if (recheck) this.el.dataset.ready = "0";
+      }
+      // join() left the state alone on a re-check. Leave scheduledWait now,
+      // as a first join would be "joining" here: joinNow() and the waiting
+      // guards key off it.
+      if (recheck) this.stateMachine("joining");
       // sendRoomInfo doesn't forward the host record to non-host clients;
       // the host self-announces via HOST_HELLO below.
       this._isHost = !!(room.user && room.user.role === "host");
@@ -371,6 +392,57 @@ class __window_meeting extends __room {
     } finally {
       if (this.el) this.el.dataset.ready = "1";
     }
+  }
+
+  /**
+   * Waiting room for an invitee early to a scheduled meeting (server
+   * lib/meeting-early). Ask again every EARLY_WAIT_POLL_MS, sooner if the
+   * room opens first: the host starting it, or its start time, lets the
+   * next join through. A re-join is the startup itself, as for Retry.
+   */
+  _armEarlyWait() {
+    clearTimeout(this._earlyWaitTimer);
+    const wait = this._earlyWait || {};
+    const untilOpen = (Number(wait.opens_at) || 0) * 1000 - Date.now();
+    // joinNow() came while a re-check was out: that answer may predate the
+    // host's start, so ask again right away instead of at the next poll.
+    const soon = this._earlyWaitSoon;
+    this._earlyWaitSoon = 0;
+    const delay = soon ? 1000 : Math.max(1000, Math.min(EARLY_WAIT_POLL_MS, untilOpen));
+    this._earlyWaitTimer = setTimeout(() => {
+      this._earlyWaitTimer = null;
+      this._recheckEarlyWait();
+    }, delay);
+  }
+
+  // One re-check at a time. The poll and joinNow() can land together, and two
+  // joins in flight would put this socket in the room twice.
+  async _recheckEarlyWait() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this._earlyChecking) {
+      this._earlyWaitSoon = 1;
+      return;
+    }
+    clearTimeout(this._earlyWaitTimer);
+    this._earlyWaitTimer = null;
+    this._earlyChecking = 1;
+    try {
+      await this.onDomRefresh();
+    } finally {
+      this._earlyChecking = 0;
+    }
+  }
+
+  /**
+   * The host has just started the meeting this window waits for: the desk got
+   * its conference.start, the room rang us, or Join was clicked elsewhere. Go
+   * in now rather than at the next re-check (the server still decides). Does
+   * nothing outside the waiting room.
+   */
+  joinNow() {
+    if (this.state !== "scheduledWait") return;
+    if (this.raise) this.raise();
+    return this._recheckEarlyWait();
   }
 
   // CONFERENCE_JOINED — the local user is now actually in the conference, so
@@ -485,6 +557,7 @@ class __window_meeting extends __room {
 
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
+    clearTimeout(this._earlyWaitTimer);
     this._unwatchShareStrip();
     this._unwatchPinStage();
     this._teardownCallParking();
@@ -961,6 +1034,9 @@ class __window_meeting extends __room {
   }
 
   async onRemoteDrumateJoined(data) {
+    // Rung from the room while still waiting for it: the meeting is on, so go
+    // in. What follows is call bookkeeping that needs a joined conference.
+    if (this.state === "scheduledWait") return this.joinNow();
     if (super.onRemoteDrumateJoined) await super.onRemoteDrumateJoined(data);
     // Re-announce so late joiners learn who hosts.
     if (this._isHost) this._announceHostIfNeeded();
@@ -1124,6 +1200,13 @@ class __window_meeting extends __room {
       case "restore-call":
         this.setCallTile(0);
         break;
+
+      // Leave from the waiting room (_showWaitingRoom). No call took place,
+      // so straight out: no feedback popup, and no re-check left behind.
+      case "leave-waiting-room":
+        clearTimeout(this._earlyWaitTimer);
+        this._earlyWaitTimer = null;
+        return this.goodbye();
 
       // Main half of the split button, and the menu's own "Leave meeting":
       // leave only. Re-assert the default so a cancelled "End meeting" can
@@ -2243,7 +2326,64 @@ class __window_meeting extends __room {
     this.goodbye();
   }
 
+  /**
+   * THE WAITING ROOM: early for a scheduled meeting (server lib/meeting-early,
+   * webrtc/room join keeps the answer in _earlyWait). A screen of its own over
+   * the window, like the denied one, rather than the call's pre-join chrome:
+   * which meeting, when it starts and how long that is, that nothing needs
+   * doing, and a way out. Re-fed on each re-check (_armEarlyWait), which keeps
+   * the minutes current.
+   */
+  _showWaitingRoom() {
+    const wait = this._earlyWait || {};
+    const starts = Number(wait.starts_at) || 0;
+    const minutes = Math.max(1, Math.ceil((starts * 1000 - Date.now()) / 60000));
+    const pfx = `${this.fig.family}__waiting`;
+    this.ensurePart("message-container").then((c) => {
+      c.feed([
+        Skeletons.Box.Y({
+          className: `${pfx}-card`,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}-icon`,
+              kids: [Skeletons.Image.Svg({ ico: "calendar", className: `${pfx}-glyph` })],
+            }),
+            wait.title
+              ? Skeletons.Note({ className: `${pfx}-title`, content: wait.title })
+              : null,
+            Skeletons.Note({
+              className: `${pfx}-time`,
+              content: LOCALE.MEETING_START_AT.format(Dayjs.unix(starts).format("h:mm A")),
+            }),
+            Skeletons.Note({
+              className: `${pfx}-countdown`,
+              content: LOCALE.MEETING_STARTS_IN_MIN.format(minutes),
+            }),
+            Skeletons.Note({
+              className: `${pfx}-text`,
+              content: LOCALE.MEETING_WAITING_AUTO_JOIN,
+            }),
+            Skeletons.Note({
+              className: `${pfx}-leave`,
+              content: LOCALE.LEAVE,
+              service: "leave-waiting-room",
+              uiHandler: [this],
+            }),
+          ].filter(Boolean),
+        }),
+      ]);
+    });
+  }
+
   stateMessage(s, timeout) {
+    // While waiting, only a change of state may take the waiting room down
+    // (stateMachine sets this.state before it calls here). A passing notice,
+    // like "X is connecting" from a ring, used to replace it.
+    if (this.state === "scheduledWait" && s !== "scheduledWait") return;
+    // Every state says whether the waiting room is up; only scheduledWait
+    // sets it (skin: data-waiting takes the window over, as data-denied does).
+    if (this.el) this.el.dataset.waiting = s === "scheduledWait" ? "1" : "0";
+    if (s === "scheduledWait") return this._showWaitingRoom();
     // No "Waiting for attendees" toast (Figma: a solo call just shows your own
     // tile). The base stateMessage would fall back to the raw state string
     // ("waiting"), so clear the message container and swallow the state.

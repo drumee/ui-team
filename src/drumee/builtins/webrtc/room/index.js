@@ -1383,7 +1383,8 @@ class __webrtc_room extends __interact {
    * @returns
    */
   async join(args) {
-    this.stateMachine("joining");
+    // A waiting-room re-check keeps its "starts at" message (window/meeting).
+    if (this.state !== "scheduledWait") this.stateMachine("joining");
     let opt = {
       socket_id: Visitor.get(_a.socket_id),
       nid: this.mget(_a.nid),
@@ -1403,7 +1404,22 @@ class __webrtc_room extends __interact {
      * privilege sent users hunting for permissions they had all along.
      */
     if (!c) {
+      // A waiting-room re-check that did not get through (a blip, a service
+      // restart) keeps waiting: the window asks again at the next tick.
+      if (this.state === "scheduledWait") return null;
       this.stateMachine("unreachable");
+      return null;
+    }
+    // Early for a scheduled meeting (server lib/meeting-early): nothing was
+    // joined and nobody was told. Say when it starts; the meeting window
+    // retries the join (window/meeting _armEarlyWait).
+    this._earlyWait = null;
+    if (c.status === "waiting" && c.starts_at) {
+      this._earlyWait = c;
+      this.statusMessages.scheduledWait = LOCALE.MEETING_WAITING_ROOM.format(
+        Dayjs.unix(c.starts_at).format("h:mm A"),
+      );
+      this.stateMachine("scheduledWait");
       return null;
     }
     if (!c.user || !c.user.permission) {
