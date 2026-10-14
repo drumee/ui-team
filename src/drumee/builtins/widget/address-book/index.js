@@ -8,6 +8,26 @@ const idOf = (c) =>
   (c && (c.id || c.contact_id || c.drumate_id || c.entity_id || c.entity)) ||
   null;
 
+// Someone you have messaged or called but never saved
+// (my_contact_show_next branch 3). No contact row backs the entry, so only
+// Inbox / Call / Add contact apply to it.
+const isChatPartner = (c) => !!c && c.status === "nocontact";
+
+// A contact saved by EMAIL is tied to its account only by the server's
+// linkEmailContacts, after the proc ran — so the proc cannot tell that the
+// person you chat with is that saved contact, and lists them twice. Keep the
+// saved contact, drop the chat-partner duplicate.
+function dropSavedPartners(list) {
+  const saved = new Set();
+  for (const c of list) {
+    if (isChatPartner(c)) continue;
+    const id = linkedDrumateId(c);
+    if (id) saved.add(id);
+    if (c.drumate_id) saved.add(c.drumate_id);
+  }
+  return list.filter((c) => !isChatPartner(c) || !saved.has(c.entity));
+}
+
 // Backend may return c.tag as an array of objects, an array of strings,
 // a single object, a single string, or a comma-separated string. Normalize
 // to an array of { tag_id, name } so the rest of the code is uniform.
@@ -86,6 +106,62 @@ class __address_book extends LetcBox {
     this.unbindEvent(_a.live);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
     if (this._untrackCanvas) this._untrackCanvas();
+    clearTimeout(this._reloadTimer);
+  }
+
+  // The desk keeps this panel alive in its slot (chat-panel) and only hides
+  // it, so reopening Contacts used to show the list as it was when it was
+  // first opened — a conversation started in the Inbox meanwhile never showed
+  // up. Re-read it on every re-show (desk _showPanel).
+  onPanelShown() {
+    this._reloadContacts();
+  }
+
+  /**
+   * Re-read the book (current tab's contacts + both invitation lists) and
+   * repaint. Coalesced: a burst of messages costs one reload. Nothing changed
+   * → nothing repainted, so reopening Contacts keeps its scroll position. The
+   * detail pane is left alone while the edit form is open, so a refresh never
+   * wipes what the user is typing.
+   */
+  _reloadContacts(delay = 0) {
+    clearTimeout(this._reloadTimer);
+    this._reloadTimer = setTimeout(async () => {
+      this._reloadTimer = null;
+      if (this.isDestroyed()) return;
+      const before = this._bookSignature();
+      await Promise.all([
+        this._loadContacts(this._contactsOption || "active"),
+        this._loadInvitations(),
+        this._loadSentInvitations(),
+      ]);
+      if (this.isDestroyed()) return;
+      if (this._bookSignature() === before) return;
+      await this._refreshList();
+      this._updateSelectionDom();
+      if (!this._editing) this._refreshDetail();
+    }, delay);
+  }
+
+  _bookSignature() {
+    try {
+      return JSON.stringify([this._contacts, this._invitations, this._sentInvitations]);
+    } catch (e) {
+      return String(Math.random()); // unserialisable: treat as changed
+    }
+  }
+
+  // Is the other party of a p2p message / call log already in the book —
+  // listed, or pending either way? (A pending person is in the Pending tab,
+  // never a chat partner, so their messages must not re-read the list.)
+  _knowsPeer(uid) {
+    const match = (c) =>
+      c && (c.drumate_id === uid || c.entity === uid || c.uid === uid || linkedDrumateId(c) === uid);
+    return (
+      this._contacts.some(match) ||
+      (this._invitations || []).some(match) ||
+      (this._sentInvitations || []).some(match)
+    );
   }
 
   /**
@@ -194,6 +270,16 @@ class __address_book extends LetcBox {
 
       case "open-invite":
         this._inviteDraft = { email: "", message: "" };
+        this._inviteError = null;
+        return this._renderInviteModal();
+
+      // A chat partner's Add contact: the invite dialog, pre-filled with
+      // their account email.
+      case "add-partner-contact":
+        this._inviteDraft = {
+          email: trigger.mget("contactEmail") || "",
+          message: "",
+        };
         this._inviteError = null;
         return this._renderInviteModal();
 
@@ -360,6 +446,20 @@ class __address_book extends LetcBox {
           this._refreshDetail();
         });
         return;
+      // A p2p message or a call log (conference writes it as chat.post) with
+      // someone the book does not list yet: they are a "chat partner" now
+      // (my_contact_show_next, status 'nocontact'), so re-read the list.
+      // Messages from people already listed change nothing here.
+      case SERVICE.chat.post: {
+        const peers = [data && data.peer_id, data && data.entity_id, data && data.author_id]
+          .filter((id) => typeof id === "string" && id && id !== Visitor.id);
+        // Hidden (parked) panels skip it: onPanelShown re-reads on reopen.
+        const visible = this.el && this.el.dataset.anim === "in";
+        if (visible && peers.some((id) => !this._knowsPeer(id))) {
+          this._reloadContacts(500);
+        }
+        return;
+      }
       case SERVICE.contact.load:
         // CSV/VCF import progress
         if (data && typeof data === "object") {
@@ -381,10 +481,11 @@ class __address_book extends LetcBox {
         hub_id: Visitor.id,
         option,
       });
-      this._contacts = (Array.isArray(rows) ? rows : []).map((c) => ({
+      const list = (Array.isArray(rows) ? rows : rows && rows.id ? [rows] : []).map((c) => ({
         ...c,
         tag: normalizeTags(c.tag),
       }));
+      this._contacts = dropSavedPartners(list);
       this._contactsOption = option;
     } catch (err) {
       this._contacts = [];
@@ -827,7 +928,7 @@ class __address_book extends LetcBox {
   async _selectContact() {
     this._refreshDetail();
     const sel = this.getSelectedContact();
-    if (!sel) return;
+    if (!sel || isChatPartner(sel)) return; // no contact row to hydrate
     const contactId = sel.id || sel.contact_id;
     const hydrated = await this._loadSelectedContactDetails(contactId);
     if (hydrated && this._selectedKey === idOf(sel)) {
@@ -837,7 +938,7 @@ class __address_book extends LetcBox {
 
   async _beginEdit() {
     const c = this.getSelectedContact();
-    if (!c) return;
+    if (!c || isChatPartner(c)) return;
     await this._loadSelectedContactDetails(c.id || c.contact_id);
     const full = this.getSelectedContact() || c;
     this._editing = true;

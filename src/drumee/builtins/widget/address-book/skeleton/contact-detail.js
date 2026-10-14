@@ -149,6 +149,19 @@ module.exports = function (ui, contact) {
         tileBtn(fig, "danger", "cross", LOCALE.CANCEL_INVITE || LOCALE.CANCEL, "delete-contact", { contactId, confirmKind: "cancel-invite" }, ui),
       ],
     });
+  } else if (contact.status === "nocontact") {
+    // Someone you have messaged or called but never saved
+    // (my_contact_show_next branch 3). There is no contact row behind it, so
+    // Archive / Edit / Block / Delete — which all act on one — are not offered;
+    // Add contact opens the invite dialog with their email.
+    actions = Skeletons.Box.X({
+      className: `${fig}__detail-tiles`,
+      kids: [
+        tileBtn(fig, "neutral", "ph-tray", LOCALE.INBOX, "contact-inbox", {}, ui),
+        tileBtn(fig, "neutral", "ph-phone", LOCALE.CALL, "contact-call", {}, ui),
+        tileBtn(fig, "primary", "ph-plus", LOCALE.CONTACT_NOT_FOUND_ADD, "add-partner-contact", { contactEmail: senderEmail }, ui),
+      ],
+    });
   } else {
     // Inbox (p2p chat) and Call (p2p call) need the drumate behind the row.
     // A contact saved by email for someone without a Drumee account has none,
