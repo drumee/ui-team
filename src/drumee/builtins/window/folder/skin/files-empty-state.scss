@@ -282,6 +282,13 @@
 // the empty view until rows arrive, which would blink the toggle away on every
 // open. Not during a search (`data-search`): no hits is not an empty folder.
 // !important: the toggle's own `display: inline-flex` sits in the same panel.
-.window-folder .window__files-panel:not([data-loading="1"]):not([data-search]):has(.window__icons-list .smart-container > .no-content) .window-folder-topbar__view-toggle {
-  display: none !important;
+//
+// Wide windows only. On a phone (the folder window's compact layout, the same
+// 700px line as the rest of it) the toggle stays: the files page is the whole
+// screen there and the control is how the user picks the layout they will
+// land in once files arrive.
+@container window-folder-w (min-width: 701px) {
+  .window-folder .window__files-panel:not([data-loading="1"]):not([data-search]):has(.window__icons-list .smart-container > .no-content) .window-folder-topbar__view-toggle {
+    display: none !important;
+  }
 }
