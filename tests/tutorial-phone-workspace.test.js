@@ -176,3 +176,22 @@ test("skin: the sheet is tinted and blocks faded only while a screen is teaching
   assert.match(css, /\.tutorial-wsp__sheet\[data-lit\] \{[^}]*linear-gradient/);
   assert.doesNotMatch(css, /\.tutorial-wsp__sheet:not\(\[data-lit=name\]\) \.tutorial-wsp__name/);
 });
+
+test("real create step: the name is a typeable field, prefilled; no Create in department", () => {
+  const tree = view(ui, SCREENS[4], { live: true, name: "Acme" });
+  const entry = find(tree, "wsd-name-input");
+  assert.ok(entry, "a real Entry on the create step");
+  assert.equal(entry.value, "Acme");
+  assert.equal(find(tree, "wsp-dept"), null, "Create in department hidden");
+  // the teaching version keeps the department row and a static name
+  const mock = view(ui, SCREENS[4], { live: false, name: "Acme" });
+  assert.ok(find(mock, "wsp-dept"));
+  assert.equal(find(mock, "wsd-name-input"), null);
+});
+
+test("real create step has exactly one error slot", () => {
+  const tree = view(ui, SCREENS[4], { live: true });
+  let n = 0;
+  (function walk(t) { if (t && typeof t === "object") { if (t.sys_pn === "wsd-name-error") n++; (t.kids || []).forEach(walk); } })(tree);
+  assert.equal(n, 1);
+});

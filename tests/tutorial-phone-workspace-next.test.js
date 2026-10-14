@@ -103,16 +103,15 @@ test("preview: Next on the create screen just advances", async () => {
   assert.equal(advanced, 1);
 });
 
-test("live run: Next on the create screen with no name goes back to the name field and says why", async () => {
+test("live run: Create with no name stays on the create step and says why (it has its own field now)", async () => {
   const s = make(7, 4);
   s._name = "";
   await s._showScreen();
   const said = [];
   s._setNameError = (m) => { if (m) said.push(m); }; // _create clears first with null
   await s._create();
-  assert.equal(s._screenIndex, 1, "back on the name screen");
+  assert.equal(s._screenIndex, 4, "stays on the create step");
   assert.equal(said.length, 1);
-  assert.ok(said[0]);
 });
 
 test("name field: typing records the name, Enter advances, leaving the field does NOT", async () => {

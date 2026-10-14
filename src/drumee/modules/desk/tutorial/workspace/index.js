@@ -347,18 +347,9 @@ class __tutorial_workspace extends LetcBox {
     this._name = name;
     this._setNameError(null);
     if (!name) {
-      const msg = LOCALE.REQUIRE_THIS_FIELD || LOCALE.ENTER_A_NAME;
-      // Phone: the name field lives on an earlier screen (380:54800). Take the
-      // user back to it and say why there, rather than refusing on a screen
-      // with nothing to type into.
-      if (this._phoneLiveCreate()) {
-        const at = this._screens.findIndex((x) => x.phone && x.phone.lit === 'name');
-        if (at >= 0) {
-          this._screenIndex = at;
-          await this._showScreen();
-        }
-      }
-      return this._setNameError(msg);
+      // Said under the name field — the phone's real create step carries one
+      // too, prefilled from the name screen.
+      return this._setNameError(LOCALE.REQUIRE_THIS_FIELD || LOCALE.ENTER_A_NAME);
     }
 
     // Mark the button, DO NOT re-render. _showScreen() rebuilds the whole

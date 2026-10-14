@@ -134,6 +134,12 @@ function dept() {
   });
 }
 
+/**
+ * The name field. Live on the name screen and on the real create step; its
+ * error slot (wsd-name-error) is where a refusal from Create is SAID — without
+ * it _setNameError fell back to Wm.alert, which draws under this full-screen
+ * tour, and a refused create looked like a dead button.
+ */
 function nameBlock(ui, { live, name }) {
   const field = live
     ? Skeletons.Entry({
@@ -209,8 +215,11 @@ function sheet(ui, { lit, live, selected = 'internal', name, pending }) {
         kids: [note('heading', LOCALE.CREATE_NEW_WORKSPACE)],
       }),
       org(),
-      dept(),
-      nameBlock(ui, { live: live && lit === 'name', name }),
+      // The real create step is the form itself: no department option, and
+      // the name is a field the user can still type into (prefilled with
+      // what the name screen took) — Create reads it.
+      plain ? null : dept(),
+      nameBlock(ui, { live: live && (lit === 'name' || lit === 'create'), name }),
       Skeletons.Box.Y({
         active: 0,
         className: `${W}__block ${W}__type`,
@@ -221,12 +230,6 @@ function sheet(ui, { lit, live, selected = 'internal', name, pending }) {
           ...TYPES.map((t) => typeRow(ui, t, { selected, live: live && lit === 'create' })),
         ],
       }),
-      // Where a refusal from Create is SAID. Without it _setNameError fell
-      // back to Wm.alert, which draws under this full-screen tour — so a
-      // refused create looked like a dead Next.
-      live && lit === 'create'
-        ? note('error', '', { sys_pn: 'wsd-name-error', partHandler: ui })
-        : null,
       Skeletons.Note({
         ...(live && lit === 'create' ? { service: 'wsd-create', uiHandler: [ui] } : { active: 0 }),
         className: `${W}__block ${W}__create`,
