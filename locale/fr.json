@@ -3323,5 +3323,6 @@
   "SALES_MAIL_APP": "Ouvrir la messagerie de bureau (Outlook, Apple Mail…)",
   "SALES_MAIL_COPY": "Copier l'adresse e-mail",
   "CONTACT_INVITE_JOINED": "Vous êtes maintenant en contact avec {0}",
-  "CONTACT_CONNECTED_SAY_HELLO": "Vous êtes maintenant en contact. Dites bonjour !"
+  "CONTACT_CONNECTED_SAY_HELLO": "Vous êtes maintenant en contact. Dites bonjour !",
+  "DESIGNATION_LINK_NO_ACCESS": "Impossible d'ouvrir ce lien : le compte avec lequel vous êtes connecté n'est pas membre de l'espace de travail qui le contient. Connectez-vous avec un compte membre, ou demandez au propriétaire ou à un administrateur de l'espace de travail de vous ajouter."
 }

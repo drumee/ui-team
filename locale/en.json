@@ -3322,5 +3322,6 @@
   "SALES_MAIL_APP": "Open desktop mail app (Outlook, Apple Mail…)",
   "SALES_MAIL_COPY": "Copy email address",
   "CONTACT_INVITE_JOINED": "You are now connected with {0}",
-  "CONTACT_CONNECTED_SAY_HELLO": "You are now connected. Say hello!"
+  "CONTACT_CONNECTED_SAY_HELLO": "You are now connected. Say hello!",
+  "DESIGNATION_LINK_NO_ACCESS": "You can't open this link: the account you're signed in with is not a member of the workspace that contains it. Sign in with an account that is a member, or ask the workspace owner or an admin to add you."
 }

@@ -3108,5 +3108,6 @@
   "SALES_MAIL_APP": "Abrir el correo de escritorio (Outlook, Apple Mail…)",
   "SALES_MAIL_COPY": "Copiar la dirección de correo",
   "CONTACT_INVITE_JOINED": "Ahora estás conectado con {0}",
-  "CONTACT_CONNECTED_SAY_HELLO": "Ahora están conectados. ¡Saluda!"
+  "CONTACT_CONNECTED_SAY_HELLO": "Ahora están conectados. ¡Saluda!",
+  "DESIGNATION_LINK_NO_ACCESS": "No puede abrir este enlace: la cuenta con la que ha iniciado sesión no es miembro del espacio de trabajo que lo contiene. Inicie sesión con una cuenta que sea miembro o pida al propietario o a un administrador del espacio de trabajo que le añada."
 }
