@@ -148,6 +148,14 @@ class __tutorial_migrate extends LetcBox {
    * has landed.
    */
   async _showScreen() {
+    // Live, the dialog on screen is the real import, not a walkthrough screen.
+    // A re-render (a rotation: layout.js relayoutStep) redraws THAT, keeping
+    // the pasted link; drawing the mock here would strand the user over a
+    // dead copy of the dialog.
+    if (this._live) {
+      this._readLiveLink();
+      return this._renderLive(this._sa.snapshot());
+    }
     const s = SCREENS[this._screenIndex];
     if (!s) {
       this.warn(`Data not found for screen ${this._screenIndex}`);

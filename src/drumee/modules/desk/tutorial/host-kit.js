@@ -69,11 +69,13 @@ const PHONE_MAX = 759;
 
 /**
  * @param {Number} viewportWidth
+ * @param {Boolean} [allowed=true] whether this run may use the phone layout at
+ *   all — the hosts pass the rollout switch (mobile_tours, or a preview)
  * @returns {'phone'|'desk'} an unmeasured (0) viewport is never a phone
  */
-function layoutFor(viewportWidth) {
+function layoutFor(viewportWidth, allowed = true) {
   const w = ~~viewportWidth;
-  return w > 0 && w <= PHONE_MAX ? 'phone' : 'desk';
+  return allowed && w > 0 && w <= PHONE_MAX ? 'phone' : 'desk';
 }
 
 // The Figma phone callout: card = viewport − 2×16, flips VERTICALLY only. A

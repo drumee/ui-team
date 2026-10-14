@@ -17,8 +17,9 @@ module.exports = function (ui) {
       Skeletons.Box.X({ active: 0,
         className: `${fig}__body`,
         kids: [
-          // No rail at phone: the step draws the phone chrome itself.
-          ui._layout === 'phone' ? null : require('./sidebar')(ui),
+          // Hidden at the mobile tier (skin), which is the phone layout's width:
+          // the phone step draws its own chrome.
+          require('./sidebar')(ui),
           // The step slot starts EMPTY. The host feeds _widgetAt(0) once this
           // shell has mounted, so the first screen comes from the registry
           // like every other screen does — planting a kind here hardcodes
@@ -28,7 +29,7 @@ module.exports = function (ui) {
             className: `${fig}__content`,
             sys_pn: _a.content,
           }),
-        ].filter(Boolean),
+        ],
       }),
       { kind: 'tutorial_spotlight', sys_pn: 'spotlight', partHandler: ui },
       // Last, so it paints above the scrim and the callout. Touch only (CSS).

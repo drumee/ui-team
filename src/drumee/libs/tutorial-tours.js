@@ -567,6 +567,7 @@ function __resetModuleState() {
 }
 
 module.exports = {
+  mobileToursOn,
   CHANNEL,
   TOUR_IDS,
   GUARD_TIMEOUT_MS,

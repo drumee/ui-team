@@ -2,6 +2,7 @@ require('./skin');
 const Tours = require('libs/tutorial-tours');
 const { tour, flaggedIds, stepChrome } = require('./tours');
 const { REFLOW_MS, tierFor, screensFor, buildStepWidgets, layoutFor } = require('./host-kit');
+const { relayoutStep } = require('./layout');
 
 const SVC_OPT = { async: 1 };
 
@@ -47,7 +48,7 @@ class tutorial_main extends LetcBox {
     this._tour = tour(this.mget('tour'));
     // Phone or desk, from the viewport (host-kit layoutFor). Read before the
     // payloads are built because every payload carries it.
-    this._layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0);
+    this._layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0, this._phoneAllowed());
     this._widgets = this._buildWidgets(this._tour);
     // ?tutorial=<id>&step=<n> — 1-based, clamped. Only useful for a multi-step
     // tour; for the rest it is always 0 and costs nothing.
@@ -154,7 +155,6 @@ class tutorial_main extends LetcBox {
     this._applySize();
     this._bindResize();
     this.feed(require('./skeleton')(this));
-    this._shellFed = true;
     // Feed the FIRST step from the registry, exactly as _nextStep feeds every
     // later one. The shell used to hardcode `tutorial_workspace` into its step
     // slot, which meant every tour opened on the workspace step no matter which
@@ -229,7 +229,7 @@ class tutorial_main extends LetcBox {
     // navItems, not railItems: the slot is replaced whole, so the org's Dept.
     // entry has to come back with the workspace tabs or the org-home rail —
     // which has no tabs at all — is fed an empty list and renders bare.
-    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail)));
+    this.ensurePart('rail-nav').then((p) => p && p.feed(sidebar.navItems(this, rail)));
   }
 
   /**
@@ -244,15 +244,23 @@ class tutorial_main extends LetcBox {
   /**
    * Phone or desk, from the viewport, and whether the pointer is a finger.
    *
-   * A flip here cannot just ask the step to redraw: the SHELL differs too (the
-   * rail exists only at desk). So the shell is re-fed and the current step is
-   * re-fed on the screen it was showing — a rotation lands where the user was.
+   * On a flip the MOUNTED step redraws its current screen in the new layout
+   * (relayoutStep), exactly as the window host does. Not a re-feed: the step
+   * instance holds what the user has done — the name typed into the live
+   * create form, the type picked, the workspace already created — and a fresh
+   * step would drop all of it (an invite sent after a rotation would silently
+   * go nowhere). The shell needs no swap: the rail is hidden at the mobile
+   * tier, which is the same width as the phone layout.
+   *
+   * The phone layout is only offered when phone tours are switched on
+   * (`mobile_tours`) or the tour is an explicit preview — until then a narrow
+   * desktop window keeps today's layout.
    *
    * @returns {Boolean} whether the layout changed
    */
   _applyLayout() {
     if (typeof window === 'undefined') return false;
-    const layout = layoutFor(window.innerWidth);
+    const layout = layoutFor(window.innerWidth, this._phoneAllowed());
     const touch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
     if (this.el && this.el.dataset) {
       this.el.dataset.layout = layout;
@@ -260,20 +268,16 @@ class tutorial_main extends LetcBox {
     }
     this._touch = touch;
     if (layout === this._layout) return false;
-    const cur = this._currentStep();
-    const at = cur && Number.isInteger(cur._screenIndex) ? cur._screenIndex + 1 : 1;
     this._layout = layout;
     this._widgets = this._widgets.map((w) => ({ ...w, layout }));
-    // Only once the shell exists; before onDomRefresh feeds it there is nothing
-    // to swap and the payloads above are all that needed changing.
-    if (this._shellFed) {
-      this.feed(require('./skeleton')(this));
-      this._applyChrome();
-      this.ensurePart(_a.content).then((p) =>
-        p.feed(this._widgetAt(this._stepIndex, { enter_at_screen: at })),
-      );
-    }
+    relayoutStep(this._currentStep(), layout);
+    this._applyChrome();
     return true;
+  }
+
+  /** Phone layout: on once phone tours are, and always for a preview. */
+  _phoneAllowed() {
+    return !!this.mget('preview') || !!(Tours.mobileToursOn && Tours.mobileToursOn());
   }
 
   _currentStep() {

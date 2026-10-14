@@ -10,7 +10,9 @@ const SRC = path.join(__dirname, "..", "src/drumee");
 const STUBS = {
   "./skin": {},
   "desk/tutorial/skin": {},
-  "libs/tutorial-tours": { armed() {}, markSeen() {} },
+  // mobile_tours on: these tests are about the phone layout itself; the
+  // flag's own gate is pinned in tutorial-phone-review-fixes.test.js.
+  "libs/tutorial-tours": { armed() {}, markSeen() {}, mobileToursOn: () => true },
   "desk/tutorial/tours": {
     tour: () => ({ id: "chat", flag: "chat", mark_on: "success", steps: [{ kind: "tutorial_chat", screens: 5 }] }),
   },

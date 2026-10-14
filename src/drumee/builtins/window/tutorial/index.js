@@ -71,7 +71,7 @@ class __window_tutorial extends LetcBox {
     const importDest = this._importDest();
     // Phone or desk, from the VIEWPORT (see host-kit layoutFor). Re-read on
     // every resize by _applyLayout.
-    this._layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0);
+    this._layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0, this._phoneAllowed());
     this._widgets = buildStepWidgets(this, this._tour, { canCreate: false, layout: this._layout })
       .map((w) => ({ ...w, live_capable: 1, ...(importDest ? { import_dest: importDest } : {}) }));
     this._stepIndex = this._entryStep();
@@ -280,7 +280,7 @@ class __window_tutorial extends LetcBox {
    * @returns {Boolean} whether the layout changed
    */
   _applyLayout() {
-    const layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0);
+    const layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0, this._phoneAllowed());
     const touch = !!(typeof window !== 'undefined' && window.matchMedia
       && window.matchMedia('(pointer: coarse)').matches);
     if (this.el && this.el.dataset) {
@@ -293,6 +293,15 @@ class __window_tutorial extends LetcBox {
     this._widgets = this._widgets.map((w) => ({ ...w, layout }));
     relayoutStep(this._currentStep(), layout);
     return true;
+  }
+
+  /**
+   * Phone layout: on once phone tours are (`mobile_tours`), and always for a
+   * preview. Until then a narrow desktop window keeps today's layout rather
+   * than a full-viewport phone takeover nobody has signed off.
+   */
+  _phoneAllowed() {
+    return !!this.mget('preview') || !!(Tours.mobileToursOn && Tours.mobileToursOn());
   }
 
   _applySize() {
