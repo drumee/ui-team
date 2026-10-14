@@ -268,6 +268,60 @@
     display: none !important;
   }
 
+  // The folder's "+ New" beside search, while the folder's view toggle is
+  // hidden. That toggle hides on an empty folder that is not loading or being
+  // searched (window/folder/skin/files-empty-state.scss) — the same chain is
+  // spelled out here, as ONE :has() (they cannot nest). It also needs the
+  // folder's own + New to be permitted (data-visible="1": viewers get none).
+  &__mobile-new-ctrl {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 12px;
+    background: var(--primary-40);
+    color: var(--gray-white);
+    flex: 0 0 auto;
+    cursor: pointer;
+
+    &:active {
+      background: var(--primary-50);
+    }
+  }
+
+  &__ui:has(.window__files-panel:not([data-loading="1"]):not([data-search]) .window__icons-list .smart-container > .no-content):has(.window-folder-topbar__new-ctrl[data-visible="1"]) &__mobile-new-ctrl {
+    display: flex;
+  }
+
+  &__mobile-new-ctrl-plus {
+    @include drumee.typo($size: 17px, $line: 17px, $color: inherit);
+    font-weight: 500;
+    pointer-events: none;
+  }
+
+  &__mobile-new-ctrl-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  // Meanwhile the folder's own pill steps aside. NOT display:none — its menu
+  // card (fixed, centred on a phone) lives inside it and must still open — so
+  // the controls leave the flow and the trigger goes invisible.
+  &__ui:has(&__mobile-new-ctrl) .window__files-panel:not([data-loading="1"]):not([data-search]):has(.window__icons-list .smart-container > .no-content) {
+    .window-folder-topbar__file-controls {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: visible;
+    }
+
+    .window-folder-topbar__new-ctrl .window-button__label-button {
+      visibility: hidden;
+    }
+  }
+
   &__mobile-search-pill {
     align-items: center;
     gap: 8px;

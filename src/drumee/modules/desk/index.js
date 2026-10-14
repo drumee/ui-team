@@ -6555,6 +6555,23 @@ class desk_module extends LetcBox {
    *
    * @returns {Object|null} a folder window with showFolderTab, or null
    */
+  /**
+   * The action row's "+ New" (phone, empty folder): open the workspace pane's
+   * OWN new-ctrl menu — the same upload / create / Google Drive card — by
+   * pressing its trigger, so there is one menu and one set of handlers.
+   *
+   * @returns {Boolean} whether a trigger was found and pressed
+   */
+  _openFolderNewMenu() {
+    const w = this._railWorkspace();
+    const trigger = w && w.el && w.el.querySelector(
+      ".window-folder-topbar__new-ctrl .window-button__label-button",
+    );
+    if (!trigger) return false;
+    trigger.click();
+    return true;
+  }
+
   _railWorkspace() {
     const w = this._activeWorkspace();
     if (w) return w;
@@ -11661,6 +11678,9 @@ class desk_module extends LetcBox {
       // Kept as an alias: anything still emitting the old drawer's
       // "mobile-show-add" lands on the create sheet.
       case "mobile-show-add":
+      case "mobile-new-ctrl":
+        return this._openFolderNewMenu();
+
       case "mobile-new-sheet":
         return this._openMobileSheet(
           "new",
