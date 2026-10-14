@@ -59,11 +59,15 @@
   }
 
   // The slot the widget fills: a plain column, clipped; the widget carries
-  // the card look. A chat-gated viewer sees nothing inside it.
+  // the card look. The shadow sits on the slot, rounded to the widget's r=8,
+  // because the slot's overflow:hidden would clip one on the widget.
+  // A chat-gated viewer sees nothing inside it.
   .window__chat-details {
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+    border-radius: 8px;
+    box-shadow: var(--drumee-shadow-box);
 
     &[data-chat_gated="1"] > * {
       display: none;
