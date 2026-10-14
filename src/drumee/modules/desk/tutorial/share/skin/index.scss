@@ -804,3 +804,24 @@
     color: var(--gray-white, #fff);
   }
 }
+
+// PHONE (share/skeleton/phone.js; Figma 386:59700 → 386:61932): the panel is
+// the page. Its own title row gives way to the phone top bar, and its body
+// stops scrolling on its own — the phone body scrolls instead.
+.tutorial-phone .tutorial-share__panel {
+  flex: none;
+  width: 100%;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+
+  .tutorial-share__head-row { display: none; }
+  .tutorial-share__head { padding: 0 0 12px; }
+  .tutorial-share__body { overflow: visible; }
+}
+
+// The lit block stands on white, full-bleed, as the frames draw it.
+.tutorial-main[data-layout="phone"] .tutorial-share__panel .is-lit {
+  background: #fff;
+  border-radius: 16px;
+}

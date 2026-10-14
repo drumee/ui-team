@@ -14,23 +14,7 @@ const { stepProgress, isLastScreen, entryScreen } = require('../tours');
  * `direction: 'east'` throughout: the design puts the card to the LEFT of the
  * panel with the beak on its right edge, which is what reaching east produces.
  */
-const SCREENS = [
-  { lit: BLOCKS.RECIPIENT, desc: () => LOCALE.TUTORIAL_SHARE_RECIPIENT },
-  { lit: BLOCKS.ACCESS, desc: () => LOCALE.TUTORIAL_SHARE_ACCESS },
-  { lit: BLOCKS.EMAIL, desc: () => LOCALE.TUTORIAL_SHARE_EMAIL },
-  { lit: BLOCKS.PASSWORD, desc: () => LOCALE.TUTORIAL_SHARE_PASSWORD },
-  { lit: BLOCKS.EXPIRY, desc: () => LOCALE.TUTORIAL_SHARE_EXPIRY },
-  // The last block sits at the very bottom of the panel, and 148:44198 does
-  // not put its callout beside the panel like the other five: the card goes
-  // ON the panel, above the notify row, with the tail pointing down at it
-  // (the frame's beak is on the card's bottom edge at y226.875).
-  //
-  // `south` is that placement — the name is the direction the callout REACHES
-  // (spotlight/index.js anchorFor), so reaching south puts the card above the
-  // target. A card beside the panel would have had to sit almost off the
-  // bottom of the tour to line up with a row 13px from the panel's floor.
-  { lit: BLOCKS.NOTIFY, direction: 'south', desc: () => LOCALE.TUTORIAL_SHARE_NOTIFY },
-];
+const SCREENS = require('./screens');
 
 // Where the callout sits when a screen does not say otherwise: to the LEFT of
 // the panel with the tail on its right edge, which is what the frames show for
@@ -132,15 +116,20 @@ class __tutorial_share extends LetcBox {
     //   subject_data  the item's raw fields, when the trigger had them. Absent
     //                 for the full tour and for `?tutorial=share` previews, and
     //                 the panel falls back to the frames' placeholder copy.
-    this.feed(skeleton(this, {
+    // Phone layout (host-kit layoutFor): the panel as a full page. `phone` is
+    // null at desk.
+    const phone = this.mget('layout') === 'phone' ? s.phone : null;
+    const state = {
       ...s,
       subject: this.mget('subject'),
       subject_data: this.mget('subject_data'),
-    }));
+    };
+    this.feed(phone ? require('./skeleton/phone')(this, state) : skeleton(this, state));
     const [panel, block] = await Promise.all([
       this.ensurePart('sp-panel'),
       this.ensurePart(s.lit),
     ]);
+    if (phone) return this._focusOnPhone(s, block);
     // Before the scroll and before the callout measures anything: the ring is
     // what the callout's beak points at.
     if (s.lit === BLOCKS.ACCESS) await this._sizeRing(block);
@@ -168,6 +157,34 @@ class __tutorial_share extends LetcBox {
         done: isLastScreen(this, this._screenIndex, SCREENS.length),
       },
       direction: s.direction || DIRECTION,
+      owner: this,
+    });
+  }
+
+  /**
+   * Phone: scroll the block into the middle of the page, then light the BLOCK
+   * itself (not the panel) with a full-width card above or below it — the
+   * frames' pattern. One Next, no Back, dashes (386:59700 → 386:61932).
+   */
+  async _focusOnPhone(s, block) {
+    const el = block && block.el;
+    if (el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'center' });
+      await new Promise((r) => requestAnimationFrame(() => r()));
+    }
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this.triggerHandlers({
+      service: 'spotlight:focus',
+      target: el,
+      anchor: el,
+      tooltip: {
+        title: LOCALE.SECURE_SHARE,
+        desc: s.desc(),
+        ...stepProgress(this, this._screenIndex),
+        progressStyle: 'dashes',
+        hide_back: true,
+        done: isLastScreen(this, this._screenIndex, SCREENS.length),
+      },
       owner: this,
     });
   }
