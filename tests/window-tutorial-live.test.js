@@ -19,6 +19,7 @@ const STUBS = {
     tour: () => ({ id: "migrate", flag: "migrate", mark_on: "success", steps: [{ kind: "tutorial_migrate", screens: 4 }] }),
   },
   "desk/tutorial/host-kit": require(path.join(SRC, "modules/desk/tutorial/host-kit.js")),
+  "desk/tutorial/layout": require(path.join(SRC, "modules/desk/tutorial/layout.js")),
   "libs/over-limit": { isLocked: () => locked, notifyBlocked: (k) => blocked.push(k) },
   "libs/permission-denied": { sayWeakPrivilege: (...a) => said.push(a) },
   "libs/hotkeys": { register: (d) => { hk.def = d; return d; }, unregister() {} },

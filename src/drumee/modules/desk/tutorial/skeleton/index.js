@@ -17,7 +17,8 @@ module.exports = function (ui) {
       Skeletons.Box.X({ active: 0,
         className: `${fig}__body`,
         kids: [
-          require('./sidebar')(ui),
+          // No rail at phone: the step draws the phone chrome itself.
+          ui._layout === 'phone' ? null : require('./sidebar')(ui),
           // The step slot starts EMPTY. The host feeds _widgetAt(0) once this
           // shell has mounted, so the first screen comes from the registry
           // like every other screen does — planting a kind here hardcodes
@@ -27,7 +28,7 @@ module.exports = function (ui) {
             className: `${fig}__content`,
             sys_pn: _a.content,
           }),
-        ],
+        ].filter(Boolean),
       }),
       { kind: 'tutorial_spotlight', sys_pn: 'spotlight', partHandler: ui },
     ],

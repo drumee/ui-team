@@ -11690,6 +11690,9 @@ class desk_module extends LetcBox {
       // a backdrop tap from also closing the panel standing behind the card.
       // Renaming it here would silently re-break those two.
       case "mobile-close-drawer":
+        // The tours mount in the overlay this service is wired to. A tap on a
+        // tour is not a tap on the drawer backdrop.
+        if (this.el && this.el.dataset && (this.el.dataset.deskTour || this.el.dataset.windowTour)) return;
         return this._closeMobileSearch();
 
       case "toggle-sidebar-pin":

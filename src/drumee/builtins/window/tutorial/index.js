@@ -11,7 +11,8 @@ require('./skin');
 require('desk/tutorial/skin');
 const Tours = require('libs/tutorial-tours');
 const { tour } = require('desk/tutorial/tours');
-const { REFLOW_MS, tierFor, buildStepWidgets } = require('desk/tutorial/host-kit');
+const { REFLOW_MS, tierFor, buildStepWidgets, layoutFor } = require('desk/tutorial/host-kit');
+const { relayoutStep } = require('desk/tutorial/layout');
 
 /**
  * A tour, run over a folder window instead of over a picture of the desk.
@@ -68,7 +69,10 @@ class __window_tutorial extends LetcBox {
     // it, and the card they are taught is the card they then get (_goLive
     // hands the step the same answer).
     const importDest = this._importDest();
-    this._widgets = buildStepWidgets(this, this._tour, { canCreate: false })
+    // Phone or desk, from the VIEWPORT (see host-kit layoutFor). Re-read on
+    // every resize by _applyLayout.
+    this._layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0);
+    this._widgets = buildStepWidgets(this, this._tour, { canCreate: false, layout: this._layout })
       .map((w) => ({ ...w, live_capable: 1, ...(importDest ? { import_dest: importDest } : {}) }));
     this._stepIndex = this._entryStep();
   }
@@ -235,6 +239,19 @@ class __window_tutorial extends LetcBox {
    * @returns {Boolean} whether a target was found and applied
    */
   _syncToWindow() {
+    // PHONE: the mock owns the whole viewport and draws its own top bar. The
+    // real folder window is full-bleed there anyway (mobile-fullscreen-window).
+    if (this._layout === 'phone' && this.el && this.el.style) {
+      const st = this.el.style;
+      st.position = 'fixed';
+      st.left = '0';
+      st.top = '0';
+      st.width = '100vw';
+      st.height = '100dvh';
+      st.borderRadius = '0';
+      st.overflow = 'hidden';
+      return true;
+    }
     const ws = this.mget('target_window');
     const el = ws && ws.el;
     if (!el || !el.isConnected || !this.el || !this.el.parentElement) return false;
@@ -253,8 +270,34 @@ class __window_tutorial extends LetcBox {
     return true;
   }
 
+  /**
+   * Phone or desk, from the viewport, and whether the pointer is a finger.
+   *
+   * On a flip the mounted step redraws its current screen in the new layout
+   * and every later payload carries it, so Back/Next after a rotation stay in
+   * the layout the user is now holding.
+   *
+   * @returns {Boolean} whether the layout changed
+   */
+  _applyLayout() {
+    const layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0);
+    const touch = !!(typeof window !== 'undefined' && window.matchMedia
+      && window.matchMedia('(pointer: coarse)').matches);
+    if (this.el && this.el.dataset) {
+      this.el.dataset.layout = layout;
+      this.el.dataset.touch = touch ? '1' : '0';
+    }
+    this._touch = touch;
+    if (layout === this._layout) return false;
+    this._layout = layout;
+    this._widgets = this._widgets.map((w) => ({ ...w, layout }));
+    relayoutStep(this._currentStep(), layout);
+    return true;
+  }
+
   _applySize() {
     if (!this.el || !this.el.dataset || !this.el.getBoundingClientRect) return false;
+    this._applyLayout();
     // Geometry first: the tier is measured from this host's box, and that box is
     // only right once it has been laid over its window.
     this._syncToWindow();
@@ -313,6 +356,10 @@ class __window_tutorial extends LetcBox {
       // used to be.
       const ws = this.mget('target_window');
       if (ws && ws.el) this._ro.observe(ws.el);
+      // AND the viewport: phone vs desk is a viewport question, and at phone
+      // this element is 100vw — a ResizeObserver on it cannot tell a rotation
+      // that crosses the line from one that does not.
+      if (typeof window !== 'undefined') window.addEventListener('resize', settle);
       return;
     }
     // No ResizeObserver: catch what a viewport event can still tell us. Strictly

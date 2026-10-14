@@ -456,3 +456,16 @@ $rail-width: 64px;
 // bottom sheet with the controls in it (skin/tooltip.scss). The panes that
 // matter most on a phone — the empty states — reflow instead of scaling.
 .tutorial-main[data-size="mobile"] { --pane-fit: 0.52; }
+
+// PHONE (host-kit layoutFor): the tour owns the viewport, above the real mobile
+// topbar (≈99999) and bottom rail (10000). The overlay that hosts it is
+// opacity:0 / pointer-events:none on mobile unless open, so the host restores
+// both. --pane-fit 1: a phone step draws a phone-sized mock, not a shrunk desk.
+.tutorial-main[data-layout="phone"] {
+  position: fixed !important;
+  inset: 0;
+  z-index: 100001;
+  opacity: 1;
+  pointer-events: auto;
+  --pane-fit: 1;
+}
