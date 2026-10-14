@@ -18,8 +18,10 @@
 //                 both workspace-level, so one pill names one thing.
 //   title         display title
 //   description   agenda / note, may be empty
-//   due_date      'YYYY-MM-DD' — tasks only. Tasks are all-day items.
-//   start_date    'YYYY-MM-DD' — tasks only, set when the task has a duration
+//   due_date      DATE — tasks only. Tasks are all-day items. The server sends
+//                 it as UTC midnight ('YYYY-MM-DDT00:00:00.000Z'); normalizeRow
+//                 keeps the 'YYYY-MM-DD' part (dateOnly below)
+//   start_date    DATE, same shape — tasks only, set when the task has a duration
 //   stime/etime   UNIX-EPOCH SECONDS — meetings only. The server names these the
 //                 canonical meeting time (room.js); `date` is a human display
 //                 string kept for back-compat and must NOT be parsed.
@@ -101,6 +103,18 @@ const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 21;
 
 const ymd = (d) => d.format("YYYY-MM-DD");
+
+// A task DATE as 'YYYY-MM-DD', or null. The server answers a stored DATE as UTC
+// midnight (…T00:00:00.000Z): its date part is the stored day everywhere, while
+// Dayjs(instant) is the day before for any viewer west of UTC — the task would
+// sit a cell early and every save would send that earlier day back. The board
+// (window/tasks/list-edit.js) and mobile (taskDateFromWire) read it the same
+// way. Task dates only: meeting times are epochs, cursors are local days.
+const DATE_PART = /^(\d{4}-\d{2}-\d{2})/;
+function dateOnly(value) {
+  const m = value == null ? null : DATE_PART.exec(String(value));
+  return m ? m[1] : null;
+}
 
 /** Dayjs for a value, or null — never throws, never returns an invalid Dayjs. */
 function day(value) {
@@ -234,8 +248,8 @@ function normalizeRow(raw, fallbackKind) {
     row.etime = Number(content.etime) || 0;
     row.all_day = !row.stime;
   } else {
-    row.due_date = content.due_date || null;
-    row.start_date = content.start_date || null;
+    row.due_date = dateOnly(content.due_date);
+    row.start_date = dateOnly(content.start_date);
     row.all_day = true;
   }
   return row;
@@ -382,6 +396,7 @@ module.exports = {
   DAY_END_HOUR,
   ymd,
   day,
+  dateOnly,
   fromEpoch,
   statusMeta,
   priorityMeta,

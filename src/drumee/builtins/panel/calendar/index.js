@@ -12,8 +12,10 @@
 //
 // Personal items live in the user's personal hub — hub_id: Visitor.id,
 // nid: Visitor.get(_a.home_id) — which is the same pair the desk already uses
-// for its own personal-scope launches. A personal task carries no assignee: the
-// field is omitted here, and refused server-side, which is the half that counts.
+// for its own personal-scope launches. A personal task carries no assignee —
+// there is nobody else to give it to — so no write here sends one. The server
+// would accept it (task.update_assignee does not check the hub), so omitting
+// the field is the only gate there is.
 const { copyToClipboard } = require("@drumee/ui-essentials");
 const { overMeetingCap } = require("libs/billing");
 const {
@@ -25,6 +27,7 @@ const {
   fromEpoch,
   day,
   ymd,
+  dateOnly,
   DAY_START_HOUR,
 } = require("./skeleton/helpers");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
@@ -32,7 +35,18 @@ const { modalKids } = require("./skeleton");
 const { recipientChips } = require("./skeleton/meeting-form");
 const A = require("./attachments");
 const { rowOf } = require("../../window/tasks/live-sync");
-const { fileChips } = require("./skeleton/attachments");
+const { fileChips, taskFileChips, fileResults } = require("./skeleton/attachments");
+const { subtaskBody } = require("./skeleton/task-form");
+const { rangeDisable } = require("./skeleton/date-field");
+
+// A task's DATE as the pickers and task.update take it (YYYY-MM-DD), or "".
+// The date part of what the server sends (dateOnly), never Dayjs(instant):
+// west of UTC that is the day before, and every save would move the task back
+// a day. Sending the instant itself back is refused outright (task.update fails).
+const dateOf = (v) => dateOnly(v) || "";
+
+// task.search_files also lists folders and the hub root; a task links files.
+const NOT_ATTACHABLE = ["folder", "hub", "root", "schedule"];
 
 const VIEW_KEYS = ["month", "week", "day"];
 const FILTER_KEYS = ["all", "task", "meeting"];
@@ -89,7 +103,19 @@ class __calendar_main extends LetcBox {
     // The dropdown dismisser lives on `document`, so it outlives this widget
     // unless it is taken down here.
     this._unbindMenuDismiss();
-    this._cancelFormUploads(this._form);
+    if (this._subMenuDismiss) {
+      document.removeEventListener("click", this._subMenuDismiss, true);
+      this._subMenuDismiss = null;
+    }
+    // A pending file search would otherwise still fire into a torn-down widget:
+    // its `this._form === form` guard holds as long as the form is kept.
+    const form = this._form;
+    if (form && form.search) {
+      clearTimeout(form.search.timer);
+      clearTimeout(form.search.blurTimer);
+    }
+    this._cancelFormUploads(form);
+    this._form = null;
     if (this._dropHandlers && this.el) {
       for (const [type, fn] of this._dropHandlers) this.el.removeEventListener(type, fn);
       this._dropHandlers = null;
@@ -650,18 +676,23 @@ class __calendar_main extends LetcBox {
 
   _openTaskForm(row) {
     this._closeMenus();
+    // Both dates in YYYY-MM-DD from the start: every task.update writes both
+    // columns, so the draft must always hold the row's own Start and End.
     if (row) {
       this._form = {
         kind: "task",
         mode: "edit",
         row,
         draft: {
+          id: row.id,
           title: row.title || "",
           description: row.description || "",
-          due_date: row.due_date || "",
+          due_date: dateOf(row.due_date),
+          start_date: dateOf(row.start_date),
           status: row.status || "todo",
           priority: row.priority || "medium",
           files: [],
+          subtasks: [],
         },
       };
     } else {
@@ -672,15 +703,24 @@ class __calendar_main extends LetcBox {
           title: "",
           description: "",
           due_date: this._pendingDay || "",
+          start_date: "",
           status: "todo",
           priority: "medium",
           files: [],
+          subtasks: [],
         },
       };
     }
+    this._form.doneKeys = [];
+    this._form.subMenu = null;
+    this._form.search = { seq: 0, timer: null, blurTimer: null, rows: [] };
     this._pendingDay = null;
     this._renderModal();
-    if (row) this._loadLinkedFiles(this._form);
+    this._loadDoneColumns(this._form);
+    if (row) {
+      this._loadLinkedFiles(this._form);
+      this._loadSubtasks(this._form);
+    }
   }
 
   _openMeetingForm() {
@@ -708,12 +748,24 @@ class __calendar_main extends LetcBox {
   _closeForm() {
     // Whatever is still uploading has no task or meeting to join any more.
     this._cancelFormUploads(this._form);
+    const form = this._form;
+    if (form && form.search) {
+      clearTimeout(form.search.timer);
+      clearTimeout(form.search.blurTimer);
+    }
     this._form = null;
-    // Pushes that landed while the modal was open were held back
-    // (_scheduleReload); this is where they are owed.
+    if (this._subMenuDismiss) {
+      document.removeEventListener("click", this._subMenuDismiss, true);
+      this._subMenuDismiss = null;
+    }
     // The modal goes first — the reload waits on the network.
     this._renderModal();
-    if (this._dirty) return this._reload();
+    // Pushes that landed while the modal was open were held back
+    // (_scheduleReload), and the task modal saves subtask edits — and, after a
+    // failed subtask, the task itself — before its Update/Create is pressed.
+    // None of our own writes come back as a push (the server skips the
+    // sending socket), so a task form always reloads on its way out.
+    if (this._dirty || (form && form.kind === "task")) return this._reload();
   }
 
   /**
@@ -777,8 +829,8 @@ class __calendar_main extends LetcBox {
 
   /**
    * Required fields — the ones the skeleton marks `data-required`, so the
-   * form, not this method, decides what is required (title, in both the task
-   * and the meeting form). Blank or whitespace-only fails.
+   * form, not this method, decides what is required (the title in both
+   * forms, and the End date in the task form). Blank or whitespace-only fails.
    *
    * A failing field gets data-error="1", which shows its error line and reds
    * its border; the first one takes the focus. Returns true when all pass.
@@ -929,7 +981,9 @@ class __calendar_main extends LetcBox {
     const list = (this._form && this._form.draft.files) || [];
     const part = _.isFunction(this.getPart) ? this.getPart("form-files") : null;
     if (!part || !part.el) return;
-    part.feed(fileChips(this, list));
+    // The task modal draws paperclip chips; the meeting modal its file rows.
+    const chips = this._form && this._form.kind === "task" ? taskFileChips : fileChips;
+    part.feed(chips(this, list));
     part.el.setAttribute("data-count", String(list.length));
     const zone = part.el.closest && part.el.closest(`.${this.fig.family}__files`);
     if (zone) zone.setAttribute("data-has-files", list.length ? "1" : "0");
@@ -1091,7 +1145,29 @@ class __calendar_main extends LetcBox {
       light(null);
       return this._onDrop(e);
     };
-    this._dropHandlers = [["dragover", over], ["dragleave", leave], ["drop", drop]];
+    // The task modal's Search file field: its results open on focus and close
+    // on blur, deferred so a click on a result lands first.
+    const isSearch = (t) => !!(t && t.matches && t.matches('[name="cal-file-search"]'));
+    const focusIn = (e) => {
+      if (isSearch(e.target)) this._searchFiles(e.target.value || "");
+    };
+    const focusOut = (e) => {
+      const form = this._form;
+      if (!form || !form.search || !isSearch(e.target)) return;
+      clearTimeout(form.search.blurTimer);
+      form.search.blurTimer = setTimeout(() => {
+        if (this._form !== form || isSearch(document.activeElement)) return;
+        form.search.seq++;
+        this._feedFileResults([]);
+      }, 200);
+    };
+    this._dropHandlers = [
+      ["dragover", over],
+      ["dragleave", leave],
+      ["drop", drop],
+      ["focusin", focusIn],
+      ["focusout", focusOut],
+    ];
     for (const [type, fn] of this._dropHandlers) this.el.addEventListener(type, fn);
     this._pasteHandler = (e) => this._onPasteFiles(e);
     document.addEventListener("paste", this._pasteHandler);
@@ -1197,13 +1273,13 @@ class __calendar_main extends LetcBox {
     return true;
   }
 
-  /** task.link_file per nid. postService never rejects: success = an array. Returns the failure count. */
+  /** task.link_file per nid. postService never rejects: success = an array. Returns the nids that did not link. */
   async _linkTaskFiles(hub_id, task_id, nids) {
     const svc = (SERVICE.task && SERVICE.task.link_file) || "task.link_file";
-    let failed = 0;
+    const failed = [];
     for (const file_nid of nids || []) {
       const res = await this.postService({ service: svc, hub_id, task_id, file_nid });
-      if (!Array.isArray(res)) failed++;
+      if (!Array.isArray(res)) failed.push(file_nid);
     }
     return failed;
   }
@@ -1243,6 +1319,401 @@ class __calendar_main extends LetcBox {
     this._renderFiles();
   }
 
+  // ── file search (task modal) ───────────────────────────────────────────────
+  //
+  // Search file: each keystroke (and focus) asks task.search_files for its
+  // first page on the personal hub — no task_id, so any file the user can read
+  // there, best matches first; the Meet tab modal's search. A picked file is
+  // linked with the uploads, on Create / Update.
+
+  _searchFiles(query) {
+    const form = this._form;
+    if (!form || form.kind !== "task" || !form.search) return;
+    const s = form.search;
+    const seq = ++s.seq;
+    clearTimeout(s.timer);
+    clearTimeout(s.blurTimer);
+    s.timer = setTimeout(async () => {
+      let rows;
+      try {
+        rows = await this.fetchService({
+          service: (SERVICE.task && SERVICE.task.search_files) || "task.search_files",
+          hub_id: this._personalHub,
+          pattern: String(query || "").trim(),
+          page: 1,
+        });
+      } catch (e) {
+        rows = [];
+      }
+      if (this._form !== form || s.seq !== seq) return;
+      // One row comes back as an object, not a one-element array.
+      const list = Array.isArray(rows) ? rows : rows && rows.nid ? [rows] : [];
+      const taken = new Set((form.draft.files || []).map((pf) => String(pf.nid || "")));
+      this._feedFileResults(
+        list.filter((r) => r && r.nid && !taken.has(String(r.nid)) && !NOT_ATTACHABLE.includes(r.category)),
+      );
+    }, 200);
+  }
+
+  _feedFileResults(rows) {
+    const form = this._form;
+    const part = _.isFunction(this.getPart) ? this.getPart("form-files-results") : null;
+    if (!form || !form.search || !part || !part.el) return;
+    form.search.rows = rows || [];
+    part.feed(fileResults(this, form.search.rows));
+    // A press on a row must not blur the search field first, or the focusout
+    // teardown closes the list mid-click and the pick is lost.
+    require("libs/pick-guard").keepListThroughClick(part.el, `.${this.fig.family}__fsearch-option`);
+    part.el.setAttribute("data-open", form.search.rows.length ? "1" : "0");
+  }
+
+  _pickSearchedFile(nid) {
+    const form = this._form;
+    if (!form || !form.search || !nid) return;
+    const row = form.search.rows.find((r) => String(r.nid) === String(nid));
+    const files = form.draft.files || (form.draft.files = []);
+    if (row && !files.some((pf) => String(pf.nid) === String(nid))) {
+      if (files.length >= A.MAX_FILES) {
+        if (typeof Butler !== "undefined") Butler.say(LOCALE.CAL_FILES_LIMIT);
+      } else {
+        files.push({
+          localKey: `pick:${nid}`,
+          nid: String(nid),
+          filename: row.filename || "",
+          extension: row.ext || row.extension || "",
+          category: row.category || "",
+          status: "queued",
+        });
+      }
+    }
+    form.search.seq++;
+    const root = this._modalEl();
+    const input = root && root.querySelector('[name="cal-file-search"]');
+    if (input) input.value = "";
+    this._feedFileResults([]);
+    this._renderFiles();
+  }
+
+  // ── subtasks (task modal) ──────────────────────────────────────────────────
+  //
+  // Create mode keeps them in the draft until Create. Edit mode saves each
+  // change at once — a new row on Enter, ✕, a Status or Priority pick — each
+  // row with its own in-flight flag, so Cancel only drops the task's own
+  // fields. Every task.update here sends the row's own due_date and
+  // start_date: the service writes both whatever else it is given.
+
+  /**
+   * The personal hub's done columns, for the progress bar. task.column_list
+   * also seeds the hub's four built-in columns the first time it is called;
+   * until then no status counts as done to the server, so neither the
+   * progress (subtask_done) nor the parent's auto-complete can fire. The board
+   * calls it on open; this modal is the calendar's equivalent.
+   */
+  async _loadDoneColumns(form) {
+    const rows = await this.fetchService({
+      service: (SERVICE.task && SERVICE.task.column_list) || "task.column_list",
+      hub_id: this._personalHub,
+      nid: this._personalNid,
+      _ts: Date.now(),
+    });
+    if (this._form !== form) return;
+    // fetchService never rejects: a failure is {error} or nothing. Said in the
+    // block, not left to read as "0% done".
+    if (!Array.isArray(rows)) {
+      form.subtaskLoadError = true;
+      return this._renderSubtasks();
+    }
+    form.doneKeys = rows.filter((c) => c && Number(c.is_done) === 1).map((c) => String(c.id));
+    this._renderSubtasks();
+  }
+
+  /** Edit mode: the task's subtasks (calendar.list leaves subtasks out). */
+  async _loadSubtasks(form) {
+    const row = form.row || {};
+    const rows = await this.fetchService({
+      service: (SERVICE.task && SERVICE.task.list) || "task.list",
+      hub_id: row.hub_id || this._personalHub,
+      workspace: 1,
+      _ts: Date.now(),
+    });
+    if (this._form !== form) return;
+    // A failed read must not look like a task with no subtasks.
+    if (!Array.isArray(rows)) {
+      form.subtaskLoadError = true;
+      return this._renderSubtasks();
+    }
+    const loaded = rows
+      .filter((t) => t && t.id && String(t.parent_task_id || "") === String(row.id))
+      .map((t) => ({
+        localKey: `id:${t.id}`,
+        id: t.id,
+        title: t.title || "",
+        status: t.status || "todo",
+        priority: t.priority || "medium",
+        due_date: dateOf(t.due_date),
+        start_date: dateOf(t.start_date),
+      }));
+    this._absorbSubtaskTitles();
+    const ids = new Set(loaded.map((s) => String(s.id)));
+    form.draft.subtasks = [
+      ...loaded,
+      ...(form.draft.subtasks || []).filter((s) => !s.id || !ids.has(String(s.id))),
+    ];
+    this._renderSubtasks();
+  }
+
+  /** Names typed into rows not saved yet → the draft. Runs before every re-feed of the rows. */
+  _absorbSubtaskTitles() {
+    const form = this._form;
+    const root = this._modalEl();
+    if (!form || !root) return;
+    root.querySelectorAll('input[name^="subtask:"]').forEach((input) => {
+      const key = input.getAttribute("name").slice("subtask:".length);
+      const s = (form.draft.subtasks || []).find((x) => x.localKey === key);
+      if (s && !s.id) s.title = String(input.value || "");
+    });
+  }
+
+  /** Re-feed the progress bar and the rows alone (part "form-subtasks"). */
+  _renderSubtasks() {
+    const part = _.isFunction(this.getPart) ? this.getPart("form-subtasks") : null;
+    if (!this._form || !part || !part.el) return;
+    this._absorbSubtaskTitles();
+    part.feed(subtaskBody(this));
+  }
+
+  _focusSubtask(key) {
+    setTimeout(() => {
+      const root = this._modalEl();
+      const input = root && root.querySelector(`input[name="subtask:${key}"]`);
+      if (input) input.focus();
+    }, 0);
+  }
+
+  _addSubtask() {
+    const form = this._form;
+    if (!form) return;
+    this._absorbSubtaskTitles();
+    const subs = form.draft.subtasks || (form.draft.subtasks = []);
+    // One blank row at a time: a second + goes to the row already waiting.
+    let s = subs.find((x) => !x.id && !String(x.title || "").trim());
+    if (!s) {
+      s = {
+        localKey: `new:${Date.now()}:${subs.length}`,
+        title: "",
+        status: "todo",
+        priority: "medium",
+        due_date: "",
+        start_date: "",
+      };
+      subs.push(s);
+      form.subMenu = null;
+      this._syncSubtaskMenuDismiss();
+      this._renderSubtasks();
+    }
+    this._focusSubtask(s.localKey);
+  }
+
+  /**
+   * task.create for one row under the form's task. True when the row exists
+   * on the server afterwards (a blank row is no task, and is let through).
+   * A create already on its way — Enter, then Update before it answered — is
+   * waited for, never posted twice and never counted as a failure.
+   */
+  _createSubtask(form, s) {
+    if (s.id) return Promise.resolve(true);
+    if (s.pending) return s.pending;
+    const title = String(s.title || "").trim();
+    if (!title) return Promise.resolve(true);
+    s.busy = true;
+    s.pending = this.postService({
+      service: (SERVICE.task && SERVICE.task.create) || "task.create",
+      hub_id: (form.row && form.row.hub_id) || this._personalHub,
+      parent_task_id: form.draft.id,
+      title,
+      status: s.status || "todo",
+      priority: s.priority || "medium",
+    }).then((res) => {
+      const created = rowOf(res);
+      s.busy = false;
+      s.pending = null;
+      if (!created) {
+        s.error = true;
+        return false;
+      }
+      s.id = created.id;
+      s.title = created.title || title;
+      s.error = false;
+      return true;
+    });
+    return s.pending;
+  }
+
+  /** Every row not on the server yet. Returns how many failed. */
+  async _saveNewSubtasks(form) {
+    this._absorbSubtaskTitles();
+    let failed = 0;
+    for (const s of form.draft.subtasks || []) {
+      if (!(await this._createSubtask(form, s))) failed++;
+    }
+    return failed;
+  }
+
+  /** Enter on a new row's name: saved at once in edit mode, kept for Create otherwise. */
+  async _commitSubtask(key) {
+    const form = this._form;
+    if (!form) return;
+    this._absorbSubtaskTitles();
+    const s = (form.draft.subtasks || []).find((x) => x.localKey === key);
+    if (!s || s.id || form.mode !== "edit" || !String(s.title || "").trim()) return;
+    const ok = await this._createSubtask(form, s);
+    if (this._form !== form) return;
+    this._renderSubtasks();
+    if (!ok) this._showToast(LOCALE.CAL_SUBTASKS_NOT_SAVED, "error");
+  }
+
+  async _removeSubtask(key) {
+    const form = this._form;
+    const s = form && (form.draft.subtasks || []).find((x) => x.localKey === key);
+    if (!s || s.busy) return;
+    if (s.id) {
+      s.busy = true;
+      const res = await this.postService({
+        service: (SERVICE.task && SERVICE.task.delete) || "task.delete",
+        hub_id: (form.row && form.row.hub_id) || this._personalHub,
+        id: s.id,
+      });
+      s.busy = false;
+      // postService never rejects: a refusal is {error}, a lost request undefined.
+      if (!res || res.error) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+        return;
+      }
+    }
+    form.draft.subtasks = (form.draft.subtasks || []).filter((x) => x !== s);
+    if (form.subMenu && form.subMenu.key === key) form.subMenu = null;
+    this._syncSubtaskMenuDismiss();
+    if (this._form === form) this._renderSubtasks();
+  }
+
+  _toggleSubtaskMenu(key, kind) {
+    const form = this._form;
+    if (!form) return;
+    const m = form.subMenu;
+    form.subMenu = m && m.key === key && m.kind === kind ? null : { key, kind };
+    this._syncSubtaskMenuDismiss();
+    this._renderSubtasks();
+  }
+
+  async _setSubtaskValue(key, kind, value) {
+    const form = this._form;
+    if (!form) return;
+    form.subMenu = null;
+    this._syncSubtaskMenuDismiss();
+    const s = (form.draft.subtasks || []).find((x) => x.localKey === key);
+    const field = kind === "status" ? "status" : "priority";
+    if (!s || !value || s[field] === value || s.busy) return this._renderSubtasks();
+    const before = s[field];
+    s[field] = value;
+    this._renderSubtasks();
+    if (!s.id) return;
+    s.busy = true;
+    const hub_id = (form.row && form.row.hub_id) || this._personalHub;
+    const res = await this.postService(
+      field === "status"
+        ? {
+            service: (SERVICE.task && SERVICE.task.update_status) || "task.update_status",
+            hub_id,
+            id: s.id,
+            status: value,
+          }
+        : {
+            service: (SERVICE.task && SERVICE.task.update) || "task.update",
+            hub_id,
+            id: s.id,
+            priority: value,
+            due_date: s.due_date || null,
+            start_date: s.start_date || null,
+          },
+    );
+    s.busy = false;
+    if (!rowOf(res)) {
+      s[field] = before;
+      Wm.alert(LOCALE.ERROR_NETWORK);
+    } else if (field === "status" && res && res.parent && res.parent.status) {
+      this._syncParentStatus(res.parent.status);
+    }
+    if (this._form === form) this._renderSubtasks();
+  }
+
+  /**
+   * The server completed the task with its last subtask (task.update_status
+   * answers with `parent`). Our own socket gets no push for it, so the modal's
+   * Status follows here — and Update, which compares against it, does not
+   * move the task back.
+   */
+  _syncParentStatus(status) {
+    const form = this._form;
+    if (!form) return;
+    // A Status the user had picked but not saved yet gives way to the server's;
+    // they are told rather than seeing their pick change under them.
+    const saved = (form.row && form.row.status) || "todo";
+    const overridden = form.draft.status !== saved && form.draft.status !== status;
+    if (form.row) form.row = { ...form.row, status };
+    form.draft.status = status;
+    const pfx = this.fig.family;
+    const root = this._modalEl();
+    const pills = root && root.querySelector(`.${pfx}__pills--status`);
+    if (pills) {
+      pills.querySelectorAll(`.${pfx}__pill`).forEach((el) => {
+        el.setAttribute("data-active", el.getAttribute("data-key") === status ? "1" : "0");
+      });
+    }
+    if (overridden) this._showToast(LOCALE.CAL_TASK_COMPLETED_BY_SUBTASKS, "success");
+  }
+
+  // A click outside the Subtasks block closes an open row menu. The guard is
+  // the whole block for the toolbar's reason (_bindMenuDismiss): this runs in
+  // the capture phase, and closing re-feeds the rows before the click lands.
+  _syncSubtaskMenuDismiss() {
+    const open = !!(this._form && this._form.subMenu);
+    if (!open) {
+      if (this._subMenuDismiss) document.removeEventListener("click", this._subMenuDismiss, true);
+      this._subMenuDismiss = null;
+      return;
+    }
+    if (this._subMenuDismiss) return;
+    const guard = `.${this.fig.family}__subtasks`;
+    this._subMenuDismiss = (ev) => {
+      const t = ev && ev.target;
+      if (t && t.closest && t.closest(guard)) return;
+      const live = this._form && this._form.subMenu && !(this.isDestroyed && this.isDestroyed());
+      if (this._form) this._form.subMenu = null;
+      this._syncSubtaskMenuDismiss();
+      if (live) this._renderSubtasks();
+    };
+    document.addEventListener("click", this._subMenuDismiss, true);
+  }
+
+  /**
+   * After a Start or End pick: the other picker is re-bounded to the new pair
+   * (Start never after End), and a filled End date drops its error — its
+   * input is read-only, so no `input` event will (_bindFieldErrorClear).
+   */
+  _syncDateRange(changed) {
+    const root = this._modalEl();
+    const d = this._form && this._form.draft;
+    if (!root || !d) return;
+    if (changed === "due_date" && d.due_date) {
+      const f = root.querySelector('[data-field="due_date"]');
+      if (f) f.setAttribute("data-error", "0");
+    }
+    const other = changed === "start_date" ? "due_date" : "start_date";
+    const input = root.querySelector(`input[name="${other}"]`);
+    const fp = input && input._flatpickr;
+    if (fp) fp.set("disable", rangeDisable(other, d.start_date, d.due_date));
+  }
+
   /**
    * Merge every formItem-bound input into the draft before a commit.
    *
@@ -1280,6 +1751,8 @@ class __calendar_main extends LetcBox {
     });
 
     this._form.draft = draft;
+    // Names typed into new subtask rows (inputs named subtask:<key>).
+    this._absorbSubtaskTitles();
     return draft;
   }
 
@@ -1332,13 +1805,13 @@ class __calendar_main extends LetcBox {
     const svcUpdate = (SERVICE.task && SERVICE.task.update) || "task.update";
     const svcStatus =
       (SERVICE.task && SERVICE.task.update_status) || "task.update_status";
-    let linkFailed = 0;
+    let hub_id = this._personalHub;
+    let task_id = null;
 
     if (!editing) {
-      // Personal task: personal-hub scope, and no assignee_uids at all —
-      // requirement §4 wants assignment refused, not hidden, and the server
-      // rejects it for a personal hub. Sending an empty array would still be
-      // sending the field.
+      // Personal task: personal-hub scope, and no assignee_uids at all — a
+      // personal task has nobody else to give it to. Sending an empty array
+      // would still be sending the field.
       const created = rowOf(await this.postService({
         service: svcCreate,
         hub_id: this._personalHub,
@@ -1348,18 +1821,29 @@ class __calendar_main extends LetcBox {
         status: draft.status || "todo",
         priority: draft.priority || "medium",
         due_date: draft.due_date || null,
+        start_date: draft.start_date || null,
       }));
       if (!created) {
         Wm.alert(LOCALE.ERROR_NETWORK);
         return;
       }
-      linkFailed = await this._linkTaskFiles(this._personalHub, created.id, A.nidsToLink(draft.files));
+      // The task exists from here on, so the form becomes its edit form before
+      // anything else can fail: pressed again after a subtask did not save,
+      // Create updates this task instead of making a second one.
+      draft.id = created.id;
+      form.mode = "edit";
+      form.row = { ...created, hub_id: this._personalHub, status: created.status || draft.status || "todo" };
+      task_id = created.id;
     } else {
       const row = form.row || {};
       // Addressed with the ROW's hub — never the personal hub. This is the
       // line that keeps ACL and audit consistent with the folder view.
-      const hub_id = row.hub_id || this._personalHub;
-      await this.postService({
+      hub_id = row.hub_id || this._personalHub;
+      task_id = row.id;
+      // task.update writes due_date AND start_date whatever else it is given:
+      // a key left out is stored as NULL, and a task with no due date drops
+      // off the calendar. Both always go, in YYYY-MM-DD (see dateOf).
+      const updated = rowOf(await this.postService({
         service: svcUpdate,
         hub_id,
         id: row.id,
@@ -1367,7 +1851,12 @@ class __calendar_main extends LetcBox {
         description: draft.description || null,
         priority: draft.priority || "medium",
         due_date: draft.due_date || null,
-      });
+        start_date: draft.start_date || null,
+      }));
+      if (!updated) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+        return;
+      }
       if ((draft.status || "todo") !== (row.status || "todo")) {
         await this.postService({
           service: svcStatus,
@@ -1375,13 +1864,35 @@ class __calendar_main extends LetcBox {
           id: row.id,
           status: draft.status || "todo",
         });
+        form.row = { ...row, status: draft.status || "todo" };
       }
-      linkFailed = await this._linkTaskFiles(hub_id, row.id, A.nidsToLink(draft.files));
+    }
+
+    const nids = A.nidsToLink(draft.files);
+    const linkFailed = await this._linkTaskFiles(hub_id, task_id, nids);
+    // What did link is on the task now: a second pass must not link it again.
+    for (const pf of draft.files || []) {
+      if (pf.nid && nids.includes(pf.nid) && !linkFailed.includes(pf.nid)) {
+        pf.linked = 1;
+        pf.status = "linked";
+      }
+    }
+
+    // A subtask that did not save keeps the modal open on it. The task and
+    // the rows that did save stay saved; Create — an update by now — retries
+    // the rest.
+    if ((draft.subtasks || []).length && (await this._saveNewSubtasks(form))) {
+      if (this._form === form) {
+        this._renderFiles();
+        this._renderSubtasks();
+      }
+      this._showToast(LOCALE.CAL_SUBTASKS_NOT_SAVED, "error");
+      return;
     }
 
     // The task exists either way; a file that would not link is said out loud
     // rather than closing the modal on it silently.
-    if (linkFailed) this._showToast(LOCALE.CAL_FILES_NOT_ATTACHED, "error");
+    if (linkFailed.length) this._showToast(LOCALE.CAL_FILES_NOT_ATTACHED, "error");
 
     this._form = null;
     await this._reload();
@@ -1805,9 +2316,15 @@ class __calendar_main extends LetcBox {
           const v = cmd.mget(_a.value);
           value = v != null ? String(v) : "";
         }
-        const key = this._form.kind === "meeting" ? "date" : "due_date";
-        this._form.draft[key] = value;
-        return;
+        if (this._form.kind === "meeting") {
+          this._form.draft.date = value;
+          return;
+        }
+        // The task form has two pickers on this one service: the field's own
+        // name says which end of Start → End moved.
+        const name = (cmd.mget(_a.name) || cmd.mget("name")) === "start_date" ? "start_date" : "due_date";
+        this._form.draft[name] = value;
+        return this._syncDateRange(name);
       }
 
       case "cal-form-status":
@@ -1922,6 +2439,25 @@ class __calendar_main extends LetcBox {
         return this._removeFile(cmd.mget("calFileKey"));
       case "cal-file-retry":
         return this._retryFile(cmd.mget("calFileKey"));
+      case "cal-file-typed":
+        return this._searchFiles((args && args.value) || "");
+      case "cal-pick-file":
+        return this._pickSearchedFile(cmd.mget("calNid"));
+
+      case "cal-subtask-add":
+        return this._addSubtask();
+      case "cal-subtask-commit":
+        // Enter only — the same status guard as cal-submit-task below.
+        if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
+          return;
+        }
+        return this._commitSubtask(cmd.mget("calSubKey"));
+      case "cal-subtask-remove":
+        return this._removeSubtask(cmd.mget("calSubKey"));
+      case "cal-subtask-menu":
+        return this._toggleSubtaskMenu(cmd.mget("calSubKey"), cmd.mget("calSubKind"));
+      case "cal-subtask-set":
+        return this._setSubtaskValue(cmd.mget("calSubKey"), cmd.mget("calSubKind"), cmd.mget("calValue"));
 
       case "cal-submit-task":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {

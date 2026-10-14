@@ -1388,9 +1388,11 @@
       width: min(760px, calc(100vw - 32px));
     }
 
-    // Task: two columns — Title/Description/Attachments | Status/Priority/Due.
+    // Task: the Figma card, 1080×720 (1693:198659 / 1693:198307). The rest
+    // of its rules are in the "personal task modal" block at the end.
     &[data-form="task"] {
-      width: min(760px, calc(100vw - 32px));
+      width: min(1080px, calc(100vw - 32px));
+      height: min(720px, 88vh);
     }
   }
 
@@ -1413,9 +1415,10 @@
     flex: 1 1 0;
   }
 
-  // Wide enough for the four status pills on two lines and a date field.
+  // The "Card detail" right column (1693:198307): 358px, which is what gives
+  // each Start / End field the frame's 153px. The left one takes the rest.
   &__modal[data-form="task"] &__modal-col--side {
-    flex: 0 0 240px;
+    flex: 0 1 358px;
   }
 
   // Wide enough for the Start → End row (two hour:minute + AM/PM pickers)
@@ -2428,5 +2431,649 @@
 @keyframes calendar-main-file-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+// ── personal task modal (skeleton/task-form.js) ──────────────────────────────
+// Figma 1693:198659 (create) and 1693:198307 (edit): a 1080×720 card with 32px
+// of padding, a 24px/600 heading, 16px labels over filled fields, and the
+// actions at the foot of the right column. Scoped to [data-form="task"]: the
+// meeting modal keeps the compact card above until its own frame is built.
+// Every selector here is at least (0,3,0), over ui-core's
+// `.drumee-widget[data-flow]` (0,2,0).
+.calendar-main {
+  &__modal[data-form="task"] {
+    padding: 32px;
+    gap: 32px;
+    border-radius: 24px;
+    // The columns scroll, not the card.
+    overflow: hidden;
+  }
+
+  &__modal[data-form="task"] &__modal-title {
+    @include drumee.typo($size: 24px, $line: 1.1, $color: var(--normal-fg-800));
+    font-weight: 600;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__modal[data-form="task"] &__modal-close {
+    color: var(--normal-fg-10);
+  }
+
+  // Two columns at the card's full height: the left one scrolls on its own,
+  // the right one pins its actions to the bottom.
+  &__modal[data-form="task"] &__modal-body--split {
+    gap: 32px;
+    align-items: stretch;
+  }
+
+  &__modal[data-form="task"] &__modal-col {
+    gap: 32px;
+    min-height: 0;
+  }
+
+  &__modal[data-form="task"] &__modal-col--main {
+    // Room for the bar, so it never sits on a row's ✕.
+    padding-right: 8px;
+    @include quiet-scroll($rest: var(--border-default));
+  }
+
+  &__modal[data-form="task"] &__field {
+    gap: 12px;
+  }
+
+  &__modal[data-form="task"] &__field-label {
+    @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10));
+    font-weight: 400;
+  }
+
+  // Title and Description: 12px of padding on a 16px/1.4 line — 46px with
+  // the 1px focus border.
+  &__modal[data-form="task"] &__input input {
+    padding: 11px 12px;
+    @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10));
+  }
+
+  &__modal[data-form="task"] &__textarea {
+    padding: 10px 4px 10px 0;
+  }
+
+  // Two lines, then the field scrolls. The frame's sample note is one line.
+  // min-height: a global textarea rule sets 100px.
+  &__modal[data-form="task"] &__textarea textarea {
+    height: 45px;
+    min-height: 0;
+    padding: 0 8px 0 12px;
+    @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10));
+  }
+
+  // ── status / priority pills ────────────────────────────────────────────────
+  &__modal[data-form="task"] &__pills {
+    gap: 8px;
+  }
+
+  &__modal[data-form="task"] &__pill {
+    position: relative;
+    box-sizing: border-box;
+    border: 1px solid var(--border-muted);
+    background: transparent;
+  }
+
+  // Status: 24px, dot and a 12px/500 label; the lit one on the brand tint.
+  &__modal[data-form="task"] &__pills--status &__pill {
+    height: 24px;
+    gap: 8px;
+    padding: 2px 12px;
+    border-radius: 16px;
+
+    &[data-active="1"] {
+      background: var(--radio-on-bg);
+      border-color: transparent;
+    }
+  }
+
+  &__modal[data-form="task"] &__pills--status &__pill-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  &__modal[data-form="task"] &__pills--status &__pill-label,
+  &__modal[data-form="task"] &__pills--status &__pill[data-active="1"] &__pill-label {
+    @include drumee.typo($size: 12px, $line: 20px, $color: var(--normal-fg-10));
+    font-weight: 500;
+  }
+
+  // Priority: 32px, label only; the lit one is filled with its own colour —
+  // the dot, which carries that colour inline, grows to cover the pill.
+  &__modal[data-form="task"] &__pills--priority &__pill {
+    height: 32px;
+    padding: 2px 16px;
+    border-radius: 100px;
+    overflow: hidden;
+
+    &[data-active="1"] {
+      border-color: transparent;
+    }
+  }
+
+  &__modal[data-form="task"] &__pills--priority &__pill-dot {
+    display: none;
+  }
+
+  &__modal[data-form="task"] &__pills--priority &__pill[data-active="1"] &__pill-dot {
+    display: block;
+    position: absolute;
+    inset: 0;
+    width: auto;
+    height: auto;
+    border-radius: inherit;
+  }
+
+  &__modal[data-form="task"] &__pills--priority &__pill-label,
+  &__modal[data-form="task"] &__pills--priority &__pill[data-active="1"] &__pill-label {
+    position: relative;
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+    font-weight: 400;
+  }
+
+  &__modal[data-form="task"] &__pills--priority &__pill[data-active="1"] &__pill-label {
+    color: var(--gray-white);
+  }
+
+  // Neither row bolds its lit pill, so the width reserved for bold goes too.
+  &__modal[data-form="task"] &__pill &__pill-label[data-label]::after {
+    font-weight: inherit;
+  }
+
+  // ── Start → End ────────────────────────────────────────────────────────────
+  &__modal[data-form="task"] &__dates {
+    gap: 16px;
+    align-items: center;
+
+    > .calendar-main__field {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+
+  &__modal[data-form="task"] &__dates-arrow {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-10);
+  }
+
+  &__modal[data-form="task"] &__date-box {
+    position: relative;
+    align-items: center;
+    gap: 12px;
+    height: 38px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: var(--overlay-bg-05);
+
+    &:focus-within {
+      border-color: var(--active-border);
+    }
+  }
+
+  &__modal[data-form="task"] &__date-box &__date-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+
+    // The altInput is also a `.form-control`, which brings its own white box.
+    input {
+      width: 100%;
+      height: auto;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10));
+    }
+  }
+
+  &__modal[data-form="task"] &__date-ico {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    color: var(--normal-fg-10);
+    pointer-events: none;
+  }
+
+  &__modal[data-form="task"] &__field[data-error="1"] &__date-box {
+    border-color: var(--signal-error, #d74e49);
+  }
+
+  // ── actions, at the foot of the right column ───────────────────────────────
+  &__modal[data-form="task"] &__modal-foot {
+    margin-top: auto;
+    padding-top: 0;
+    border-top: 0;
+    gap: 8px;
+  }
+
+  &__modal[data-form="task"] &__button {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 36px;
+    padding: 0 8px;
+    margin: 0;
+    border: 0;
+    border-radius: 12px;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--gray-white));
+    font-weight: 600;
+  }
+
+  &__modal[data-form="task"] &__button--neutral {
+    background: var(--tertiary-grey-20);
+    color: var(--normal-fg-10);
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  // ── subtasks ───────────────────────────────────────────────────────────────
+  &__modal[data-form="task"] &__subtasks-head {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__modal[data-form="task"] &__subtasks-add {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+  }
+
+  &__modal[data-form="task"] &__subtasks-body {
+    gap: 12px;
+  }
+
+  &__modal[data-form="task"] &__subtask-list {
+    gap: 8px;
+  }
+
+  &__modal[data-form="task"] &__subtask-progress {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__modal[data-form="task"] &__subtask-track {
+    flex: 1 1 auto;
+    height: 4px;
+    border-radius: 14px;
+    background: var(--overlay-bg-05);
+    overflow: hidden;
+  }
+
+  &__modal[data-form="task"] &__subtask-fill {
+    height: 4px;
+    border-radius: 18px;
+    background: var(--primary-50);
+  }
+
+  &__modal[data-form="task"] &__subtask-error {
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--signal-error, #d74e49));
+  }
+
+  &__modal[data-form="task"] &__subtask-pct {
+    flex: 0 0 auto;
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-10));
+    white-space: nowrap;
+  }
+
+  // One row: name, then 110px for Priority, Status and the ✕ (the frame's
+  // grid; its avatar slot is not drawn).
+  &__modal[data-form="task"] &__subtask {
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-muted);
+    border-radius: 12px;
+    background: var(--normal-bg-elevated);
+
+    &[data-busy="1"] {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    &[data-error="1"] {
+      border-color: var(--signal-error, #d74e49);
+    }
+  }
+
+  &__modal[data-form="task"] &__subtask-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-self: flex-start;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+  }
+
+  &__modal[data-form="task"] &__subtask-input {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      height: 32px;
+      box-sizing: border-box;
+      padding: 0 10px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      outline: none;
+      background: var(--overlay-bg-05);
+      @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+
+      &:focus {
+        border-color: var(--active-border);
+      }
+    }
+  }
+
+  &__modal[data-form="task"] &__subtask-cell,
+  &__modal[data-form="task"] &__subtask-end {
+    flex: 0 0 110px;
+    min-width: 0;
+  }
+
+  &__modal[data-form="task"] &__subtask-cell {
+    position: relative;
+  }
+
+  &__modal[data-form="task"] &__subtask-end {
+    justify-content: flex-end;
+  }
+
+  &__modal[data-form="task"] &__subtask-remove {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+  }
+
+  &__modal[data-form="task"] &__subtask-chip {
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+    max-width: 100%;
+    padding: 2px 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-muted);
+    border-radius: 16px;
+    cursor: pointer;
+
+    &[data-kind="priority"] {
+      padding: 2px 16px;
+      border-radius: 100px;
+    }
+
+    &[data-open="1"],
+    &:hover {
+      border-color: var(--hover-border-40);
+    }
+  }
+
+  &__modal[data-form="task"] &__subtask-chip-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+  }
+
+  &__modal[data-form="task"] &__subtask-chip-ico {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  // Overlays the rows under it, never pushes them.
+  &__modal[data-form="task"] &__subtask-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    z-index: 5;
+    min-width: 150px;
+    padding: 4px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    background: var(--normal-bg-elevated);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  &__modal[data-form="task"] &__subtask-option {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+
+    &[data-active="1"] .calendar-main__subtask-option-label {
+      font-weight: 600;
+    }
+  }
+
+  &__modal[data-form="task"] &__subtask-option &__pill-dot {
+    width: 8px;
+    height: 8px;
+  }
+
+  &__modal[data-form="task"] &__subtask-option-label {
+    white-space: nowrap;
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+  }
+
+  // ── files: Search file + Upload over paperclip chips ──────────────────────
+  &__modal[data-form="task"] &__files--search {
+    gap: 4px;
+    padding: 0;
+    border: 0;
+  }
+
+  &__modal[data-form="task"] &__fsearch {
+    position: relative;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--overlay-bg-05);
+  }
+
+  &__modal[data-form="task"] &__fsearch-input {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      outline: none;
+      background: transparent;
+      @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10));
+
+      &::placeholder {
+        color: var(--normal-fg-20);
+      }
+    }
+  }
+
+  &__modal[data-form="task"] &__fsearch-upload {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 6px 24px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    background: var(--primary-50);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--primary-40);
+    }
+  }
+
+  &__modal[data-form="task"] &__fsearch-upload-ico {
+    width: 20px;
+    height: 20px;
+    color: var(--gray-white);
+  }
+
+  &__modal[data-form="task"] &__fsearch-upload-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--gray-white));
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &__modal[data-form="task"] &__fsearch-results {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 5;
+    max-height: 240px;
+    padding: 4px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-muted);
+    border-radius: 8px;
+    background: var(--normal-bg-elevated);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    @include quiet-scroll($rest: var(--border-default));
+  }
+
+  &__modal[data-form="task"] &__fsearch-results[data-open="0"] {
+    display: none;
+  }
+
+  &__modal[data-form="task"] &__fsearch-option {
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  &__modal[data-form="task"] &__fchips {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+  }
+
+  &__modal[data-form="task"] &__fchips[data-count="0"] {
+    display: none;
+  }
+
+  &__modal[data-form="task"] &__fchip {
+    position: relative;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    padding: 4px 8px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    background: var(--overlay-bg-05);
+    overflow: hidden;
+
+    &[data-status="error"] .calendar-main__fchip-name {
+      color: var(--signal-error, #d74e49);
+    }
+
+    &[data-status="uploading"]::after {
+      content: "";
+      flex: none;
+      width: 10px;
+      height: 10px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: calendar-main-file-spin 0.8s linear infinite;
+    }
+  }
+
+  &__modal[data-form="task"] &__fchip-ico {
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    color: var(--normal-fg-10);
+  }
+
+  &__modal[data-form="task"] &__fchip-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-10));
+  }
+
+  &__modal[data-form="task"] &__fchip-retry {
+    cursor: pointer;
+    text-decoration: underline;
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-10));
+  }
+
+  &__modal[data-form="task"] &__fchip-remove {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+  }
+
+  // A split screen (720px) leaves the left column too little room for a
+  // subtask row (name + three 110px cells), so the task card stacks its
+  // columns below 900px: the body scrolls as one, the actions stay in view.
+  @media (max-width: 900px) {
+    &__modal[data-form="task"] &__modal-body--split {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    &__modal[data-form="task"] &__modal-col--main {
+      flex: 0 0 auto;
+      overflow: visible;
+      padding-right: 0;
+    }
+
+    // The right column's fields and actions become the body's own items, so
+    // the actions can stick to the bottom of the body's scroll box — a
+    // sticky element only sticks inside its parent, and the column starts
+    // below the fold.
+    &__modal[data-form="task"] &__modal-col--side {
+      display: contents;
+    }
+
+    &__modal[data-form="task"] &__modal-foot {
+      position: sticky;
+      bottom: 0;
+      z-index: 6;
+      padding-top: 12px;
+      background: var(--normal-bg-elevated);
+    }
   }
 }
