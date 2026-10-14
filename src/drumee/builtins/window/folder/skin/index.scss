@@ -226,6 +226,12 @@
       width: 100% !important;
       height: 100% !important;
 
+      // Same 600px popup floor as the window manager's (desk/wm/skin): the
+      // pane fills the work area, so it may be as narrow as the work area is.
+      &:not([data-device="mobile"]) {
+        min-width: 0;
+      }
+
       // 43:23955's content frame carries 12px padding, and the toolbar and the
       // file grid share that left edge — the filter tabs and the "Folders"
       // heading both start 12px inside the card. The shared grid rule uses
