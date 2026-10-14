@@ -115,3 +115,15 @@
     }
   }
 }
+
+// PHONE (Figma mobile flows): a 20% black scrim rather than the desktop's
+// white film, and round targets (the FAB, the composer +) get a soft halo —
+// a step asks for it with `halo: true` on spotlight:focus.
+.tutorial-main[data-layout="phone"] .tutorial-spotlight[data-scrim="1"] .tutorial-spotlight__scrim {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.tutorial-main[data-layout="phone"] [data-halo="1"] {
+  border-radius: 999px;
+  box-shadow: 0 0 0 32px rgba(255, 255, 255, 0.55);
+}

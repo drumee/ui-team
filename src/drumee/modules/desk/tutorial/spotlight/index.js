@@ -1,6 +1,6 @@
 require('./skin');
 const { tooltipBubble } = require('../skeleton/toolkit');
-const { anchorFor, splitAnchor } = require('../host-kit');
+const { anchorFor, splitAnchor, phoneAnchor } = require('../host-kit');
 
 // Card edge to target edge.
 //
@@ -119,6 +119,45 @@ class __tutorial_spotlight extends LetcBox {
     // last one asked for — and a step swap asks for clear-then-focus in that
     // order but resolves them in whichever order the awaits happen to land.
     this._seq = 0;
+  }
+
+  /** Is the tour drawing its phone layout (host root data-layout)? */
+  _phone() {
+    const root = this.el && this.el.closest && this.el.closest('.tutorial-main');
+    return !!(root && root.dataset && root.dataset.layout === 'phone');
+  }
+
+  /**
+   * The Figma phone callout: render it hidden, measure its height, then place
+   * it with phoneAnchor and show it.
+   *
+   * No _keepInView: phoneAnchor already clamps to the host. The old phone path
+   * anchored and flipped the card in JS and then moved it to a bottom sheet with
+   * !important CSS, so keep-in-view measured a card the stylesheet had moved.
+   *
+   * @param {Object} callout the callout part
+   * @param {Object} owner   the step, whose handlers the card's buttons reach
+   * @param {Object} tooltip the step's tooltip description
+   * @param {Object} rect    what the beak points at, in viewport coordinates
+   * @param {Number} ticket  this focus's sequence number
+   */
+  async _placeOnPhone(callout, owner, tooltip, rect, ticket) {
+    callout.feed(tooltipBubble(owner || this, {
+      ...tooltip,
+      direction: 'north',
+      style: { left: '16px', right: '16px', top: '0px', visibility: 'hidden' },
+    }));
+    const card = callout.el && callout.el.querySelector(`.${BUBBLE_CLASS}`);
+    if (!card) return;
+    const r = await waitForStableRect(card);
+    if (this._stale(ticket) || !card.isConnected) return;
+    const host = this.el.getBoundingClientRect();
+    const { style, direction, beakPx } = phoneAnchor(rect, host, { height: r.height });
+    for (const k of ['left', 'right', 'top', 'bottom', 'width']) card.style[k] = style[k] || 'auto';
+    card.style.transform = 'none';
+    card.style.setProperty('--beak-px', `${beakPx}px`);
+    card.dataset.direction = direction;
+    card.style.visibility = '';
   }
 
   /** Has a newer focus/clear been asked for since `ticket` was taken? */
@@ -260,6 +299,10 @@ class __tutorial_spotlight extends LetcBox {
     }
     if (this._stale(ticket)) return;
     const pointsAt = measuredAnchor && measuredAnchor.width ? measuredAnchor : box;
+    // PHONE: one placement, done in JS, from the rect the beak points at.
+    if (this._phone()) {
+      return this._placeOnPhone(callout, owner, tooltip, pointsAt, ticket);
+    }
     // A card can clear one box while pointing at another INSIDE it.
     //
     // The import dialog is the case the design states outright: 176:47527 puts
@@ -477,6 +520,8 @@ class __tutorial_spotlight extends LetcBox {
 
     this._lit = touched;
     el.classList.add('is-lit');
+    // Round targets on phone (the FAB, the composer +) get a soft halo.
+    if (this._args && this._args.halo && el.dataset) el.dataset.halo = '1';
   }
 
   _unlight() {
@@ -490,6 +535,7 @@ class __tutorial_spotlight extends LetcBox {
     }
     const el = touched[0] && touched[0].node;
     if (el && el.classList) el.classList.remove('is-lit');
+    if (el && el.dataset) delete el.dataset.halo;
   }
 
   /**
