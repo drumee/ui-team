@@ -152,7 +152,10 @@ class __tutorial_spotlight extends LetcBox {
     const r = await waitForStableRect(card);
     if (this._stale(ticket) || !card.isConnected) return;
     const host = this.el.getBoundingClientRect();
-    const { style, direction, beakPx } = phoneAnchor(rect, host, { height: r.height });
+    // A step may pin the frames' own inset and beak gap (the workspace sheet's
+    // card is 396 wide on 430); otherwise phoneAnchor's defaults.
+    const a = this._args || {};
+    const { style, direction, beakPx } = phoneAnchor(rect, host, { height: r.height }, { margin: a.phone_margin, gap: a.phone_gap, prefer: a.phone_prefer });
     for (const k of ['left', 'right', 'top', 'bottom', 'width']) card.style[k] = style[k] || 'auto';
     card.style.transform = 'none';
     card.style.setProperty('--beak-px', `${beakPx}px`);

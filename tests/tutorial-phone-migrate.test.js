@@ -12,6 +12,7 @@ const ALIASES = {
 };
 const load = Module._load;
 Module._load = function (r, p, m) {
+  if (/^assets\//.test(r)) return `asset:${r}`; // webpack asset modules
   return Object.prototype.hasOwnProperty.call(ALIASES, r) ? ALIASES[r] : load.call(this, r, p, m);
 };
 const mk = (type) => new Proxy(function (o = {}) { return { type, ...o }; }, {

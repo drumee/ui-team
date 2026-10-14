@@ -467,6 +467,15 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
   }
 
   .tutorial__bubble-back { background: #f2f2f7; color: #84848c; }
+
+  // Centred copy (the workspace frames 380:54800, 385:938): 12 between the
+  // title and its line, 16 down to the button.
+  .tutorial__bubble-card--center {
+    gap: 16px;
+    text-align: center;
+
+    .tutorial__bubble-body { gap: 12px; align-items: stretch; }
+  }
   .tutorial__bubble-next { background: #433cc5; color: #fff; }
 
   // The beak keeps its desktop shape (rotated, clipped square); only WHERE it

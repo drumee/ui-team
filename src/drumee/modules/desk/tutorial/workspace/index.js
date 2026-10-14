@@ -109,7 +109,8 @@ class __tutorial_workspace extends LetcBox {
       created: this._created,
       name: this._name,
     };
-    this.feed(phone ? require('./skeleton/phone')(this, s, state) : skeleton(this, s, state));
+    if (phone) return this._showPhone(s, phone, state);
+    this.feed(skeleton(this, s, state));
     // Tell the host whether this screen is one the user fills in, so its Skip
     // control can stand down there (those screens carry their own exits).
     this.triggerHandlers({ service: 'step-live', live: this.isLive() });
@@ -117,8 +118,8 @@ class __tutorial_workspace extends LetcBox {
     // inside it; the home screen lights the button and points at the same
     // thing, so the target is named per screen rather than assumed.
     const [target, anchor] = await Promise.all([
-      this.ensurePart(phone ? phone.target : (s.target || 'wsd-dialog')),
-      this.ensurePart(phone ? phone.target : s.anchor),
+      this.ensurePart(s.target || 'wsd-dialog'),
+      this.ensurePart(s.anchor),
     ]);
 
     // Back and Done are the same rules on every screen, bare or not — the
@@ -192,7 +193,7 @@ class __tutorial_workspace extends LetcBox {
       // moved onto the focus call and this is its other caller.
       // On a phone the frames DO dim (380:54800 on): the sheet's other rows
       // fade and the lit one stands out. The home hero is drawn plain.
-      dim: phone ? phone.view !== 'home' : false,
+      dim: false,
       owner: this,
     });
   }
@@ -200,6 +201,85 @@ class __tutorial_workspace extends LetcBox {
   // ── the live screens ───────────────────────────────────────────────────────
 
   /** Whatever the live dialog's name field currently holds. */
+  /**
+   * Is this run allowed to create (the post-signup `workspace` tour)? Its
+   * step carries the live tail; `full` and the in-window host drop it.
+   */
+  _canCreateHere() {
+    return this._screens.length > 5;
+  }
+
+  /**
+   * The phone layout — Figma "org home -> create wp", screen by screen.
+   *
+   * The frames teach and DO in the same sheet: the name screen's field takes
+   * the name, and the create screen picks a type and creates. So on a run
+   * that may create, those two are live and carry no buttons (the field and
+   * Create are the way forward), and the desk's separate live form is
+   * skipped. A run that may not create (`full`) keeps a Next on both, or it
+   * would have no way forward at all.
+   *
+   * Dimming is the frames' own — an overlay and per-block opacities drawn by
+   * the skeleton — so the spotlight is asked only for the callout.
+   */
+  async _showPhone(s, phone, state) {
+    if (phone.skip) {
+      this._screenIndex = Math.min(this._screenIndex + 1, this._screens.length - 1);
+      if (this._screens[this._screenIndex] === s) return null;
+      return this._showScreen();
+    }
+    const live = this._canCreateHere() && !!phone.live;
+    this.feed(require('./skeleton/phone')(this, s, { ...state, live: this._canCreateHere() }));
+    this.triggerHandlers({ service: 'step-live', live: this.isLive() });
+    const target = await this.ensurePart(phone.target);
+    if (this.isDestroyed && this.isDestroyed()) return null;
+    if (live && phone.lit === 'name') this._bindPhoneName();
+
+    const last = isLastScreen(this, this._screenIndex, this._screens.length);
+    let tooltip = null;
+    if (phone.lit === 'internal' || phone.lit === 'external') {
+      // 385:938 / 385:1090 — title, line, one full-width Next.
+      tooltip = { title: s.title(), desc: s.desc(), hide_back: true, done: last, align: 'center' };
+    } else if (phone.lit === 'name' || phone.lit === 'create') {
+      // 380:54800 / 385:1226 — one line, no controls when the field or
+      // Create is the way forward; a Next when nothing here is live.
+      tooltip = live
+        ? { text: s.text(), hide_back: true, hide_next: true, align: 'center' }
+        : { text: s.text(), hide_back: true, done: last, align: 'center' };
+    }
+    this.triggerHandlers({
+      service: 'spotlight:focus',
+      target: target && target.el,
+      anchor: target && target.el,
+      tooltip,
+      dim: false,
+      // The frames' card is 396 on a 430 screen, its beak tip ~8px off the
+      // block it names.
+      phone_margin: 17,
+      phone_gap: 26,
+      phone_prefer: 'above',
+      owner: this,
+    });
+    return null;
+  }
+
+  /**
+   * 380:54800 has no button: typing the name IS the step. Move on once the
+   * field is committed with something in it (Enter, Go, or leaving it).
+   */
+  async _bindPhoneName() {
+    const entry = await this.ensurePart('wsd-name-input');
+    const input = entry && entry.el && entry.el.querySelector('input');
+    if (!input || input.dataset.tourBound) return;
+    input.dataset.tourBound = '1';
+    input.addEventListener('change', () => {
+      const v = String(input.value || '').trim();
+      if (!v || this.isDestroyed()) return;
+      this._name = v;
+      this._advance();
+    });
+  }
+
   _readName() {
     const entry = this.getPart && this.getPart('wsd-name-input');
     return String((entry && entry.getValue && entry.getValue()) || '').trim();
@@ -237,7 +317,9 @@ class __tutorial_workspace extends LetcBox {
    */
   async _create() {
     if (this._pending) return;
-    const name = this._readName();
+    // On a phone the name was taken on an earlier screen (380:54800), so the
+    // create screen has no field to read — fall back to what was typed there.
+    const name = this._readName() || this._name || '';
     this._name = name;
     this._setNameError(null);
     if (!name) {
@@ -356,7 +438,11 @@ class __tutorial_workspace extends LetcBox {
   /** Is the screen on show one the user is filling in rather than watching? */
   isLive() {
     const s = this._screens[this._screenIndex];
-    return !!(s && (s.live || s.invite));
+    if (!s) return false;
+    if (s.live || s.invite) return true;
+    // Phone: the create screen IS the real form on a run that may create.
+    const p = this.mget('layout') === 'phone' ? s.phone : null;
+    return !!(p && p.live && p.lit === 'create' && this._canCreateHere());
   }
 
   onUiEvent(trigger, args = {}) {

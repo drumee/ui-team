@@ -105,7 +105,8 @@ function clamp(v, lo, hi) {
  * @param {Object} target the lit element's rect
  * @param {Object} host   the callout's containing block
  * @param {{height: Number}} card the measured card
- * @param {Object} [opt] margin / gap / sideMax overrides
+ * @param {Object} [opt] margin / gap / sideMax overrides; `prefer: 'above'`
+ *   tries above the target before below
  * @returns {{style: Object, direction: String, beakPx: Number}}
  */
 function phoneAnchor(target, host, card, opt = {}) {
@@ -137,7 +138,12 @@ function phoneAnchor(target, host, card, opt = {}) {
   const base = { left: `${margin}px`, width: `${width}px` };
 
   // Below when it fits; when neither side fits, whichever has more room.
-  if (h <= below || (h > above && below >= above)) {
+  // `prefer: 'above'` flips the first choice — the workspace frames put the
+  // card over the block it names, beak down (380:54800, 385:938).
+  const goBelow = opt.prefer === 'above'
+    ? !(h <= above) && (h <= below || below >= above)
+    : h <= below || (h > above && below >= above);
+  if (goBelow) {
     const top = clamp(target.bottom - host.top + gap, PHONE_EDGE, host.height - PHONE_EDGE - h);
     return { style: { ...base, top: `${top}px` }, direction: 'north', beakPx };
   }

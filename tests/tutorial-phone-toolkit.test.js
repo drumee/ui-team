@@ -4,14 +4,20 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 const sass = require("sass");
 const SRC = path.join(__dirname, "..", "src/drumee");
+const Module = require("node:module");
+const baseLoad = Module._load;
+Module._load = function (r, p, m) {
+  if (/^assets\//.test(r)) return `asset:${r}`; // webpack asset modules
+  return baseLoad.call(this, r, p, m);
+};
 const node = (type) => (o = {}) => ({ type, ...o });
 global.Skeletons = {
   Box: { X: node("X"), Y: node("Y") }, Note: node("Note"),
-  Image: { Svg: node("Svg") }, Element: node("El"),
+  Image: { Svg: node("Svg") }, Element: node("El"), UserProfile: node("UserProfile"),
 };
 global.LOCALE = new Proxy({}, { get: (_, k) => String(k) });
 const ph = require(path.join(SRC, "modules/desk/tutorial/skeleton/toolkit/phone.js"));
-test.after(() => { delete global.Skeletons; delete global.LOCALE; });
+test.after(() => { Module._load = baseLoad; delete global.Skeletons; delete global.LOCALE; });
 
 const ui = { fig: { family: "tutorial-chat", group: "tutorial" } };
 const find = (t, pn) => {

@@ -68,3 +68,14 @@ test("buildStepWidgets stamps layout, default desk", () => {
   assert.equal(hk.buildStepWidgets(ui, t)[0].layout, "desk");
   assert.equal(hk.buildStepWidgets(ui, t, { layout: "phone" })[0].layout, "phone");
 });
+
+test("phoneAnchor prefer:'above' puts the card over the target when it fits (Figma workspace frames)", () => {
+  const a = hk.phoneAnchor(R(16, 500, 358, 80), HOST, { height: 100 }, { prefer: "above" });
+  assert.equal(a.direction, "south");
+  assert.equal(a.style.bottom, `${844 - 500 + 14}px`);
+});
+
+test("phoneAnchor prefer:'above' falls back below when above does not fit", () => {
+  const a = hk.phoneAnchor(R(16, 60, 358, 40), HOST, { height: 200 }, { prefer: "above" });
+  assert.equal(a.direction, "north");
+});

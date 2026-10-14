@@ -356,7 +356,8 @@
 .tutorial-migrate__ph-menu {
   position: absolute;
   right: 16px;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px + 66px + 16px + 54px + 12px);
+  // nav band + row padding + tab pill + the FAB above it + a 12px gap
+  bottom: calc(max(env(safe-area-inset-bottom, 0px), 32px) + 12px + 66px + 54px + 12px);
   width: 233px;
   padding: 12px;
   border-radius: 12px;

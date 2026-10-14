@@ -8,8 +8,7 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: #f2f2f7;
-  font-family: Geist, var(--font-family, sans-serif);
+  background: #fff;
   overflow: hidden;
 
   &__status {
@@ -17,12 +16,18 @@
     flex: none;
   }
 
+  // folder-top-navigation: 16 all round, 12 between, top-aligned.
   &__top {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
     padding: 16px;
     flex: none;
+  }
+
+  // Figma's tour frames fade the top bar to 40% behind the overlay.
+  &[data-dim="1"] &__top {
+    opacity: 0.4;
   }
 
   &__circle,
@@ -45,7 +50,15 @@
   }
 
   &__avatar {
-    background: linear-gradient(135deg, #ffa8dc, #5950ff);
+    border: 0;
+    box-shadow: none;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  &__avatar-img {
+    width: 44px;
+    height: 44px;
   }
 
   &__title {
@@ -55,11 +68,13 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 0 16px;
+    padding: 7px 17px 7px 13px;
     border-radius: 40px;
     background: #fff;
     border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
     font-size: 14px;
+    line-height: 1.2;
     font-weight: 600;
     color: #0b0a21;
   }
@@ -85,25 +100,53 @@
     padding: 0 24px 24px;
   }
 
+  // The navigation: a white fade, the bottom row, the home-indicator band
+  // (32 in the frames — the safe area where a device has one). The FAB rides
+  // on it: Figma pins it 54 above the row's top, 16 from the right.
+  &__nav {
+    position: relative;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 100%);
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 32px);
+  }
+
   &__bottom {
     flex: none;
     display: flex;
     gap: 12px;
-    align-items: center;
-    padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 8px);
+    align-items: stretch;
+    padding: 12px 16px 0;
   }
 
   &__bottom > &__circle {
     width: 54px;
     height: 54px;
+    padding: 15px;
+  }
+
+  &__apps-ico {
+    width: 22px;
+    height: 22px;
+    display: block;
+  }
+
+  // The 20% black overlay of the tour frames (385:937), over everything but
+  // the sheet or modal drawn after it.
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.2);
   }
 
   &__tabs,
   &__search {
     flex: 1;
-    height: 66px;
+    min-height: 54px;
     border-radius: 40px;
     background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     justify-content: space-around;
@@ -111,15 +154,25 @@
     box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
   }
 
-  &__search {
-    justify-content: flex-start;
-    gap: 8px;
-    padding: 0 20px;
-    color: #84848c;
-    font-size: 16px;
+  &__tabs {
+    min-height: 66px;
   }
 
-  &__search-ico,
+  // The pre-workspace Search pill (225:30747): 13/17 insets, a 26px glass.
+  &__search {
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 13px 17px;
+    color: #65656c;
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  &__search-ico {
+    width: 26px;
+    height: 26px;
+  }
+
   &__tab-ico {
     width: 20px;
     height: 20px;
@@ -144,11 +197,13 @@
   &__fab {
     position: absolute;
     right: 16px;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px + 66px + 16px);
+    top: -54px;
     width: 54px;
     height: 54px;
     border-radius: 50%;
     background: #5950ff;
+    border: 1.182px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 7px 5px rgba(0, 0, 0, 0.05), 0 40px 40px rgba(0, 0, 0, 0.15);
     display: flex;
     align-items: center;
     justify-content: center;

@@ -3,9 +3,16 @@
  * table without mounting the widget.
  *
  * Each entry describes the DESK mock (lit/anchor/target/direction…) and, under
- * `phone`, the phone mock (skeleton/phone.js): which view it draws and which
- * part the spotlight lifts. Phone targets reuse the desk dialog's own part
- * names, because the phone sheet hosts that same dialog.
+ * `phone`, the phone mock (skeleton/phone.js, Figma "org home -> create wp"):
+ *
+ *   view    home | sheet | invite
+ *   lit     the sheet block the screen is about (drives the Figma opacities)
+ *   target  what the callout points at
+ *   live    on a run that may create, this screen is the REAL thing — the name
+ *           field takes the name (380:54800) and the create screen picks a
+ *           type and creates (385:1226). The frames have no separate form.
+ *   skip    the desk's separate live form; on a phone the create screen above
+ *           already is that form, so the phone never shows this one.
  */
 const { BLOCKS } = require('../skeleton/toolkit/workspace-dialog');
 
@@ -36,7 +43,7 @@ const SCREENS = [
   {
     // Phone layout (Figma 380:54433 → 385:1364): what the phone mock draws
     // and lifts out of the scrim. The callout copy is the desk entry's.
-    phone: { view: 'dialog', target: BLOCKS.NAME },
+    phone: { view: 'sheet', lit: 'name', target: BLOCKS.NAME, live: true },
     lit: BLOCKS.NAME,
     anchor: BLOCKS.NAME,
     text: () => LOCALE.TUTORIAL_WS_NAME,
@@ -44,7 +51,7 @@ const SCREENS = [
   {
     // Phone layout (Figma 380:54433 → 385:1364): what the phone mock draws
     // and lifts out of the scrim. The callout copy is the desk entry's.
-    phone: { view: 'dialog', target: BLOCKS.type('internal') },
+    phone: { view: 'sheet', lit: 'internal', target: BLOCKS.type('internal') },
     lit: BLOCKS.type('internal'),
     anchor: BLOCKS.type('internal'),
     title: () => LOCALE.TUTORIAL_WS_INTERNAL_TITLE,
@@ -53,7 +60,7 @@ const SCREENS = [
   {
     // Phone layout (Figma 380:54433 → 385:1364): what the phone mock draws
     // and lifts out of the scrim. The callout copy is the desk entry's.
-    phone: { view: 'dialog', target: BLOCKS.type('external') },
+    phone: { view: 'sheet', lit: 'external', target: BLOCKS.type('external') },
     lit: BLOCKS.type('external'),
     anchor: BLOCKS.type('external'),
     title: () => LOCALE.TUTORIAL_WS_EXTERNAL_TITLE,
@@ -62,7 +69,7 @@ const SCREENS = [
   {
     // Phone layout (Figma 380:54433 → 385:1364): what the phone mock draws
     // and lifts out of the scrim. The callout copy is the desk entry's.
-    phone: { view: 'dialog', target: BLOCKS.CREATE },
+    phone: { view: 'sheet', lit: 'create', target: BLOCKS.TYPE, live: true },
     // The closing screen lights the type list AND the now-enabled Create
     // button, because it is about the pair.
     lit: BLOCKS.CREATE,
@@ -80,7 +87,7 @@ const SCREENS = [
   {
     // Phone layout (Figma 380:54433 → 385:1364): what the phone mock draws
     // and lifts out of the scrim. The callout copy is the desk entry's.
-    phone: { view: 'dialog', target: 'wsd-dialog' },
+    phone: { view: 'sheet', lit: 'create', target: BLOCKS.TYPE, skip: true },
     // Every section at full strength, because there is no longer one being
     // taught: the user is filling it in.
     //

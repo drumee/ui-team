@@ -3462,5 +3462,8 @@
   "TUTORIAL_MIGRATE_FAB": "Cliquez pour ajouter des fichiers",
   "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "Touchez + pour joindre un fichier",
   "TUTORIAL_CHAT_PHONE_ATTACH_DESC": "Joignez un fichier dans le chat pour ouvrir une discussion à son sujet. Fini les « de quel fichier parle-t-on ? »",
-  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Appuyez longuement sur un message pour répondre dans une discussion"
+  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Appuyez longuement sur un message pour répondre dans une discussion",
+  "WS_TYPE_PHONE_INTERNAL_DESC": "Partagé avec des personnes précises",
+  "WS_TYPE_PHONE_EXTERNAL_DESC": "Toute personne disposant du lien unique",
+  "TUTORIAL_WS_IN_DEPARTMENT": "Créer dans un département"
 }

@@ -3230,5 +3230,8 @@
   "TUTORIAL_MIGRATE_FAB": "点击添加新文件",
   "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "点按 + 附加文件",
   "TUTORIAL_CHAT_PHONE_ATTACH_DESC": "在聊天中附加任何文件即可为其开启讨论。再也不用问“我们在说哪个文件？”",
-  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "长按消息即可在讨论中回复"
+  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "长按消息即可在讨论中回复",
+  "WS_TYPE_PHONE_INTERNAL_DESC": "与特定人员共享",
+  "WS_TYPE_PHONE_EXTERNAL_DESC": "拥有唯一链接的任何人",
+  "TUTORIAL_WS_IN_DEPARTMENT": "在部门中创建"
 }

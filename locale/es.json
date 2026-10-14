@@ -3231,5 +3231,8 @@
   "TUTORIAL_MIGRATE_FAB": "Haz clic para añadir archivos",
   "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "Toca + para adjuntar un archivo",
   "TUTORIAL_CHAT_PHONE_ATTACH_DESC": "Adjunta cualquier archivo en el chat para abrir un hilo sobre él. Se acabó el «¿de qué archivo hablamos?»",
-  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Mantén pulsado un mensaje para responder en un hilo"
+  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Mantén pulsado un mensaje para responder en un hilo",
+  "WS_TYPE_PHONE_INTERNAL_DESC": "Compartido con personas específicas",
+  "WS_TYPE_PHONE_EXTERNAL_DESC": "Cualquiera con el enlace único",
+  "TUTORIAL_WS_IN_DEPARTMENT": "Crear en un departamento"
 }

@@ -14,6 +14,10 @@
  */
 const P = 'tutorial-phone';
 
+// Figma's SquaresFour (the apps button) — no glyph of that shape in the sprite.
+const SQUARES_FOUR = require('assets/tutorial/ws-phone/squares-four.svg');
+const url = (m) => (m && m.default ? m.default : m);
+
 const TABS = [
   { key: 'files', ico: 'rail-files', label: () => LOCALE.FILES },
   { key: 'chat', ico: 'rail-chat', label: () => LOCALE.CHAT },
@@ -30,6 +34,26 @@ function circle(ico, pn) {
   });
 }
 
+/** The signed-in user's avatar — the same widget the real mobile topbar uses. */
+function avatar() {
+  const v = typeof Visitor !== 'undefined' ? Visitor : {};
+  return Skeletons.Box.X({
+    active: 0,
+    className: `${P}__avatar`,
+    sys_pn: 'ph-avatar',
+    kids: [Skeletons.UserProfile({
+      className: `${P}__avatar-img`,
+      id: v.id,
+      firstname: v.firstname ? v.firstname() : '',
+      lastname: v.lastname ? v.lastname() : '',
+      auto_color: 1,
+      oneLetter: 1,
+      live_status: 0,
+      active: 0,
+    })],
+  });
+}
+
 /**
  * The top bar: avatar or back, a name pill, then search and more.
  * @param {Object} ui
@@ -40,9 +64,7 @@ function topBar(ui, { lead = 'back', title = '', ico = null, actions = true } = 
     active: 0,
     className: `${P}__top`,
     kids: [
-      lead === 'avatar'
-        ? Skeletons.Box.X({ active: 0, className: `${P}__avatar`, sys_pn: 'ph-avatar' })
-        : circle('arrow-left', 'ph-back'),
+      lead === 'avatar' ? avatar() : circle('arrow-left', 'ph-back'),
       Skeletons.Box.X({
         active: 0,
         className: `${P}__title`,
@@ -53,7 +75,7 @@ function topBar(ui, { lead = 'back', title = '', ico = null, actions = true } = 
           Skeletons.Image.Svg({ active: 0, ico: 'ph-caret-down', className: `${P}__title-caret` }),
         ].filter(Boolean),
       }),
-      actions ? circle('dock-search', 'ph-search-btn') : null,
+      actions ? circle('ph-magnifying-glass', 'ph-search-btn') : null,
       actions ? circle('app-dots-horizontal', 'ph-more') : null,
     ].filter(Boolean),
   });
@@ -72,7 +94,7 @@ function tabBar(ui, active) {
       className: `${P}__search`,
       sys_pn: 'ph-search',
       kids: [
-        Skeletons.Image.Svg({ active: 0, ico: 'dock-search', className: `${P}__search-ico` }),
+        Skeletons.Image.Svg({ active: 0, ico: 'ph-magnifying-glass', className: `${P}__search-ico` }),
         Skeletons.Note({ active: 0, className: `${P}__search-text`, content: LOCALE.SEARCH }),
       ],
     })
@@ -93,7 +115,17 @@ function tabBar(ui, active) {
   return Skeletons.Box.X({
     active: 0,
     className: `${P}__bottom`,
-    kids: [pill, circle('dots-nine', 'ph-apps')],
+    kids: [pill, Skeletons.Box.X({
+      active: 0,
+      className: `${P}__circle ${P}__apps`,
+      sys_pn: 'ph-apps',
+      kids: [Skeletons.Element({
+        active: 0,
+        tagName: 'img',
+        className: `${P}__apps-ico`,
+        attribute: { src: url(SQUARES_FOUR), alt: '' },
+      })],
+    })],
   });
 }
 
@@ -110,7 +142,7 @@ function fab(ui, { service = null, menu = null } = {}) {
     className: `${P}__fab`,
     sys_pn: 'ph-fab',
     ...(menu ? { dataset: { menu }, attrOpt: { 'data-menu': menu } } : {}),
-    kids: [Skeletons.Image.Svg({ active: 0, ico: 'plus', className: `${P}__fab-ico` })],
+    kids: [Skeletons.Image.Svg({ active: 0, ico: 'ph-plus', className: `${P}__fab-ico` })],
   });
 }
 
@@ -207,16 +239,28 @@ function hero(ui, { title, desc, cta, cta_service, deck = null }) {
  * The whole phone screen: status pad, top bar, scrolling body, bottom row,
  * then the absolutely placed FAB and overlay (a sheet, a popover).
  */
-function screen(ui, { top = null, body = [], bottom = null, fab: f = null, overlay = null } = {}) {
+function screen(ui, {
+  top = null, body = [], bottom = null, fab: f = null, overlay = null, dim = false, view = null,
+} = {}) {
   return Skeletons.Box.Y({
     active: 0,
     className: `${P} ${ui.fig.family}__phone`,
+    // `dim`: the Figma tour frames lay a 20% black overlay over the whole
+    // screen and fade the top bar to 40%, then draw the sheet or modal above.
+    dataset: { dim: dim ? '1' : '0', ...(view ? { view } : {}) },
+    attrOpt: { 'data-dim': dim ? '1' : '0', ...(view ? { 'data-view': view } : {}) },
     kids: [
       Skeletons.Element({ active: 0, className: `${P}__status` }),
       top,
       Skeletons.Box.Y({ active: 0, className: `${P}__body`, sys_pn: 'ph-body', kids: body }),
-      bottom,
-      f,
+      // The FAB rides on the bottom row (Figma: top -54 / right 16 of the
+      // navigation), so it moves with it whatever the safe area does.
+      bottom || f ? Skeletons.Box.Y({
+        active: 0,
+        className: `${P}__nav`,
+        kids: [bottom, f].filter(Boolean),
+      }) : null,
+      dim ? Skeletons.Element({ active: 0, className: `${P}__overlay` }) : null,
       overlay,
     ].filter(Boolean),
   });

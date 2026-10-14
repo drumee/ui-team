@@ -3236,5 +3236,8 @@
   "TUTORIAL_MIGRATE_FAB": "Нажмите, чтобы добавить файлы",
   "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "Нажмите +, чтобы прикрепить файл",
   "TUTORIAL_CHAT_PHONE_ATTACH_DESC": "Прикрепите файл в чате, чтобы открыть по нему ветку. Больше никаких «о каком файле речь?»",
-  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Удерживайте сообщение, чтобы ответить в ветке"
+  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "Удерживайте сообщение, чтобы ответить в ветке",
+  "WS_TYPE_PHONE_INTERNAL_DESC": "Доступ для выбранных людей",
+  "WS_TYPE_PHONE_EXTERNAL_DESC": "Любой, у кого есть уникальная ссылка",
+  "TUTORIAL_WS_IN_DEPARTMENT": "Создать в отделе"
 }

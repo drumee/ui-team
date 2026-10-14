@@ -4,6 +4,12 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 const fs = require("node:fs");
 const SRC = path.join(__dirname, "..", "src/drumee");
+const Module = require("node:module");
+const baseLoad = Module._load;
+Module._load = function (r, p, m) {
+  if (/^assets\//.test(r)) return `asset:${r}`; // webpack asset modules
+  return baseLoad.call(this, r, p, m);
+};
 const mk = (type) => new Proxy(function (o = {}) { return { type, ...o }; }, {
   get: (t, k) => (k in t ? t[k] : mk(`${type}.${String(k)}`)),
 });
@@ -12,7 +18,7 @@ global.LOCALE = new Proxy({}, { get: (_, k) => String(k) });
 global._a = new Proxy({}, { get: (_, k) => String(k) });
 const SCREENS = require(path.join(SRC, "modules/desk/tutorial/chat/screens.js"));
 const view = require(path.join(SRC, "modules/desk/tutorial/chat/skeleton/phone.js"));
-test.after(() => { for (const k of ["Skeletons", "LOCALE", "_a"]) delete global[k]; });
+test.after(() => { Module._load = baseLoad; for (const k of ["Skeletons", "LOCALE", "_a"]) delete global[k]; });
 
 const ui = { fig: { family: "tutorial-chat", group: "tutorial" }, mget: () => null };
 const find = (t, pn) => {
