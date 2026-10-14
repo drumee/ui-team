@@ -4117,6 +4117,36 @@
       margin-left: 0;
     }
 
+    // …except while the view toggle is hidden: an empty folder that is not
+    // loading or searched (files-empty-state.scss, same chain). The controls
+    // are then + New alone, and a whole row for one pill reads as a gap — so
+    // + New moves onto the filter bar's own row, after the tabs. The tabs give
+    // way to make the room: they shrink and scroll sideways (scrollbar hidden,
+    // as the tab-bar strip does) rather than wrap.
+    .window__files-panel:not([data-loading="1"]):not([data-search]):has(.window__icons-list .smart-container > .no-content) {
+      .window-folder__filter-bar {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+      }
+
+      .window-folder__filter-track {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+      }
+
+      .window-folder-topbar__file-controls {
+        order: 0;
+        flex: 0 0 auto;
+        margin-left: 0;
+      }
+    }
+
     // The rendered tab class is `__filter-tab-main` (see topbar/filter
     // skeletons). The previous rule targeted `__filter-tab` and never
     // applied, so the tabs shrank and collided once the row had more
