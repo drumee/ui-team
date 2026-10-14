@@ -82,6 +82,17 @@
     // escape to the root and paint above the settings/apps slot (1500).
     isolation: isolate;
 
+    // `.window__ui` (shared with every window, see window/skin/window.scss)
+    // carries a 600px floor meant for floating popups. The manager is the work
+    // area itself, so it must follow its container instead: with the floor, a
+    // work area under 600px (a narrow desktop window) left the manager — and
+    // the workspace pane filling it — wider than the screen, and the right edge
+    // was clipped: the Meet tab's view picker and Schedule button, chat
+    // messages (Lexis, 2026-10-14). Phones have their own layout; untouched.
+    &:not([data-device="mobile"]) {
+      min-width: 0;
+    }
+
     &[data-device="mobile"] {
       // Let the parent flex container (.desk-module__wm-container) own
       // the height. The previous `calc(100vh - 260px)` reserved 260px
