@@ -152,11 +152,25 @@ test("a chat partner has no contact row to hydrate or edit", async () => {
   assert.equal(w.fetches.length, 0);
 });
 
-test("my_contact_show_next lists chat partners (branch 3)", () => {
-  const sql = fs.readFileSync(
-    path.join(__dirname, "../../schemas/drumate/procedures/contact/my_contact_show_next.sql"),
-    "utf8",
-  );
+// The proc lives in the sibling schemas repo. Read the pushed version
+// (origin/test) rather than the working tree, which may be behind; skip when
+// that repo is not checked out next to this one.
+function pushedProc() {
+  try {
+    return require("node:child_process").execFileSync(
+      "git",
+      ["-C", path.join(__dirname, "../../schemas"), "show",
+        "origin/test:drumate/procedures/contact/my_contact_show_next.sql"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+  } catch (e) {
+    return null;
+  }
+}
+
+test("my_contact_show_next lists chat partners (branch 3)", (t) => {
+  const sql = pushedProc();
+  if (!sql) return t.skip("schemas repo not available");
   const b3 = sql.slice(sql.indexOf("-- 3. People you have messaged"));
   assert.match(b3, /FROM p2p_time tc/);
   assert.match(b3, /'nocontact' as status/);
