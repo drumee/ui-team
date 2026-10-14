@@ -89,6 +89,8 @@ function desk(extra = {}) {
     isDestroyed: () => false,
     _restoreInFlight: true,
     _releaseLandingHold: () => calls.push(["release"]),
+    // As loadDefault leaves it on a boot that may land (_holdLandingPane).
+    el: { dataset: { landingHold: "1" } },
     ...extra,
   };
   d._landOnOrgView = landOnOrgView.bind(d);
@@ -382,10 +384,20 @@ for (const [label, env, extra] of [
   });
 }
 
-test("reload replay of the org screen never touches the hold", async () => {
+test("reload onto the org screen: the hold it set comes down after the screen", async () => {
   resetEnv();
   const saved = { workspace: { hub_id: "h1", nid: "n1" }, orgView: 1 };
-  const d = desk({ _bootDeepLink: false, _bootSavedState: saved });
+  const d = desk({ _bootDeepLink: false, _bootSavedState: saved, el: { dataset: { landingHold: "1" } } });
+  await restoreDeskState.call(d);
+  for (let i = 0; i < 40 && !d.calls.some((c) => c[0] === "release"); i++) await tick();
+  const names = d.calls.map((c) => c[0]);
+  assert.ok(names.indexOf("release") > names.indexOf("restoreScreen"), JSON.stringify(names));
+});
+
+test("reload onto a workspace or another screen: no hold, nothing released", async () => {
+  resetEnv();
+  const saved = { workspace: { hub_id: "h1", nid: "n1" }, service: "toggle-settings" };
+  const d = desk({ _bootDeepLink: false, _bootSavedState: saved, el: { dataset: {} } });
   await restoreDeskState.call(d);
   await tick();
   assert.ok(!d.calls.some((c) => c[0] === "release"));
@@ -406,13 +418,17 @@ function holder(extra = {}) {
   return h;
 }
 
-test("hold is stamped only for a first open that may land on the org screen", () => {
+test("hold is stamped only when the boot may land on the org screen", () => {
   resetEnv();
   const yes = holder();
   holdLandingPane.call(yes);
   assert.equal(yes.el.dataset.landingHold, "1");
   yes._releaseLandingHold();
   assert.equal(yes.el.dataset.landingHold, undefined);
+  const back = holder({ _bootSavedState: { workspace: { hub_id: "h", nid: "n" }, orgView: 1 } });
+  holdLandingPane.call(back);
+  assert.equal(back.el.dataset.landingHold, "1", "a reload back onto the org screen");
+  back._releaseLandingHold();
   for (const [env, extra] of [
     [{}, { _bootDeepLink: true }],
     [{}, { _bootSavedState: { workspace: { hub_id: "h", nid: "n" } } }],
