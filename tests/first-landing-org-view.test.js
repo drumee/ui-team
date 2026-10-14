@@ -157,12 +157,15 @@ test("the org landing never sweeps away a dialog that is up", async () => {
   const d = {
     el: { dataset: { wmModal: "open" } },
     onUiEvent: (cmd, a) => sent.push(a.service),
+    _openOrgView: () => sent.push("direct:org"),
   };
   await assert.rejects(openRestored.call(d, "open-org-view"));
   await openRestored.call(d, "toggle-settings");
   d.el.dataset = {};
   await openRestored.call(d, "open-org-view");
-  assert.deepEqual(sent, ["toggle-settings", "open-org-view"]);
+  // Direct, so a stuck window.pointerDragged (which makes onUiEvent drop
+  // everything) cannot swallow the landing.
+  assert.deepEqual(sent, ["toggle-settings", "direct:org"]);
 });
 
 test("reload on a workspace still restores that workspace, no org screen", async () => {
