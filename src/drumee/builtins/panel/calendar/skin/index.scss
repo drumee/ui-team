@@ -45,18 +45,26 @@
 
 .calendar-main {
   // Chip / cell geometry in one place, so the three grids stay in step.
-  // 2px between chips: the Meet tab's month cards (window/folder/skin/
-  // meeting-schedule.scss → __meeting-sched-mcard, margin-top: 2px).
-  --cal-gap: 2px;
+  // 10px between the items of a month cell, as the frame's cell spaces its
+  // chip and cards (1697:48540). The "+N" footer reuses it to cover the gap
+  // above itself, so skeleton/month.js counts it in the footer's height.
+  --cal-gap: 10px;
   --cal-radius: 8px;
   // A month row's FLOOR (rows share the grid's height above it, as the Meet
-  // tab's do). skeleton/month.js MONTH_FIT = 3 is measured against it, and
-  // both are pending recalculation for the current cell: 12px padding, the
-  // 20px date line with its 10px gap and the 1px rule leave 63px of the
-  // 118px, not the 79px three 19px chips on 2px gaps and the pinned 18px "+N"
-  // need (see the note on MONTH_FIT). The Meet tab floors its rows at 90px but has no "+N" to
-  // keep honest. Change one of these and the other goes stale silently.
-  --cal-cell-min: 118px;
+  // tab's do). skeleton/month.js labels "+N" by laying the day's items out in
+  // the cell body this floor leaves — 170px less 12px padding top and bottom,
+  // the 20px date line, its 10px gap and the 1px rule, i.e. 115px — so the two
+  // change together or "+N" goes wrong silently.
+  //
+  // 170px is the floor at which the days people actually have read whole: two
+  // personal cards stand in the cell with no "+N" (114.8px of 115), and over a
+  // "+N" a meeting and a card still both show (87.2px of the 89px above the
+  // footer), as does the tallest item, a workspace card (86.8px). Two pixels
+  // less and each of those days reads one item short. The frame's own shortest
+  // row is 160px (1693:181977), 10px under this once the date line is 20px tall
+  // here rather than 17px. Six rows do not fit a 900px screen at either height;
+  // the frame scrolls its month too.
+  --cal-cell-min: 170px;
   // Hour-canvas geometry, matched to the workspace Meet tab's schedule grid
   // (window/folder/skin/meeting-schedule.scss: 72px rows, an 85px hour gutter)
   // so the day and week views read as the same calendar in both places. The
@@ -826,8 +834,9 @@
   // previously the last child of a clipped stack — i.e. the first thing lost.
   //
   // The negative margin swallows the flex gap above it so its background covers
-  // that 4px too; without it a chip stays visible in the sliver between the
-  // last gap and the footer.
+  // that gap too; without it a chip stays visible in the sliver between the
+  // last gap and the footer. With the 10px gap that makes the footer 26px
+  // tall, which is the height skeleton/month.js reserves for it.
   &__day-more {
     @include drumee.typo($size: 11px, $line: 16px, $color: var(--primary-40));
     font-weight: 600;
@@ -842,13 +851,13 @@
   }
 
   // ── chips ─────────────────────────────────────────────────────────────────
+  // Figma 1697:48543 (task card), 1697:10988 (workspace task card), 1697:48542
+  // (month meeting chip), 1693:188958 (hour block). Every item is ONE line of
+  // text per field — a name that wrapped would make an item's height depend on
+  // its data, and skeleton/month.js counts the "+N" from fixed item heights.
   &__chip {
     flex: 0 0 auto;
     position: relative;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 7px;
-    border-radius: 6px;
     min-width: 0;
     overflow: hidden;
     cursor: default;
@@ -883,45 +892,43 @@
       }
     }
 
-    // 43:31159 gives the two kinds deliberately different silhouettes:
+    // The two kinds keep deliberately different silhouettes:
     //
-    //   task    — a white card, hairline border, evenly rounded. Reads as an
-    //             object that sits on the day.
-    //   meeting — a 10% brand wash with a 4px brand bar down the left and the
-    //             left corners squared off, so the bar runs the full height.
-    //             Reads as a span of time anchored to the left edge.
+    //   task    — a white card, hairline border, r=12, 12px in from every
+    //             edge. Reads as an object that sits on the day.
+    //   meeting — the 10% brand wash with a 4px brand bar down the left and
+    //             the left corners squared off, so the bar runs the full
+    //             height. Reads as a span of time anchored to the left edge.
+    //
+    // The card's hairline is 0.5px of 20% black in the frame. It is drawn as
+    // the 1px token border instead: a 0.5px border lays out as 1px on a 1x
+    // screen and 0.5px on a 2x one, and the "+N" maths needs one card height.
     &[data-kind="task"] {
+      gap: 12px;
+      padding: 12px;
       background: var(--normal-bg-elevated);
       border: 1px solid var(--border-default);
-      border-radius: 8px;
-      padding: 12px;
+      border-radius: 12px;
+      transition: box-shadow 0.12s ease-out;
 
-      // 12px of padding belongs to the week/day hour block, which is a
-      // full-height card with a description and a status pill. The one-line
-      // chip (month cell, all-day strip) is the Meet tab's month card in size
-      // — 19px with its hairline, r=4 — kept a white card rather than a brand
-      // wash, so a task still reads differently from a meeting.
-      &[data-compact="1"] {
-        gap: 6px;
-        padding: 1px 6px;
-        border-radius: 4px;
+      // Drop Shadow/300, as both hover frames (1697:48544, 1697:11085) draw.
+      &:hover {
+        box-shadow:
+          0 4px 4px -1px rgba(12, 12, 13, 0.1),
+          0 4px 4px -1px rgba(12, 12, 13, 0.05);
       }
     }
 
-    // The Meet tab's meeting card: an 8% brand wash with a 3px brand bar and
-    // r=4 on the free corners. The one-line chip is its month card
-    // (__meeting-sched-mcard, 2px 6px); the hour block its schedule card
-    // (4px 8px, see __hour-blocks below).
     &[data-kind="meeting"] {
-      background: var(--hover-bg-40);
-      border-left: 3px solid var(--primary-40);
-      border-radius: 0 4px 4px 0;
-      padding: 4px 8px;
+      background: var(--brand-tint);
+      border-left: 4px solid var(--primary-40);
+      border-radius: 0 8px 8px 0;
+      padding: 4px 12px;
 
+      // "1:30 PM title", 8px apart.
       &[data-compact="1"] {
-        gap: 4px;
-        padding: 2px 6px;
-        border-radius: 4px;
+        align-items: center;
+        gap: 8px;
       }
 
       // The Meet tab darkens its cards to a 16% wash on hover.
@@ -940,6 +947,12 @@
     }
   }
 
+  // The task card's dot-over-name group, 4px apart.
+  &__chip-head {
+    gap: 4px;
+    min-width: 0;
+  }
+
   &__chip-dot {
     flex: 0 0 auto;
     width: 8px;
@@ -947,55 +960,67 @@
     border-radius: 50%;
   }
 
-  // The time sits in body ink at regular weight — the bold belongs to the
-  // title beside it, so the eye lands on what the item IS before when it is.
-  // "09:00 Title" in one 12/15 bold run, as the Meet tab's month card writes
-  // it — it used to be a lighter 17px-line time beside a 16px-line title.
+  // The time in regular body ink, the title beside it bold — "1:30 PM" then
+  // what the item IS (Body/Mini Body 12/1.4 beside Buttons/Mini Button 12/1.2).
   &__chip-time {
     flex: 0 0 auto;
-    @include drumee.typo($size: 12px, $line: 15px, $color: var(--normal-fg));
-    font-weight: 600;
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg));
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   &__chip-title {
     flex: 0 1 auto;
     min-width: 0;
-    @include drumee.typo($size: 12px, $line: 15px, $color: var(--normal-fg));
+    @include drumee.typo($size: 12px, $line: 1.2, $color: var(--normal-fg));
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
+  // A Note's text sits in an inner .note-content block, and that block is what
+  // has to shrink and ellipsize: on the Note itself text-overflow never fires,
+  // and a long name was simply cut off at the item's edge. white-space is
+  // left to inherit, so the hour block's hover can still wrap it.
+  &__chip-title .note-content,
+  &__chip-origin-name .note-content {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-  // Provenance pill (decision C-04). Truncates the title before itself: in an
-  // aggregated calendar, WHERE an item lives matters more than the rest of a
-  // long name.
+  // Workspace pill (Figma 1697:11003): the folder, then the workspace's name,
+  // on the 15% pink wash. It hugs its content and gives way before the card
+  // does — a long workspace name ellipsizes inside it.
   &__chip-origin {
     flex: 0 0 auto;
-    max-width: 84px;
-    padding: 1px 6px;
-    border-radius: 999px;
-    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-20));
-    font-weight: 500;
+    align-self: flex-start;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    min-width: 0;
+    padding: 4px 8px 4px 4px;
+    border-radius: 8px;
+    background: var(--area-tint-share);
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  // The 14px "folder mini icon" — the workspace glyph's own recipe, at the
+  // height of the name line beside it.
+  &__chip-origin-ico {
+    @include drumee.ws-folder-icon(14px, 11.5px);
+  }
+
+  &__chip-origin-name {
+    min-width: 0;
+    @include drumee.typo($size: 12px, $line: 1.2, $color: var(--normal-fg));
+    font-weight: 400;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-
-    // "folder" kept alongside it: a server predating the workspace-scope
-    // migration still stamps that value, and losing the pill's background
-    // would be the visible symptom.
-    &[data-scope="workspace"],
-    &[data-scope="folder"] {
-      background: var(--normal-bg-80);
-      color: var(--normal-fg-20);
-    }
-
-    &[data-scope="personal"] {
-      background: var(--primary-40);
-      color: var(--gray-white);
-    }
   }
 
   &__chip-desc {
@@ -1026,17 +1051,20 @@
     font-weight: 500;
   }
 
-  // Hover delete (personal + writable chips only — skeleton/chip.js).
+  // Hover delete (personal + writable items only — skeleton/chip.js): the
+  // frame's 16px Phosphor X (1697:48544), in ink, red under the pointer.
   //
-  // Was a 16px box pinned at top:3px with an unsized sprite: on the 19px
-  // one-line chip it hung off the bottom edge, and it sat ON the title with
-  // nothing making room for it, so "11:00 tttt" ran under a full-size red ✕.
-  // Now: centred on the one-line chip (top-right on the tall hour block), a
-  // 10px glyph in a 16px target, and the chip gives up 22px on the right while
-  // it is hovered, so the title ellipsizes before the button instead of under
-  // it.
-  &__chip:has(> &__chip-remove):hover {
+  // On the card it sits in the top-right corner, 12px in, level with the dot,
+  // and only the name line gives way to it, with 4px to spare; on the
+  // one-line meeting chip it is centred and the chip gives up 22px on the
+  // right while hovered. Either way the title ellipsizes before the button
+  // instead of under it.
+  &__chip[data-kind="meeting"][data-compact="1"]:has(> &__chip-remove):hover {
     padding-right: 22px;
+  }
+
+  &__chip[data-kind="task"]:has(> &__chip-remove):hover > &__chip-head {
+    padding-right: 20px;
   }
 
   &__chip-remove {
@@ -1052,7 +1080,7 @@
     border-radius: 4px;
     cursor: pointer;
     opacity: 0;
-    color: var(--normal-fg-20);
+    color: var(--normal-fg);
     background: transparent;
     transition:
       opacity 0.12s ease-out,
@@ -1061,8 +1089,8 @@
 
     svg {
       display: block;
-      width: 10px;
-      height: 10px;
+      width: 16px;
+      height: 16px;
       fill: currentcolor;
     }
 
@@ -1070,6 +1098,12 @@
       color: var(--signal-error, #d74e49);
       background: rgba(215, 78, 73, 0.12);
     }
+  }
+
+  &__chip[data-kind="task"] > &__chip-remove {
+    top: 12px;
+    right: 12px;
+    transform: none;
   }
 
   // The hour block is a tall card: the button belongs in its top-right
@@ -1141,14 +1175,21 @@
   // cap nor an overflow: twelve all-day tasks grew the header to 593px and
   // squeezed the hour canvas to 106px, and thirty made the header taller than
   // the scroll viewport — pinned at top:0, so its own lower half became
-  // unreachable. Two hour-rows' worth shows ~4 chips and scrolls for the rest.
+  // unreachable.
+  //
+  // Its own spacing, not the month cell's: 8px between cards, as the week
+  // frame stacks them (1693:187899), and room for two cards of either kind —
+  // two 86.8px workspace cards, or three personal ones — before it scrolls. Its
+  // 144px cap held about six of the old one-line chips but not two workspace
+  // cards; at this height the sticky header can take 40px more of the screen.
   &__allday {
-    gap: var(--cal-gap);
+    gap: 8px;
     flex: 0 1 auto;
     min-height: 0;
-    max-height: calc(var(--cal-hour-height) * 2);
+    max-height: 184px;
     // Inked at rest: this strip has no "+N" label, so with a hidden bar a
-    // twelve-task day would show four and say nothing about the other eight.
+    // twelve-task day would show two or three cards and say nothing about the
+    // rest.
     @include quiet-scroll($rest: var(--border-strong));
   }
 
@@ -1233,11 +1274,11 @@
     pointer-events: none;
   }
 
-  // The timed block, built to read like the Meet tab's schedule card: a bold
-  // title on its own line, the agenda under it, the time and provenance in a
-  // meta row at the foot — and hover to see the rest of whatever a short slot
-  // had to cut. `height` / `min-height` / `left` / `width` are inline because
-  // they are data (skeleton/hours.js).
+  // The timed block — the frame's weekly schedule card (1693:188958): the
+  // bold title on its own line and the agenda line under it, one line each, on
+  // the meeting wash with its brand bar (see &__chip[data-kind="meeting"]).
+  // Hover opens it to its full text. `height` / `min-height` / `left` /
+  // `width` are inline because they are data (skeleton/hours.js).
   &__hour-blocks > .calendar-main__chip {
     position: absolute;
     pointer-events: auto;
@@ -1245,8 +1286,6 @@
     box-sizing: border-box;
     // Hairline gutter so adjacent concurrent blocks read as separate.
     margin-right: 2px;
-    gap: 2px;
-    padding: 4px 8px;
     overflow: hidden;
 
     &:hover {
@@ -1259,45 +1298,37 @@
       box-shadow: 0 6px 16px rgba(11, 10, 33, 0.18);
     }
 
-    // One line at slot size — the title is what the block is FOR, so it never
-    // shrinks and the agenda below it clips instead. Hover releases it.
+    // The title is what the block is FOR, so it never shrinks and the agenda
+    // below it clips instead.
     .calendar-main__chip-title {
       flex: 0 0 auto;
-      // Clear of the hover remove button.
-      padding-right: 18px;
-      // The Meet tab's schedule-card title: 14/18, bold.
-      @include drumee.typo($size: 14px, $line: 18px, $color: var(--normal-fg));
-      font-weight: 700;
     }
 
-    &:hover .calendar-main__chip-title {
+    // Clear of the remove button, while it shows.
+    &:has(> .calendar-main__chip-remove):hover .calendar-main__chip-title {
+      padding-right: 18px;
+    }
+
+    // Body/Mini Body in ink, like the title — not the grey two-line caption
+    // the base rule draws.
+    .calendar-main__chip-desc {
+      flex: 0 0 auto;
+      @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg));
+      display: block;
+      -webkit-line-clamp: unset;
+      white-space: nowrap;
+
+      .note-content {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+
+    &:hover .calendar-main__chip-title,
+    &:hover .calendar-main__chip-desc {
       white-space: normal;
       overflow-wrap: anywhere;
     }
-
-    .calendar-main__chip-desc {
-      flex: 0 1 auto;
-      min-height: 0;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      overflow-wrap: anywhere;
-    }
-
-    &:hover .calendar-main__chip-desc {
-      -webkit-line-clamp: unset;
-      display: block;
-    }
-  }
-
-  // Time + provenance, at the foot of an hour block.
-  &__chip-meta {
-    flex: 0 0 auto;
-    align-items: center;
-    gap: 6px;
-    min-width: 0;
-    overflow: hidden;
   }
 
   // ── modal ─────────────────────────────────────────────────────────────────

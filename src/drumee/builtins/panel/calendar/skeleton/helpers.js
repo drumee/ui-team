@@ -260,13 +260,14 @@ function rowEnd(row) {
   return day(row.due_date);
 }
 
-/** 'HH:mm A' start label for a meeting chip; '' for an all-day task. */
-// "09:00" — the 24-hour form the workspace Meet tab's calendar cards use
-// (meeting-schedule.js monthCard: `HH:mm title`). The hour gutter keeps "9 AM",
-// as that tab's gutter does.
+/** 'h:mm A' start label for a meeting chip; '' for an all-day task. */
+// "1:30 PM" — the 12-hour form of the frame's month chip (1697:48542), which
+// the workspace Meet tab's month cards write too (meeting-schedule.js
+// monthCard: `h:mm A title`). Worded in the UI language through the global
+// Dayjs locale, set where the string table is.
 function startLabel(row) {
   const s = row && row.kind === "meeting" ? fromEpoch(row.stime) : null;
-  return s ? s.format("HH:mm") : "";
+  return s ? s.format("h:mm A") : "";
 }
 
 /**
