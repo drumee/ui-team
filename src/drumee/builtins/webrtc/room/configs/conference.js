@@ -40,8 +40,9 @@ module.exports = function (opt = {}) {
 			sendMultipleVideoStreams: true,
 			receiveMultipleVideoStreams: true
 		},
-		// Above 5: a max of 5 makes lib-jitsi-meet cap the share to a single
-		// 500 kbps layer (see screen-receiver-constraints).
+		// Max <= 5 keeps lib-jitsi-meet's capped share: one layer at
+		// videoQuality.desktopbitrate that holds its resolution (see
+		// screen-receiver-constraints).
 		desktopSharingFrameRate: { ...SCREEN_FPS },
 		startAudioOnly: false,
 		startAudioMuted: 10,
@@ -87,7 +88,8 @@ module.exports = function (opt = {}) {
 		},
 		videoQuality: {
 			codecPreferenceOrder: ['VP9', 'VP8', 'H264'],
-			// Screen-share send bitrate (lib-jitsi-meet's default is 500 kbps).
+			// Screen-share send bitrate. The capped (<= 5 fps) share is sent at
+			// exactly this rate; lib-jitsi-meet's default is 500 kbps.
 			desktopbitrate: 2500000,
 			maxBitratesVideo: {
 				H264: {

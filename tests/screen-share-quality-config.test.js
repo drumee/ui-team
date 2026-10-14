@@ -1,5 +1,6 @@
-// screen-share-quality-config.test.js — screen share is not capped to a
-// single 5 fps / 500 kbps layer, and the viewer asks the bridge for it in HD.
+// screen-share-quality-config.test.js — screen share stays in lib-jitsi-meet's
+// capped mode (max <= 5 fps: one layer, maintain-resolution, sent at
+// videoQuality.desktopbitrate), and the viewer asks the bridge for it in HD.
 //
 //   node --test tests/screen-share-quality-config.test.js
 const test = require("node:test");
@@ -13,13 +14,16 @@ const conf = R("room/configs/conference.js")({ domain: "x" });
 const init = R("room/configs/init.js")();
 const { screenOnStage, noScreenOnStage, SCREEN_FPS } = R("screen-receiver-constraints.js");
 
-test("capture and send above 5 fps (5 fps max = single 500 kbps layer)", () => {
-  assert.ok(conf.desktopSharingFrameRate.max > 5);
+// Above 5 fps lib-jitsi-meet switches the share to maintain-framerate +
+// simulcast: under CPU/bandwidth pressure the encoder drops resolution and
+// climbs back, and the viewer's screen visibly zooms every few seconds.
+test("capture at max 5 fps so the share keeps its resolution", () => {
+  assert.ok(conf.desktopSharingFrameRate.max <= 5);
   assert.deepEqual(conf.desktopSharingFrameRate, SCREEN_FPS);
   assert.deepEqual(init.desktopSharingFrameRate, SCREEN_FPS);
 });
 
-test("an explicit screen-share bitrate is configured", () => {
+test("the capped share is sent at the configured bitrate, not 500 kbps", () => {
   assert.ok(conf.videoQuality.desktopbitrate >= 2000000);
 });
 
