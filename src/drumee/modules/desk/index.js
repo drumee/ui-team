@@ -42,7 +42,7 @@ const DESK_BILLING_LOADER_DELAY = 220;
 // they share, which also gives it their mutual exclusion for free.
 const folderIcon = require("media/grid/template/folder");
 const { groupWorkspaces } = require("libs/workspace-groups");
-const { restoreScreen, pollFor } = require("libs/screen-restore");
+const { restoreScreen, pollFor, withTimeout } = require("libs/screen-restore");
 const { lightUtilityButton } = require("libs/utility-light");
 const {
   SECURE_SHARE_TAB,
@@ -109,6 +109,10 @@ const RAIL_NAV_SERVICES = new Set([
 // Longest a utility icon may spin. A hung chunk or request must leave the
 // cluster usable rather than locked for the rest of the session.
 const UTILITY_BUSY_MAX = 10000;
+
+// Longest boot waits on the org overview before landing on the organisation
+// screen (_landOnOrgView); past it the workspace stays the landing.
+const ORG_LANDING_WAIT = 4000;
 
 // How long the cached workspace list may be served before it is refreshed in
 // the background. Short enough that a workspace shared with the user, or one
@@ -1903,7 +1907,33 @@ class desk_module extends LetcBox {
       "toggle-settings": { slot: main, kind: "settings_main", ready: null, refresh: null },
       "toggle-help": { slot: main, kind: "help_main", ready: null, refresh: null },
       "upgrade-plan": { slot: main, kind: "settings_billing", ready: null, refresh: null },
+      // The organisation screen. Deliberately NOT in _RESTORABLE_SCREENS: it
+      // has no sidebar row to light, and _currentScreenService does not report
+      // it, so every reader of those two stays exactly as it was. It is saved
+      // as its own flag (_persistDeskState `orgView`) and replayed through
+      // this same machinery by _landOnOrgView.
+      "open-org-view": { slot: main, kind: "desk_org_view", ready: null, refresh: null },
     };
+  }
+
+  /**
+   * Is the organisation screen the one on the full-canvas slot?
+   *
+   * The same top-child read _currentScreenService makes for its slot-mates.
+   * desk_org_view is destroy-on-close (not in KEEP_ALIVE_MAIN_KINDS), so a
+   * live child that is not parked means it is showing.
+   *
+   * @returns {Boolean}
+   */
+  _orgViewOnScreen() {
+    const slot = this.getPart && this.getPart("settings-main-slot");
+    const child = slot && slot.children && slot.children.last && slot.children.last();
+    if (!child || (child.isDestroyed && child.isDestroyed()) || !child.el) return false;
+    if (child.el.dataset && child.el.dataset.anim === "out") return false;
+    const kind =
+      (child.mget && child.mget(_a.kind)) ||
+      (child.el.dataset && child.el.dataset.kind);
+    return kind === "desk_org_view";
   }
 
   /**
@@ -2065,6 +2095,7 @@ class desk_module extends LetcBox {
       return true;
     }
     if (Array.isArray(state.windows) && state.windows.length) return true;
+    if (state.orgView) return true;
     return false;
   }
 
@@ -2105,6 +2136,7 @@ class desk_module extends LetcBox {
       if (service) state.service = service;
       if (workspace) state.workspace = workspace;
       if (windows.length) state.windows = windows;
+      if (this._orgViewOnScreen()) state.orgView = 1;
       if (Object.keys(state).length) {
         sessionStorage.setItem(
           desk_module._DESK_STATE_KEY,
@@ -2434,6 +2466,14 @@ class desk_module extends LetcBox {
       }
       return;
     }
+    // The organisation screen is a LANDING, not something the user asked for,
+    // so it never sweeps away a dialog already up (togglePanel dismisses the
+    // WM modal — an invited-workspace prompt, a confirm). The workspace under
+    // it stays the screen instead.
+    if (service === "open-org-view" && this.el && this.el.dataset
+      && this.el.dataset.wmModal === "open") {
+      throw new Error("a dialog is up");
+    }
     // `intent` matters for ONE of these services: "upgrade-plan" opens the
     // billing page on checkout when it can tell which plan is meant, and a
     // RESTORE is not a click — it puts back the plans view the reader was on.
@@ -2513,6 +2553,13 @@ class desk_module extends LetcBox {
       // Keep the restore flag up across the open, or the breadcrumb's
       // mount-time loadHome() fires Wm.reload() and wipes it.
       const opened = await this._openDefaultWorkspace();
+      // FIRST OPEN LANDS ON THE ORGANISATION SCREEN (Lexis, 2026-10-14): the
+      // directory of every workspace, not one arbitrary workspace. The default
+      // workspace above is still opened UNDERNEATH it, exactly as a remembered
+      // screen gets one seeded below it, so the rail and switcher keep a
+      // workspace to act on. Only when a workspace opened: with none, the
+      // no-workspace screen and its create button stay the landing.
+      if (opened) await this._landOnOrgView(true, { firstOpen: true });
       this._clearRestoreInFlight(opened ? 2500 : 0);
       // Nothing opened — either the account has none (home-empty is up, and
       // settleHomeGrid sees it) or the list could not be read, which is the
@@ -2558,6 +2605,12 @@ class desk_module extends LetcBox {
         // remembered screen still ends up on top.
         paneComing = !!(await this._openDefaultWorkspace());
       }
+      // The organisation screen the user was on. Before saved.service: a
+      // slide-out (Trash, Contacts, Notifications) can be open over it, and
+      // has to land on top of it again.
+      if (saved.orgView && !(this.isDestroyed && this.isDestroyed())) {
+        await this._landOnOrgView(paneComing);
+      }
       if (saved.service && !(this.isDestroyed && this.isDestroyed())) {
         // Wait for the OPEN only. The restore flag below exists to keep a
         // late loadHome from wiping the screen being opened; the wait for the
@@ -2579,6 +2632,70 @@ class desk_module extends LetcBox {
       // it comes back. It defers itself until the flag above clears, and
       // stays hidden unless nothing at all claimed the canvas.
       this._settleHomeGrid();
+    }
+  }
+
+  /**
+   * Put the organisation screen up at boot — on a first open, or because it
+   * was the screen the user reloaded on.
+   *
+   * Through _restoreScreen, the path a remembered Settings takes: it waits for
+   * the workspace pane under it to paint (loadWorkspace closes the full-canvas
+   * slot, so opening first would be undone), stands down if the user already
+   * went somewhere, and opens via the "open-org-view" service like the chip.
+   *
+   * Only where the screen has something to show — the same test as the rail
+   * logo (_railHome): an organisation this account may browse. Everyone else
+   * (no organisation, a plain member, a phone, which has no org screen) keeps
+   * the workspace exactly as before.
+   *
+   * @param {Boolean} paneComing see _restoreScreen
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.firstOpen] a boot with nothing to restore — stands
+   *   down for a tour, which is drawn on the workspace pane
+   * @returns {Promise<Boolean>} whether the screen was asked for
+   */
+  async _landOnOrgView(paneComing, opt = {}) {
+    try {
+      if (Visitor.isMobile()) return false;
+      if (opt.firstOpen && this._bootTourComing()) return false;
+      const { orgFeature, orgOverview } = require("libs/org-overview");
+      if (!orgFeature()) return false;
+      // Cached and never rejects (libs/org-overview); the topbar chip has
+      // usually asked already. Bounded all the same: the restore flag is held
+      // across this wait, and a hung request must not hold it for good. A
+      // timeout simply leaves the workspace as the landing.
+      const data = await withTimeout(orgOverview(this), ORG_LANDING_WAIT);
+      if (this.isDestroyed && this.isDestroyed()) return false;
+      if (!data || typeof data !== "object" || !data.can_browse) return false;
+      // Something else already claimed this boot's screen — the billing deep
+      // link drops the restore flag when it opens (_maybeOpenBillingDeepLink).
+      // The page the link asked for wins over a default landing.
+      if (opt.firstOpen && !this._restoreInFlight) return false;
+      await new Promise((resolve) => {
+        this._restoreScreen("open-org-view", resolve, { paneComing }).then(resolve);
+      });
+      return true;
+    } catch (e) {
+      this.warn && this.warn("[landing] organisation screen not opened", e);
+      return false;
+    }
+  }
+
+  /**
+   * Will this boot raise a tour over the workspace pane? Then the pane must
+   * stay what is on screen. The gates _holdBootTourPane reads, any of them.
+   *
+   * @returns {Boolean}
+   */
+  _bootTourComing() {
+    try {
+      if (this._postOnboardingTutorial) return true;
+      if (Visitor.parseModuleArgs().tutorial) return true;
+      if (require("libs/window-tutorial-intent").has()) return true;
+      return !!require("libs/tutorial-tours").offerable("migrate", this);
+    } catch (e) {
+      return false;
     }
   }
 

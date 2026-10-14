@@ -14,6 +14,17 @@ const { orgOverview, groupByDepartment, EMPTY } = require("libs/org-overview");
  */
 const PENDING_DEPT_TTL = 120000;
 
+/**
+ * Does a workspace's name match the search box? One rule for the
+ * organisation's workspaces and the personal ones.
+ *
+ * @param {Object} w a workspace row
+ * @param {String} q the lowercased query
+ */
+function matchesQuery(w, q) {
+  return String(w.filename || w.name || "").toLowerCase().includes(q);
+}
+
 class __desk_org_view extends LetcBox {
 
   /**
@@ -27,6 +38,11 @@ class __desk_org_view extends LetcBox {
     // server row onto a skeleton collides with the props the renderer reads
     // (name / id / area / filetype all mean something to Skeletons).
     this._rows = new Map();
+    // The caller's PERSONAL workspaces, nid -> the desk.home row. Keyed by
+    // nid, not hub_id: every personal workspace carries the user's own hub_id
+    // (see Desk._workspaceKey).
+    this._personal = [];
+    this._personalRows = new Map();
     this._filter = "";
     // Arriving with the intent already set means the desk mounted this screen
     // FOR the topbar's "New department" row. Read here rather than at paint
@@ -110,11 +126,14 @@ class __desk_org_view extends LetcBox {
    */
   _render(force) {
     return this.ensurePart("sections").then((part) =>
-      orgOverview(this, force).then((data) => {
+      Promise.all([orgOverview(this, force), this._personalWorkspaces(force)]).then(([data, personal]) => {
         if (!part || (part.isDestroyed && part.isDestroyed())) return;
         this._data = data;
         this._rows.clear();
         for (const w of data.workspaces) this._rows.set(String(w.hub_id), w);
+        this._personal = personal;
+        this._personalRows.clear();
+        for (const w of personal) this._personalRows.set(String(w.nid || w.id), w);
         this._paint(part);
         // Only after the first paint: the entry is fed into a part that
         // _paint creates, so arming before it exists would resolve against
@@ -125,6 +144,34 @@ class __desk_org_view extends LetcBox {
         }
       }),
     );
+  }
+
+  /**
+   * The caller's personal workspaces.
+   *
+   * NOT IN THE OVERVIEW, by construction: a personal workspace is a home-root
+   * folder, not a hub, so it has no row in yp.hub for org_workspaces to list
+   * (see _reload). The desk's own workspace list — the switcher's, which files
+   * them under "Personal" — already holds them, so they come from there
+   * rather than from a second desk.home read.
+   *
+   * Never rejects: an unreachable list leaves the section out, it does not
+   * take the organisation's workspaces down with it.
+   *
+   * @param {Boolean} [force] refetch instead of the cached list
+   * @returns {Promise<Array>} desk.home folder rows
+   */
+  _personalWorkspaces(force) {
+    const desk = window.Desk;
+    if (!desk || !_.isFunction(desk._fetchWorkspaces)) return Promise.resolve([]);
+    // A failed fetch answers [] and leaves the desk's cache untouched, so an
+    // empty answer falls back to that cache rather than dropping the section.
+    const cached = () => desk._workspaces || [];
+    return Promise.resolve()
+      .then(() => desk._fetchWorkspaces(force))
+      .then((rows) => (rows && rows.length ? rows : cached()))
+      .catch(cached)
+      .then((rows) => rows.filter((r) => r && r.filetype === _a.folder));
   }
 
   /**
@@ -160,8 +207,19 @@ class __desk_org_view extends LetcBox {
         this,
         groupByDepartment(data),
         !!data.can_manage,
+        // null, not [], when the user has none at all: the section is then
+        // left out rather than drawn empty. A search that matches none of them
+        // keeps the header, like a department's.
+        this._personal.length ? this._filteredPersonal() : null,
       ),
     );
+  }
+
+  /** The personal workspaces, narrowed to the search box like the rest. */
+  _filteredPersonal() {
+    const q = this._filter.trim().toLowerCase();
+    if (!q) return this._personal;
+    return this._personal.filter((w) => matchesQuery(w, q));
   }
 
   /**
@@ -181,9 +239,7 @@ class __desk_org_view extends LetcBox {
     if (!q || !this._data) return this._data || { ...EMPTY };
     return {
       ...this._data,
-      workspaces: this._data.workspaces.filter((w) =>
-        String(w.filename || w.name || "").toLowerCase().includes(q),
-      ),
+      workspaces: this._data.workspaces.filter((w) => matchesQuery(w, q)),
     };
   }
 
@@ -403,7 +459,11 @@ class __desk_org_view extends LetcBox {
    * @param {View} cmd
    */
   _openWorkspace(cmd) {
-    const row = this._rows.get(String(cmd.mget("wsHubId")));
+    // A personal card carries its nid instead — see _personalRows.
+    const nid = cmd.mget("wsNid");
+    const row = nid != null
+      ? this._personalRows.get(String(nid))
+      : this._rows.get(String(cmd.mget("wsHubId")));
     if (!row) return;
     return this.triggerHandlers({ service: "switch-workspace-row", row });
   }
