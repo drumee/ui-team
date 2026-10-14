@@ -3360,7 +3360,13 @@
 
       .note-content {
         min-height: 16px;
-        padding: 0 8px;
+        // Vietnamese stacked marks rise above the 16.8px line box (Armin
+        // Grotesk 14px, measured: ấ/ố/ế 2.1px, Ấ/Ố/Ế 4.9px) and overflow-y
+        // clips at the padding edge, so "ấ" read as "â" while typing. 5px of
+        // vertical padding gives them room; the negative margin keeps the
+        // composer's height unchanged.
+        padding: 5px 8px;
+        margin: -5px 0;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         word-break: break-word;
