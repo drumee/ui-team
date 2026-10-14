@@ -55,8 +55,10 @@ const anchorOf = (value) => {
 };
 
 // "September 2026" / "September 20-26, 2026" / "Sep 28 - Oct 04, 2026" /
-// "September 25, 2026" — the Meet tab's rangeLabel (and, since, the Personal
-// Calendar's), so one range never reads two ways in two tabs.
+// "September 25, 2026" — the Meet tab's rangeLabel, so one range never reads
+// two ways in two tabs. The Personal Calendar matches it for week and day;
+// its month label alone carries a comma ("September, 2026"), as its design
+// draws it.
 function rangeLabel(mode, anchor) {
   if (!anchor) return "";
   if (mode === "day") return anchor.format("MMMM DD, YYYY");

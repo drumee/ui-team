@@ -2818,6 +2818,8 @@
   "CAL_FILTER_ALL": "Все",
   "CAL_FILTER_TASK": "Задачи",
   "CAL_FILTER_MEETING": "Встречи",
+  "CAL_AUDIENCE_PERSONAL": "Личное",
+  "CAL_AUDIENCE_TEAM": "Команда",
   "CAL_NOTHING_SCHEDULED": "Ничего не запланировано",
   "NEW_PERSONAL_TASK": "Новая личная задача",
   "EDIT_PERSONAL_TASK": "Изменить личную задачу",

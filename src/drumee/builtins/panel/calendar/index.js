@@ -36,6 +36,7 @@ const { fileChips } = require("./skeleton/attachments");
 
 const VIEW_KEYS = ["month", "week", "day"];
 const FILTER_KEYS = ["all", "task", "meeting"];
+const AUDIENCE_KEYS = ["personal", "team"];
 // A parked calendar (desk keep-alive) revealed after this long re-reads its
 // window even if no push arrived meanwhile — a missed push is plausible by then.
 const PARKED_REFRESH_MS = 60 * 1000;
@@ -57,14 +58,18 @@ class __calendar_main extends LetcBox {
     this._cursor = ymd(Dayjs());
     // Not persisted, by spec: the filter resets to All every session.
     this._filter = "all";
+    // Personal | Team. Team — every row calendar.list sends — is the default:
+    // it is the set this screen showed before the toggle existed, and the
+    // Daily Reminder's task and meeting tiles count workspace items only, so a
+    // Personal default would open their calendar on an empty grid.
+    this._audience = "team";
     this._items = [];
     this._form = null;
-    this._viewMenuOpen = false;
-    this._newMenuOpen = false;
-    // The range label is a control rather than a caption: it opens a month
-    // jump list for the cursor's year. It shows no caret of its own (Lexis,
-    // 2026-09-08) — the label itself is the affordance.
-    this._rangeMenuOpen = false;
+    // Which toolbar dropdown is open — "view", "new", "range" (the range
+    // label's mini calendar) or "filter" — or null. One value rather than a
+    // flag per menu, so opening one closes the others by construction and
+    // _closeMenus has a single thing to reset.
+    this._openMenu = null;
     this._loading = false;
     // One in-flight write per open modal — see _submitTask.
     this._submitting = false;
@@ -182,6 +187,10 @@ class __calendar_main extends LetcBox {
    * already on screen where an open-only togglePanel is a deliberate no-op,
    * never sees launch options and would otherwise keep the view it was left on.
    *
+   * It also puts the toolbar back on Team and All. The card's tiles count
+   * workspace items, so a screen left on Personal, or on one kind only, would
+   * open without the very items the card just counted.
+   *
    * No-op when the screen is already exactly there, so the fresh-mount path —
    * which just read the same view from its options — does not pay for a second
    * fetch of the window it is already loading.
@@ -189,9 +198,18 @@ class __calendar_main extends LetcBox {
   focusView(view) {
     if (!VIEW_KEYS.includes(view)) return;
     const today = ymd(Dayjs());
-    if (this._view === view && this._cursor === today) return;
+    if (
+      this._view === view &&
+      this._cursor === today &&
+      this._audience === "team" &&
+      this._filter === "all"
+    ) {
+      return;
+    }
     this._view = view;
     this._cursor = today;
+    this._audience = "team";
+    this._filter = "all";
     // Same pairing every cursor/view change in onUiEvent uses: a toolbar
     // dropdown left open would hang over a grid it no longer describes.
     this._closeMenus();
@@ -232,20 +250,18 @@ class __calendar_main extends LetcBox {
     return this._filter;
   }
 
+  /** The Personal | Team toolbar state. */
+  getActiveAudience() {
+    return this._audience;
+  }
+
   getForm() {
     return this._form;
   }
 
-  isViewMenuOpen() {
-    return !!this._viewMenuOpen;
-  }
-
-  isNewMenuOpen() {
-    return !!this._newMenuOpen;
-  }
-
-  isRangeMenuOpen() {
-    return !!this._rangeMenuOpen;
+  /** Is this toolbar dropdown ("view", "new", "range", "filter") the open one? */
+  isMenuOpen(name) {
+    return this._openMenu === name;
   }
 
   /**
@@ -269,7 +285,8 @@ class __calendar_main extends LetcBox {
 
   /**
    * The rows the current view should draw: recurrence expanded into the visible
-   * window, then the All / Task / Meeting filter applied.
+   * window, then the All / Task / Meeting filter and the Personal | Team toggle
+   * applied.
    *
    * Expansion is client-side by the server's own stated contract (room.js: "the
    * calendar expands occurrences client-side").
@@ -279,6 +296,7 @@ class __calendar_main extends LetcBox {
     const out = [];
     this._items.forEach((row) => {
       if (!passesFilter(row, this._filter)) return;
+      if (this._audience === "personal" && row.scope !== "personal") return;
       expandRecurrence(row, from, to).forEach((r) => {
         // Only rows the grids can actually place. Two shapes reach here that
         // cannot be drawn anywhere, and both used to be counted as "visible":
@@ -466,7 +484,8 @@ class __calendar_main extends LetcBox {
    * a click that changed nothing below the toolbar.
    *
    * Only state the toolbar draws (which menu is open) may use this. Anything
-   * the GRID reads — the view, the cursor, the filter — still needs _render().
+   * the GRID reads — the view, the cursor, the filter, Personal | Team — still
+   * needs _render().
    */
   _renderToolbar() {
     // Every open and close of a dropdown comes through here, so this is the one
@@ -564,10 +583,14 @@ class __calendar_main extends LetcBox {
   }
 
   _closeMenus() {
-    this._viewMenuOpen = false;
-    this._newMenuOpen = false;
-    this._rangeMenuOpen = false;
+    this._openMenu = null;
     this._unbindMenuDismiss();
+  }
+
+  /** Open `name`, or close it if it is the one already open. */
+  _toggleMenu(name) {
+    this._openMenu = this._openMenu === name ? null : name;
+    return this._renderToolbar();
   }
 
   // ── outside-click dismissal for the toolbar dropdowns ──────────────────────
@@ -580,10 +603,10 @@ class __calendar_main extends LetcBox {
   // that is deliberate. This runs in the CAPTURE phase, so closing repaints the
   // toolbar BEFORE the click reaches whatever it was aimed at — and a repaint
   // destroys the toolbar's children. With a narrower guard, clicking ‹ Today ›,
-  // a filter chip or another picker while a menu was open would have destroyed
-  // that button mid-click and the click would have done nothing. Every control
-  // in the row already calls _closeMenus() in its own handler, so leaving the
-  // row alone loses nothing.
+  // the Personal | Team toggle or another picker while a menu was open would
+  // have destroyed that button mid-click and the click would have done
+  // nothing. Every control in the row already calls _closeMenus() in its own
+  // handler, so leaving the row alone loses nothing.
   //
   // Capture phase and a `document` listener both follow the folder window's
   // thread menu (window/folder/index.js _bindThreadMenuOutside). Listening on
@@ -593,7 +616,7 @@ class __calendar_main extends LetcBox {
   // Repaint via _renderToolbar(), NEVER _render(): a full render rebuilds the
   // month grid, i.e. the very element the click is still travelling to.
   _syncMenuDismiss() {
-    if (this._viewMenuOpen || this._newMenuOpen || this._rangeMenuOpen) {
+    if (this._openMenu) {
       this._bindMenuDismiss();
     } else {
       this._unbindMenuDismiss();
@@ -1661,22 +1684,26 @@ class __calendar_main extends LetcBox {
         return this._step(-1);
       case "cal-next":
         return this._step(1);
+      // Back to today in whatever view is current: the month, the week or the
+      // day holding it. Same cursor-then-refetch path as ‹ and ›.
+      case "cal-today":
+        this._cursor = ymd(Dayjs());
+        this._closeMenus();
+        return this._reload();
+
       // Menu open/close is toolbar-only state — never repaint the grid for it.
       case "cal-toggle-view-menu":
-        this._viewMenuOpen = !this._viewMenuOpen;
-        this._newMenuOpen = false;
-        this._rangeMenuOpen = false;
-        return this._renderToolbar();
+        return this._toggleMenu("view");
 
       case "cal-toggle-range-menu":
-        this._rangeMenuOpen = !this._rangeMenuOpen;
-        this._viewMenuOpen = false;
-        this._newMenuOpen = false;
         // Each open starts on the month the calendar is actually showing —
         // otherwise the popup reopens wherever the user last browsed to and
         // stopped, which is not where the grid behind it is.
         this._pickerCursor = null;
-        return this._renderToolbar();
+        return this._toggleMenu("range");
+
+      case "cal-toggle-filter-menu":
+        return this._toggleMenu("filter");
 
       // ‹ › either side of the popup's month. Moves the POPUP only, so this is
       // a toolbar repaint and not a refetch — the grid behind it has not moved.
@@ -1717,10 +1744,16 @@ class __calendar_main extends LetcBox {
         return this._render();
       }
 
+      case "cal-set-audience": {
+        const next = cmd.mget("calAudience");
+        if (AUDIENCE_KEYS.includes(next)) this._audience = next;
+        this._closeMenus();
+        // Client-side too: calendar.list already sends every row's scope.
+        return this._render();
+      }
+
       case "cal-toggle-new-menu":
-        this._newMenuOpen = !this._newMenuOpen;
-        this._viewMenuOpen = false;
-        return this._renderToolbar();
+        return this._toggleMenu("new");
 
       case "cal-new-task":
         return this._openTaskForm(null);

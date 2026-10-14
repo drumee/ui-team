@@ -85,6 +85,14 @@ const FILTERS = [
   { key: "meeting", label: "CAL_FILTER_MEETING" },
 ];
 
+// Personal | Team, an axis of its own beside the kind filter: Team is every row
+// calendar.list sends (personal and workspace), Personal only the rows whose
+// `scope` is "personal". Same order as the toggle draws them.
+const AUDIENCES = [
+  { key: "personal", label: "CAL_AUDIENCE_PERSONAL" },
+  { key: "team", label: "CAL_AUDIENCE_TEAM" },
+];
+
 // The week/day grids draw all 24 hours (skeleton/hours.js), the same frame the
 // workspace Meet tab's schedule uses, so these no longer bound the ruler.
 // DAY_START_HOUR is now the hour the widget scrolls an EMPTY day onto — the
@@ -342,12 +350,13 @@ function viewRange(view, cursor) {
   return { from: gridStart, to: gridStart.add(6 * 7 - 1, "day").endOf("day") };
 }
 
-// The range the toolbar names, worded exactly as the workspace Meet tab's
-// schedule words it (window/folder/skeleton/meeting-schedule.js rangeLabel):
-//   month  "September 2026"
+// The range the toolbar names:
+//   month  "September, 2026" — the design's own wording, comma included
 //   week   "September 20-26, 2026"  /  "Sep 28 - Oct 04, 2026" across months
 //   day    "September 25, 2026"
-// Two-digit days, as that toolbar and both calendars' day numbers use.
+// Week and day keep the workspace Meet tab's schedule wording
+// (window/folder/skeleton/meeting-schedule.js rangeLabel), two-digit days and
+// all; only the month label differs from it.
 function rangeLabel(view, cursor) {
   const anchor = day(cursor) || Dayjs();
   if (view === "day") return anchor.format("MMMM DD, YYYY");
@@ -359,7 +368,7 @@ function rangeLabel(view, cursor) {
     }
     return `${s.format("MMM DD")} - ${e.format("MMM DD")}, ${e.format("YYYY")}`;
   }
-  return anchor.format("MMMM YYYY");
+  return anchor.format("MMMM, YYYY");
 }
 
 module.exports = {
@@ -367,6 +376,7 @@ module.exports = {
   PRIORITIES,
   VIEWS,
   FILTERS,
+  AUDIENCES,
   DAY_START_HOUR,
   DAY_END_HOUR,
   ymd,

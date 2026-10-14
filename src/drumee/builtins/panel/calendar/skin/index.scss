@@ -98,52 +98,64 @@
   }
 
   // ── toolbar ───────────────────────────────────────────────────────────────
+  // Figma 1697:47993 / 1693:180534. Two groups on one 41px row:
+  //   left   [ ‹ Today › ] pill, then the range label with its caret
+  //   right  view ▾, Personal | Team, ≡ filter, + New — 8px apart
+  //
+  // The row is its own size container, so its narrow layout follows the width
+  // the toolbar actually gets rather than the viewport: this screen shares
+  // the desk with the sidebar and with a split pane, the case the workspace
+  // Meet tab's toolbar keys on its window's width for (window/folder/skin/
+  // meeting-schedule.scss). The row, not the whole screen, is the container:
+  // the breakpoint is about the width the row gets, and scoping the
+  // containment to it leaves the grid, the modal and the toast alone.
   &__toolbar {
     flex: 0 0 auto;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    // A wrapped row sits 8px under the first, as the Meet tab's two rows do.
+    gap: 8px 16px;
     flex-wrap: wrap;
+    container-type: inline-size;
+    container-name: calendar-toolbar;
   }
 
+  // Each group wraps as a WHOLE or not at all. Left to wrap inside itself, the
+  // right group split beside the left one and stacked its controls into a
+  // staircase — the split-screen failure the Meet tab's toolbar had.
+  // !important: ui-core's `.drumee-box[data-flow="x"]` (0,2,0) sets wrap.
   &__toolbar-left,
   &__toolbar-right {
     align-items: center;
+    flex-wrap: nowrap !important;
+  }
+
+  &__toolbar-left {
     gap: 12px;
   }
 
-  // ‹ Today › reads as one filled pill in 43:31159 — a 5%-black ground with no
-  // border, not an outlined group.
-  // ‹ Today › — a BARE group, per 43:31159, which gives it no fill and no
-  // radius at all (its frame carries `fills: []`). It used to be a filled
-  // 999px capsule, which is why this corner read as a different design
-  // language from the range label sitting right beside it: everything else in
-  // this toolbar is a transparent r=8 control that fills only on hover.
-  // ── [ ‹ range › ] — the workspace Meet tab's nav pill ─────────────────────
-  // window/folder/skin/meeting-schedule.scss → __meeting-sched-nav / -nav-btn /
-  // -label, in this file's tokens. It replaced ‹ Today › and a separate range
-  // label, so the two calendars no longer answer "where am I" with two
-  // different controls.
-  //
-  // Weights: the Meet skin declares its label 600 through drumee.typo($weight),
-  // which emits nothing for 600 (typo-mixin-no-font-weight) — so what a user
-  // actually sees there is the regular face. Matched to what renders, with an
-  // explicit 400, so the two stay identical even if that mixin is fixed later
-  // (fix both together then).
+  &__toolbar-right {
+    gap: 8px;
+  }
+
+  // ‹ Today › — one grey capsule, the arrows inline with the label. Every
+  // control here is ink on a transparent or grey ground; the hover washes
+  // are not drawn by the design and follow the rest of this screen.
   &__nav {
     align-items: center;
     gap: 4px;
-    padding: 4px 6px;
+    padding: 9px 18px;
     border-radius: 71px;
     background: var(--overlay-bg-05);
   }
 
+  // caret-left/right, never arrow-left (a 40x22 viewBox that draws a long
+  // horizontal arrow). The wrapper's size is half of it; the sprite <svg>
+  // needs its own box.
   &__nav-arrow {
-    width: 26px;
-    height: 26px;
+    width: 19px;
+    height: 19px;
     flex: 0 0 auto;
-    padding: 6px;
-    box-sizing: border-box;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
@@ -151,12 +163,9 @@
     color: var(--normal-fg);
     transition: background 0.12s ease;
 
-    // The wrapper's size is half of it; the sprite <svg> needs its own box.
-    // caret-left/right, never arrow-left (a 40x22 viewBox that draws a long
-    // horizontal arrow).
     svg {
-      width: 14px;
-      height: 14px;
+      width: 19px;
+      height: 19px;
     }
 
     &:hover {
@@ -164,21 +173,33 @@
     }
   }
 
-  // The popup is a sibling of the pill inside this box, so it anchors under
-  // the whole pill rather than moving with the label's text.
+  // font-weight explicit: drumee.typo()'s $weight is a no-op.
+  &__today {
+    @include drumee.typo($size: 16px, $line: 1.2, $color: var(--normal-fg));
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  // The popup is a sibling of the label inside this box, so it anchors under
+  // the label rather than moving with its text.
   &__range-picker {
     position: relative;
   }
 
-  // Caretless by design (Lexis, 2026-09-08): the label itself opens the mini
-  // calendar, so the only open-state cue is the wash below.
+  // "June, 2026 ▾". The negative margin gives the hover wash room to breathe
+  // without moving the label off the 12px the design puts after the pill.
   &__range {
     align-items: center;
-    padding: 3px 8px;
+    gap: 4px;
+    padding: 4px 8px;
+    margin: 0 -8px;
     border-radius: 6px;
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
+    color: var(--normal-fg);
 
     &:hover,
     &[data-open="1"] {
@@ -187,9 +208,21 @@
   }
 
   &__range-label {
-    @include drumee.typo($size: 15px, $line: 20px, $color: var(--normal-fg));
-    font-weight: 400;
+    @include drumee.typo($size: 16px, $line: 1.2, $color: inherit);
+    font-weight: 600;
     white-space: nowrap;
+  }
+
+  &__range-caret {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    color: currentColor;
+    transition: transform 0.15s ease-out;
+  }
+
+  &__range[data-open="1"] &__range-caret {
+    transform: rotate(180deg);
   }
 
   // ── the range label's mini calendar ───────────────────────────────────────
@@ -292,23 +325,34 @@
     }
   }
 
-  // view picker + New: both own a dropdown, so both need a positioning context
+  // view picker, filter and New: each owns a dropdown, so each needs a
+  // positioning context
   &__view-picker,
+  &__filter-picker,
   &__new {
     position: relative;
   }
 
+  // The three buttons share one box: 41px tall, 24px each side, r=12. The
+  // height is set rather than left to 12px of padding because the view
+  // caret and New's plus are 20px — the design lets them overhang the 17px
+  // line, and padding alone would make those two buttons 44px.
   &__view-button,
+  &__filter-button,
   &__new-button {
     align-items: center;
     gap: 8px;
-    padding: 8px 14px;
+    height: 41px;
+    padding: 0 24px;
     border-radius: 12px;
+    box-sizing: border-box;
     cursor: pointer;
     user-select: none;
+    white-space: nowrap;
   }
 
-  &__view-button {
+  &__view-button,
+  &__filter-button {
     background: var(--normal-bg-90);
     color: var(--normal-fg);
 
@@ -320,15 +364,15 @@
 
   &__view-ico,
   &__view-caret {
-    width: 16px;
-    height: 16px;
+    width: 17px;
+    height: 17px;
     flex: 0 0 auto;
     color: currentColor;
   }
 
   &__view-caret {
-    width: 12px;
-    height: 12px;
+    width: 20px;
+    height: 20px;
     transition: transform 0.15s ease-out;
   }
 
@@ -336,89 +380,147 @@
     transform: rotate(180deg);
   }
 
-  &__view-label {
-    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
+  &__view-label,
+  &__filter-label {
+    @include drumee.typo($size: 14px, $line: 1.2, $color: inherit);
     font-weight: 400;
   }
 
-  // The page's primary action, drawn as the Meet tab's "Schedule" button
-  // (__meeting-sched-schedule-btn): brand at rest, the darker brand on hover,
-  // r=8. It had those two colours the other way round and the view button's
-  // r=12, so the two tabs' main buttons read as different controls.
-  &__new-button {
-    border-radius: 8px;
-    background: var(--primary-40);
-    color: var(--gray-white);
+  // ≡ — the funnel's three lines sit 4px from the label. The sprite is cropped
+  // to the lines themselves (15x8), so it is centred in the design's 17px box
+  // rather than stretched to fill it.
+  &__filter-button {
+    gap: 4px;
+  }
 
-    &:hover {
-      background: var(--primary-50);
+  // Not a Box, so `display` is ours to set.
+  &__filter-ico {
+    display: flex;
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 15px;
+      height: 8px;
+      fill: currentColor;
     }
   }
 
+  // Personal | Team — the active half on brand inside a grey trough, both
+  // labels regular weight.
+  &__audience {
+    align-items: center;
+    padding: 4px;
+    background: var(--normal-bg-90);
+    border-radius: 12px;
+  }
+
+  &__audience-item {
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg));
+    font-weight: 400;
+    justify-content: center;
+    padding: 8px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+
+    &[data-active="1"] {
+      background: var(--primary-40);
+      color: var(--gray-white);
+    }
+  }
+
+  // The page's primary action. The design fills it with the darker brand
+  // (Primary/50) at rest, which leaves it unlike the Meet tab's "Schedule"
+  // button (brand at rest, darker on hover). Hover is not drawn; one step
+  // darker again.
+  &__new-button {
+    background: var(--primary-50);
+    color: var(--gray-white);
+
+    &:hover {
+      background: var(--primary-60);
+    }
+  }
+
+  // Not a Box either. The sprite path carries no fill of its own, so
+  // currentColor reaches it through the <use>.
   &__new-plus {
-    @include drumee.typo($size: 18px, $line: 18px, $color: inherit);
-    font-weight: 500;
+    display: flex;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
   }
 
   &__new-label {
-    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
+    @include drumee.typo($size: 14px, $line: 1.2, $color: inherit);
     font-weight: 600;
   }
 
-  // shared dropdown for the view picker and the New menu
+  // The dropdown shell for all four popups (the mini calendar takes its own
+  // width and padding above): white, a soft lift, no hairline. At least as
+  // wide as its trigger, so the view menu lines up with its button.
   &__menu {
     position: absolute;
-    top: calc(100% + 6px);
-    min-width: 150px;
+    top: calc(100% + 8px);
+    min-width: 100%;
     padding: 8px;
     gap: 4px;
+    box-sizing: border-box;
     z-index: 40;
     background: var(--normal-bg-elevated);
-    // The Meet tab's dropdown shell: a lifted shadow and an 8% hairline.
-    border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
 
-    // The mini calendar hangs from the left-hand pill; the view and New menus
-    // sit in the right-hand group and open right-aligned, as the Meet tab's
-    // view menu does.
+    // The mini calendar hangs from the left-hand label; the right-hand group's
+    // menus open right-aligned on their buttons.
     &[data-anchor="range"] {
       left: 0;
     }
 
     &[data-anchor="view"],
+    &[data-anchor="filter"],
     &[data-anchor="new"] {
       right: 0;
     }
+
+    // Drawn 116px wide over a 107px button: its rows are a fixed 100px.
+    &[data-anchor="new"] {
+      min-width: 116px;
+    }
   }
 
+  // 12/1.4 rows on 8px; the current choice and the hovered row take the
+  // design's 10% brand wash and keep their ink — no bold, no brand text.
   &__menu-item {
-    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg));
     align-items: center;
     gap: 8px;
-    min-height: 34px;
-    padding: 8px 10px;
-    border-radius: 6px;
+    padding: 8px;
+    border-radius: 8px;
     cursor: pointer;
     white-space: nowrap;
 
-    // Neutral wash on hover, the 8% brand wash only on the active row — the
-    // Meet tab's menu. A brand hover made every row look selected.
-    &:hover {
-      background: var(--overlay-bg-05);
-    }
-
+    &:hover,
     &[data-active="1"] {
-      background: var(--hover-bg-40);
-      font-weight: 600;
-      color: var(--primary-40);
+      background: var(--radio-on-bg);
     }
   }
 
   // Sprite icons render as `<svg class="full …">` — width/height 100% — so an
   // icon with no box of its own stretches to fill the whole row (this is what
   // broke the New dropdown). Pin the wrapper AND the svg, the way the desk
-  // topbar's New menu and both reference modals do.
+  // topbar's New menu and both reference modals do. Brand ink, as drawn.
   &__menu-ico {
     // Not a Box, so `display` is ours to set — same as the reference modals'
     // icon wrappers.
@@ -428,7 +530,7 @@
     height: 16px;
     align-items: center;
     justify-content: center;
-    color: var(--normal-fg-20);
+    color: var(--primary-40);
     overflow: hidden;
 
     svg {
@@ -444,31 +546,83 @@
     min-width: 0;
   }
 
-  // segmented All / Task / Meet — 43:31159: 14px labels, the active pill on
-  // --primary-40 (#5950ff) inside an --normal-bg-90 (#f2f2f7) trough.
-  &__filter {
-    align-items: center;
-    padding: 4px;
-    gap: 2px;
-    background: var(--normal-bg-90);
-    border-radius: 12px;
-  }
+  // ── narrow toolbar ────────────────────────────────────────────────────────
+  // The design draws the full-width row only; this is ours. While the right
+  // group fits on one line it either sits beside the left group or, once the
+  // two no longer share a line, wraps WHOLE onto a second row. Below the
+  // width it needs, it becomes two even rows, edge to edge:
+  //
+  //   [ Month ▾ ][ Personal | Team ]
+  //   [  ≡ All  ][      + New      ]
+  //
+  // 660px: the widest the right group gets on one line, measured in the live
+  // toolbar with each locale's longest labels — en 589, es 620, ru 636,
+  // fr 652 (Semaine, Réunions, Nouveau), km 538, zh 503 — plus a margin.
+  //
+  // The zero-height ::after with a 100% basis is the line break between the
+  // pairs, and `order` puts it there. Every control carries its own 8px top
+  // margin (row gap 0, the group pulled up by the same 8px), so the rows stay
+  // 8px apart however many there are: on the narrowest widths a pair splits
+  // too, and a row gap would put 16px around the break but nothing between
+  // the halves of a split pair.
+  @container calendar-toolbar (max-width: 660px) {
+    &__toolbar-right {
+      flex: 1 1 100%;
+      flex-wrap: wrap !important;
+      row-gap: 0;
+      margin-top: -8px;
 
-  &__filter-item {
-    @include drumee.typo($size: 14px, $line: 17px, $color: var(--normal-fg));
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    white-space: nowrap;
-
-    &:hover {
-      color: var(--normal-fg);
+      &::after {
+        content: "";
+        order: 2;
+        flex: 0 0 100%;
+        height: 0;
+      }
     }
 
-    &[data-active="1"] {
-      background: var(--primary-40);
-      color: var(--gray-white);
-      font-weight: 600;
+    // `max-content` as the floor: a pair that no longer fits wraps rather
+    // than clipping a label.
+    &__view-picker,
+    &__audience,
+    &__filter-picker,
+    &__new {
+      flex: 1 1 0;
+      min-width: max-content;
+      margin-top: 8px;
+    }
+
+    &__view-picker,
+    &__audience {
+      order: 1;
+    }
+
+    &__filter-picker,
+    &__new {
+      order: 3;
+    }
+
+    &__view-button,
+    &__filter-button,
+    &__new-button,
+    &__audience-item {
+      justify-content: center;
+    }
+
+    &__audience-item {
+      flex: 1 1 0;
+    }
+
+    // The 264px mini calendar hangs from the row's start, under the Today
+    // pill, instead of from the label beside it: from there it ran past the
+    // page's right edge on a narrow pane (measured: 22px cut at a 480px
+    // window, 112px at 390, the › month button with it). The left group
+    // becomes its positioning box and the label's box steps aside.
+    &__toolbar-left {
+      position: relative;
+    }
+
+    &__range-picker {
+      position: static;
     }
   }
 
@@ -2076,11 +2230,6 @@
     &__title {
       @include drumee.typo($size: 22px, $line: 1.15em, $color: var(--primary-purple-100));
       font-weight: 600;
-    }
-
-    &__toolbar-right {
-      width: 100%;
-      justify-content: space-between;
     }
 
     &__grid {

@@ -2818,6 +2818,8 @@
   "CAL_FILTER_ALL": "ទាំងអស់",
   "CAL_FILTER_TASK": "កិច្ចការ",
   "CAL_FILTER_MEETING": "ការប្រជុំ",
+  "CAL_AUDIENCE_PERSONAL": "ផ្ទាល់ខ្លួន",
+  "CAL_AUDIENCE_TEAM": "ក្រុម",
   "CAL_NOTHING_SCHEDULED": "គ្មានកម្មវិធីកំណត់",
   "NEW_PERSONAL_TASK": "កិច្ចការផ្ទាល់ខ្លួនថ្មី",
   "EDIT_PERSONAL_TASK": "កែកិច្ចការផ្ទាល់ខ្លួន",

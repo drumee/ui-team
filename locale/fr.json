@@ -2825,6 +2825,8 @@
   "CAL_FILTER_ALL": "Tout",
   "CAL_FILTER_TASK": "Tâches",
   "CAL_FILTER_MEETING": "Réunions",
+  "CAL_AUDIENCE_PERSONAL": "Personnel",
+  "CAL_AUDIENCE_TEAM": "Équipe",
   "CAL_NOTHING_SCHEDULED": "Rien de prévu",
   "NEW_PERSONAL_TASK": "Nouvelle tâche personnelle",
   "EDIT_PERSONAL_TASK": "Modifier la tâche personnelle",
