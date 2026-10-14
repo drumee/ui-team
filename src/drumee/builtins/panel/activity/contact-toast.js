@@ -72,11 +72,16 @@ function showContactConnectedToast(peer = {}, onMessage) {
           Skeletons.Box.Y({
             className: `${pfx}__avatar-wrap`,
             kids: [
-              Skeletons.Avatar(
-                (peer.id && Visitor.avatar && Visitor.avatar(peer.id)) || "default",
-                `${pfx}__avatar`,
-                name,
-              ),
+              // UserProfile, as the chat toast and the feed row: the photo,
+              // or the initials when there is none (a bare Avatar image left
+              // an empty square). Only the full name travels with this push.
+              Skeletons.UserProfile({
+                className: `${pfx}__avatar`,
+                id: peer.id,
+                firstname: name,
+                fullname: name,
+                type: "thumb",
+              }),
               Skeletons.Box.X({
                 className: `${pfx}__badge`,
                 kids: [Skeletons.Image.Svg({ ico: "noti-check-circle" })],
@@ -100,7 +105,6 @@ function showContactConnectedToast(peer = {}, onMessage) {
           Skeletons.Button.Svg({
             className: `${pfx}__close`,
             ico: _a.cross,
-            tooltips: LOCALE.CLOSE,
           }),
         ],
       }),

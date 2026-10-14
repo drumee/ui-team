@@ -70,11 +70,17 @@ function buildCard({ sender = {}, name, message }, replacing) {
           Skeletons.Box.Y({
             className: `${pfx}__avatar-wrap`,
             kids: [
-              Skeletons.Avatar(
-                (Visitor.avatar && uid && Visitor.avatar(uid)) || "default",
-                `${pfx}__avatar`,
-                who,
-              ),
+              // UserProfile, as the chat toast and the feed row: the photo,
+              // or the initials when there is none (a bare Avatar image left
+              // an empty square).
+              Skeletons.UserProfile({
+                className: `${pfx}__avatar`,
+                id: uid,
+                firstname: sender.firstname || who,
+                lastname: sender.lastname,
+                fullname: who,
+                type: "thumb",
+              }),
               Skeletons.Box.X({
                 className: `${pfx}__badge`,
                 kids: [Skeletons.Image.Svg({ ico: "noti-chats-circle" })],
@@ -96,7 +102,6 @@ function buildCard({ sender = {}, name, message }, replacing) {
           Skeletons.Button.Svg({
             className: `${pfx}__close`,
             ico: _a.cross,
-            tooltips: LOCALE.CLOSE,
           }),
         ],
       }),
