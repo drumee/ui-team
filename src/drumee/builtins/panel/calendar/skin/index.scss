@@ -1363,11 +1363,10 @@
   }
 
   &__modal {
-    // Same footprint as the meeting modal (a centred card, unlike the Task
-    // tab's near-fullscreen sheet), so the two read as the same object.
-    // Compact card (2026-10-01): every control below was taken down a step —
-    // 34px fields, 32px buttons, 18px heading — so the meeting form fits a
-    // laptop viewport without scrolling.
+    // The base card: centred, capped at 88vh, its body scrolling inside.
+    // The task card and the meeting / invite-link cards size themselves
+    // (below and in the "personal meeting modal" block at the end); this
+    // compact 420px footprint is what any other form would get.
     width: min(420px, calc(100vw - 32px));
     max-height: 88vh;
     padding: 20px 24px;
@@ -1382,11 +1381,8 @@
       0 1px 11px rgba(0, 0, 0, 0.13);
     animation: calendar-main-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
 
-    // Meeting: two columns — Title/Attachments | Date/Time/Invite. The task
-    // modal's width, so the two forms read as the same object.
-    &[data-form="meeting"] {
-      width: min(760px, calc(100vw - 32px));
-    }
+    // Meeting and invite link: the Figma cards, in the "personal meeting
+    // modal" block at the end.
 
     // Task: the Figma card, 1080×720 (1693:198659 / 1693:198307). The rest
     // of its rules are in the "personal task modal" block at the end.
@@ -1398,20 +1394,17 @@
 
   // Scoped under the modal's data-form for weight: the body is a Box.X, and
   // `.drumee-widget[data-flow=x]` (0,2,0) would win over a single class.
-  &__modal[data-form="task"] &__modal-body--split,
-  &__modal[data-form="meeting"] &__modal-body--split {
+  &__modal[data-form="task"] &__modal-body--split {
     gap: 24px;
     align-items: flex-start;
   }
 
-  &__modal[data-form="task"] &__modal-col,
-  &__modal[data-form="meeting"] &__modal-col {
+  &__modal[data-form="task"] &__modal-col {
     gap: 12px;
     min-width: 0;
   }
 
-  &__modal[data-form="task"] &__modal-col--main,
-  &__modal[data-form="meeting"] &__modal-col--main {
+  &__modal[data-form="task"] &__modal-col--main {
     flex: 1 1 0;
   }
 
@@ -1421,15 +1414,10 @@
     flex: 0 1 358px;
   }
 
-  // Wide enough for the Start → End row (two hour:minute + AM/PM pickers)
-  // and the invite toggles' hint lines.
-  &__modal[data-form="meeting"] &__modal-col--side {
-    flex: 0 0 340px;
-  }
-
-  // Sub-blocks of the invite block and the chip row are always rendered and
-  // toggled by attribute (index.js _syncInviteDom / _renderRecipients), so a
-  // click never re-feeds the modal. (0,3,0) on purpose: the base
+  // The invite block's sub-blocks (today the password field) are always
+  // rendered and toggled by attribute (index.js _syncInviteDom), so a click
+  // never re-feeds the modal; the chip row rule serves the recipient list
+  // once the email rows are drawn again. (0,3,0) on purpose: the base
   // `.drumee-widget[data-flow=y] { display: flex }` is (0,2,0) and would win
   // a two-part selector here by source order.
   &__modal [data-sub][data-open="0"],
@@ -1659,26 +1647,24 @@
 
   // Password row — the sign-in form's PASSWORD row
   // (welcome/signin skin: __entry-row / __entry-input / __entry-eye-toggle),
-  // sized and coloured as this modal's other fields: a 36px filled row with
-  // the input and the eye side by side, a focus ring on the ROW, and the
-  // EntryBox's inner wrappers turned into transparent pass-throughs.
+  // sized to Figma 1693:191932's field: 12px around a 12px/1.4 line (40.8px),
+  // the input and the eye side by side, a focus ring on the ROW (a shadow, so
+  // it adds no height), and the EntryBox's inner wrappers turned into
+  // transparent pass-throughs.
   &__password {
     width: 100%;
-    // __input's height: 8px + 18px line + 8px, plus its 1px border each side.
-    height: 36px;
+    height: 40.8px;
     box-sizing: border-box;
-    padding: 0 10px;
+    padding: 0 12px;
     gap: 8px;
     align-items: center;
     overflow: hidden;
     background: var(--overlay-bg-05);
-    border: 1px solid transparent;
     border-radius: 8px;
-    transition: border-color 0.2s;
+    transition: box-shadow 0.2s;
 
     &:focus-within {
-      border-color: var(--active-border);
-      background: var(--normal-bg);
+      box-shadow: inset 0 0 0 1px var(--active-border);
     }
   }
 
@@ -1722,20 +1708,21 @@
       box-shadow: none;
       background: transparent;
       box-sizing: border-box;
-      @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-10));
+      @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-10));
       font-family: inherit;
 
       &::placeholder {
-        @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-50));
+        @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-50));
       }
     }
   }
 
+  // 17px, the frame's trailing glyph; primary like its pencil once active.
   &__password-eye {
     display: flex;
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -1822,26 +1809,48 @@
     }
   }
 
-  // ── time pickers ──────────────────────────────────────────────────────────
+  // ── time pickers (meeting form) ───────────────────────────────────────────
+  // Figma 1693:163829 "Enter time → End time": hour : minute boxes 33px tall
+  // (8px around a 14px line), captions under them, an AM/PM pair 56×59, the
+  // two pickers pushed to the row's ends with the arrow between.
+  //
+  // Two 175px pickers + the 20px arrow need 370px; the gaps are 10px rather
+  // than the frame's 12 so the row asks for 390 of the column's 394 — with
+  // 12 it filled it exactly, and zoom or DPR rounding then tipped the card
+  // into a sideways scroll. space-between still spreads it to the frame's
+  // positions.
   &__time-row {
     align-items: flex-start;
+    justify-content: space-between;
     gap: 10px;
   }
 
   &__time-arrow {
-    @include drumee.typo($size: 14px, $line: 14px, $color: var(--normal-fg-50));
-    align-self: center;
-    padding-top: 14px;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    // The frame's arrow sits 35px down: the 19px label, its 12px gap, then
+    // level with the middle of the 33px boxes.
+    margin-top: 35px;
+    color: var(--normal-fg-20);
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentcolor;
+    }
   }
 
   &__time {
     align-items: flex-start;
-    gap: 4px;
+    gap: 8px;
   }
 
   &__time-part {
-    gap: 2px;
-    width: 40px;
+    align-items: center;
+    gap: 4px;
+    width: 43px;
   }
 
   &__time-input {
@@ -1849,96 +1858,112 @@
     box-sizing: border-box;
     // Same ground and radius as __input / __date-input above — one field
     // treatment per dialog, and --overlay-bg-05 flips with the theme where
-    // --normal-bg-90 stays a solid surface.
+    // --normal-bg-90 stays a solid surface. The focus ring is a shadow, so it
+    // adds nothing to the 33px box.
     background: var(--overlay-bg-05);
     border-radius: 8px;
+
+    &:focus-within {
+      box-shadow: inset 0 0 0 1px var(--active-border);
+    }
 
     input {
       width: 100%;
       box-sizing: border-box;
-      padding: 6px 4px;
+      padding: 8px 4px;
       border: 0;
       background: transparent;
       outline: none;
       text-align: center;
       font-variant-numeric: tabular-nums;
-      @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg));
+      @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
       font-family: inherit;
     }
   }
 
   &__time-caption {
     text-align: center;
-    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-50));
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-50));
   }
 
   &__time-colon {
-    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-20));
-    padding-top: 6px;
+    width: 5px;
+    text-align: center;
+    @include drumee.typo($size: 16px, $line: 38px, $color: var(--normal-fg-10));
   }
 
+  // 12px from the minute box in the frame: the row's 8px gap plus this 4px.
   &__meridiem {
-    gap: 2px;
+    flex: 0 0 56px;
+    width: 56px;
+    margin-left: 4px;
+    gap: 4px;
   }
 
   &__meridiem-item {
-    padding: 2px 8px;
-    border-radius: 6px;
+    height: 27.5px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: var(--overlay-bg-05);
     cursor: pointer;
     text-align: center;
-    border: 1px solid transparent;
-    @include drumee.typo($size: 11px, $line: 14px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
 
     &[data-active="1"] {
       border-color: var(--radio-on-border);
       background: var(--radio-on-bg);
       color: var(--primary-40);
-      font-weight: 600;
     }
   }
 
-  // ── invite block (mirrors the secure-share panel) ──────────────────────────
-  &__invite {
-    gap: 8px;
-  }
-
+  // ── invite block (meeting form) ───────────────────────────────────────────
+  // Figma 1693:191932 "Add password protection": a 12px-padded card on a
+  // hairline, 12px radius — icon, label over hint, checkbox — and, while the
+  // box is ticked, the password field 12px under the row (the card's gap; the
+  // field is display:none otherwise, so the gap goes with it).
   &__invite-group {
-    border: 1px solid var(--border-default);
-    border-radius: 8px;
-    overflow: hidden;
+    gap: 12px;
+    padding: 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-muted);
+    border-radius: 12px;
   }
 
   &__toggle-row {
     align-items: center;
-    gap: 8px;
-    padding: 8px 10px;
+    gap: 12px;
     cursor: pointer;
-
-    &:hover {
-      background: var(--overlay-bg-05);
-    }
   }
 
   &__toggle-ico {
-    flex: 0 0 auto;
-    width: 16px;
-    height: 16px;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
     color: var(--normal-fg-20);
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentcolor;
+    }
   }
 
   &__toggle-text {
     flex: 1 1 auto;
     min-width: 0;
-    gap: 1px;
   }
 
   &__toggle-label {
-    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg));
-    font-weight: 500;
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-10));
   }
 
   &__toggle-hint {
-    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-50));
+    @include drumee.typo($size: 10px, $line: 1.4, $color: var(--normal-fg-20));
   }
 
   &__checkbox {
@@ -1946,13 +1971,14 @@
     width: 16px;
     height: 16px;
     border-radius: 4px;
-    border: 1px solid var(--border-strong);
+    // The frame's hairline (rgba 0,0,0,.05), filled #433cc5 once ticked.
+    border: 1px solid var(--border-muted);
     box-sizing: border-box;
     position: relative;
 
     &[data-checked="1"] {
-      background: var(--primary-40);
-      border-color: var(--primary-40);
+      background: var(--primary-50);
+      border-color: var(--primary-50);
 
       // Tick drawn in CSS: a sprite <use> cannot be recoloured across the
       // symbol boundary here.
@@ -1971,9 +1997,7 @@
   }
 
   &__invite-sub {
-    padding: 0 10px 10px;
-    gap: 6px;
-    border-top: 1px solid var(--border-muted);
+    gap: 8px;
   }
 
   &__switch-row {
@@ -2056,8 +2080,10 @@
   }
 
   // ── toast (index.js _showToast) ───────────────────────────────────────────
-  // Settings' toast (settings_main skin __toast-slot / __toast), on theme
-  // tokens so it follows dark mode the way Settings' dark block does.
+  // Figma 1693:201972: a 512px white card, 24px padding and gaps, 12px
+  // radius — glyph, one line of 16px/600 ink, × — hung at the screen's
+  // bottom-right (index.js _placeToast). On theme tokens, so dark mode
+  // follows.
   //
   // z-index: the meeting toast's band (upload-progress + 2 = 50004), NOT
   // Settings' 30000. The open modal wrapper does not sit at the 20000 this
@@ -2067,63 +2093,93 @@
   // blurred backdrop. Both share this screen's stacking context; 50004 wins.
   &__toast-slot {
     position: fixed;
-    top: 24px;
     right: 24px;
+    bottom: 24px;
     z-index: calc(var(--z-index-upload-progress, 50002) + 2);
     pointer-events: none;
   }
 
   &__toast {
-    align-items: center;
-    gap: 10px;
-    max-width: 360px;
-    padding: 12px 16px;
-    border-radius: 10px;
+    align-items: flex-start;
+    gap: 24px;
+    width: 512px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    padding: 24px;
+    border-radius: 12px;
     background: var(--normal-bg-elevated);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    box-shadow:
+      0 7px 10px rgba(0, 0, 0, 0.05),
+      0 40px 80px rgba(0, 0, 0, 0.15);
     pointer-events: auto;
     animation: calendar-main-toast-in 160ms ease-out;
   }
 
   &__toast-ico {
     display: flex;
-    flex-shrink: 0;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
     align-items: center;
     justify-content: center;
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
     }
   }
 
   &__toast-text {
-    @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-10));
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 16px, $line: 1.2, $color: var(--normal-fg-10));
     font-weight: 600;
   }
 
+  &__toast-close {
+    display: flex;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+
+    svg {
+      display: block;
+      width: 14px;
+      height: 14px;
+      fill: currentcolor;
+    }
+
+    &:hover {
+      color: var(--normal-fg-10);
+    }
+  }
+
   &__toast--success &__toast-ico svg {
-    fill: #54b684;
+    fill: var(--success, #54b684);
 
     .icon-fill-blue,
     .icon-fill-grey {
-      fill: #54b684;
+      fill: var(--success, #54b684);
     }
   }
 
   &__toast--error &__toast-ico svg {
-    fill: #d64e49;
+    fill: var(--signal-error, #d74e49);
 
     .icon-fill-blue,
     .icon-fill-grey {
-      fill: #d64e49;
+      fill: var(--signal-error, #d74e49);
     }
   }
 
   @keyframes calendar-main-toast-in {
     from {
       opacity: 0;
-      transform: translateY(-8px);
+      transform: translateY(8px);
     }
     to {
       opacity: 1;
@@ -2131,57 +2187,67 @@
     }
   }
 
-  // ── invite link ready ─────────────────────────────────────────────────────
-  // Settings' referral row (settings_main skin: __inner + __referral-action):
-  // title over value on the left, a 32px ghost button on the right, 16px
-  // padding on an 8px-radius row. The row sits on this modal's own field
-  // ground (--overlay-bg-05) rather than Settings' white, which would vanish
-  // on the white card; colours are theme tokens so dark mode follows.
+  // ── invite link ready (meeting-form.js inviteLink) ────────────────────────
+  // Figma 1693:163906: one filled row, 12px padding on an 8px radius — link
+  // glyph, the link at 60% ink cut with an ellipsis, a copy button.
   &__link-row {
     align-items: center;
-    justify-content: space-between;
-    gap: var(--spacer-5, 16px);
-    padding: var(--spacer-5, 16px);
+    gap: 8px;
+    padding: 12px;
     border-radius: 8px;
     background: var(--overlay-bg-05);
   }
 
-  &__link-text-box {
+  &__link-ico {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--normal-fg-50);
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentcolor;
+    }
+  }
+
+  // The Note root is a flex row around .note-content, so the ellipsis has to
+  // be set on that child — on the root it cuts the text with no "…".
+  &__link-text {
     flex: 1 1 auto;
     min-width: 0;
-    gap: 4px;
-  }
-
-  &__link-title {
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-800));
-    font-weight: 600;
-  }
-
-  &__link-text {
-    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-50));
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    opacity: 0.6;
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 
   &__link-copy {
     display: flex;
-    flex: 0 0 auto;
-    min-width: 120px;
-    height: 32px;
-    padding: 0 var(--spacer-5, 16px);
-    box-sizing: border-box;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    background: rgba(89, 80, 255, 0.1);
     cursor: pointer;
-    user-select: none;
-    @include drumee.typo($size: 12px, $line: 16px, $color: #847dff);
-    font-weight: 600;
+    color: var(--primary-40);
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentcolor;
+    }
 
     &:hover {
-      background: rgba(89, 80, 255, 0.18);
+      color: var(--primary-50);
     }
   }
 
@@ -2248,16 +2314,15 @@
       padding: 16px 12px 0;
     }
 
-    // The task and meeting modals' two columns stack: details first, the
-    // side column under them.
-    &__modal[data-form="task"] &__modal-body--split,
-    &__modal[data-form="meeting"] &__modal-body--split {
+    // The task modal's two columns stack: details first, the side column
+    // under them. (The meeting form is one column already at this width —
+    // its two-column layout needs a wide screen, see its own block.)
+    &__modal[data-form="task"] &__modal-body--split {
       flex-direction: column;
       align-items: stretch;
     }
 
-    &__modal[data-form="task"] &__modal-col--side,
-    &__modal[data-form="meeting"] &__modal-col--side {
+    &__modal[data-form="task"] &__modal-col--side {
       flex: 0 0 auto;
     }
 
@@ -3074,6 +3139,190 @@
       z-index: 6;
       padding-top: 12px;
       background: var(--normal-bg-elevated);
+    }
+  }
+}
+
+// ── personal meeting modal (skeleton/meeting-form.js) ────────────────────────
+// Figma 1693:163829 (portrait, the default), 1693:166935 (landscape) and
+// 1693:163906 (invite link ready): 460px cards, 32px padding inside a 1px
+// hairline (the frames' 33), 24px between head, body and the full-width
+// action, 24px radius. Scoped to the two forms' data-form, so the task card
+// and the base compact card are untouched.
+//
+// One tree, two layouts. The body is a column — the portrait frame — and only
+// on a short, wide screen do its two columns sit side by side as in the
+// landscape frame (2 × 394px + 24px, an 878px card). The height bar is the
+// portrait card in its shortest state, password OFF, under the modal's 88vh
+// cap: a window too short to show that card whole gets the landscape layout.
+// With the password on, the portrait card grows by the field and its body
+// scrolls inside the cap. The width bar is the landscape card plus a 16px
+// margin each side; a pane that is short AND narrower than that keeps the
+// single column.
+.calendar-main {
+  &__modal[data-form="meeting"],
+  &__modal[data-form="invite-link"] {
+    width: min(460px, calc(100vw - 32px));
+    padding: 32px;
+    gap: 24px;
+    border-radius: 24px;
+    box-shadow:
+      0 7px 10px rgba(0, 0, 0, 0.09),
+      0 40px 80px rgba(0, 0, 0, 0.3);
+  }
+
+  &__modal[data-form="meeting"] &__modal-head,
+  &__modal[data-form="invite-link"] &__modal-head {
+    align-items: flex-start;
+  }
+
+  &__modal[data-form="meeting"] &__modal-title,
+  &__modal[data-form="invite-link"] &__modal-title {
+    @include drumee.typo($size: 24px, $line: 1.1, $color: var(--normal-fg-800));
+    font-weight: 600;
+  }
+
+  &__modal[data-form="meeting"] &__modal-close,
+  &__modal[data-form="invite-link"] &__modal-close {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-20);
+  }
+
+  // Keyboard focus on the icon buttons made focusable for these cards and
+  // the toast (role="button", tabindex 0): the × buttons, copy, the eye.
+  &__modal-close[role="button"],
+  &__toast-close[role="button"],
+  &__link-copy[role="button"],
+  &__password-eye[role="button"] {
+    &:focus-visible {
+      outline: 2px solid var(--active-border);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+  }
+
+  // One action across the card, 48px: 12px around a 24px line.
+  &__modal[data-form="meeting"] &__modal-foot,
+  &__modal[data-form="invite-link"] &__modal-foot {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  &__modal[data-form="meeting"] &__button,
+  &__modal[data-form="invite-link"] &__button {
+    flex: 1 1 auto;
+    height: 48px;
+    padding: 0 24px;
+    border-radius: 4px;
+    @include drumee.typo($size: 16px, $line: 24px, $color: var(--gray-white));
+    font-weight: 600;
+  }
+
+  // ── body ───────────────────────────────────────────────────────────────────
+  &__modal[data-form="meeting"] &__modal-body,
+  &__modal[data-form="meeting"] &__modal-col {
+    gap: 16px;
+    min-width: 0;
+  }
+
+  &__modal[data-form="meeting"] &__field {
+    gap: 8px;
+  }
+
+  // The time fields put 12px between label and picker.
+  &__modal[data-form="meeting"] &__time-row > &__field {
+    gap: 12px;
+  }
+
+  &__modal[data-form="meeting"] &__field-label {
+    @include drumee.typo($size: 16px, $line: 1.2, $color: var(--normal-fg-10));
+    font-weight: 400;
+  }
+
+  // 40.8px: 11px + a 14px/1.2 line + 11px inside the 1px border the error
+  // state reddens.
+  &__modal[data-form="meeting"] &__input input {
+    padding: 11px 12px;
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+  }
+
+  // Date: a 49px filled row, 24px in, the calendar glyph at the end — the
+  // task modal's __date-box, at this frame's size.
+  &__modal[data-form="meeting"] &__date-box {
+    align-items: center;
+    gap: 12px;
+    height: 49px;
+    padding: 0 24px;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: var(--overlay-bg-05);
+
+    &:focus-within {
+      border-color: var(--active-border);
+    }
+  }
+
+  &__modal[data-form="meeting"] &__date-box &__date-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+
+    // The altInput is also a `.form-control`, which brings its own white box.
+    input {
+      width: 100%;
+      height: auto;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+    }
+  }
+
+  &__modal[data-form="meeting"] &__date-ico {
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    color: var(--normal-fg-20);
+    pointer-events: none;
+  }
+
+  // Attachments (not in the frames): the drop zone at the Title field's
+  // height and type, its dashed edge kept as the drop affordance.
+  &__modal[data-form="meeting"] &__files {
+    padding: 11px 12px;
+    border-radius: 8px;
+  }
+
+  &__modal[data-form="meeting"] &__files-hint {
+    opacity: 1;
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
+  }
+
+  // ── landscape (Figma 1693:166935) ──────────────────────────────────────────
+  // 725px: the password-off portrait card measures 638.7px on stage, and 88vh
+  // holds it whole from a 726px window up — a 1440×900 laptop's Chrome
+  // (≈788-813px inside) keeps the portrait frame. (0,3,0) selectors: the
+  // body's Box.Y flow rule is (0,2,0).
+  @media (max-height: 725px) and (min-width: 910px) {
+    // The window is ≥ 910px here, so the cap only bites if the wrapper is
+    // ever narrower than the window (it is the full viewport today).
+    &__modal[data-form="meeting"] {
+      width: min(878px, calc(100vw - 32px));
+    }
+
+    &__modal[data-form="meeting"] &__modal-body--split {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 24px;
+    }
+
+    &__modal[data-form="meeting"] &__modal-col {
+      flex: 0 0 394px;
     }
   }
 }

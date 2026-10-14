@@ -3067,6 +3067,7 @@
   "PASSWORD_PROTECTION_HINT": "Set a password for access",
   "CREATE_MEETING_SEND_INVITE": "Create meeting & send invite",
   "INVITE_LINK_READY": "Invite link ready",
+  "PERSONAL_MEETING_LINK_COPIED": "Personal meeting link copied",
   "PREVIOUS": "Previous",
   "MUTE": "Mute",
   "JUST_NOW": "Just now",

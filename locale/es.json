@@ -2841,6 +2841,7 @@
   "PASSWORD_PROTECTION_HINT": "Define una contraseña de acceso",
   "CREATE_MEETING_SEND_INVITE": "Crear reunión y enviar invitación",
   "INVITE_LINK_READY": "Enlace de invitación listo",
+  "PERSONAL_MEETING_LINK_COPIED": "Enlace de la reunión personal copiado",
   "PREVIOUS": "Anterior",
   "MUTE": "Silenciar",
   "JUST_NOW": "Ahora mismo",

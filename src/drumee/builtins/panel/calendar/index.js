@@ -129,6 +129,10 @@ class __calendar_main extends LetcBox {
       this.el.removeEventListener("change", this._timeFilter);
       this._timeFilter = null;
     }
+    if (this._formKeys) {
+      document.removeEventListener("keydown", this._formKeys, true);
+      this._formKeys = null;
+    }
     if (this._reloadTimer) {
       clearTimeout(this._reloadTimer);
       this._reloadTimer = null;
@@ -152,6 +156,7 @@ class __calendar_main extends LetcBox {
   onDomRefresh() {
     this._installFileDrop();
     this._installTimeFilter();
+    this._installFormKeys();
     this._render();
     this._loadItems().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
@@ -587,6 +592,14 @@ class __calendar_main extends LetcBox {
       // Meetings push on room.scheduled to new INVITEES (room.js
       // _notify_invitees), and on room.book / room.update / room.remove to
       // every socket on the meeting's hub (room.js _broadcast).
+      //
+      // No hub_id filter on purpose. This screen lists the workspace meetings
+      // the user takes part in as well as the personal ones (calendar.list
+      // _meetings reads the global index by participation), and the push only
+      // carries { nid, hub_id } — so a push from any hub this socket hears may
+      // be a meeting drawn here. Filtering on the loaded nids fails too: a
+      // meeting moved INTO the visible range is not loaded yet. The cost is
+      // one debounced re-read (_scheduleReload) per push.
       case "room.scheduled":
       case "room.book":
       case "room.update":
@@ -784,6 +797,10 @@ class __calendar_main extends LetcBox {
     }
     part.el.setAttribute("data-state", this._form ? "open" : "closed");
     part.feed(modalKids(this));
+    // A toast still up must clear the card that just opened, and go back to
+    // its corner once the card is gone (_placeToast).
+    const toast = this._toast ? this.getPart("cal-toast") : null;
+    if (toast && toast.el) this._placeToast(toast.el);
   }
 
   // ── in-place form updates ──────────────────────────────────────────────────
@@ -807,7 +824,12 @@ class __calendar_main extends LetcBox {
     });
   }
 
-  /** Invite block: toggle rows, the restrict switch and the sub-blocks they reveal. */
+  /**
+   * Invite block: each toggle row's checkbox and the sub-block its flag
+   * reveals. Only the password row is drawn today (skeleton/meeting-form.js
+   * header); the restrict switch it also repaints comes back with the email
+   * rows.
+   */
   _syncInviteDom() {
     const root = this._modalEl();
     if (!root || !this._form) return;
@@ -873,18 +895,15 @@ class __calendar_main extends LetcBox {
 
   // ── toast ──────────────────────────────────────────────────────────────────
   //
-  // Settings' toast (settings_main _showToast / _renderToast / _placeToast),
-  // same markup, timing and placement: a white card with a check (success) or
-  // warning (error) glyph, hung under the topbar's utility icons for 3.5s.
+  // Figma 1693:201972: a 512px white card at the calendar's bottom-right with
+  // a glyph, one line and a ×, for 3.5s. The glyph follows the kind — a
+  // check-circle for success, the warning glyph for an error (the task form's
+  // failures use this same toast), never a check on an error.
 
   _showToast(message, kind = "success") {
     this._toast = { message, kind };
     if (this._toastTimer) clearTimeout(this._toastTimer);
-    this._toastTimer = setTimeout(() => {
-      this._toastTimer = null;
-      this._toast = null;
-      this._renderToast();
-    }, 3500);
+    this._toastTimer = setTimeout(() => this._closeToast(), 3500);
     this._renderToast();
   }
 
@@ -895,42 +914,75 @@ class __calendar_main extends LetcBox {
     if (!this._toast) return part.feed([]);
     const pfx = this.fig.family;
     const { message, kind } = this._toast;
-    const ico = kind === "error" ? "apps-warning" : "app-check";
+    const ico = kind === "error" ? "apps-warning" : "noti-check-circle";
     part.feed(
       Skeletons.Box.X({
         className: `${pfx}__toast ${pfx}__toast--${kind}`,
         kids: [
           Skeletons.Image.Svg({ ico, className: `${pfx}__toast-ico` }),
           Skeletons.Note({ className: `${pfx}__toast-text`, content: message }),
+          Skeletons.Button.Svg({
+            className: `${pfx}__toast-close`,
+            ico: "cross",
+            bubble: 0,
+            service: "cal-toast-close",
+            uiHandler: [this],
+            // Focusable and announced; Enter / Space press it (_installFormKeys).
+            attrOpt: { "aria-label": LOCALE.CLOSE, role: "button", tabindex: "0" },
+          }),
         ],
       }),
     );
     this._placeToast(part.el);
   }
 
+  _closeToast() {
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._toastTimer = null;
+    this._toast = null;
+    this._renderToast();
+  }
+
   /**
-   * Right edge on the topbar's utility cluster, TOAST_GAP below it; without
-   * a cluster (phone topbar) the slot keeps its CSS corner. Set, measured and
-   * corrected by the difference, because this slot lives inside the desk's
-   * animated main slot and its `fixed` offsets are not viewport pixels —
-   * the reasoning settings_main _placeToast documents.
+   * Bottom-right corner of this screen: 24px in from its right edge and 37px
+   * up from its bottom, where frame 1693:201564 hangs the card. Set, measured
+   * and corrected by the difference, because this slot lives inside the
+   * desk's animated main slot and its `fixed` offsets are not viewport
+   * pixels — the reasoning settings_main _placeToast documents.
+   *
+   * Unless that corner lands on the open modal card. The task card fills 88vh
+   * with its actions at the bottom right, and its failure toasts fire while
+   * it stays open for a retry — there the toast covered Cancel and Create.
+   * It then hangs INSET_TOP under the top of the window instead, which a
+   * full-height card leaves to its top padding.
    */
   _placeToast(slot) {
-    const TOAST_GAP = 8;
+    const INSET_RIGHT = 24;
+    const INSET_BOTTOM = 37;
+    const INSET_TOP = 8;
     slot.style.top = "";
+    slot.style.bottom = "";
     slot.style.right = "";
-    const cluster = document.querySelector(".desk-module-topbar__utility-cluster");
-    const c = cluster && cluster.getBoundingClientRect();
-    if (!c || !c.width || !c.height) return;
-    const want = { top: c.bottom + TOAST_GAP, right: c.right };
+    const page = this.el && this.el.getBoundingClientRect();
+    if (!page || !page.width || !page.height) return;
+    const want = { bottom: page.bottom - INSET_BOTTOM, right: page.right - INSET_RIGHT };
     const style = getComputedStyle(slot);
-    const got = slot.getBoundingClientRect();
+    let got = slot.getBoundingClientRect();
     const sx = slot.offsetWidth ? got.width / slot.offsetWidth : 1;
     const sy = slot.offsetHeight ? got.height / slot.offsetHeight : 1;
-    const top = (parseFloat(style.top) || 0) + (want.top - got.top) / (sy || 1);
+    const bottom = (parseFloat(style.bottom) || 0) + (got.bottom - want.bottom) / (sy || 1);
     const right = (parseFloat(style.right) || 0) + (got.right - want.right) / (sx || 1);
-    slot.style.top = `${top}px`;
+    slot.style.bottom = `${bottom}px`;
     slot.style.right = `${right}px`;
+
+    const card = this._form ? this._modalEl() : null;
+    const c = card && card.getBoundingClientRect();
+    got = slot.getBoundingClientRect();
+    if (!c || got.bottom <= c.top || got.top >= c.bottom || got.right <= c.left || got.left >= c.right) return;
+    slot.style.bottom = "auto";
+    slot.style.top = "0px";
+    got = slot.getBoundingClientRect();
+    slot.style.top = `${(INSET_TOP - got.top) / (sy || 1)}px`;
   }
 
   /** Re-feed the recipient chip row alone. */
@@ -1221,6 +1273,45 @@ class __calendar_main extends LetcBox {
     };
     this.el.addEventListener("input", this._timeFilter);
     this.el.addEventListener("change", this._timeFilter);
+  }
+
+  /**
+   * Keyboard for the meeting modal, its invite-link card and the toast.
+   *
+   * - Enter / Space on one of this screen's role="button" icons (the modal and
+   *   toast ×, the link's copy, the password eye) presses it: they are
+   *   Button.Svg divs, which have no keyboard behaviour of their own.
+   * - Escape closes the meeting form or the invite-link card — after an open
+   *   date picker, which takes the first Escape. On the document and in the
+   *   capture phase, so focus anywhere counts and the check runs before
+   *   flatpickr's own handler has closed the picker.
+   */
+  _installFormKeys() {
+    if (this._formKeys) return;
+    this._formKeys = (e) => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const t = e.target;
+      if (e.key === "Enter" || e.key === " ") {
+        if (t && t.getAttribute && t.getAttribute("role") === "button" && this.el && this.el.contains(t)) {
+          e.preventDefault();
+          t.click();
+        }
+        return;
+      }
+      if (e.key !== "Escape" || !this._form) return;
+      if (this._form.kind !== "meeting" && this._form.kind !== "invite-link") return;
+      const root = this._modalEl();
+      const picker = Array.from((root && root.querySelectorAll("input")) || [])
+        .map((input) => input._flatpickr)
+        .find((fp) => fp && fp.isOpen);
+      if (picker) {
+        picker.close();
+        return;
+      }
+      e.preventDefault();
+      this._closeForm();
+    };
+    document.addEventListener("keydown", this._formKeys, true);
   }
 
   _onDrop(e) {
@@ -1989,10 +2080,11 @@ class __calendar_main extends LetcBox {
     // Invitees. The server ALREADY implements per-email invitation — a
     // 'no_traversal' dmz grant plus real mail from the butler/external-meeting
     // template (room.js _commit_invitation) — but that method currently has no
-    // caller, so `recipients` is inert until room.book (or a room.invite) is
-    // wired to it. Sent regardless: when the server side lands, this form needs
-    // no change, and until then the meeting is still created and still gets a
-    // shareable link.
+    // caller, so `recipients` would be inert. The form therefore does not draw
+    // the "Require email" / "Restrict access" rows that set these flags, and
+    // this branch never runs today; once room.book (or a room.invite) is wired
+    // to that call, drawing the rows again (skeleton/meeting-form.js) is the
+    // only change needed here.
     if (draft.require_email && draft.restrict && draft.recipients.length) {
       payload.recipients = draft.recipients.map((email) => ({ email, name: email }));
     }
@@ -2394,6 +2486,7 @@ class __calendar_main extends LetcBox {
           use.setAttribute("xlink:href", visible ? "#--icon-eye_closed" : "#--icon-eye");
         }
         cmd.el.dataset.state = visible ? "0" : "1";
+        cmd.el.setAttribute("aria-pressed", visible ? "false" : "true");
         return;
       }
 
@@ -2476,10 +2569,13 @@ class __calendar_main extends LetcBox {
         const link = this._form && this._form.link;
         if (link) {
           copyToClipboard(link);
-          this._showToast(LOCALE.URL_COPIED, "success");
+          this._showToast(LOCALE.PERSONAL_MEETING_LINK_COPIED, "success");
         }
         return;
       }
+
+      case "cal-toast-close":
+        return this._closeToast();
 
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);

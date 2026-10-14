@@ -2842,6 +2842,7 @@
   "PASSWORD_PROTECTION_HINT": "Задайте пароль для доступа",
   "CREATE_MEETING_SEND_INVITE": "Создать встречу и отправить приглашение",
   "INVITE_LINK_READY": "Ссылка-приглашение готова",
+  "PERSONAL_MEETING_LINK_COPIED": "Ссылка на личную встречу скопирована",
   "PREVIOUS": "Назад",
   "MUTE": "Отключить",
   "JUST_NOW": "Только что",

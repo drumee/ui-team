@@ -2849,6 +2849,7 @@
   "PASSWORD_PROTECTION_HINT": "Définir un mot de passe d'accès",
   "CREATE_MEETING_SEND_INVITE": "Créer la réunion et envoyer l'invitation",
   "INVITE_LINK_READY": "Lien d'invitation prêt",
+  "PERSONAL_MEETING_LINK_COPIED": "Lien de la réunion personnelle copié",
   "PREVIOUS": "Précédent",
   "MUTE": "Mettre en sourdine",
   "JUST_NOW": "À l'instant",
