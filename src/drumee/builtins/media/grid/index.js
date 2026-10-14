@@ -265,6 +265,13 @@ class __media_grid extends DrumeeMediaInteract {
     if (!entry || entry.isDestroyed() || !entry.el) return;
     const type = this.mget(_a.filetype);
     if (type === _a.folder || type === _a.hub) return;
+    // The date line under the name is hidden while the editor is up: the
+    // field (and its focus ring) took its place and drew over it, and the
+    // fallback below (base &__input: absolute, bottom 0) lands right on it.
+    this.el.dataset.renaming = "1";
+    entry.once(_e.destroy, () => {
+      if (this.el) delete this.el.dataset.renaming;
+    });
     const name = document.getElementById(`${this._id}-filename`);
     const row = name && name.closest(`.${this.fig.family}__meta-row-top`);
     if (!row) return;

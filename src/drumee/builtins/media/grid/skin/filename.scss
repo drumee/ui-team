@@ -233,6 +233,13 @@
   }
 }
 
+// While a file tile is renamed (grid/index.js _createInput stamps
+// data-renaming) its date line is hidden: the editor replaces the name and the
+// date is not what is being edited.
+.media-grid[data-renaming="1"] .media-grid__date {
+  display: none;
+}
+
 html[data-theme="dark"] .media-grid {
   &__input {
     textarea {
