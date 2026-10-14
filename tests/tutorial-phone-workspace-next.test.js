@@ -61,10 +61,16 @@ for (const [label, screens] of [["live run", 7], ["preview/full", 5]]) {
     assert.equal(t.align, "center");
   });
 
-  test(`${label}: create screen shows a Next button`, async () => {
+  test(`${label}: create screen`, async () => {
     const s = make(screens, 4);
     await s._showScreen();
-    assert.equal(focus(s).tooltip.hide_next, undefined);
+    if (screens === 7) {
+      // The real create step: no callout, no highlight, no backdrop.
+      assert.equal(focus(s), undefined, "no spotlight:focus");
+      assert.ok(s.raised.some((a) => a.service === "spotlight:clear"));
+    } else {
+      assert.equal(focus(s).tooltip.hide_next, undefined, "teaching run keeps its Next");
+    }
   });
 }
 

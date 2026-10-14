@@ -348,8 +348,14 @@ $card-scale: 0.85;
     padding: 17px 17px 41px;
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 24px;
-    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), #fff;
+    background: #fff;
     box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
+
+  // Tinted only while a screen is teaching (the frames' 20% over the sheet);
+  // the real create step has no data-lit and stays white.
+  &__sheet[data-lit] {
+    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), #fff;
   }
 
   &__heading {
@@ -557,7 +563,7 @@ $card-scale: 0.85;
     .tutorial-wsp__create { opacity: 0.2; }
   }
 
-  &__sheet:not([data-lit="name"]) {
+  &__sheet[data-lit]:not([data-lit="name"]) {
     .tutorial-wsp__name { opacity: 0.4; }
     .tutorial-wsp__row { background: #fff; }
   }

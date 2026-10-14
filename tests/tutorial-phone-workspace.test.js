@@ -157,3 +157,22 @@ test("the live create screen carries the inline error slot (a refusal must be vi
   const tree = view(ui, SCREENS[4], { live: true });
   assert.ok(find(tree, "wsd-name-error"));
 });
+
+test("the REAL create screen is a plain form: no overlay, no per-block highlight", () => {
+  const tree = view(ui, SCREENS[4], { live: true });
+  assert.equal(findClass(tree, "tutorial-phone__overlay"), null, "no backdrop");
+  assert.equal((find(tree, "wsd-dialog").dataset || {}).lit, undefined, "no highlight");
+  // the teaching version of the same screen keeps both
+  const mock = view(ui, SCREENS[4], { live: false });
+  assert.ok(findClass(mock, "tutorial-phone__overlay"));
+  assert.equal(find(mock, "wsd-dialog").dataset.lit, "create");
+});
+
+test("skin: the sheet is tinted and blocks faded only while a screen is teaching (data-lit)", () => {
+  const sass = require("sass");
+  const css = sass.compile(path.join(SRC, "modules/desk/tutorial/workspace/skin/index.scss"),
+    { loadPaths: [SRC, path.join(SRC, "skin")] }).css.replace(/\s+/g, " ");
+  assert.match(css, /\.tutorial-wsp__sheet \{[^}]*background: #fff/);
+  assert.match(css, /\.tutorial-wsp__sheet\[data-lit\] \{[^}]*linear-gradient/);
+  assert.doesNotMatch(css, /\.tutorial-wsp__sheet:not\(\[data-lit=name\]\) \.tutorial-wsp__name/);
+});

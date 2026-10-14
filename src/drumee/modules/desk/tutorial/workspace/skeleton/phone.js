@@ -192,13 +192,15 @@ function typeRow(ui, type, { selected, live }) {
 }
 
 function sheet(ui, { lit, live, selected = 'internal', name, pending }) {
+  // The REAL create step is a plain form: no block is held back, so no
+  // data-lit (which drives the tint and the fading in the skin).
+  const plain = live && lit === 'create';
   return Skeletons.Box.Y({
     active: 0,
     className: `${W}__sheet`,
     sys_pn: 'wsd-dialog',
     partHandler: ui,
-    dataset: { lit },
-    attrOpt: { 'data-lit': lit },
+    ...(plain ? {} : { dataset: { lit }, attrOpt: { 'data-lit': lit } }),
     kids: [
       Skeletons.Box.X({
         active: 0,
@@ -321,12 +323,14 @@ module.exports = function (ui, screen, state = {}) {
       overlay: personal ? personalModal(ui) : inviteSheet(ui),
     });
   }
+  const live = !!(state.live && p.live);
   return frame(ui, {
     view: 'sheet',
-    dim: true,
+    // No backdrop on the real create step — it is the form, not a lesson.
+    dim: !(live && p.lit === 'create'),
     overlay: sheet(ui, {
       lit: p.lit,
-      live: !!(state.live && p.live),
+      live,
       selected: state.selected,
       name: state.name,
       pending: state.pending,

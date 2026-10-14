@@ -235,6 +235,14 @@ class __tutorial_workspace extends LetcBox {
     if (this.isDestroyed && this.isDestroyed()) return null;
     if (live && phone.lit === 'name') this._bindPhoneName();
 
+    // The REAL create step (385:1226 on the post-signup run): the user is
+    // filling in the form, so no callout, no highlight, no backdrop — Create
+    // is the way forward. The skeleton draws it plain; the spotlight stands
+    // down entirely.
+    if (live && phone.lit === 'create') {
+      this.triggerHandlers({ service: 'spotlight:clear' });
+      return null;
+    }
     const last = isLastScreen(this, this._screenIndex, this._screens.length);
     // Back on every callout but the tour's very first screen — the desk rule.
     const firstScreen = !!this.mget('is_first') && this._screenIndex === 0;
