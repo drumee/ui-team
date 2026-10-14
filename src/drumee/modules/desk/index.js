@@ -2795,11 +2795,11 @@ class desk_module extends LetcBox {
       this.warn && this.warn("[landing] organisation screen not opened", e);
       return false;
     } finally {
-      // The first-open hold comes down once the screen is DRAWN — `done`
+      // The landing hold comes down once the screen is DRAWN — `done`
       // settles after its real widget mounted, on every outcome, and two
       // frames let it paint (as _releaseBootTourHold waits for the tour) — or
       // at once when the landing was never asked for. See _holdLandingPane.
-      if (opt.firstOpen) {
+      if (this.el && this.el.dataset && this.el.dataset.landingHold) {
         const release = () => this._releaseLandingHold();
         if (!done) release();
         else {
@@ -2823,8 +2823,9 @@ class desk_module extends LetcBox {
    * hidden — VISIBILITY, so it still lays out and still announces its split
    * body, which is what the landing waits for.
    *
-   * Asked with what is known before the feed: nothing to restore, no deep
-   * link, desktop, an organisation, no boot tour. Whether this account may
+   * Asked with what is known before the feed: nothing to restore (or a
+   * reload that will put the org screen back), no deep link, desktop, an
+   * organisation, no boot tour. Whether this account may
    * BROWSE it needs the overview, so a plain member is held only until that
    * answer comes (bounded by ORG_LANDING_WAIT). Every way out releases it:
    * the screen drawn, a landing declined, a user navigation (_navigated), and
@@ -2834,7 +2835,10 @@ class desk_module extends LetcBox {
     if (!this.el || !this.el.dataset) return;
     try {
       if (this._bootDeepLink) return;
-      if (this._savedStateIsRestorable(this._bootSavedState)) return;
+      // A reload that will put the org screen back (saved `orgView`) is held
+      // the same way; any other remembered state is not this landing.
+      const saved = this._bootSavedState;
+      if (this._savedStateIsRestorable(saved) && !(saved && saved.orgView)) return;
       if (Visitor.isMobile()) return;
       if (!require("libs/org-overview").orgFeature()) return;
       if (this._bootTourComing()) return;
