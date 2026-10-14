@@ -241,11 +241,10 @@ class __tutorial_workspace extends LetcBox {
       // 385:938 / 385:1090 — title, line, one full-width Next.
       tooltip = { title: s.title(), desc: s.desc(), hide_back: true, done: last, align: 'center' };
     } else if (phone.lit === 'name' || phone.lit === 'create') {
-      // 380:54800 / 385:1226 — one line, no controls when the field or
-      // Create is the way forward; a Next when nothing here is live.
-      tooltip = live
-        ? { text: s.text(), hide_back: true, hide_next: true, align: 'center' }
-        : { text: s.text(), hide_back: true, done: last, align: 'center' };
+      // 380:54800 / 385:1226 — one line and a full-width Next. On the live
+      // create screen that Next creates (see onUiEvent): nothing follows this
+      // screen without a workspace, so it never reads Done there.
+      tooltip = { text: s.text(), hide_back: true, done: last && !live, align: 'center' };
     }
     this.triggerHandlers({
       service: 'spotlight:focus',
@@ -263,8 +262,15 @@ class __tutorial_workspace extends LetcBox {
     return null;
   }
 
+  /** Is the phone's live create screen (385:1226) up? */
+  _phoneLiveCreate() {
+    const s = this._screens[this._screenIndex];
+    const p = s && this.mget('layout') === 'phone' ? s.phone : null;
+    return !!(p && p.live && p.lit === 'create' && this._canCreateHere());
+  }
+
   /**
-   * 380:54800 has no button: typing the name IS the step. Move on once the
+   * 380:54800: typing the name is the step, and its Next moves on too. Move on once the
    * field is committed with something in it (Enter, Go, or leaving it).
    */
   async _bindPhoneName() {
@@ -466,6 +472,8 @@ class __tutorial_workspace extends LetcBox {
         return this._advance();
 
       case 'next-step':
+        // Phone, live create screen: the callout's Next is Create.
+        if (this._phoneLiveCreate()) return this._create();
         // Through _advance, like every other way forward. Only the last screen
         // hands the tour back to tutorial_main, and it NAMES the service — the
         // step widget carries no `service` of its own (see _buildWidgets in
