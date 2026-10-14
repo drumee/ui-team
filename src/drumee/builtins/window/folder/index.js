@@ -5998,6 +5998,7 @@ class __window_folder extends mfsInteract {
       // Who has access switch animation (skin/index.scss). Empty on first show.
       view.el.dataset.fromView = prevTab || "";
       view.el.dataset.view = tab;
+      this._firstSplitPage(view);
       this._playViewEntrance(view);
       this._restorePanelScroll();
       switch (tab) {
@@ -6143,6 +6144,18 @@ class __window_folder extends mfsInteract {
       this.__folderView = v;
       return showAccessOverlay(this, v, overlayOpt);
     });
+  }
+
+  /**
+   * Files always opens on its first page. On a narrow window the Files view is
+   * a two-page carousel (files, then Team Chat — skin/index.scss, the compact
+   * `[data-view="files"]` rule); pressing Files must show the files, not
+   * whichever page the user last swiped to. A no-op on a wide window, where
+   * the split body does not scroll sideways.
+   */
+  _firstSplitPage(view) {
+    const el = view && view.el;
+    if (el && el.dataset && el.dataset.view === "files") el.scrollLeft = 0;
   }
 
   /**

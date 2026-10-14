@@ -4121,16 +4121,32 @@
       // be settled by bundle order. Chat details still takes the chat's
       // cell: chat-details.scss hides the chat panel with !important while
       // [data-details="open"].
+      //
+      // A CAROUSEL of two full-width pages: page 1 the file grid, page 2 Team
+      // Chat (or Chat details while it is open — it takes the chat's cell).
+      // It used to be the two columns at their floors (360 + 12 + 300) in a
+      // free sideways scroll: on a phone the user stopped anywhere between
+      // them, never on either. Each page now fills the window and the scroll
+      // snaps a page at a time.
       &.window__split-body[data-view="files"] {
-        grid-template-columns: minmax(360px, 2fr) minmax(300px, 1fr) !important;
-        column-gap: 12px;
+        grid-template-columns: 100% 100% !important;
+        column-gap: 0;
         overflow-x: auto;
         overflow-y: hidden;
         overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
         scrollbar-width: none;
 
         &::-webkit-scrollbar {
           display: none;
+        }
+
+        > .window__files-panel,
+        > .window__chat-panel,
+        > .window__chat-details {
+          min-width: 0;
+          scroll-snap-align: start;
+          scroll-snap-stop: always;
         }
 
         > .window__chat-panel {
