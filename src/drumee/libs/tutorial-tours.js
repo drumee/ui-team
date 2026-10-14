@@ -150,8 +150,20 @@ function isNewUser() {
   }
 }
 
+// Phones were blocked outright while the tours drew a shrunk desktop. The phone
+// layout (desk/tutorial host-kit `layoutFor`) makes them usable, and this flag
+// is the rollout switch for it: off, phones see nothing, exactly as before.
+function mobileToursOn() {
+  try {
+    return !!(typeof Platform !== "undefined" && Platform.get && ~~Platform.get("mobile_tours"));
+  } catch (e) {
+    return false;
+  }
+}
+
 function isMobile() {
   try {
+    if (mobileToursOn()) return false;
     return !!(typeof Visitor !== "undefined" && Visitor.isMobile && Visitor.isMobile());
   } catch (e) {
     return false;
