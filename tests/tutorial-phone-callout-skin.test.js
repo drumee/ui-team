@@ -27,3 +27,7 @@ test("phone beak follows --beak-px", () => {
 test("phone scrim is 20% black", () => {
   assert.match(spot, /\[data-layout=phone\][^{]*\[data-scrim="1"\][^{]*\{[^}]*rgba\(0, 0, 0, 0\.2\)/);
 });
+
+test("touch: callout buttons are 44px tall at desk layout (tablets)", () => {
+  assert.match(tip, /\[data-touch="1"\]:not\(\[data-layout=phone\]\) \.tutorial__bubble-(back|next)[^{]*\{[^}]*min-height: 44px/);
+});

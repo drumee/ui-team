@@ -484,6 +484,19 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
   }
 }
 
+// TABLET = narrow/compact width + a coarse pointer. Same anchored card as the
+// desktop; the controls grow to a finger-sized target (44px, Apple HIG), and
+// the card widens just enough to hold the taller buttons' padding.
+.tutorial-main[data-touch="1"]:not([data-layout="phone"]) {
+  .tutorial__bubble-back,
+  .tutorial__bubble-next {
+    min-height: 44px;
+    padding: 0 20px;
+  }
+
+  .tutorial__bubble-card { width: 320px; }
+}
+
 // SHORT: the card is competing with the pane for height, so it gives up padding
 // before it gives up its buttons.
 .tutorial-main[data-short="1"] .tutorial__bubble-card {
