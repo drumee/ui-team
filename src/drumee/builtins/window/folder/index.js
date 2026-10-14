@@ -1743,7 +1743,7 @@ class __window_folder extends mfsInteract {
   }
 
   _captureNavState() {
-    return {
+    const state = {
       area: this.mget(_a.area),
       ext: this.mget(_a.ext),
       filename: this.mget(_a.filename),
@@ -1766,6 +1766,13 @@ class __window_folder extends mfsInteract {
       // Workspace name, so an empty-filename root can label its title/crumb.
       hub_name: this.model.get("hub_name"),
     };
+    // Marks a state taken from this pane's own live model, as opposed to a
+    // get_path row refreshBreadcrumbsUI rebuilds the stack from. Only these
+    // have exactly the shape the pane had when it showed that folder, which is
+    // what lets Wm.openWorkspaceFolder walk back to one without waiting for
+    // media.attributes. Non-enumerable: mset(state) and spreads never see it.
+    Object.defineProperty(state, "_live", { value: 1 });
+    return state;
   }
 
   // The file-type filter is scoped to a single folder view. When moving to
@@ -1888,26 +1895,44 @@ class __window_folder extends mfsInteract {
     //
     // Still gated on focused (`state == 1`): headlessLayer can hold more than
     // one workspace pane, and a background one must not retitle the bar.
-    if (
-      window.Wm &&
-      this.mget(_a.headless) &&
-      this.mget(_a.state) == 1 &&
-      _.isFunction(this.updateBreadcrumb)
-    ) {
-      let curNid = this.mget(_a.nid);
-      if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
-        curNid = this.mget(_a.actual_home_id);
-      }
-      this.updateBreadcrumb(
-        {
+    //
+    // DEFERRED ONE TASK, and coalesced. The mirror makes desk_breadcrumb ask
+    // media.get_path, and every navigation reaches here from updateTopbar —
+    // BEFORE the caller's loadContent() sends media.show_node_by. get_path
+    // builds a temporary table server-side, so issued first it held the
+    // folder's own listing behind it (libs/path-request). loadContent resolves
+    // its list part on a microtask, so one macrotask later the listing request
+    // is already out. The model is read when the timer fires, so a burst of
+    // navigations mirrors only where the pane ended up.
+    if (window.Wm && this.mget(_a.headless) && _.isFunction(this.updateBreadcrumb)) {
+      const tok = (this._crumbMirrorTok = (this._crumbMirrorTok || 0) + 1);
+      _.defer(() => {
+        if (tok !== this._crumbMirrorTok) return;
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (this.mget(_a.state) != 1 || !window.Wm) return;
+        const filetype = this.mget(_a.filetype);
+        let curNid = this.mget(_a.nid);
+        if (filetype === _a.hub && this.mget(_a.actual_home_id)) {
+          curNid = this.mget(_a.actual_home_id);
+        }
+        const crumb = {
           nid: curNid,
           hub_id: this.mget(_a.hub_id),
           actual_home_id: this.mget(_a.actual_home_id),
-          filetype: this.mget(_a.filetype),
+          filetype,
           service: "change-workspace",
-        },
-        window.Wm,
-      );
+        };
+        // Enough for desk_breadcrumb to draw a child folder's crumb before
+        // get_path answers (its _optimisticPath). Folders only: a workspace
+        // root is labelled by hub_name, which only get_path knows.
+        if (filetype === _a.folder) {
+          crumb.pid = this.mget(_a.pid);
+          crumb.filename = this.mget(_a.filename);
+          crumb.area = this.mget(_a.area);
+          crumb.privilege = this.mget(_a.privilege);
+        }
+        this.updateBreadcrumb(crumb, window.Wm);
+      });
     }
 
     // The in-window crumb strip lives in the window topbar, which a headless
@@ -5721,7 +5746,15 @@ class __window_folder extends mfsInteract {
     // Topics belong to a folder: another folder starts on # General; its topics
     // and file threads replace the strip's and the bar's.
     Topics.onFolderChange(this);
-    Topics.refreshStrip(this);
+    // One task later, for the same reason as the breadcrumb mirror in
+    // refreshBreadcrumbsUI: the caller sends this folder's show_node_by right
+    // after updateTopbar returns, and topic_list must not be queued ahead of
+    // it. onFolderChange above already cleared the strip; fetchTopics drops an
+    // answer for a folder we have since left.
+    _.defer(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      Topics.refreshStrip(this);
+    });
     FTBar.onFolderChange(this);
     this.scopeChatToFolder(this.mget(_a.nid));
     // The rail lists the *current* folder's threads — refetch on navigation,

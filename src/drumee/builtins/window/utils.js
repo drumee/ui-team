@@ -494,11 +494,20 @@ class __window_mfs extends DrumeeMFS {
     this._setupPartitionObserver(listPart);
     this._partitionFoldersAndFiles(listPart);
 
+    // Runs on EVERY in-place navigation (loadContent), and the handler only
+    // removes itself once a document shows up — so in folders without one a
+    // new copy piled onto the same collection per click. Keep exactly one.
+    const prev = this._prewarmListener;
+    if (prev && prev.collection && prev.handler) {
+      prev.collection.off(_e.add, prev.handler);
+    }
+    this._prewarmListener = null;
     const f = (e) => {
       preloadEditors(e, listPart.collection, f)
     }
     if (!editorPrewarmed) {
       listPart.collection.on(_e.add, f)
+      this._prewarmListener = { collection: listPart.collection, handler: f };
     }
 
     listPart.once(EOD, () => {
