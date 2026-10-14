@@ -3,11 +3,15 @@
 // areas come from env() rather than the iOS 48/32px drawn in the frames.
 @use "mixins/drumee";
 
-// `.box` too: the root is a Box, and skin/lib/container.scss's
-// `.box { position: relative }` ties a single class — whichever sheet is
-// injected last would win, and in flow the mock shrinks to its widest row.
-.tutorial-phone,
+// The root is a Box, and skin/lib/container.scss's `.box { position:
+// relative }` ties a single class — whichever sheet is injected last would
+// win. Its own rule, NOT in the list below: `&__x` would expand to
+// `.tutorial-phone.box__x` as well.
 .tutorial-phone.box {
+  position: absolute;
+}
+
+.tutorial-phone {
   position: absolute;
   inset: 0;
   display: flex;
