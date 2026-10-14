@@ -40,6 +40,11 @@ const restoreDeskState = method(DESK_SRC, "async _restoreDeskState()");
 const persistDeskState = method(DESK_SRC, "_persistDeskState()");
 const savedStateIsRestorable = method(DESK_SRC, "_savedStateIsRestorable(state)");
 const orgViewOnScreen = method(DESK_SRC, "_orgViewOnScreen()");
+const holdLandingPane = method(DESK_SRC, "_holdLandingPane()");
+const releaseLandingHold = method(DESK_SRC, "_releaseLandingHold()");
+const navigated = method(DESK_SRC, "_navigated()");
+global.LANDING_HOLD_MAX = 15000;
+global.requestAnimationFrame = (fn) => setImmediate(fn);
 
 // libs/org-overview, resolved by its webpack alias.
 let overview = { can_browse: 1 };
@@ -83,6 +88,7 @@ function desk(extra = {}) {
     warn() {},
     isDestroyed: () => false,
     _restoreInFlight: true,
+    _releaseLandingHold: () => calls.push(["release"]),
     ...extra,
   };
   d._landOnOrgView = landOnOrgView.bind(d);
@@ -121,7 +127,7 @@ for (const [label, env] of [
     resetEnv(env);
     const d = desk({ _bootDeepLink: false, _bootSavedState: null });
     await restoreDeskState.call(d);
-    assert.deepEqual(d.calls.map((c) => c[0]), ["openDefault", "clearFlag"]);
+    assert.deepEqual(d.calls.map((c) => c[0]).filter((n) => n !== "release"), ["openDefault", "clearFlag"]);
   });
 }
 
@@ -145,7 +151,7 @@ test("a hung org overview cannot hold the landing: the workspace stays", async (
   try {
     const d = desk({ _bootDeepLink: false, _bootSavedState: null });
     await restoreDeskState.call(d);
-    assert.deepEqual(d.calls.map((c) => c[0]), ["openDefault", "clearFlag"]);
+    assert.deepEqual(d.calls.map((c) => c[0]).filter((n) => n !== "release"), ["openDefault", "clearFlag"]);
   } finally {
     require.cache["org-overview-stub"].exports.orgOverview = () => Promise.resolve(overview);
   }
@@ -346,4 +352,95 @@ test("personal rows come from the desk list, folders only, and never reject", as
   assert.deepEqual(await personalWorkspaces.call({}), [PERSONAL[1]]);
   global.window = {};
   assert.deepEqual(await personalWorkspaces.call({}), []);
+});
+
+// ── the first-open hold: no flash of the workspace before the org screen ────
+
+const tick = () => new Promise((r) => setTimeout(r, 5));
+
+test("first open: the hold comes down only after the org screen is drawn", async () => {
+  resetEnv();
+  const d = desk({ _bootDeepLink: false, _bootSavedState: null });
+  await restoreDeskState.call(d);
+  for (let i = 0; i < 40 && !d.calls.some((c) => c[0] === "release"); i++) await tick();
+  const names = d.calls.map((c) => c[0]);
+  assert.ok(names.indexOf("release") > names.indexOf("restoreScreen"), JSON.stringify(names));
+});
+
+for (const [label, env, extra] of [
+  ["a member who may not browse", { can_browse: 0 }, {}],
+  ["no workspace at all", {}, { _openDefaultWorkspace: async () => false }],
+  ["a billing link that took the screen", {}, { _restoreInFlight: false }],
+]) {
+  test(`hold released when there is no landing: ${label}`, async () => {
+    resetEnv(env);
+    const d = desk({ _bootDeepLink: false, _bootSavedState: null, ...extra });
+    await restoreDeskState.call(d);
+    await tick();
+    assert.ok(d.calls.some((c) => c[0] === "release"));
+    assert.ok(!d.calls.some((c) => c[0] === "restoreScreen"));
+  });
+}
+
+test("reload replay of the org screen never touches the hold", async () => {
+  resetEnv();
+  const saved = { workspace: { hub_id: "h1", nid: "n1" }, orgView: 1 };
+  const d = desk({ _bootDeepLink: false, _bootSavedState: saved });
+  await restoreDeskState.call(d);
+  await tick();
+  assert.ok(!d.calls.some((c) => c[0] === "release"));
+});
+
+function holder(extra = {}) {
+  global.clearTimeout = global.clearTimeout || clearTimeout;
+  const h = {
+    el: { dataset: {} },
+    _bootDeepLink: false,
+    _bootSavedState: null,
+    _savedStateIsRestorable: savedStateIsRestorable,
+    _bootTourComing: () => false,
+    ...extra,
+  };
+  h._releaseLandingHold = releaseLandingHold.bind(h);
+  h._releaseBootTourHold = () => {};
+  return h;
+}
+
+test("hold is stamped only for a first open that may land on the org screen", () => {
+  resetEnv();
+  const yes = holder();
+  holdLandingPane.call(yes);
+  assert.equal(yes.el.dataset.landingHold, "1");
+  yes._releaseLandingHold();
+  assert.equal(yes.el.dataset.landingHold, undefined);
+  for (const [env, extra] of [
+    [{}, { _bootDeepLink: true }],
+    [{}, { _bootSavedState: { workspace: { hub_id: "h", nid: "n" } } }],
+    [{}, { _bootTourComing: () => true }],
+    [{ mobile: true }, {}],
+    [{ org: false }, {}],
+  ]) {
+    resetEnv(env);
+    const no = holder(extra);
+    holdLandingPane.call(no);
+    assert.equal(no.el.dataset.landingHold, undefined, JSON.stringify([env, Object.keys(extra)]));
+  }
+});
+
+test("a user navigation drops the hold, the landing's own open does not", () => {
+  resetEnv();
+  const h = holder();
+  holdLandingPane.call(h);
+  h._landingOpening = true;
+  navigated.call(h);
+  assert.equal(h.el.dataset.landingHold, "1");
+  h._landingOpening = false;
+  navigated.call(h);
+  assert.equal(h.el.dataset.landingHold, undefined);
+  h._releaseLandingHold();
+});
+
+test("the skin hides the headless layer under the hold", () => {
+  const scss = fs.readFileSync(path.join(ROOT, "src/drumee/modules/desk/skin/index.scss"), "utf8");
+  assert.match(scss, /\.desk-module\[data-landing-hold="1"\] \.window-manager__layer\.headless \{\s*visibility: hidden;/);
 });

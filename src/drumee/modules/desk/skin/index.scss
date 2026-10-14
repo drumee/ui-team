@@ -1372,7 +1372,12 @@ html {
 // `visibility`, since a descendant can set `visibility: visible` back and no
 // descendant can undo an ancestor's opacity. The headless layer is already a
 // stacking context (z-index), so opacity changes nothing about its stacking.
-.desk-module[data-boot-tour-hold="1"] .window-manager__layer.headless {
+//
+// `data-landing-hold` does the same for a FIRST OPEN that will land on the
+// organisation screen (desk _holdLandingPane): the default workspace still
+// opens underneath, but is not shown before the screen that covers it.
+.desk-module[data-boot-tour-hold="1"] .window-manager__layer.headless,
+.desk-module[data-landing-hold="1"] .window-manager__layer.headless {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;

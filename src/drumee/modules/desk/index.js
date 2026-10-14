@@ -89,6 +89,11 @@ const UTILITY_KINDS = {
 // the mount; past it the pane shows whether or not a tour came.
 const BOOT_TOUR_HOLD_MAX = 20000;
 
+// The same for a first open that will land on the organisation screen
+// (_holdLandingPane): the overview wait (ORG_LANDING_WAIT), the split-body
+// wait (8s) and the screen's mount, with room to spare.
+const LANDING_HOLD_MAX = 15000;
+
 // Topbar slide-out icons → the panel each one opens: the service it fires, the
 // button's part name, and how to read whether that panel is on screen.
 const UTILITY_PANELS = [
@@ -986,10 +991,13 @@ class desk_module extends LetcBox {
     // Before the feed, so the restored pane is hidden from its first frame
     // when this boot is going to raise the migrate tour over it.
     this._holdBootTourPane();
+    // Same reason, for a first open headed for the organisation screen.
+    this._holdLandingPane();
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
     this._restoreDeskState().catch((e) => {
       this._restoreInFlight = false;
+      this._releaseLandingHold();
       this.warn && this.warn("[Reload] restore failed", e);
     });
     // There used to be an `await this.ensurePart("wrapper-popup")` here, with
@@ -1953,7 +1961,16 @@ class desk_module extends LetcBox {
       // it, so every reader of those two stays exactly as it was. It is saved
       // as its own flag (_persistDeskState `orgView`) and replayed through
       // this same machinery by _landOnOrgView.
-      "open-org-view": { slot: main, kind: "desk_org_view", ready: null, refresh: null },
+      // isReal: the lazy-loader placeholder is not the screen — the first-open
+      // landing hold is released once THIS resolves, and it must not uncover
+      // the pane under a placeholder.
+      "open-org-view": {
+        slot: main,
+        kind: "desk_org_view",
+        isReal: (w) => !w.isLazyClass,
+        ready: null,
+        refresh: null,
+      },
     };
   }
 
@@ -2558,7 +2575,14 @@ class desk_module extends LetcBox {
       // pointerup/keyup (letc/addons/dom/events-handler.js). At boot nobody
       // has clicked yet, so one resize was enough to make the landing a
       // silent no-op (seen on drumee.in).
-      return this._openOrgView();
+      // Flagged so _navigated keeps the landing hold up across it (togglePanel
+      // calls _navigated synchronously, before the screen has painted).
+      this._landingOpening = true;
+      try {
+        return this._openOrgView();
+      } finally {
+        this._landingOpening = false;
+      }
     }
     // `intent` matters for ONE of these services: "upgrade-plan" opens the
     // billing page on checkout when it can tell which plan is meant, and a
@@ -2623,6 +2647,8 @@ class desk_module extends LetcBox {
       // A second loadDefault in the same page must not leave the suppress
       // flag stuck true (which would permanently no-op loadHome).
       this._clearRestoreInFlight(0);
+      // Nor the landing hold: no landing runs on this path.
+      this._releaseLandingHold();
       this._settleHomeGrid();
       return;
     }
@@ -2646,6 +2672,7 @@ class desk_module extends LetcBox {
       // workspace to act on. Only when a workspace opened: with none, the
       // no-workspace screen and its create button stay the landing.
       if (opened) await this._landOnOrgView(true, { firstOpen: true });
+      else this._releaseLandingHold();
       this._clearRestoreInFlight(opened ? 2500 : 0);
       // Nothing opened — either the account has none (home-empty is up, and
       // settleHomeGrid sees it) or the list could not be read, which is the
@@ -2742,6 +2769,7 @@ class desk_module extends LetcBox {
    * @returns {Promise<Boolean>} whether the screen was asked for
    */
   async _landOnOrgView(paneComing, opt = {}) {
+    let done = null;
     try {
       if (Visitor.isMobile()) return false;
       if (opt.firstOpen && this._bootTourComing()) return false;
@@ -2759,13 +2787,73 @@ class desk_module extends LetcBox {
       // The page the link asked for wins over a default landing.
       if (opt.firstOpen && !this._restoreInFlight) return false;
       await new Promise((resolve) => {
-        this._restoreScreen("open-org-view", resolve, { paneComing }).then(resolve);
+        done = this._restoreScreen("open-org-view", resolve, { paneComing });
+        done.then(resolve);
       });
       return true;
     } catch (e) {
       this.warn && this.warn("[landing] organisation screen not opened", e);
       return false;
+    } finally {
+      // The first-open hold comes down once the screen is DRAWN — `done`
+      // settles after its real widget mounted, on every outcome, and two
+      // frames let it paint (as _releaseBootTourHold waits for the tour) — or
+      // at once when the landing was never asked for. See _holdLandingPane.
+      if (opt.firstOpen) {
+        const release = () => this._releaseLandingHold();
+        if (!done) release();
+        else {
+          done.then(
+            () => requestAnimationFrame(() => requestAnimationFrame(release)),
+            release,
+          );
+        }
+      }
     }
+  }
+
+  /**
+   * HIDE THE DEFAULT WORKSPACE ON A FIRST OPEN HEADED FOR THE ORG SCREEN.
+   *
+   * The landing opens the default workspace underneath and waits for its
+   * pane to paint before raising the organisation screen (_landOnOrgView), so
+   * the workspace showed for a second or two first, then vanished. The same
+   * fault, and the same answer, as _holdBootTourPane: stamp
+   * `data-landing-hold` before the feed and the skin keeps the headless layer
+   * hidden — VISIBILITY, so it still lays out and still announces its split
+   * body, which is what the landing waits for.
+   *
+   * Asked with what is known before the feed: nothing to restore, no deep
+   * link, desktop, an organisation, no boot tour. Whether this account may
+   * BROWSE it needs the overview, so a plain member is held only until that
+   * answer comes (bounded by ORG_LANDING_WAIT). Every way out releases it:
+   * the screen drawn, a landing declined, a user navigation (_navigated), and
+   * LANDING_HOLD_MAX as the last resort.
+   */
+  _holdLandingPane() {
+    if (!this.el || !this.el.dataset) return;
+    try {
+      if (this._bootDeepLink) return;
+      if (this._savedStateIsRestorable(this._bootSavedState)) return;
+      if (Visitor.isMobile()) return;
+      if (!require("libs/org-overview").orgFeature()) return;
+      if (this._bootTourComing()) return;
+    } catch (e) {
+      return;
+    }
+    this.el.dataset.landingHold = "1";
+    clearTimeout(this._landingHoldTimer);
+    this._landingHoldTimer = setTimeout(
+      () => this._releaseLandingHold(),
+      LANDING_HOLD_MAX,
+    );
+  }
+
+  /** Show the pane _holdLandingPane hid. Idempotent. */
+  _releaseLandingHold() {
+    clearTimeout(this._landingHoldTimer);
+    this._landingHoldTimer = null;
+    if (this.el && this.el.dataset) delete this.el.dataset.landingHold;
   }
 
   /**
@@ -6994,6 +7082,9 @@ class desk_module extends LetcBox {
     // The user went somewhere: a pane hidden for the boot tour must not stay
     // hidden under wherever that is. See _holdBootTourPane.
     this._releaseBootTourHold();
+    // Same for the first-open landing hold — except for the landing's own
+    // open of the organisation screen, which is the screen the hold is for.
+    if (!this._landingOpening) this._releaseLandingHold();
     this._navSeq = (this._navSeq || 0) + 1;
     return this._navSeq;
   }
