@@ -142,6 +142,16 @@ class __widget_chat_details extends LetcBox {
             filename: get("filename") || "",
           }),
         );
+      case "chat-details-member": {
+        // The same Contacts panel wherever this panel lives, so the Desk,
+        // not the host.
+        const uid = get("uid");
+        const desk = typeof Desk !== "undefined" ? Desk : null;
+        if (!uid || !desk || typeof desk.openContact !== "function") return;
+        return Engine.openItem(this, cmd, () =>
+          desk.openContact(uid, { name: get("fullname") || "", email: get("email") || "" }),
+        );
+      }
       case "chat-details-open-link": {
         // Re-extracted, never trusted as given: only an http(s) URL opens.
         const url = extractUrl(get("url"));

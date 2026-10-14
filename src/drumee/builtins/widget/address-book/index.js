@@ -57,6 +57,10 @@ class __address_book extends LetcBox {
     this._tags = [];
     this._selectedTagId = null;
     this._selectedKey = null;
+    // Someone showContact() was asked for who is not in the book:
+    // { uid, name, email }. Shown in the detail area while nothing is
+    // selected (skeleton/not-found-detail).
+    this._notFound = null;
     this._inviteDraft = { email: "", message: "" };
     this._inviteError = null;
     this._inviteSubmitting = false;
@@ -127,6 +131,9 @@ class __address_book extends LetcBox {
     // here and have togglePanel read it as closed and reopen).
     const svc = source && source.mget && source.mget(_a.service);
     if (typeof svc === "string" && svc.startsWith("toggle-")) return;
+    // A Chat details member row opens a contact HERE (showContact): closing
+    // first would only make the panel flicker out and back in.
+    if (svc === "chat-details-member") return;
     // Opening the desk's mobile sidebar/drawer via a topbar button must not
     // dismiss the contact panel — the drawer overlays on top and the panel
     // stays open behind it. Bail on those clicks (they read as "outside").
@@ -173,6 +180,7 @@ class __address_book extends LetcBox {
 
       case "select-contact":
         this._selectedKey = trigger.mget("contactKey");
+        this._notFound = null;
         this._editing = false;
         this._updateSelectionDom();
         // Single-pane mobile/tablet: reveal the detail pane (inert ≥ 1024px).
@@ -186,6 +194,16 @@ class __address_book extends LetcBox {
 
       case "open-invite":
         this._inviteDraft = { email: "", message: "" };
+        this._inviteError = null;
+        return this._renderInviteModal();
+
+      // The not-found screen's Add contact: the invite dialog, with the
+      // person's email when the caller knew it.
+      case "add-not-found-contact":
+        this._inviteDraft = {
+          email: (this._notFound && this._notFound.email) || "",
+          message: "",
+        };
         this._inviteError = null;
         return this._renderInviteModal();
 
@@ -426,6 +444,7 @@ class __address_book extends LetcBox {
   async switchTab(tab) {
     this._tab = tab;
     this._selectedKey = null;
+    this._notFound = null;
     this._editing = false;
     // Back to the first window. Without this a deep scroll in one tab would
     // carry its grown window into the next, mounting hundreds of rows in one
@@ -445,6 +464,66 @@ class __address_book extends LetcBox {
     if (tasks.length) await Promise.all(tasks);
     this._refreshList();
     this._refreshDetail();
+  }
+
+  /**
+   * Select the contact behind a drumate id and show its detail — what a
+   * Chat details member row opens (Desk.openContact). Waits for the first
+   * load. The All tab is the one that holds active contacts and colleagues,
+   * so a contact the current tab, search or tag filter hides brings the view
+   * back to All, unfiltered, with its row built and scrolled into view.
+   * Someone who is not in the book gets the not-found screen in the detail
+   * area (named, and with Add contact pre-filled, from `who` when given).
+   *
+   * @param {String} uid drumate id
+   * @param {Object} [who] { name, email } as the caller knows the person
+   */
+  async showContact(uid, who = {}) {
+    if (!uid) return;
+    if (this.whenItemsReady) await this.whenItemsReady();
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const match = (c) =>
+      c &&
+      (c.drumate_id === uid || c.entity === uid || linkedDrumateId(c) === uid);
+    if (!this._listForView().some(match)) {
+      if (this._tab !== "all" || this._contactsOption !== "active") {
+        await this.switchTab("all");
+      }
+      this._selectedTagId = null;
+      this._search = "";
+      const input = this.el && this.el.querySelector(`.${this.fig.family}__search-input input`);
+      if (input) input.value = "";
+    }
+    const list = this._listForView();
+    const idx = list.findIndex(match);
+    if (idx < 0) {
+      this._selectedKey = null;
+      this._editing = false;
+      this._notFound = { uid, name: who.name || "", email: who.email || "" };
+      // Single-pane mobile/tablet: the screen is in the detail pane.
+      this.el.dataset.mview = "detail";
+      this._updateSelectionDom();
+      return this._refreshDetail();
+    }
+    this._notFound = null;
+    // Build enough rows to include it (the list mounts a window of them).
+    if (idx >= this.contactWindow()) {
+      this._contactWin =
+        Math.ceil((idx + 1) / CONTACT_WINDOW_STEP) * CONTACT_WINDOW_STEP;
+    }
+    this._selectedKey = idOf(list[idx]);
+    this._editing = false;
+    // Single-pane mobile/tablet: reveal the detail pane (inert ≥ 1024px).
+    this.el.dataset.mview = "detail";
+    await this._refreshList();
+    this._updateSelectionDom();
+    const row =
+      this.el &&
+      this.el.querySelector(
+        `.${this.fig.family}__contact-item[data-contact-key="${this._selectedKey}"]`,
+      );
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+    return this._selectContact();
   }
 
   // ─── Mutations ──────────────────────────────────────────────────
@@ -1337,11 +1416,15 @@ class __address_book extends LetcBox {
       // it): on mobile/tablet the detail pane would be left showing the empty
       // placeholder, so fall back to the list — same as chat-p2p's
       // _clearConversation. Inert ≥ 1024px.
-      if (!sel && this.el) this.el.dataset.mview = "sidebar";
+      // The not-found screen is a detail of its own and keeps the pane.
+      const notFound = !sel && this._notFound;
+      if (!sel && !notFound && this.el) this.el.dataset.mview = "sidebar";
       part.feed(
         sel
           ? require("./skeleton/contact-detail")(this, sel)
-          : require("./skeleton/empty-detail")(this),
+          : notFound
+            ? require("./skeleton/not-found-detail")(this, notFound)
+            : require("./skeleton/empty-detail")(this),
       );
     });
   }

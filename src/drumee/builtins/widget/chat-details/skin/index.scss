@@ -297,6 +297,31 @@
       align-items: center;
       gap: 12px;
     }
+    // Opens the person in Contacts. No negative margin: the list is its own
+    // scroll box and would clip it.
+    &-member--link {
+      position: relative;
+      padding: 4px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+      &[data-loading="1"] {
+        pointer-events: none;
+        padding-right: 32px;
+
+        &::before {
+          @include cd-spinner(14px);
+          right: 12px;
+          top: calc(50% - 9px);
+          border: 2px solid rgba(89, 80, 255, 0.25);
+          border-top-color: var(--primary-40, #5950ff);
+        }
+      }
+    }
     &-avatar {
       width: 32px;
       height: 32px;

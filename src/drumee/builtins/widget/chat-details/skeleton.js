@@ -177,16 +177,34 @@ function memberRows(ui, members, participants = false) {
         className: `${pfx}-members-list`,
         kids: list.map((m) => {
           const seen = M.lastSeenLabel(m);
+          // A click opens that person in the Contacts panel; the viewer's own
+          // row has no contact to open, so it stays inert.
+          const self = typeof Visitor !== "undefined" && `${m.id}` === `${Visitor.id}`;
           return Skeletons.Box.X({
-            className: `${pfx}-member`,
+            className: self ? `${pfx}-member` : `${pfx}-member ${pfx}-member--link`,
+            ...(self
+              ? {}
+              : {
+                  service: "chat-details-member",
+                  uid: `${m.id}`,
+                  // Names the not-found screen when they are no contact.
+                  fullname: m.fullname || "",
+                  email: m.email || "",
+                  uiHandler: [ui],
+                  kidsOpt: { active: 0 },
+                }),
             kids: [
               { kind: KIND.profile, className: `${pfx}-avatar`, id: m.id, firstname: m.firstname, lastname: m.lastname, active: 0 },
               Skeletons.Box.Y({
                 className: `${pfx}-member-text`,
+                // The row's kidsOpt reaches only its direct kids; an active
+                // Note down here would bind its own click, stop propagation
+                // and swallow the row's — only the avatar used to open.
                 kids: [
-                  Skeletons.Note({ className: `${pfx}-member-name`, content: m.fullname || m.email || "" }),
+                  Skeletons.Note({ className: `${pfx}-member-name`, content: m.fullname || m.email || "", active: 0 }),
                   Skeletons.Note({
                     className: `${pfx}-member-status`,
+                    active: 0,
                     dataset: { online: seen.online ? 1 : 0 },
                     content: seen.text,
                   }),

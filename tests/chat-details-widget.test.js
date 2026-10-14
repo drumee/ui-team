@@ -150,6 +150,24 @@ test("every host-bound click reaches host.chatDetailsAction with its payload", a
   ]);
 });
 
+test("a member click opens that person in Contacts (Desk.openContact), not via the host", async () => {
+  const host = fakeHost();
+  const w = widget({ mode: "workspace", hub_id: "h1", privilege: 7 }, host);
+  const opened = [];
+  global.Desk = { openContact: (uid, who) => opened.push([uid, who]) };
+  try {
+    const c = cmd({ uid: "u1", fullname: "Zoe Lin", email: "zoe@x.io" });
+    const done = w.onUiEvent(c, { service: "chat-details-member" });
+    assert.equal(c.el.dataset.loading, "1");
+    await done;
+    assert.deepEqual(opened, [["u1", { name: "Zoe Lin", email: "zoe@x.io" }]]);
+    assert.equal(c.el.dataset.loading, "0");
+    assert.deepEqual(host.actions, []);
+  } finally {
+    delete global.Desk;
+  }
+});
+
 test("open-media without a row hub falls back to the widget's hub", async () => {
   const host = fakeHost();
   const w = widget({ mode: "workspace", hub_id: "h1", privilege: 7 }, host);
