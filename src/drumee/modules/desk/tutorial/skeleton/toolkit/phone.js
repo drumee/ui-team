@@ -17,6 +17,12 @@ const P = 'tutorial-phone';
 // Figma's SquaresFour (the apps button) — no glyph of that shape in the sprite.
 const SQUARES_FOUR = require('assets/tutorial/ws-phone/squares-four.svg');
 const url = (m) => (m && m.default ? m.default : m);
+// The composer's glyphs (212:31308) — Phosphor shapes the sprite lacks.
+const COMPOSER = {
+  plus: require('assets/tutorial/chat-phone/plus.svg'),
+  smiley: require('assets/tutorial/chat-phone/smiley.svg'),
+  send: require('assets/tutorial/chat-phone/send.svg'),
+};
 
 // The workspace tab pill of the Figma nav (206:5444): Phosphor Files,
 // ChatCircleDots, ListChecks, VideoCamera — none of them in the sprite, so the
@@ -154,18 +160,35 @@ function fab(ui, { service = null, menu = null } = {}) {
   });
 }
 
-/** The chat composer row: the + and the message field. */
+/**
+ * The chat composer row (Figma component 212:31308): the + and the message
+ * field with its emoji and send glyphs. `ph-composer-row` is the whole row,
+ * which is what the chat flow's last frame lights (386:57195).
+ */
 function composer() {
+  const icon = (cls, src) => Skeletons.Element({
+    active: 0, tagName: 'img', className: `${P}__${cls}`, attribute: { src: url(src), alt: '' },
+  });
   return Skeletons.Box.X({
     active: 0,
     className: `${P}__composer-row`,
+    sys_pn: 'ph-composer-row',
     kids: [
-      circle('plus', 'ph-composer-plus'),
+      Skeletons.Box.X({
+        active: 0,
+        className: `${P}__circle ${P}__composer-plus`,
+        sys_pn: 'ph-composer-plus',
+        kids: [icon('composer-plus-ico', COMPOSER.plus)],
+      }),
       Skeletons.Box.X({
         active: 0,
         className: `${P}__composer`,
         sys_pn: 'ph-composer',
-        kids: [Skeletons.Note({ active: 0, className: `${P}__composer-ph`, content: LOCALE.MESSAGE_TO })],
+        kids: [
+          Skeletons.Note({ active: 0, className: `${P}__composer-ph`, content: LOCALE.MESSAGE_TO }),
+          icon('composer-smiley', COMPOSER.smiley),
+          icon('composer-send', COMPOSER.send),
+        ],
       }),
     ],
   });

@@ -32,6 +32,7 @@ const SCREENS = [
       view: 'stream',
       target: 'ph-composer-plus',
       halo: true,
+      // Beside the +, bottoms level (386:56395): host-kit's corner placement.
       // A phone attaches with the +, it does not drag (386:56395).
       title: () => LOCALE.TUTORIAL_CHAT_PHONE_ATTACH_TITLE,
       desc: () => LOCALE.TUTORIAL_CHAT_PHONE_ATTACH_DESC,
@@ -62,6 +63,10 @@ const SCREENS = [
     phone: {
       view: 'actions',
       target: 'ph-act-thread',
+      // Over the tile, beak down, 16 in and 23 clear (386:56600).
+      prefer: 'above',
+      margin: 16,
+      gap: 23,
       // A phone has no hover toolbar: a long press raises the action sheet
       // (386:56600). The desk description still says what a thread is for.
       title: () => LOCALE.TUTORIAL_CHAT_PHONE_HOLD_TITLE,
@@ -83,7 +88,8 @@ const SCREENS = [
     desc: () => LOCALE.TUTORIAL_CHAT_HASH_DESC,
   },
   {
-    phone: { view: 'thread', target: 'ph-thread-head' },
+    // Under the header card, 17 in, beak up (386:56858).
+    phone: { view: 'thread', target: 'ph-thread-head', margin: 17, gap: 28 },
     // Thread panel open, callout below its file card.
     pane: { thread: true },
     target: 'thread',
@@ -93,7 +99,8 @@ const SCREENS = [
     desc: () => LOCALE.TUTORIAL_CHAT_OPEN_DESC,
   },
   {
-    phone: { view: 'thread', target: 'ph-composer', replies: true },
+    // The whole composer row lit, the card over it (386:57195).
+    phone: { view: 'thread', target: 'ph-composer-row', replies: true, prefer: 'above', margin: 17, gap: 22 },
     // The thread, answered.
     pane: { thread: true, replies: true },
     target: 'thread',

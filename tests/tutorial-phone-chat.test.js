@@ -8,6 +8,7 @@ const Module = require("node:module");
 const baseLoad = Module._load;
 Module._load = function (r, p, m) {
   if (/^assets\//.test(r)) return `asset:${r}`; // webpack asset modules
+  if (r === "media/grid/template/folder") return () => "<svg/>";
   return baseLoad.call(this, r, p, m);
 };
 const mk = (type) => new Proxy(function (o = {}) { return { type, ...o }; }, {
@@ -16,9 +17,10 @@ const mk = (type) => new Proxy(function (o = {}) { return { type, ...o }; }, {
 global.Skeletons = mk("S");
 global.LOCALE = new Proxy({}, { get: (_, k) => String(k) });
 global._a = new Proxy({}, { get: (_, k) => String(k) });
+global._ = { uniqueId: (p) => `${p}1` };
 const SCREENS = require(path.join(SRC, "modules/desk/tutorial/chat/screens.js"));
 const view = require(path.join(SRC, "modules/desk/tutorial/chat/skeleton/phone.js"));
-test.after(() => { Module._load = baseLoad; for (const k of ["Skeletons", "LOCALE", "_a"]) delete global[k]; });
+test.after(() => { Module._load = baseLoad; for (const k of ["Skeletons", "LOCALE", "_a", "_"]) delete global[k]; });
 
 const ui = { fig: { family: "tutorial-chat", group: "tutorial" }, mget: () => null };
 const find = (t, pn) => {
@@ -76,5 +78,26 @@ test("phone chat skin: own bubbles pink, sheet tiles", () => {
   const sass = require("sass");
   const css = sass.compile(path.join(SRC, "modules/desk/tutorial/chat/skin/index.scss"),
     { loadPaths: [SRC, path.join(SRC, "skin")] }).css.replace(/\s+/g, " ");
-  assert.match(css, /\.tutorial-chat__ph-msg\[data-own="1"\] \.tutorial-chat__ph-bubble \{[^}]*background: #ffa8dc/);
+  assert.match(css, /\.tutorial-chat__ph-msg--own \.tutorial-chat__ph-bubble \{[^}]*background: #ffa8dc/);
+  assert.match(css, /\.tutorial-chat__ph-tile\[data-lit="1"\] \{[^}]*background: #fff/);
+  assert.match(css, /\.tutorial-phone\.tutorial-chat__phone \{[^}]*background: #f2f2f7/);
+});
+
+test("the last screen lights the whole composer row, the card above it", () => {
+  const p = SCREENS[4].phone;
+  assert.equal(p.target, "ph-composer-row");
+  assert.equal(p.prefer, "above");
+});
+
+test("stream follows 386:56395: day pills, own reply first, no file message", () => {
+  const tree = view(ui, SCREENS[1].phone);
+  const body = JSON.stringify(tree);
+  assert.match(body, /August 13/);
+  assert.match(body, /August 14/);
+  assert.doesNotMatch(body, /file chat thread start here/);
+});
+
+test("the screen stamps its view for the skin's fades", () => {
+  assert.equal(view(ui, SCREENS[3].phone).dataset.view, "thread-open");
+  assert.equal(view(ui, SCREENS[4].phone).dataset.view, "thread-reply");
 });

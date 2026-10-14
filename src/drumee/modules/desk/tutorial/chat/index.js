@@ -104,6 +104,8 @@ class __tutorial_chat extends LetcBox {
       // that screen, so the two cannot drift apart.
       dim: !s.bare,
       halo: !!(phone && phone.halo),
+      // The frames' own inset, gap and side for the phone card (screens.js).
+      ...(phone ? { phone_margin: phone.margin, phone_gap: phone.gap, phone_prefer: phone.prefer } : {}),
       owner: this,
     });
   }
