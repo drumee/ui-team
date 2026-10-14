@@ -699,15 +699,8 @@
       // i.e. 53px off, hugging the left edge with dead space to its right.
       //
       // `center` is applied per LINE, which is all this needs: the two groups
-      // stack across effectively the whole compact range, and a lone group on
-      // its own line is exactly what `center` centres.
-      //
-      // Nothing here forces `flex: 1 1 100%`, because nothing has to — the
-      // groups already wrap on their own. Measured: they need 693px of inner
-      // width to share a line (nav 261 + gap 8 + controls 424), so they only
-      // ever would between 693 and 700px, a 7px slice of the range. Adding the
-      // basis would buy nothing and would stack them by decree instead of by
-      // fit, which is worse the day one of the groups gets shorter.
+      // stack (see -toolbar-right below), and a lone group on its own line is
+      // exactly what `center` centres.
       justify-content: center;
     }
 
@@ -726,8 +719,24 @@
       justify-content: center;
     }
 
-    // Give the view picker its own line so the two CTAs pair up on the next
-    // one.
+    // The controls always take a line of their own, under the date pill.
+    //
+    // They used to be left to wrap by fit, on a measurement that said the two
+    // groups needed 693px to share a line. The labels have since got shorter
+    // (nav 202 + controls ~373), so from ~600 to 700px — a half-split screen
+    // (Lexis, 2026-10-13) — the controls fitted BESIDE the pill only by
+    // wrapping inside themselves: view picker on top, CTAs below, pill
+    // centred between them, a three-step staircase. Stacking by decree keeps
+    // the rows aligned whatever the labels measure.
+    //
+    // Only the right group gets the basis: the left one stays content-sized,
+    // so the mini-calendar (`left: 0` against it) still opens under the pill.
+    &__meeting-sched-toolbar-right {
+      flex: 1 1 100%;
+    }
+
+    // Below 580px, give the view picker its own line so the two CTAs pair up
+    // on the next one.
     //
     // Without this the right group wrapped wherever it happened to run out of
     // room, which split the pair at exactly the widths that matter most —
@@ -738,22 +747,28 @@
     // narrowest phone and wrong on the common one.)
     //
     // The pair costs 235px together (Start 137 + gap 12 + Schedule 86), so it
-    // clears even the 296px of inner width a 320px window leaves. Nothing
-    // needs a media query below this one.
-    &__meeting-sched-view-picker {
-      flex: 1 1 100%;
-      // Centre the trigger INSIDE the box rather than stretching it: a
-      // full-width button would read as a third CTA.
-      align-items: center;
-    }
+    // clears even the 296px of inner width a 320px window leaves.
+    //
+    // Above 580px the picker and both CTAs fit on ONE line, so they stay
+    // together there. Measured: 373px in English, 464px in French/Russian,
+    // 543px for the longest trio (Russian "Join meeting") — 567px of window
+    // with the 24px padding.
+    @container window-folder-w (max-width: 580px) {
+      &__meeting-sched-view-picker {
+        flex: 1 1 100%;
+        // Centre the trigger INSIDE the box rather than stretching it: a
+        // full-width button would read as a third CTA.
+        align-items: center;
+      }
 
-    // The picker box now spans the whole line, so `right: 0` would pin the
-    // dropdown to the toolbar's right edge while the trigger sits centred.
-    // Re-anchor it on the trigger.
-    &__meeting-sched-view-picker &__meeting-sched-menu {
-      right: auto;
-      left: 50%;
-      transform: translateX(-50%);
+      // The picker box now spans the whole line, so `right: 0` would pin the
+      // dropdown to the toolbar's right edge while the trigger sits centred.
+      // Re-anchor it on the trigger.
+      &__meeting-sched-view-picker &__meeting-sched-menu {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%);
+      }
     }
 
     &__meeting-sched-schedule-btn,
