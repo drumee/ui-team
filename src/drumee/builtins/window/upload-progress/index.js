@@ -18,6 +18,14 @@ const ROLE_NOTICE_MS = 5000;
 // batch that ended well leaves on its own; errors and cancels wait for the user.
 const AUTO_DISMISS_MS = 300;
 
+// Pointer travel before a press on the header turns into a drag, so a plain
+// click (or a hand that shakes a pixel) never nudges the card.
+const DRAG_THRESHOLD_PX = 4;
+// Where the user last dropped the card, in viewport px, for this page session.
+// A new batch opens a fresh window; without this it would jump back to the
+// bottom-right corner the user just dragged it away from.
+let _draggedPos = null;
+
 /**
  * @class __window_upload_progress
  * @extends __window_core
@@ -1420,8 +1428,146 @@ class __window_upload_progress extends __window_core {
   }
 
   onBeforeDestroy() {
+    this._unbindDrag();
     this._cancelAutoMinimize();
     if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  // ── Drag to move ──────────────────────────────────────────────────────
+  // The card used to be pinned bottom-right and sat on top of whatever was
+  // under it. Pressing on the header and dragging moves it anywhere on screen.
+  // Native pointer events rather than jQuery UI's draggable (which the
+  // interact windows use): this window is not on that chain, and pointer
+  // events also cover pen/touch on a tablet.
+  //
+  // Until the first drag nothing here touches the geometry, so the CSS
+  // bottom-right placement stays exactly what it was. On a phone (and below
+  // 650px) the card is a full-width sheet whose geometry the skin pins with
+  // !important; dragging is off there.
+
+  _canDrag() {
+    if (!this.el || this.isDestroyed?.()) return false;
+    if (this.el.dataset.device === "mobile") return false;
+    return window.innerWidth > 650;
+  }
+
+  _bindDrag() {
+    if (this._dragBound || !this.el) return;
+    this._dragBound = true;
+    const pfx = this.fig.family;
+
+    // On the root, not the header: the header is rebuilt on every feed().
+    this._onDragDown = (e) => {
+      if (e.button !== 0 || !this._canDrag()) return;
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (!t.closest(`.${pfx}__header`)) return;
+      // Collapse and close stay plain clicks.
+      if (t.closest(`.${pfx}__header-actions`)) return;
+      const r = this.el.getBoundingClientRect();
+      this._drag = {
+        id: e.pointerId,
+        x: e.clientX,
+        y: e.clientY,
+        dx: e.clientX - r.left,
+        dy: e.clientY - r.top,
+        moving: false,
+      };
+      // No preventDefault: it would also swallow the mousedown that other
+      // listeners (click-outside closers) rely on. The skin turns off text
+      // selection and touch panning on the header instead.
+    };
+    this._onDragMove = (e) => {
+      const d = this._drag;
+      if (!d || e.pointerId !== d.id) return;
+      if (!d.moving) {
+        if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < DRAG_THRESHOLD_PX) return;
+        d.moving = true;
+        try { this.el.setPointerCapture(d.id); } catch (err) { }
+        this.el.dataset.dragging = "1";
+      }
+      this._moveTo(e.clientX - d.dx, e.clientY - d.dy);
+    };
+    this._onDragEnd = (e) => {
+      const d = this._drag;
+      if (!d || e.pointerId !== d.id) return;
+      this._drag = null;
+      if (!d.moving) return;
+      try { this.el.releasePointerCapture(d.id); } catch (err) { }
+      delete this.el.dataset.dragging;
+      const r = this.el.getBoundingClientRect();
+      _draggedPos = { left: r.left, top: r.top };
+    };
+    this.el.addEventListener("pointerdown", this._onDragDown);
+    // Move/up on window so a fast drag that outruns the card before pointer
+    // capture is taken is not dropped.
+    window.addEventListener("pointermove", this._onDragMove);
+    window.addEventListener("pointerup", this._onDragEnd);
+    window.addEventListener("pointercancel", this._onDragEnd);
+
+    // Keep a moved card on screen when the viewport shrinks, and when the
+    // card itself grows (expand, the warning card) from a spot near an edge.
+    this._onViewportResize = _.debounce(() => this._keepInView(), 100);
+    window.addEventListener("resize", this._onViewportResize);
+    if (typeof ResizeObserver !== "undefined") {
+      this._dragSizeObserver = new ResizeObserver(() => this._keepInView());
+      this._dragSizeObserver.observe(this.el);
+    }
+
+    // A new batch opens where the user left the previous one.
+    if (_draggedPos && this._canDrag()) {
+      this._moveTo(_draggedPos.left, _draggedPos.top);
+    }
+  }
+
+  _unbindDrag() {
+    if (!this._dragBound) return;
+    this._dragBound = false;
+    this._drag = null;
+    if (this.el) this.el.removeEventListener("pointerdown", this._onDragDown);
+    window.removeEventListener("pointermove", this._onDragMove);
+    window.removeEventListener("pointerup", this._onDragEnd);
+    window.removeEventListener("pointercancel", this._onDragEnd);
+    window.removeEventListener("resize", this._onViewportResize);
+    if (this._onViewportResize && this._onViewportResize.cancel) this._onViewportResize.cancel();
+    if (this._dragSizeObserver) this._dragSizeObserver.disconnect();
+    this._dragSizeObserver = null;
+  }
+
+  /**
+   * Place the card's top-left corner at (left, top) viewport px, kept fully
+   * on screen. Switches the card from its CSS bottom/right anchor to an
+   * inline top/left one, and marks it moved.
+   */
+  _moveTo(left, top) {
+    if (!this.el) return;
+    const w = this.el.offsetWidth;
+    const h = this.el.offsetHeight;
+    const maxL = Math.max(0, window.innerWidth - w);
+    const maxT = Math.max(0, window.innerHeight - h);
+    const l = Math.round(Math.min(Math.max(0, left), maxL));
+    const t = Math.round(Math.min(Math.max(0, top), maxT));
+    // CSS left/top are relative to the containing block, which is the
+    // viewport only while no ancestor is transformed. Measure the gap rather
+    // than assume it, so the card never jumps on the first move.
+    const cs = getComputedStyle(this.el);
+    const r = this.el.getBoundingClientRect();
+    const ox = r.left - (parseFloat(cs.left) || 0);
+    const oy = r.top - (parseFloat(cs.top) || 0);
+    const s = this.el.style;
+    s.left = `${l - ox}px`;
+    s.top = `${t - oy}px`;
+    s.right = "auto";
+    s.bottom = "auto";
+    this.el.dataset.moved = "1";
+  }
+
+  _keepInView() {
+    if (!this.el || this.el.dataset.moved !== "1" || this._drag) return;
+    if (!this._canDrag()) return;
+    const r = this.el.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    this._moveTo(r.left, r.top);
   }
 
   /**
@@ -1763,8 +1909,9 @@ class __window_upload_progress extends __window_core {
       if (this.el) {
         this.el.style.display = '';
       }
+      this._bindDrag();
       this._refreshUI();
-      
+
       // Apply any pending progress updates after UI refresh
       if (this._pendingProgressUpdates && this._pendingProgressUpdates.size > 0) {
         setTimeout(() => {
