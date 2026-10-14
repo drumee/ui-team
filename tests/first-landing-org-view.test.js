@@ -307,7 +307,7 @@ test("no personal workspaces: no Personal section, org view as before", () => {
 test("an empty organisation still says so above the personal section", () => {
   const kids = sections("org", {}, { sections: [], ungrouped: [] }, true, PERSONAL);
   assert.equal(kids[0].content, "none");
-  assert.ok(flat(kids[1]).some((n) => n.content === "Personal"));
+  assert.ok(flat(kids[kids.length - 1]).some((n) => n.content === "Personal"));
 });
 
 test("a filter matching no personal workspace keeps the header, drops the grid", () => {
