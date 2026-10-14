@@ -786,6 +786,12 @@ class tutorial_main extends LetcBox {
       // The step made a workspace. The host is what opens it and hands on to
       // the next tour, because both outlive the step — the tour is coming down
       // around them.
+      // The step entered or left a screen the user is filling in (the real
+      // create form, the invite card). Stamped for the skin: Skip hides there,
+      // because those screens carry their own exits.
+      case 'step-live':
+        if (this.el && this.el.dataset) this.el.dataset.live = args.live ? '1' : '0';
+        break;
       case 'workspace-created': {
         const ws = args.workspace || {};
         if (ws.hub_id) this._createdWorkspace = ws;
