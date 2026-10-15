@@ -19,7 +19,7 @@ const ORG_SRC = fs.readFileSync(path.join(ROOT, "src/drumee/modules/desk/org-vie
 
 global._a = Object.assign(global._a || {}, { kind: "kind", folder: "folder", hub: "hub" });
 global._ = global._ || { isFunction: (f) => typeof f === "function", uniqueId: (p) => `${p}1` };
-global.LOCALE = { PERSONAL: "Personal", WORKSPACE: "workspace", WORKSPACES: "workspaces", NO_DEPARTMENTS_YET: "none" };
+global.LOCALE = { PERSONAL: "Personal", OTHER_WORKSPACES: "Other workspaces", WORKSPACE: "workspace", WORKSPACES: "workspaces", NO_DEPARTMENTS_YET: "none" };
 
 // The static registry the sliced methods read off the class.
 global.desk_module = {
@@ -325,7 +325,7 @@ test("a filter matching no personal workspace keeps the header, drops the grid",
 });
 
 const openWorkspace = method(ORG_SRC, "_openWorkspace(cmd)");
-const personalWorkspaces = method(ORG_SRC, "_personalWorkspaces(force)");
+const myWorkspaces = method(ORG_SRC, "_myWorkspaces(force)");
 
 test("a personal card opens ITS row through the desk's switch path", () => {
   const raised = [];
@@ -342,18 +342,108 @@ test("a personal card opens ITS row through the desk's switch path", () => {
   assert.deepEqual(raised[1].row, { hub_id: "h1" });
 });
 
-test("personal rows come from the desk list, folders only, and never reject", async () => {
-  global.window = {
-    Desk: { _fetchWorkspaces: async () => [PERSONAL[0], { filetype: "hub", hub_id: "h1" }] },
-  };
-  assert.deepEqual(await personalWorkspaces.call({}), [PERSONAL[0]]);
+test("the user's rows come from the desk list (all of them) and never reject", async () => {
+  const hub = { filetype: "hub", hub_id: "h1" };
+  global.window = { Desk: { _fetchWorkspaces: async () => [PERSONAL[0], hub, null] } };
+  assert.deepEqual(await myWorkspaces.call({}), [PERSONAL[0], hub]);
   global.window = { Desk: { _fetchWorkspaces: async () => { throw new Error("down"); } } };
-  assert.deepEqual(await personalWorkspaces.call({}), []);
+  assert.deepEqual(await myWorkspaces.call({}), []);
   // A failed fetch answers [] — fall back to the desk's last good list.
   global.window = { Desk: { _workspaces: [PERSONAL[1]], _fetchWorkspaces: async () => [] } };
-  assert.deepEqual(await personalWorkspaces.call({}), [PERSONAL[1]]);
+  assert.deepEqual(await myWorkspaces.call({}), [PERSONAL[1]]);
   global.window = {};
-  assert.deepEqual(await personalWorkspaces.call({}), []);
+  assert.deepEqual(await myWorkspaces.call({}), []);
+});
+
+// ── Other workspaces: hubs the switcher has and the org overview does not ────
+
+const OTHERS = [
+  { filetype: "hub", area: "private", hub_id: "x1", id: "x1", filename: "Drumee team" },
+  { filetype: "hub", area: "share", hub_id: "x2", id: "x2", filename: "MOU" },
+];
+
+test("Other workspaces: own section before Personal, cards keyed by hub_id + wsOther, no members", () => {
+  const kids = sections("org", {}, ORG, true, PERSONAL, OTHERS);
+  const names = kids.map((k) => flat(k).find((n) => n.className === "org__section-name"))
+    .map((n) => n && n.content);
+  assert.deepEqual(names.slice(-2), ["Other workspaces", "Personal"]);
+  const other = kids[kids.length - 2];
+  assert.match(other.className, /org__section--other/);
+  const cards = flat(other).filter((n) => n.className === "org__card");
+  assert.deepEqual(cards.map((c) => [c.wsHubId, c.wsOther, c.wsNid]), [["x1", 1, undefined], ["x2", 1, undefined]]);
+  assert.ok(!flat(other).some((n) => n.className === "org__members"));
+  // The org's own card is untouched: no wsOther, members drawn.
+  const team = flat(kids).find((n) => n.className === "org__card" && n.wsHubId === "h1");
+  assert.equal(team.wsOther, undefined);
+  assert.ok(flat(team).some((n) => n.className === "org__members"));
+});
+
+test("no other workspaces: the page is exactly what it was", () => {
+  assert.deepEqual(sections("org", {}, ORG, true, PERSONAL, null), sections("org", {}, ORG, true, PERSONAL));
+});
+
+test("an Other card opens ITS row; a same hub_id org card still opens the org row", () => {
+  const raised = [];
+  const ui = {
+    _rows: new Map([["x1", { hub_id: "x1", org: 1 }]]),
+    _personalRows: new Map(),
+    _otherRows: new Map([["x1", OTHERS[0]]]),
+    triggerHandlers: (a) => raised.push(a),
+  };
+  const cmd = (o) => ({ mget: (k) => o[k] });
+  openWorkspace.call(ui, cmd({ wsHubId: "x1", wsOther: 1 }));
+  openWorkspace.call(ui, cmd({ wsHubId: "x1" }));
+  assert.equal(raised[0].row, OTHERS[0]);
+  assert.deepEqual(raised[1].row, { hub_id: "x1", org: 1 });
+});
+
+test("_render splits the user's list: folders → Personal, hubs not in the org → Other", async () => {
+  const render = method(ORG_SRC, "_render(force)");
+  global.orgOverview = async () => ({ organisation: { id: 21 }, workspaces: [{ hub_id: "h1" }], departments: [] });
+  const painted = [];
+  const ui = {
+    _rows: new Map(), _personalRows: new Map(), _otherRows: new Map(),
+    ensurePart: async () => ({ isDestroyed: () => false }),
+    _myWorkspaces: async () => [
+      PERSONAL[0],
+      { filetype: "hub", hub_id: "h1", filename: "Team (also in org)" },
+      OTHERS[0],
+      { filetype: "hub", id: "x9", filename: "keyed by id" },
+    ],
+    _paint: () => painted.push(1),
+  };
+  await render.call(ui);
+  assert.deepEqual(ui._personal, [PERSONAL[0]]);
+  assert.deepEqual(ui._others.map((r) => r.filename), ["Drumee team", "keyed by id"]);
+  assert.deepEqual([...ui._otherRows.keys()], ["x1", "x9"]);
+  assert.equal(painted.length, 1);
+  delete global.orgOverview;
+});
+
+test("a failed overview (EMPTY) files nothing under Other", async () => {
+  const render = method(ORG_SRC, "_render(force)");
+  global.orgOverview = async () => ({ organisation: null, workspaces: [], departments: [] });
+  const ui = {
+    _rows: new Map(), _personalRows: new Map(), _otherRows: new Map(),
+    ensurePart: async () => ({ isDestroyed: () => false }),
+    _myWorkspaces: async () => [PERSONAL[0], OTHERS[0]],
+    _paint: () => {},
+  };
+  await render.call(ui);
+  assert.deepEqual(ui._others, []);
+  assert.deepEqual(ui._personal, [PERSONAL[0]]);
+  delete global.orgOverview;
+});
+
+test("search narrows Other workspaces too, keeping the header", () => {
+  const filteredMine = method(ORG_SRC, "_filteredMine(rows)");
+  global.matchesQuery = (w, q) => String(w.filename || w.name || "").toLowerCase().includes(q);
+  assert.deepEqual(filteredMine.call({ _filter: " mou " }, OTHERS), [OTHERS[1]]);
+  assert.deepEqual(filteredMine.call({ _filter: "" }, OTHERS), OTHERS);
+  const all = flat(sections("org", {}, ORG, true, null, []));
+  assert.ok(all.some((n) => n.content === "Other workspaces"));
+  assert.ok(!all.some((n) => n.wsOther));
+  delete global.matchesQuery;
 });
 
 // ── the first-open hold: no flash of the workspace before the org screen ────

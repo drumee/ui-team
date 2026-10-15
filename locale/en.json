@@ -1671,6 +1671,7 @@
   "INTERNAL": "Internal",
   "EXTERNAL": "External",
   "PERSONAL": "Personal",
+  "OTHER_WORKSPACES": "Other workspaces",
   "RESTRICTED": "Restricted",
   "NEW_SUB_FOLDER": "New subfolder",
   "NOTIFICATIONS": "Notifications",
