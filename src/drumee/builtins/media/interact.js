@@ -1268,14 +1268,9 @@ class __media_interact extends media_core {
             //               click must still do what it was for; swallowing it
             //               would make Share a dead control.
             if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
-            // ON A PHONE, Done hands over to "Who has access" — the host
-            // window's members panel (permission_restricted) — rather than the
-            // link builder. No host window to hold it: the panel as before.
-            if (Visitor.isMobile()) {
-              let win = this.parent;
-              while (win && !_.isFunction(win.openManageAccess)) win = win.parent;
-              if (win && !(win.isDestroyed && win.isDestroyed())) return win.openManageAccess({ members: true });
-            }
+            // ON A PHONE the tour's own Done opened "Who has access" (window
+            // tutorial _handOffMembers), so the link builder stays shut.
+            if (Visitor.isMobile() && Tours.appeared("share")) return;
             this.onUiEvent(cmd, { ...args, _tourDone: 1 });
           });
         }

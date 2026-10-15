@@ -2425,10 +2425,10 @@ class __window_folder extends mfsInteract {
           //               click must still do what it was for; swallowing it
           //               would make Share a dead control.
             if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
-            // ON A PHONE, Done hands over to "Who has access" — the members
-            // panel (permission_restricted), where a phone user actually
-            // brings people in — rather than the link builder.
-            this.openManageAccess({ members: membersOnly || Visitor.isMobile() });
+            // ON A PHONE the tour's own Done opens "Who has access" (window
+            // tutorial _handOffMembers); opening here too would toggle it shut.
+            if (Visitor.isMobile() && Tours.appeared("share")) return;
+            this.openManageAccess({ members: membersOnly });
           });
         }
         return this.openManageAccess({ members: membersOnly });

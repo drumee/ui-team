@@ -87,10 +87,13 @@ test("share phone page title reads Secure Share for every subject", () => {
   assert.match(src, /ph\.titleBar\(ui, \{ title: LOCALE\.SECURE_SHARE \}\)/);
 });
 
-test("share tour Done on a phone opens Who has access (permission_restricted)", () => {
+test("share tour Done on a phone opens Who has access — in the host, for every run", () => {
+  const host = fs.readFileSync(path.join(SRC, "builtins/window/tutorial/index.js"), "utf8");
+  assert.match(host, /if \(this\._tour\.id === 'share' && this\._layout === 'phone'\) this\._handOffMembers\(\);\s*this\._markDone\(\);/);
+  assert.match(host, /_handOffMembers\(\) \{[\s\S]*?this\.once\(_e\.destroy[\s\S]*?desk\._railAccess\(\{ members: 1 \}\)[\s\S]*?ws\.showFolderTab\(.access.\)/);
   const folder = fs.readFileSync(path.join(SRC, "builtins/window/folder/index.js"), "utf8");
-  assert.match(folder, /this\.openManageAccess\(\{ members: membersOnly \|\| Visitor\.isMobile\(\) \}\)/);
+  assert.match(folder, /if \(Visitor\.isMobile\(\) && Tours\.appeared\("share"\)\) return;\s*this\.openManageAccess\(\{ members: membersOnly \}\)/);
   assert.match(folder, /_internalAccessPanel\(\) \{\s*return \{\s*kind\s*: "permission_restricted"/);
   const media = fs.readFileSync(path.join(SRC, "builtins/media/interact.js"), "utf8");
-  assert.match(media, /if \(Visitor\.isMobile\(\)\) \{[\s\S]*?win\.openManageAccess\(\{ members: true \}\)/);
+  assert.match(media, /if \(Visitor\.isMobile\(\) && Tours\.appeared\("share"\)\) return;\s*this\.onUiEvent\(cmd, \{ \.\.\.args, _tourDone: 1 \}\)/);
 });

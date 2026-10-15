@@ -189,3 +189,23 @@ test("no destination answer → no import_dest, the step keeps its example", () 
   const { h } = make({ ws: { gdriveDestination: undefined } });
   assert.ok(h._widgets.every((w) => w.import_dest == null));
 });
+
+test("share tour Done on a phone opens the bar's Access members column as it comes down", () => {
+  global._e = { destroy: "destroy" };
+  const calls = [];
+  global.window = { Desk: { _railAccess: (o) => calls.push(o) } };
+  try {
+    const h = Object.create(Host.prototype);
+    const handlers = {};
+    h._m = { target_window: { isDestroyed: () => false } };
+    h.mget = (k) => h._m[k];
+    h.once = (ev, fn) => { handlers[ev] = fn; };
+    h._handOffMembers();
+    assert.equal(calls.length, 0, "not before the tour comes down");
+    handlers.destroy();
+    assert.deepEqual(calls, [{ members: 1 }]);
+  } finally {
+    delete global.window;
+    delete global._e;
+  }
+});

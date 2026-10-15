@@ -468,7 +468,47 @@ class __window_tutorial extends LetcBox {
     // Only this route. Escape and the callout's skip also end the tour and
     // reach _endTour directly; they leave it armed, which is the difference
     // between finishing something and getting out of it.
+    // Done on a phone's share tour hands over to "Who has access".
+    if (this._tour.id === 'share' && this._layout === 'phone') this._handOffMembers();
     this._markDone();
+  }
+
+  /**
+   * The share tour's Done, on a phone: open the window's "Who has access"
+   * panel (permission_restricted) as the tour comes down.
+   *
+   * HERE, in the host, because the host is the one thing every run of this
+   * tour has. The real triggers (the folder window's access action, the media
+   * menu's Share) used to queue it on Tours.whenDone — and a run nobody
+   * triggered (`T.show("share")`, `?tutorial=share`) had nothing queued, so Done
+   * lit the bar's Access tab (mountWindowTutorial's highlight) and opened
+   * nothing. Those triggers now stand aside on a phone once the tour appeared.
+   *
+   * WHICH panel: the one the bar's Access opens — the members column in the
+   * split body (window/folder access-column, `showFolderTab("access")`), via
+   * the desk's own _railAccess so the tab, the screen and the stamp agree.
+   * NOT openManageAccess: that feeds the window's dialog wrapper, which a
+   * phone's folder window may never have created (`this.dialogWrapper` is
+   * assigned only by the drawers that open it), so it threw and nothing
+   * appeared.
+   *
+   * On destroy, not now: the panel opens under the tour, and the fade is what
+   * reveals it; _railAccess also waits for the tour to release.
+   */
+  _handOffMembers() {
+    const ws = this.mget('target_window');
+    if (!ws || !_.isFunction(this.once)) return;
+    this.once(_e.destroy, () => {
+      if (ws.isDestroyed && ws.isDestroyed()) return;
+      try {
+        const desk = typeof window !== 'undefined' ? window.Desk : null;
+        if (desk && _.isFunction(desk._railAccess)) return desk._railAccess({ members: 1 });
+        if (_.isFunction(ws.showFolderTab)) return ws.showFolderTab('access');
+      } catch (e) {
+        this.warn && this.warn('[window-tutorial] could not open Who has access', e);
+      }
+      return null;
+    });
   }
 
   /**
