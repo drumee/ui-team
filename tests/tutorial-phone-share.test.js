@@ -71,6 +71,7 @@ test("share phone follows the Figma frames: title bar, card above after screen 1
   const S = require(path.join(__dirname, "..", "src/drumee/modules/desk/tutorial/share/screens.js"));
   assert.equal(S[0].phone.prefer, undefined);
   assert.ok(S.slice(1).every((s) => s.phone.prefer === "above" && s.phone.margin === 17));
+  assert.ok(S.every((s) => s.phone.gap === 30));
   const sass = require("sass");
   const SRCD = path.join(__dirname, "..", "src/drumee");
   const css = sass.compile(path.join(SRCD, "modules/desk/tutorial/share/skin/index.scss"),

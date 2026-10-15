@@ -26,8 +26,12 @@ const SCREENS = [
 
 // The frames put the card under the first block and OVER every later one
 // (386:60952 → 386:61932), 17px in from the edges (a 396-wide card on 430).
+//
+// `gap` is measured from the BLOCK, but the lit block wears a 16px white plate
+// outside its own box (skin: `.is-lit` box-shadow), so the default 14 left the
+// card touching the plate. 30 = the plate + the usual 14 of air.
 SCREENS.forEach((s, i) => {
-  s.phone = { view: 'panel', target: s.lit, margin: 17, ...(i > 0 ? { prefer: 'above' } : {}) };
+  s.phone = { view: 'panel', target: s.lit, margin: 17, gap: 30, ...(i > 0 ? { prefer: 'above' } : {}) };
 });
 
 module.exports = SCREENS;
