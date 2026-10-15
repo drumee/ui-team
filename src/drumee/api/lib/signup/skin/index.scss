@@ -61,7 +61,7 @@
   & .api__error-message {
     @include drumee.typo($color: #ff805c, $size: 14px, $line: 21px, $weight: 400);
     font-weight: 400;
-    font-family: Roboto;
+    font-family: var(--font-main);
     max-width: 350px;
     justify-content: center;
     width: 100%;

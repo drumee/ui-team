@@ -125,6 +125,11 @@ function recurRow(ui, pfx) {
               // as "recurs until today", i.e. not at all.
               defaultDate: recur.until || null,
               appendTo: document.body,
+              // This is the card's last row, so there is rarely room for the
+              // calendar below it — the widget's default "below" ran it off the
+              // bottom of the screen. "auto" flips it above the field when the
+              // space below can't hold it.
+              position: "auto",
             },
             uiHandler: [ui],
           },
@@ -303,6 +308,8 @@ module.exports = function meetingModal(ui, opt = {}) {
       altInput: true,
       altFormat: "d/m/Y",
       appendTo: document.body,
+      // Flip above when a short window leaves no room below (see mm-until).
+      position: "auto",
     },
     // Moving the meeting re-runs the invitees' free/busy check.
     service: "mm-recheck-availability",

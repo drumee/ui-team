@@ -414,8 +414,8 @@ class __player_video extends __core {
       case 'secure-share':
         return share.click(this, cmd);
 
-      // Get info: the node's own properties card, docked under this
-      // player's header and closed with it (widget/details).
+      // Get info: the node's own properties card, centred on screen,
+      // capped to this player and closed with it (widget/details).
       case 'info':
         return details.open(this);
 

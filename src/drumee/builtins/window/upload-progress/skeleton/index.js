@@ -11,6 +11,7 @@ module.exports = function (ui) {
   const staging = require('./staging')(ui);
   const content = require('./content')(ui);
   const footer = require('./footer')(ui);
+  const warning = require('./warning')(ui);
 
   // Main container
   return Skeletons.Box.Y({
@@ -25,6 +26,7 @@ module.exports = function (ui) {
       staging,
       content,
       footer,
+      warning,
     ]
   });
 }

@@ -1,0 +1,63 @@
+@use "./topic-surfaces";
+
+// The File threads bar's small face (skeleton/file-threads-bar), wherever the
+// topic strip shows: the bar as it was, "File threads" and the file threads
+// only - the strip already lists the topics.
+@mixin ft-small-face {
+  .window__ft-bar-clip--threads,
+  .window__ft-bar-label--threads,
+  .window__ft-section,
+  .window__ft-row--topic {
+    display: none;
+  }
+}
+
+// Files-tab chat topics (Figma 869:189953 / 869:191968): the topic strip
+// under "Team Chat" and the File threads bar + dropdown. Parts built by
+// window/skeleton/toolkit chatPanel, fed by window/folder/topics.js and
+// window/folder/file-threads-bar.js.
+.window-folder {
+  // The topic strip only where the Chat-tab rail is not: hidden on the wide
+  // Chat tab (the rail lists the topics), back on the compact one. The File
+  // threads bar shows on both tabs — the rail lists no file threads.
+  &__split-body[data-view="chat"] .window__topic-strip {
+    display: none;
+  }
+
+  &__split-body:not([data-view="chat"]) {
+    @include ft-small-face;
+  }
+
+  @container window-folder-w (max-width: 700px) {
+    &__split-body[data-view="chat"] .window__topic-strip {
+      display: flex;
+    }
+
+    &__split-body[data-view="chat"] {
+      @include ft-small-face;
+    }
+  }
+
+  // Wide Chat tab, no strip: the "Threads" face - the chat threads (topics)
+  // above the file threads, with room for both.
+  @container window-folder-w (width > 700px) {
+    &__split-body[data-view="chat"] {
+      .window__ft-bar-clip--files,
+      .window__ft-bar-label--files {
+        display: none;
+      }
+
+      .window__ft-list {
+        max-height: 420px;
+      }
+    }
+  }
+
+  // A member without chat access sees neither (same gate as the rail).
+  .window__chat-panel[data-chat_gated="1"] .window__topic-strip,
+  .window__chat-panel[data-chat_gated="1"] .window__ft-bar {
+    display: none !important;
+  }
+
+  @include topic-surfaces.parts;
+}

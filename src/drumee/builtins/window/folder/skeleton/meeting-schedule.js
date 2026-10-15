@@ -205,6 +205,9 @@ function weekCard(ui, pfx, mtg) {
     },
     service: "open-meeting",
     nid: mtg.nid,
+    // Which occurrence this card is, for a recurring series: its editor's
+    // Join sends it on (window/folder join-meeting).
+    stime: mtg.start.unix(),
     dataset: { nid: mtg.nid },
     attrOpt: { "data-nid": mtg.nid },
     // Don't bubble to the cell's "new meeting" click.
@@ -229,6 +232,7 @@ function weekCard(ui, pfx, mtg) {
         ico: "meet-camera",
         service: "join-meeting",
         nid: mtg.nid,
+        stime: mtg.start.unix(),
         bubble: 0,
         uiHandler: [ui],
       }),
@@ -332,10 +336,15 @@ function monthlyGrid(ui, pfx) {
   const today = Dayjs().format("YYYY-MM-DD");
   const meetings = normalizeMeetings(ui, gridStart, gridStart.add(42, "day"));
   const dayMeetings = (d) => meetings.filter((m) => m.start.isSame(d, "day"));
+  // Scheduling is an edit-tier action: the same test toolbarKids uses to drop
+  // the "Schedule" button (canUpload, absent → allowed).
+  const mayStart = typeof ui.canUpload !== "function" ? true : !!ui.canUpload();
   const monthCard = (m) =>
     Skeletons.Note({
       className: `${pfx}-sched-mcard`,
       content: `${m.start.format("HH:mm")} ${m.title}`,
+      // Opens the meeting — and never also the day square behind it.
+      bubble: 0,
       service: "open-meeting",
       nid: m.nid,
       dataset: { nid: m.nid },
@@ -370,14 +379,35 @@ function monthlyGrid(ui, pfx) {
         className: `${pfx}-sched-week`,
         kids: Array.from({ length: 7 }, (_, i) => {
           const d = rowStart.add(i, "day");
+          const ds = d.format("YYYY-MM-DD");
+          // A click on the square schedules a meeting that day — what the
+          // week/day grid's half-hour slots already did, and what the month
+          // cell never did (it had no service at all, so the click went
+          // nowhere). Same `sched-new-at` handler; with no hour given it opens
+          // on its 09:00 default. Only for a viewer who may schedule, the same
+          // gate as the Schedule button.
+          //
+          // The date is inert (`active: 0`), or it would take the click on its
+          // own line — ui-core stops propagation before triggerHandlers. The
+          // cards keep their own service and open their meeting instead.
+          const addable = mayStart
+            ? { bubble: 0, service: "sched-new-at", day: ds, uiHandler: [ui] }
+            : {};
           return Skeletons.Box.Y({
             className: `${pfx}-sched-mcell`,
+            ...addable,
             attrOpt: {
               "data-off": d.month() === anchor.month() ? "0" : "1",
-              "data-today": d.format("YYYY-MM-DD") === today ? "1" : "0",
+              "data-today": ds === today ? "1" : "0",
+              "data-day": ds,
+              "data-add": mayStart ? "1" : "0",
             },
             kids: [
-              Skeletons.Note({ className: `${pfx}-sched-mnum`, content: pad2(d.date()) }),
+              Skeletons.Note({
+                className: `${pfx}-sched-mnum`,
+                content: pad2(d.date()),
+                active: 0,
+              }),
               ...dayMeetings(d).map(monthCard),
             ],
           });

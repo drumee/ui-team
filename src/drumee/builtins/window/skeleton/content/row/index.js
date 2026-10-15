@@ -1,9 +1,14 @@
-const __media_skl_row = function (ui) {
-  let a;
-  const type = ui.mget(_a.type);
-  const pfx = `${ui.fig.group}__filter`;
-
-  const header = Skeletons.Box.G({
+/**
+ * The list view's column header: select-all, then Name / Last change / Size /
+ * Type, each sorting on click. Shared with the secure-share recipient view
+ * (dmz/wm), which passes the desk's class root (`group`) so the desk styles
+ * apply, its own `uiHandler` for the sort clicks, and `selectAll: false` since
+ * that view has no row selection to drive (the cell stays, for the columns).
+ */
+function listHeader(ui, opt = {}) {
+  const pfx = `${opt.group || ui.fig.group}__filter`;
+  const handler = opt.uiHandler ? { uiHandler: opt.uiHandler } : {};
+  return Skeletons.Box.G({
     className: `${pfx}__main`,
     kids: [
       // Select-all, in the track of the rows' own checkbox. Ticks the rows that
@@ -11,7 +16,7 @@ const __media_skl_row = function (ui) {
       // not reach onChildBubble, which unselects everything in folder windows.
       Skeletons.Box.X({
         className: `${pfx}__select-cell`,
-        kids: [
+        kids: opt.selectAll === false ? [] : [
           Skeletons.Button.Svg({
             className: `${pfx}__select-all`,
             ico: "upload-checked",
@@ -32,6 +37,7 @@ const __media_skl_row = function (ui) {
         state: 0,
         name: _a.filename,
         icons: ["arrow-up", "arrow-down"],
+        ...handler,
       }),
       Skeletons.Button.Label({
         ico: "arrow-down",
@@ -42,6 +48,7 @@ const __media_skl_row = function (ui) {
         state: 0,
         name: _a.mtime,
         icons: ["arrow-down", "arrow-up"],
+        ...handler,
       }),
       Skeletons.Button.Label({
         ico: "arrow-down",
@@ -52,6 +59,7 @@ const __media_skl_row = function (ui) {
         state: 0,
         name: _a.filesize,
         icons: ["arrow-down", "arrow-up"],
+        ...handler,
       }),
       Skeletons.Button.Label({
         ico: "arrow-down",
@@ -62,9 +70,17 @@ const __media_skl_row = function (ui) {
         state: 0,
         name: _a.ext,
         icons: ["arrow-down", "arrow-up"],
+        ...handler,
       }),
     ],
   });
+}
+
+const __media_skl_row = function (ui) {
+  let a;
+  const type = ui.mget(_a.type);
+
+  const header = listHeader(ui);
 
   const list = Skeletons.List.Smart({
     className: `${ui.fig.group}__content-row`,
@@ -106,11 +122,17 @@ const __media_skl_row = function (ui) {
     // crashes on this.actualNode(). Wrap it so getCurrentApi is invoked as a
     // method on `ui` (same pattern as gridFilesBrowser's working api).
     api: function () {
-      return ui.getCurrentApi();
+      // getListApi when the window has one (the folder: search mode).
+      return ui.getListApi ? ui.getListApi() : ui.getCurrentApi();
     },
   });
 
+  // Folder windows only: its skin is the one that styles and gates the
+  // skeleton (folder/skin/icons-skeleton.scss); elsewhere it would paint raw.
   const kids = [header, list];
+  if (ui.fig.family === "window-folder") {
+    kids.push(require("../../toolkit/icons-skeleton").iconsSkeleton(ui, "row"));
+  }
 
   // Selected chip — "N selected  ✕", floating over the bottom of the list
   // while anything is ticked. window/core _syncRowSelectAll writes the count
@@ -146,3 +168,4 @@ const __media_skl_row = function (ui) {
 };
 
 module.exports = __media_skl_row;
+module.exports.listHeader = listHeader;

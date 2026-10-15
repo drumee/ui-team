@@ -234,3 +234,103 @@
     background: var(--primary-purple-50);
   }
 }
+
+// PHONE (meeting/skeleton/phone.js) — Figma 386:58198 / 386:58622. Values are
+// the frames'.
+.tutorial-phone.tutorial-meeting__phone[data-view="meeting"] {
+  background: #fff;
+
+  .tutorial-phone__body {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+  }
+
+  .tutorial-phone__hero {
+    padding-top: 0;
+  }
+
+  .tutorial-phone__deck-wrap {
+    gap: 24px;
+  }
+
+  // The toolkit's deck frame is the well here, inside the card.
+  .tutorial-phone__card {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    overflow: visible;
+  }
+}
+
+.tutorial-meeting__ph {
+  &-card {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  &-well {
+    height: 306px;
+    overflow: hidden;
+    border-radius: 20px;
+  }
+
+  // The frame's own picture: gradient, border and the phone.
+  &-well-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  &-feature {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 12px;
+    text-align: left;
+  }
+
+  // A 44px square (the frame's text height), held square when a longer line
+  // wraps; the glyph at its own size.
+  &-feature-ico {
+    width: 44px;
+    height: 44px;
+    align-self: flex-start;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    box-sizing: border-box;
+    border-radius: 16px;
+    background: rgba(89, 80, 255, 0.1);
+  }
+
+  &-feature-glyph {
+    display: block;
+  }
+
+  &-feature-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &-feature-title {
+    font-size: 16px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #000;
+  }
+
+  &-feature-desc {
+    font-size: 14px;
+    line-height: 1.2;
+    color: #34343a;
+  }
+}

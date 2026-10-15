@@ -1,10 +1,11 @@
-// Notification popup mute — Round 3 Phase 3, the CHAT half (xlsx row 6).
+// Chat mute — a workspace, a person (DM) or everything.
 //
-// 🚨 THIS SUPPRESSES POPUPS AND NOTHING ELSE. A muted user keeps every row in
-// the Notification Center, keeps the unread badge and keeps the tab counts —
-// they simply stop being interrupted by a card. Muting is "stop talking to
-// me", not "stop recording". Nothing here may be consulted by the feed, by
-// `unread_counts`, or by any row-rendering path.
+// A muted chat raises no card, OS notification or sound (this module, read by
+// the panel), no mobile push (server worker), and since Aaron's 2026-10-13
+// call its rows leave the Notification Center and every badge too. That last
+// part is decided by the SERVER (activity._notificationRollups / get_feed),
+// not here: the panel only re-reads the feed after a mute lands
+// (`activity:refresh`, see setMute). Meeting start/end and bookmarks stay.
 //
 // WHY THE STATE IS CACHED HERE RATHER THAN ASKED FOR PER MESSAGE. A per-push
 // lookup would put a request on the chat path at typing rate, and — worse —
@@ -23,7 +24,8 @@
 // means every workspace. The server clears the per-workspace rows when a
 // global mute is written, so the two do not layer — but `isPopupMuted` treats
 // global as decisive rather than relying on that.
-const STATE = { loaded: 0, global: 0, hubs: new Set() };
+// `peers` holds the people whose DM popups are muted (activity.mute_peer_set).
+const STATE = { loaded: 0, global: 0, hubs: new Set(), peers: new Set() };
 
 // Broadcast whenever the cache takes a server answer. The account menu's
 // "Mute notifications" row is built with the desk, before the boot read
@@ -38,6 +40,8 @@ function applyMuteState(d) {
   if (!d || typeof d !== 'object') return STATE;
   STATE.global = d.global ? 1 : 0;
   STATE.hubs = new Set((Array.isArray(d.hubs) ? d.hubs : []).map((h) => String(h)));
+  // An older server answers no `peers`: nobody is muted as a person.
+  STATE.peers = new Set((Array.isArray(d.peers) ? d.peers : []).map((p) => String(p)));
   STATE.loaded = 1;
   try {
     if (typeof RADIO_BROADCAST !== 'undefined') RADIO_BROADCAST.trigger(MUTE_CHANGED, STATE);
@@ -57,6 +61,7 @@ function resetMuteState() {
   STATE.loaded = 0;
   STATE.global = 0;
   STATE.hubs = new Set();
+  STATE.peers = new Set();
   return STATE;
 }
 
@@ -91,14 +96,20 @@ async function loadMuteState(host) {
 /**
  * Should the popup for this push be suppressed?
  *
- * A workspace-less push (a p2p DM carries no workspace) can only be silenced
- * by a global mute — there is no per-workspace row that could match it.
+ * A workspace-less push (a p2p DM carries no workspace) is silenced by a
+ * global mute or by muting its author as a person (activity.mute_peer_set).
+ * A push that names a workspace follows the workspace mutes only.
  */
 function isPopupMuted(model = {}) {
   try {
     if (STATE.global) return true;
     const id = model.hub_id == null ? '' : String(model.hub_id);
-    return !!id && STATE.hubs.has(id);
+    if (id) return STATE.hubs.has(id);
+    // A hub-less push is a DM: its author can be muted as a person. A push
+    // that names a workspace is judged by workspace rules only, so muting a
+    // person never silences what they post in a shared workspace.
+    const who = model.author_id == null ? '' : String(model.author_id);
+    return !!who && STATE.peers.has(who);
   } catch (e) {
     return false;
   }
@@ -127,7 +138,53 @@ async function setMute(host, hub_id, muted = true) {
       muted: muted ? 1 : 0,
     });
     const ok = !!d && d.status === 'ok';
-    if (ok) applyMuteState(d);
+    if (ok) {
+      applyMuteState(d);
+      refreshFeed();
+    }
+    return { ok, data: d };
+  } catch (e) {
+    return { ok: false };
+  }
+}
+
+/**
+ * Ask the panel to re-read the feed and the counts: the server now leaves the
+ * newly (un)muted chats out of both, so the badges change at once rather than
+ * on the next push. Only after a write that landed — not from applyMuteState,
+ * which also runs at boot. The panel debounces the event.
+ */
+function refreshFeed() {
+  try {
+    if (typeof RADIO_BROADCAST !== 'undefined') RADIO_BROADCAST.trigger('activity:refresh');
+  } catch (e) {}
+}
+
+/** Whether DM popups from `peer_id` are muted (a global mute counts). */
+function isPeerMuted(peer_id) {
+  if (STATE.global) return true;
+  return !!peer_id && STATE.peers.has(String(peer_id));
+}
+
+/**
+ * Mute or unmute the DM popups from one person. Same contract as setMute:
+ * `{ ok }` only from a server "ok", cache folded from the answer itself.
+ * Sent on the viewer's own hub (the endpoint's ACL is hub-scoped).
+ */
+async function setPeerMute(host, peer_id, muted = true) {
+  const svc = muteService('mute_peer_set');
+  if (!svc || !host || !host.postService || !peer_id) return { ok: false };
+  try {
+    const d = await host.postService(svc, {
+      hub_id: (typeof Visitor !== 'undefined' && Visitor.id) || '',
+      peer_id: String(peer_id),
+      muted: muted ? 1 : 0,
+    });
+    const ok = !!d && d.status === 'ok';
+    if (ok) {
+      applyMuteState(d);
+      refreshFeed();
+    }
     return { ok, data: d };
   } catch (e) {
     return { ok: false };
@@ -197,6 +254,8 @@ module.exports = {
   loadMuteState,
   isPopupMuted,
   setMute,
+  isPeerMuted,
+  setPeerMute,
   muteState,
   applyMuteState,
   resetMuteState,

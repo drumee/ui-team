@@ -1196,10 +1196,15 @@ html[data-theme="dark"] {
     height: 40px;
   }
 
+  // The chat, contact and task toasts draw a UserProfile here: the photo, or
+  // the initials, clipped by overflow. cover/center keep a photo filling the
+  // box if it is painted as a background.
   &__avatar {
+    flex-shrink: 0;
     width: 40px;
     height: 40px;
     border-radius: 12px;
+    overflow: hidden;
     background-size: cover;
     background-position: center;
   }

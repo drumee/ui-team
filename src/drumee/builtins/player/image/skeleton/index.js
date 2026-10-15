@@ -1,3 +1,5 @@
+const withFileSwitcher = require("../../widget/file-switcher/frame");
+
 module.exports = function (ui) {
   const topbar = require("./topbar")(ui);
 
@@ -9,7 +11,7 @@ module.exports = function (ui) {
     ]
   });
 
-  return Skeletons.Box.Y({
+  return withFileSwitcher(ui, Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.group}__main`,
     partHandler: ui,
@@ -20,5 +22,5 @@ module.exports = function (ui) {
       "min-height": 250
     },
     kids: [topbar, main]
-  });
-};;
+  }));
+};

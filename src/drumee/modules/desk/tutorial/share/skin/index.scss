@@ -804,3 +804,70 @@
     color: var(--gray-white, #fff);
   }
 }
+
+// PHONE (share/skeleton/phone.js) — Figma 386:59700 → 386:61932: the panel is
+// the page. The frames' values: 16/12 page insets, 32 between the blocks; the
+// rest of the panel's own rows already follow the same components.
+.tutorial-phone.tutorial-share__phone[data-view="share"] {
+  // The frames' ground: white under a 20% black overlay (386:59700), i.e.
+  // #cccccc. It is the page itself, not a scrim over it — the content is
+  // faded onto it, and nothing darkens the lit block.
+  background: #ccc;
+
+  // Every frame lights a block, and every frame holds the bar back to 20%.
+  .tutorial-phone__top { opacity: 0.2; }
+
+  .tutorial-phone__body { padding: 0; }
+}
+
+.tutorial-phone .tutorial-share__panel {
+  flex: none;
+  width: 100%;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+
+  // No title row and no subject row: the page's own bar says what it is.
+  .tutorial-share__head { display: none; }
+
+  .tutorial-share__body {
+    overflow: visible;
+    padding: 12px 16px;
+    gap: 32px;
+  }
+
+  // Held back as the frames hold it: `opacity: 0.2` on the #ccc ground. Done
+  // as a film of that ground at 80%, which composites to the same colour
+  // (0.2 x content + 0.8 x #ccc) — and unlike opacity on an ancestor, the
+  // email and password cards lit from INSIDE a held-back block can still lift
+  // over it (z-index 2, see __card[data-lit] above).
+  .tutorial-share__block[data-blur="1"]::before {
+    background: rgba(204, 204, 204, 0.8);
+  }
+
+  // The permission rows as the phone frames draw them (386:59700): white,
+  // 12px radius, the chosen one on Primary/10 #e4e3ff inside a #5950ff line.
+  .tutorial-share__perm {
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+
+    &[data-on="1"] {
+      background: #e4e3ff;
+      box-shadow: inset 0 0 0 1px #5950ff;
+    }
+  }
+
+  // No ring on a phone: the frames lift the block onto white instead.
+  .tutorial-share__block[data-lit="1"]::after { display: none; }
+  .tutorial-share__card[data-lit="1"] { outline: 0; }
+}
+
+// The lit block stands on white, 16px proud on every side (386:60915 is a
+// 430-wide white plate behind a 398-wide block), over the tour's scrim. A
+// spread shadow costs no layout; its corners take the block's radius + 16.
+.tutorial-main[data-layout="phone"] .tutorial-share__panel .is-lit {
+  background: #fff;
+  border-radius: 1px;
+  box-shadow: 0 0 0 16px #fff;
+}

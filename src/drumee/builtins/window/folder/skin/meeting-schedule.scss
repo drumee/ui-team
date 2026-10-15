@@ -529,7 +529,7 @@
 
     &::-webkit-scrollbar-thumb {
       border-radius: 2px;
-      background: rgba(0, 0, 0, 0.18);
+      background: var(--scrollbar-thumb);
     }
 
     &:first-child {
@@ -543,6 +543,14 @@
     &[data-today="1"] .window-folder__meeting-sched-mnum {
       color: var(--primary-40, #5950ff);
     }
+  }
+
+  // A month square schedules a meeting that day (skeleton monthlyGrid) — for
+  // a viewer who may schedule; data-add is "0" otherwise. Pointer only, no
+  // hover wash: the cards sit inside the square, so a wash would light up
+  // under a hovered card that opens its meeting instead.
+  &__meeting-sched-mcell[data-add="1"] {
+    cursor: pointer;
   }
 
   &__meeting-sched-mnum {

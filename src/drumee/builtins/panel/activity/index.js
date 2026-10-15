@@ -17,10 +17,10 @@ const { VIEW_FILTERS, buttonLabel: viewFilterLabel } = require('./skeleton/view-
 // Round 3 Phase 2: the real-time chat card. Built to Figma
 // (58208:83650) — see chat-toast.js for the measurements and the rules.
 const { showChatToast, killChatToast } = require('./chat-toast');
-// Round 3 Phase 3: which popups the user has switched off. Read once here and
-// refreshed from every mute_set — never per message. Suppresses the CARD only:
-// the feed, the badge and the tab counts are untouched by design.
-const { loadMuteState, muteState } = require('./mute');
+// Which chats the user muted. Read once here and refreshed from every
+// mute_set — never per message. Suppresses the card, the OS notification and
+// its sound; the server leaves muted chats out of the feed and the counts.
+const { loadMuteState, muteState, isPopupMuted } = require('./mute');
 const { hubCounts, latestTime } = require('./hub-counts');
 require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
@@ -2633,6 +2633,14 @@ class __panel_activity extends LetcBox {
     ) {
       showChatToast(this, opt, url);
     }
+
+    // Muted chat: no OS notification and no drip either — the card above has
+    // already stood down on its own. Only chat posts are judged: mute is a
+    // chat setting, and invites / tasks / shares keep notifying.
+    if (
+      (data.service === SERVICE.chat.post || data.service === SERVICE.channel.post) &&
+      isPopupMuted(opt)
+    ) return;
 
     if (!window.Notification) return;
     if (Notification.permission === "denied") return;

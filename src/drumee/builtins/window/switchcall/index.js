@@ -115,6 +115,7 @@ class ___window_switchcall extends mfsInteract {
   /**
    */
   async decline(cmd) {
+    this._declineMeetingInvite();
     if (!this.currentRoom || this.peerData.room_type != _e.connect) {
       return;
     }
@@ -125,6 +126,34 @@ class ___window_switchcall extends mfsInteract {
     this.$el.hide();
     this.goodbye();
 }
+
+  /**
+   * Someone in a meeting rang us from its roster (conference.invite → push.js
+   * dispatchRoom) and we dismissed the prompt: tell them, so their "Call in
+   * progress" turns into "Declined" instead of waiting out the ring. A prompt
+   * raised by anything else (conference.join "first participant arrived")
+   * carries no caller socket and is left alone. Sent once, through the
+   * meeting's workspace — the callee is a member there, which is what the
+   * decline's user_permission check needs.
+   */
+  _declineMeetingInvite() {
+    const p = this.peerData;
+    if (this._declined || !p || p.room_type != _a.meeting) return;
+    if (p.type && p.type != SERVICE.conference.invite) return;
+    if (!p.caller_id || !p.hub_id) return;
+    this._declined = 1;
+    this.postService(SERVICE.conference.decline, {
+      hub_id: p.hub_id,
+      nid: p.room_id,
+      metadata: { type: _a.meeting },
+      caller: {
+        caller_id: p.caller_id,
+        uid: p.uid,
+        hub_id: p.hub_id,
+        room_id: p.room_id,
+      },
+    }).catch((e) => this.warn && this.warn("conference.decline failed", e));
+  }
 
   /**
    * User Interaction Evant Handler

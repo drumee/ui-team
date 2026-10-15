@@ -71,6 +71,12 @@
         cursor: not-allowed;
       }
 
+      // The share button stays clickable while locked, so the click can say
+      // who is sharing (screenshare.js _explainShareLocked).
+      &.screen[data-disabled="1"] {
+        pointer-events: auto;
+      }
+
       &[data-muted="1"]:not([data-disabled="1"]) {
         opacity: 0.85;
       }
@@ -194,27 +200,29 @@
       z-index: 1;
     }
 
+    // Brand tint, same as the camera picker below (it was a legacy slate
+    // blue next to a violet Save button).
     .device-label {
-      padding: 4px 8px;
-      @include drumee.typo($size: 13px, $line: 17px, $weight: 400, $color: var(--default-text-color));
-      text-align: left;
+      padding: 8px;
+      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--normal-fg-10));
       cursor: pointer;
-      margin-bottom: 3px;
-      background-color: #fbfbfb;
+      margin-bottom: 2px;
+      background-color: transparent;
       border-radius: var(--border-radius);
       width: 100%;
-      text-align: center;
-      justify-content: center;
+      box-sizing: border-box;
+      text-align: left;
+      justify-content: flex-start;
       min-width: 150px;
 
       &:hover {
-        background-color: #879bff;
-        color: var(--default-bg);
+        background-color: var(--overlay-brand, rgba(89, 80, 255, 0.08));
       }
 
       &[data-state="1"] {
-        background-color: #6178d8;
-        color: var(--default-bg);
+        background-color: var(--overlay-brand, rgba(89, 80, 255, 0.1));
+        color: var(--primary-40, #5950ff);
+        font-weight: 600;
       }
 
       div {
@@ -222,6 +230,13 @@
         overflow: hidden;
         text-overflow: ellipsis;
       }
+    }
+
+    // Same look for the audio list, written against `.audio` so the selected
+    // state is pinned by a test and can't drift from the camera picker again.
+    &.audio .device-label[data-state="1"] {
+      background-color: var(--overlay-brand, rgba(89, 80, 255, 0.1));
+      color: var(--primary-40, #5950ff);
     }
 
 
@@ -241,15 +256,14 @@
       }
 
       &.button-confirm {
-        // --btn-commit-background is malformed in skin/vars/default.scss
-        // (`-primary-500` instead of `var(--primary-500)`) so it computes to
-        // transparent — the Confirm button then rendered white-on-white on the
-        // popup and looked blank. Use the intended commit accent directly.
-        background-color: var(--primary-500);
+        // Brand accent, same as the selected row and the media-blocked retry
+        // button. (--btn-commit-background is malformed in
+        // skin/vars/default.scss, and --primary-500 is the old violet.)
+        background-color: var(--primary-40, #5950ff);
         @include drumee.typo($line: 18px, $size: 13px, $weight: 300, $color: var(--btn-commit-text));
 
         &:hover {
-          background-color: var(--primary-600);
+          background-color: var(--primary-50);
         }
       }
     }

@@ -56,6 +56,8 @@ function detachWhenFaded(node) {
 const { timestamp } = require("@drumee/ui-essentials")
 const winman = require("window/manager");
 const { withOwnWorkspaceName } = require("libs/workspace-label");
+const { acceptStartsCall } = require("builtins/window/connect/call-start");
+const { ringWhileOpen, toastRings } = require("./incoming-ring");
 
 class __push_manager extends winman {
 
@@ -187,8 +189,11 @@ class __push_manager extends winman {
 
       // A scheduled meeting's start time has arrived (reminderWorker →
       // meeting_schedule_due). Show the same toast, flavoured as a reminder
-      // with a Join button that opens the meeting.
+      // with a Join button that opens the meeting. Not while that workspace's
+      // meeting window is open: its waiting room already says when, and goes
+      // in by itself.
       case "room.reminder":
+        if (this._inMeetingOf(data && data.hub_id)) return;
         return this._showMeetingToast(data, { reminder: 1 });
 
       // Someone STARTED a meeting in a workspace we belong to. conference.js
@@ -232,6 +237,14 @@ class __push_manager extends winman {
       // spot instead, and say who did it.
       case "hub.member_removed":
         return this.onWorkspaceAccessRevoked(data);
+
+      // The user's pinned workspaces changed in another tab or on another
+      // device (server drumate.pinned_workspaces). The desk redraws them.
+      case "drumate.pinned_workspaces":
+        if (typeof Desk !== "undefined" && Desk && _.isFunction(Desk._onPinsPushed)) {
+          Desk._onPinsPushed(data);
+        }
+        return;
       // case SERVICE.adminpanel.mimic_new:
       //   return this.loadMimicNew(data);
 
@@ -809,7 +822,27 @@ class __push_manager extends winman {
         }),
       );
       this._meetingToasts.set(key, toast);
+      // Ring the "now" card like an incoming call (same tone, same stop rules
+      // as the switchcall prompt — see ./incoming-ring), unless a call is
+      // already live. Every way the card goes away runs kill(), so the ring
+      // ends there: Join, Cancel, ✕, and the MEETING_TOAST_MS auto-dismiss.
+      const inCall = !!(
+        (Wm.hasLiveCall && Wm.hasLiveCall()) ||
+        ["window_connect", "window_meeting"].some((k) =>
+          ((Wm.getItemsByKind && Wm.getItemsByKind(k)) || []).some(
+            (w) => w && !(w.isDestroyed && w.isDestroyed()),
+          ),
+        )
+      );
+      const stopRing = toastRings(variant, inCall)
+        ? ringWhileOpen(null, _K.ringtones.call, {
+            play: (url, loop) => Visitor.playSound(url, loop),
+            mute: () => Visitor.muteSound(),
+            current: () => Visitor._audio && Visitor._audio.src,
+          })
+        : () => {};
       const kill = () => {
+        stopRing();
         try {
           // Release the slot first — a card dismissed out of order must not
           // leave a gap that keeps pushing later ones further down.
@@ -926,6 +959,21 @@ class __push_manager extends winman {
   }
 
   /**
+   * Is this workspace's meeting window open, waiting room included? Then a
+   * meeting card for it has nothing to offer, and a waiting room is told to
+   * go in (window/meeting joinNow, a no-op once in the call).
+   */
+  _inMeetingOf(hub_id) {
+    if (!hub_id || typeof Wm === "undefined" || !Wm.getItemsByKind) return false;
+    const w = (Wm.getItemsByKind("window_meeting") || []).find(
+      (m) => m && !(m.isDestroyed && m.isDestroyed()) && m.mget(_a.hub_id) == hub_id,
+    );
+    if (!w) return false;
+    if (typeof w.joinNow === "function") w.joinNow();
+    return true;
+  }
+
+  /**
    * Is a meeting card for this workspace already on screen?
    *
    * Used only to stop conference.start from doubling a card the reminder has
@@ -977,6 +1025,11 @@ class __push_manager extends winman {
       // Name the workspace as this desk does, not by its shared name.
       data = withOwnWorkspaceName(data);
       if (data.uid && data.uid == Visitor.id) return;
+      // Already in this workspace's meeting window, its waiting room most of
+      // all: the host starting it is the waiting room's cue to go in. A card
+      // with a second Join on top of it was what led to "You are already on
+      // other call".
+      if (this._inMeetingOf(data.hub_id)) return;
       if (this._hasLiveMeetingToastFor(data.hub_id)) return;
 
       // Same derivation the switchcall popup uses for this very payload, so
@@ -1180,7 +1233,7 @@ class __push_manager extends winman {
       });
     } else {
       o = respawn;
-      Visitor.playSound();
+      Visitor.playSound(_K.ringtones.call);
       if (data.origin && data.origin.uid) {
         const title = LOCALE.X_IS_CALLING_YOU.format(data.origin.firstname);
         const notif = {
@@ -1274,7 +1327,20 @@ class __push_manager extends winman {
         respawn,
       };
 
-      this.addWindow(o);
+      const added = this.addWindow(o);
+      // Ring like an incoming call — but never over a call already in
+      // progress (the shared Audio would play through it).
+      if (!currentRoom || currentRoom.isDestroyed()) {
+        const prompt =
+          (added && typeof added.once === "function" && added) ||
+          Wm.getItemByKind("window_switchcall");
+        ringWhileOpen(prompt, _K.ringtones.call, {
+          play: (url, loop) => Visitor.playSound(url, loop),
+          mute: () => Visitor.muteSound(),
+          current: () => Visitor._audio && Visitor._audio.src,
+          destroyEvent: _e.destroy,
+        });
+      }
     });
   }
 
@@ -1282,6 +1348,16 @@ class __push_manager extends winman {
    *
    */
   dispatchSignaling(service, data) {
+    // A member we rang from a meeting roster declined: that ring belongs to the
+    // meeting window, not to a 1:1 call.
+    if (service === SERVICE.conference.decline && data && data.room_type == _a.meeting) {
+      for (const w of Wm.getItemsByKind("window_meeting") || []) {
+        if (!w || w.isDestroyed() || typeof w.onInviteDeclined !== "function") continue;
+        if (w.mget(_a.room_id) != data.room_id && w.mget(_a.hub_id) != data.hub_id) continue;
+        w.onInviteDeclined(data.uid);
+      }
+      return;
+    }
     const currentRoom = Wm.getItemByKind("window_connect");
     if (!currentRoom || currentRoom.isDestroyed()) {
       return;
@@ -1293,10 +1369,12 @@ class __push_manager extends winman {
         break;
       case SERVICE.conference.accept:
         this.verbose("AAA:364", currentRoom, currentRoom.state, _a.invite, data)
+        // Two accepts arrive per call (the server's join() push, then the
+        // callee's own). Only a still-ringing window acts — the state moves
+        // past 'connect' within milliseconds, so the old invite/connect check
+        // let the second accept start the caller's conference again.
+        if (!acceptStartsCall(currentRoom.state)) return;
         state = "connect";
-        if (currentRoom.state == _a.invite || currentRoom.state == 'connect') {
-          return;
-        }
         break;
       case SERVICE.conference.revoke:
         currentRoom.goodbye();

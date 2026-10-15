@@ -161,6 +161,14 @@ class __migrate_gdrive_popup extends LetcBox {
 
   _render() {
     this.feed(require('./skeleton')(this));
+    this._animateBar();
+  }
+
+  /** Each render brings a new fill: run it from where the last one stood. */
+  _animateBar() {
+    if (!this.el || !this.fig) return;
+    this._barMemo = this._barMemo || {};
+    require('libs/progress-fill').animateFill(this.el, `.${this.fig.family}__progress-fill`, this._barMemo);
   }
 
   async _refreshScope() {

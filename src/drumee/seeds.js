@@ -219,6 +219,9 @@ module.exports = {
   image_viewer: function () {
     return import("./builtins/player/image");
   },
+  player_file_switcher: function () {
+    return import("./builtins/player/widget/file-switcher");
+  },
   locale_language: function () {
     return import("./modules/devel/locale/language");
   },
@@ -396,6 +399,9 @@ module.exports = {
   settings_change_email: function () {
     return import("widget/settings/change-email");
   },
+  settings_leave_confirm: function () {
+    return import("widget/settings/leave-confirm");
+  },
   // apps_main (the admin console) migrated to the @drumee/admin-console plugin —
   // loaded on demand via Kind.loadPlugin (see modules/desk onUiEvent "toggle-apps").
   settings_filename: function () {
@@ -476,6 +482,12 @@ module.exports = {
   },
   widget_chat_export: function () {
     return import("./builtins/widget/chat-export");
+  },
+  widget_topic_create: function () {
+    return import("./builtins/widget/topic-create");
+  },
+  widget_chat_details: function () {
+    return import("./builtins/widget/chat-details");
   },
   widget_meeting: function () {
     return import("./builtins/widget/meeting");

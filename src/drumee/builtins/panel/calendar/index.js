@@ -28,6 +28,11 @@ const {
   DAY_START_HOUR,
 } = require("./skeleton/helpers");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { modalKids } = require("./skeleton");
+const { recipientChips } = require("./skeleton/meeting-form");
+const A = require("./attachments");
+const { rowOf } = require("../../window/tasks/live-sync");
+const { fileChips } = require("./skeleton/attachments");
 
 const VIEW_KEYS = ["month", "week", "day"];
 const FILTER_KEYS = ["all", "task", "meeting"];
@@ -79,9 +84,27 @@ class __calendar_main extends LetcBox {
     // The dropdown dismisser lives on `document`, so it outlives this widget
     // unless it is taken down here.
     this._unbindMenuDismiss();
+    this._cancelFormUploads(this._form);
+    if (this._dropHandlers && this.el) {
+      for (const [type, fn] of this._dropHandlers) this.el.removeEventListener(type, fn);
+      this._dropHandlers = null;
+    }
+    if (this._pasteHandler) {
+      document.removeEventListener("paste", this._pasteHandler);
+      this._pasteHandler = null;
+    }
+    if (this._timeFilter && this.el) {
+      this.el.removeEventListener("input", this._timeFilter);
+      this.el.removeEventListener("change", this._timeFilter);
+      this._timeFilter = null;
+    }
     if (this._reloadTimer) {
       clearTimeout(this._reloadTimer);
       this._reloadTimer = null;
+    }
+    if (this._toastTimer) {
+      clearTimeout(this._toastTimer);
+      this._toastTimer = null;
     }
   }
 
@@ -96,6 +119,8 @@ class __calendar_main extends LetcBox {
    * an aggregated read view has even less excuse to block on its data.
    */
   onDomRefresh() {
+    this._installFileDrop();
+    this._installTimeFilter();
     this._render();
     this._loadItems().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
@@ -120,6 +145,12 @@ class __calendar_main extends LetcBox {
     // Only when something happened while parked (a push was deferred) or the
     // window on screen is old enough that a missed push is plausible.
     const stale = Date.now() - (this._loadedAt || 0) > PARKED_REFRESH_MS;
+    // A modal still open from before the screen was parked keeps its draft:
+    // the re-read waits for it to close (_closeForm), like a live push does.
+    if (this._form) {
+      this._dirty = this._dirty || stale;
+      return;
+    }
     if (!this._dirty && !stale) return;
     this._dirty = false;
     this._loadItems().then(() => {
@@ -366,6 +397,10 @@ class __calendar_main extends LetcBox {
     const keep = grid && key === this._gridKey ? grid.scrollTop : null;
     this._gridKey = key;
     this.feed(require("./skeleton")(this));
+    // The page feed rebuilds the toast slot empty — closing the invite-link
+    // card with "Done" reloads the page right after a Copy. Put a live toast
+    // back so it still gets its full 3.5s.
+    if (this._toast) this._renderToast();
     // The children are not laid out inside feed(), so the scroller has no
     // height to set scrollTop against until the frame settles.
     _.defer(() => {
@@ -390,7 +425,7 @@ class __calendar_main extends LetcBox {
    *     working hours when nothing is scheduled. Same rule, and the same
    *     default hour, as window/folder/index.js _scrollScheduleIntoView.
    *   range the SAME, page merely re-fed (a live push, a filter repaint, a
-   *     modal opening) → put the user back where they were. _render rebuilds
+   *     modal closing) → put the user back where they were. _render rebuilds
    *     the whole page, so without this every push threw the grid to midnight.
    *
    * Month doesn't scroll by hour and is left alone in the first case.
@@ -458,6 +493,7 @@ class __calendar_main extends LetcBox {
   }
 
   async _reload() {
+    this._dirty = false;
     await this._loadItems();
     this._render();
   }
@@ -470,7 +506,11 @@ class __calendar_main extends LetcBox {
    * the window several times for one user action.
    */
   _scheduleReload() {
-    if (this._parked) {
+    // While a modal is open a reload would re-feed the page and the modal with
+    // it — replaying its entrance, rebuilding the date picker and dropping
+    // whatever is typed but not yet absorbed. Parked the same way a hidden
+    // screen is; _closeForm runs it.
+    if (this._parked || this._form) {
       this._dirty = true;
       return;
     }
@@ -478,6 +518,11 @@ class __calendar_main extends LetcBox {
     this._reloadTimer = setTimeout(() => {
       this._reloadTimer = null;
       if (this.isDestroyed && this.isDestroyed()) return;
+      // The modal may have opened during the debounce.
+      if (this._form) {
+        this._dirty = true;
+        return;
+      }
       this._reload();
     }, 250);
   }
@@ -494,10 +539,13 @@ class __calendar_main extends LetcBox {
       case (SERVICE.task && SERVICE.task.update_status) || "task.update_status":
       case (SERVICE.task && SERVICE.task.update_assignee) || "task.update_assignee":
       case (SERVICE.task && SERVICE.task.delete) || "task.delete":
-      // Meetings push on room.scheduled (room.js _notify_invitees). Note it
-      // targets INVITEES, so a hub meeting the viewer is not invited to still
-      // only appears on the next view change.
+      // Meetings push on room.scheduled to new INVITEES (room.js
+      // _notify_invitees), and on room.book / room.update / room.remove to
+      // every socket on the meeting's hub (room.js _broadcast).
       case "room.scheduled":
+      case "room.book":
+      case "room.update":
+      case "room.remove":
         this._scheduleReload();
         return;
       default:
@@ -590,6 +638,7 @@ class __calendar_main extends LetcBox {
           due_date: row.due_date || "",
           status: row.status || "todo",
           priority: row.priority || "medium",
+          files: [],
         },
       };
     } else {
@@ -602,11 +651,13 @@ class __calendar_main extends LetcBox {
           due_date: this._pendingDay || "",
           status: "todo",
           priority: "medium",
+          files: [],
         },
       };
     }
     this._pendingDay = null;
-    this._render();
+    this._renderModal();
+    if (row) this._loadLinkedFiles(this._form);
   }
 
   _openMeetingForm() {
@@ -624,30 +675,549 @@ class __calendar_main extends LetcBox {
         restrict: false,
         recipients: [],
         password_on: false,
+        files: [],
       },
     };
     this._pendingDay = null;
-    this._render();
+    this._renderModal();
   }
 
   _closeForm() {
+    // Whatever is still uploading has no task or meeting to join any more.
+    this._cancelFormUploads(this._form);
     this._form = null;
-    this._render();
+    // Pushes that landed while the modal was open were held back
+    // (_scheduleReload); this is where they are owed.
+    // The modal goes first — the reload waits on the network.
+    this._renderModal();
+    if (this._dirty) return this._reload();
   }
 
   /**
-   * Re-paint after a click that changed the draft while the modal is open.
+   * Open, swap or close the modal by re-feeding ONLY its wrapper.
    *
-   * MUST be used instead of _render() by every in-form handler. _render()
-   * re-feeds the whole page from `draft`, and the free-text fields (title,
-   * description, the four time boxes, the password) only live in the DOM until
-   * _absorbFormText runs — so picking a status pill, flipping AM/PM or ticking
-   * a switch used to silently wipe whatever the user had typed above it.
-   * Absorbing first makes the re-render lossless.
+   * Opening used to call _render(), which rebuilt the header, toolbar and the
+   * whole grid underneath a dialog that covers them. The wrapper is a stable
+   * part of the page ("wrapper-cal-modal"), so it is fed on its own and its
+   * data-state — the desk's slot-lift hook — is stamped directly. Falls back
+   * to the full render if the part is missing, as _renderToolbar does.
    */
-  _renderForm() {
-    this._absorbFormText();
-    this._render();
+  _renderModal() {
+    const part = _.isFunction(this.getPart) ? this.getPart("wrapper-cal-modal") : null;
+    if (!part || (part.isDestroyed && part.isDestroyed()) || !part.el) {
+      return this._render();
+    }
+    part.el.setAttribute("data-state", this._form ? "open" : "closed");
+    part.feed(modalKids(this));
+  }
+
+  // ── in-place form updates ──────────────────────────────────────────────────
+  //
+  // A click inside the modal (a pill, AM/PM, a toggle, a recipient) changes the
+  // draft and then repaints ONLY the element it changed. Nothing in the modal
+  // is re-fed, so the card does not replay its entrance, the date picker is
+  // not rebuilt, and text the user is typing stays where it is — no absorb
+  // pass needed before a click any more, only before a commit.
+
+  _modalEl() {
+    return (this.el && this.el.querySelector(`.${this.fig.family}__modal`)) || null;
+  }
+
+  /** Light `key` in the option row the clicked element belongs to. */
+  _lightOption(cmd, rowSelector, itemSelector, key) {
+    const row = cmd.el && cmd.el.closest(rowSelector);
+    if (!row) return;
+    row.querySelectorAll(itemSelector).forEach((el) => {
+      el.setAttribute("data-active", el.getAttribute("data-key") === key ? "1" : "0");
+    });
+  }
+
+  /** Invite block: toggle rows, the restrict switch and the sub-blocks they reveal. */
+  _syncInviteDom() {
+    const root = this._modalEl();
+    if (!root || !this._form) return;
+    const pfx = this.fig.family;
+    const d = this._form.draft || {};
+    const flag = (on) => (on ? "1" : "0");
+    root.querySelectorAll("[data-toggle]").forEach((el) => {
+      const on = flag(d[el.getAttribute("data-toggle")]);
+      el.setAttribute("data-on", on);
+      const box = el.querySelector(`.${pfx}__checkbox`);
+      if (box) box.setAttribute("data-checked", on);
+      const sw = el.querySelector(`.${pfx}__switch`);
+      if (sw) sw.setAttribute("data-on", on);
+    });
+    root.querySelectorAll("[data-sub]").forEach((el) => {
+      el.setAttribute("data-open", flag(d[el.getAttribute("data-sub")]));
+    });
+  }
+
+  /**
+   * Required fields — the ones the skeleton marks `data-required`, so the
+   * form, not this method, decides what is required (title, in both the task
+   * and the meeting form). Blank or whitespace-only fails.
+   *
+   * A failing field gets data-error="1", which shows its error line and reds
+   * its border; the first one takes the focus. Returns true when all pass.
+   * The flag comes off again as the user types (_clearFieldError).
+   */
+  _validateRequired(draft) {
+    const root = this._modalEl();
+    if (!root) return true;
+    let first = null;
+    root.querySelectorAll("[data-required='1'][data-field]").forEach((el) => {
+      const key = el.getAttribute("data-field");
+      const ok = String((draft && draft[key]) || "").trim() !== "";
+      el.setAttribute("data-error", ok ? "0" : "1");
+      if (!ok && !first) first = el;
+    });
+    if (!first) return true;
+    const input = first.querySelector("input, textarea");
+    if (input) input.focus();
+    this._bindFieldErrorClear(root);
+    return false;
+  }
+
+  /**
+   * One delegated `input` listener per modal element, bound on the first
+   * failed submit: a flagged field loses its error as soon as it holds text
+   * again. The modal element is replaced on every open, so the listener goes
+   * with it.
+   */
+  _bindFieldErrorClear(root) {
+    if (root.__calErrorClear) return;
+    root.__calErrorClear = (ev) => {
+      const t = ev.target;
+      const field = t && t.closest && t.closest("[data-required='1'][data-error='1']");
+      if (field && String(t.value || "").trim() !== "") {
+        field.setAttribute("data-error", "0");
+      }
+    };
+    root.addEventListener("input", root.__calErrorClear);
+  }
+
+  // ── toast ──────────────────────────────────────────────────────────────────
+  //
+  // Settings' toast (settings_main _showToast / _renderToast / _placeToast),
+  // same markup, timing and placement: a white card with a check (success) or
+  // warning (error) glyph, hung under the topbar's utility icons for 3.5s.
+
+  _showToast(message, kind = "success") {
+    this._toast = { message, kind };
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      this._toastTimer = null;
+      this._toast = null;
+      this._renderToast();
+    }, 3500);
+    this._renderToast();
+  }
+
+  _renderToast() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const part = _.isFunction(this.getPart) ? this.getPart("cal-toast") : null;
+    if (!part || !part.el) return;
+    if (!this._toast) return part.feed([]);
+    const pfx = this.fig.family;
+    const { message, kind } = this._toast;
+    const ico = kind === "error" ? "apps-warning" : "app-check";
+    part.feed(
+      Skeletons.Box.X({
+        className: `${pfx}__toast ${pfx}__toast--${kind}`,
+        kids: [
+          Skeletons.Image.Svg({ ico, className: `${pfx}__toast-ico` }),
+          Skeletons.Note({ className: `${pfx}__toast-text`, content: message }),
+        ],
+      }),
+    );
+    this._placeToast(part.el);
+  }
+
+  /**
+   * Right edge on the topbar's utility cluster, TOAST_GAP below it; without
+   * a cluster (phone topbar) the slot keeps its CSS corner. Set, measured and
+   * corrected by the difference, because this slot lives inside the desk's
+   * animated main slot and its `fixed` offsets are not viewport pixels —
+   * the reasoning settings_main _placeToast documents.
+   */
+  _placeToast(slot) {
+    const TOAST_GAP = 8;
+    slot.style.top = "";
+    slot.style.right = "";
+    const cluster = document.querySelector(".desk-module-topbar__utility-cluster");
+    const c = cluster && cluster.getBoundingClientRect();
+    if (!c || !c.width || !c.height) return;
+    const want = { top: c.bottom + TOAST_GAP, right: c.right };
+    const style = getComputedStyle(slot);
+    const got = slot.getBoundingClientRect();
+    const sx = slot.offsetWidth ? got.width / slot.offsetWidth : 1;
+    const sy = slot.offsetHeight ? got.height / slot.offsetHeight : 1;
+    const top = (parseFloat(style.top) || 0) + (want.top - got.top) / (sy || 1);
+    const right = (parseFloat(style.right) || 0) + (got.right - want.right) / (sx || 1);
+    slot.style.top = `${top}px`;
+    slot.style.right = `${right}px`;
+  }
+
+  /** Re-feed the recipient chip row alone. */
+  _renderRecipients() {
+    const list = (this._form && this._form.draft.recipients) || [];
+    const part = _.isFunction(this.getPart) ? this.getPart("form-recipient-chips") : null;
+    if (!part || !part.el) return;
+    part.feed(recipientChips(this, list));
+    part.el.setAttribute("data-count", String(list.length));
+  }
+
+  // ── attachments ────────────────────────────────────────────────────────────
+  //
+  // Files upload the moment they are added (upload-progress window, the route
+  // the Task tab takes) into the personal hub's hidden task folder; the commit
+  // only links the nids (_linkTaskFiles / _linkMeetingFiles). Every callback
+  // checks it still belongs to the open form: the modal can close, or another
+  // open, while bytes are in flight.
+
+  /** The personal hub's /__chat__/__task__ (mfs_home.task_upload_id). */
+  async _attachmentNid() {
+    if (this._attachNid) return this._attachNid;
+    try {
+      const home = await this.fetchService({
+        service: (SERVICE.media && SERVICE.media.home) || "media.home",
+        hub_id: this._personalHub,
+      });
+      if (home && home.task_upload_id) this._attachNid = home.task_upload_id;
+    } catch (e) {
+      this.warn && this.warn("calendar: task folder lookup failed", e);
+    }
+    return this._attachNid || this._personalNid;
+  }
+
+  async _stageFiles(files) {
+    const form = this._form;
+    if (!form || !files || !files.length) return;
+    const draft = form.draft;
+    draft.files = draft.files || [];
+    const { overflow } = A.stageFiles(draft.files, files);
+    if (overflow.length && typeof Butler !== "undefined") Butler.say(LOCALE.CAL_FILES_LIMIT);
+    this._renderFiles();
+    return this._startUploads(form);
+  }
+
+  /** Re-feed the chip list alone (part "form-files"). */
+  _renderFiles() {
+    const list = (this._form && this._form.draft.files) || [];
+    const part = _.isFunction(this.getPart) ? this.getPart("form-files") : null;
+    if (!part || !part.el) return;
+    part.feed(fileChips(this, list));
+    part.el.setAttribute("data-count", String(list.length));
+    const zone = part.el.closest && part.el.closest(`.${this.fig.family}__files`);
+    if (zone) zone.setAttribute("data-has-files", list.length ? "1" : "0");
+  }
+
+  async _startUploads(form) {
+    const list = (form && form.draft.files) || [];
+    const fresh = list.filter((pf) => pf.file && !pf.nid && !pf.bundleEntry && pf.status === "queued");
+    if (!fresh.length) return;
+    const Entry = require("media/bundle/entry");
+    const UploadProgress = require("window/upload-progress");
+    const paired = A.pairEntries(fresh, Entry.entriesFromFileList(fresh.map((pf) => pf.file)));
+    if (!paired.length) return;
+    paired.forEach((pf) => (pf.status = "uploading"));
+    this._renderFiles();
+    const dest = await this._attachmentNid();
+    await UploadProgress.runBundle(
+      paired.map((pf) => pf.bundleEntry),
+      dest,
+      this._personalHub,
+      null,
+      {
+        onJob: (job) => paired.forEach((pf) => (pf.bundleJob = job)),
+        onFileDone: (node, _parent, entry) => this._onFileDone(form, entry, node),
+        onDone: () => this._onBatchDone(form, paired),
+      },
+    ).catch(() => null);
+    // No window, or it refused the batch before making a job: nothing will
+    // ever report on these.
+    const orphaned = paired.filter((pf) => !pf.bundleJob && pf.bundleEntry && pf.bundleEntry.status !== "canceled");
+    if (orphaned.length) {
+      orphaned.forEach((pf) => (pf.bundleEntry.status = "error"));
+      this._onBatchDone(form, orphaned);
+    }
+  }
+
+  _onFileDone(form, entry, node) {
+    const pf = ((form && form.draft.files) || []).find((f) => f.bundleEntry === entry);
+    if (!pf || !A.settleEagerFile(pf, node, this._personalHub)) return;
+    if (this._form !== form) return;
+    this._renderFiles();
+  }
+
+  _onBatchDone(form, pfs) {
+    // settleEagerBatch hands failures back for a commit-time retry; this
+    // modal has no commit-time upload, so a failure is an error chip with
+    // Retry, and a cancel leaves the list.
+    const { fallback, dropped } = A.settleEagerBatch(pfs);
+    fallback.forEach((pf) => (pf.status = "error"));
+    if (dropped.length) {
+      const gone = new Set(dropped);
+      form.draft.files = form.draft.files.filter((f) => !gone.has(f));
+    }
+    if (this._form !== form) return;
+    if (fallback.length || dropped.length) this._renderFiles();
+  }
+
+  async _removeFile(key) {
+    const form = this._form;
+    if (!form) return;
+    const list = form.draft.files || [];
+    const pf = list.find((f) => A.fileKey(f) === key);
+    if (!pf) return;
+    if (pf.linked) {
+      // Edit mode: the file is already on the task. Unlinked now, like the
+      // Task tab's ✕, addressed with the ROW's hub.
+      const row = form.row || {};
+      const res = await this.postService({
+        service: (SERVICE.task && SERVICE.task.unlink_file) || "task.unlink_file",
+        hub_id: row.hub_id || this._personalHub,
+        task_id: row.id,
+        file_nid: pf.nid,
+      });
+      // unlink_file answers an object ({task_id, file_nid, ...}); postService
+      // never rejects, so a refusal is {error} and a transport failure undefined.
+      if (!res || res.error || String(res.file_nid) !== String(pf.nid)) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+        return;
+      }
+    } else if (A.unfinishedPending([pf]).length) {
+      require("window/upload-progress").dropEntries(A.itemsOf([pf]));
+    }
+    if (pf.previewUrl) {
+      try {
+        URL.revokeObjectURL(pf.previewUrl);
+      } catch (_) {}
+    }
+    form.draft.files = (form.draft.files || []).filter((f) => f !== pf);
+    if (this._form === form) this._renderFiles();
+  }
+
+  _retryFile(key) {
+    const form = this._form;
+    const pf = form && (form.draft.files || []).find((f) => A.fileKey(f) === key);
+    if (!pf || pf.status !== "error" || !pf.file) return;
+    pf.bundleEntry = null;
+    pf.bundleJob = null;
+    pf.status = "queued";
+    this._startUploads(form);
+  }
+
+  _cancelFormUploads(form) {
+    const list = (form && form.draft && form.draft.files) || [];
+    const doomed = A.abandonedPending(list);
+    if (doomed.length) require("window/upload-progress").dropEntries(A.itemsOf(doomed));
+    for (const pf of list) {
+      if (!pf.previewUrl) continue;
+      try {
+        URL.revokeObjectURL(pf.previewUrl);
+      } catch (_) {}
+    }
+  }
+
+  /** Paperclip: a throwaway <input type=file multiple>. */
+  _pickFiles() {
+    const form = this._form;
+    if (!form) return;
+    const input = document.createElement("input");
+    input.type = "file";
+    input.multiple = true;
+    input.onchange = () => {
+      if (this._form === form) this._stageFiles(Array.from(input.files || []));
+    };
+    input.click();
+  }
+
+  /**
+   * Delegated on this.el, so it survives every modal re-feed. Only a COMPUTER
+   * file drag (dataTransfer type "Files") while a task/meeting modal is open is
+   * ours. Over the Attachments zone it is accepted; anywhere else in the modal
+   * it is refused out loud. Either way it is stopped here, because the desk's
+   * own drop handler would otherwise upload the file into the home folder.
+   */
+  _installFileDrop() {
+    if (!this.el || this._dropHandlers) return;
+    const pfx = this.fig.family;
+    const modalOpen = () => this._form && (this._form.kind === "task" || this._form.kind === "meeting");
+    const zoneOf = (t) => (t && t.closest ? t.closest(`.${pfx}__files[data-drop-zone="files"]`) : null);
+    const light = (zone) => {
+      if (this._litZone === zone) return;
+      if (this._litZone) this._litZone.setAttribute("data-drop-active", "0");
+      if (zone) zone.setAttribute("data-drop-active", "1");
+      this._litZone = zone || null;
+    };
+    const over = (e) => {
+      if (!modalOpen() || !A.isFileDrag(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const zone = zoneOf(e.target);
+      try {
+        e.dataTransfer.dropEffect = zone ? "copy" : "none";
+      } catch (_) {}
+      light(zone);
+    };
+    const leave = (e) => {
+      if (this._litZone && !this._litZone.contains(e.relatedTarget)) light(null);
+    };
+    const drop = (e) => {
+      light(null);
+      return this._onDrop(e);
+    };
+    this._dropHandlers = [["dragover", over], ["dragleave", leave], ["drop", drop]];
+    for (const [type, fn] of this._dropHandlers) this.el.addEventListener(type, fn);
+    this._pasteHandler = (e) => this._onPasteFiles(e);
+    document.addEventListener("paste", this._pasteHandler);
+  }
+
+  /**
+   * The meeting form's time boxes take digits only: hour 1-12, minute 00-59.
+   * Delegated on this.el like _installFileDrop, so it survives every modal
+   * re-feed.
+   *
+   * On `input`, a value that is not on its way to a legal one (13, 60, a
+   * letter) is refused and the box goes back to what it held before the key
+   * press. Partial values ("0", "1") are let through because they are
+   * keystrokes away from "09" or "12". On `change` (blur), an hour left at
+   * "0" or "00" can never become legal, so it goes back to the last complete
+   * hour the box held.
+   */
+  _installTimeFilter() {
+    if (!this.el || this._timeFilter) return;
+    const pfx = this.fig.family;
+    const RULES = {
+      hour: { partial: /^(0|1|0[1-9]|1[0-2]|[2-9])?$/, done: (n) => n >= 1 && n <= 12 },
+      minute: { partial: /^([0-5][0-9]?|[6-9])?$/, done: (n) => n >= 0 && n <= 59 },
+    };
+    this._timeFilter = (e) => {
+      const t = e.target;
+      if (!t || t.tagName !== "INPUT" || !t.closest(`.${pfx}__time-input`)) return;
+      const part = /_(hour|minute)$/.exec(t.name || "");
+      const rule = part && RULES[part[1]];
+      if (!rule) return;
+      const isDone = (v) => v !== "" && rule.done(parseInt(v, 10));
+      if (t.__calLast == null) t.__calLast = rule.partial.test(t.defaultValue) ? t.defaultValue : "";
+      if (t.__calGood == null) t.__calGood = isDone(t.defaultValue) ? t.defaultValue : "";
+
+      if (e.type === "input") {
+        const digits = String(t.value || "").replace(/\D/g, "").slice(0, 2);
+        if (!rule.partial.test(digits)) {
+          t.value = t.__calLast;
+          return;
+        }
+        if (t.value !== digits) t.value = digits;
+        t.__calLast = digits;
+        if (isDone(digits)) t.__calGood = digits;
+        return;
+      }
+
+      if (t.value !== "" && !isDone(t.value)) {
+        t.value = t.__calGood;
+        t.__calLast = t.__calGood;
+      }
+    };
+    this.el.addEventListener("input", this._timeFilter);
+    this.el.addEventListener("change", this._timeFilter);
+  }
+
+  _onDrop(e) {
+    if (!this._form || !A.isFileDrag(e)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pfx = this.fig.family;
+    const zone = e.target && e.target.closest ? e.target.closest(`.${pfx}__files[data-drop-zone="files"]`) : null;
+    if (!zone) {
+      if (typeof Butler !== "undefined") Butler.say(LOCALE.WRONG_DROP_AREA);
+      return;
+    }
+    return this._stageFiles(Array.from((e.dataTransfer && e.dataTransfer.files) || []));
+  }
+
+  /**
+   * Paste files (a screenshot, a file copied in the OS file manager) into the
+   * open modal. A paste into the title or description stays text.
+   */
+  _onPasteFiles(e) {
+    if (!this._form || (this._form.kind !== "task" && this._form.kind !== "meeting")) return;
+    const t = e && e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    const files = Array.from((e.clipboardData && e.clipboardData.files) || []);
+    if (!files.length) return;
+    e.preventDefault();
+    return this._stageFiles(files);
+  }
+  /**
+   * Before a commit. A failed file must be retried or removed first — this
+   * modal has no commit-time upload. A file still on its way asks the
+   * upload-progress card (wait, or go without it). True = the commit may go.
+   */
+  async _gateFiles(form) {
+    const list = (form && form.draft.files) || [];
+    if (A.failedFiles(list).length) {
+      if (typeof Butler !== "undefined") Butler.say(LOCALE.CAL_FILES_FAILED);
+      return false;
+    }
+    const moving = A.unfinishedPending(list);
+    if (!moving.length) return true;
+    const choice = await require("window/upload-progress").confirmUnfinished({
+      items: A.itemsOf(moving),
+      action: form.kind === "meeting" || form.mode !== "edit" ? "create" : "update",
+    });
+    if (this._form !== form || choice !== "skip") return false;
+    // "skip" has already cancelled them in their bundle; take them off the list.
+    const gone = new Set(A.abandonedPending(form.draft.files));
+    form.draft.files = form.draft.files.filter((f) => !gone.has(f));
+    return true;
+  }
+
+  /** task.link_file per nid. postService never rejects: success = an array. Returns the failure count. */
+  async _linkTaskFiles(hub_id, task_id, nids) {
+    const svc = (SERVICE.task && SERVICE.task.link_file) || "task.link_file";
+    let failed = 0;
+    for (const file_nid of nids || []) {
+      const res = await this.postService({ service: svc, hub_id, task_id, file_nid });
+      if (!Array.isArray(res)) failed++;
+    }
+    return failed;
+  }
+
+  async _linkMeetingFiles(nid, nids) {
+    if (!nids || !nids.length) return true;
+    const res = await this.postService({
+      service: (SERVICE.room && SERVICE.room.link_files) || "room.link_files",
+      hub_id: this._personalHub,
+      nid,
+      file_nids: nids,
+    });
+    return !!(res && Array.isArray(res.attachments));
+  }
+
+  /** Edit mode: the task's current files, as removable chips. */
+  async _loadLinkedFiles(form) {
+    const row = form.row || {};
+    const rows = await this.fetchService({
+      service: (SERVICE.task && SERVICE.task.get_linked_files) || "task.get_linked_files",
+      hub_id: row.hub_id || this._personalHub,
+      task_id: row.id,
+      // A GET is served from the HTTP cache; a reopen right after a link or an
+      // unlink must not get the old list back.
+      _ts: Date.now(),
+    });
+    if (this._form !== form || !Array.isArray(rows)) return;
+    const linked = rows.map((f) => ({
+      nid: f.file_nid,
+      linked: 1,
+      status: "linked",
+      filename: f.filename || "",
+      extension: f.extension || f.ext || "",
+      category: f.category || "",
+    }));
+    form.draft.files = [...linked, ...(form.draft.files || []).filter((f) => !f.linked)];
+    this._renderFiles();
   }
 
   /**
@@ -673,19 +1243,13 @@ class __calendar_main extends LetcBox {
     });
 
     // start_hour / start_minute / end_hour / end_minute → draft.start / .end,
-    // leaving the meridiem the toggle already set (except for a 24h hour).
+    // leaving the meridiem the toggle already set. The boxes only accept
+    // 1-12 for the hour (_installTimeFilter), so there is no 24h hour to fold.
     ["start", "end"].forEach((which) => {
       const part = draft[which] || {};
       const hour = data[`${which}_hour`];
       const minute = data[`${which}_minute`];
       if (hour != null && `${hour}`.trim() !== "") part.hour = `${hour}`.trim();
-      // A 24-hour entry (13-23, e.g. "16" for 4 PM) is unambiguous: store it
-      // the 12h way (4 + PM) instead of letting _epochFor clamp it to 12.
-      const h = parseInt(part.hour, 10);
-      if (h >= 13 && h <= 23) {
-        part.hour = String(h - 12);
-        part.meridiem = "PM";
-      }
       if (minute != null && `${minute}`.trim() !== "") {
         part.minute = `${minute}`.trim();
       }
@@ -720,8 +1284,9 @@ class __calendar_main extends LetcBox {
 
   async _submitTask() {
     const draft = this._absorbFormText();
+    if (!this._validateRequired(draft)) return;
+    if (!(await this._gateFiles(this._form))) return;
     const title = String(draft.title || "").trim();
-    if (!title) return;
 
     // The form is only cleared once the write comes back, so every trigger
     // that lands while the request is in flight would post again — a second
@@ -744,13 +1309,14 @@ class __calendar_main extends LetcBox {
     const svcUpdate = (SERVICE.task && SERVICE.task.update) || "task.update";
     const svcStatus =
       (SERVICE.task && SERVICE.task.update_status) || "task.update_status";
+    let linkFailed = 0;
 
     if (!editing) {
       // Personal task: personal-hub scope, and no assignee_uids at all —
       // requirement §4 wants assignment refused, not hidden, and the server
       // rejects it for a personal hub. Sending an empty array would still be
       // sending the field.
-      await this.postService({
+      const created = rowOf(await this.postService({
         service: svcCreate,
         hub_id: this._personalHub,
         nid: this._personalNid,
@@ -759,7 +1325,12 @@ class __calendar_main extends LetcBox {
         status: draft.status || "todo",
         priority: draft.priority || "medium",
         due_date: draft.due_date || null,
-      });
+      }));
+      if (!created) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+        return;
+      }
+      linkFailed = await this._linkTaskFiles(this._personalHub, created.id, A.nidsToLink(draft.files));
     } else {
       const row = form.row || {};
       // Addressed with the ROW's hub — never the personal hub. This is the
@@ -782,7 +1353,12 @@ class __calendar_main extends LetcBox {
           status: draft.status || "todo",
         });
       }
+      linkFailed = await this._linkTaskFiles(hub_id, row.id, A.nidsToLink(draft.files));
     }
+
+    // The task exists either way; a file that would not link is said out loud
+    // rather than closing the modal on it silently.
+    if (linkFailed) this._showToast(LOCALE.CAL_FILES_NOT_ATTACHED, "error");
 
     this._form = null;
     await this._reload();
@@ -813,8 +1389,10 @@ class __calendar_main extends LetcBox {
 
   async _submitMeeting() {
     const draft = this._absorbFormText();
+    if (!this._validateRequired(draft)) return;
     const title = String(draft.title || "").trim();
-    if (!title || !draft.date) return;
+    if (!draft.date) return;
+    if (!(await this._gateFiles(this._form))) return;
 
     // Same in-flight guard as _submitTask: room.book runs two round trips
     // before the modal is replaced, and a second trigger in that window
@@ -892,6 +1470,10 @@ class __calendar_main extends LetcBox {
       return;
     }
 
+    // Before public_link, which grants the link whatever is attached when it runs.
+    const linked = await this._linkMeetingFiles(nid, A.nidsToLink(draft.files));
+    if (!linked) this._showToast(LOCALE.CAL_FILES_NOT_ATTACHED, "error");
+
     // Link + optional password. public_link accepts `password` today.
     const linkPayload = { service: linkSvc, hub_id: this._personalHub, nid };
     if (draft.password_on && draft.password) linkPayload.password = draft.password;
@@ -900,8 +1482,10 @@ class __calendar_main extends LetcBox {
 
     if (link) copyToClipboard(link);
     this._form = { kind: "invite-link", link: link || "" };
-    await this._loadItems();
-    this._render();
+    // The new meeting reaches the grid when this card closes (_closeForm),
+    // not underneath it — a reload now would re-feed the card it just opened.
+    this._dirty = true;
+    this._renderModal();
   }
 
   async _removeItem(cmd) {
@@ -1196,12 +1780,22 @@ class __calendar_main extends LetcBox {
       case "cal-form-status":
         if (!this._form) return;
         this._form.draft.status = cmd.mget("calStatus") || "todo";
-        return this._renderForm();
+        return this._lightOption(
+          cmd,
+          `.${this.fig.family}__pills`,
+          `.${this.fig.family}__pill`,
+          this._form.draft.status,
+        );
 
       case "cal-form-priority":
         if (!this._form) return;
         this._form.draft.priority = cmd.mget("calPriority") || "medium";
-        return this._renderForm();
+        return this._lightOption(
+          cmd,
+          `.${this.fig.family}__pills`,
+          `.${this.fig.family}__pill`,
+          this._form.draft.priority,
+        );
 
       case "cal-form-time":
         // Absorbed at commit from getData(); nothing to do per keystroke.
@@ -1213,7 +1807,12 @@ class __calendar_main extends LetcBox {
         const part = this._form.draft[which] || {};
         part.meridiem = cmd.mget("calMeridiem") === "PM" ? "PM" : "AM";
         this._form.draft[which] = part;
-        return this._renderForm();
+        return this._lightOption(
+          cmd,
+          `.${this.fig.family}__meridiem`,
+          `.${this.fig.family}__meridiem-item`,
+          part.meridiem,
+        );
       }
 
       case "cal-toggle-require-email": {
@@ -1224,18 +1823,34 @@ class __calendar_main extends LetcBox {
         if (!d.require_email) {
           d.restrict = false;
         }
-        return this._renderForm();
+        return this._syncInviteDom();
       }
 
       case "cal-toggle-restrict":
         if (!this._form) return;
         this._form.draft.restrict = !this._form.draft.restrict;
-        return this._renderForm();
+        return this._syncInviteDom();
+
+      // The sign-in form's eye toggle (welcome/signin index.js): flip the
+      // input between password and text, and swap the icon to match.
+      case "cal-toggle-password-visibility": {
+        const row = cmd.el && cmd.el.closest(`.${this.fig.family}__password`);
+        const input = row && row.querySelector("input");
+        if (!input) return;
+        const visible = input.type === "text";
+        input.type = visible ? "password" : "text";
+        const use = cmd.el.querySelector("svg use");
+        if (use) {
+          use.setAttribute("xlink:href", visible ? "#--icon-eye_closed" : "#--icon-eye");
+        }
+        cmd.el.dataset.state = visible ? "0" : "1";
+        return;
+      }
 
       case "cal-toggle-password":
         if (!this._form) return;
         this._form.draft.password_on = !this._form.draft.password_on;
-        return this._renderForm();
+        return this._syncInviteDom();
 
       case "cal-add-recipient": {
         if (!this._form) return;
@@ -1247,7 +1862,7 @@ class __calendar_main extends LetcBox {
         if (!list.includes(value)) list.push(value);
         this._form.draft.recipients = list;
         if (input) input.value = "";
-        return this._renderForm();
+        return this._renderRecipients();
       }
 
       case "cal-remove-recipient": {
@@ -1256,7 +1871,7 @@ class __calendar_main extends LetcBox {
         this._form.draft.recipients = (this._form.draft.recipients || []).filter(
           (e) => e !== email,
         );
-        return this._renderForm();
+        return this._renderRecipients();
       }
 
       // The title Entry carries `service: "cal-submit-task"` so Enter commits.
@@ -1268,6 +1883,13 @@ class __calendar_main extends LetcBox {
       // interactive, and this keeps any status but an explicit commit out of
       // the write regardless. A click on the Create button carries no
       // __inputStatus at all, so it passes. Same guard as invite-popup.
+      case "cal-pick-files":
+        return this._pickFiles();
+      case "cal-file-remove":
+        return this._removeFile(cmd.mget("calFileKey"));
+      case "cal-file-retry":
+        return this._retryFile(cmd.mget("calFileKey"));
+
       case "cal-submit-task":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
           return;
@@ -1285,7 +1907,7 @@ class __calendar_main extends LetcBox {
         const link = this._form && this._form.link;
         if (link) {
           copyToClipboard(link);
-          Wm.acknowledge && Wm.acknowledge(LOCALE.URL_COPIED);
+          this._showToast(LOCALE.URL_COPIED, "success");
         }
         return;
       }

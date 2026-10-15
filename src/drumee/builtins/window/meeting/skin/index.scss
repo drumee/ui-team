@@ -80,6 +80,125 @@
   pointer-events: none;
 }
 
+// WAITING ROOM — early for a scheduled meeting. window/meeting stamps
+// data-waiting="1" on __ui and feeds the card below into message-container
+// (_showWaitingRoom). The same full-window take-over as the denied state, and
+// the pre-join header (video pill, 00:00 timer, chat and people buttons)
+// steps aside: it belongs to a call that has not begun.
+.window-meeting__ui[data-waiting="1"] {
+  .window-meeting__header {
+    display: none !important;
+  }
+
+  .window__message-container {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    right: auto;
+    transform: none;
+    // The card's Leave is a button.
+    pointer-events: auto;
+    background: var(--normal-bg-90);
+    border-radius: 0;
+    padding: 24px;
+    box-sizing: border-box;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
+.window-meeting__waiting {
+  &-card {
+    font-family: var(--font-main);
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    max-width: 360px;
+    padding: 32px 28px 24px;
+    box-sizing: border-box;
+    border-radius: 16px;
+    border: 1px solid var(--border-default);
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow: 0 12px 32px rgba(11, 10, 33, 0.08);
+    text-align: center;
+  }
+
+  &-icon {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 10px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    background: var(--radio-on-bg);
+    color: var(--primary-40);
+  }
+
+  // The sprite draws in currentColor's absence of a fill: give it the
+  // circle's purple instead of the default near-black.
+  &-glyph,
+  &-glyph svg {
+    width: 26px;
+    height: 26px;
+    fill: currentColor;
+  }
+
+  &-title {
+    font-family: var(--font-main);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 24px;
+    color: var(--normal-fg-10);
+    word-break: break-word;
+  }
+
+  &-time {
+    font-family: var(--font-main);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--normal-fg-10);
+  }
+
+  &-countdown {
+    margin-top: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--radio-on-bg);
+    color: var(--primary-40);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+  }
+
+  &-text {
+    margin-top: 10px;
+    max-width: 280px;
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--normal-fg-50);
+  }
+
+  &-leave {
+    margin-top: 20px;
+    padding: 8px 22px;
+    border-radius: 8px;
+    border: 1px solid var(--border-default);
+    color: var(--normal-fg-10);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: var(--normal-bg-90);
+    }
+  }
+}
+
 // Solo-call preview overlay: when join() fails (denied / network / device),
 // window/meeting/index.js sets data-denied="1" on __ui. Expand the
 // message-container to cover the body so it reads like a normal 1-person
@@ -502,4 +621,106 @@
       }
     }
   }
+}
+
+// ── Pinned participant on the main stage ───────────────────────────────────
+//
+// window_meeting._layoutPinStage stamps `data-pin-stage` on the window root
+// while a tile is pinned and NO screen is shared (a share owns the stage; the
+// pinned person then takes the share strip's first slot instead):
+//   column — the pinned camera, then a 264px column of the others on the right.
+//   row    — side panel open beside the stage, or a narrow window: the others
+//            in a 163px row under the pinned camera.
+//   solo   — nobody else in the call: the pinned camera alone.
+// Same 4-slot plan as the share strip: over four others, three tiles and a
+// "+N" (the manager's ::after, text from data-more). Inline `order` puts the
+// pinned tile first; the others' slots come from data-strip-hidden.
+//
+// The participants manager carries inline grid templates from its own
+// responsive() and the base skin absolutely positions the local tile in a
+// 1:1 call, hence the !important. Not while parked: the corner tile keeps the
+// plain grid.
+.window-meeting__ui[data-pin-stage]:not([data-call-tile="1"])
+  .window-meeting__endpoints
+  .participants-manager__ui {
+  display: grid !important;
+  gap: 10px;
+  padding: 0 !important;
+  overflow: hidden !important;
+  align-content: stretch !important;
+  justify-content: stretch !important;
+  align-self: stretch !important;
+  grid-auto-rows: 0 !important;
+  grid-auto-columns: 0 !important;
+
+  > [data-kind="webrtc_local_user"],
+  > [data-kind="webrtc_remote_user"] {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    aspect-ratio: auto !important;
+    z-index: auto !important;
+    border-radius: 16px;
+    overflow: hidden;
+    // So the camera-off avatar sizes off the tile, not the viewport.
+    container-type: size;
+
+    &[data-strip-hidden="1"] {
+      display: none !important;
+    }
+
+    .user-profile__ui {
+      width: min(53cqh, 120px) !important;
+      height: min(53cqh, 120px) !important;
+    }
+  }
+
+  > [data-pinned="1"] {
+    grid-area: stage !important;
+  }
+
+  &[data-more]:not([data-more=""])::after {
+    content: attr(data-more);
+    order: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 0;
+    border-radius: 16px;
+    background: rgba(20, 17, 35, 0.72);
+    color: #fff;
+    font-family: var(--font-main);
+    font-size: 24px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+}
+
+.window-meeting__ui[data-pin-stage="column"]:not([data-call-tile="1"])
+  .window-meeting__endpoints
+  .participants-manager__ui {
+  grid-template-columns: minmax(0, 1fr) 264px !important;
+  grid-template-rows: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-areas: "stage a" "stage b" "stage c" "stage d" !important;
+}
+
+.window-meeting__ui[data-pin-stage="row"]:not([data-call-tile="1"])
+  .window-meeting__endpoints
+  .participants-manager__ui {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-template-rows: minmax(0, 1fr) 163px !important;
+  grid-template-areas: "stage stage stage stage" "a b c d" !important;
+}
+
+.window-meeting__ui[data-pin-stage="solo"]:not([data-call-tile="1"])
+  .window-meeting__endpoints
+  .participants-manager__ui {
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  grid-template-areas: "stage" !important;
 }

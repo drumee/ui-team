@@ -614,6 +614,11 @@ class __window_core extends __utils {
               c.unselect();
             } else if (!c.mget(_a.state)) {
               c.select();
+              // select() marks the row only; unselect() and tick() also
+              // repaint its checkbox.
+              if (_.isFunction(c._changeState)) {
+                c._changeState("checkbox", "selected", 1);
+              }
             }
           } catch (e) { }
         }
@@ -1429,14 +1434,16 @@ class __window_core extends __utils {
         this.iconsList.model.set({
           skip: require("./skeleton/toolkit/list-skip").fileListSkip(true),
         });
-        this.iconsList.restart();
+        // The window's restart, so a window that overrides it (the folder's
+        // search mode) gets to answer.
+        this.restart();
         break;
       case "hide-hidden-files":
         localStorage.removeItem("showHidden");
         this.iconsList.model.set({
           skip: require("./skeleton/toolkit/list-skip").fileListSkip(false),
         });
-        this.iconsList.restart();
+        this.restart();
         break;
       case "export-to-server":
       case "import-from-server":

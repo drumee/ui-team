@@ -26,7 +26,7 @@
     height: 100%;
     overflow: hidden;
     background: var(--white);
-    font-family: "Geist", system-ui, sans-serif;
+    font-family: var(--font-main);
   }
 
   &__main {
@@ -40,7 +40,7 @@
   // responsive block below needs the scrollbar on a different element.
   @mixin thin-scroll {
     scrollbar-width: thin;
-    scrollbar-color: $purple-deep $hairline;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 
     &::-webkit-scrollbar {
       width: 4px;
@@ -48,12 +48,12 @@
     }
 
     &::-webkit-scrollbar-track {
-      background: $hairline;
+      background: var(--scrollbar-track);
       border-radius: 45px;
     }
 
     &::-webkit-scrollbar-thumb {
-      background: $purple-deep;
+      background: var(--scrollbar-thumb);
       border-radius: 45px;
     }
   }

@@ -1,3 +1,4 @@
+const { chatEmptyState } = require('./empty-state');
 
 /**
  * Empty state for a support conversation that has not started yet.
@@ -88,7 +89,7 @@ const __skl_widget_chat = function (ui) {
     },
     spinnerWait: 500,
     spinner: true,
-    placeholder: supportPlaceholder(ui) || Skeletons.Note(LOCALE.NO_DISCUSSIONS_YET, 'no-content'),
+    placeholder: supportPlaceholder(ui) || chatEmptyState(ui),
     itemsOpt: {
       // Item widget kind is configurable so a host (e.g. the DMZ share chat)
       // can swap in a variant — see chat-item-other, which pins every message

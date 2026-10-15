@@ -138,6 +138,33 @@
         border-top-color: var(--normal-fg-10, #0b0a21);
       }
     }
+
+    // The chip is pinned to the bubble's OUTER edge (see &__dropdown), which is
+    // also the edge of .widget-chat__body (overflow-x: hidden). A centred
+    // tooltip on the outermost icon would hang ~half its width past that edge
+    // and get clipped ("Add reactio"), so that one grows inward instead; the
+    // caret stays centred over the 16px icon (8px − 5px border = 3px).
+    &__dropdown.me &__item:last-child &__tooltip {
+      left: auto;
+      right: 0;
+      transform: none;
+
+      &::after {
+        left: auto;
+        right: 3px;
+        transform: none;
+      }
+    }
+
+    &__dropdown.other &__item:first-child &__tooltip {
+      left: 0;
+      transform: none;
+
+      &::after {
+        left: 3px;
+        transform: none;
+      }
+    }
   }
 
   // Multi-file reply picker — floats beside the bubble (lazy-appended into

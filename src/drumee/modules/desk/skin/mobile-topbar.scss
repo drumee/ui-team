@@ -97,7 +97,8 @@
     }
   }
 
-  // Unread marker on the bell. A DOT, not a number: the desktop cluster shows
+  // Unread marker on the go-to button (the sheet it opens holds the
+  // Notifications tile). A DOT, not a number: the desktop cluster's bell shows
   // one too (Ellipse 882, 6px, #D74E49), and a count is unreadable at this
   // size. The desk writes the value into this part; empty means nothing
   // unread, so it is hidden until it has one.
@@ -299,34 +300,6 @@
 
   &__mobile-search-hint {
     @include drumee.typo($size: 13px, $line: 18px, $color: var(--normal-fg-50));
-    pointer-events: none;
-  }
-
-  &__mobile-new-btn {
-    align-items: center;
-    gap: 6px;
-    height: 36px;
-    padding: 0 14px;
-    border-radius: 12px;
-    background: var(--primary-40);
-    color: var(--gray-white);
-    flex: 0 0 auto;
-    cursor: pointer;
-
-    &:active {
-      background: var(--primary-50);
-    }
-  }
-
-  &__mobile-new-plus {
-    @include drumee.typo($size: 17px, $line: 17px, $color: inherit);
-    font-weight: 500;
-    pointer-events: none;
-  }
-
-  &__mobile-new-label {
-    @include drumee.typo($size: 14px, $line: 20px, $color: inherit);
-    font-weight: 600;
     pointer-events: none;
   }
 

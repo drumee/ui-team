@@ -190,18 +190,23 @@ module.exports = function (ui, days, view) {
   const headCell = (d) => {
     const k = ymd(d);
     const items = allDay[k] || [];
+    // The whole header cell is the day's add target — its padding and the
+    // gaps around the all-day chips too, not just the date — so the column
+    // adds a task from top to bottom. Its containers are inert (`active: 0`)
+    // for the reason the hour rows have no kids: an active one would take the
+    // click on its own area. The chips keep their own service.
     return Skeletons.Box.Y({
       className: `${pfx}__hours-head-cell`,
+      bubble: 0,
+      service: "cal-day-add",
+      uiHandler: [ui],
+      calDay: k,
       attrOpt: { "data-today": k === todayKey ? "1" : "0" },
       kids: [
         // Stacked num-over-name, matching the Meet tab's schedule header.
         Skeletons.Box.Y({
           className: `${pfx}__hours-head-date`,
-          bubble: 0,
-          service: "cal-day-add",
-          uiHandler: [ui],
-          calDay: k,
-          // active:0 or a child eats the click before triggerHandlers runs.
+          active: 0,
           kidsOpt: { active: 0 },
           kids: [
             Skeletons.Note({
@@ -219,6 +224,7 @@ module.exports = function (ui, days, view) {
         items.length
           ? Skeletons.Box.Y({
               className: `${pfx}__allday`,
+              active: 0,
               kids: items.map((row) => chip(ui, row, { compact: 1 })),
             })
           : null,

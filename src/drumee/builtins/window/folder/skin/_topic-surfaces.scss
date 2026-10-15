@@ -1,0 +1,264 @@
+@use "mixins/drumee";
+
+// The folder chat's topic strip + File threads bar (Figma 869:189953 /
+// 869:191968), shared by the folder window's Files tab (files-chat-topics)
+// and the Inbox's Workspace chat (widget/chat-p2p skin). Skeletons:
+// window/folder/skeleton/topic-strip.js + file-threads-bar.js.
+@mixin parts {
+  // ── Topic strip ────────────────────────────────────────────────────
+  // Underlined text tabs on a hairline (Figma 775:130783): the page of tabs
+  // scrolls sideways when it overflows; "+ Create topic" stays pinned after
+  // it. topic-strip.js reveal() keeps the picked tab in view.
+  .window__topic-strip {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    align-items: stretch;
+    min-width: 0;
+    padding: 0 12px;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+    font-family: var(--font-main);
+  }
+
+  // The scroller: as wide as its tabs, at most the room left by the create
+  // tab; no visible scrollbar (wheel / trackpad / touch scroll it).
+  .window__topic-page {
+    display: flex;
+    flex-direction: row;
+    flex: 0 1 auto;
+    min-width: 0;
+    align-items: stretch;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .window__topic-page {
+      scroll-behavior: auto;
+    }
+  }
+
+  // Press-and-drag pans the page (topic-strip.js bind()).
+  .window__topic-page[data-panning="1"] {
+    cursor: grabbing;
+    user-select: none;
+  }
+
+  // More tabs past an edge: that edge fades out (data-fade, stamped by
+  // topic-strip.js on scroll / resize / feed).
+  .window__topic-page[data-fade="start"] {
+    mask-image: linear-gradient(to right, transparent, #000 24px);
+  }
+
+  .window__topic-page[data-fade="end"] {
+    mask-image: linear-gradient(to left, transparent, #000 24px);
+  }
+
+  .window__topic-page[data-fade="both"] {
+    mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  }
+
+  // A tab: its whole name, never shrunk (the page scrolls instead); the
+  // underline is an inset shadow so it sits on the strip's hairline.
+  .window__topic-tab {
+    flex: 0 0 auto;
+    height: 36px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #65656c;
+    transition: color 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+      color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  .window__topic-tab[data-active="1"] {
+    color: #5950ff;
+    box-shadow: inset 0 -2px 0 #5950ff;
+  }
+
+  // "+ Create topic": a tab like the others, pinned after the scroller.
+  .window__topic-strip .window__topic-tab--create {
+    flex: 0 0 auto;
+  }
+
+  .window__topic-create-ico {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    fill: currentColor;
+    color: currentColor;
+  }
+
+  .window__topic-create-label {
+    @include drumee.typo($size: 14px, $line: 16px, $weight: 500, $color: currentColor);
+  }
+
+  .window__topic-tab-name {
+    white-space: nowrap;
+    @include drumee.typo($size: 14px, $line: 1.2, $weight: 500, $color: currentColor);
+  }
+
+  .window__topic-tab-emoji {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  // ── File threads bar ───────────────────────────────────────────────
+  .window__ft-bar {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    padding: 8px 12px;
+    font-family: var(--font-main);
+  }
+
+  .window__ft-bar-card {
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
+    cursor: pointer;
+  }
+
+  .window__ft-bar-left {
+    align-items: center;
+    gap: 8px;
+  }
+
+  // Decoration must never be the click target: every LETC view binds its own
+  // onclick and stops propagation, so a click on the label / icons (nested
+  // below kidsOpt's reach) was swallowed and the bar did not open.
+  .window__ft-bar-card *,
+  .window__ft-row * {
+    pointer-events: none;
+  }
+
+  .window__ft-bar-badge {
+    width: 24px;
+    height: 24px;
+    box-sizing: border-box;
+    padding: 4px;
+    border-radius: 6px;
+    background: rgba(89, 80, 255, 0.1);
+  }
+
+  .window__ft-bar-clip {
+    width: 16px;
+    height: 16px;
+    fill: #5950ff;
+    color: #5950ff;
+  }
+
+  .window__ft-bar-label {
+    @include drumee.typo($size: 14px, $line: 1.2, $weight: 600, $color: #5950ff);
+  }
+
+  .window__ft-bar-ico {
+    width: 20px;
+    height: 20px;
+    padding: 2px;
+    fill: var(--normal-fg-10, #0b0a21);
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  .window__ft-list {
+    position: absolute;
+    top: calc(100% - 4px);
+    left: 12px;
+    right: 12px;
+    z-index: 20;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .window__ft-row {
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--hover-bg-40);
+    }
+
+    &.is-active {
+      background-color: rgba(89, 80, 255, 0.1);
+    }
+  }
+
+  .window__ft-row-ico {
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    fill: #5950ff;
+    color: #5950ff;
+  }
+
+  .window__ft-row-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: var(--normal-fg-10, #0b0a21));
+  }
+
+  // "Chat threads" / "File threads" headings of the dropdown.
+  .window__ft-section {
+    padding: 4px 8px 0;
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 500, $color: #65656c);
+  }
+
+  .window__ft-row-emoji {
+    flex: 0 0 17px;
+    text-align: center;
+    @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: #5950ff);
+  }
+
+  .window__ft-empty {
+    padding: 8px;
+    @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: #65656c);
+  }
+
+  // The dropdown rows' unread pill (the folder skin also styles it for the
+  // rail; the Inbox has no rail).
+  .window__ft-row .window__thread-menu__badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 4px;
+    border-radius: 100px;
+    background: #d74e49; // Signal/Error
+    @include drumee.typo($size: 8px, $line: 1, $weight: 400, $color: #fff);
+  }
+}

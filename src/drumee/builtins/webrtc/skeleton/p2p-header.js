@@ -27,6 +27,13 @@ module.exports = function (_ui_) {
           Skeletons.Button.Svg({
             className: `${pfx}__call-header-btn expand`,
             ico: "meet-expand",
+            // state 0 = windowed (CornersOut), 1 = fullscreen / maximised
+            // (CornersIn). window-fullscreen._syncFullscreenButton drives it on
+            // every change, Esc included — a click alone proves nothing, the
+            // browser may refuse or drop the request.
+            icons: ["meet-expand", "meet-collapse"],
+            state: 0,
+            sys_pn: "call-expand",
             service: "toggle-fullscreen",
             uiHandler: [_ui_],
             bubble: 0,

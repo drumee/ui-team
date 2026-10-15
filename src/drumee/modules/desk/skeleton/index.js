@@ -24,8 +24,9 @@
 // the avatar menu (account). This bar is those three, one control each:
 //
 //   workspace pill  -> the switcher sheet     (mobile-workspace-sheet)
-//   bell            -> notifications          (toggle-activity, count badge)
-//   go-to grid      -> the destinations sheet (mobile-goto-sheet)
+//   go-to grid      -> the destinations sheet (mobile-goto-sheet), with a red
+//                      dot while any tile in it has one (today only
+//                      Notifications does, so it is the unread count)
 //   avatar          -> the account sheet      (mobile-account-sheet)
 //
 // No hamburger and no drawer: the legacy drawer's content maps 1:1 onto the
@@ -108,11 +109,16 @@ const _build_mobile_topbar = (ui) => {
         className: `${fig}__mobile-topbar-wrapper`,
         kids: [
           chip({
-            service: "toggle-activity",
-            pn: "mobile-bell-btn",
-            mod: "bell",
+            service: "mobile-goto-sheet",
+            pn: "mobile-goto-btn",
+            mod: "goto",
             kids: [
-              Skeletons.Image.Svg({ ico: "sidebar_notifications", className: `${fig}__mobile-topbar-ico` }),
+              Skeletons.Image.Svg({ ico: "dots-nine", className: `${fig}__mobile-topbar-ico` }),
+              // No bell on the phone bar: Notifications is a tile in the sheet
+              // this opens, so the sheet's button carries the unread dot. The
+              // only tile with a dot is that one (activity-count-sheet), and
+              // both read the same number — _writeActivityCount fills this
+              // part with it. A tile that gains a dot later must feed this too.
               // Its OWN part name — registerPart is last-one-wins, and both
               // 'activity-count' (the old drawer) and 'activity-count-top'
               // (the desktop cluster, still rendered on mobile) are taken.
@@ -123,12 +129,6 @@ const _build_mobile_topbar = (ui) => {
                 content: "",
               }),
             ],
-          }),
-          chip({
-            service: "mobile-goto-sheet",
-            pn: "mobile-goto-btn",
-            mod: "goto",
-            kids: [Skeletons.Image.Svg({ ico: "dots-nine", className: `${fig}__mobile-topbar-ico` })],
           }),
           Skeletons.Box.X({
             className: `${fig}__mobile-topbar-avatar`,
@@ -179,19 +179,6 @@ const _build_mobile_action_row = (ui) => {
           }),
         ],
       }),
-      // Over-limit: creating, uploading and inviting are all paused, exactly
-      // as the tablet consolidated menu goes empty — so the button that opens
-      // the create sheet is not offered at all. "" is dropped by validChild.
-      require("libs/over-limit").isLocked() ? "" : Skeletons.Box.X({
-        className: `${fig}__mobile-new-btn`,
-        service: "mobile-new-sheet",
-        uiHandler: [ui],
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Note({ className: `${fig}__mobile-new-plus`, content: "+" }),
-          Skeletons.Note({ className: `${fig}__mobile-new-label`, content: LOCALE.NEW }),
-        ],
-      }),
     ],
   });
 };
@@ -238,9 +225,9 @@ const _build_mobile_sheet_host = (ui) => {
 //
 // A bottom bar is the same object in the shape a phone reads: persistent,
 // thumb-reachable, one tap per destination. It carries the SAME services as
-// the rail, so _railTab / _railAccess drive it with no new wiring, and it
-// wears the rail's own treatment — navy ground, a 40px r=8 tile that fills
-// with --primary-40 when active, the label under the glyph.
+// the rail, so _railTab / _railAccess drive it with no new wiring. It wears
+// the Drumee Mobile frames' bar (the one the tours draw): one white pill of
+// tabs, floating over a fade to white.
 //
 // It has its OWN radio group. Sharing the rail's "sidebar-radio" would let a
 // drawer row and a bar item mark each other, since the drawer is rendered at
@@ -262,12 +249,41 @@ const _build_mobile_rail = (ui) => {
   // lookup uses getPart and skips a missing part on purpose, because the
   // desktop rail and this bar are per-device and ensurePart never resolves for
   // a part that will not mount here. Rename → grep desk/index.js first.
-  const item = ({ ico, label, service, pn, badge }) =>
+  // The tour's phone bar (desk/tutorial skin/phone.scss `__tabs`, Figma
+  // 206:5444): one white pill of tabs. The four workspace glyphs are the
+  // frames' own (Phosphor; not in the sprite); Access, which the frames do not
+  // draw, keeps the desktop rail's sprite glyph.
+  const url = (m) => (m && m.default ? m.default : m);
+  const GLYPH = {
+    "rail-files": require("assets/tutorial/mg-phone/files.svg"),
+    "rail-chat": require("assets/tutorial/mg-phone/chat.svg"),
+    "rail-task": require("assets/tutorial/mg-phone/task.svg"),
+    "rail-meet": require("assets/tutorial/mg-phone/meet.svg"),
+  };
+  const glyph = (ico) => GLYPH[ico]
+    ? Skeletons.Element({
+      active: 0,
+      tagName: "img",
+      className: `${fig}__mrail-glyph`,
+      attribute: { src: url(GLYPH[ico]), alt: "" },
+    })
+    : Skeletons.Image.Svg({ active: 0, ico, className: `${fig}__mrail-glyph` });
+  const badgeNote = (badge) => Skeletons.Note({
+    className: `${fig}__mrail-badge`,
+    sys_pn: badge,
+    partHandler: ui,
+    content: "",
+    dataset: { count: 0 },
+  });
+  const item = ({ ico, label, service, pn, badge, initialState }) =>
     Skeletons.Box.Y({
       className: `${fig}__mrail-item`,
       service,
       uiHandler: [ui],
       radio: "mobile-rail-radio",
+      // Files is lit from the first paint, as the desktop rail's Files row is
+      // (sidebar.js `initialState: 1`); _railHighlight moves it from there.
+      ...(initialState ? { initialState } : {}),
       sys_pn: pn,
       // ui-core binds a click to every widget that does not opt out and stops
       // propagation before triggerHandlers, so a glyph or label would eat it.
@@ -276,19 +292,8 @@ const _build_mobile_rail = (ui) => {
         Skeletons.Box.X({
           className: `${fig}__mrail-tile`,
           kidsOpt: { active: 0 },
-          kids: [
-            Skeletons.Image.Svg({ ico, className: `${fig}__mrail-glyph` }),
-            // Same unread pill as the desktop rail (desk _writeRailCounts).
-            badge
-              ? Skeletons.Note({
-                  className: `${fig}__mrail-badge`,
-                  sys_pn: badge,
-                  partHandler: ui,
-                  content: "",
-                  dataset: { count: 0 },
-                })
-              : null,
-          ].filter(Boolean),
+          // Same unread pill as the desktop rail (desk _writeRailCounts).
+          kids: [glyph(ico), badge ? badgeNote(badge) : null].filter(Boolean),
         }),
         Skeletons.Note({ className: `${fig}__mrail-label`, content: label }),
       ],
@@ -299,11 +304,17 @@ const _build_mobile_rail = (ui) => {
     sys_pn: "mobile-rail",
     partHandler: ui,
     kids: [
-      item({ ico: "rail-files", label: LOCALE.FILES, service: "rail-files", pn: "mrail-files", badge: "mrail-badge-files" }),
-      item({ ico: "rail-chat", label: LOCALE.CHAT, service: "rail-chat", pn: "mrail-chat", badge: "mrail-badge-chat" }),
-      item({ ico: "rail-task", label: LOCALE.TASK, service: "rail-task", pn: "mrail-task", badge: "mrail-badge-task" }),
-      item({ ico: "rail-meet", label: LOCALE.MEET, service: "rail-meet", pn: "mrail-meet", badge: "mrail-badge-meet" }),
-      item({ ico: "rail-access", label: LOCALE.ACCESS, service: "rail-access", pn: "mrail-access" }),
+      Skeletons.Box.X({
+        active: 0,
+        className: `${fig}__mrail-pill`,
+        kids: [
+          item({ ico: "rail-files", label: LOCALE.FILES, service: "rail-files", pn: "mrail-files", badge: "mrail-badge-files", initialState: 1 }),
+          item({ ico: "rail-chat", label: LOCALE.CHAT, service: "rail-chat", pn: "mrail-chat", badge: "mrail-badge-chat" }),
+          item({ ico: "rail-task", label: LOCALE.TASK, service: "rail-task", pn: "mrail-task", badge: "mrail-badge-task" }),
+          item({ ico: "rail-meet", label: LOCALE.MEET, service: "rail-meet", pn: "mrail-meet", badge: "mrail-badge-meet" }),
+          item({ ico: "rail-access", label: LOCALE.ACCESS, service: "rail-access", pn: "mrail-access" }),
+        ],
+      }),
     ],
   });
 };

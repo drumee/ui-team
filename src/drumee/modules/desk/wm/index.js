@@ -2017,10 +2017,33 @@ class __window_manager extends push {
     // to ask: "is the target already a tile in THIS listing?" Outside the pane
     // it now falls through to the resolve-and-refresh path below, which is the
     // correct handling for a node that is not on screen.
+    //
+    // AND ONLY A FILE TILE. getItemsByAttr on the pane walks every widget in
+    // it, not just its listing, and matches any model carrying that nid. The
+    // pane's team chat is one: it is mounted with the pane's nid, which is the
+    // workspace ROOT. So the workspace crumb (going back from a subfolder to
+    // the root) matched the chat widget, fired open-node on it — which opens
+    // nothing — and returned: the crumbs said "workspace", the grid kept the
+    // subfolder. Only when the chat was mounted with exactly that nid, hence
+    // "occasionally". The listing's own children are the tiles; a folder or
+    // workspace tile is the only kind open-node navigates the pane for.
     const scope = this.headlessPane();
-    const media = scope && _.isFunction(scope.getItemsByAttr)
-      ? scope.getItemsByAttr(_a.nid, data.nid)[0]
-      : null;
+    const tiles = scope && scope.iconsList;
+    const media =
+      tiles &&
+      !(tiles.isDestroyed && tiles.isDestroyed()) &&
+      tiles.children &&
+      _.isFunction(tiles.children.find) &&
+      data.nid != null
+        ? tiles.children.find(
+          (c) =>
+            c &&
+            c.model &&
+            _.isFunction(c.triggerHandlers) &&
+            [_a.folder, _a.hub].includes(c.mget(_a.filetype)) &&
+            `${c.mget(_a.nid)}` === `${data.nid}`,
+        )
+        : null;
     if (media) {
       return media.triggerHandlers({ service: "open-node" });
     }
@@ -2032,78 +2055,144 @@ class __window_manager extends push {
 
     if (!hub_id || !nid) return this.loadWorkspaceNode(node);
 
+    // A PARENT OF WHERE THE PANE STANDS needs no lookup. Walking forward, the
+    // pane pushes the state it had in each folder onto _navStack, so a crumb
+    // or a sidebar row for a folder above us starts loading NOW instead of
+    // after a media.attributes round trip. That round trip still runs, and its
+    // answer is applied over the same node — or, if it disagrees on the node,
+    // its type or the rights, the full path below runs with it.
+    //
+    // Only those captured states (`_live`, window/folder _captureNavState).
+    // After a crumb or sidebar jump the stack is rebuilt from get_path rows,
+    // whose fields (a workspace root's filetype among them) need not match
+    // what media.attributes gives — and the folder's side effects (task scope,
+    // chat, + New) are computed once, from whatever the model holds then.
+    //
+    // Not while the pane stands in a symlinked folder: copyPropertiesFrom
+    // only ever SETS isalink, the stack rows do not carry it, and a stale
+    // truthy isalink would make actualNode() list the link target instead.
+    const pane = this.headlessPane();
+    const stack = pane && !pane.mget(_a.isalink) && Array.isArray(pane._navStack)
+      ? pane._navStack
+      : null;
+    const at = stack
+      ? stack.findIndex(
+        (s) => s && s._live && `${s.nid}` === `${nid}` && `${s.hub_id}` === `${hub_id}`,
+      )
+      : -1;
+
+    const navigate = (attrs) => {
+      const resolved =
+        attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
+      if (!resolved) {
+        this.warn("openWorkspaceFolder: cannot resolve node", {
+          hub_id,
+          nid,
+          attrs,
+        });
+        return;
+      }
+      // THE WORKSPACE PANE, never "the last folder window anywhere".
+      //
+      // This used to be folderWindowIn() with no pool, which answers
+      // getWindowsPool() — headlessLayer whenever a workspace is open — and
+      // takes the LAST window_folder in it. Every explicitly launched window
+      // lands in that layer too, so with a folder popup up ("Open in window",
+      // "Get info", a chat/notification "open location") the click navigated
+      // the popup and the pane the breadcrumb describes never moved: the
+      // crumbs cropped to the clicked ancestor, the grid stayed where it was,
+      // and the only way out of a subfolder was one level at a time.
+      // headlessPane() filters on the flag that tells the two apart.
+      //
+      // Resolved HERE rather than reusing `scope` from before the fetch: a
+      // workspace switch during the round trip replaces the pane, and the
+      // dead one must not be navigated.
+      const currentFolder = this.headlessPane();
+      if (!currentFolder || !_.isFunction(currentFolder.refreshContent)) {
+        // No pane to navigate — a section screen over an empty desk, or a
+        // crumb clicked before the first workspace mounted. Open the target
+        // as a workspace rather than dropping the click on the floor.
+        // An EXPLICIT shape, like the sidebar's own folder rows build:
+        // loadWorkspace prefers actual_home_id/home_id over nid, and this
+        // node's row carries the workspace ROOT in both — spreading it would
+        // open Home instead of the folder that was clicked.
+        return this.loadWorkspace({
+          hub_id,
+          nid: attrs.nid || nid,
+          area: attrs.area || data.area,
+          filename: attrs.filename || data.filename,
+        });
+      }
+      currentFolder.refreshContent(attrs);
+      // refreshContent can't infer the ancestor chain for a deep jump, so the
+      // breadcrumb would keep the previous folder's crumbs. Rebuild it from
+      // get_path, as loadWorkspace does.
+      const deepNid = attrs.nid || nid;
+      // Deferred for the same reason as in loadWorkspace: refreshContent()
+      // above kicks off this folder's media.show_node_by, and get_path issued
+      // in the same tick would reach the endpoint first and hold the listing
+      // behind its temporary-table build (see libs/path-request).
+      _.defer(() => {
+        // Painted at once from the session's last answer for this node, and
+        // again only if the server's differs (path-request).
+        const paint = (path) => {
+          if (_.isEmpty(path)) return;
+          // The pane has moved on (another crumb, a grid folder, a workspace
+          // switch) since this lookup started: this path is not where it is,
+          // and refreshBreadcrumbsUI would rebuild _navStack from it.
+          if (currentFolder.isDestroyed && currentFolder.isDestroyed()) return;
+          if (attrs.nid != null && `${currentFolder.mget(_a.nid)}` !== `${attrs.nid}`) return;
+          if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
+            currentFolder.refreshBreadcrumbsUI(path);
+          // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
+          // folder navigation. refreshBreadcrumbsUI above also mirrors into the
+          // topbar, but only when `currentFolder` is the focused headless
+          // workspace window; this explicit broadcast covers the case where it
+          // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
+          this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
+        };
+        getPath(this, { nid: deepNid, hub_id }, paint)
+          .then(paint)
+          .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
+      });
+    };
+
+    if (at >= 0 && _.isFunction(pane.refreshContent)) {
+      const stacked = { ...stack[at] };
+      // What is above the target stays; the target and everything below it
+      // are no longer ancestors (same crop _navigateToStackIndex makes).
+      // get_path's answer rebuilds it authoritatively right after.
+      pane._navStack = stack.slice(0, at);
+      navigate(stacked);
+      this.fetchService(SERVICE.media.attributes, { hub_id, nid })
+        .then((attrs) => {
+          if (!attrs || !(attrs.actual_home_id || attrs.home_id || attrs.nid)) return;
+          if (pane.isDestroyed && pane.isDestroyed()) return;
+          // Moved on meanwhile: this answer describes a folder we left.
+          if (`${pane.mget(_a.nid)}` !== `${stacked.nid}`) return;
+          // The server disagrees on WHICH node, its type, its root or the rights
+          // over it (the state was captured earlier this session, so this means
+          // something changed since): run the full lookup path with its answer,
+          // exactly as before this shortcut.
+          const differs = (k) =>
+            attrs[k] != null && `${attrs[k]}` !== `${pane.mget(k)}`;
+          if (
+            differs(_a.nid) ||
+            differs(_a.filetype) ||
+            differs(_a.privilege) ||
+            differs(_a.actual_home_id)
+          ) {
+            return navigate(attrs);
+          }
+          pane.mset(attrs);
+        })
+        .catch((e) => this.warn("openWorkspaceFolder: get_attributes failed", e));
+      return;
+    }
+
     // Data provided by the trigger may not be reliable enough. Get fresh one
     this.fetchService(SERVICE.media.attributes, { hub_id, nid })
-      .then((attrs) => {
-        const resolved =
-          attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
-        if (!resolved) {
-          this.warn("openWorkspaceFolder: cannot resolve node", {
-            hub_id,
-            nid,
-            attrs,
-          });
-          return;
-        }
-        // THE WORKSPACE PANE, never "the last folder window anywhere".
-        //
-        // This used to be folderWindowIn() with no pool, which answers
-        // getWindowsPool() — headlessLayer whenever a workspace is open — and
-        // takes the LAST window_folder in it. Every explicitly launched window
-        // lands in that layer too, so with a folder popup up ("Open in window",
-        // "Get info", a chat/notification "open location") the click navigated
-        // the popup and the pane the breadcrumb describes never moved: the
-        // crumbs cropped to the clicked ancestor, the grid stayed where it was,
-        // and the only way out of a subfolder was one level at a time.
-        // headlessPane() filters on the flag that tells the two apart.
-        //
-        // Resolved HERE rather than reusing `scope` from before the fetch: a
-        // workspace switch during the round trip replaces the pane, and the
-        // dead one must not be navigated.
-        const currentFolder = this.headlessPane();
-        if (!currentFolder || !_.isFunction(currentFolder.refreshContent)) {
-          // No pane to navigate — a section screen over an empty desk, or a
-          // crumb clicked before the first workspace mounted. Open the target
-          // as a workspace rather than dropping the click on the floor.
-          // An EXPLICIT shape, like the sidebar's own folder rows build:
-          // loadWorkspace prefers actual_home_id/home_id over nid, and this
-          // node's row carries the workspace ROOT in both — spreading it would
-          // open Home instead of the folder that was clicked.
-          return this.loadWorkspace({
-            hub_id,
-            nid: attrs.nid || nid,
-            area: attrs.area || data.area,
-            filename: attrs.filename || data.filename,
-          });
-        }
-        currentFolder.refreshContent(attrs);
-        // refreshContent can't infer the ancestor chain for a deep jump, so the
-        // breadcrumb would keep the previous folder's crumbs. Rebuild it from
-        // get_path, as loadWorkspace does.
-        const deepNid = attrs.nid || nid;
-        // Deferred for the same reason as in loadWorkspace: refreshContent()
-        // above kicks off this folder's media.show_node_by, and get_path issued
-        // in the same tick would reach the endpoint first and hold the listing
-        // behind its temporary-table build (see libs/path-request).
-        _.defer(() => {
-          // Painted at once from the session's last answer for this node, and
-          // again only if the server's differs (path-request).
-          const paint = (path) => {
-            if (_.isEmpty(path)) return;
-            if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
-              currentFolder.refreshBreadcrumbsUI(path);
-            // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
-            // folder navigation. refreshBreadcrumbsUI above also mirrors into the
-            // topbar, but only when `currentFolder` is the focused headless
-            // workspace window; this explicit broadcast covers the case where it
-            // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
-            this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
-          };
-          getPath(this, { nid: deepNid, hub_id }, paint)
-            .then(paint)
-            .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
-        });
-      })
+      .then(navigate)
       .catch((e) => this.warn("openWorkspaceFolder: get_attributes failed", e));
 
   }

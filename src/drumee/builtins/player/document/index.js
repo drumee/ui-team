@@ -28,6 +28,9 @@ const { applyLivePrivilege, hasWriteBit } = require('window/live-privilege');
 const WS_EVENT = "ws:event";
 const EDITOR_READY_FALLBACK_MS = 2500;
 const EDITOR_READY_EVENTS = new Set(['onDocumentReady', 'onAppReady', 'docEditorReady']);
+// Longest a closing editor window waits on its save request (see goodbye). The
+// service holds its reply up to 4 s for the save to land.
+const FLUSH_WAIT_MS = 5000;
 
 // hub.set_privilege is supplied by the backend service map (Platform.get
 // ('services')), not by the local lex/services.json placeholder — see
@@ -110,8 +113,10 @@ class __player_document extends PlayerInteract {
    */
   onBeforeDestroy() {
     // The Details card is a separate WM window, so closing the player would
-    // otherwise leave it orphaned over the desk.
-    details.close(this);
+    // otherwise leave it orphaned over the desk. A window that closed through
+    // goodbye already did this when it was closed: by now the user may have
+    // opened the same file's card again from the folder.
+    if (!this._closing) details.close(this);
     if (this.loader && _.isFunction(this.loader.isDestroyed)) {
       this.loader.destroy();
       this.loader = null;
@@ -964,6 +969,36 @@ class __player_document extends PlayerInteract {
     } catch (e) {
       if (this.warn) this.warn('[document] read-only reload failed', e && e.message);
     }
+  }
+
+  /**
+   * Close, asking the editor to save first. Otherwise the document server hands
+   * the file back 5 s after the last user leaves (its savetimeoutdelay), so Get
+   * info opened right after closing showed the old version. The window goes at
+   * once, but its editor stays connected until the save has landed (the service
+   * replies then): the document server drops a save whose session has emptied.
+   */
+  goodbye(...args) {
+    if (this._closing) return;
+    const svc = this._flushService();
+    if (!svc) return super.goodbye(...args);
+    this._closing = true;
+    details.close(this);
+    this.el.style.visibility = 'hidden';
+    const { nid, hub_id } = this.actualNode();
+    const waited = new Promise((r) => setTimeout(r, FLUSH_WAIT_MS));
+    Promise.race([this.postService(svc, { nid, hub_id }).catch(() => null), waited])
+      .then(() => {
+        if (!this.isDestroyed()) super.goodbye(...args);
+      });
+  }
+
+  /** The editor's flush service, while this window edits a desk document. */
+  _flushService() {
+    if (this.mget(_a.mode) !== _a.edit || Visitor.inDmz) return null;
+    const editor = Platform.get('doc_editor');
+    const ns = editor && SERVICE[editor];
+    return (ns && ns.flush) || null;
   }
 
   _cleanupEditorListeners() {

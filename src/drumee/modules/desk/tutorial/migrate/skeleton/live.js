@@ -47,7 +47,12 @@ function heading(state) {
   }
 }
 
-module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
+/**
+ * The import's content for its current state — the form, the progress, or the
+ * result. Shared by the desk dialog below and the phone sheet
+ * (./phone.js live), which draw it in different frames.
+ */
+function liveBody(ui, snap = {}, dest = {}, opt = {}) {
   const pfx = ui.fig.family;
   const state = snap.state || 'loading';
   const note = (c, content, extra = {}) =>
@@ -203,10 +208,21 @@ module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
       }),
     ].filter(Boolean);
   }
+  return body;
+}
+
+module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
+  const pfx = ui.fig.family;
+  const state = snap.state || 'loading';
+  const note = (c, content, extra = {}) =>
+    Skeletons.Note({ className: `${pfx}__${c}`, content, ...extra });
+  const body = liveBody(ui, snap, dest, opt);
 
   return Skeletons.Box.Y({
     className: `${pfx}__stage ${pfx}__stage--live`,
-    kids: [filesPane(ui, {}), Skeletons.Box.Y({
+    // `opt.pane`: what sits behind the dialog. The phone layout passes its own
+    // pane (migrate/skeleton/phone.js) so the sheet rises over a phone screen.
+    kids: [(opt.pane || filesPane)(ui, {}), Skeletons.Box.Y({
       className: `${pfx}__overlay`,
       kids: [Skeletons.Box.Y({
         className: `${pfx}__backdrop`,
@@ -236,3 +252,7 @@ module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
     })],
   });
 };
+
+module.exports.liveBody = liveBody;
+module.exports.heading = heading;
+module.exports.FORM = FORM;
