@@ -93,3 +93,14 @@ test("task phone (386:57322): frame's well pictures, captions, + on the CTA", ()
   assert.equal(cta.service, "next-step");
   assert.equal(tree.dataset.view, "task");
 });
+
+test("meeting phone (386:58198 / 386:58622): frame wells, camera tile, CTA", () => {
+  const tree = require(path.join(T, "meeting/skeleton/phone.js"))(ui, {});
+  const json = JSON.stringify(tree);
+  assert.equal((json.match(/tutorial-meeting__ph-well-img/g) || []).length, 2);
+  assert.equal((json.match(/tutorial-meeting__ph-feature-glyph/g) || []).length, 2);
+  assert.match(json, /INSTANT_MEETING_HINT/);
+  assert.match(json, /SCHEDULE_MEETING_HINT/);
+  assert.equal(find(tree, "ph-cta").service, "next-step");
+  assert.equal(tree.dataset.view, "meeting");
+});
