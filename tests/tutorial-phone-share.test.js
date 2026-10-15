@@ -81,3 +81,8 @@ test("share phone follows the Figma frames: title bar, card above after screen 1
   assert.match(css, /\.tutorial-share__phone\[data-view=share\] \{[^}]*background: #ccc/);
   assert.match(css, /\[data-blur="1"\]::before \{ background: rgba\(204, 204, 204, 0\.8\)/);
 });
+
+test("share phone page title reads Secure Share for every subject", () => {
+  const src = fs.readFileSync(path.join(SRC, "modules/desk/tutorial/share/skeleton/phone.js"), "utf8");
+  assert.match(src, /ph\.titleBar\(ui, \{ title: LOCALE\.SECURE_SHARE \}\)/);
+});
