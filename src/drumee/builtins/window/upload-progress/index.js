@@ -3119,8 +3119,11 @@ __window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWind
   if (!roots || !roots.length) return Promise.resolve(null);
   // Read by initialize when this call has to create the card.
   __window_upload_progress._createCollapsed = !!(opt && opt.collapsed);
-  return __window_upload_progress.getOrCreate().then(function(win) {
+  // Cleared however the launch ends, so a failed one cannot leave the next
+  // card born collapsed.
+  return __window_upload_progress.getOrCreate().finally(function() {
     __window_upload_progress._createCollapsed = false;
+  }).then(function(win) {
     if (!win) return null;
     win._targetWindow = targetWindow || win._targetWindow;
     // Merge into the visible bundle list (do not replace — user may drop more
