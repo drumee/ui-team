@@ -24,7 +24,6 @@
   --sb-banner-to: #2900a0;
   --sb-card-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   --sb-font-body: var(--font-main);
-  --sb-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 /* Workspace accent tokens. Declared on the outer module root (.dmz-sharebox)
@@ -565,7 +564,7 @@
 
   .note-content {
     @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--sb-accent-deep));
-    font-family: var(--sb-font-mono);
+    font-family: var(--font-main);
     text-transform: uppercase;
     letter-spacing: 0.4px;
   }
@@ -1365,7 +1364,7 @@
     border-radius: 100px;
     background: rgba(67, 60, 197, 0.1);
     @include drumee.typo($size: 12px, $line: 20px, $weight: 600, $color: var(--sb-cta));
-    font-family: var(--sb-font-mono);
+    font-family: var(--font-main);
     text-transform: uppercase;
     letter-spacing: 0.4px;
   }

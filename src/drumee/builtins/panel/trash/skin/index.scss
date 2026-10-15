@@ -495,7 +495,7 @@
       $size: 12px,
       $weight: 600,
       $line: 1.4);
-    font-family: var(--font-mono, var(--font-medium));
+    font-family: var(--font-main);
     text-transform: uppercase;
     letter-spacing: 0.48px;
     cursor: pointer;
@@ -524,7 +524,7 @@
       $size: 10px,
       $weight: 600,
       $line: 1);
-    font-family: var(--font-mono, var(--font-medium));
+    font-family: var(--font-main);
     text-transform: uppercase;
     letter-spacing: 0.4px;
   }

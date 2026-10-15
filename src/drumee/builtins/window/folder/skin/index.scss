@@ -476,8 +476,8 @@
     }
 
     &__badge-label {
-      // Mono Display/XXS — Geist Mono SemiBold 10 / 100% / +0.04em / UPPER
-      font-family: "Geist Mono", monospace;
+      // Mono Display/XXS — Geist Mono SemiBold 10 / 100% / +0.04em / UPPER — rendered in --font-main (Geist Mono is not loaded)
+      font-family: var(--font-main);
       font-weight: 600;
       font-size: 10px;
       line-height: 100%;
@@ -3342,7 +3342,7 @@
     padding: 8px 16px;
     box-sizing: border-box;
     border-bottom: 1px solid var(--border-muted);
-    font-family: "Geist Mono", monospace;
+    font-family: var(--font-main);
     @include drumee.typo(
       $size: 10px,
       $line: 1,
