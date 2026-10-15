@@ -805,9 +805,18 @@
   }
 }
 
-// PHONE (share/skeleton/phone.js; Figma 386:59700 → 386:61932): the panel is
-// the page. Its own title row gives way to the phone top bar, and its body
-// stops scrolling on its own — the phone body scrolls instead.
+// PHONE (share/skeleton/phone.js) — Figma 386:59700 → 386:61932: the panel is
+// the page. The frames' values: 16/12 page insets, 32 between the blocks; the
+// rest of the panel's own rows already follow the same components.
+.tutorial-phone.tutorial-share__phone[data-view="share"] {
+  background: #fff;
+
+  // Every frame lights a block, and every frame holds the bar back to 20%.
+  .tutorial-phone__top { opacity: 0.2; }
+
+  .tutorial-phone__body { padding: 0; }
+}
+
 .tutorial-phone .tutorial-share__panel {
   flex: none;
   width: 100%;
@@ -815,13 +824,33 @@
   background: transparent;
   overflow: visible;
 
-  .tutorial-share__head-row { display: none; }
-  .tutorial-share__head { padding: 0 0 12px; }
-  .tutorial-share__body { overflow: visible; }
+  // No title row and no subject row: the page's own bar says what it is.
+  .tutorial-share__head { display: none; }
+
+  .tutorial-share__body {
+    overflow: visible;
+    padding: 12px 16px;
+    gap: 32px;
+  }
+
+  // Held back as the frames hold it: 20% of itself on the white page. A film
+  // rather than `opacity`, because the email and password cards are lit from
+  // INSIDE a held-back block and opacity on an ancestor cannot be undone; the
+  // card lifts over the film (z-index 2, see __card[data-lit] above).
+  .tutorial-share__block[data-blur="1"]::before {
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  // No ring on a phone: the frames lift the block onto white instead.
+  .tutorial-share__block[data-lit="1"]::after { display: none; }
+  .tutorial-share__card[data-lit="1"] { outline: 0; }
 }
 
-// The lit block stands on white, full-bleed, as the frames draw it.
+// The lit block stands on white, 16px proud on every side (386:60915 is a
+// 430-wide white plate behind a 398-wide block), over the tour's scrim. A
+// spread shadow costs no layout; its corners take the block's radius + 16.
 .tutorial-main[data-layout="phone"] .tutorial-share__panel .is-lit {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 1px;
+  box-shadow: 0 0 0 16px #fff;
 }

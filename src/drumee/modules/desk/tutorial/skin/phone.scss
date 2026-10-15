@@ -33,6 +33,35 @@
     flex: none;
   }
 
+  // A page's own bar (titleBar): the title centred on the full width, the
+  // back circle laid over its left end.
+  &__top--page {
+    position: relative;
+    align-items: center;
+  }
+
+  &__top--page > &__circle {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  &__page-title {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 56px;
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
+    text-align: center;
+  }
+
   // Figma's tour frames fade the top bar to 40% behind the overlay.
   &[data-overlay="1"] &__top {
     opacity: 0.4;

@@ -66,3 +66,15 @@ test("phone skin: the panel fills the page, the lit block sits on white", () => 
   assert.match(css, /\.tutorial-phone \.tutorial-share__panel \{[^}]*width: 100%/);
   assert.match(css, /\[data-layout=phone\] \.tutorial-share__panel \.is-lit \{[^}]*background: #fff/);
 });
+
+test("share phone follows the Figma frames: title bar, card above after screen 1", () => {
+  const S = require(path.join(__dirname, "..", "src/drumee/modules/desk/tutorial/share/screens.js"));
+  assert.equal(S[0].phone.prefer, undefined);
+  assert.ok(S.slice(1).every((s) => s.phone.prefer === "above" && s.phone.margin === 17));
+  const sass = require("sass");
+  const SRCD = path.join(__dirname, "..", "src/drumee");
+  const css = sass.compile(path.join(SRCD, "modules/desk/tutorial/share/skin/index.scss"),
+    { loadPaths: [SRCD, path.join(SRCD, "skin")] }).css.replace(/\s+/g, " ");
+  assert.match(css, /\.tutorial-share__head \{ display: none; \}/);
+  assert.match(css, /\.is-lit \{[^}]*box-shadow: 0 0 0 16px #fff/);
+});

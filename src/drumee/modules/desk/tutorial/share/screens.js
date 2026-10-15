@@ -24,6 +24,10 @@ const SCREENS = [
   { lit: BLOCKS.NOTIFY, direction: 'south', desc: () => LOCALE.TUTORIAL_SHARE_NOTIFY },
 ];
 
-for (const s of SCREENS) s.phone = { view: 'panel', target: s.lit };
+// The frames put the card under the first block and OVER every later one
+// (386:60952 → 386:61932), 17px in from the edges (a 396-wide card on 430).
+SCREENS.forEach((s, i) => {
+  s.phone = { view: 'panel', target: s.lit, margin: 17, ...(i > 0 ? { prefer: 'above' } : {}) };
+});
 
 module.exports = SCREENS;

@@ -94,6 +94,23 @@ function topBar(ui, { lead = 'back', title = '', ico = null, art = null, actions
 }
 
 /**
+ * A page's own top bar (Figma "top-navigation-more", the share flow): the
+ * back circle on the left and the page title centred on the whole width.
+ * @param {Object} ui
+ * @param {{title?: String}} opt
+ */
+function titleBar(ui, { title = '' } = {}) {
+  return Skeletons.Box.X({
+    active: 0,
+    className: `${P}__top ${P}__top--page`,
+    kids: [
+      Skeletons.Note({ active: 0, className: `${P}__page-title`, content: title }),
+      circle('arrow-left', 'ph-back'),
+    ],
+  });
+}
+
+/**
  * The bottom row: the tab pill (or, before a workspace exists, a search pill)
  * and the apps button.
  * @param {Object} ui
@@ -383,4 +400,4 @@ function autoSlide(deck, current, ms) {
   };
 }
 
-module.exports = { P, topBar, tabBar, fab, composer, sheet, swipeDeck, hero, screen, syncDeck, autoSlide };
+module.exports = { P, topBar, titleBar, tabBar, fab, composer, sheet, swipeDeck, hero, screen, syncDeck, autoSlide };

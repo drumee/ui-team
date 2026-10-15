@@ -185,6 +185,8 @@ class __tutorial_share extends LetcBox {
         hide_back: !!this.mget('is_first') && this._screenIndex === 0,
         done: isLastScreen(this, this._screenIndex, SCREENS.length),
       },
+      phone_margin: s.phone && s.phone.margin,
+      phone_prefer: s.phone && s.phone.prefer,
       owner: this,
     });
   }
