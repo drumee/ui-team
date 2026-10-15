@@ -1356,6 +1356,7 @@
   "INTERNAL": "内部",
   "EXTERNAL": "外部",
   "PERSONAL": "个人",
+  "OTHER_WORKSPACES": "其他工作区",
   "RESTRICTED": "受限",
   "NEW_SUB_FOLDER": "新建子文件夹",
   "NOTIFICATIONS": "通知",

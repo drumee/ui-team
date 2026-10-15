@@ -61,22 +61,27 @@ function members(pfx, value, tip) {
  * switcher's rows (`cmd.mget("wsHubId")`).
  *
  * A PERSONAL card carries `wsNid` instead: every personal workspace shares the
- * user's own hub_id, so only the nid tells them apart. It draws no member
- * count — a personal workspace has no members to count.
+ * user's own hub_id, so only the nid tells them apart. An OTHER card (a hub
+ * the overview does not list) keeps `wsHubId` and adds `wsOther`, which tells
+ * the widget which map to read it from. Neither draws a member count: a
+ * desk.home row carries none, and a personal workspace has no members.
  *
  * @param {String} pfx
  * @param {Object} ui
- * @param {Object} ws an org_workspaces row, or a desk.home folder row
- * @param {Boolean} [personal]
+ * @param {Object} ws an org_workspaces row, or a desk.home row
+ * @param {String} [kind] "personal" | "other"; omitted for the org's own
  */
-function card(pfx, ui, ws, personal) {
+function card(pfx, ui, ws, kind) {
+  const personal = kind === "personal";
   return Skeletons.Box.Y({
     className: `${pfx}__card`,
     // attrOpt, not dataset: a skeleton's `dataset` is dropped at render unless
     // an `attribute`/`attrOpt` map is passed too, so the area tint would never
     // have reached the DOM.
     attrOpt: { "data-area": ws.area || "" },
-    ...(personal ? { wsNid: ws.nid || ws.id } : { wsHubId: ws.hub_id }),
+    ...(personal
+      ? { wsNid: ws.nid || ws.id }
+      : { wsHubId: ws.hub_id || ws.id, ...(kind === "other" ? { wsOther: 1 } : {}) }),
     service: "open-workspace",
     uiHandler: [ui],
     // EVERY DESCENDANT IS active: 0, or the card only opens from its padding.
@@ -113,7 +118,7 @@ function card(pfx, ui, ws, personal) {
         content: ws.filename || ws.name || "",
       }),
       // Inert on both counts — see members(), which is why it takes no tip here.
-      personal ? null : members(pfx, ws.members),
+      kind ? null : members(pfx, ws.members),
     ],
   });
 }
@@ -227,22 +232,24 @@ function departmentSection(pfx, ui, section, canManage) {
 }
 
 /**
- * The caller's personal workspaces, as one more section.
+ * One of the caller's own sections — "Other workspaces" or "Personal".
  *
  * Drawn like a department — same header classes — so it reads as a peer of
  * them, but with nothing to manage: no rename, no delete, no "+ New
- * workspace" (personal workspaces are not the organisation's), and no member
- * figure. Titled "Personal", the heading the workspace switcher files them
- * under (libs/workspace-groups).
+ * workspace" (these are not the organisation's), and no member figure.
+ * "Personal" is the heading the workspace switcher files personal workspaces
+ * under (libs/workspace-groups); "Other workspaces" holds the hubs the
+ * overview does not list, another organisation's mostly.
  *
  * @param {String} pfx
  * @param {Object} ui
- * @param {Array} rows desk.home folder rows, already filtered
+ * @param {Array} rows desk.home rows, already filtered
+ * @param {String} kind "personal" | "other"
  */
-function personalSection(pfx, ui, rows) {
+function mineSection(pfx, ui, rows, kind) {
   const count = rows.length;
   return Skeletons.Box.Y({
-    className: `${pfx}__section ${pfx}__section--personal`,
+    className: `${pfx}__section ${pfx}__section--${kind}`,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__section-head`,
@@ -253,7 +260,10 @@ function personalSection(pfx, ui, rows) {
               Skeletons.Box.X({
                 className: `${pfx}__section-name-row`,
                 kids: [
-                  Skeletons.Note({ className: `${pfx}__section-name`, content: LOCALE.PERSONAL }),
+                  Skeletons.Note({
+                    className: `${pfx}__section-name`,
+                    content: kind === "personal" ? LOCALE.PERSONAL : LOCALE.OTHER_WORKSPACES,
+                  }),
                 ],
               }),
               Skeletons.Box.X({
@@ -267,7 +277,7 @@ function personalSection(pfx, ui, rows) {
       count
         ? Skeletons.Box.G({
             className: `${pfx}__grid`,
-            kids: rows.map((w) => card(pfx, ui, w, true)),
+            kids: rows.map((w) => card(pfx, ui, w, kind)),
           })
         : null,
     ],
@@ -276,7 +286,7 @@ function personalSection(pfx, ui, rows) {
 
 /**
  * Everything below the header: the department sections, then the ungrouped
- * workspaces, then the caller's personal ones.
+ * workspaces, then the caller's other workspaces and personal ones.
  *
  * THE UNGROUPED ROW HAS NO HEADER in the frame, and it must not grow one: it
  * is not a department, it has no name to rename and nothing to delete. It is
@@ -288,8 +298,9 @@ function personalSection(pfx, ui, rows) {
  * @param {Object} grouped {sections, ungrouped}
  * @param {Boolean} canManage
  * @param {Array|null} [personal] null leaves the Personal section out
+ * @param {Array|null} [others] null leaves the Other workspaces section out
  */
-function sections(pfx, ui, grouped, canManage, personal) {
+function sections(pfx, ui, grouped, canManage, personal, others) {
   const { sections: list, ungrouped } = grouped;
   const kids = list.map((s) => departmentSection(pfx, ui, s, canManage));
 
@@ -326,8 +337,10 @@ function sections(pfx, ui, grouped, canManage, personal) {
   }
 
   // After the empty note, so an organisation with nothing in it still says
-  // so: the personal workspaces are not the organisation's.
-  if (personal) kids.push(personalSection(pfx, ui, personal));
+  // so: neither section is the organisation's. Other before Personal, the
+  // switcher's order (hubs, then personal folders).
+  if (others) kids.push(mineSection(pfx, ui, others, "other"));
+  if (personal) kids.push(mineSection(pfx, ui, personal, "personal"));
 
   return kids;
 }
