@@ -1031,6 +1031,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    // Same room for the marks as __chip-title; the pill does not grow.
+    padding-block: 4px;
+    margin-block: -4px;
   }
 
   &__chip-desc {
