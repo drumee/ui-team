@@ -27,3 +27,13 @@ test("mobile rail skin: the tours' bar values", () => {
   assert.doesNotMatch(css, /mrail-apps/);
   assert.match(css, /\.desk-module__body\[data-device=mobile\] \{[^}]*calc\(78px/);
 });
+
+test("mobile topbar: no bell; the go-to button carries the unread dot", () => {
+  const src = fs.readFileSync(path.join(SRC, "modules/desk/skeleton/index.js"), "utf8");
+  const bar = src.slice(src.indexOf("const _build_mobile_topbar"), src.indexOf("const _build_mobile_rail"));
+  assert.doesNotMatch(bar, /mobile-bell-btn|service: "toggle-activity"/);
+  const goto = bar.slice(bar.indexOf('service: "mobile-goto-sheet"'));
+  assert.match(goto, /sys_pn: "activity-count-mobile"/);
+  const desk = fs.readFileSync(path.join(SRC, "modules/desk/index.js"), "utf8");
+  assert.match(desk, /\["activity-count-top", "activity-count-mobile", "activity-count-sheet"\]\.forEach/);
+});

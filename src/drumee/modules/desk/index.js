@@ -3342,8 +3342,9 @@ class desk_module extends LetcBox {
   _writeActivityCount(unread) {
     const n = parseInt(unread, 10) || 0;
     const content = n > 99 ? "99+" : String(n);
-    // Three surfaces: the desktop cluster's bell, the phone bar's bell, and
-    // the go-to sheet's notifications tile. (The old drawer's 'activity-count'
+    // Three surfaces: the desktop cluster's bell, the phone bar's go-to
+    // button (which opens the sheet the notifications tile lives in), and
+    // that tile. (The old drawer's 'activity-count'
     // is gone with the drawer.) They read the same number, so they are filled
     // from one place — updating only some left the others permanently unmarked.
     ["activity-count-top", "activity-count-mobile", "activity-count-sheet"].forEach((pn) => {

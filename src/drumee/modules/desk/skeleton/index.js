@@ -24,8 +24,9 @@
 // the avatar menu (account). This bar is those three, one control each:
 //
 //   workspace pill  -> the switcher sheet     (mobile-workspace-sheet)
-//   bell            -> notifications          (toggle-activity, count badge)
-//   go-to grid      -> the destinations sheet (mobile-goto-sheet)
+//   go-to grid      -> the destinations sheet (mobile-goto-sheet), with a red
+//                      dot while any tile in it has one (today only
+//                      Notifications does, so it is the unread count)
 //   avatar          -> the account sheet      (mobile-account-sheet)
 //
 // No hamburger and no drawer: the legacy drawer's content maps 1:1 onto the
@@ -108,11 +109,16 @@ const _build_mobile_topbar = (ui) => {
         className: `${fig}__mobile-topbar-wrapper`,
         kids: [
           chip({
-            service: "toggle-activity",
-            pn: "mobile-bell-btn",
-            mod: "bell",
+            service: "mobile-goto-sheet",
+            pn: "mobile-goto-btn",
+            mod: "goto",
             kids: [
-              Skeletons.Image.Svg({ ico: "sidebar_notifications", className: `${fig}__mobile-topbar-ico` }),
+              Skeletons.Image.Svg({ ico: "dots-nine", className: `${fig}__mobile-topbar-ico` }),
+              // No bell on the phone bar: Notifications is a tile in the sheet
+              // this opens, so the sheet's button carries the unread dot. The
+              // only tile with a dot is that one (activity-count-sheet), and
+              // both read the same number — _writeActivityCount fills this
+              // part with it. A tile that gains a dot later must feed this too.
               // Its OWN part name — registerPart is last-one-wins, and both
               // 'activity-count' (the old drawer) and 'activity-count-top'
               // (the desktop cluster, still rendered on mobile) are taken.
@@ -123,12 +129,6 @@ const _build_mobile_topbar = (ui) => {
                 content: "",
               }),
             ],
-          }),
-          chip({
-            service: "mobile-goto-sheet",
-            pn: "mobile-goto-btn",
-            mod: "goto",
-            kids: [Skeletons.Image.Svg({ ico: "dots-nine", className: `${fig}__mobile-topbar-ico` })],
           }),
           Skeletons.Box.X({
             className: `${fig}__mobile-topbar-avatar`,

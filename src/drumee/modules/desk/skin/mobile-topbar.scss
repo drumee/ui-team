@@ -97,7 +97,8 @@
     }
   }
 
-  // Unread marker on the bell. A DOT, not a number: the desktop cluster shows
+  // Unread marker on the go-to button (the sheet it opens holds the
+  // Notifications tile). A DOT, not a number: the desktop cluster's bell shows
   // one too (Ellipse 882, 6px, #D74E49), and a count is unreadable at this
   // size. The desk writes the value into this part; empty means nothing
   // unread, so it is hidden until it has one.
