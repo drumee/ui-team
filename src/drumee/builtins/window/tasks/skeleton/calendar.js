@@ -31,12 +31,13 @@ const VIEWS = [
   { key: "day", label: "CAL_VIEW_DAY" },
 ];
 
-// How many compact chips stand in a month cell at rest. It only LABELS the
+// How many month cards stand in a month cell at rest. It only LABELS the
 // "+N" — every task renders and the cell scrolls — so it has to agree with the
-// cell geometry in the skin: --tcal-cell-min (139px) is three 19px chips on
-// 4px gaps plus the pinned 18px "+N", under the 12px padding and the 20px date
-// line with its 10px gap. The derivation is next to that token.
-const MONTH_FIT = 3;
+// cell geometry in the skin: --tcal-cell-min (190px) is two 52.4px cards on
+// the month body's 10px gap plus the pinned 18px "+N", under the 12px padding
+// and the 20px date line with its 10px gap. The derivation is next to that
+// token.
+const MONTH_FIT = 2;
 
 /** The active view, validated — anything unknown falls back to the month. */
 const calMode = (ui) => {
@@ -133,39 +134,38 @@ module.exports = function (ui) {
       ],
     });
 
-  // Compact month chip — a single line (priority dot + title), status-tinted.
-  // Month cells are small, so the full board-style card is reserved for week.
+  // Month card (Figma 1697:48543, hover 1697:48544) — the Personal Calendar's
+  // month card: the priority dot over the name, 4px apart, on a white card;
+  // the × shows on hover. No status tint and no subtask count: the frame has
+  // neither (Aaron, 2026-10-15). The week card keeps both.
+  //
+  // The dot and the name are inert: a kid left active takes the click itself
+  // (ui-core stops propagation before triggerHandlers), so only the card's
+  // padding used to open the task. The × keeps its own service.
   const compactChip = (t) => {
     const pm = priorityMeta(ui, t.priority || "medium");
-    return Skeletons.Box.X({
+    return Skeletons.Box.Y({
       className: `${pfx}__cal-chip`,
       bubble: 0,
       service: "open-detail",
       uiHandler: [ui],
       taskId: t.id,
-      // data-theme carries the chip tint — a custom column's status IS its DB
-      // id, so the old per-status rules only ever matched the four built-ins.
-      dataset: {
-        status: t.status || "",
-        theme: statusMeta(ui, t.status || ui.getDefaultStatus()).theme,
-      },
+      dataset: { status: t.status || "" },
       kids: [
         Skeletons.Note({
           className: `${pfx}__cal-chip-dot`,
           styleOpt: { background: pm.color },
+          active: 0,
         }),
         Skeletons.Note({
           className: `${pfx}__cal-chip-title`,
           content: t.title || "",
+          active: 0,
         }),
-        // Count only — Calendar gets no expand this round. A subtask never
-        // earns its own cell even when its due date differs from the parent's;
-        // getTopLevelTasks above is what enforces that.
-        subtaskBadge(ui, t, `${pfx}__cal-chip-subcount`),
         // Hover delete; bubble:0 so it doesn't also open the detail panel.
         Skeletons.Button.Svg({
           className: `${pfx}__cal-chip-remove`,
-          ico: "cross",
+          ico: "ph-x",
           bubble: 0,
           service: "remove-task",
           uiHandler: [ui],

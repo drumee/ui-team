@@ -5703,14 +5703,14 @@ $theme-colors: (
     container-name: cal;
     animation: tasks-cal-fade 0.16s ease;
     // A month row's FLOOR (rows share the grid's height above it, as the Meet
-    // tab's do). skeleton/calendar.js MONTH_FIT = 3 is measured against it:
-    // 24px of padding, the 20px date line and its 10px gap (54px), then three
-    // 19px chips on the body's 4px gaps (65px), 2px (the 4px gap less the
-    // footer's -2px margin) and the pinned 18px "+N" — 139px. At that height
-    // the third chip ends 2px above the footer and the fourth starts under
-    // it, so "+N" counts exactly what is out of sight. Change the cell
-    // padding, the date line, the chip or the gap and this goes stale.
-    --tcal-cell-min: 139px;
+    // tab's do). skeleton/calendar.js MONTH_FIT = 2 is measured against it:
+    // 24px of padding, the 20px date line and its 10px gap (54px) leave a
+    // 136px body; two 52.4px cards on the month body's 10px gap end at 114.8,
+    // 3px above the pinned 18px "+N" (118-136), and the third starts at 124.8
+    // under it, so "+N" counts exactly what is out of sight. 190px is close to
+    // the Figma cell (1697:48540, 196px). Change the cell padding, the date
+    // line, the card or the gap and this goes stale.
+    --tcal-cell-min: 190px;
   }
 
   // The fade above is for a view switch or a new range. The same range
@@ -5960,6 +5960,11 @@ $theme-colors: (
     flex: 1 1 auto;
     min-height: 0;
     gap: 4px;
+
+    // The month cell's 10px between cards (1697:48540); MONTH_FIT counts it.
+    .tasks-panel__calendar[data-mode="month"] & {
+      gap: 10px;
+    }
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
@@ -6031,49 +6036,49 @@ $theme-colors: (
     }
   }
 
-  // Compact month chip: status-tinted single line (dot + title). Its geometry
-  // is the Meet tab's month card — 19px, r=4, 12/15 bold title — as is the
-  // Personal Calendar's compact chip,
-  // so a task reads the same size in both month grids. The status tint is this
-  // board's own and stays: it is the only place a month cell says where a task
-  // stands, and the Personal Calendar has no columns to colour by.
+  // Month card (Figma 1697:48543; hover 1697:48544), the Personal Calendar's
+  // month card: white, hairline border, r=12, 12px in, the priority dot over
+  // the name 4px apart; Drop Shadow/300 and the × on hover. 52.4px tall
+  // (12 + 8 + 4 + 14.4 + 12 + 2px of border), the height MONTH_FIT assumes.
+  // The frame's hairline is 0.5px of 20% black, drawn as the 1px token
+  // border as the Personal Calendar does, so the card has one height on 1x
+  // and 2x screens. It used to be a status-tinted one-line chip; Figma has
+  // no status in the month cell (Aaron, 2026-10-15).
   &__cal-chip {
     position: relative;
     flex: 0 0 auto;
-    align-items: center;
-    gap: 6px;
-    min-height: 19px;
-    padding: 2px 6px;
+    min-width: 0;
+    gap: 4px;
+    padding: 12px;
     box-sizing: border-box;
-    border-radius: 4px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.2));
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
     cursor: pointer;
-    transform-origin: left center;
-    transition: filter 0.12s, transform 0.12s;
-    // Tint keyed on data-theme, so custom columns colour their chips too.
-    @include theme-tint(rgba(174, 174, 178, 0.16));
+    transition: box-shadow 0.12s ease-out;
     &:hover {
-      filter: brightness(0.97);
-      transform: scale(1.03);
+      box-shadow:
+        0 4px 4px -1px rgba(12, 12, 13, 0.1),
+        0 4px 4px -1px rgba(12, 12, 13, 0.05);
     }
     &:hover &-remove {
       opacity: 1;
     }
   }
 
-  // Same treatment on the compact month chip — transparent by default (the
-  // previous white fill showed as an odd square), tint red only on its hover.
+  // The month card's × (16px, top-right on the dot's row, as 1697:48544
+  // draws it) — transparent by default, tinted red only on its own hover.
   &__cal-chip-remove {
     position: absolute;
-    top: 50%;
-    right: 2px;
+    top: 12px;
+    right: 12px;
     width: 16px;
     height: 16px;
-    margin-top: -8px;
-    padding: 2px;
+    padding: 0;
     justify-content: center;
     align-items: center;
     border-radius: 4px;
-    color: var(--normal-fg-40, #84848c);
+    color: var(--normal-fg);
     background: transparent;
     opacity: 0;
     cursor: pointer;
@@ -6082,8 +6087,8 @@ $theme-colors: (
     transition: opacity 0.12s, color 0.12s, background 0.12s;
 
     svg {
-      width: 10px;
-      height: 10px;
+      width: 16px;
+      height: 16px;
       display: block;
     }
 
@@ -6094,18 +6099,35 @@ $theme-colors: (
   }
 
   &__cal-chip-dot {
-    flex: 0 0 8px;
+    flex: 0 0 auto;
     width: 8px;
     height: 8px;
     border-radius: 50%;
   }
 
+  // Buttons/Mini Button, 12/1.2 semibold, one line: a wrapped name would make
+  // the card's height depend on its data, and MONTH_FIT counts fixed cards.
   &__cal-chip-title {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($size: 12px, $line: 15px, $color: var(--normal-fg));
+    @include drumee.typo($size: 12px, $line: 1.2, $color: var(--normal-fg));
     font-weight: 600;
+    // Room for stacked Vietnamese marks ("ế", "ặ" reach above and below a
+    // 1.2 line): overflow clips at the padding box, so 4px of padding each
+    // way widens the clip and the negative margin gives the line its height
+    // back — the card, and MONTH_FIT, do not move.
+    padding-block: 4px;
+    margin-block: -4px;
+
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-block: 4px;
+      margin-block: -4px;
+    }
   }
 
   // "+N" — pinned to the foot of the scrolling cell so the one way to the rest
@@ -9526,7 +9548,6 @@ html[data-theme="dark"] .tasks-panel {
   // rules (the all-done green and the checkbox fill) burn out on a dark ground.
   &__task-subcount,
   &__list-subcount,
-  &__cal-chip-subcount,
   &__cal-card-subcount,
   &__gantt-subcount {
     &[data-complete="1"] {
