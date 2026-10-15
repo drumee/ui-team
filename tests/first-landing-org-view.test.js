@@ -550,3 +550,15 @@ test("the skin hides the headless layer under the hold", () => {
   const scss = fs.readFileSync(path.join(ROOT, "src/drumee/modules/desk/skin/index.scss"), "utf8");
   assert.match(scss, /\.desk-module\[data-landing-hold="1"\] \.window-manager__layer\.headless \{\s*visibility: hidden;/);
 });
+
+test("Other / Personal are unframed so their cards share the ungrouped grid's columns", () => {
+  const scss = fs.readFileSync(path.join(ROOT, "src/drumee/modules/desk/org-view/skin/index.scss"), "utf8");
+  const at = scss.indexOf("&__section--other,\n  &__section--personal {");
+  assert.ok(at > 0, "rule present");
+  const body = scss.slice(at, scss.indexOf("}", at));
+  for (const decl of ["padding: 0;", "border: 0;", "background-color: transparent;"]) {
+    assert.ok(body.includes(decl), decl);
+  }
+  // After the department frame, so it wins at equal specificity.
+  assert.ok(at > scss.indexOf("  &__section {"), "declared after &__section");
+});

@@ -598,6 +598,25 @@
     text-align: center;
   }
 
+  // ── The user's own sections (Other workspaces, Personal) ──────────────
+  //
+  // NOT FRAMED like a department. They are not the organisation's, and in a
+  // frame their cards sat 25px in (padding + border) and 8px narrower than
+  // the bare ungrouped grid right above them, so the columns did not line up.
+  // Unframed, the grid is the same width as that one and the cards share its
+  // columns; the heading keeps the department's typography. The extra top
+  // margin makes the gap ABOVE the heading (16 + 16) larger than the one
+  // below it (16), so it reads as the title of the grid under it.
+  &__section--other,
+  &__section--personal {
+    gap: 16px;
+    margin-top: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+  }
+
   // ── "Create department" dialog ────────────────────────────────────────
   //
   // Rendered in the desk's modal host (Wm.__wrapperModal), NOT under this
