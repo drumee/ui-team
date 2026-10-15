@@ -187,6 +187,9 @@ class __tutorial_share extends LetcBox {
       },
       phone_margin: s.phone && s.phone.margin,
       phone_prefer: s.phone && s.phone.prefer,
+      // No scrim: the frames' grey is the PAGE's own ground (white under 20%
+      // black), with the held-back blocks faded onto it — see the skin.
+      dim: false,
       owner: this,
     });
   }

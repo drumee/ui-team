@@ -77,4 +77,6 @@ test("share phone follows the Figma frames: title bar, card above after screen 1
     { loadPaths: [SRCD, path.join(SRCD, "skin")] }).css.replace(/\s+/g, " ");
   assert.match(css, /\.tutorial-share__head \{ display: none; \}/);
   assert.match(css, /\.is-lit \{[^}]*box-shadow: 0 0 0 16px #fff/);
+  assert.match(css, /\.tutorial-share__phone\[data-view=share\] \{[^}]*background: #ccc/);
+  assert.match(css, /\[data-blur="1"\]::before \{ background: rgba\(204, 204, 204, 0\.8\)/);
 });
