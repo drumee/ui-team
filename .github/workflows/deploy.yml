@@ -231,11 +231,14 @@ jobs:
           fi
 
           DEPLOYED=\$(echo "\$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['head'])" 2>/dev/null || echo "")
-          EXPECTED_SHORT=\$(echo "$EXPECTED" | cut -c1-8)
+          # The build stamps git's --short head, whose length grows with the
+          # repository (8 chars became 9 on 2026-10-15): compare it as a prefix
+          # of the full sha instead of against a fixed 8-char cut.
+          EXPECTED_FULL="$EXPECTED"
           echo "Deployed head: \$DEPLOYED"
-          echo "Expected head: \$EXPECTED_SHORT"
+          echo "Expected head: \$EXPECTED_FULL"
 
-          if [ "\$DEPLOYED" != "\$EXPECTED_SHORT" ]; then
+          if [ \${#DEPLOYED} -lt 7 ] || [ "\${EXPECTED_FULL#\$DEPLOYED}" = "\$EXPECTED_FULL" ]; then
             echo "::error::Verify failed: deployed head mismatch"
             exit 1
           fi
