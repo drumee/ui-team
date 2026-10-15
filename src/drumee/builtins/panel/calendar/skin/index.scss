@@ -979,6 +979,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    // Room for stacked Vietnamese marks ("ế", "ặ" reach above and below a
+    // 1.2 line): overflow clips at the padding box, so 4px of padding each
+    // way widens the clip and the negative margin gives the line its height
+    // back — the item, and the "+N" maths, do not move.
+    padding-block: 4px;
+    margin-block: -4px;
   }
 
   // A Note's text sits in an inner .note-content block, and that block is what
@@ -990,6 +996,9 @@
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
+    // The inner block clips too: same room for the marks (see __chip-title).
+    padding-block: 4px;
+    margin-block: -4px;
   }
 
   // Workspace pill (Figma 1697:11003): the folder, then the workspace's name,

@@ -772,12 +772,20 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    // Room for stacked Vietnamese marks ("ế", "ặ" reach above and below a
+    // 1.2 line): overflow clips at the padding box, so 4px of padding each
+    // way widens the clip and the negative margin gives the line its height
+    // back — the chip does not grow.
+    padding-block: 4px;
+    margin-block: -4px;
 
     // The text sits in the Note's inner block; that is what has to ellipsize.
     .note-content {
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+      padding-block: 4px;
+      margin-block: -4px;
     }
   }
 
