@@ -258,7 +258,8 @@ class __dmz_meeting extends LetcBox {
     if (this._passwordBusy) return;
     const entry = await this.ensurePart("ref-password");
     const error = await this.ensurePart("password-error");
-    const password = String((entry && entry.getData && entry.getData().value) || "").trim();
+    // As typed: the calendar stores the password untrimmed.
+    const password = String((entry && entry.getData && entry.getData().value) || "");
     if (!password) return;
     this._passwordBusy = true;
     let res;
@@ -594,16 +595,17 @@ class __dmz_meeting extends LetcBox {
 
     const lobby = await this.ensurePart("lobby-container");
 
+    // A dead link says so, password or not: asking for it would only loop.
+    if (data.validity != 'TICKET_OK') {
+      lobby.feed(this.infoSkeleton(this, LOCALE.LINK_EXPIRES));
+      return;
+    }
+
     // A password-protected link: the gate first. Once dmz.login accepts the
     // password this session holds the link, and this method runs again for
     // the lobby.
     if (data.status === "REQUIRED_PASSWORD") {
       lobby.feed(require("./skeleton/password")(this, data));
-      return;
-    }
-
-    if (data.validity != 'TICKET_OK') {
-      lobby.feed(this.infoSkeleton(this, LOCALE.LINK_EXPIRES));
       return;
     }
 

@@ -56,6 +56,7 @@ test("the page shows the gate for REQUIRED_PASSWORD instead of the lobby", () =>
   const gateAt = body.indexOf('data.status === "REQUIRED_PASSWORD"');
   assert.ok(gateAt > 0, "no REQUIRED_PASSWORD branch");
   assert.ok(gateAt < body.indexOf('require("./skeleton/lobby")'), "the lobby is drawn before the gate");
+  assert.ok(body.indexOf("data.validity != 'TICKET_OK'") < gateAt, "a dead link asks for its password");
 });
 
 const submit = new Function("SERVICE", "LOCALE", "Visitor", "_a",
@@ -79,7 +80,8 @@ function page(answer) {
 test("a right password goes on to the lobby; a wrong one says so", async () => {
   const ok = page({ is_verified: 1 });
   await ok.run();
-  assert.deepEqual(ok.calls.login, [{ svc: "dmz.login", password: "secret" }]);
+  // Sent as typed, spaces included: that is how the calendar saved it.
+  assert.deepEqual(ok.calls.login, [{ svc: "dmz.login", password: " secret " }]);
   assert.equal(ok.calls.again, 1);
 
   const wrong = page({ failed: 1, status: "WRONG_PASSWORD" });
