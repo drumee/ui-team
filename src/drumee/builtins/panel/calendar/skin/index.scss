@@ -3147,6 +3147,36 @@
   }
 }
 
+// The upload-progress card (window/upload-progress/skin: fixed, bottom 130px,
+// right 24px, 360x280, a 64px bar collapsed) sits right over this card's
+// footer: at a 900px-tall viewport Update/Create are at 741-777 and the card
+// reaches 770, and it stays above the modal, so a click on Update during an
+// upload landed on the card and did nothing. While the task card is open the
+// upload card rests above its footer instead: half the space around the
+// centred min(720px, 88vh) card, plus its 32px padding, the 36px buttons and an
+// 8px gap. These numbers couple both skins — change them together. Below 651px
+// the upload card is a sheet whose geometry its own skin pins.
+//
+// !important because the widget writes its 130px as an inline style
+// (upload-progress/index.js, this.style.set). A card the user dragged
+// (data-moved) is left where they put it, and on a mobile device (up to 800px)
+// the card is the sheet its own skin pins (data-device="mobile").
+//
+// The workspace task's quick-open card has the same footer in the same place:
+// the board's card capped at 739px (window/tasks/skin, &__root--quick), centred,
+// 32px padding, 38px buttons, so (100vh - 739px) / 2 + 78px.
+@media (min-width: 651px) {
+  body:has(.calendar-main__modal[data-form="task"])
+    .window-upload-progress__ui:not([data-moved="1"]):not([data-device="mobile"]) {
+    bottom: max(130px, calc((100vh - min(720px, 88vh)) / 2 + 76px)) !important;
+  }
+
+  body:has(.calendar-main__modal[data-form="task-quick-open"])
+    .window-upload-progress__ui:not([data-moved="1"]):not([data-device="mobile"]) {
+    bottom: max(130px, calc((100vh - 739px) / 2 + 78px)) !important;
+  }
+}
+
 // ── personal meeting modal (skeleton/meeting-form.js) ────────────────────────
 // Figma 1693:163829 (portrait, the default), 1693:166935 (landscape) and
 // 1693:163906 (invite link ready): 460px cards, 32px padding inside a 1px
