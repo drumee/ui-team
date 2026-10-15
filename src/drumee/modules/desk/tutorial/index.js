@@ -277,7 +277,8 @@ class tutorial_main extends LetcBox {
 
   /** Phone layout: on once phone tours are, and always for a preview. */
   _phoneAllowed() {
-    return !!this.mget('preview') || !!(Tours.mobileToursOn && Tours.mobileToursOn(this._tour && this._tour.id));
+    return !!this.mget('preview') || !!this.mget('phone_ok')
+      || !!(Tours.mobileToursOn && Tours.mobileToursOn(this._tour && this._tour.id));
   }
 
   _currentStep() {
@@ -648,6 +649,11 @@ class tutorial_main extends LetcBox {
    */
   _chainMigrateTour(pane) {
     if (this._migrateChained || !_.isFunction(this.once)) return;
+    // NOT ON A PHONE. There the migrate tour is the user's to start — from the
+    // Files empty state's or the + New menu's "Migrate from Google Drive"
+    // (window/folder "launch-gdrive-migration") — not a continuation of this
+    // one.
+    if (this._layout === 'phone') return;
     if (!pane || !_.isFunction(pane.showTutorial)) return;
     this._migrateChained = true;
     const preview = !!this.mget('preview');

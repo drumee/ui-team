@@ -1228,10 +1228,13 @@ class __media_interact extends media_core {
           mtime: this.mget(_a.mtime),
           area: this.mget(_a.area),
         };
-        const _raised = args._tourDone ? false : require("libs/tutorial-tours").fire("share", this, {
+        // ON A PHONE TOO: the media menu's Share is a phone's way into this
+        // tour, so it passes the mobile switch (phoneGate).
+        const _Tours = require("libs/tutorial-tours");
+        const _raised = args._tourDone ? false : _Tours.fire("share", this, {
           subject: _subject,
           subject_data: _subjectData,
-        });
+        }, _Tours.phoneGate());
         // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
         // tour teaches the secure-share panel, and the panel was opening while
         // the walkthrough about it was still on screen — visible only once the

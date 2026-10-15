@@ -309,7 +309,8 @@ class __window_tutorial extends LetcBox {
    * than a full-viewport phone takeover nobody has signed off.
    */
   _phoneAllowed() {
-    return !!this.mget('preview') || !!(Tours.mobileToursOn && Tours.mobileToursOn(this._tour && this._tour.id));
+    return !!this.mget('preview') || !!this.mget('phone_ok')
+      || !!(Tours.mobileToursOn && Tours.mobileToursOn(this._tour && this._tour.id));
   }
 
   _applySize() {

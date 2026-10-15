@@ -64,6 +64,10 @@ require("./skin");
 const SCHED_NARROW_PX = 700;
 
 
+// The migrate tour has been raised by a phone's "Migrate from Google Drive"
+// tap this session (see "launch-gdrive-migration").
+let _phoneMigrateRaised = false;
+
 class __window_folder extends mfsInteract {
   constructor(...args) {
     super(...args);
@@ -705,7 +709,10 @@ class __window_folder extends mfsInteract {
    */
   showTutorial(tour, opt = {}) {
     const Tours = require("libs/tutorial-tours");
-    if (!opt.preview && !Tours.claim(tour, this)) return false;
+    // `phone_ok`: a phone's own trigger for this tour (see phoneGate in
+    // libs/tutorial-tours) — it passes the mobile switch, and rides on to the
+    // host, which draws the phone layout for it.
+    if (!opt.preview && !Tours.claim(tour, this, opt.phone_ok ? { phone: true } : undefined)) return false;
     // BROADCAST, do not append.
     //
     // This used to `this.append()` a wrapper and feed the tour into it. That put
@@ -2226,6 +2233,20 @@ class __window_folder extends mfsInteract {
         // raised elsewhere — the rail's Files button — that is still on screen.
         // With none in flight, whenDone runs `launch` synchronously, exactly
         // where a bare call would sit, which is every click on this row today.
+        //
+        // EXCEPT THE FIRST ONE ON A PHONE. There this row and the Files empty
+        // state's "Migrate from Google Drive" card (the same service) ARE the
+        // migrate tour's way in — a phone has no rail Files press that raises
+        // it — and the tour's last step is the real import (window/tutorial
+        // _goLive), so it takes the place of the popup rather than preceding
+        // it. Once per session: this tour is earned (mark_on "success"), so the
+        // seen-set alone would keep raising it until an import ran, and a user
+        // who left it early must get the dialog on their next tap.
+        if (!_phoneMigrateRaised && Visitor.isMobile()
+          && this.showTutorial("migrate", { phone_ok: 1 })) {
+          _phoneMigrateRaised = true;
+          return;
+        }
         return Tours.whenDone("migrate", launch);
       }
 
@@ -2356,7 +2377,11 @@ class __window_folder extends mfsInteract {
             // mock of itself — while the panel this tour is about is right
             // here. showTutorial takes the same claim fire() would have taken,
             // so every gate still applies exactly once.
+            // ON A PHONE TOO: the workspace sheet's link action lands here
+            // (mobile-ws-action → workspace-access), and it is a phone's way
+            // into this tour — phone_ok passes the mobile switch.
             raised = this.showTutorial("share", {
+              ...(Visitor.isMobile() ? { phone_ok: 1 } : {}),
               subject: "workspace",
               subject_data: {
                 name: this.mget(_a.hub_name) || this.mget(_a.filename),

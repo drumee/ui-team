@@ -181,8 +181,24 @@ function mobileToursOn(tourId) {
   }
 }
 
-function isMobile(tourId) {
+/**
+ * The gate a phone trigger passes: `{phone: true}` on a phone, nothing on a
+ * desktop (where the switch is not in play anyway).
+ */
+function phoneGate() {
   try {
+    return typeof Visitor !== "undefined" && Visitor.isMobile && Visitor.isMobile() ? { phone: true } : undefined;
+  } catch (e) {
+    return undefined;
+  }
+}
+
+function isMobile(tourId, gate) {
+  try {
+    // A trigger that IS a phone's way into this tour (gate.phone — the bar's
+    // Chat / Task / Meet, the migrate card and row, the share entries) passes
+    // whatever the rollout switch says. Every other surface still waits on it.
+    if (gate && gate.phone) return false;
     if (mobileToursOn(tourId)) return false;
     return !!(typeof Visitor !== "undefined" && Visitor.isMobile && Visitor.isMobile());
   } catch (e) {
@@ -392,18 +408,18 @@ function isSeen(tourId, host) {
  * true here does not promise the claim will succeed, only that this tour is not
  * ruled out on its own merits.
  */
-function offerable(tourId, host) {
+function offerable(tourId, host, gate) {
   if (!enabled()) return false;
   if (!isNewUser()) return false;
-  if (isMobile(tourId)) return false;
+  if (isMobile(tourId, gate)) return false;
   if (!TOUR_IDS.includes(tourId)) return false;
   if (isSeen(tourId, host)) return false;
   return true;
 }
 
-function claim(tourId, host) {
+function claim(tourId, host, gate) {
   // One definition of the gates, so a second caller cannot drift from it.
-  if (!offerable(tourId, host)) return false;
+  if (!offerable(tourId, host, gate)) return false;
   if (_inFlight) return false;
 
   _inFlight = tourId;
@@ -424,14 +440,18 @@ function claim(tourId, host) {
  * @param {Object} [opt] extra model attributes for the tour widget, for a
  *   trigger that knows something the tour cannot work out for itself. Rides in
  *   the broadcast under its own key so it can never collide with `tour`.
+ * @param {{phone?: Boolean}} [gate] `phone`: this trigger is a phone's way
+ *   into the tour — it passes the mobile switch, and the tour is stamped
+ *   `phone_ok` so its host draws the phone layout (phoneGate()).
  * @returns {Boolean} whether the tour was broadcast
  */
-function fire(tourId, host, opt) {
-  if (!claim(tourId, host)) return false;
+function fire(tourId, host, opt, gate) {
+  if (!claim(tourId, host, gate)) return false;
+  const attrs = gate && gate.phone ? { ...(opt || {}), phone_ok: 1 } : (opt || null);
 
   try {
     if (typeof RADIO_BROADCAST !== "undefined") {
-      RADIO_BROADCAST.trigger(CHANNEL, { tour: tourId, opt: opt || null });
+      RADIO_BROADCAST.trigger(CHANNEL, { tour: tourId, opt: attrs });
     }
   } catch (e) {
     // A listener that throws must not leave the guard latched for the session.
@@ -589,6 +609,7 @@ function __resetModuleState() {
 module.exports = {
   mobileToursOn,
   allowPhone,
+  phoneGate,
   CHANNEL,
   TOUR_IDS,
   GUARD_TIMEOUT_MS,

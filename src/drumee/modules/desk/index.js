@@ -6830,11 +6830,11 @@ class desk_module extends LetcBox {
    *   screen the user has already left.
    * @returns {Promise<Boolean>} whether the tour was asked for
    */
-  async _raiseRailTour(tour, seq) {
+  async _raiseRailTour(tour, seq, gate) {
     await this._whenToursIdle();
     if (this.isDestroyed && this.isDestroyed()) return false;
     if (seq !== undefined && (this._navSeq || 0) !== seq) return false;
-    return require("libs/tutorial-tours").fire(tour, this);
+    return require("libs/tutorial-tours").fire(tour, this, null, gate);
   }
 
   /**
@@ -6869,7 +6869,7 @@ class desk_module extends LetcBox {
    * @param {String} tour the tour that tab is about
    * @returns {Promise}
    */
-  async _railTabWithTour(tab, tour) {
+  async _railTabWithTour(tab, tour, gate) {
     // THIS PRESS SUPERSEDES THE ONE BEFORE IT. See _navigated: the previous
     // press may have parked a tab switch on its tour's release, and ending
     // that tour below is exactly what fires it.
@@ -6884,7 +6884,7 @@ class desk_module extends LetcBox {
     // is up comes down is what lets that one skip its fade: a tour being
     // replaced by another tour has nothing to reveal, while a tour that is
     // simply ending is uncovering the window on purpose. See _endWindowTour.
-    const offerable = require("libs/tutorial-tours").offerable(tour, this);
+    const offerable = require("libs/tutorial-tours").offerable(tour, this, gate);
     this._endWindowTourUnlessAbout(tab, { immediate: offerable });
     if (!w) await this._openDefaultWorkspace();
     if (this.isDestroyed && this.isDestroyed()) return;
@@ -6902,7 +6902,7 @@ class desk_module extends LetcBox {
     // then resolved, fire() claimed the now-free tour and mounted a fresh
     // migrate tour straight over the Calendar the user had just opened.
     if (this._windowTourIs(tour)) return this._railTab(tab);
-    const raised = await this._raiseRailTour(tour, seq);
+    const raised = await this._raiseRailTour(tour, seq, gate);
     // Whatever the wait inside was for, a navigation during it wins: the user
     // has gone elsewhere, so neither a tour nor this tab lands on top of it.
     if ((this._navSeq || 0) !== seq) return;
@@ -8463,14 +8463,13 @@ class desk_module extends LetcBox {
           // wizard to warm anything during — a different situation with its own
           // timing, and not the one being fixed.
           //
-          // ON A PHONE TOO. Finishing the wizard is the one moment the tours
-          // are owed whatever the `mobile_tours` rollout switch says: the
-          // workspace tour in the phone layout, and the migrate tour it hands
-          // off to in the window. Granted for those two only, for this session
-          // (libs/tutorial-tours allowPhone); every other tour still waits on
-          // the switch. Harmless on a desktop, where the layout stays desk.
+          // ON A PHONE TOO. Finishing the wizard is the one moment the
+          // workspace tour is owed whatever the `mobile_tours` rollout switch
+          // says (libs/tutorial-tours allowPhone). It does not hand off to
+          // migrate on a phone (_chainMigrateTour); the phone's other tours
+          // come from their own taps (phoneGate). Harmless on a desktop.
           if (postOnboarding) {
-            require("libs/tutorial-tours").allowPhone(["workspace", "migrate"]);
+            require("libs/tutorial-tours").allowPhone(["workspace"]);
           }
           const delay = postOnboarding ? 0 : 2000;
           setTimeout(() => {
@@ -11928,7 +11927,9 @@ class desk_module extends LetcBox {
         // on the home grid — it is drawn on a window or not at all — and if
         // that fallback did open a workspace, the chat pane is exactly what the
         // user is now looking at.
-        return this._railTabWithTour(_a.chat, _a.chat);
+        // ON A PHONE TOO: the bottom bar's Chat is a phone's way into this
+        // tour, so it passes the mobile switch (phoneGate).
+        return this._railTabWithTour(_a.chat, _a.chat, require("libs/tutorial-tours").phoneGate());
       }
       case "rail-task": {
         // Contextual tour, on the first press of Task in the rail.
@@ -11961,7 +11962,8 @@ class desk_module extends LetcBox {
         // is written when — and only when — "Create your first task" is
         // pressed. Until then the claim keeps succeeding and the rail keeps
         // offering it.
-        return this._railTabWithTour(_a.task, "folder_task");
+        // ON A PHONE TOO, from the bottom bar's Task (phoneGate).
+        return this._railTabWithTour(_a.task, "folder_task", require("libs/tutorial-tours").phoneGate());
       }
       case "rail-meet": {
         // Contextual tour, on a press of Meet in the rail — the gesture this
@@ -11982,7 +11984,8 @@ class desk_module extends LetcBox {
         // the user is not on". An in-window tour cannot land on the home grid —
         // it is drawn on a window or not at all — and _onTourTrigger is what
         // routes this one there.
-        return this._railTabWithTour("meeting", "meeting");
+        // ON A PHONE TOO, from the bottom bar's Meet (phoneGate).
+        return this._railTabWithTour("meeting", "meeting", require("libs/tutorial-tours").phoneGate());
       }
       // The rail's Access and the switcher header's link icon do the identical
       // thing — hand `folder-manage-access` to the active workspace window,
