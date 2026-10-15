@@ -226,8 +226,8 @@ const _build_mobile_sheet_host = (ui) => {
 // A bottom bar is the same object in the shape a phone reads: persistent,
 // thumb-reachable, one tap per destination. It carries the SAME services as
 // the rail, so _railTab / _railAccess drive it with no new wiring. It wears
-// the Drumee Mobile frames' bar (the one the tours draw): a white pill of four
-// tabs and a round apps button, floating over a fade to white.
+// the Drumee Mobile frames' bar (the one the tours draw): one white pill of
+// tabs, floating over a fade to white.
 //
 // It has its OWN radio group. Sharing the rail's "sidebar-radio" would let a
 // drawer row and a bar item mark each other, since the drawer is rendered at
@@ -249,24 +249,25 @@ const _build_mobile_rail = (ui) => {
   // lookup uses getPart and skips a missing part on purpose, because the
   // desktop rail and this bar are per-device and ensurePart never resolves for
   // a part that will not mount here. Rename → grep desk/index.js first.
-  // The tour's phone bar (desk/tutorial skin/phone.scss `__bottom`, Figma
-  // 206:5444): a white pill of four tabs, then the round apps button. Access
-  // is that button — the bar's fifth destination, on the frames' SquaresFour.
-  // The glyphs are the frames' own (Phosphor; not in the sprite).
+  // The tour's phone bar (desk/tutorial skin/phone.scss `__tabs`, Figma
+  // 206:5444): one white pill of tabs. The four workspace glyphs are the
+  // frames' own (Phosphor; not in the sprite); Access, which the frames do not
+  // draw, keeps the desktop rail's sprite glyph.
   const url = (m) => (m && m.default ? m.default : m);
   const GLYPH = {
     "rail-files": require("assets/tutorial/mg-phone/files.svg"),
     "rail-chat": require("assets/tutorial/mg-phone/chat.svg"),
     "rail-task": require("assets/tutorial/mg-phone/task.svg"),
     "rail-meet": require("assets/tutorial/mg-phone/meet.svg"),
-    "rail-access": require("assets/tutorial/ws-phone/squares-four.svg"),
   };
-  const glyph = (ico) => Skeletons.Element({
-    active: 0,
-    tagName: "img",
-    className: `${fig}__mrail-glyph`,
-    attribute: { src: url(GLYPH[ico]), alt: "" },
-  });
+  const glyph = (ico) => GLYPH[ico]
+    ? Skeletons.Element({
+      active: 0,
+      tagName: "img",
+      className: `${fig}__mrail-glyph`,
+      attribute: { src: url(GLYPH[ico]), alt: "" },
+    })
+    : Skeletons.Image.Svg({ active: 0, ico, className: `${fig}__mrail-glyph` });
   const badgeNote = (badge) => Skeletons.Note({
     className: `${fig}__mrail-badge`,
     sys_pn: badge,
@@ -308,19 +309,8 @@ const _build_mobile_rail = (ui) => {
           item({ ico: "rail-chat", label: LOCALE.CHAT, service: "rail-chat", pn: "mrail-chat", badge: "mrail-badge-chat" }),
           item({ ico: "rail-task", label: LOCALE.TASK, service: "rail-task", pn: "mrail-task", badge: "mrail-badge-task" }),
           item({ ico: "rail-meet", label: LOCALE.MEET, service: "rail-meet", pn: "mrail-meet", badge: "mrail-badge-meet" }),
+          item({ ico: "rail-access", label: LOCALE.ACCESS, service: "rail-access", pn: "mrail-access" }),
         ],
-      }),
-      // The apps circle. Same service, radio and part name as the old fifth
-      // item, so _railAccess and the highlight logic are untouched.
-      Skeletons.Box.X({
-        className: `${fig}__mrail-apps`,
-        service: "rail-access",
-        uiHandler: [ui],
-        radio: "mobile-rail-radio",
-        sys_pn: "mrail-access",
-        tooltips: LOCALE.ACCESS,
-        kidsOpt: { active: 0 },
-        kids: [glyph("rail-access")],
       }),
     ],
   });

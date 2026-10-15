@@ -2,13 +2,12 @@
 
 // The phone's workspace navigation — the Drumee Mobile bottom bar (Figma
 // 206:5444), the same bar the tours draw (desk/tutorial/skin/phone.scss
-// `__bottom`, `__tabs`, `__tab`, `__apps`):
+// `__tabs`, `__tab`): one pill holding all five destinations.
 //
 //   band     a fade from clear to white, 12px over the row, the home strip under
 //   pill     white, 1000px radius, 4px inside, a hairline and a 5.5px shadow
 //   tab      44px, 40px radius, glyph over a 12/1.2 SemiBold label; the active
 //            one on rgba(89, 80, 255, 0.1)
-//   apps     a 54px white circle, the same hairline and shadow, SquaresFour
 //
 // Rendered on mobile only (skeleton/index.js), so every rule here assumes it.
 .desk-module {
@@ -24,7 +23,7 @@
     padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
     background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 100%);
-    // Only the pill and the circle take taps; the fade above them is see-through.
+    // Only the pill takes taps; the fade above it is see-through.
     pointer-events: none;
 
     > * { pointer-events: auto; }
@@ -50,7 +49,7 @@
     align-items: center;
     justify-content: center;
     gap: 2px;
-    padding: 4px 8px;
+    padding: 4px 6px;
     border-radius: 40px;
     box-sizing: border-box;
     cursor: pointer;
@@ -77,6 +76,12 @@
     width: 20px;
     height: 20px;
     pointer-events: none;
+    color: #0b0a21;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
   }
 
   // Unread pill on the glyph's corner — the desktop rail's red pill
@@ -120,31 +125,6 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-    }
-  }
-
-  &__mrail-apps {
-    flex: none;
-    width: 54px;
-    height: 54px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 40px;
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
-    box-sizing: border-box;
-    cursor: pointer;
-
-    .desk-module__mrail-glyph {
-      width: 22px;
-      height: 22px;
-    }
-
-    // Access is open: the same tint the active tab wears.
-    &[data-radio="on"],
-    &[data-state="1"] {
-      background-color: #eeedff;
     }
   }
 
