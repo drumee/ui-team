@@ -276,8 +276,19 @@ class __dmz_meeting extends LetcBox {
       this._passwordBusy = false;
     }
     if (res && res.is_verified) return this.loadWindowManager();
-    const wrong = res && (res.status === "WRONG_PASSWORD" || res.failed);
-    error.set({ content: wrong ? LOCALE.SECURE_SHARE_WRONG_PASSWORD : LOCALE.ERROR_NETWORK });
+    // Only a refused password says "wrong password"; any other failure (a
+    // link served from the wrong area, say) must not tell the guest a right
+    // password was wrong.
+    let content = LOCALE.SOMETHING_WENT_WRONG;
+    if (!res) {
+      content = LOCALE.ERROR_NETWORK;
+    } else if (res.status === "TOO_MANY_ATTEMPTS") {
+      const s = Math.max(1, ~~res.retry_after);
+      content = LOCALE.TOO_MANY_ATTEMPTS.format(`${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`);
+    } else if (res.error === "INVALID_CREDENTIAL" || res.status === "WRONG_PASSWORD") {
+      content = LOCALE.SECURE_SHARE_WRONG_PASSWORD;
+    }
+    error.set({ content });
   }
 
   /**

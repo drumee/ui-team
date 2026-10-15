@@ -84,8 +84,24 @@ test("a right password goes on to the lobby; a wrong one says so", async () => {
   assert.deepEqual(ok.calls.login, [{ svc: "dmz.login", password: " secret " }]);
   assert.equal(ok.calls.again, 1);
 
-  const wrong = page({ failed: 1, status: "WRONG_PASSWORD" });
+  // dmz.login's answer to a refused password.
+  const wrong = page({ failed: 1, error: "INVALID_CREDENTIAL", validity: "INVALID_CREDENTIAL" });
   await wrong.run();
   assert.equal(wrong.calls.again, 0);
   assert.equal(wrong.calls.error, en.SECURE_SHARE_WRONG_PASSWORD);
+});
+
+test("only a refused password says it was wrong", async () => {
+  // The app extends String with format(); the test gives it the same one.
+  if (!String.prototype.format) {
+    String.prototype.format = function (...a) { return this.replace(/\{(\d+)\}/g, (m, i) => a[i]); };
+  }
+  const paused = page({ status: "TOO_MANY_ATTEMPTS", retry_after: 600 });
+  await paused.run();
+  assert.equal(paused.calls.error, en.TOO_MANY_ATTEMPTS.format("10:00"));
+
+  // A right password the server could not take (served from the wrong area).
+  const area = page({ failed: 1, error: "WRONG_AREA", validity: "WRONG_AREA" });
+  await area.run();
+  assert.equal(area.calls.error, en.SOMETHING_WENT_WRONG);
 });
