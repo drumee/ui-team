@@ -96,9 +96,9 @@ class __window_upload_progress extends __window_core {
     );
     this._warning = null; // { items, action, resolve, prevPhase } while the card is up
 
-    // A card created for a caller that wants it collapsed (runBundle
+    // A card launched for a caller that wants it collapsed (runBundle
     // `collapsed`) is born that way, so it never paints expanded first.
-    this._isExpanded = !__window_upload_progress._createCollapsed;
+    this._isExpanded = !(opt && opt.startCollapsed);
     this._autoMinimizeTimer = null; // auto-dismiss once uploads settle (see _maybeArmAutoMinimize)
     this._totalFiles = 0;
     this._fileProgressMap = {}; // Track progress for speed calculation
@@ -2986,9 +2986,13 @@ let _pendingPromise = null;
 
 /**
  * Get or create upload progress window instance (singleton)
+ * @param {Object} [opt]
+ * @param {boolean} [opt.collapsed] if this call launches the card, launch it
+ *   collapsed. The state goes with the launch itself, so another caller
+ *   arriving while the card is being created cannot change how it is born.
  * @returns {Promise<__window_upload_progress>}
  */
-__window_upload_progress.getOrCreate = function() {
+__window_upload_progress.getOrCreate = function(opt) {
   // If there's already a pending promise, return it
   if (_pendingPromise) {
     return _pendingPromise.then((instance) => {
@@ -2998,7 +3002,7 @@ __window_upload_progress.getOrCreate = function() {
       }
       // If destroyed, clear cache and try again
       _pendingPromise = null;
-      return __window_upload_progress.getOrCreate();
+      return __window_upload_progress.getOrCreate(opt);
     });
   }
   
@@ -3027,7 +3031,7 @@ __window_upload_progress.getOrCreate = function() {
     
     // Launch new window
     const launched = window.Wm.launch(
-      { kind: 'window_upload_progress' },
+      { kind: 'window_upload_progress', startCollapsed: !!(opt && opt.collapsed) },
       { explicit: 1, singleton: 1 }
     );
     
@@ -3117,13 +3121,7 @@ __window_upload_progress.openStaging = function(targetWindow) {
  */
 __window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWindow, opt) {
   if (!roots || !roots.length) return Promise.resolve(null);
-  // Read by initialize when this call has to create the card.
-  __window_upload_progress._createCollapsed = !!(opt && opt.collapsed);
-  // Cleared however the launch ends, so a failed one cannot leave the next
-  // card born collapsed.
-  return __window_upload_progress.getOrCreate().finally(function() {
-    __window_upload_progress._createCollapsed = false;
-  }).then(function(win) {
+  return __window_upload_progress.getOrCreate({ collapsed: !!(opt && opt.collapsed) }).then(function(win) {
     if (!win) return null;
     win._targetWindow = targetWindow || win._targetWindow;
     // Merge into the visible bundle list (do not replace — user may drop more
