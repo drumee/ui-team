@@ -312,39 +312,15 @@ class __tutorial_task extends LetcBox {
   }
 
   /**
-   * Phone: move the deck one card on every AUTO_SLIDE_MS, wrapping after the
-   * last. A smooth native scroll, so syncDeck moves the dots and `_card` as it
-   * would for a swipe. A finger on the deck pauses it; it carries on from
-   * wherever the user let go. Stands down under prefers-reduced-motion.
+   * Phone: one card on every AUTO_SLIDE_MS (toolkit autoSlide). Stands down
+   * under prefers-reduced-motion, as the desk track does.
    *
    * @param {Element} deck the ph-deck element
-   * @returns {Function} stops the timer and drops the listeners
+   * @returns {Function} stops it
    */
   _armPhoneSlide(deck) {
-    if (!deck || typeof deck.scrollTo !== 'function' || !this._mayAnimate()) return () => {};
-    let timer = null;
-    const stop = () => { clearTimeout(timer); timer = null; };
-    const go = () => {
-      stop();
-      timer = setTimeout(() => {
-        if (this.isDestroyed && this.isDestroyed()) return;
-        const cards = deck.children;
-        if (!cards || cards.length < 2) return;
-        const next = this._card >= cards.length - 1 ? 0 : this._card + 1;
-        deck.scrollTo({ left: cards[next].offsetLeft - cards[0].offsetLeft, behavior: 'smooth' });
-        go();
-      }, AUTO_SLIDE_MS);
-    };
-    deck.addEventListener('pointerdown', stop, { passive: true });
-    deck.addEventListener('pointerup', go, { passive: true });
-    deck.addEventListener('pointercancel', go, { passive: true });
-    go();
-    return () => {
-      stop();
-      deck.removeEventListener('pointerdown', stop);
-      deck.removeEventListener('pointerup', go);
-      deck.removeEventListener('pointercancel', go);
-    };
+    if (!this._mayAnimate()) return () => {};
+    return require('../skeleton/toolkit/phone').autoSlide(deck, () => this._card, AUTO_SLIDE_MS);
   }
 
   onBeforeDestroy() {

@@ -128,7 +128,7 @@ class __tutorial_meeting extends LetcBox {
     clearTimeout(this._slideTimer);
     this._slideTimer = null;
     if (!this._mayAnimate()) return;
-    // A phone swipes; nothing advances on its own (Figma 386:57322, 386:58198).
+    // A phone's deck has its own timer (_bindDeck → toolkit autoSlide).
     if (this.mget('layout') === 'phone') return;
     const s = SCREENS[this._screenIndex];
     // The carousel wraps, so there is no last card to stop on.
@@ -221,8 +221,14 @@ class __tutorial_meeting extends LetcBox {
     const [deck, dots] = await Promise.all([this.ensurePart('ph-deck'), this.ensurePart('ph-dots')]);
     if (this.isDestroyed && this.isDestroyed()) return;
     if (!deck || !dots) return;
-    this._unbindDeck = require('../skeleton/toolkit/phone')
-      .syncDeck(deck.el, dots.el, (i) => { this._card = i; });
+    const kit = require('../skeleton/toolkit/phone');
+    const unsync = kit.syncDeck(deck.el, dots.el, (i) => { this._card = i; });
+    // One card on every AUTO_SLIDE_MS, as the task deck; not under
+    // prefers-reduced-motion.
+    const unslide = this._mayAnimate()
+      ? kit.autoSlide(deck.el, () => this._card, AUTO_SLIDE_MS)
+      : () => {};
+    this._unbindDeck = () => { unsync(); unslide(); };
   }
 
   onBeforeDestroy() {

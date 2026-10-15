@@ -63,3 +63,23 @@ test("phone deck: a finger on it pauses the timer until release", (t) => {
   t.mock.timers.tick(2000);
   assert.equal(deck.scrolls.length, 1);
 });
+
+test("toolkit autoSlide: the meeting deck's two cards alternate", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const kit = require(path.join(SRC, "modules/desk/tutorial/skeleton/toolkit/phone.js"));
+  let at = 0;
+  const deck = fakeDeck(2);
+  const off = kit.autoSlide(deck, () => at, 2000);
+  t.mock.timers.tick(2000);
+  assert.equal(deck.scrolls[0].left, 414);
+  at = 1;
+  t.mock.timers.tick(2000);
+  assert.equal(deck.scrolls[1].left, 0);
+  off();
+});
+
+test("meeting step wires the phone deck to autoSlide every AUTO_SLIDE_MS", () => {
+  const src = require("node:fs").readFileSync(path.join(SRC, "modules/desk/tutorial/meeting/index.js"), "utf8");
+  assert.match(src, /kit\.autoSlide\(deck\.el, \(\) => this\._card, AUTO_SLIDE_MS\)/);
+  assert.match(src, /const AUTO_SLIDE_MS = 2000;/);
+});

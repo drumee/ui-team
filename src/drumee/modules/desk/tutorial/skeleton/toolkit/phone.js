@@ -344,4 +344,43 @@ function syncDeck(deck, dots, onIndex) {
   return () => deck.removeEventListener('scroll', onScroll);
 }
 
-module.exports = { P, topBar, tabBar, fab, composer, sheet, swipeDeck, hero, screen, syncDeck };
+/**
+ * Move a swipeDeck one card on every `ms`, wrapping after the last.
+ *
+ * A smooth native scroll, so syncDeck moves the dots (and the step's card
+ * index) exactly as it would for a swipe. A finger on the deck pauses it; it
+ * carries on from wherever the user let go.
+ *
+ * @param {Element} deck the ph-deck element
+ * @param {Function} current returns the card on show (the step's syncDeck index)
+ * @param {Number} ms the interval
+ * @returns {Function} stops the timer and drops the listeners
+ */
+function autoSlide(deck, current, ms) {
+  if (!deck || typeof deck.scrollTo !== 'function') return () => {};
+  let timer = null;
+  const stop = () => { clearTimeout(timer); timer = null; };
+  const go = () => {
+    stop();
+    timer = setTimeout(() => {
+      const cards = deck.children;
+      if (!cards || cards.length < 2) return;
+      const at = ~~current();
+      const next = at >= cards.length - 1 ? 0 : at + 1;
+      deck.scrollTo({ left: cards[next].offsetLeft - cards[0].offsetLeft, behavior: 'smooth' });
+      go();
+    }, ms);
+  };
+  deck.addEventListener('pointerdown', stop, { passive: true });
+  deck.addEventListener('pointerup', go, { passive: true });
+  deck.addEventListener('pointercancel', go, { passive: true });
+  go();
+  return () => {
+    stop();
+    deck.removeEventListener('pointerdown', stop);
+    deck.removeEventListener('pointerup', go);
+    deck.removeEventListener('pointercancel', go);
+  };
+}
+
+module.exports = { P, topBar, tabBar, fab, composer, sheet, swipeDeck, hero, screen, syncDeck, autoSlide };
