@@ -2338,6 +2338,19 @@ class __window_meeting extends __room {
     const wait = this._earlyWait || {};
     const starts = Number(wait.starts_at) || 0;
     const minutes = Math.max(1, Math.ceil((starts * 1000 - Date.now()) / 60000));
+    // A meeting's own Join holds however far off it is, so the wait can run
+    // into another day: say which, and count in hours past the first one.
+    const at = Dayjs.unix(starts);
+    const when = at.isSame(Dayjs(), "day") ? at.format("h:mm A") : at.format("ddd, MMM D, h:mm A");
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    let countdown = null;
+    if (!hours) countdown = LOCALE.MEETING_STARTS_IN_MIN.format(minutes);
+    else if (hours < 24) {
+      countdown = rest
+        ? LOCALE.MEETING_STARTS_IN_HOURS_MIN.format(hours, rest)
+        : LOCALE.MEETING_STARTS_IN_HOURS.format(hours);
+    }
     const pfx = `${this.fig.family}__waiting`;
     this.ensurePart("message-container").then((c) => {
       c.feed([
@@ -2353,12 +2366,12 @@ class __window_meeting extends __room {
               : null,
             Skeletons.Note({
               className: `${pfx}-time`,
-              content: LOCALE.MEETING_START_AT.format(Dayjs.unix(starts).format("h:mm A")),
+              content: LOCALE.MEETING_START_AT.format(when),
             }),
-            Skeletons.Note({
-              className: `${pfx}-countdown`,
-              content: LOCALE.MEETING_STARTS_IN_MIN.format(minutes),
-            }),
+            // Past a day the date above says it.
+            countdown
+              ? Skeletons.Note({ className: `${pfx}-countdown`, content: countdown })
+              : null,
             Skeletons.Note({
               className: `${pfx}-text`,
               content: LOCALE.MEETING_WAITING_AUTO_JOIN,

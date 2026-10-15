@@ -864,6 +864,8 @@
   "JOIN_MEETING": "參加會議",
   "MEETING_STARTING_NOW": "您的会议即将开始",
   "MEETING_STARTS_IN_MIN": "{0} 分钟后开始",
+  "MEETING_STARTS_IN_HOURS": "{0} 小时后开始",
+  "MEETING_STARTS_IN_HOURS_MIN": "{0} 小时 {1} 分钟后开始",
   "MEETING_START_AT": "{0} 开始",
   "MEETING_WAITING_ROOM": "会议将于 {0} 开始。到时或主持人开始会议后，您将自动加入。",
   "MEETING_WAITING_AUTO_JOIN": "到达开始时间或主持人开始会议后，您将自动加入。",

@@ -1393,6 +1393,10 @@ class __webrtc_room extends __interact {
       metadata: this.metadata(),
       type: this.service_class,
       room_type: this.service_class,
+      // Joined from one scheduled meeting: early, the server holds us in the
+      // waiting room until it starts (lib/meeting-early).
+      schedule_id: this.mget("schedule_id") || undefined,
+      schedule_at: this.mget("schedule_at") || undefined,
       ...args,
     };
 

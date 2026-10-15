@@ -2773,13 +2773,21 @@ class __window_folder extends mfsInteract {
         // A schedule card on the calendar → edit that meeting.
         const nid = (cmd.mget && cmd.mget(_a.nid)) || (cmd.el && cmd.el.dataset.nid);
         const meeting = (this._meetings || []).find((m) => m.id === nid);
-        return this.openMeetingModal({ meeting });
+        return this.openMeetingModal({ meeting, occurrence: cmd.mget && cmd.mget("stime") });
       }
 
-      case "join-meeting":
+      case "join-meeting": {
         // Join the workspace meeting room (from a calendar card or the editor).
+        // Which meeting rides along: an invitee early for it waits for its
+        // start (server lib/meeting-early). Read before closeMeetingModal,
+        // which forgets the editor's meeting.
+        const schedule_id = (cmd && cmd.mget && cmd.mget(_a.nid)) || this._mmEditNid || null;
+        // And which occurrence: a recurring series is indexed at its NEXT one
+        // as soon as one starts, so the row alone would hold this one back.
+        const schedule_at = (cmd && cmd.mget && cmd.mget("stime")) || this._mmOccurrenceAt || null;
         this.closeMeetingModal();
-        return this._launchMeetingStandalone();
+        return this._launchMeetingStandalone({ schedule_id, schedule_at });
+      }
 
       case "close-meeting-modal":
         return this.closeMeetingModal();
@@ -3576,6 +3584,8 @@ class __window_folder extends mfsInteract {
     this._mmAttendees = prefill ? prefill.attendees.slice() : [];
     this._mmRecur = prefill ? { ...prefill.recur } : { freq: "none", until: "" };
     this._mmEditNid = prefill ? prefill.nid : null;
+    // The occurrence the card stood for (a recurring series), for Join.
+    this._mmOccurrenceAt = (prefill && opt.occurrence) || null;
     // Creator of the meeting being edited (null while creating — the current
     // user becomes the creator on submit).
     this._mmCreatedBy = prefill ? prefill.created_by : null;
@@ -3651,6 +3661,7 @@ class __window_folder extends mfsInteract {
     this._mmAttendees = [];
     this._mmRecur = { freq: "none", until: "" };
     this._mmEditNid = null;
+    this._mmOccurrenceAt = null;
     this._mmBusy = {};
     this._mmCapNotice = 0;
     if (this.dialogWrapper) {
@@ -4304,7 +4315,7 @@ class __window_folder extends mfsInteract {
    * Mirrors the team window's startTeamCall. Singleton-guarded so a second
    * click refocuses the running call instead of launching a duplicate.
    */
-  _launchMeetingStandalone() {
+  _launchMeetingStandalone(opts = {}) {
     if (this._launchingMeeting) return;
     this._launchingMeeting = true;
     const startBtn =
@@ -4355,6 +4366,10 @@ class __window_folder extends mfsInteract {
           area: this.mget(_a.area),
           trigger: this.mget(_a.media) || this,
           media: this.mget(_a.media) || this,
+          // The scheduled meeting joined from, if any (calendar card Join).
+          // webrtc/room join() sends it; "Start a Meeting" has none.
+          schedule_id: opts.schedule_id || undefined,
+          schedule_at: opts.schedule_at || undefined,
           service: "meeting",
           audio: 1,
           video: 1,

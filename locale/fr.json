@@ -866,6 +866,8 @@
   "JOIN_MEETING": "Rejoindre la réunion",
   "MEETING_STARTING_NOW": "Votre réunion va commencer",
   "MEETING_STARTS_IN_MIN": "Commence dans {0} min",
+  "MEETING_STARTS_IN_HOURS": "Commence dans {0} h",
+  "MEETING_STARTS_IN_HOURS_MIN": "Commence dans {0} h {1} min",
   "MEETING_START_AT": "Début à {0}",
   "MEETING_WAITING_ROOM": "Cette réunion commence à {0}. Vous la rejoindrez automatiquement à cette heure-là ou dès que l'organisateur la démarrera.",
   "MEETING_WAITING_AUTO_JOIN": "Vous rejoindrez automatiquement la réunion à l'heure prévue ou dès que l'organisateur la démarrera.",

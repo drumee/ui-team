@@ -205,6 +205,9 @@ function weekCard(ui, pfx, mtg) {
     },
     service: "open-meeting",
     nid: mtg.nid,
+    // Which occurrence this card is, for a recurring series: its editor's
+    // Join sends it on (window/folder join-meeting).
+    stime: mtg.start.unix(),
     dataset: { nid: mtg.nid },
     attrOpt: { "data-nid": mtg.nid },
     // Don't bubble to the cell's "new meeting" click.
@@ -229,6 +232,7 @@ function weekCard(ui, pfx, mtg) {
         ico: "meet-camera",
         service: "join-meeting",
         nid: mtg.nid,
+        stime: mtg.start.unix(),
         bubble: 0,
         uiHandler: [ui],
       }),

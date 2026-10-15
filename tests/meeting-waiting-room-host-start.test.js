@@ -272,7 +272,7 @@ function callWindow(kind, hub_id) {
 }
 
 for (const [name, src, sig] of [
-  ["folder", FOLDER_SRC, "_launchMeetingStandalone()"],
+  ["folder", FOLDER_SRC, "_launchMeetingStandalone(opts = {})"],
   ["team", TEAM_SRC, "startTeamCall()"],
 ]) {
   const launch = new Function(`return ${sliceFunction(src, sig)}`)();
@@ -301,3 +301,89 @@ for (const [name, src, sig] of [
     assert.deepEqual(alerts2, [LOCALE.ALREADY_ANOTHER_CALL]);
   });
 }
+
+// ── joining from one meeting (QA reopened it two hours early) ───────────────
+// The server holds a join that names its meeting (schedule_id) however early
+// it is, and nothing else. The calendar card's Join and the editor's Join name
+// it; "Start a Meeting" does not.
+test("the calendar card's and the editor's Join say which meeting, and which occurrence", () => {
+  assert.match(
+    FOLDER_SRC,
+    /case "join-meeting": \{[\s\S]{0,400}?const schedule_id = \(cmd && cmd\.mget && cmd\.mget\(_a\.nid\)\) \|\| this\._mmEditNid \|\| null;[\s\S]{0,300}?const schedule_at = \(cmd && cmd\.mget && cmd\.mget\("stime"\)\) \|\| this\._mmOccurrenceAt \|\| null;\s*this\.closeMeetingModal\(\);\s*return this\._launchMeetingStandalone\(\{ schedule_id, schedule_at \}\);/,
+  );
+  // The card and its Join icon carry the occurrence's start; opening the
+  // editor from the card keeps it until the editor closes.
+  const SCHED_SRC = read("src/drumee/builtins/window/folder/skeleton/meeting-schedule.js");
+  assert.equal((SCHED_SRC.match(/stime: mtg\.start\.unix\(\),/g) || []).length, 2);
+  assert.match(FOLDER_SRC, /this\.openMeetingModal\(\{ meeting, occurrence: cmd\.mget && cmd\.mget\("stime"\) \}\)/);
+  assert.match(FOLDER_SRC, /this\._mmOccurrenceAt = \(prefill && opt\.occurrence\) \|\| null;/);
+  assert.match(FOLDER_SRC, /this\._mmEditNid = null;\n\s*this\._mmOccurrenceAt = null;/);
+});
+
+test("the folder launch hands it to the meeting window; Start a Meeting has none", () => {
+  const launch = new Function(`return ${sliceFunction(FOLDER_SRC, "_launchMeetingStandalone(opts = {})")}`)();
+  let launched = null;
+  global.Wm = { getItemByKind: () => null, launch: (o) => { launched = o; return o; }, alert() {} };
+  const me = {
+    el: null, fig: { family: "x" },
+    mget: (k) => (k === "hub_id" ? HUB : null),
+    _setMeetingStartLoading() {}, _awaitMeetingReady() {},
+  };
+  launch.call(me, { schedule_id: "m-1", schedule_at: 1800000000 });
+  assert.equal(launched.schedule_id, "m-1");
+  assert.equal(launched.schedule_at, 1800000000);
+  launch.call(me);
+  assert.equal(launched.schedule_id, undefined);
+  assert.equal(launched.schedule_at, undefined);
+});
+
+test("the room sends it with conference.join", async () => {
+  const join = new Function(`return ${sliceFunction(ROOM_SRC, "async join(args)")}`)();
+  let payload = null;
+  const room = {
+    state: "initializing", statusMessages: {}, service_class: "meeting",
+    mget: (k) => ({ schedule_id: "m-1", schedule_at: 1800000000 })[k] || null,
+    metadata: () => ({}),
+    postService: async (svc, p) => { payload = p; return undefined; },
+    stateMachine(s) { this.state = s; },
+  };
+  await join.call(room);
+  assert.equal(payload.schedule_id, "m-1");
+  assert.equal(payload.schedule_at, 1800000000);
+});
+
+test("the waiting card counts minutes, then hours, and names another day", async () => {
+  global.Dayjs = require("dayjs");
+  global.Skeletons = { Box: { Y: (o) => o, X: (o) => o }, Image: { Svg: (o) => o }, Note: (o) => o };
+  Object.assign(global.LOCALE, {
+    MEETING_START_AT: "Start at {0}",
+    MEETING_STARTS_IN_MIN: "Starting in {0} min",
+    MEETING_STARTS_IN_HOURS: "Starting in {0} h",
+    MEETING_STARTS_IN_HOURS_MIN: "Starting in {0} h {1} min",
+    MEETING_WAITING_AUTO_JOIN: "auto",
+    LEAVE: "Leave",
+  });
+  if (!String.prototype.format) {
+    String.prototype.format = function (...a) { return this.replace(/\{(\d+)\}/g, (m, i) => a[i]); };
+  }
+  const show = new Function(`return ${sliceFunction(MEETING_SRC, "_showWaitingRoom()")}`)();
+  const card = async (inSec) => {
+    let fed = null;
+    const w = {
+      fig: { family: "window-meeting" },
+      _earlyWait: { starts_at: Math.floor(Date.now() / 1000) + inSec, title: "Weekly" },
+      ensurePart: async () => ({ feed: (k) => { fed = k; } }),
+    };
+    show.call(w);
+    await new Promise((r) => setImmediate(r));
+    const kids = fed[0].kids;
+    const text = (cls) => (kids.find((k) => k.className === `window-meeting__waiting-${cls}`) || {}).content;
+    return { time: text("time"), countdown: text("countdown") };
+  };
+  assert.equal((await card(25 * 60)).countdown, "Starting in 25 min");
+  assert.equal((await card(2 * 3600 + 5 * 60)).countdown, "Starting in 2 h 5 min");
+  assert.equal((await card(3 * 3600)).countdown, "Starting in 3 h");
+  const far = await card(3 * 86400);
+  assert.equal(far.countdown, undefined, "past a day the date says it");
+  assert.match(far.time, /^Start at \w{3}, \w{3} \d{1,2}, \d{1,2}:\d{2} [AP]M$/);
+});
