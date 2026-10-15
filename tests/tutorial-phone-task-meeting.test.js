@@ -81,3 +81,15 @@ for (const [step, tab, cards] of [["task", "task", 5], ["meeting", "meet", 2]]) 
     }
   });
 }
+
+test("task phone (386:57322): frame's well pictures, captions, + on the CTA", () => {
+  const tree = require(path.join(T, "task/skeleton/phone.js"))(ui, {});
+  const json = JSON.stringify(tree);
+  assert.equal((json.match(/tutorial-task__ph-well-img/g) || []).length, 5);
+  assert.match(json, /TASK_CARD_BOARD/);
+  assert.match(json, /TASK_CARD_HEALTH/);
+  const cta = find(tree, "ph-cta");
+  assert.ok(cta.className.includes("tutorial-phone__hero-cta--ico"));
+  assert.equal(cta.service, "next-step");
+  assert.equal(tree.dataset.view, "task");
+});

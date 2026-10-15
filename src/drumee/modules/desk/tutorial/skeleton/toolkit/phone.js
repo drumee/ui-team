@@ -247,20 +247,37 @@ function swipeDeck(ui, { cards = [], index = 0, dots = true } = {}) {
  * The empty-state hero: headline, subline, the CTA, then an optional deck.
  * @param {Object} ui the step — the CTA's service is routed to it
  */
-function hero(ui, { title, desc, cta, cta_service, deck = null }) {
+function hero(ui, { title, desc, cta, cta_service, cta_ico = null, deck = null }) {
+  // `cta_ico`: a glyph before the label (the task frame's +, 386:58055).
+  const button = cta_ico
+    ? Skeletons.Box.X({
+      className: `${P}__hero-cta ${P}__hero-cta--ico`,
+      service: cta_service,
+      uiHandler: [ui],
+      sys_pn: 'ph-cta',
+      kids: [
+        Skeletons.Box.X({
+          active: 0,
+          className: `${P}__hero-cta-ico`,
+          kids: [Skeletons.Element({ active: 0, tagName: 'img', attribute: { src: cta_ico, alt: '' } })],
+        }),
+        Skeletons.Note({ active: 0, className: `${P}__hero-cta-label`, content: cta }),
+      ],
+    })
+    : Skeletons.Note({
+      className: `${P}__hero-cta`,
+      content: cta,
+      service: cta_service,
+      uiHandler: [ui],
+      sys_pn: 'ph-cta',
+    });
   return Skeletons.Box.Y({
     active: 0,
     className: `${P}__hero`,
     kids: [
       Skeletons.Note({ active: 0, className: `${P}__hero-title`, content: title }),
       Skeletons.Note({ active: 0, className: `${P}__hero-desc`, content: desc }),
-      Skeletons.Note({
-        className: `${P}__hero-cta`,
-        content: cta,
-        service: cta_service,
-        uiHandler: [ui],
-        sys_pn: 'ph-cta',
-      }),
+      button,
       deck,
     ].filter(Boolean),
   });

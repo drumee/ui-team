@@ -245,29 +245,77 @@
   }
 }
 
-// PHONE (task/skeleton/phone.js; Figma 386:57322): a white card per view,
-// the gradient well holding the preview, a caption under it.
-.tutorial-task__ph-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px 12px 16px;
-  border-radius: 24px;
-  background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+// PHONE (task/skeleton/phone.js) — Figma 386:57322. Values are the frame's.
+.tutorial-phone.tutorial-task__phone[data-view="task"] {
+  background: #f2f2f7;
+
+  .tutorial-phone__body {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+  }
+
+  .tutorial-phone__hero {
+    padding-top: 0;
+  }
+
+  // The description keeps its own break: "…your team thinks." / "Same data,
+  // five lenses." The title wraps by itself into the frame's two lines.
+  .tutorial-phone__hero-desc {
+    white-space: pre-line;
+  }
+
+  .tutorial-phone__deck-wrap {
+    gap: 24px;
+  }
+
+  // Room for the cards' shadow: the deck scrolls, so it clips.
+  .tutorial-phone__deck {
+    margin: -8px -24px;
+    padding: 8px 24px;
+    scroll-padding: 0 24px;
+  }
+
+  // The toolkit's deck frame is the well here, inside the white card.
+  .tutorial-phone__card {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    overflow: visible;
+  }
 }
 
-.tutorial-task__ph-well {
-  height: 300px;
-  overflow: hidden;
-  border-radius: 20px;
-  background: linear-gradient(180deg, rgba(93, 84, 255, 0.05), #5950ff);
-  zoom: 0.6;
-}
+.tutorial-task__ph {
+  &-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 12px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
 
-.tutorial-task__ph-caption {
-  font-size: 18px;
-  text-align: center;
-  color: #000;
+  &-well {
+    height: 308px;
+    overflow: hidden;
+    border-radius: 20px;
+  }
+
+  // The frame's own picture of the view: gradient, border and phone.
+  &-well-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+  }
+
+  &-caption {
+    font-size: 18px;
+    line-height: 1.2;
+    text-align: center;
+    color: #000;
+  }
 }
