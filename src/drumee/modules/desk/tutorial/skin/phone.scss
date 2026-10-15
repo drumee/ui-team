@@ -33,6 +33,137 @@
     flex: none;
   }
 
+  // The app's own phone bar (topBar) — desk-module__mobile-topbar's values
+  // (modules/desk/skin/mobile-topbar.scss): 52px, 8/12 insets, a hairline;
+  // the grey workspace pill, the go-to chip, the ringed avatar.
+  &__top--app {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: 52px;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    background-color: var(--normal-bg, #fff);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  &__ws {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    background-color: var(--normal-bg-90, #f2f2f7);
+  }
+
+  // The area-tinted folder shape, at the real pill's 20x16.
+  &__ws-ico {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+
+    .media-grid__folder-art {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 16px;
+    }
+
+    .folder-shape {
+      width: 20px;
+      height: 16px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder { fill: var(--area-personal); }
+      &.public       { fill: var(--area-public); }
+      &.share,
+      &.dmz          { fill: var(--area-share); }
+      &.private      { fill: var(--area-private); }
+    }
+
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 13px !important;
+      height: 13px !important;
+      color: var(--grid-color-folder-badge);
+    }
+  }
+
+  &__ws-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--normal-fg-10, #0b0a21);
+
+    .note-content {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__ws-caret {
+    width: 12px;
+    height: 12px;
+    flex: none;
+    color: var(--normal-fg-20, #65656c);
+  }
+
+  &__top-actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__top-chip {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  &__top-chip-ico {
+    width: 18px;
+    height: 18px;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  &__top--app &__avatar {
+    width: 30px;
+    height: 30px;
+    margin-left: 3px;
+    border: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 0 0 2px var(--normal-bg, #fff), 0 0 0 3px var(--border-default, rgba(0, 0, 0, 0.1));
+  }
+
   // A page's own bar (titleBar): the title centred on the full width, the
   // back circle laid over its left end.
   &__top--page {
@@ -173,17 +304,6 @@
     padding: 12px 16px 0;
   }
 
-  &__bottom > &__circle {
-    width: 54px;
-    height: 54px;
-    padding: 15px;
-  }
-
-  &__apps-ico {
-    width: 22px;
-    height: 22px;
-    display: block;
-  }
 
   // The 20% black overlay of the tour frames (385:937), over everything but
   // the sheet or modal drawn after it.
@@ -232,8 +352,30 @@
   &__tab-ico {
     width: 20px;
     height: 20px;
+    display: block;
+    flex: none;
+    color: #0b0a21;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
   }
 
+  &__tab-label {
+    max-width: 100%;
+    overflow: hidden;
+    justify-content: center;
+
+    .note-content {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // desk-module__mrail-item's values: five fit across a phone.
   &__tab {
     flex: 1;
     min-width: 0;
@@ -243,7 +385,8 @@
     align-items: center;
     justify-content: center;
     gap: 2px;
-    padding: 4px 15px;
+    padding: 4px 6px;
+    box-sizing: border-box;
     border-radius: 40px;
     font-size: 12px;
     line-height: 1.2;

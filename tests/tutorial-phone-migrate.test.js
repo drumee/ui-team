@@ -81,9 +81,10 @@ test("Verify & Import is solid only on its own step", () => {
   assert.equal(find(phone(ui, SCREENS[3], {}), "mg-ph-verify").dataset.ready, "1");
 });
 
-test("the workspace behind: folder pill, search + more, All filter, view toggle, Files tab lit", () => {
+test("the workspace behind: the app's top bar, All filter, view toggle, Files tab lit, no FAB", () => {
   const tree = phone(ui, SCREENS[1], {});
-  assert.ok(find(tree, "ph-search-btn") && find(tree, "ph-more"));
+  assert.ok(find(tree, "ph-title") && find(tree, "ph-more") && find(tree, "ph-avatar"));
+  assert.equal(find(tree, "ph-fab"), null);
   assert.ok(has(tree, "tutorial-migrate__ph-filter-all"));
   assert.ok(has(tree, "tutorial-migrate__ph-view"));
   assert.equal(find(tree, "ph-tab-files").dataset.active, "1");

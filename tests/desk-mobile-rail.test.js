@@ -37,3 +37,12 @@ test("mobile topbar: no bell; the go-to button carries the unread dot", () => {
   const desk = fs.readFileSync(path.join(SRC, "modules/desk/index.js"), "utf8");
   assert.match(desk, /\["activity-count-top", "activity-count-mobile", "activity-count-sheet"\]\.forEach/);
 });
+
+test("mobile bar: Files lit from the first paint; split dots only on the Files tab", () => {
+  const src = fs.readFileSync(path.join(SRC, "modules/desk/skeleton/index.js"), "utf8");
+  assert.match(src, /pn: "mrail-files", badge: "mrail-badge-files", initialState: 1/);
+  const sass = require("sass");
+  const css = sass.compile(path.join(SRC, "modules/desk/skin/mobile-rail.scss"),
+    { loadPaths: [SRC, path.join(SRC, "skin")] }).css.replace(/\s+/g, " ");
+  assert.match(css, /\.desk-module__ui\[data-mtab\]:not\(\[data-mtab=files\]\) \.window-folder__split-dots \{ display: none !important; \}/);
+});

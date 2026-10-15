@@ -275,12 +275,15 @@ const _build_mobile_rail = (ui) => {
     content: "",
     dataset: { count: 0 },
   });
-  const item = ({ ico, label, service, pn, badge }) =>
+  const item = ({ ico, label, service, pn, badge, initialState }) =>
     Skeletons.Box.Y({
       className: `${fig}__mrail-item`,
       service,
       uiHandler: [ui],
       radio: "mobile-rail-radio",
+      // Files is lit from the first paint, as the desktop rail's Files row is
+      // (sidebar.js `initialState: 1`); _railHighlight moves it from there.
+      ...(initialState ? { initialState } : {}),
       sys_pn: pn,
       // ui-core binds a click to every widget that does not opt out and stops
       // propagation before triggerHandlers, so a glyph or label would eat it.
@@ -305,7 +308,7 @@ const _build_mobile_rail = (ui) => {
         active: 0,
         className: `${fig}__mrail-pill`,
         kids: [
-          item({ ico: "rail-files", label: LOCALE.FILES, service: "rail-files", pn: "mrail-files", badge: "mrail-badge-files" }),
+          item({ ico: "rail-files", label: LOCALE.FILES, service: "rail-files", pn: "mrail-files", badge: "mrail-badge-files", initialState: 1 }),
           item({ ico: "rail-chat", label: LOCALE.CHAT, service: "rail-chat", pn: "mrail-chat", badge: "mrail-badge-chat" }),
           item({ ico: "rail-task", label: LOCALE.TASK, service: "rail-task", pn: "mrail-task", badge: "mrail-badge-task" }),
           item({ ico: "rail-meet", label: LOCALE.MEET, service: "rail-meet", pn: "mrail-meet", badge: "mrail-badge-meet" }),

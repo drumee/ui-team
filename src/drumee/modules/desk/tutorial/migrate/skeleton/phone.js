@@ -121,7 +121,6 @@ function frame(ui, { overlay, dim }) {
     top: ph.topBar(ui, { lead: 'avatar', title: dest.name || '', art }),
     body: [filters],
     bottom: ph.tabBar(ui, 'files'),
-    fab: ph.fab(ui),
     overlay,
   });
 }

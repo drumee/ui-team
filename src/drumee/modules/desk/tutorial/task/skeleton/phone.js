@@ -63,6 +63,5 @@ module.exports = function (ui, state = {}) {
       deck: ph.swipeDeck(ui, { cards: VIEWS.map(card), index: state.index, dots: true }),
     })],
     bottom: ph.tabBar(ui, 'task'),
-    fab: ph.fab(ui),
   });
 };

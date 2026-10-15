@@ -134,4 +134,13 @@
     padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
   }
+
+  // The folder window's carousel dots (window-folder__split-dots) belong to
+  // the Files screen: shown only while the bar's Files is the open tab. The
+  // desk stamps that tab as data-mtab (_railHighlight); no stamp yet is the
+  // first paint, which is Files. !important over the folder skin's own
+  // mobile display:flex rule.
+  &__ui[data-mtab]:not([data-mtab="files"]) .window-folder__split-dots {
+    display: none !important;
+  }
 }

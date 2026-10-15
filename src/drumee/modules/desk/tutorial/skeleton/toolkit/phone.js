@@ -9,13 +9,11 @@
  *
  * The parts a callout can point at carry a `ph-*` sys_pn, and those names are
  * the contract with the steps' SCREENS tables:
- *   ph-body ph-title ph-back ph-avatar ph-search ph-tab-<key> ph-fab
+ *   ph-body ph-title ph-more ph-avatar ph-tab-<key> ph-fab
  *   ph-composer-plus ph-composer ph-sheet ph-cta ph-deck ph-dots
  */
 const P = 'tutorial-phone';
 
-// Figma's SquaresFour (the apps button) — no glyph of that shape in the sprite.
-const SQUARES_FOUR = require('assets/tutorial/ws-phone/squares-four.svg');
 const url = (m) => (m && m.default ? m.default : m);
 // The composer's glyphs (212:31308) — Phosphor shapes the sprite lacks.
 const COMPOSER = {
@@ -32,6 +30,8 @@ const TABS = [
   { key: 'chat', src: require('assets/tutorial/mg-phone/chat.svg'), label: () => LOCALE.CHAT },
   { key: 'task', src: require('assets/tutorial/mg-phone/task.svg'), label: () => LOCALE.TASK },
   { key: 'meet', src: require('assets/tutorial/mg-phone/meet.svg'), label: () => LOCALE.MEET },
+  // The real bar's fifth tab; its glyph is the desktop rail's sprite one.
+  { key: 'access', ico: 'rail-access', label: () => LOCALE.ACCESS },
 ];
 
 function circle(ico, pn) {
@@ -64,32 +64,46 @@ function avatar() {
 }
 
 /**
- * The top bar: avatar or back, a name pill, then search and more.
+ * The top bar — the app's own phone bar (desk-module__mobile-topbar,
+ * modules/desk/skeleton/index.js _build_mobile_topbar): the workspace pill
+ * (folder, name, caret), the go-to grid chip and the avatar. Drawn with the
+ * real bar's classes' values (skin/phone.scss `__top`), so the tours show the
+ * bar the user will meet.
+ *
  * @param {Object} ui
- * @param {{lead?: 'avatar'|'back', title?: String, ico?: String, actions?: Boolean}} opt
+ * @param {{title?: String, art?: String}} opt `art`: the workspace's own folder
+ *   markup (media/grid/template/folder), as the real pill draws it. `lead`,
+ *   `ico` and `actions` are accepted and ignored — the real bar has one shape.
  */
-function topBar(ui, { lead = 'back', title = '', ico = null, art = null, actions = true } = {}) {
+function topBar(ui, { title = '', art = null } = {}) {
   return Skeletons.Box.X({
     active: 0,
-    className: `${P}__top`,
+    className: `${P}__top ${P}__top--app`,
     kids: [
-      lead === 'avatar' ? avatar() : circle('arrow-left', 'ph-back'),
       Skeletons.Box.X({
         active: 0,
-        className: `${P}__title`,
+        className: `${P}__ws`,
         sys_pn: 'ph-title',
         kids: [
-          ico ? Skeletons.Image.Svg({ active: 0, ico, className: `${P}__title-ico` }) : null,
-          // `art`: the workspace's own folder icon (media/grid/template/folder
-          // markup), as the frames draw it in the pill.
-          art ? Skeletons.Element({ active: 0, className: `${P}__title-art`, content: art }) : null,
-          Skeletons.Note({ active: 0, className: `${P}__title-text`, content: title }),
-          Skeletons.Image.Svg({ active: 0, ico: 'ph-caret-down', className: `${P}__title-caret` }),
+          art ? Skeletons.Element({ active: 0, className: `${P}__ws-ico`, content: art }) : null,
+          Skeletons.Note({ active: 0, className: `${P}__ws-name`, content: title }),
+          Skeletons.Image.Svg({ active: 0, ico: 'ph-caret-down', className: `${P}__ws-caret` }),
         ].filter(Boolean),
       }),
-      actions ? circle('ph-magnifying-glass', 'ph-search-btn') : null,
-      actions ? circle('ph-dots-three', 'ph-more') : null,
-    ].filter(Boolean),
+      Skeletons.Box.X({
+        active: 0,
+        className: `${P}__top-actions`,
+        kids: [
+          Skeletons.Box.X({
+            active: 0,
+            className: `${P}__top-chip`,
+            sys_pn: 'ph-more',
+            kids: [Skeletons.Image.Svg({ active: 0, ico: 'dots-nine', className: `${P}__top-chip-ico` })],
+          }),
+          avatar(),
+        ],
+      }),
+    ],
   });
 }
 
@@ -111,51 +125,34 @@ function titleBar(ui, { title = '' } = {}) {
 }
 
 /**
- * The bottom row: the tab pill (or, before a workspace exists, a search pill)
- * and the apps button.
+ * The bottom row — the app's own phone bar (desk-module__mrail-pill): one
+ * white pill of Files, Chat, Task, Meet and Access, the open one tinted.
  * @param {Object} ui
- * @param {'files'|'chat'|'task'|'meet'|null} active
+ * @param {'files'|'chat'|'task'|'meet'|'access'|null} active `null` (no
+ *   workspace yet) lights Files, the real bar's default.
  */
 function tabBar(ui, active) {
-  const pill = active == null
-    ? Skeletons.Box.X({
-      active: 0,
-      className: `${P}__search`,
-      sys_pn: 'ph-search',
-      kids: [
-        Skeletons.Image.Svg({ active: 0, ico: 'ph-magnifying-glass', className: `${P}__search-ico` }),
-        Skeletons.Note({ active: 0, className: `${P}__search-text`, content: LOCALE.SEARCH }),
-      ],
-    })
-    : Skeletons.Box.X({
+  const on = active || 'files';
+  return Skeletons.Box.X({
+    active: 0,
+    className: `${P}__bottom`,
+    kids: [Skeletons.Box.X({
       active: 0,
       className: `${P}__tabs`,
       kids: TABS.map((t) => Skeletons.Box.Y({
         active: 0,
         className: `${P}__tab`,
         sys_pn: `ph-tab-${t.key}`,
-        dataset: { active: t.key === active ? '1' : '0' },
+        dataset: { active: t.key === on ? '1' : '0' },
         kids: [
-          Skeletons.Element({
-            active: 0, tagName: 'img', className: `${P}__tab-ico`, attribute: { src: url(t.src), alt: '' },
-          }),
+          t.src
+            ? Skeletons.Element({
+              active: 0, tagName: 'img', className: `${P}__tab-ico`, attribute: { src: url(t.src), alt: '' },
+            })
+            : Skeletons.Image.Svg({ active: 0, ico: t.ico, className: `${P}__tab-ico` }),
           Skeletons.Note({ active: 0, className: `${P}__tab-label`, content: t.label() }),
         ],
       })),
-    });
-  return Skeletons.Box.X({
-    active: 0,
-    className: `${P}__bottom`,
-    kids: [pill, Skeletons.Box.X({
-      active: 0,
-      className: `${P}__circle ${P}__apps`,
-      sys_pn: 'ph-apps',
-      kids: [Skeletons.Element({
-        active: 0,
-        tagName: 'img',
-        className: `${P}__apps-ico`,
-        attribute: { src: url(SQUARES_FOUR), alt: '' },
-      })],
     })],
   });
 }

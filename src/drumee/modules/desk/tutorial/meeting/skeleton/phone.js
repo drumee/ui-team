@@ -74,6 +74,5 @@ module.exports = function (ui, state = {}) {
       deck: ph.swipeDeck(ui, { cards: ITEMS.map(card), index: state.index, dots: true }),
     })],
     bottom: ph.tabBar(ui, 'meet'),
-    fab: ph.fab(ui),
   });
 };

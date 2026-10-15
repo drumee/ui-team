@@ -66,11 +66,11 @@ test("the desk's separate live form is skipped on a phone — the create screen 
   assert.equal(SCREENS[1].phone.live, true);
 });
 
-test("home: hero CTA, Search pill, FAB, mockup, no overlay", () => {
+test("home: hero CTA, the app's tab pill (Files lit), no FAB, mockup, no overlay", () => {
   const tree = view(ui, SCREENS[0], {});
   assert.equal(find(tree, "ph-cta").service, "next-step");
-  assert.ok(find(tree, "ph-search"));
-  assert.ok(find(tree, "ph-fab"));
+  assert.equal(find(tree, "ph-tab-files").dataset.active, "1");
+  assert.equal(find(tree, "ph-fab"), null);
   assert.equal(findClass(tree, "tutorial-phone__overlay"), null);
   assert.ok(findClass(tree, "tutorial-wsp__mockup"), "the phone mockup illustration");
 });

@@ -63,7 +63,6 @@ function frame(ui, { body = [], overlay = null, dim = false, view } = {}) {
     top: ph.topBar(ui, { lead: 'avatar', title: orgName(), actions: false }),
     body,
     bottom: ph.tabBar(ui, null),
-    fab: ph.fab(ui),
     overlay,
   });
 }

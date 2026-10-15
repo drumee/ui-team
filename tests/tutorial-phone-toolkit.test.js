@@ -34,10 +34,17 @@ test("tabBar marks the active tab and names every tab", () => {
   assert.equal(find(t, "ph-tab-files").dataset.active, "0");
 });
 
-test("tabBar(null) is the pre-workspace search pill", () => {
+test("tabBar is the app's pill of five; null lights Files, the real default", () => {
   const t = ph.tabBar(ui, null);
-  assert.equal(find(t, "ph-tab-chat"), null);
-  assert.ok(find(t, "ph-search"));
+  for (const k of ["files", "chat", "task", "meet", "access"]) assert.ok(find(t, `ph-tab-${k}`), k);
+  assert.equal(find(t, "ph-tab-files").dataset.active, "1");
+  assert.equal(find(t, "ph-search"), null);
+});
+
+test("topBar is the app's phone bar: workspace pill, go-to chip, avatar", () => {
+  const t = ph.topBar(ui, { title: "Docs" });
+  assert.ok(t.className.includes("tutorial-phone__top--app"));
+  assert.ok(find(t, "ph-title") && find(t, "ph-more") && find(t, "ph-avatar"));
 });
 
 test("hero exposes the CTA with its service, routed to the step", () => {
