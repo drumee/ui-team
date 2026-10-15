@@ -277,7 +277,7 @@ class tutorial_main extends LetcBox {
 
   /** Phone layout: on once phone tours are, and always for a preview. */
   _phoneAllowed() {
-    return !!this.mget('preview') || !!(Tours.mobileToursOn && Tours.mobileToursOn());
+    return !!this.mget('preview') || !!(Tours.mobileToursOn && Tours.mobileToursOn(this._tour && this._tour.id));
   }
 
   _currentStep() {

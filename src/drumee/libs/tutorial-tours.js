@@ -153,7 +153,27 @@ function isNewUser() {
 // Phones were blocked outright while the tours drew a shrunk desktop. The phone
 // layout (desk/tutorial host-kit `layoutFor`) makes them usable, and this flag
 // is the rollout switch for it: off, phones see nothing, exactly as before.
-function mobileToursOn() {
+//
+// ONE EXCEPTION, granted per tour by allowPhone(): the run that follows
+// onboarding. A new account finishing the wizard on a phone gets its
+// `workspace` tour (and the `migrate` tour that hands off from it) in the
+// phone layout whatever the switch says; every other tour still waits on it.
+const _phoneOk = new Set();
+
+/**
+ * Let these tours run on a phone this session, flag or no flag.
+ * @param {String|String[]} ids tour ids
+ */
+function allowPhone(ids) {
+  for (const id of [].concat(ids || [])) _phoneOk.add(id);
+}
+
+/**
+ * Do phones get tours — this one, when an id is given?
+ * @param {String} [tourId]
+ */
+function mobileToursOn(tourId) {
+  if (tourId && _phoneOk.has(tourId)) return true;
   try {
     return !!(typeof Platform !== "undefined" && Platform.get && ~~Platform.get("mobile_tours"));
   } catch (e) {
@@ -161,9 +181,9 @@ function mobileToursOn() {
   }
 }
 
-function isMobile() {
+function isMobile(tourId) {
   try {
-    if (mobileToursOn()) return false;
+    if (mobileToursOn(tourId)) return false;
     return !!(typeof Visitor !== "undefined" && Visitor.isMobile && Visitor.isMobile());
   } catch (e) {
     return false;
@@ -375,7 +395,7 @@ function isSeen(tourId, host) {
 function offerable(tourId, host) {
   if (!enabled()) return false;
   if (!isNewUser()) return false;
-  if (isMobile()) return false;
+  if (isMobile(tourId)) return false;
   if (!TOUR_IDS.includes(tourId)) return false;
   if (isSeen(tourId, host)) return false;
   return true;
@@ -568,6 +588,7 @@ function __resetModuleState() {
 
 module.exports = {
   mobileToursOn,
+  allowPhone,
   CHANNEL,
   TOUR_IDS,
   GUARD_TIMEOUT_MS,

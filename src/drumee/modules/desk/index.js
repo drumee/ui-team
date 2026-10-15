@@ -8462,6 +8462,16 @@ class desk_module extends LetcBox {
           // desk is still restoring behind the overlay and there has been no
           // wizard to warm anything during — a different situation with its own
           // timing, and not the one being fixed.
+          //
+          // ON A PHONE TOO. Finishing the wizard is the one moment the tours
+          // are owed whatever the `mobile_tours` rollout switch says: the
+          // workspace tour in the phone layout, and the migrate tour it hands
+          // off to in the window. Granted for those two only, for this session
+          // (libs/tutorial-tours allowPhone); every other tour still waits on
+          // the switch. Harmless on a desktop, where the layout stays desk.
+          if (postOnboarding) {
+            require("libs/tutorial-tours").allowPhone(["workspace", "migrate"]);
+          }
           const delay = postOnboarding ? 0 : 2000;
           setTimeout(() => {
             if (this._launchHomeTutorial(explicit, forced)) return;
