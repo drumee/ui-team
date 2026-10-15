@@ -149,7 +149,7 @@ class __tutorial_task extends LetcBox {
     clearTimeout(this._slideTimer);
     this._slideTimer = null;
     if (!this._mayAnimate()) return;
-    // A phone swipes; nothing advances on its own (Figma 386:57322, 386:58198).
+    // A phone's deck has its own timer (_armPhoneSlide): it scrolls natively.
     if (this.mget('layout') === 'phone') return;
     const s = SCREENS[this._screenIndex];
     // The carousel wraps, so there is no last card to stop on.
@@ -305,8 +305,46 @@ class __tutorial_task extends LetcBox {
     const [deck, dots] = await Promise.all([this.ensurePart('ph-deck'), this.ensurePart('ph-dots')]);
     if (this.isDestroyed && this.isDestroyed()) return;
     if (!deck || !dots) return;
-    this._unbindDeck = require('../skeleton/toolkit/phone')
+    const unsync = require('../skeleton/toolkit/phone')
       .syncDeck(deck.el, dots.el, (i) => { this._card = i; });
+    const unslide = this._armPhoneSlide(deck.el);
+    this._unbindDeck = () => { unsync(); unslide(); };
+  }
+
+  /**
+   * Phone: move the deck one card on every AUTO_SLIDE_MS, wrapping after the
+   * last. A smooth native scroll, so syncDeck moves the dots and `_card` as it
+   * would for a swipe. A finger on the deck pauses it; it carries on from
+   * wherever the user let go. Stands down under prefers-reduced-motion.
+   *
+   * @param {Element} deck the ph-deck element
+   * @returns {Function} stops the timer and drops the listeners
+   */
+  _armPhoneSlide(deck) {
+    if (!deck || typeof deck.scrollTo !== 'function' || !this._mayAnimate()) return () => {};
+    let timer = null;
+    const stop = () => { clearTimeout(timer); timer = null; };
+    const go = () => {
+      stop();
+      timer = setTimeout(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        const cards = deck.children;
+        if (!cards || cards.length < 2) return;
+        const next = this._card >= cards.length - 1 ? 0 : this._card + 1;
+        deck.scrollTo({ left: cards[next].offsetLeft - cards[0].offsetLeft, behavior: 'smooth' });
+        go();
+      }, AUTO_SLIDE_MS);
+    };
+    deck.addEventListener('pointerdown', stop, { passive: true });
+    deck.addEventListener('pointerup', go, { passive: true });
+    deck.addEventListener('pointercancel', go, { passive: true });
+    go();
+    return () => {
+      stop();
+      deck.removeEventListener('pointerdown', stop);
+      deck.removeEventListener('pointerup', go);
+      deck.removeEventListener('pointercancel', go);
+    };
   }
 
   onBeforeDestroy() {
