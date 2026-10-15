@@ -625,7 +625,7 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
 
   &__header {
     color: var(--reverse-lb);
-    font-family: "Geist Mono", monospace;
+    font-family: var(--font-main);
     font-size: 10px !important;
     font-weight: 600;
     letter-spacing: 0.4px;

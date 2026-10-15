@@ -56,7 +56,8 @@
     @include drumee.typo($color: var(--neutral-600, #5a5a78), $size: 11px, $weight: 600);
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    font-family: monospace;
+    font-family: var(--font-main);
+    font-variant-numeric: tabular-nums;
     background-color: var(--neutral-100, #f0f0f8);
   }
 

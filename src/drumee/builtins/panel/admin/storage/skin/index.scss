@@ -56,7 +56,8 @@
     @include drumee.typo($color: var(--primary-light, #8b8ff8), $size: 11px, $weight: 700);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    font-family: monospace;
+    font-family: var(--font-main);
+    font-variant-numeric: tabular-nums;
   }
 
   &__capacity-actions {
@@ -106,7 +107,8 @@
     @include drumee.typo($color: var(--primary-light, #8b8ff8), $size: 10px, $weight: 700);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-family: monospace;
+    font-family: var(--font-main);
+    font-variant-numeric: tabular-nums;
   }
 
   &__utilized-pct {

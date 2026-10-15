@@ -16,6 +16,7 @@ body {
 
 html,
 body {
+  font-family: var(--font-main);
   // Kill the two-finger horizontal-swipe "Back" gesture. The desk is a
   // single-page app whose hash rarely changes, so the history entry BEHIND it
   // is whatever the user arrived from — after a Google sign-in that is
@@ -25,6 +26,17 @@ body {
   // 2026-07-29). Deliberate Back via the browser button still works, and
   // drumee.js pushes one buffer entry after an OAuth arrival for that case.
   overscroll-behavior-x: none;
+}
+
+// The UA stylesheet gives form controls their own font (system-ui, and
+// monospace for textarea) instead of inheriting it. Type selectors only, so
+// any class rule (JSON editor, emoji pills) still overrides.
+button,
+input,
+select,
+optgroup,
+textarea {
+  font-family: inherit;
 }
 
 

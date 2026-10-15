@@ -248,7 +248,8 @@
       font-size: 13px;
       font-weight: 500;
       color: rgba(255, 255, 255, 0.75);
-      font-family: var(--font-mono, monospace);
+      font-family: var(--font-main);
+      font-variant-numeric: tabular-nums;
       flex-shrink: 0;
       letter-spacing: 0.5px;
     }
