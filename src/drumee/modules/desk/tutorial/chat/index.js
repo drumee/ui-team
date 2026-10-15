@@ -13,87 +13,7 @@ const { stepProgress, isLastScreen, entryScreen } = require('../tours');
  * The pane is identical on all four; what changes is which of its three
  * optional pieces is present and where the callout points.
  */
-const SCREENS = [
-  {
-    // Figma 142:38674 — the Chat empty state the flow opens on.
-    //
-    // NO callout: the frame carries none, and the hero already says what this
-    // screen is for in its own headline and paragraph. The card that used to
-    // float beside the CTA was ours, and it repeated the hero in miniature.
-    //
-    // Which leaves the screen with nothing to press Next on, so the CTA becomes
-    // the control — "Start discovering now" raises `next-step` itself (see
-    // `cta_service` in skeleton/index.js). Exactly the arrangement the
-    // workspace tour's opening screen uses for `home-cta`.
-    //
-    // `LOCALE.CHAT_HERO_TITLE_SHORT` and `LOCALE.TUTORIAL_CHAT_START` were this
-    // callout's copy and now have no reader; the keys are left in the locale
-    // files rather than pruned across all seven.
-    pane: { empty: true },
-    target: 'es-cta',
-    anchor: 'es-cta',
-    direction: 'north',
-    bare: true,
-  },
-  {
-    // Figma 142:39178 — "Drag and drop a file".
-    //
-    // The COMPOSER is what this screen is about, so the composer is what is
-    // lit. That is the frame's own treatment: every other surface on it is
-    // drawn at 40% — the chat panel, the stream's header, all six bubbles —
-    // and the Chat Input alone is at full strength. Lighting `stream` (what
-    // this did) held the whole message area out of the scrim instead, so the
-    // one thing the screen is teaching was the only part of the pane that
-    // looked no different from the rest.
-    //
-    // The beak lands on the PAPERCLIP, not on the composer's mid-point. The
-    // frame puts the card over the left end of the input, which is where the
-    // attach control is — and it is the control the sentence is about, since
-    // dragging a file in is the same act as attaching one. target and anchor
-    // exist precisely so the lit area and the beak can be measured off
-    // different elements.
-    target: 'composer',
-    anchor: 'composer-attach',
-    direction: 'south',
-    title: () => LOCALE.TUTORIAL_CHAT_DROP_TITLE,
-    desc: () => LOCALE.TUTORIAL_CHAT_DROP_DESC,
-  },
-  {
-    // Figma 169:39799. The design lands the beak on the reply-in-thread control
-    // specifically, not on the bar: the card's beak is centred at x 1280.5 and
-    // that control's centre is ~1278.
-    //
-    // 46, not the shared default of 32 (spotlight/index.js GAP). The frame puts
-    // the card's bottom at y 806 and the toolbar's top at 852 — the extra 14
-    // is the "Reply in thread" tip, which stands between the two and which the
-    // average default was never measured against.
-    pane: { hint: true },
-    target: 'msg-file-message',
-    anchor: 'hint-thread',
-    direction: 'south',
-    gap: 46,
-    title: () => LOCALE.TUTORIAL_CHAT_HASH_TITLE,
-    desc: () => LOCALE.TUTORIAL_CHAT_HASH_DESC,
-  },
-  {
-    // Thread panel open, callout below its file card.
-    pane: { thread: true },
-    target: 'thread',
-    anchor: 'thread-file',
-    direction: 'north',
-    title: () => LOCALE.TUTORIAL_CHAT_OPEN_TITLE,
-    desc: () => LOCALE.TUTORIAL_CHAT_OPEN_DESC,
-  },
-  {
-    // The thread, answered.
-    pane: { thread: true, replies: true },
-    target: 'thread',
-    anchor: 'thread-composer',
-    direction: 'south',
-    title: () => LOCALE.TUTORIAL_CHAT_DISCUSS_TITLE,
-    desc: () => LOCALE.TUTORIAL_CHAT_DISCUSS_DESC,
-  },
-];
+const SCREENS = require('./screens');
 
 class __tutorial_chat extends LetcBox {
 
@@ -127,10 +47,13 @@ class __tutorial_chat extends LetcBox {
       this.warn(`Data not found for screen ${this._screenIndex}`);
       return;
     }
-    this.feed(skeleton(this, s.pane || {}));
+    // Phone layout (host-kit layoutFor): the Figma mobile frames. `phone` is
+    // null at desk.
+    const phone = this.mget('layout') === 'phone' ? s.phone : null;
+    this.feed(phone ? require('./skeleton/phone')(this, phone) : skeleton(this, s.pane || {}));
     const [target, anchor] = await Promise.all([
-      this.ensurePart(s.target),
-      this.ensurePart(s.anchor),
+      this.ensurePart(phone ? phone.target : s.target),
+      this.ensurePart(phone ? phone.target : s.anchor),
     ]);
 
     // `bare` raises the screen with no tooltip at all: focus() clears the
@@ -159,8 +82,8 @@ class __tutorial_chat extends LetcBox {
     const tooltip = s.bare
       ? null
       : {
-          title: s.title(),
-          desc: s.desc(),
+          title: (phone && phone.title ? phone.title : s.title)(),
+          desc: (phone && phone.desc ? phone.desc : s.desc)(),
           ...progress,
           // Live whenever a previous step exists; hidden on screen 1 of its own
           // tour, where back-step would reach the host with nowhere to go.
@@ -180,6 +103,9 @@ class __tutorial_chat extends LetcBox {
       // surface out of a busy mock and need it. `bare` already marks exactly
       // that screen, so the two cannot drift apart.
       dim: !s.bare,
+      halo: !!(phone && phone.halo),
+      // The frames' own inset, gap and side for the phone card (screens.js).
+      ...(phone ? { phone_margin: phone.margin, phone_gap: phone.gap, phone_prefer: phone.prefer } : {}),
       owner: this,
     });
   }

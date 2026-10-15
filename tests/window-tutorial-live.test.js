@@ -19,6 +19,7 @@ const STUBS = {
     tour: () => ({ id: "migrate", flag: "migrate", mark_on: "success", steps: [{ kind: "tutorial_migrate", screens: 4 }] }),
   },
   "desk/tutorial/host-kit": require(path.join(SRC, "modules/desk/tutorial/host-kit.js")),
+  "desk/tutorial/layout": require(path.join(SRC, "modules/desk/tutorial/layout.js")),
   "libs/over-limit": { isLocked: () => locked, notifyBlocked: (k) => blocked.push(k) },
   "libs/permission-denied": { sayWeakPrivilege: (...a) => said.push(a) },
   "libs/hotkeys": { register: (d) => { hk.def = d; return d; }, unregister() {} },
@@ -187,4 +188,24 @@ test("every step payload carries the window's import destination", () => {
 test("no destination answer → no import_dest, the step keeps its example", () => {
   const { h } = make({ ws: { gdriveDestination: undefined } });
   assert.ok(h._widgets.every((w) => w.import_dest == null));
+});
+
+test("share tour Done on a phone opens the bar's Access members column as it comes down", () => {
+  global._e = { destroy: "destroy" };
+  const calls = [];
+  global.window = { Desk: { _railAccess: (o) => calls.push(o) } };
+  try {
+    const h = Object.create(Host.prototype);
+    const handlers = {};
+    h._m = { target_window: { isDestroyed: () => false } };
+    h.mget = (k) => h._m[k];
+    h.once = (ev, fn) => { handlers[ev] = fn; };
+    h._handOffMembers();
+    assert.equal(calls.length, 0, "not before the tour comes down");
+    handlers.destroy();
+    assert.deepEqual(calls, [{ members: 1 }]);
+  } finally {
+    delete global.window;
+    delete global._e;
+  }
 });

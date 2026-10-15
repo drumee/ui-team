@@ -24,11 +24,7 @@ const { isLastScreen, entryScreen } = require('../tours');
  * split: the timer and the drag move the first, the CTA and the callout's
  * Next/Back move the second.
  */
-const SCREENS = [
-  // The empty state. No `desc` — it carries no callout (see _showScreen), and
-  // each card names its own view through the skeleton's VIEWS titles.
-  { target: 'es-viewport', anchor: 'es-cta', direction: 'north' },
-];
+const SCREENS = require('./screens');
 
 // How long each card holds before the track moves on.
 //
@@ -78,10 +74,16 @@ class __tutorial_task extends LetcBox {
       return;
     }
     // `index` is the card, not the step — the dialog screen ignores it.
-    this.feed(skeleton(this, { ...s, index: this._card }));
+    // Phone layout (host-kit layoutFor): the Figma mobile hero, with a
+    // native swipe deck in place of the timed carousel. `phone` is null at desk.
+    const phone = this.mget('layout') === 'phone' ? s.phone : null;
+    this.feed(phone
+      ? require('./skeleton/phone')(this, { index: this._card })
+      : skeleton(this, { ...s, index: this._card }));
+    if (phone) this._bindDeck();
     const [target, anchor] = await Promise.all([
-      this.ensurePart(s.target),
-      this.ensurePart(s.anchor),
+      this.ensurePart(phone ? phone.target : s.target),
+      this.ensurePart(phone ? phone.target : s.anchor),
     ]);
     // The callout appears on the DIALOG screen only. The carousel screen is the
     // empty state with its track sliding — the artwork is the thing being
@@ -147,6 +149,8 @@ class __tutorial_task extends LetcBox {
     clearTimeout(this._slideTimer);
     this._slideTimer = null;
     if (!this._mayAnimate()) return;
+    // A phone's deck has its own timer (_armPhoneSlide): it scrolls natively.
+    if (this.mget('layout') === 'phone') return;
     const s = SCREENS[this._screenIndex];
     // The carousel wraps, so there is no last card to stop on.
     if (!s || s.dialog) return;
@@ -210,6 +214,8 @@ class __tutorial_task extends LetcBox {
    * end the drag. They are removed the moment it does, so nothing accumulates.
    */
   async _armDrag() {
+    // A phone's deck scrolls natively; this drag is the desk track's.
+    if (this.mget('layout') === 'phone') return;
     const track = await this.ensurePart('es-track');
     if (!track || !track.el) return;
     if (this.isDestroyed && this.isDestroyed()) return;
@@ -289,7 +295,37 @@ class __tutorial_task extends LetcBox {
     }
   }
 
+  /**
+   * Phone: keep the dots, and `_card`, on whatever card the user swiped to —
+   * so a rotation back to the desk layout lands on the same card.
+   */
+  async _bindDeck() {
+    if (this._unbindDeck) this._unbindDeck();
+    this._unbindDeck = null;
+    const [deck, dots] = await Promise.all([this.ensurePart('ph-deck'), this.ensurePart('ph-dots')]);
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!deck || !dots) return;
+    const unsync = require('../skeleton/toolkit/phone')
+      .syncDeck(deck.el, dots.el, (i) => { this._card = i; });
+    const unslide = this._armPhoneSlide(deck.el);
+    this._unbindDeck = () => { unsync(); unslide(); };
+  }
+
+  /**
+   * Phone: one card on every AUTO_SLIDE_MS (toolkit autoSlide). Stands down
+   * under prefers-reduced-motion, as the desk track does.
+   *
+   * @param {Element} deck the ph-deck element
+   * @returns {Function} stops it
+   */
+  _armPhoneSlide(deck) {
+    if (!this._mayAnimate()) return () => {};
+    return require('../skeleton/toolkit/phone').autoSlide(deck, () => this._card, AUTO_SLIDE_MS);
+  }
+
   onBeforeDestroy() {
+    if (this._unbindDeck) this._unbindDeck();
+    this._unbindDeck = null;
     clearTimeout(this._slideTimer);
     this._slideTimer = null;
     if (this._dragCleanup) this._dragCleanup();

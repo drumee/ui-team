@@ -3224,5 +3224,17 @@
   "CREATE_NEW_FILE": "新建文件",
   "RECENTLY_VIEWED": "最近查看",
   "OTHER_FILES": "其他文件",
-  "DESIGNATION_LINK_NO_ACCESS": "无法打开此链接：当前账户不是其所在工作区的成员。请使用成员账户登录，或请工作区管理员将您添加为成员。"
+  "DESIGNATION_LINK_NO_ACCESS": "无法打开此链接：当前账户不是其所在工作区的成员。请使用成员账户登录，或请工作区管理员将您添加为成员。",
+  "TUTORIAL_SKIP": "跳过导览",
+  "MESSAGE_TO": "发消息给…",
+  "TUTORIAL_MIGRATE_FAB": "点击添加新文件",
+  "TUTORIAL_CHAT_PHONE_ATTACH_TITLE": "点击附加文件",
+  "TUTORIAL_CHAT_PHONE_ATTACH_DESC": "在聊天中附加任何文件即可为其开启讨论。再也不用问“我们在说哪个文件？”",
+  "TUTORIAL_CHAT_PHONE_HOLD_TITLE": "长按以选择在讨论串中回复",
+  "WS_TYPE_PHONE_INTERNAL_DESC": "与特定人员共享",
+  "WS_TYPE_PHONE_EXTERNAL_DESC": "拥有唯一链接的任何人",
+  "TUTORIAL_WS_IN_DEPARTMENT": "在部门中创建",
+  "MIGRATE_PHONE_LINK_PLACEHOLDER": "粘贴链接",
+  "MIGRATE_PHONE_VERIFY_IMPORT": "验证并导入",
+  "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE": "开始在聊天讨论串中讨论该文件"
 }

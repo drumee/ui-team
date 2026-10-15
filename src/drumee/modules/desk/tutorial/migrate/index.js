@@ -63,101 +63,7 @@ const { isLastScreen, entryScreen } = require('../tours');
  * the same dialog becomes the real share-to-SA import — the popup is no longer
  * opened at the end of the tour.
  */
-const SCREENS = [
-  {
-    // 142:34981, drawn exactly as the frame has it: no callout, no scrim, and
-    // the three hero buttons live. `live` is what makes them controls (see
-    // ./skeleton/index.js); `bare` is what stops a card being raised over a
-    // frame that has none.
-    //
-    // A target is still named because the spotlight needs one to measure, and
-    // the CTA is the thing the screen is about. With `bare` it is only
-    // promoted, never ringed — nothing in spotlight/skin styles `.is-lit`.
-    key: 'pane',
-    pane: true,
-    live: true,
-    bare: true,
-    // The dropdown is drawn on this screen now, and its rows act. `+ New` and
-    // `Upload` are no longer screens of their own — see the note above the
-    // table.
-    menu: true,
-    live_menu: true,
-    target: 'fp-migrate',
-    anchor: 'fp-migrate',
-    direction: 'north',
-    beak: 'start',
-  },
-  {
-    // Back goes to the PANE, not to the screen before this one.
-    //
-    // Screen 2 is the `+ New` branch, and the only way into this screen is the
-    // Migrate CTA on screen 1 — so unwinding to index-1 would land the user on
-    // a dropdown they never opened. Both branches return to the fork.
-    key: 'copy',
-    back: 'pane',
-    dialog: true,
-    target: 'mg-dialog',
-    anchor: 'mg-address',
-    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
-    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
-    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
-    //
-    // Anchoring the placement on the row measured the gap from the wrong edge.
-    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
-    // gap from the row left the card 4px off the panel — all but touching it,
-    // on all three screens.
-    anchor_x: 'mg-dialog',
-    direction: 'west',
-    gap: 34,
-    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_COPY_DESC,
-  },
-  {
-    // The address has been copied; the link is still empty.
-    key: 'paste',
-    dialog: true,
-    copied: true,
-    target: 'mg-dialog',
-    anchor: 'mg-link',
-    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
-    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
-    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
-    //
-    // Anchoring the placement on the row measured the gap from the wrong edge.
-    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
-    // gap from the row left the card 4px off the panel — all but touching it,
-    // on all three screens.
-    anchor_x: 'mg-dialog',
-    direction: 'west',
-    gap: 34,
-    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
-    desc: () => LOCALE.TUTORIAL_MIGRATE_PASTE_DESC,
-  },
-  {
-    key: 'verify',
-    dialog: true,
-    copied: true,
-    linked: true,
-    target: 'mg-dialog',
-    anchor: 'mg-verify',
-    // Vertically the card tracks the row it is about; HORIZONTALLY it clears
-    // the whole dialog. 176:47527 states both numbers: the dialog's right edge
-    // at x1056 and the callout's left at x1090 — 34px clear of the PANEL.
-    //
-    // Anchoring the placement on the row measured the gap from the wrong edge.
-    // Every row stops 28px short of the panel (the dialog's inset), so a 32px
-    // gap from the row left the card 4px off the panel — all but touching it,
-    // on all three screens.
-    anchor_x: 'mg-dialog',
-    direction: 'west',
-    gap: 34,
-    title: () => LOCALE.TUTORIAL_MIGRATE_TITLE,
-    // Its own line, not the paste screen's. This screen is reached with the
-    // link already in the field, so "Paste the link" described a step the user
-    // had just finished; the only thing left on it is the button.
-    desc: () => LOCALE.TUTORIAL_MIGRATE_VERIFY_DESC,
-  },
-];
+const SCREENS = require('./screens');
 
 class __tutorial_migrate extends LetcBox {
 
@@ -242,6 +148,14 @@ class __tutorial_migrate extends LetcBox {
    * has landed.
    */
   async _showScreen() {
+    // Live, the dialog on screen is the real import, not a walkthrough screen.
+    // A re-render (a rotation: layout.js relayoutStep) redraws THAT, keeping
+    // the pasted link; drawing the mock here would strand the user over a
+    // dead copy of the dialog.
+    if (this._live) {
+      this._readLiveLink();
+      return this._renderLive(this._sa.snapshot());
+    }
     const s = SCREENS[this._screenIndex];
     if (!s) {
       this.warn(`Data not found for screen ${this._screenIndex}`);
@@ -252,7 +166,14 @@ class __tutorial_migrate extends LetcBox {
     // each of the three dialog screens — read as a flicker, not a transition.
     const enter = !!s.dialog && !this._dialogUp;
     this._dialogUp = !!s.dialog;
-    this.feed(skeleton(this, s, { menuOpen: this._menuOpen || null, enter }));
+    // Phone layout (host-kit layoutFor): the Figma mobile frames. `phone` is
+    // null at desk. With the + menu open the menu is what is lit, uncarded,
+    // as in 385:55247.
+    const phone = this.mget('layout') === 'phone' ? s.phone : null;
+    if (phone) return this._showPhone(s, phone);
+    const menuOpen = this._menuOpen || null;
+    const state = { menuOpen, enter };
+    this.feed(skeleton(this, s, state));
     const [target, anchor, anchor_x] = await Promise.all([
       this.ensurePart(s.target),
       this.ensurePart(s.anchor),
@@ -306,6 +227,53 @@ class __tutorial_migrate extends LetcBox {
   }
 
   /**
+   * The phone layout — Figma 385:55398 / 386:55610 / 386:55759, the import
+   * sheet walked in three steps. The blank workspace before them is not a
+   * step here (`skip`).
+   *
+   * The LAST step, on a host that can do it for real (live_capable — the
+   * folder-window host), is not a lesson: the host goes live at once (its
+   * _goLive applies the same gates as the product, clears the spotlight and
+   * hands this step goLive), and the sheet becomes the real import, plain.
+   * Elsewhere (a desk preview, `full`) it teaches with a Done.
+   */
+  async _showPhone(s, phone) {
+    if (phone.skip) {
+      this._screenIndex = Math.min(this._screenIndex + 1, SCREENS.length - 1);
+      return this._showScreen();
+    }
+    const last = isLastScreen(this, this._screenIndex, SCREENS.length);
+    if (phone.live && last && this.mget('live_capable')) {
+      return this.triggerHandlers({ service: 'window-tutorial:go-live' });
+    }
+    this.feed(require('./skeleton/phone')(this, s));
+    const target = await this.ensurePart(phone.target);
+    if (this.isDestroyed && this.isDestroyed()) return null;
+    // Back nowhere: the first step a phone shows, when the tour starts here.
+    const firstShown = SCREENS.slice(0, this._screenIndex).every((x) => x.phone && x.phone.skip);
+    this.triggerHandlers({
+      service: 'spotlight:focus',
+      target: target && target.el,
+      anchor: target && target.el,
+      tooltip: {
+        title: s.title(),
+        // The frames' line for the last step is the button's own label.
+        desc: phone.lit === 'verify' ? LOCALE.MIGRATE_PHONE_VERIFY_IMPORT : s.desc(),
+        hide_back: !!this.mget('is_first') && firstShown,
+        done: last,
+        align: 'center',
+      },
+      // The skeleton draws the frames' overlay and fading itself.
+      dim: false,
+      phone_margin: 17,
+      phone_gap: 26,
+      phone_prefer: phone.prefer,
+      owner: this,
+    });
+    return null;
+  }
+
+  /**
    * Become the real import, over the window the tour was about.
    *
    * Called by the host once it has decided this may happen (over-limit, write
@@ -349,7 +317,11 @@ class __tutorial_migrate extends LetcBox {
     // No key for share-to-SA on this server: the popup can still fall back to
     // OAuth, this card cannot.
     if (snap.state === 'unavailable') return this._toHost('window-tutorial:fallback-popup');
-    this.feed(liveSkeleton(this, snap, this._live.dest, { link: this._live.link }));
+    if (this.mget('layout') === 'phone') {
+      this.feed(require('./skeleton/phone').live(this, snap, this._live.dest, { link: this._live.link }));
+    } else {
+      this.feed(liveSkeleton(this, snap, this._live.dest, { link: this._live.link }));
+    }
     // Each render brings a new fill: run it from where the last one stood.
     if (this.el && this.fig) {
       this._barMemo = this._barMemo || {};
@@ -514,6 +486,14 @@ class __tutorial_migrate extends LetcBox {
         // A screen may name where Back goes, because this tour BRANCHES at
         // screen 1 and index-1 is then the wrong answer — see `back` on the
         // copy screen. Everything else unwinds linearly.
+        // Phone: the screen before is not a step there (`skip`), so Back off
+        // the first phone step leaves the tour's step, like screen 1 does.
+        if (this.mget('layout') === 'phone') {
+          let i = this._screenIndex - 1;
+          while (i >= 0 && SCREENS[i].phone && SCREENS[i].phone.skip) i--;
+          if (i < 0) return this.triggerHandlers({ service: 'back-step' });
+          return this._transition(i);
+        }
         const back = (SCREENS[this._screenIndex] || {}).back;
         if (back) return this._goto(back);
         if (this._screenIndex <= 0) return this.triggerHandlers({ service: 'back-step' });

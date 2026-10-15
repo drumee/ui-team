@@ -1228,10 +1228,13 @@ class __media_interact extends media_core {
           mtime: this.mget(_a.mtime),
           area: this.mget(_a.area),
         };
-        const _raised = args._tourDone ? false : require("libs/tutorial-tours").fire("share", this, {
+        // ON A PHONE TOO: the media menu's Share is a phone's way into this
+        // tour, so it passes the mobile switch (phoneGate).
+        const _Tours = require("libs/tutorial-tours");
+        const _raised = args._tourDone ? false : _Tours.fire("share", this, {
           subject: _subject,
           subject_data: _subjectData,
-        });
+        }, _Tours.phoneGate());
         // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
         // tour teaches the secure-share panel, and the panel was opening while
         // the walkthrough about it was still on screen — visible only once the
@@ -1265,6 +1268,9 @@ class __media_interact extends media_core {
             //               click must still do what it was for; swallowing it
             //               would make Share a dead control.
             if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
+            // ON A PHONE the tour's own Done opened "Who has access" (window
+            // tutorial _handOffMembers), so the link builder stays shut.
+            if (Visitor.isMobile() && Tours.appeared("share")) return;
             this.onUiEvent(cmd, { ...args, _tourDone: 1 });
           });
         }

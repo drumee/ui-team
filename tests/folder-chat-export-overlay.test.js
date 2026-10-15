@@ -23,7 +23,7 @@ global._e = new Proxy({}, { get: (t, k) => k });
 const _load = Module._load;
 Module._load = function (r, ...a) {
   if (r === "../../skeleton/toolkit") {
-    return { dialog: () => node("dialog")(), tooltips: () => node("tooltips")(), tabBar: () => node("tabBar")(), splitBody: () => node("splitBody")() };
+    return { dialog: () => node("dialog")(), tooltips: () => node("tooltips")(), tabBar: () => node("tabBar")(), splitBody: () => node("splitBody")(), splitDots: () => node("splitDots")() };
   }
   if (r === "./topbar") return () => node("topbar")();
   return _load.call(this, r, ...a);

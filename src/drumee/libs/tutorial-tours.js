@@ -150,8 +150,56 @@ function isNewUser() {
   }
 }
 
-function isMobile() {
+// Phones were blocked outright while the tours drew a shrunk desktop. The phone
+// layout (desk/tutorial host-kit `layoutFor`) makes them usable, and this flag
+// is the rollout switch for it: off, phones see nothing, exactly as before.
+//
+// ONE EXCEPTION, granted per tour by allowPhone(): the run that follows
+// onboarding. A new account finishing the wizard on a phone gets its
+// `workspace` tour (and the `migrate` tour that hands off from it) in the
+// phone layout whatever the switch says; every other tour still waits on it.
+const _phoneOk = new Set();
+
+/**
+ * Let these tours run on a phone this session, flag or no flag.
+ * @param {String|String[]} ids tour ids
+ */
+function allowPhone(ids) {
+  for (const id of [].concat(ids || [])) _phoneOk.add(id);
+}
+
+/**
+ * Do phones get tours — this one, when an id is given?
+ * @param {String} [tourId]
+ */
+function mobileToursOn(tourId) {
+  if (tourId && _phoneOk.has(tourId)) return true;
   try {
+    return !!(typeof Platform !== "undefined" && Platform.get && ~~Platform.get("mobile_tours"));
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * The gate a phone trigger passes: `{phone: true}` on a phone, nothing on a
+ * desktop (where the switch is not in play anyway).
+ */
+function phoneGate() {
+  try {
+    return typeof Visitor !== "undefined" && Visitor.isMobile && Visitor.isMobile() ? { phone: true } : undefined;
+  } catch (e) {
+    return undefined;
+  }
+}
+
+function isMobile(tourId, gate) {
+  try {
+    // A trigger that IS a phone's way into this tour (gate.phone — the bar's
+    // Chat / Task / Meet, the migrate card and row, the share entries) passes
+    // whatever the rollout switch says. Every other surface still waits on it.
+    if (gate && gate.phone) return false;
+    if (mobileToursOn(tourId)) return false;
     return !!(typeof Visitor !== "undefined" && Visitor.isMobile && Visitor.isMobile());
   } catch (e) {
     return false;
@@ -360,18 +408,18 @@ function isSeen(tourId, host) {
  * true here does not promise the claim will succeed, only that this tour is not
  * ruled out on its own merits.
  */
-function offerable(tourId, host) {
+function offerable(tourId, host, gate) {
   if (!enabled()) return false;
   if (!isNewUser()) return false;
-  if (isMobile()) return false;
+  if (isMobile(tourId, gate)) return false;
   if (!TOUR_IDS.includes(tourId)) return false;
   if (isSeen(tourId, host)) return false;
   return true;
 }
 
-function claim(tourId, host) {
+function claim(tourId, host, gate) {
   // One definition of the gates, so a second caller cannot drift from it.
-  if (!offerable(tourId, host)) return false;
+  if (!offerable(tourId, host, gate)) return false;
   if (_inFlight) return false;
 
   _inFlight = tourId;
@@ -392,14 +440,18 @@ function claim(tourId, host) {
  * @param {Object} [opt] extra model attributes for the tour widget, for a
  *   trigger that knows something the tour cannot work out for itself. Rides in
  *   the broadcast under its own key so it can never collide with `tour`.
+ * @param {{phone?: Boolean}} [gate] `phone`: this trigger is a phone's way
+ *   into the tour — it passes the mobile switch, and the tour is stamped
+ *   `phone_ok` so its host draws the phone layout (phoneGate()).
  * @returns {Boolean} whether the tour was broadcast
  */
-function fire(tourId, host, opt) {
-  if (!claim(tourId, host)) return false;
+function fire(tourId, host, opt, gate) {
+  if (!claim(tourId, host, gate)) return false;
+  const attrs = gate && gate.phone ? { ...(opt || {}), phone_ok: 1 } : (opt || null);
 
   try {
     if (typeof RADIO_BROADCAST !== "undefined") {
-      RADIO_BROADCAST.trigger(CHANNEL, { tour: tourId, opt: opt || null });
+      RADIO_BROADCAST.trigger(CHANNEL, { tour: tourId, opt: attrs });
     }
   } catch (e) {
     // A listener that throws must not leave the guard latched for the session.
@@ -555,6 +607,9 @@ function __resetModuleState() {
 }
 
 module.exports = {
+  mobileToursOn,
+  allowPhone,
+  phoneGate,
   CHANNEL,
   TOUR_IDS,
   GUARD_TIMEOUT_MS,

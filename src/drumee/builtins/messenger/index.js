@@ -68,9 +68,43 @@ class __lib_messenger extends LetcBox {
     // the host so it can mark messages as read (read receipts).
     this._onInputFocus = () => this.triggerHandlers({ service: 'input-focus' });
     this.el.addEventListener('focusin', this._onInputFocus);
+    // Same moment ui-core's editable used (it waited for the field, then this
+    // delay); see _autofocus for why the messenger does it now.
+    if (this.mget('autofocus')) {
+      this._autofocusTimer = _.delay(() => this._autofocus(), Visitor.timeout(1000));
+    }
+  }
+
+  /**
+   * Put the caret in the composer WITHOUT scrolling anything.
+   *
+   * ui-core's editable autofocus did a plain focus(), and the browser scrolls
+   * every scrollable ancestor to reveal a focused element. The folder window's
+   * Files view on a phone is a sideways two-page carousel (files, Team Chat),
+   * so a reload slid it from the files to the chat page once the composer
+   * mounted. preventScroll keeps the caret and leaves the page where it is.
+   * The caret goes to the end of a restored draft, as before.
+   */
+  _autofocus(tries = 0) {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const el = this.__content && this.__content.content;
+    if (!el || !el.isConnected) {
+      // The editable creates its field asynchronously (waitElement).
+      if (tries < 20) this._autofocusTimer = setTimeout(() => this._autofocus(tries + 1), 50);
+      return;
+    }
+    el.focus({ preventScroll: true });
+    if (!el.textContent) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = document.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
   }
 
   onBeforeDestroy() {
+    clearTimeout(this._autofocusTimer);
     if (this._trackSelection) {
       document.removeEventListener('selectionchange', this._trackSelection);
     }

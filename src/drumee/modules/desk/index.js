@@ -3342,8 +3342,9 @@ class desk_module extends LetcBox {
   _writeActivityCount(unread) {
     const n = parseInt(unread, 10) || 0;
     const content = n > 99 ? "99+" : String(n);
-    // Three surfaces: the desktop cluster's bell, the phone bar's bell, and
-    // the go-to sheet's notifications tile. (The old drawer's 'activity-count'
+    // Three surfaces: the desktop cluster's bell, the phone bar's go-to
+    // button (which opens the sheet the notifications tile lives in), and
+    // that tile. (The old drawer's 'activity-count'
     // is gone with the drawer.) They read the same number, so they are filled
     // from one place — updating only some left the others permanently unmarked.
     ["activity-count-top", "activity-count-mobile", "activity-count-sheet"].forEach((pn) => {
@@ -6829,11 +6830,11 @@ class desk_module extends LetcBox {
    *   screen the user has already left.
    * @returns {Promise<Boolean>} whether the tour was asked for
    */
-  async _raiseRailTour(tour, seq) {
+  async _raiseRailTour(tour, seq, gate) {
     await this._whenToursIdle();
     if (this.isDestroyed && this.isDestroyed()) return false;
     if (seq !== undefined && (this._navSeq || 0) !== seq) return false;
-    return require("libs/tutorial-tours").fire(tour, this);
+    return require("libs/tutorial-tours").fire(tour, this, null, gate);
   }
 
   /**
@@ -6868,7 +6869,7 @@ class desk_module extends LetcBox {
    * @param {String} tour the tour that tab is about
    * @returns {Promise}
    */
-  async _railTabWithTour(tab, tour) {
+  async _railTabWithTour(tab, tour, gate) {
     // THIS PRESS SUPERSEDES THE ONE BEFORE IT. See _navigated: the previous
     // press may have parked a tab switch on its tour's release, and ending
     // that tour below is exactly what fires it.
@@ -6883,7 +6884,7 @@ class desk_module extends LetcBox {
     // is up comes down is what lets that one skip its fade: a tour being
     // replaced by another tour has nothing to reveal, while a tour that is
     // simply ending is uncovering the window on purpose. See _endWindowTour.
-    const offerable = require("libs/tutorial-tours").offerable(tour, this);
+    const offerable = require("libs/tutorial-tours").offerable(tour, this, gate);
     this._endWindowTourUnlessAbout(tab, { immediate: offerable });
     if (!w) await this._openDefaultWorkspace();
     if (this.isDestroyed && this.isDestroyed()) return;
@@ -6901,7 +6902,7 @@ class desk_module extends LetcBox {
     // then resolved, fire() claimed the now-free tour and mounted a fresh
     // migrate tour straight over the Calendar the user had just opened.
     if (this._windowTourIs(tour)) return this._railTab(tab);
-    const raised = await this._raiseRailTour(tour, seq);
+    const raised = await this._raiseRailTour(tour, seq, gate);
     // Whatever the wait inside was for, a navigation during it wins: the user
     // has gone elsewhere, so neither a tour nor this tab lands on top of it.
     if ((this._navSeq || 0) !== seq) return;
@@ -8461,6 +8462,15 @@ class desk_module extends LetcBox {
           // desk is still restoring behind the overlay and there has been no
           // wizard to warm anything during — a different situation with its own
           // timing, and not the one being fixed.
+          //
+          // ON A PHONE TOO. Finishing the wizard is the one moment the
+          // workspace tour is owed whatever the `mobile_tours` rollout switch
+          // says (libs/tutorial-tours allowPhone). It does not hand off to
+          // migrate on a phone (_chainMigrateTour); the phone's other tours
+          // come from their own taps (phoneGate). Harmless on a desktop.
+          if (postOnboarding) {
+            require("libs/tutorial-tours").allowPhone(["workspace"]);
+          }
           const delay = postOnboarding ? 0 : 2000;
           setTimeout(() => {
             if (this._launchHomeTutorial(explicit, forced)) return;
@@ -11690,6 +11700,9 @@ class desk_module extends LetcBox {
       // a backdrop tap from also closing the panel standing behind the card.
       // Renaming it here would silently re-break those two.
       case "mobile-close-drawer":
+        // The tours mount in the overlay this service is wired to. A tap on a
+        // tour is not a tap on the drawer backdrop.
+        if (this.el && this.el.dataset && (this.el.dataset.deskTour || this.el.dataset.windowTour)) return;
         return this._closeMobileSearch();
 
       case "toggle-sidebar-pin":
@@ -11914,7 +11927,9 @@ class desk_module extends LetcBox {
         // on the home grid — it is drawn on a window or not at all — and if
         // that fallback did open a workspace, the chat pane is exactly what the
         // user is now looking at.
-        return this._railTabWithTour(_a.chat, _a.chat);
+        // ON A PHONE TOO: the bottom bar's Chat is a phone's way into this
+        // tour, so it passes the mobile switch (phoneGate).
+        return this._railTabWithTour(_a.chat, _a.chat, require("libs/tutorial-tours").phoneGate());
       }
       case "rail-task": {
         // Contextual tour, on the first press of Task in the rail.
@@ -11947,7 +11962,8 @@ class desk_module extends LetcBox {
         // is written when — and only when — "Create your first task" is
         // pressed. Until then the claim keeps succeeding and the rail keeps
         // offering it.
-        return this._railTabWithTour(_a.task, "folder_task");
+        // ON A PHONE TOO, from the bottom bar's Task (phoneGate).
+        return this._railTabWithTour(_a.task, "folder_task", require("libs/tutorial-tours").phoneGate());
       }
       case "rail-meet": {
         // Contextual tour, on a press of Meet in the rail — the gesture this
@@ -11968,7 +11984,8 @@ class desk_module extends LetcBox {
         // the user is not on". An in-window tour cannot land on the home grid —
         // it is drawn on a window or not at all — and _onTourTrigger is what
         // routes this one there.
-        return this._railTabWithTour("meeting", "meeting");
+        // ON A PHONE TOO, from the bottom bar's Meet (phoneGate).
+        return this._railTabWithTour("meeting", "meeting", require("libs/tutorial-tours").phoneGate());
       }
       // The rail's Access and the switcher header's link icon do the identical
       // thing — hand `folder-manage-access` to the active workspace window,

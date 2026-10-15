@@ -46,90 +46,7 @@ const SERVICE_TYPE = { internal: 'team', external: 'share', personal: 'personal'
 // dialog. Screen 1 raises no callout at all, so it is unaffected.
 const DIALOG_GAP = 40;
 
-const SCREENS = [
-  {
-    // Figma 140:22684 — the home EMPTY STATE the flow starts on: the
-    // "Your workspace starts here." hero and the CTA that opens the dialog.
-    // The tour used to open straight onto an already-open dialog, which
-    // skipped how the user got there.
-    home: true,
-    target: 'home-cta',
-    anchor: 'home-cta',
-    direction: 'north',
-    beak: 'end',
-    // NO callout. 140:22684 is the entry state the flow arrow leaves from and
-    // it carries none — the CTA is the whole instruction, and a card floating
-    // beside it was ours.
-    //
-    // Which leaves the screen with nothing to press Next on, so the CTA
-    // becomes the control: it is already the lit surface, it is already what
-    // the frame's arrow leaves from, and in the product it is what opens the
-    // dialog that screen 2 draws. See `home-cta` in skeleton/toolkit/home.js.
-    bare: true,
-  },
-  {
-    lit: BLOCKS.NAME,
-    anchor: BLOCKS.NAME,
-    text: () => LOCALE.TUTORIAL_WS_NAME,
-  },
-  {
-    lit: BLOCKS.type('internal'),
-    anchor: BLOCKS.type('internal'),
-    title: () => LOCALE.TUTORIAL_WS_INTERNAL_TITLE,
-    desc: () => LOCALE.INTERNAL_WORKSPACE_HINT,
-  },
-  {
-    lit: BLOCKS.type('external'),
-    anchor: BLOCKS.type('external'),
-    title: () => LOCALE.TUTORIAL_WS_EXTERNAL_TITLE,
-    desc: () => LOCALE.EXTERNAL_WORKSPACE_HINT,
-  },
-  {
-    // The closing screen lights the type list AND the now-enabled Create
-    // button, because it is about the pair.
-    lit: BLOCKS.CREATE,
-    anchor: BLOCKS.CREATE,
-    ready: true,
-    text: () => LOCALE.TUTORIAL_WS_CREATE,
-  },
-
-  // ── from here it is not a tour any more ────────────────────────────────────
-  //
-  // These two run ONLY on the post-signup pass — the host slices the table to
-  // `screen_count`, and _screensFor drops them for a preview or for the full
-  // tour (see ../index.js). Five screens of being shown the dialog, and then
-  // the dialog.
-  {
-    // Every section at full strength, because there is no longer one being
-    // taught: the user is filling it in.
-    //
-    // AND NO CALLOUT. Five screens have just explained this dialog field by
-    // field; a sixth card beside the filled-in version of it is the tour
-    // talking over the thing it spent those five screens introducing. The
-    // dialog carries Create, which is the only way forward this screen has.
-    live: true,
-    bare: true,
-    target: 'wsd-dialog',
-    anchor: 'wsd-dialog',
-    direction: 'west',
-  },
-  {
-    // NO CALLOUT HERE EITHER, and `bare` is what says so rather than the
-    // absence of `text`. Leaving the text off is not the same thing: feed(null)
-    // is a no-op in ui-core, so a screen that raises nothing INHERITS the
-    // previous screen's card — which is how this one once ended up telling the
-    // user to create a workspace they had just created. `bare` makes focus()
-    // feed the callout null, which clears it.
-    //
-    // The card itself carries Send and Skip, so nothing is lost by going
-    // quiet: it is already a complete screen with its own two ways out.
-    invite: true,
-    bare: true,
-    target: 'inv-card',
-    anchor: 'inv-card',
-    direction: 'west',
-  },
-];
+const SCREENS = require('./screens');
 
 class __tutorial_workspace extends LetcBox {
 
@@ -183,12 +100,20 @@ class __tutorial_workspace extends LetcBox {
     // a rebuilt Entry is an empty one — so read what is in the field first and
     // hand it back through the composer.
     this._name = this._readName() || this._name || '';
-    this.feed(skeleton(this, s, {
+    // Phone layout (host-kit layoutFor): the Figma mobile frames, built from
+    // the same dialog and invite builders. `phone` is null at desk.
+    const phone = this.mget('layout') === 'phone' ? s.phone : null;
+    const state = {
       selected: this._type,
       pending: !!this._pending,
       created: this._created,
       name: this._name,
-    }));
+    };
+    if (phone) return this._showPhone(s, phone, state);
+    this.feed(skeleton(this, s, state));
+    // Tell the host whether this screen is one the user fills in, so its Skip
+    // control can stand down there (those screens carry their own exits).
+    this.triggerHandlers({ service: 'step-live', live: this.isLive() });
     // The dialog screens light the whole dialog and point the beak at one row
     // inside it; the home screen lights the button and points at the same
     // thing, so the target is named per screen rather than assumed.
@@ -266,6 +191,8 @@ class __tutorial_workspace extends LetcBox {
       // give the chat flow one undimmed screen out of five, and it stopped
       // applying inside `full`, where the stamped id is "full" — so the rule
       // moved onto the focus call and this is its other caller.
+      // On a phone the frames DO dim (380:54800 on): the sheet's other rows
+      // fade and the lit one stands out. The home hero is drawn plain.
       dim: false,
       owner: this,
     });
@@ -274,6 +201,109 @@ class __tutorial_workspace extends LetcBox {
   // ── the live screens ───────────────────────────────────────────────────────
 
   /** Whatever the live dialog's name field currently holds. */
+  /**
+   * Is this run allowed to create (the post-signup `workspace` tour)? Its
+   * step carries the live tail; `full` and the in-window host drop it.
+   */
+  _canCreateHere() {
+    return this._screens.length > 5;
+  }
+
+  /**
+   * The phone layout — Figma "org home -> create wp", screen by screen.
+   *
+   * The frames teach and DO in the same sheet: the name screen's field takes
+   * the name, and the create screen picks a type and creates. So on a run
+   * that may create, those two are live and carry no buttons (the field and
+   * Create are the way forward), and the desk's separate live form is
+   * skipped. A run that may not create (`full`) keeps a Next on both, or it
+   * would have no way forward at all.
+   *
+   * Dimming is the frames' own — an overlay and per-block opacities drawn by
+   * the skeleton — so the spotlight is asked only for the callout.
+   */
+  async _showPhone(s, phone, state) {
+    if (phone.skip) {
+      this._screenIndex = Math.min(this._screenIndex + 1, this._screens.length - 1);
+      if (this._screens[this._screenIndex] === s) return null;
+      return this._showScreen();
+    }
+    const live = this._canCreateHere() && !!phone.live;
+    this.feed(require('./skeleton/phone')(this, s, { ...state, live: this._canCreateHere() }));
+    this.triggerHandlers({ service: 'step-live', live: this.isLive() });
+    const target = await this.ensurePart(phone.target);
+    if (this.isDestroyed && this.isDestroyed()) return null;
+    if (live && phone.lit === 'name') this._bindPhoneName();
+
+    // The REAL create step (385:1226 on the post-signup run): the user is
+    // filling in the form, so no callout, no highlight, no backdrop — Create
+    // is the way forward. The skeleton draws it plain; the spotlight stands
+    // down entirely.
+    if (live && phone.lit === 'create') {
+      this.triggerHandlers({ service: 'spotlight:clear' });
+      return null;
+    }
+    const last = isLastScreen(this, this._screenIndex, this._screens.length);
+    // Back on every callout but the tour's very first screen — the desk rule.
+    const firstScreen = !!this.mget('is_first') && this._screenIndex === 0;
+    let tooltip = null;
+    if (phone.lit === 'internal' || phone.lit === 'external') {
+      // 385:938 / 385:1090 — title, line, one full-width Next.
+      tooltip = { title: s.title(), desc: s.desc(), hide_back: firstScreen, done: last, align: 'center' };
+    } else if (phone.lit === 'name' || phone.lit === 'create') {
+      // 380:54800 / 385:1226 — one line and a full-width Next. On the live
+      // create screen that Next creates (see onUiEvent): nothing follows this
+      // screen without a workspace, so it never reads Done there.
+      tooltip = { text: s.text(), hide_back: firstScreen, done: last && !live, align: 'center' };
+    }
+    this.triggerHandlers({
+      service: 'spotlight:focus',
+      target: target && target.el,
+      anchor: target && target.el,
+      tooltip,
+      dim: false,
+      // The frames' card is 396 on a 430 screen, its beak tip ~8px off the
+      // block it names.
+      phone_margin: 17,
+      phone_gap: 26,
+      phone_prefer: 'above',
+      owner: this,
+    });
+    return null;
+  }
+
+  /** Is the phone's live create screen (385:1226) up? */
+  _phoneLiveCreate() {
+    const s = this._screens[this._screenIndex];
+    const p = s && this.mget('layout') === 'phone' ? s.phone : null;
+    return !!(p && p.live && p.lit === 'create' && this._canCreateHere());
+  }
+
+  /**
+   * 380:54800: typing the name is the step, and its Next moves on too. Move on once the
+   * field is committed with something in it (Enter, Go, or leaving it).
+   */
+  async _bindPhoneName() {
+    const entry = await this.ensurePart('wsd-name-input');
+    const input = entry && entry.el && entry.el.querySelector('input');
+    if (!input || input.dataset.tourBound) return;
+    input.dataset.tourBound = '1';
+    // Kept as typed, so the name survives the screens after this one.
+    input.addEventListener('input', () => {
+      this._name = String(input.value || '').trim();
+    });
+    // Enter (or the keyboard's Go) moves on. NOT `change`: that also fires
+    // when the field loses focus, so typing and then tapping Next advanced
+    // twice and skipped the Internal screen.
+    input.addEventListener('keydown', (e) => {
+      if (!e || e.key !== 'Enter') return;
+      if (e.preventDefault) e.preventDefault();
+      this._name = String(input.value || '').trim();
+      if (!this._name || this.isDestroyed()) return;
+      this._advance();
+    });
+  }
+
   _readName() {
     const entry = this.getPart && this.getPart('wsd-name-input');
     return String((entry && entry.getValue && entry.getValue()) || '').trim();
@@ -311,10 +341,14 @@ class __tutorial_workspace extends LetcBox {
    */
   async _create() {
     if (this._pending) return;
-    const name = this._readName();
+    // On a phone the name was taken on an earlier screen (380:54800), so the
+    // create screen has no field to read — fall back to what was typed there.
+    const name = this._readName() || this._name || '';
     this._name = name;
     this._setNameError(null);
     if (!name) {
+      // Said under the name field — the phone's real create step carries one
+      // too, prefilled from the name screen.
       return this._setNameError(LOCALE.REQUIRE_THIS_FIELD || LOCALE.ENTER_A_NAME);
     }
 
@@ -430,7 +464,11 @@ class __tutorial_workspace extends LetcBox {
   /** Is the screen on show one the user is filling in rather than watching? */
   isLive() {
     const s = this._screens[this._screenIndex];
-    return !!(s && (s.live || s.invite));
+    if (!s) return false;
+    if (s.live || s.invite) return true;
+    // Phone: the create screen IS the real form on a run that may create.
+    const p = this.mget('layout') === 'phone' ? s.phone : null;
+    return !!(p && p.live && p.lit === 'create' && this._canCreateHere());
   }
 
   onUiEvent(trigger, args = {}) {
@@ -454,6 +492,8 @@ class __tutorial_workspace extends LetcBox {
         return this._advance();
 
       case 'next-step':
+        // Phone, live create screen: the callout's Next is Create.
+        if (this._phoneLiveCreate()) return this._create();
         // Through _advance, like every other way forward. Only the last screen
         // hands the tour back to tutorial_main, and it NAMES the service — the
         // step widget carries no `service` of its own (see _buildWidgets in

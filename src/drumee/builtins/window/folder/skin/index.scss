@@ -1339,6 +1339,11 @@
     display: none;
   }
 
+  // Split-body carousel footer — only the compact Files view shows it (below).
+  &__split-dots {
+    display: none;
+  }
+
   &__tab-bar-item {
     height: 32px;
     min-width: 84px;
@@ -4016,6 +4021,39 @@
       transform: scale(1.15);
     }
 
+    // ── Split-body carousel footer ──────────────────────────────
+    // Under the two-page Files view (files, Team Chat). Not over Access, which
+    // takes the whole body as one column.
+    &__split-body[data-view="files"]:not([data-access="1"]) + &__split-dots {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 16px 0;
+    }
+
+    &__split-dot {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 6px;
+      border-radius: 50%;
+      background-color: var(--normal-fg-10);
+      opacity: 0.25;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    &__split-dots[data-page="0"] &__split-dot:nth-child(1),
+    &__split-dots[data-page="1"] &__split-dot:nth-child(2) {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+
     // ── Filter bar (All / Docs / PDF / Images / Other) ──────────
     // Two rows on a narrow layout: the New + view-toggle controls on top, the
     // filter tabs beneath. This used to be one nowrap strip that scrolled
@@ -4079,6 +4117,36 @@
       margin-left: 0;
     }
 
+    // …except while the view toggle is hidden: an empty folder that is not
+    // loading or searched (files-empty-state.scss, same chain). The controls
+    // are then + New alone, and a whole row for one pill reads as a gap — so
+    // + New moves onto the filter bar's own row, after the tabs. The tabs give
+    // way to make the room: they shrink and scroll sideways (scrollbar hidden,
+    // as the tab-bar strip does) rather than wrap.
+    .window__files-panel:not([data-loading="1"]):not([data-search]):has(.window__icons-list .smart-container > .no-content) {
+      .window-folder__filter-bar {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+      }
+
+      .window-folder__filter-track {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+      }
+
+      .window-folder-topbar__file-controls {
+        order: 0;
+        flex: 0 0 auto;
+        margin-left: 0;
+      }
+    }
+
     // The rendered tab class is `__filter-tab-main` (see topbar/filter
     // skeletons). The previous rule targeted `__filter-tab` and never
     // applied, so the tabs shrank and collided once the row had more
@@ -4121,16 +4189,32 @@
       // be settled by bundle order. Chat details still takes the chat's
       // cell: chat-details.scss hides the chat panel with !important while
       // [data-details="open"].
+      //
+      // A CAROUSEL of two full-width pages: page 1 the file grid, page 2 Team
+      // Chat (or Chat details while it is open — it takes the chat's cell).
+      // It used to be the two columns at their floors (360 + 12 + 300) in a
+      // free sideways scroll: on a phone the user stopped anywhere between
+      // them, never on either. Each page now fills the window and the scroll
+      // snaps a page at a time.
       &.window__split-body[data-view="files"] {
-        grid-template-columns: minmax(360px, 2fr) minmax(300px, 1fr) !important;
-        column-gap: 12px;
+        grid-template-columns: 100% 100% !important;
+        column-gap: 0;
         overflow-x: auto;
         overflow-y: hidden;
         overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
         scrollbar-width: none;
 
         &::-webkit-scrollbar {
           display: none;
+        }
+
+        > .window__files-panel,
+        > .window__chat-panel,
+        > .window__chat-details {
+          min-width: 0;
+          scroll-snap-align: start;
+          scroll-snap-stop: always;
         }
 
         > .window__chat-panel {

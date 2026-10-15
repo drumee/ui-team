@@ -64,6 +64,10 @@ require("./skin");
 const SCHED_NARROW_PX = 700;
 
 
+// The migrate tour has been raised by a phone's "Migrate from Google Drive"
+// tap this session (see "launch-gdrive-migration").
+let _phoneMigrateRaised = false;
+
 class __window_folder extends mfsInteract {
   constructor(...args) {
     super(...args);
@@ -705,7 +709,10 @@ class __window_folder extends mfsInteract {
    */
   showTutorial(tour, opt = {}) {
     const Tours = require("libs/tutorial-tours");
-    if (!opt.preview && !Tours.claim(tour, this)) return false;
+    // `phone_ok`: a phone's own trigger for this tour (see phoneGate in
+    // libs/tutorial-tours) — it passes the mobile switch, and rides on to the
+    // host, which draws the phone layout for it.
+    if (!opt.preview && !Tours.claim(tour, this, opt.phone_ok ? { phone: true } : undefined)) return false;
     // BROADCAST, do not append.
     //
     // This used to `this.append()` a wrapper and feed the tour into it. That put
@@ -1530,8 +1537,14 @@ class __window_folder extends mfsInteract {
       this.__cdWidget = child;
       return;
     }
+    if (pn === "split-dots") {
+      this._splitDots = child;
+      this._syncSplitPage();
+      return;
+    }
     if (pn === "folder-view") {
       this.__folderView = child;
+      this._wireSplitCarousel(child);
       // Restore the user's persisted Files-tab split ratio (default 2:1).
       this._applyFilesSplit();
       // First paint of the split body enters like every later view switch.
@@ -2133,6 +2146,9 @@ class __window_folder extends mfsInteract {
       case "tab-bar-page":
         return this._showTabCarouselPage(cmd);
 
+      case "split-page":
+        return this._showSplitPage(cmd);
+
       // Tap on the mobile dim layer behind the centred "+ New" card. Same
       // close a leaf row runs, so the card and its backdrop leave together.
       case "close-new-menu":
@@ -2217,6 +2233,20 @@ class __window_folder extends mfsInteract {
         // raised elsewhere — the rail's Files button — that is still on screen.
         // With none in flight, whenDone runs `launch` synchronously, exactly
         // where a bare call would sit, which is every click on this row today.
+        //
+        // EXCEPT THE FIRST ONE ON A PHONE. There this row and the Files empty
+        // state's "Migrate from Google Drive" card (the same service) ARE the
+        // migrate tour's way in — a phone has no rail Files press that raises
+        // it — and the tour's last step is the real import (window/tutorial
+        // _goLive), so it takes the place of the popup rather than preceding
+        // it. Once per session: this tour is earned (mark_on "success"), so the
+        // seen-set alone would keep raising it until an import ran, and a user
+        // who left it early must get the dialog on their next tap.
+        if (!_phoneMigrateRaised && Visitor.isMobile()
+          && this.showTutorial("migrate", { phone_ok: 1 })) {
+          _phoneMigrateRaised = true;
+          return;
+        }
         return Tours.whenDone("migrate", launch);
       }
 
@@ -2347,7 +2377,11 @@ class __window_folder extends mfsInteract {
             // mock of itself — while the panel this tour is about is right
             // here. showTutorial takes the same claim fire() would have taken,
             // so every gate still applies exactly once.
+            // ON A PHONE TOO: the workspace sheet's link action lands here
+            // (mobile-ws-action → workspace-access), and it is a phone's way
+            // into this tour — phone_ok passes the mobile switch.
             raised = this.showTutorial("share", {
+              ...(Visitor.isMobile() ? { phone_ok: 1 } : {}),
               subject: "workspace",
               subject_data: {
                 name: this.mget(_a.hub_name) || this.mget(_a.filename),
@@ -2391,6 +2425,9 @@ class __window_folder extends mfsInteract {
           //               click must still do what it was for; swallowing it
           //               would make Share a dead control.
             if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
+            // ON A PHONE the tour's own Done opens "Who has access" (window
+            // tutorial _handOffMembers); opening here too would toggle it shut.
+            if (Visitor.isMobile() && Tours.appeared("share")) return;
             this.openManageAccess({ members: membersOnly });
           });
         }
@@ -5998,6 +6035,7 @@ class __window_folder extends mfsInteract {
       // Who has access switch animation (skin/index.scss). Empty on first show.
       view.el.dataset.fromView = prevTab || "";
       view.el.dataset.view = tab;
+      this._firstSplitPage(view);
       this._playViewEntrance(view);
       this._restorePanelScroll();
       switch (tab) {
@@ -6143,6 +6181,53 @@ class __window_folder extends mfsInteract {
       this.__folderView = v;
       return showAccessOverlay(this, v, overlayOpt);
     });
+  }
+
+  /**
+   * Files always opens on its first page. On a narrow window the Files view is
+   * a two-page carousel (files, then Team Chat — skin/index.scss, the compact
+   * `[data-view="files"]` rule); pressing Files must show the files, not
+   * whichever page the user last swiped to. A no-op on a wide window, where
+   * the split body does not scroll sideways.
+   */
+  _firstSplitPage(view) {
+    const el = view && view.el;
+    if (el && el.dataset && el.dataset.view === "files") el.scrollLeft = 0;
+    this._syncSplitPage();
+  }
+
+  // ── Mobile split-body carousel footer ────────────────────────────────
+  // Same recipe as the tab-bar carousel above: the split body's own scroll is
+  // the one source of truth (swipe, dot press, the first-page reset), and the
+  // footer's data-page follows it, rAF-throttled.
+  _wireSplitCarousel(child) {
+    if (!child || !child.el) return;
+    let queued = 0;
+    child.el.addEventListener("scroll", () => {
+      if (queued) return;
+      queued = 1;
+      requestAnimationFrame(() => {
+        queued = 0;
+        this._syncSplitPage();
+      });
+    }, { passive: true });
+  }
+
+  _syncSplitPage() {
+    const view = this.__folderView;
+    const dots = this._splitDots;
+    if (!view || !view.el || !dots || !dots.el) return;
+    const w = view.el.clientWidth;
+    const page = w > 0 ? Math.round(view.el.scrollLeft / w) : 0;
+    if (`${page}` !== dots.el.dataset.page) dots.el.dataset.page = `${page}`;
+  }
+
+  // Dot press: scroll a whole page; the listener above then moves data-page.
+  _showSplitPage(cmd) {
+    const view = this.__folderView;
+    if (!view || !view.el || !cmd || !cmd.el) return;
+    const page = Number(cmd.el.dataset.page) || 0;
+    view.el.scrollTo({ left: page * view.el.clientWidth, behavior: "smooth" });
   }
 
   /**

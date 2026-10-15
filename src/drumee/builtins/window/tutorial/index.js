@@ -11,7 +11,8 @@ require('./skin');
 require('desk/tutorial/skin');
 const Tours = require('libs/tutorial-tours');
 const { tour } = require('desk/tutorial/tours');
-const { REFLOW_MS, tierFor, buildStepWidgets } = require('desk/tutorial/host-kit');
+const { REFLOW_MS, tierFor, buildStepWidgets, layoutFor } = require('desk/tutorial/host-kit');
+const { relayoutStep } = require('desk/tutorial/layout');
 
 /**
  * A tour, run over a folder window instead of over a picture of the desk.
@@ -68,7 +69,10 @@ class __window_tutorial extends LetcBox {
     // it, and the card they are taught is the card they then get (_goLive
     // hands the step the same answer).
     const importDest = this._importDest();
-    this._widgets = buildStepWidgets(this, this._tour, { canCreate: false })
+    // Phone or desk, from the VIEWPORT (see host-kit layoutFor). Re-read on
+    // every resize by _applyLayout.
+    this._layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0, this._phoneAllowed());
+    this._widgets = buildStepWidgets(this, this._tour, { canCreate: false, layout: this._layout })
       .map((w) => ({ ...w, live_capable: 1, ...(importDest ? { import_dest: importDest } : {}) }));
     this._stepIndex = this._entryStep();
   }
@@ -235,6 +239,24 @@ class __window_tutorial extends LetcBox {
    * @returns {Boolean} whether a target was found and applied
    */
   _syncToWindow() {
+    // PHONE: the mock owns the whole viewport and draws its own top bar. The
+    // real folder window is full-bleed there anyway (mobile-fullscreen-window).
+    if (this._layout === 'phone' && this.el && this.el.style) {
+      const st = this.el.style;
+      // All four edges, NOT 100vw/100dvh: the overlay this sits in is already
+      // the viewport (fixed, inset 0), and 100dvh measured 44px short of it
+      // on a 440x956 phone — the desk showed through below the tour.
+      st.position = 'fixed';
+      st.left = '0';
+      st.top = '0';
+      st.right = '0';
+      st.bottom = '0';
+      st.width = 'auto';
+      st.height = 'auto';
+      st.borderRadius = '0';
+      st.overflow = 'hidden';
+      return true;
+    }
     const ws = this.mget('target_window');
     const el = ws && ws.el;
     if (!el || !el.isConnected || !this.el || !this.el.parentElement) return false;
@@ -243,6 +265,9 @@ class __window_tutorial extends LetcBox {
     if (!box.width || !box.height) return false;
     const st = this.el.style;
     st.position = 'absolute';
+    // The phone branch pins all four edges; a rotation back to desk clears two.
+    st.right = '';
+    st.bottom = '';
     st.left = `${box.left - host.left}px`;
     st.top = `${box.top - host.top}px`;
     st.width = `${box.width}px`;
@@ -253,8 +278,44 @@ class __window_tutorial extends LetcBox {
     return true;
   }
 
+  /**
+   * Phone or desk, from the viewport, and whether the pointer is a finger.
+   *
+   * On a flip the mounted step redraws its current screen in the new layout
+   * and every later payload carries it, so Back/Next after a rotation stay in
+   * the layout the user is now holding.
+   *
+   * @returns {Boolean} whether the layout changed
+   */
+  _applyLayout() {
+    const layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0, this._phoneAllowed());
+    const touch = !!(typeof window !== 'undefined' && window.matchMedia
+      && window.matchMedia('(pointer: coarse)').matches);
+    if (this.el && this.el.dataset) {
+      this.el.dataset.layout = layout;
+      this.el.dataset.touch = touch ? '1' : '0';
+    }
+    this._touch = touch;
+    if (layout === this._layout) return false;
+    this._layout = layout;
+    this._widgets = this._widgets.map((w) => ({ ...w, layout }));
+    relayoutStep(this._currentStep(), layout);
+    return true;
+  }
+
+  /**
+   * Phone layout: on once phone tours are (`mobile_tours`), and always for a
+   * preview. Until then a narrow desktop window keeps today's layout rather
+   * than a full-viewport phone takeover nobody has signed off.
+   */
+  _phoneAllowed() {
+    return !!this.mget('preview') || !!this.mget('phone_ok')
+      || !!(Tours.mobileToursOn && Tours.mobileToursOn(this._tour && this._tour.id));
+  }
+
   _applySize() {
     if (!this.el || !this.el.dataset || !this.el.getBoundingClientRect) return false;
+    this._applyLayout();
     // Geometry first: the tier is measured from this host's box, and that box is
     // only right once it has been laid over its window.
     this._syncToWindow();
@@ -313,6 +374,10 @@ class __window_tutorial extends LetcBox {
       // used to be.
       const ws = this.mget('target_window');
       if (ws && ws.el) this._ro.observe(ws.el);
+      // AND the viewport: phone vs desk is a viewport question, and at phone
+      // this element is 100vw — a ResizeObserver on it cannot tell a rotation
+      // that crosses the line from one that does not.
+      if (typeof window !== 'undefined') window.addEventListener('resize', settle);
       return;
     }
     // No ResizeObserver: catch what a viewport event can still tell us. Strictly
@@ -403,7 +468,47 @@ class __window_tutorial extends LetcBox {
     // Only this route. Escape and the callout's skip also end the tour and
     // reach _endTour directly; they leave it armed, which is the difference
     // between finishing something and getting out of it.
+    // Done on a phone's share tour hands over to "Who has access".
+    if (this._tour.id === 'share' && this._layout === 'phone') this._handOffMembers();
     this._markDone();
+  }
+
+  /**
+   * The share tour's Done, on a phone: open the window's "Who has access"
+   * panel (permission_restricted) as the tour comes down.
+   *
+   * HERE, in the host, because the host is the one thing every run of this
+   * tour has. The real triggers (the folder window's access action, the media
+   * menu's Share) used to queue it on Tours.whenDone — and a run nobody
+   * triggered (`T.show("share")`, `?tutorial=share`) had nothing queued, so Done
+   * lit the bar's Access tab (mountWindowTutorial's highlight) and opened
+   * nothing. Those triggers now stand aside on a phone once the tour appeared.
+   *
+   * WHICH panel: the one the bar's Access opens — the members column in the
+   * split body (window/folder access-column, `showFolderTab("access")`), via
+   * the desk's own _railAccess so the tab, the screen and the stamp agree.
+   * NOT openManageAccess: that feeds the window's dialog wrapper, which a
+   * phone's folder window may never have created (`this.dialogWrapper` is
+   * assigned only by the drawers that open it), so it threw and nothing
+   * appeared.
+   *
+   * On destroy, not now: the panel opens under the tour, and the fade is what
+   * reveals it; _railAccess also waits for the tour to release.
+   */
+  _handOffMembers() {
+    const ws = this.mget('target_window');
+    if (!ws || !_.isFunction(this.once)) return;
+    this.once(_e.destroy, () => {
+      if (ws.isDestroyed && ws.isDestroyed()) return;
+      try {
+        const desk = typeof window !== 'undefined' ? window.Desk : null;
+        if (desk && _.isFunction(desk._railAccess)) return desk._railAccess({ members: 1 });
+        if (_.isFunction(ws.showFolderTab)) return ws.showFolderTab('access');
+      } catch (e) {
+        this.warn && this.warn('[window-tutorial] could not open Who has access', e);
+      }
+      return null;
+    });
   }
 
   /**
