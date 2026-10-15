@@ -12,18 +12,19 @@
   --font-light: "Armin Grotesk", var(--font-fallback);
   --font-light-italic: "Armin Grotesk", var(--font-fallback);
   --font-main: "Armin Grotesk", var(--font-fallback);
+  --font-main-light: var(--font-main); // read by @drumee/ui-styles
   --font-italic: "Armin Grotesk", var(--font-fallback);
   --font-medium: "Armin Grotesk", var(--font-fallback);
   --font-medium-italic: "Armin Grotesk", var(--font-fallback);
   --font-bold: "Armin Grotesk", var(--font-fallback);
   --font-bold-italic: "Armin Grotesk", var(--font-fallback);
 
-  --main-typo-light: --font-light;
-  --main-typo: --font-main;
-  --main-typo-medium: --font-medium;
-  --main-typo-bold: --font-bold;
-  --main-typo-light-italic: --font-light-italic;
-  --main-typoitalic: --font-italic;
-  --main-typo-medium-italic: --font-medium-italic;
-  --main-typo-bold-italic: --font-bold-italic;
+  --main-typo-light: var(--font-light);
+  --main-typo: var(--font-main);
+  --main-typo-medium: var(--font-medium);
+  --main-typo-bold: var(--font-bold);
+  --main-typo-light-italic: var(--font-light-italic);
+  --main-typoitalic: var(--font-italic);
+  --main-typo-medium-italic: var(--font-medium-italic);
+  --main-typo-bold-italic: var(--font-bold-italic);
 }
