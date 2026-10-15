@@ -10,6 +10,7 @@
 // Element + content. Passing markup as an icon NAME would build
 // `<use href="#<markup>">` and render nothing (the breadcrumb learned this).
 const folderArt = require("media/grid/template/folder");
+const { isDevDeployment } = require("builtins/window/skeleton/toolkit/new-menu-rows");
 
 /**
  * "12 [people]" — the count on a workspace card and in a section header.
@@ -447,7 +448,11 @@ module.exports = function (ui) {
                   }),
                 ],
               }),
-              newMenu(pfx, ui),
+              // The "+ New" menu (department / workspace / migrate) is a dev
+              // platform affordance for now: departments are still being
+              // shaped, and this screen is the first one a production user
+              // lands on. Production and preview show the search alone.
+              ...(isDevDeployment() ? [newMenu(pfx, ui)] : []),
             ],
           }),
         ],

@@ -54,32 +54,58 @@ export function menuRow(ui, { service, ico, content, area, name, className }) {
 }
 
 /**
- * Endpoints where the Casual editors are NOT offered as a create option.
- *
- * The .udoc / .usheet editors are still a proof of concept, so the endpoints
- * that carry real user data must not invite people to start documents in a
- * format we may still change. Opening an existing .udoc / .usheet keeps
- * working everywhere — only the two create rows disappear.
+ * The dev platforms: the stage box, every dev endpoint it hosts, and a local
+ * build. Everything else (production's root, the preview endpoint beside it)
+ * carries real user data.
  */
-const CASUAL_HIDDEN_ENDPOINTS = ["preview"];
+const DEV_DOMAINS = ["drumee.in", "localhost"];
 
 /**
- * Whether this deployment may offer the Casual editors in the create list.
+ * Whether this deployment is one of the dev platforms (the stage box, every
+ * dev endpoint it hosts, a local build) rather than one carrying real user
+ * data (production's root and the preview endpoint beside it). Shared by every
+ * create surface that must not offer an unfinished feature on production.
  *
- * `bootstrap()` (window.bootstrap, see drumee/api.js) reads the endpoint name
- * off the bootstrap page's `data-instance`: "main" on a stage or production
- * root, the endpoint's own name elsewhere. Unknown deployments keep the rows —
- * the dev endpoints this POC is built for are the ones that need them.
+ * Matched on the PLATFORM domain the page server was configured with
+ * ("drumee.in", "app.drumee.com"), not on anything closer to hand:
+ *
+ *  - the endpoint name cannot tell these apart — stage's root and
+ *    production's root are BOTH called "main", and a dev endpoint carries a
+ *    person's name, so there is no pattern to match;
+ *  - the address bar cannot either — a workspace opens on its own subdomain
+ *    (team-3238.app.drumee.com), so the host varies inside one deployment.
+ *
+ * `bootstrap()` here is the env the page server renders into the bootstrap
+ * page, not the api.js fallback of the same name: a global `const` shadows the
+ * `window` property, so every bundled module reading a bare `bootstrap` gets
+ * the server's values. A deployment that cannot be identified counts as
+ * production — the dev boxes are the known ones.
+ *
+ * @returns {Boolean}
+ */
+export function isDevDeployment() {
+  try {
+    const env = (typeof bootstrap === "function" && bootstrap()) || {};
+    const domain = String(env.main_domain || "").toLowerCase();
+    return DEV_DOMAINS.some((d) => domain === d || domain.endsWith(`.${d}`));
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Whether this deployment may offer the Casual editors in the create list:
+ * only the dev platforms, see isDevDeployment().
+ *
+ * The .udoc / .usheet editors are a proof of concept, so no deployment
+ * carrying real user data invites people to start a document in a format that
+ * can still change. Opening an existing .udoc / .usheet keeps working
+ * everywhere; only the two create rows disappear.
  *
  * @returns {Boolean}
  */
 function offersCasualEditors() {
-  try {
-    const env = (typeof bootstrap === "function" && bootstrap()) || {};
-    return !CASUAL_HIDDEN_ENDPOINTS.includes(String(env.endpointName || ""));
-  } catch (e) {
-    return true;
-  }
+  return isDevDeployment();
 }
 
 /**
