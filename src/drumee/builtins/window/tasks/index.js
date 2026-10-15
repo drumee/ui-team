@@ -7321,6 +7321,9 @@ class __tasks_panel extends LetcBox {
         onFileDone: (node, parent, entry) =>
           this._onEagerFileDone(scopeKey, draft, entry, node),
         onDone: () => this._onEagerBatchDone(scopeKey, draft, paired),
+        // The quick-open card on the Personal Calendar: its tiles show each
+        // file's state, and the card stays a bar clear of it (calendar skin).
+        collapsed: !!this._quickOpen,
       },
     ).catch(() => null);
     // No window, or one that refused the batch before creating a job (client

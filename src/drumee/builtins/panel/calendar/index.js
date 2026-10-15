@@ -1065,6 +1065,9 @@ class __calendar_main extends LetcBox {
         onJob: (job) => paired.forEach((pf) => (pf.bundleJob = job)),
         onFileDone: (node, _parent, entry) => this._onFileDone(form, entry, node),
         onDone: () => this._onBatchDone(form, paired),
+        // The chips show each file's state; the card stays a bar under the
+        // modal (skin) instead of covering it.
+        collapsed: true,
       },
     ).catch(() => null);
     // No window, or it refused the batch before making a job: nothing will

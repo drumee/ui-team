@@ -3175,6 +3175,25 @@
     .window-upload-progress__ui:not([data-moved="1"]):not([data-device="mobile"]) {
     bottom: max(130px, calc((100vh - 739px) / 2 + 78px)) !important;
   }
+
+  // Collapsed — how these forms start it (runBundle `collapsed`), since their
+  // chips already show each file — the 64px bar rests in the bottom-left
+  // corner, 8px in. That corner is clear on every one of them: under the task
+  // card's left column there is its 32px padding plus the margin below the
+  // card (clear from 667px of height up), the quick-open card's footer row is
+  // empty left of Cancel, and the meeting card is centred and 460px wide.
+  // Expanded (by the user, or for the unfinished-upload question) it goes
+  // back to the lifted spot above.
+  body:has(
+      .calendar-main__modal[data-form="task"],
+      .calendar-main__modal[data-form="task-quick-open"],
+      .calendar-main__modal[data-form="meeting"]
+    )
+    .window-upload-progress__ui[data-expanded="0"]:not([data-moved="1"]):not([data-device="mobile"]) {
+    right: auto !important;
+    left: 24px !important;
+    bottom: 8px !important;
+  }
 }
 
 // ── personal meeting modal (skeleton/meeting-form.js) ────────────────────────
