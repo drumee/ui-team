@@ -3468,5 +3468,6 @@
   "TUTORIAL_WS_IN_DEPARTMENT": "Créer dans un département",
   "MIGRATE_PHONE_LINK_PLACEHOLDER": "Collez le lien",
   "MIGRATE_PHONE_VERIFY_IMPORT": "Vérifier et importer",
-  "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE": "Commencez à discuter du fichier dans le fil de discussion"
+  "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE": "Commencez à discuter du fichier dans le fil de discussion",
+  "DMZ_MEETING_PASSWORD_PROTECTED": "Cette réunion est protégée. Saisissez le mot de passe pour continuer."
 }

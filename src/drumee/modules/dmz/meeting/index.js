@@ -238,6 +238,9 @@ class __dmz_meeting extends LetcBox {
         location.reload();
         break;
 
+      case "dmz-submit-password":
+        return this._submitPassword();
+
       case "dmz-open-attachment": {
         const b = (typeof bootstrap === "function" && bootstrap()) || {};
         const url = require("./skeleton/attachments").fileUrl(cmd.mget("fileNid"), cmd.mget("fileHub"), b);
@@ -245,6 +248,35 @@ class __dmz_meeting extends LetcBox {
         break;
       }
     }
+  }
+
+  /**
+   * The password gate's Continue (or Enter in the field). A wrong password says
+   * so under the field; the right one goes on to the lobby.
+   */
+  async _submitPassword() {
+    if (this._passwordBusy) return;
+    const entry = await this.ensurePart("ref-password");
+    const error = await this.ensurePart("password-error");
+    const password = String((entry && entry.getData && entry.getData().value) || "").trim();
+    if (!password) return;
+    this._passwordBusy = true;
+    let res;
+    try {
+      res = await this.postService(SERVICE.dmz.login, {
+        token: this.mget(_a.token),
+        socker_id: Visitor.get(_a.socker_id),
+        hub_id: "",
+        password,
+      });
+    } catch (e) {
+      res = null;
+    } finally {
+      this._passwordBusy = false;
+    }
+    if (res && res.is_verified) return this.loadWindowManager();
+    const wrong = res && (res.status === "WRONG_PASSWORD" || res.failed);
+    error.set({ content: wrong ? LOCALE.SECURE_SHARE_WRONG_PASSWORD : LOCALE.ERROR_NETWORK });
   }
 
   /**
@@ -561,6 +593,14 @@ class __dmz_meeting extends LetcBox {
     }
 
     const lobby = await this.ensurePart("lobby-container");
+
+    // A password-protected link: the gate first. Once dmz.login accepts the
+    // password this session holds the link, and this method runs again for
+    // the lobby.
+    if (data.status === "REQUIRED_PASSWORD") {
+      lobby.feed(require("./skeleton/password")(this, data));
+      return;
+    }
 
     if (data.validity != 'TICKET_OK') {
       lobby.feed(this.infoSkeleton(this, LOCALE.LINK_EXPIRES));
