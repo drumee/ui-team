@@ -5782,6 +5782,11 @@ $theme-colors: (
     gap: 2px;
   }
 
+  // The header adds a task that day, like the column under it.
+  &__cal-headday[data-add="1"] {
+    cursor: pointer;
+  }
+
   &__cal-headday:hover &__cal-day-add {
     opacity: 1;
   }

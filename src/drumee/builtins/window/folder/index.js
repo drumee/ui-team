@@ -2803,7 +2803,18 @@ class __window_folder extends mfsInteract {
         const day = (cmd.mget && cmd.mget("day")) || (cmd.el && cmd.el.dataset.day);
         const hour = Number((cmd.mget && cmd.mget("hour")) ?? (cmd.el && cmd.el.dataset.hour));
         const min = Number((cmd.mget && cmd.mget("min")) ?? (cmd.el && cmd.el.dataset.min)) || 0;
-        return this.openMeetingModal({ at: { day, hour: isNaN(hour) ? 9 : hour, min } });
+        if (!isNaN(hour)) return this.openMeetingModal({ at: { day, hour, min } });
+        // A month square carries a day, not a time: 09:00 — except today once
+        // 09:00 has gone, where that would prefill a meeting already over.
+        // There it is the next half hour, kept early enough that the 1-hour
+        // slot still ends the same day.
+        const now = Dayjs();
+        let at = 9 * 60;
+        if (day === now.format("YYYY-MM-DD")) {
+          const next = Math.ceil((now.hour() * 60 + now.minute() + 1) / 30) * 30;
+          at = Math.min(Math.max(at, next), 22 * 60 + 30);
+        }
+        return this.openMeetingModal({ at: { day, hour: Math.floor(at / 60), min: at % 60 } });
       }
 
       case "open-meeting": {

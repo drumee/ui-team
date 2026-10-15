@@ -940,6 +940,8 @@
     padding: 12px;
     gap: 2px;
     border-right: 1px solid var(--border-default);
+    // The whole cell adds a task that day (skeleton/hours.js headCell).
+    cursor: pointer;
 
     // Today is the DATE in brand ink, not a wash over the column — the Meet
     // tab's rule. The wash was invisible as a marker on the day view (there is
@@ -952,12 +954,11 @@
 
   // Stacked num-over-name, the Meet tab's schedule header. It was a baseline
   // ROW here, which is the one shape that made the same day read differently
-  // in the two calendars. Still the day's "add" target, unlike the Meet tab's —
-  // hence the pointer.
+  // in the two calendars. Its cell, not the date alone, is the day's "add"
+  // target.
   &__hours-head-date {
     align-items: flex-start;
     gap: 2px;
-    cursor: pointer;
   }
 
   // 18/24 in body ink, brand when today — the Meet tab's __meeting-sched-day-

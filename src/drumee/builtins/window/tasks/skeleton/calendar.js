@@ -407,10 +407,22 @@ module.exports = function (ui) {
           })
         : Skeletons.Box.X({
             className: `${pfx}__cal-headday`,
-            attrOpt: { "data-today": ymd(d) === todayKey ? "1" : "0" },
+            // The header adds too, not only its "+": it is the top of the
+            // day's column, and the column below already adds (dayCell). The
+            // Personal Calendar's week/day header does the same. The date is
+            // inert so it does not take the click on its own area.
+            ...(mayCreate
+              ? { bubble: 0, service: "cal-add", uiHandler: [ui], calDay: ymd(d) }
+              : {}),
+            attrOpt: {
+              "data-today": ymd(d) === todayKey ? "1" : "0",
+              "data-add": mayCreate ? "1" : "0",
+            },
             kids: [
               Skeletons.Box.Y({
                 className: `${pfx}__cal-headday-date`,
+                active: 0,
+                kidsOpt: { active: 0 },
                 kids: [
                   Skeletons.Note({
                     className: `${pfx}__cal-headday-num`,
