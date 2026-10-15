@@ -132,3 +132,29 @@ test("wiring: decline reaches the meeting window and the roster", () => {
   const row = read("src/drumee/builtins/widget/meeting/skeleton/member.js");
   assert.match(row, /"data-call": callState/);
 });
+
+test("default timers are called the way a browser allows (no Illegal invocation)", () => {
+  // A browser's setTimeout/clearTimeout throw unless `this` is the window (or
+  // undefined). Node's do not check, which is how a bare `this.setTimer =
+  // setTimeout` shipped and killed every roster Call. Enforce the browser rule.
+  const realSet = global.setTimeout;
+  const realClear = global.clearTimeout;
+  const strict = (real) =>
+    function (...a) {
+      if (this !== undefined && this !== globalThis) throw new TypeError("Illegal invocation");
+      return real(...a);
+    };
+  global.setTimeout = strict(realSet);
+  global.clearTimeout = strict(realClear);
+  try {
+    const states = new Map();
+    const calls = new MemberCalls(states, { refresh: () => {} });
+    assert.equal(calls.start("42"), true);
+    assert.equal(states.get("42"), "calling");
+    assert.equal(calls.end("42", "declined"), true);
+    calls.dispose();
+  } finally {
+    global.setTimeout = realSet;
+    global.clearTimeout = realClear;
+  }
+});

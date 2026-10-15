@@ -40,8 +40,12 @@ class MemberCalls {
   constructor(states, io = {}) {
     this.states = states;
     this.refresh = io.refresh || (() => {});
-    this.setTimer = io.setTimer || setTimeout;
-    this.clearTimer = io.clearTimer || clearTimeout;
+    // Wrapped, never stored bare: this.setTimer(...) calls it with `this` set
+    // to this object, and a browser's setTimeout/clearTimeout then throw
+    // "Illegal invocation" — start() died before the invite was sent, so the
+    // roster's Call button did nothing at all. (Node does not check `this`.)
+    this.setTimer = io.setTimer || ((fn, ms) => setTimeout(fn, ms));
+    this.clearTimer = io.clearTimer || ((t) => clearTimeout(t));
     this.timers = new Map();
   }
 
