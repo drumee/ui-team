@@ -417,8 +417,13 @@ class __dmz_meeting extends LetcBox {
       user.firstname = user.firstname || firstname;
       user.lastname = user.lastname || lastname;
       user.username = user.username || guest_name;
+      // The room is the workspace's meeting room (server conference.join), and
+      // its details describe that room. The meeting this link names stays the
+      // node: the guest holds nothing else, and every later join and signal is
+      // checked against it.
+      const { nid: _roomNid, filename: _roomName, ...details } = room.details || {};
       this.mset({
-        ...room.details,
+        ...details,
         room_id: room.user.room_id,
         uid: room.uid,
         username: user.username,
