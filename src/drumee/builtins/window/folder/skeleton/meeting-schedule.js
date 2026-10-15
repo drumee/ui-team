@@ -341,18 +341,23 @@ function monthlyGrid(ui, pfx) {
   // Scheduling is an edit-tier action: the same test toolbarKids uses to drop
   // the "Schedule" button (canUpload, absent → allowed).
   const mayStart = typeof ui.canUpload !== "function" ? true : !!ui.canUpload();
-  // 12-hour start ("1:30 PM"), as the schedule card in Figma writes it.
+  // The schedule card in Figma (1697:48542): the 12-hour start ("1:30 PM") in
+  // body weight, then the title in bold, 8px apart.
   const monthCard = (m) =>
-    Skeletons.Note({
+    Skeletons.Box.X({
       className: `${pfx}-sched-mcard`,
-      content: `${m.start.format("h:mm A")} ${m.title}`,
       // Opens the meeting — and never also the day square behind it.
       bubble: 0,
       service: "open-meeting",
       nid: m.nid,
       dataset: { nid: m.nid },
-      attrOpt: { "data-nid": m.nid },
+      attrOpt: { "data-nid": m.nid, title: `${m.start.format("h:mm A")} ${m.title}` },
       uiHandler: [ui],
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Note({ className: `${pfx}-sched-mcard-time`, content: m.start.format("h:mm A") }),
+        Skeletons.Note({ className: `${pfx}-sched-mcard-title`, content: m.title }),
+      ],
     });
 
   const header = Skeletons.Box.X({

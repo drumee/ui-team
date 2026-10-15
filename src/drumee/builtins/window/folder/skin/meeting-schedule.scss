@@ -731,23 +731,53 @@
     }
   }
 
-  // Monthly: a compact line per meeting inside the day cell.
+  // Monthly: one schedule card per meeting inside the day cell (Figma
+  // 1697:48542, the Personal Calendar's month chip): the 10% brand wash, a 4px
+  // brand bar with the left corners squared off, 4px 12px in, ~25px tall.
   &__meeting-sched-mcard {
     flex-shrink: 0; // don't squash the line list when the day cell scrolls
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
     margin-top: 2px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: rgba(89, 80, 255, 0.08);
-    border-left: 3px solid var(--primary-40, #5950ff);
+    padding: 4px 12px;
+    border-radius: 0 8px 8px 0;
+    background: var(--brand-tint);
+    border-left: 4px solid var(--primary-40, #5950ff);
     cursor: pointer;
-    @include drumee.typo($size: 12px, $line: 15px, $color: #0b0a21);
+    overflow: hidden;
+
+    &:hover {
+      background: rgba(89, 80, 255, 0.16);
+    }
+  }
+
+  // Body/Mini Body 12/1.4 for the time, Buttons/Mini Button 12/1.2 for the
+  // title, which is the part that gives way.
+  // Primary/100 as a literal, not --normal-fg: the day cell is pinned white
+  // in both themes, and the token turns near-white in the dark one.
+  &__meeting-sched-mcard-time {
+    flex: 0 0 auto;
+    @include drumee.typo($size: 12px, $line: 1.4, $color: #0b0a21);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  &__meeting-sched-mcard-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 12px, $line: 1.2, $color: #0b0a21);
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 
-    &:hover {
-      background: rgba(89, 80, 255, 0.16);
+    // The text sits in the Note's inner block; that is what has to ellipsize.
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 
@@ -947,10 +977,21 @@
     // horizontal padding — at a 7th of a phone width, padding is most of the
     // cell and the title is what has to survive.
     &__meeting-sched-mcard {
+      gap: 3px;
       padding: 1px 3px;
       border-left-width: 2px;
+    }
+
+    &__meeting-sched-mcard-title {
       font-size: 11px;
       line-height: 14px;
+    }
+
+    // No room for both: the start time alone would fill the chip. It stays
+    // in the chip's title attribute. !important over ui-core's
+    // `.drumee-widget[data-flow]` display:flex, which this Note carries.
+    &__meeting-sched-mcard &__meeting-sched-mcard-time {
+      display: none !important;
     }
 
     // Week rows get shorter with their contents, so a month does not need a
