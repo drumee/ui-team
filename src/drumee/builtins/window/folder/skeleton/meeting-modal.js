@@ -241,19 +241,25 @@ function fileLabel(pf) {
 
 // One Files chip: paperclip + name. Only a file still waiting to be linked
 // (picked or uploaded in this sitting) carries the ✕ — what is already on the
-// meeting stays read-only, the server has no unlink for it yet.
+// meeting stays read-only, the server has no unlink for it yet. A chip whose
+// file exists opens it, for the creator and for every invitee.
 function fileChip(ui, pfx, pf) {
   const key = pf.localKey;
+  const opens = !!pf.nid && pf.status !== "missing";
   return Skeletons.Box.X({
     className: `${pfx}-attach-chip`,
     attrOpt: {
       "data-key": key,
       "data-status": pf.status || "",
       "data-linked": pf.linked ? 1 : 0,
+      "data-opens": opens ? 1 : 0,
     },
+    ...(opens ? { service: "mm-open-file", nid: pf.nid, uiHandler: [ui] } : {}),
     kids: [
-      Skeletons.Image.Svg({ ico: "app-attachment", className: `${pfx}-attach-chip-ico` }),
-      Skeletons.Note({ className: `${pfx}-attach-chip-name`, content: fileLabel(pf) }),
+      // Inert, so a click on the paperclip or the name is the chip's own; the
+      // ✕ keeps its service (no kidsOpt, which would silence it too).
+      Skeletons.Image.Svg({ ico: "app-attachment", className: `${pfx}-attach-chip-ico`, active: 0 }),
+      Skeletons.Note({ className: `${pfx}-attach-chip-name`, content: fileLabel(pf), active: 0 }),
       pf.linked
         ? null
         : Skeletons.Button.Svg({

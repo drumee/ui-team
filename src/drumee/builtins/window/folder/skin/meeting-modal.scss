@@ -428,6 +428,11 @@ $field-bg: rgba(0, 0, 0, 0.05);
       opacity: 0.6;
     }
 
+    // A file that exists opens in its viewer (window/folder _mmOpenFile).
+    &[data-opens="1"] {
+      cursor: pointer;
+    }
+
     // A failed upload, a file the server would not attach, a file gone.
     &[data-status="error"],
     &[data-status="refused"],

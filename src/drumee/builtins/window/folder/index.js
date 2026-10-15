@@ -2875,6 +2875,9 @@ class __window_folder extends mfsInteract {
       case "mm-remove-file":
         return this._mmRemoveFile(cmd);
 
+      case "mm-open-file":
+        return this._mmOpenFile(cmd);
+
       case "mm-set-ampm":
         return this._setMeetingAmpm(cmd);
 
@@ -4045,6 +4048,50 @@ class __window_folder extends mfsInteract {
     }
     st.files = st.files.filter((f) => f !== pf);
     this._mmRenderFiles();
+  }
+
+  /**
+   * A Files chip opens its file the way newDocument's direct open does
+   * (window/core): node_info in the meeting's hub, a detached media widget,
+   * then openContent picks the viewer from the filetype. One lookup at a
+   * time, so a double-click does not open the file twice.
+   */
+  async _mmOpenFile(cmd) {
+    const st = this._mmState;
+    const nid = cmd && cmd.mget && cmd.mget(_a.nid);
+    if (!st || !nid || this._mmOpening) return;
+    this._mmOpening = true;
+    try {
+      let r;
+      try {
+        r = await this.fetchService(
+          { service: SERVICE.media.node_info, ...st.scope, nid },
+          { async: 1 },
+        );
+      } catch (e) {
+        if (this._mmState === st && !require("libs/permission-denied").saidRecently()) {
+          Wm.alert(LOCALE.ERROR_NETWORK);
+        }
+        return;
+      }
+      if (this._mmState !== st) return;
+      if (!r || !r.nid) {
+        // The hub answered and has no such file: the chip says so, the way
+        // _mmLoadFileNames marks it, instead of claiming a network error.
+        const pf = st.files.find((f) => String(f.nid) === String(nid));
+        if (pf) pf.status = "missing";
+        this._mmRenderFiles();
+        return;
+      }
+      const k = await Kind.waitFor(_a.media);
+      if (this._mmState !== st) return;
+      const media = new k({ model: new Backbone.Model(r) });
+      this.openContent(media, { service: "open-node" });
+    } catch (e) {
+      this.warn("meeting modal: open file failed", e);
+    } finally {
+      this._mmOpening = false;
+    }
   }
 
   /**
