@@ -43,6 +43,10 @@ class __desk_org_view extends LetcBox {
     // (see Desk._workspaceKey).
     this._personal = [];
     this._personalRows = new Map();
+    // The caller's OTHER workspaces — hubs in the switcher that the overview
+    // does not list (another organisation's, mostly), hub_id -> desk.home row.
+    this._others = [];
+    this._otherRows = new Map();
     this._filter = "";
     // Arriving with the intent already set means the desk mounted this screen
     // FOR the topbar's "New department" row. Read here rather than at paint
@@ -129,14 +133,27 @@ class __desk_org_view extends LetcBox {
    */
   _render(force) {
     return this.ensurePart("sections").then((part) =>
-      Promise.all([orgOverview(this, force), this._personalWorkspaces(force)]).then(([data, personal]) => {
+      Promise.all([orgOverview(this, force), this._myWorkspaces(force)]).then(([data, mine]) => {
         if (!part || (part.isDestroyed && part.isDestroyed())) return;
         this._data = data;
         this._rows.clear();
         for (const w of data.workspaces) this._rows.set(String(w.hub_id), w);
-        this._personal = personal;
+        this._personal = mine.filter((r) => r.filetype === _a.folder);
         this._personalRows.clear();
-        for (const w of personal) this._personalRows.set(String(w.nid || w.id), w);
+        for (const w of this._personal) this._personalRows.set(String(w.nid || w.id), w);
+        // Every hub the switcher offers and the overview does not — so each
+        // workspace the user can open is on this screen somewhere. The key is
+        // the desk's own (_workspaceKey: hub_id, else id). Only against an
+        // overview that ANSWERED: a failed one resolves EMPTY (no
+        // organisation, no workspaces), and every hub — the organisation's
+        // own included — would be filed under "Other".
+        this._others = data.organisation
+          ? mine.filter(
+            (r) => r.filetype === _a.hub && !this._rows.has(String(r.hub_id || r.id)),
+          )
+          : [];
+        this._otherRows.clear();
+        for (const w of this._others) this._otherRows.set(String(w.hub_id || w.id), w);
         this._paint(part);
         // Only after the first paint: the entry is fed into a part that
         // _paint creates, so arming before it exists would resolve against
@@ -150,21 +167,28 @@ class __desk_org_view extends LetcBox {
   }
 
   /**
-   * The caller's personal workspaces.
+   * The caller's own workspaces — the switcher's list.
    *
-   * NOT IN THE OVERVIEW, by construction: a personal workspace is a home-root
-   * folder, not a hub, so it has no row in yp.hub for org_workspaces to list
-   * (see _reload). The desk's own workspace list — the switcher's, which files
-   * them under "Personal" — already holds them, so they come from there
-   * rather than from a second desk.home read.
+   * Two kinds are NOT IN THE OVERVIEW, which lists only the hubs of this
+   * organisation's domain (yp org_workspaces, `h.domain_id = _domain_id`):
    *
-   * Never rejects: an unreachable list leaves the section out, it does not
+   *   personal  a home-root folder, not a hub, so it has no row in yp.hub at
+   *             all (see _reload);
+   *   other     a hub of ANOTHER domain the user is a member of. Without it a
+   *             member of three organisations saw one organisation's
+   *             workspaces here and had to go to the switcher for the rest.
+   *
+   * The desk's own list already holds both, so they come from there rather
+   * than from a second desk.home read — and the switcher and this screen
+   * cannot disagree about what the user has.
+   *
+   * Never rejects: an unreachable list leaves the sections out, it does not
    * take the organisation's workspaces down with it.
    *
    * @param {Boolean} [force] refetch instead of the cached list
-   * @returns {Promise<Array>} desk.home folder rows
+   * @returns {Promise<Array>} desk.home rows (folders and hubs)
    */
-  _personalWorkspaces(force) {
+  _myWorkspaces(force) {
     const desk = window.Desk;
     if (!desk || !_.isFunction(desk._fetchWorkspaces)) return Promise.resolve([]);
     // A failed fetch answers [] and leaves the desk's cache untouched, so an
@@ -174,7 +198,7 @@ class __desk_org_view extends LetcBox {
       .then(() => desk._fetchWorkspaces(force))
       .then((rows) => (rows && rows.length ? rows : cached()))
       .catch(cached)
-      .then((rows) => rows.filter((r) => r && r.filetype === _a.folder));
+      .then((rows) => rows.filter(Boolean));
   }
 
   /**
@@ -213,16 +237,22 @@ class __desk_org_view extends LetcBox {
         // null, not [], when the user has none at all: the section is then
         // left out rather than drawn empty. A search that matches none of them
         // keeps the header, like a department's.
-        this._personal.length ? this._filteredPersonal() : null,
+        this._personal.length ? this._filteredMine(this._personal) : null,
+        this._others.length ? this._filteredMine(this._others) : null,
       ),
     );
   }
 
-  /** The personal workspaces, narrowed to the search box like the rest. */
-  _filteredPersonal() {
+  /**
+   * The user's own rows (personal / other), narrowed to the search box like
+   * the rest.
+   *
+   * @param {Array} rows
+   */
+  _filteredMine(rows) {
     const q = this._filter.trim().toLowerCase();
-    if (!q) return this._personal;
-    return this._personal.filter((w) => matchesQuery(w, q));
+    if (!q) return rows;
+    return rows.filter((w) => matchesQuery(w, q));
   }
 
   /**
@@ -546,11 +576,15 @@ class __desk_org_view extends LetcBox {
    * @param {View} cmd
    */
   _openWorkspace(cmd) {
-    // A personal card carries its nid instead — see _personalRows.
+    // A personal card carries its nid instead — see _personalRows — and an
+    // "other" card says so, its hub_id keying _otherRows.
     const nid = cmd.mget("wsNid");
+    const hubId = String(cmd.mget("wsHubId"));
     const row = nid != null
       ? this._personalRows.get(String(nid))
-      : this._rows.get(String(cmd.mget("wsHubId")));
+      : cmd.mget("wsOther")
+        ? this._otherRows.get(hubId)
+        : this._rows.get(hubId);
     if (!row) return;
     return this.triggerHandlers({ service: "switch-workspace-row", row });
   }

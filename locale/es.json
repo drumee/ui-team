@@ -488,6 +488,7 @@
   "INTERNAL": "Interno",
   "EXTERNAL": "Externo",
   "PERSONAL": "Personal",
+  "OTHER_WORKSPACES": "Otros espacios de trabajo",
   "RESTRICTED": "Restringido",
   "RESTORE_HINT": "Restaurar a la ubicación original.",
   "ACTIVE_NOW": "En línea",
