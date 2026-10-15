@@ -779,6 +779,35 @@
   overflow-wrap: anywhere;
 }
 
+// Timeline: "14:02  Started by X" / "14:47  Ended · 45 min".
+.widget-chatItem__meeting-card-log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.widget-chatItem__meeting-card-log-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
+}
+
+.widget-chatItem__meeting-card-log-time {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--grey-70, #84848c);
+
+  &:empty {
+    display: none;
+  }
+}
+
+.widget-chatItem__meeting-card-log-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .widget-chatItem__meeting-card-foot {
   display: flex;
   align-items: center;

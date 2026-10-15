@@ -44,6 +44,11 @@ module.exports = function (ui) {
       if (rowMeta && rowMeta.meeting_status) {
         parsed.meeting_status = rowMeta.meeting_status;
       }
+      // End time for the card's timeline (meeting-event.js), stamped next to
+      // meeting_status.
+      if (rowMeta && rowMeta.ended_at) {
+        parsed.ended_at = rowMeta.ended_at;
+      }
       m.metadata = parsed;
     }
     body = require("./meeting-event")(m);
