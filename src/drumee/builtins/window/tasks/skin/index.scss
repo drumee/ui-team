@@ -6817,6 +6817,7 @@ $theme-colors: (
     align-items: center;
     gap: 6px;
     align-self: stretch;
+    padding: 0 6px;
     border-radius: 6px;
 
     &[data-editable="1"] {
