@@ -11,7 +11,8 @@
 const { VIEWS, FILTERS, AUDIENCES, rangeLabel, day, ymd } = require("./helpers");
 
 // The personal task and meeting forms open from "+ New" (Figma 1693:164274).
-const SHOW_NEW_BUTTON = true;
+// Hidden for now; a task still opens from a day cell's "+".
+const SHOW_NEW_BUTTON = false;
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
