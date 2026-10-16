@@ -1818,6 +1818,10 @@ class __window_mfs extends DrumeeMFS {
         (c) =>
           c &&
           _.isFunction(c._setNotifyHighlight) &&
+          // A chat attachment card (media_grid, isAttachment) can carry the
+          // same nid and sits visible beside the grid in the Files view's
+          // chat column; a reveal is never about that card.
+          !(c.mget && c.mget("isAttachment")) &&
           c.el &&
           // offsetWidth/Height are 0 for anything under display:none, which is
           // exactly how the inactive view mode is parked.
@@ -1853,6 +1857,19 @@ class __window_mfs extends DrumeeMFS {
       setTimeout(() => seek(n - 1), 150);
     };
     seek(tries);
+  }
+
+  /**
+   * Drop every soft highlight a previous reveal left behind, so the next one
+   * points at one file only. The highlight is DOM-only (media/core
+   * _setNotifyHighlight), so this clears the attribute wherever it sits —
+   * both view-mode twins included.
+   */
+  clearReveal() {
+    for (const el of document.querySelectorAll("[data-ui-highlight]")) {
+      el.removeAttribute("data-ui-highlight");
+      el.classList.remove("media-highlight");
+    }
   }
 
   /**

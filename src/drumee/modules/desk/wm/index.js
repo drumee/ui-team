@@ -2864,13 +2864,11 @@ class __window_manager extends push {
     }
     this._lastTaget = this._target;
     this.moveAllowed(moving);
-
-    const targetPOS =
-      (this._target.bbox.y || 0) + (this._target.bbox.h || 0) - 10;
-    const movingPOS = (moving.bbox.y || 0) + (moving.bbox.h || 0);
-    if (targetPOS < movingPOS) {
-      this._target.scrollToBottom();
-    }
+    // No auto-scroll while dragging. The old rule compared the window's
+    // bottom edge with `moving.bbox` — the tile's RESTING seat, measured at
+    // drag start, not where the pointer is — so grabbing any tile already
+    // clipped by the window's bottom edge (e.g. the last row of a section)
+    // satisfied it on the very first tick and jumped the list to the end.
   }
 
   /**
