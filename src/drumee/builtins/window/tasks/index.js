@@ -3060,6 +3060,11 @@ class __tasks_panel extends LetcBox {
     });
   }
 
+  // The workspace a push came from, or null when it does not say.
+  _pushHub(data, options) {
+    return (options && options.hub_id) || (data && data.hub_id) || null;
+  }
+
   onWsMessage(svc, data, options = {}) {
     // Server-side pushes built with `payload(data, { service })` reach the
     // browser as a `live.update` envelope whose FIRST arg is that envelope name
@@ -3070,10 +3075,12 @@ class __tasks_panel extends LetcBox {
     // fallback for senders that do label the frame themselves.
     const service = (options && options.service) || svc;
     // A user in several workspaces hears every workspace's pushes on the same
-    // socket. Task rows carry no hub_id, so this only filters the payloads that
-    // do name one (e.g. the workspace-wide unassign announcement) — it can't
-    // silence a legitimate task event.
-    if (data && data.hub_id && `${data.hub_id}` !== `${this._hubId}`) {
+    // socket. Task rows carry no hub_id, so the server names the workspace in
+    // the envelope (options.hub_id, task.js _broadcast); a payload that names
+    // one itself (e.g. the workspace-wide unassign announcement) counts too.
+    // Without this, a board open on workspace B drew workspace A's new task.
+    const pushHub = this._pushHub(data, options);
+    if (pushHub && `${pushHub}` !== `${this._hubId}`) {
       if (super.onWsMessage) super.onWsMessage(svc, data, options);
       return;
     }
@@ -3321,6 +3328,14 @@ class __tasks_panel extends LetcBox {
       data && data.task_id ? this._tasks.find((t) => t.id === data.task_id) : null;
     const patch = peerPatch(service, data, current);
     if (!patch) return false;
+    // A push that does not say which workspace it came from (a server that
+    // predates options.hub_id) may belong to another workspace this user is
+    // in. Patch only a row this board already holds — task ids are unique
+    // across databases — and send anything new through the reload, which
+    // reads this workspace's own list instead of trusting the push.
+    if (!this._pushHub(data, options) && !this._tasks.some((t) => t.id === patch.id)) {
+      return false;
+    }
     // The row as it was, for the List view's "Updated by" toast wording.
     const cached = this._tasks.find((t) => t.id === patch.id);
     const prev = cached ? { ...cached } : null;
