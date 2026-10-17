@@ -491,6 +491,18 @@
     display: none !important;
   }
 
+  // A UTILITY SCREEN — Notifications, Personal Calendar, Inbox, Contacts,
+  // Trash, Admin console — keeps its label but has no switcher: the caret goes,
+  // and desk._crumbClickOpensSwitcher refuses the chip on the same flag
+  // (`noSwitcher` on breadcrumb:context, stamped by
+  // desk_breadcrumb._setSectionMode). `!important`: the framework forces a
+  // widget's display inline.
+  &__crumb-group:has(> .desk-breadcrumb__ui[data-no-switcher="1"]) {
+    .desk-module-topbar__ws-btn {
+      display: none !important;
+    }
+  }
+
   &__crumb-group:has(.breadcrumb-item__icon):has(.breadcrumb-item__filename),
   &__crumb-group:has(.breadcrumb-item__main--section .breadcrumb-item__filename) {
     .desk-breadcrumb__main {

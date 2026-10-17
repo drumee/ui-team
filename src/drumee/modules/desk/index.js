@@ -2542,6 +2542,7 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: LOCALE.NOTIFICATIONS,
       ico: "top-bell",
+      noSwitcher: 1,
     });
   }
 
@@ -5812,7 +5813,14 @@ class desk_module extends LetcBox {
     // along with the chip.
     const chip = this._crumbGroupPart;
     if (!chip || !chip.el || !chip.el.querySelector) return false;
-    // THE CARET ALWAYS OPENS. It is drawn in every state — loading, a deeper
+    // A UTILITY SCREEN HAS NO SWITCHER. Notifications, Personal Calendar,
+    // Inbox, Contacts, Trash and Admin console ask for `noSwitcher` on their
+    // breadcrumb:context; the caret is hidden there (desk/skin/topbar) and the
+    // chip is a plain label, so nothing in it opens the panel.
+    if (chip.el.querySelector(':scope > .desk-breadcrumb__ui[data-no-switcher="1"]')) {
+      return false;
+    }
+    // THE CARET OPENS EVERYWHERE ELSE. It is drawn in every state — loading, a deeper
     // path, a section screen (desk/skin/topbar.scss) — so it must never be a
     // dead glyph. The panel lives inside __ws-wrapper, not inside __ws-btn, so
     // this cannot catch a click meant for a row in the open dropdown.
@@ -11758,6 +11766,7 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.INBOX,
           ico: "top-inbox",
+          noSwitcher: 1,
         });
         // Full-canvas, so the rail no longer describes the screen — see
         // _railUnlight. Beside the breadcrumb retitle and for the same reason:
@@ -11772,6 +11781,7 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.CONTACTS,
           ico: "top-contacts",
+          noSwitcher: 1,
         });
         return this.togglePanel("address_book", "chat-panel");
 
@@ -11805,6 +11815,7 @@ class desk_module extends LetcBox {
           // sheet tile, which label the launcher, not the screen.
           filename: LOCALE.PERSONAL_CALENDAR,
           ico: "top-calendar",
+          noSwitcher: 1,
         });
         // See _railUnlight — the calendar covers the workspace pane entirely.
         // Before _openCalendar, which always reaches togglePanel (there is no
@@ -12144,6 +12155,7 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.ADMIN_CONSOLE,
           ico: "top-apps",
+          noSwitcher: 1,
         });
         // See _railUnlight. AFTER the upsell gate above — a personal plan gets
         // a modal over the workspace it is still looking at, not a screen — and
@@ -12196,6 +12208,7 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.TRASH,
           ico: "top-trash",
+          noSwitcher: 1,
         });
         return this.togglePanel("panel_trash", "trash-panel");
 
