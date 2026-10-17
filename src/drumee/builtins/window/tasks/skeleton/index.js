@@ -618,68 +618,15 @@ const make = function (ui) {
       ),
     });
 
-  // Assignee control — same interaction as the meeting-schedule invitee field:
-  // chips + inline search, suggestions fed live by _filterAssignees. It is a
-  // combobox, not a search-only field: focusing the input (or clicking the
-  // caret) lists every member, and typing filters that same list — so the set
-  // stays browsable for people who don't know who they're looking for.
-  // `scope` is "create" | "detail".
-  const assigneeSearchField = (selectedUids, scope) => {
-    const selected = Array.isArray(selectedUids)
-      ? selectedUids.map(String)
-      : selectedUids
-        ? [String(selectedUids)]
-        : [];
-    // One mapping for both scopes, shared with the panel (_applyAssigneeChange
-    // / _filterAssignees resolve the same way) so a new picker only has to name
-    // its scope. "-reporter" scopes are single-select — see reporterPicker.
-    const service = ui.pickerService(scope);
-    return Skeletons.Box.Y({
-      className: `${pfx}__assignee-picker`,
-      kids: [
-        Skeletons.Box.X({
-          className: `${pfx}__assignee-control`,
-          kids: [
-            Skeletons.Box.X({
-              className: `${pfx}__assignee-chips`,
-              sys_pn: `${scope}-assignee-chips`,
-              partHandler: ui,
-              kids: buildAssigneeChips(ui, selected, service),
-            }),
-            // Entry (not a bare input) so the framework keeps it typeable.
-            Skeletons.Entry({
-              className: `${pfx}__assignee-search`,
-              name: `assignee-search-${scope}`,
-              ...(scope === "detail" || scope === "detail-reporter" ? lockOpt : {}),
-              placeholder: LOCALE.SEARCH_PEOPLE,
-              require: "any",
-              bubble: 0,
-              uiHandler: [ui],
-            }),
-            // Visible affordance that a full member list is one click away —
-            // focusing the input opens the same list.
-            Skeletons.Button.Svg({
-              className: `${pfx}__assignee-caret`,
-              ico: "apps-caret-down",
-              bubble: 0,
-              service: "toggle-assignee-list",
-              uiHandler: [ui],
-              assigneeScope: scope,
-            }),
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__assignee-suggestions`,
-          sys_pn: `${scope}-assignee-suggestions`,
-          partHandler: ui,
-          // dataset is dropped at render unless attrOpt is also set.
-          attrOpt: { "data-open": "0" },
-          bubble: 0,
-          kids: [],
-        }),
-      ],
-    });
-  };
+  // Assignee control for the task cards — see assigneePickerField. `scope` is
+  // "create" | "detail"; only the detail card takes the quick lock.
+  const assigneeSearchField = (selectedUids, scope) =>
+    assigneePickerField(
+      ui,
+      selectedUids,
+      scope,
+      scope === "detail" ? lockOpt : {},
+    );
 
   // Reporter control — the assignee picker in single-select mode. Same shell
   // (chips row + combobox + suggestions part), so it inherits the delegated
@@ -1364,6 +1311,10 @@ const make = function (ui) {
         Skeletons.Box.Y({
           className: `${pfx}__title-field ${pfx}__detail-title-field${titleFlags(dDraft)}`,
           kids: [
+            // Inside the title column, not a sibling of the header: the
+            // panel's gap (32 / 16 / 12px by layout) would otherwise sit
+            // between the crumb and the title it names.
+            parentCrumb,
             // Textarea (not Entry) so a long title wraps and stays fully
             // visible in the update popup instead of being clipped past the
             // field width. `ignoreEnter` keeps it logically single-line.
@@ -1381,7 +1332,7 @@ const make = function (ui) {
               uiHandler: [ui],
             }),
             ...titleMissingNote(),
-          ],
+          ].filter(Boolean),
         }),
         Skeletons.Button.Svg({
           className: `${pfx}__detail-close`,
@@ -1425,7 +1376,6 @@ const make = function (ui) {
             : { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
           kids: [
-            parentCrumb,
             header,
             // Column on mobile (Box.Y) so the main content + metadata side
             // stack instead of squeezing into two narrow columns.
@@ -1465,7 +1415,6 @@ const make = function (ui) {
               className: `${pfx}__reactions-picker`,
               name: "reactions",
             }),
-            // filter: parentCrumb is null on a top-level task.
           ].filter(Boolean),
         }),
       ],
@@ -2539,6 +2488,72 @@ function buildReporterChip(ui, uid, opt = {}) {
       ].filter(Boolean),
     }),
   ];
+}
+
+// Assignee control — same interaction as the meeting-schedule invitee field:
+// chips + inline search, suggestions fed live by _filterAssignees. It is a
+// combobox, not a search-only field: focusing the input (or clicking the
+// caret) lists every member, and typing filters that same list — so the set
+// stays browsable for people who don't know who they're looking for.
+// `scope` is a multi-select PICKER_SCOPES entry: "create" | "detail" (the task
+// cards) or "subtask" | "create-subtask" (the child creator card).
+// `entryOpt` is spread onto the search Entry (the detail card's quick lock).
+function assigneePickerField(ui, selectedUids, scope, entryOpt = {}) {
+  const pfx = ui.fig.family;
+  const selected = Array.isArray(selectedUids)
+    ? selectedUids.map(String)
+    : selectedUids
+      ? [String(selectedUids)]
+      : [];
+  // One mapping for every scope, shared with the panel (_applyAssigneeChange
+  // / _filterAssignees resolve the same way) so a new picker only has to name
+  // its scope. "-reporter" scopes are single-select — see reporterPicker.
+  const service = ui.pickerService(scope);
+  return Skeletons.Box.Y({
+    className: `${pfx}__assignee-picker`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__assignee-control`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${pfx}__assignee-chips`,
+            sys_pn: `${scope}-assignee-chips`,
+            partHandler: ui,
+            kids: buildAssigneeChips(ui, selected, service),
+          }),
+          // Entry (not a bare input) so the framework keeps it typeable.
+          Skeletons.Entry({
+            className: `${pfx}__assignee-search`,
+            name: `assignee-search-${scope}`,
+            ...entryOpt,
+            placeholder: LOCALE.SEARCH_PEOPLE,
+            require: "any",
+            bubble: 0,
+            uiHandler: [ui],
+          }),
+          // Visible affordance that a full member list is one click away —
+          // focusing the input opens the same list.
+          Skeletons.Button.Svg({
+            className: `${pfx}__assignee-caret`,
+            ico: "apps-caret-down",
+            bubble: 0,
+            service: "toggle-assignee-list",
+            uiHandler: [ui],
+            assigneeScope: scope,
+          }),
+        ],
+      }),
+      Skeletons.Box.Y({
+        className: `${pfx}__assignee-suggestions`,
+        sys_pn: `${scope}-assignee-suggestions`,
+        partHandler: ui,
+        // dataset is dropped at render unless attrOpt is also set.
+        attrOpt: { "data-open": "0" },
+        bubble: 0,
+        kids: [],
+      }),
+    ],
+  });
 }
 
 // Selected assignees as removable chips. Exported so the panel can re-feed
@@ -4609,40 +4624,59 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
             ),
           ],
         }),
-        // Due date on a row of its own, as the same flatpickr field the parent's
-        // Due date uses (__due-input) rather than a chip over a native picker.
-        Skeletons.Box.Y({
-          className: `${pfx}__subtask-card-date ${pfx}__due-field`,
-          attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
+        // Assignees and due date side by side on one row.
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-card-fields`,
           kids: [
-            {
-              kind: "date_picker",
-              className: `${pfx}__due-input ${pfx}__subtask-due-input`,
-              innerClass: `${pfx}__due-input-inner`,
-              name: svc.dateField,
-              placeholder: LOCALE.DUE_DATE,
-              value: draft.due_date || "",
-              service: "task-input-changed",
-              uiHandler: [ui],
-              vendorOpt: {
-                dateFormat: "Y-m-d",
-                altInput: true,
-                altFormat: "d/m/Y",
-                // Explicit null keeps an unset due date unset (see the parent's
-                // picker in buildDueSectionContent).
-                defaultDate: draft.due_date || null,
-                disable: noPastDaysExcept(draft.due_date),
-                appendTo: document.body,
-                position: positionDueCalendarLeft,
-                onReady: (_d, _s, instance) => {
-                  const cc = instance && instance.calendarContainer;
-                  if (cc) cc.classList.add("tasks-panel__flatpickr");
+            // Assignees — the parent card's people picker, editing this card's
+            // draft. Its own scope, so its chips / suggestions parts never collide
+            // with the parent's picker on the same panel.
+            Skeletons.Box.Y({
+              className: `${pfx}__subtask-card-assignee`,
+              kids: [
+                assigneePickerField(
+                  ui,
+                  draft.assignees,
+                  isCreate ? "create-subtask" : "subtask",
+                ),
+              ],
+            }),
+            // Due date: the same flatpickr field the parent's Due date uses
+            // (__due-input) rather than a chip over a native picker.
+            Skeletons.Box.Y({
+              className: `${pfx}__subtask-card-date ${pfx}__due-field`,
+              attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
+              kids: [
+                {
+                  kind: "date_picker",
+                  className: `${pfx}__due-input ${pfx}__subtask-due-input`,
+                  innerClass: `${pfx}__due-input-inner`,
+                  name: svc.dateField,
+                  placeholder: LOCALE.DUE_DATE,
+                  value: draft.due_date || "",
+                  service: "task-input-changed",
+                  uiHandler: [ui],
+                  vendorOpt: {
+                    dateFormat: "Y-m-d",
+                    altInput: true,
+                    altFormat: "d/m/Y",
+                    // Explicit null keeps an unset due date unset (see the parent's
+                    // picker in buildDueSectionContent).
+                    defaultDate: draft.due_date || null,
+                    disable: noPastDaysExcept(draft.due_date),
+                    appendTo: document.body,
+                    position: positionDueCalendarLeft,
+                    onReady: (_d, _s, instance) => {
+                      const cc = instance && instance.calendarContainer;
+                      if (cc) cc.classList.add("tasks-panel__flatpickr");
+                    },
+                  },
                 },
-              },
-            },
-            Skeletons.Note({
-              className: `${pfx}__due-missing`,
-              content: LOCALE.TASK_DUE_REQUIRED,
+                Skeletons.Note({
+                  className: `${pfx}__due-missing`,
+                  content: LOCALE.TASK_DUE_REQUIRED,
+                }),
+              ],
             }),
           ],
         }),
