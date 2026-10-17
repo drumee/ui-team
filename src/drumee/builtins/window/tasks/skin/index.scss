@@ -2177,10 +2177,13 @@ $theme-colors: (
   &__detail-title-field {
     flex: 1 1 auto;
     min-width: 0;
-    gap: 4px;
+    gap: 6px;
+    // Title text flush with the body below; the textarea's own pad + border
+    // would otherwise indent it 9px.
+    margin-left: -9px;
 
     .tasks-panel__title-missing {
-      padding: 0 6px;
+      padding: 0 9px;
     }
   }
 
@@ -2659,22 +2662,33 @@ $theme-colors: (
   // now, so it no longer has an inline avatar+name row of its own.)
 
   // Breadcrumb shown only when the open task is a child: names the parent and
-  // is the route back to it (the X walks back there too).
+  // is the route back to it (the X walks back there too). First kid of the
+  // title column, so it sits right above the title in every layout.
   &__detail-parent {
     align-items: center;
-    gap: 4px;
     align-self: flex-start;
+    gap: 6px;
     max-width: 100%;
-    // __detail-panel is a 32px-gap column, which parks the crumb miles above
-    // the title it belongs to. Pull it back to ~8px.
-    margin-bottom: -24px;
-    padding: 2px 6px 2px 2px;
-    border-radius: 6px;
+    // Lines the crumb's text up with the title's (the textarea pads 8px).
+    margin-left: 2px;
+    padding: 3px 10px 3px 6px;
+    border-radius: 999px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.04));
     cursor: pointer;
-    transition: background 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     &:hover {
-      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+      background: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
+
+      .tasks-panel__detail-parent-ico svg {
+        fill: var(--accent, #433cc5);
+      }
+
+      .tasks-panel__detail-parent-title {
+        color: var(--accent, #433cc5);
+      }
     }
   }
 
@@ -2688,26 +2702,35 @@ $theme-colors: (
       width: 12px;
       height: 12px;
       fill: var(--normal-fg-40, #6f6d87);
+      transition: fill 0.15s;
     }
   }
 
+  // The ellipsis needs overflow:hidden, which clips at the padding box — so
+  // the line box must be tall enough for stacked Vietnamese marks (ế, ỗ, ậ
+  // carry two diacritics above the x-height). At 16px/12px the acute of "nếu"
+  // was cut off and it read "nêu". 20px line + 1px top pad clears them.
   &__detail-parent-title {
     min-width: 0;
+    padding-top: 1px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    transition: color 0.15s;
     @include drumee.typo(
       $size: 12px,
       $weight: 500,
-      $line: 16px,
+      $line: 20px,
       $color: var(--normal-fg-40, #6f6d87)
     );
   }
 
+  // Title column + close. flex-start, not center: a title that wraps to two
+  // or three lines kept the X floating in the middle of it.
   &__detail-header {
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
   }
 
   &__detail-title {
@@ -2718,15 +2741,17 @@ $theme-colors: (
     input,
     textarea {
       width: 100%;
-      padding: 4px 6px;
+      padding: 4px 8px;
       border: 1px solid transparent;
-      border-radius: 6px;
+      border-radius: 8px;
       outline: none;
       background: transparent;
+      // 32px, not 26px: a 24px title needs the extra headroom for stacked
+      // Vietnamese marks, same as the crumb above it.
       @include drumee.typo(
         $size: 24px,
         $weight: 600,
-        $line: 26px,
+        $line: 32px,
         $color: var(--normal-fg-20, #34343a)
       );
       transition:
@@ -2748,21 +2773,33 @@ $theme-colors: (
     textarea {
       resize: none;
       overflow-y: auto;
-      min-height: 30px;
-      max-height: 88px;
+      min-height: 42px;
+      max-height: 106px;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
       display: block;
     }
   }
 
+  // A 32px round hit target, centred on the title's first line. Sized by
+  // padding (9 + 14 + 9), not width/height + flex centring: Button.Svg's root
+  // is ui-core's `svg-wrapper` div, which is not a flex box, so align-items
+  // did nothing and the X sat in the circle's top-left corner.
   &__detail-close {
     flex-shrink: 0;
+    box-sizing: content-box;
+    width: 14px;
+    height: 14px;
+    padding: 9px;
+    margin-top: 5px;
+    border-radius: 50%;
     color: var(--normal-fg-50, #65656c);
     cursor: pointer;
     overflow: hidden;
     font-size: 0;
-    transition: opacity 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     svg {
       width: 14px;
@@ -2771,8 +2808,15 @@ $theme-colors: (
     }
 
     &:hover {
-      opacity: 0.7;
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+      color: var(--normal-fg-10, #0b0a21);
     }
+  }
+
+  // With a crumb above the title, the X stays level with the crumb row
+  // instead of drifting down to the title.
+  &__detail-header:has(.tasks-panel__detail-parent) .tasks-panel__detail-close {
+    margin-top: 0;
   }
 
   &__detail-label {
@@ -9030,6 +9074,17 @@ $theme-colors: (
     overflow: hidden;
   }
 
+  // The avatar is a UserProfile widget: it takes the click itself and the
+  // parent's service never runs — so with someone assigned only the bare "+N"
+  // opened the menu. Let the click fall through to __subtask-assignee, which
+  // carries the toggle (same fix as __assignee-option). The glyph and "+N"
+  // too, so every part of the button behaves the same.
+  &__subtask-assignee-avatar,
+  &__subtask-assignee-ico,
+  &__subtask-assignee-more {
+    pointer-events: none;
+  }
+
   &__subtask-assignee-more {
     padding-right: 8px;
     @include drumee.typo(
@@ -9261,6 +9316,54 @@ $theme-colors: (
     align-items: center;
     gap: 4px;
     flex-wrap: wrap;
+  }
+
+  // Assignee + due date on one row: exactly half each (basis 0, so the chips
+  // or the date's text never widen one side), centred on each other, and the
+  // same 46px box. Wraps to two rows once a half would drop under 140px.
+  &__subtask-card-fields {
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    > .tasks-panel__subtask-card-assignee,
+    > .tasks-panel__subtask-card-date {
+      flex: 1 1 0;
+      min-width: 140px;
+      width: auto;
+    }
+
+    // Chips + query share a half-width box, so the query may shrink further
+    // than the parent card's 120px before it wraps under the chips.
+    .tasks-panel__assignee-search {
+      flex-basis: 60px;
+      min-width: 60px;
+
+      // Same text as the date beside it (__due-input: 16/22).
+      input {
+        font-size: 16px;
+        line-height: 22px;
+      }
+    }
+  }
+
+  // Assignee picker: the parent card's __assignee-picker, drawn as the same
+  // grey box as the due-date field beside it rather than underlined.
+  &__subtask-card-assignee {
+    .tasks-panel__assignee-control {
+      // Same height as the due-date field beside it (12+22+12).
+      min-height: 46px;
+      box-sizing: border-box;
+      padding: 4px 12px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+
+      &:focus-within {
+        box-shadow: 0 0 0 2px rgba(67, 60, 197, 0.35);
+      }
+    }
   }
 
   // Required title — same red as the parent's __title-missing. !important on

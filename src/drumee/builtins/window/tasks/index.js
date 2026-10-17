@@ -187,7 +187,9 @@ const BUILTIN_META = {
 };
 
 // Every people-picker scope. "create" / "detail" are the multi-select assignee
-// fields; the "-reporter" pair are single-select. A scope is the identity of one
+// fields; the "-reporter" pair are single-select; "subtask" / "create-subtask"
+// are the child creator card's assignee field (detail panel / create modal),
+// multi-select and editing that card's draft. A scope is the identity of one
 // picker: it names its Entry (assignee-search-{scope}), its two parts
 // ({scope}-assignee-chips / -suggestions) and its onUiEvent service
 // (pickerService). Keep it in sync with pickerService().
@@ -196,6 +198,8 @@ const PICKER_SCOPES = [
   "detail",
   "create-reporter",
   "detail-reporter",
+  "subtask",
+  "create-subtask",
 ];
 
 // How long a "a peer changed this out from under you" notice stays up before
@@ -427,6 +431,7 @@ class __tasks_panel extends LetcBox {
     this._cancelUnfinishedUploads("detail", this._detailDraft);
     this.unbindEvent(_a.live);
     this._unbindCalMenuDismiss();
+    this._unbindSubtaskMenuDismiss();
     // Parts that never mounted leave their waiter behind (their promise simply
     // never settles, exactly as ensurePart's would) — drop them with the panel.
     for (const cb of this._partWaiters || []) this.off(_e.part.ready, cb);
@@ -2069,6 +2074,9 @@ class __tasks_panel extends LetcBox {
         if (!this._subtaskDraft) return;
         const kind = trigger.mget("menuKind");
         this._subtaskDraft.menu = this._subtaskDraft.menu === kind ? null : kind;
+        // One menu at a time: opening the creator's closes any row's.
+        this._subtaskRowMenu = null;
+        this._bindSubtaskMenuDismiss();
         // A plain re-feed is safe here: the card's title Entry is seeded from
         // the draft and kept current by the `task-input-changed` watch, so
         // rebuilding the block cannot lose what has been typed.
@@ -2102,6 +2110,8 @@ class __tasks_panel extends LetcBox {
         const cur = this._subtaskRowMenu;
         this._subtaskRowMenu =
           cur && cur.id === id && cur.kind === kind ? null : { id, kind };
+        if (this._subtaskDraft) this._subtaskDraft.menu = null;
+        this._bindSubtaskMenuDismiss();
         return this._refreshSubtaskSection();
       }
 
@@ -2151,6 +2161,8 @@ class __tasks_panel extends LetcBox {
         const kind = trigger.mget("menuKind");
         this._createSubtaskDraft.menu =
           this._createSubtaskDraft.menu === kind ? null : kind;
+        this._createSubtaskRowMenu = null;
+        this._bindSubtaskMenuDismiss();
         return this._refreshCreateSubtaskSection();
       }
 
@@ -2168,6 +2180,20 @@ class __tasks_panel extends LetcBox {
         return this._refreshCreateSubtaskSection();
       }
 
+      // The creator card's assignee picker, in either scope. Edits the card's
+      // draft and repaints the picker in place (chips + suggestions), never the
+      // block: a re-feed would drop the search field's focus mid-pick.
+      case "set-subtask-assignee":
+      case "set-create-subtask-assignee": {
+        const scope = service === "set-subtask-assignee" ? "subtask" : "create-subtask";
+        const draft = this._pickerDraft(scope);
+        if (!draft) return;
+        const before = (draft.assignees || []).length;
+        draft.assignees = this._toggleAssignee(draft.assignees, trigger.mget("memberUid"));
+        this._applyAssigneeChange(scope, draft.assignees, draft.assignees.length > before);
+        return;
+      }
+
       // Chips on a child QUEUED on the create draft: edit the queued row; it
       // is posted with these values once the parent exists.
       case "toggle-create-subtask-row-menu": {
@@ -2176,6 +2202,8 @@ class __tasks_panel extends LetcBox {
         const cur = this._createSubtaskRowMenu;
         this._createSubtaskRowMenu =
           cur && cur.id === id && cur.kind === kind ? null : { id, kind };
+        if (this._createSubtaskDraft) this._createSubtaskDraft.menu = null;
+        this._bindSubtaskMenuDismiss();
         return this._refreshCreateSubtaskSection();
       }
 
@@ -2826,13 +2854,18 @@ class __tasks_panel extends LetcBox {
    * the panel's surgical re-feeds can never disagree about it — adding a picker
    * means adding a scope here and nowhere else.
    *
-   * Scopes: "create" | "detail" (assignee, multi-select) and "create-reporter" |
-   * "detail-reporter" (reporter, single-select).
+   * Scopes: "create" | "detail" (assignee, multi-select), "create-reporter" |
+   * "detail-reporter" (reporter, single-select) and "subtask" |
+   * "create-subtask" (the child creator card's assignees, multi-select).
    */
   pickerService(scope) {
     switch (scope) {
       case "create":
         return "create-assignee";
+      case "subtask":
+        return "set-subtask-assignee";
+      case "create-subtask":
+        return "set-create-subtask-assignee";
       case "create-reporter":
         return "create-reporter";
       case "detail-reporter":
@@ -2855,6 +2888,9 @@ class __tasks_panel extends LetcBox {
 
   // Which draft a picker scope edits.
   _pickerDraft(scope) {
+    // The creator cards first: "create-subtask" would otherwise match ^create.
+    if (scope === "subtask") return this._subtaskDraft;
+    if (scope === "create-subtask") return this._createSubtaskDraft;
     return /^create/.test(String(scope || ""))
       ? this._createDefaults
       : this._detailDraft;
@@ -5202,6 +5238,64 @@ class __tasks_panel extends LetcBox {
     if (!this._calMenuDismiss) return;
     document.removeEventListener("click", this._calMenuDismiss, true);
     this._calMenuDismiss = null;
+  }
+
+  // ── outside-click dismissal for the subtask chip menus ──────────────────
+  // Priority / Status / assignee menus on the creator card and on each child
+  // row, in both scopes. A click on a menu or on a chip/avatar trigger is left
+  // to its own handler (pick, toggle, switch menu); anything else closes.
+  //
+  // Closing flips the DOM in place rather than re-feeding the block: the click
+  // may land on the card's title Entry, ✕ or done tick, and a re-feed in the
+  // capture phase would rebuild that target before it is reached (and steal
+  // the Entry's focus). The cleared state keeps the menus shut on the next
+  // re-feed, which is the one that removes them for good.
+  _anySubtaskMenuOpen() {
+    return !!(
+      (this._subtaskDraft && this._subtaskDraft.menu) ||
+      this._subtaskRowMenu ||
+      (this._createSubtaskDraft && this._createSubtaskDraft.menu) ||
+      this._createSubtaskRowMenu
+    );
+  }
+
+  _bindSubtaskMenuDismiss() {
+    if (this._subtaskMenuDismiss || typeof document === "undefined") return;
+    const pfx = this.fig.family;
+    const keep = `.${pfx}__subtask-menu, .${pfx}__subtask-chip, .${pfx}__subtask-assignee`;
+    this._subtaskMenuDismiss = (ev) => {
+      if (this.isDestroyed && this.isDestroyed()) return this._unbindSubtaskMenuDismiss();
+      if (!this._anySubtaskMenuOpen()) return this._unbindSubtaskMenuDismiss();
+      const t = ev && ev.target;
+      // THIS panel's controls only — another window's Task tab is outside.
+      const hit = t && t.closest && t.closest(keep);
+      if (hit && this.el && this.el.contains(hit)) return;
+      this._closeSubtaskMenus();
+    };
+    // Bound from inside the opening click, after the document capture phase
+    // has passed — so that click cannot dismiss the menu it just opened.
+    document.addEventListener("click", this._subtaskMenuDismiss, true);
+  }
+
+  _unbindSubtaskMenuDismiss() {
+    if (!this._subtaskMenuDismiss) return;
+    document.removeEventListener("click", this._subtaskMenuDismiss, true);
+    this._subtaskMenuDismiss = null;
+  }
+
+  _closeSubtaskMenus() {
+    if (this._subtaskDraft) this._subtaskDraft.menu = null;
+    if (this._createSubtaskDraft) this._createSubtaskDraft.menu = null;
+    this._subtaskRowMenu = null;
+    this._createSubtaskRowMenu = null;
+    this._unbindSubtaskMenuDismiss();
+    if (!this.el) return;
+    const pfx = this.fig.family;
+    for (const menu of this.el.querySelectorAll(`.${pfx}__subtask-menu`)) {
+      const trigger = menu.parentElement && menu.parentElement.closest("[data-open]");
+      if (trigger) trigger.setAttribute("data-open", "0");
+      menu.style.display = "none";
+    }
   }
 
   async _loadComments(taskId) {
@@ -8407,12 +8501,18 @@ class __tasks_panel extends LetcBox {
 
   // Reflect the current assignee set in place: re-feed the chips row and the
   // suggestions (the picked member must leave them), and clear the query.
-  // `kind` is "create-assignee" | "detail-assignee". `picked` = a member was
+  // `kind` is "create-assignee" | "detail-assignee", or a picker scope as is
+  // ("subtask" | "create-subtask"). `picked` = a member was
   // just added, so keep the field focused for the next pick; a chip removal
   // leaves focus (and the dropdown's open state) alone.
   _applyAssigneeChange(kind, assignees, picked = false) {
     if (!this.el) return;
-    const scope = kind === "create-assignee" ? "create" : "detail";
+    const scope =
+      kind === "create-assignee"
+        ? "create"
+        : kind === "detail-assignee"
+          ? "detail"
+          : kind;
     this._withPart(`${scope}-assignee-chips`)
       .then((chips) => {
         if (!chips || chips.isDestroyed?.()) return;
@@ -11133,6 +11233,7 @@ class __tasks_panel extends LetcBox {
       due_date: this._notPast(parent.due_date),
       priority: "medium",
       status: firstOpen ? firstOpen.key : "todo",
+      assignees: [],
       // Which chip's dropdown is open: null | "priority" | "status".
       menu: null,
     };
@@ -11394,6 +11495,7 @@ class __tasks_panel extends LetcBox {
       due_date: this._notPast(this._createDefaults.due_date),
       priority: "medium",
       status: firstOpen ? firstOpen.key : "todo",
+      assignees: [],
       menu: null,
     };
     this._refreshCreateSubtaskSection().then(() =>
@@ -11491,6 +11593,7 @@ class __tasks_panel extends LetcBox {
       priority: draft.priority || "medium",
       status: draft.status || this.getDefaultStatus(),
       due_date: draft.due_date || "",
+      assignees: Array.isArray(draft.assignees) ? draft.assignees.slice() : [],
     });
     // Queued: close the card, matching the detail-panel creator — the row now
     // shows in the list, and the ＋ opens a fresh card for the next one.
@@ -11614,6 +11717,7 @@ class __tasks_panel extends LetcBox {
         priority: draft.priority || "medium",
         status: draft.status || undefined,
         due_date: draft.due_date || null,
+        assignee_uids: Array.isArray(draft.assignees) ? draft.assignees : [],
       });
       const row = Array.isArray(created) ? created[0] : created;
       if (!row || !row.id) {
