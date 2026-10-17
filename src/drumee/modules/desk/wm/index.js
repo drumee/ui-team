@@ -1101,7 +1101,10 @@ class __window_manager extends push {
       window.Desk._railHighlight(lit);
     }
 
-    if (highlight) this._revealFromNotification(nid, filetype, pid);
+    if (highlight) {
+      // revealTtl: a timed reveal (chat "Show in folder"); absent = persistent.
+      this._revealFromNotification(nid, filetype, pid, { ttl: args.revealTtl });
+    }
     return win;
   }
 

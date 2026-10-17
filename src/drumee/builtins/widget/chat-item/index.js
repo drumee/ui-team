@@ -1,5 +1,8 @@
 const { toggleState, colorFromName, copyToClipboard } = require("@drumee/ui-essentials");
 const { isSupportEntity, supportMarkup } = require("libs/support");
+// How long "Show in folder" keeps the file lit (ms) before it fades out
+// (Wm._fadeOutReveal, media/grid skin [data-reveal="out"]).
+const REVEAL_TTL = 5000;
 require("./skin");
 class ___widget_chatItem extends LetcBox {
   /**
@@ -2218,6 +2221,8 @@ class ___widget_chatItem extends LetcBox {
       filetype: node.filetype || node.ftype,
       activeTab: "files",
       highlight: 1,
+      // Lit for REVEAL_TTL, then cleared — a pointer, not a lasting mark.
+      revealTtl: REVEAL_TTL,
     };
     // One file at a time: the file a previous "Show in folder" lit stays lit
     // otherwise, and the grid ends up pointing at several.
