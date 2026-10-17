@@ -6837,6 +6837,11 @@ $theme-colors: (
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      // Room for stacked Vietnamese marks ("ế" reaches above a 16px line):
+      // overflow clips at the padding box, so 4px each way widens the clip
+      // and the negative margin gives the line its height back.
+      padding-block: 4px;
+      margin-block: -4px;
     }
   }
   &__list-row[data-done="1"] &__list-title {
