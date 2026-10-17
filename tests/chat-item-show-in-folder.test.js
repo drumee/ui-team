@@ -26,12 +26,15 @@ const _ = {
 };
 const _a = { nid: "nid", hub_id: "hub_id", uiHandler: "uiHandler" };
 
+// The module constant, read from source so the test tracks it.
+const REVEAL_TTL = Number(/const REVEAL_TTL = (\d+);/.exec(SRC)[1]);
+
 function load(Wm, LOCALE = { FILE_NOT_FOUND: "File not found" }) {
   const make = (sig) =>
     new Function(
-      "_", "_a", "Wm", "LOCALE", "SERVICE",
+      "_", "_a", "Wm", "LOCALE", "SERVICE", "REVEAL_TTL",
       `return ${sliceFunction(SRC, sig)}`,
-    )(_, _a, Wm, LOCALE, {});
+    )(_, _a, Wm, LOCALE, {}, REVEAL_TTL);
   return {
     showInFolder: make("async _showInFolder(trigger)"),
     isPeerChat: make("_isPeerChat()"),
@@ -98,6 +101,7 @@ test("lands on the RESOLVED file's folder, not the card's", async () => {
       filetype: "document",
       activeTab: "files",
       highlight: 1,
+      revealTtl: 5000,
     },
   ]);
   // The previous reveal's highlight goes first, so only this file is lit.
@@ -126,34 +130,6 @@ test("nothing found → says so, opens nothing", async () => {
   assert.equal(cleared, 0);
 });
 
-test("clearReveal un-lights every highlighted cell", () => {
-  const WSRC = fs
-    .readFileSync(path.join(__dirname, "../src/drumee/builtins/window/utils.js"), "utf8")
-    .replace(/\r\n/g, "\n");
-  const cells = [0, 1].map(() => {
-    const attrs = { "data-ui-highlight": "1" };
-    const classes = new Set(["media-highlight"]);
-    return {
-      attrs,
-      classes,
-      removeAttribute: (k) => delete attrs[k],
-      classList: { remove: (c) => classes.delete(c) },
-    };
-  });
-  const document = {
-    querySelectorAll: (sel) => (sel === "[data-ui-highlight]" ? cells : []),
-  };
-  const clearReveal = new Function(
-    "document",
-    `return ${sliceFunction(WSRC, "clearReveal()")}`,
-  )(document);
-  clearReveal.call({});
-  for (const c of cells) {
-    assert.equal(c.attrs["data-ui-highlight"], undefined);
-    assert.equal(c.classes.has("media-highlight"), false);
-  }
-});
-
 test("p2p rows are peer chats; hub chats are not", () => {
   const { isPeerChat } = load({});
   const of = (uh) => isPeerChat.call({ mget: () => uh });
@@ -161,4 +137,233 @@ test("p2p rows are peer chats; hub chats are not", () => {
   assert.equal(of([{ peerId: "p" }]), true);
   assert.equal(of({ hubId: "h", peerId: "" }), false);
   assert.equal(of(undefined), false);
+});
+
+// ── Timed reveal (Wm._applyReveal with opt.ttl) + fade-out clear ─────────
+// `fly`: stand-in for _flyReveal (geometry and Web Animations are checked in
+// a real browser, not here) — records the flight and lands it at once.
+// `inView`: what _revealInView answers.
+function revealHost(document, { inView = () => false, fly } = {}) {
+  const WSRC = fs
+    .readFileSync(path.join(__dirname, "../src/drumee/builtins/window/utils.js"), "utf8")
+    .replace(/\r\n/g, "\n");
+  const mk = (sig) =>
+    new Function("document", `return ${sliceFunction(WSRC, sig)}`)(document);
+  const flights = [];
+  return {
+    flights,
+    _applyReveal: mk("_applyReveal(cells, scrollFirst, opt = {})"),
+    _fadeOutReveal: mk("_fadeOutReveal(el, fadeMs = 900)"),
+    _revealSwitchFrom: mk("_revealSwitchFrom(maxAgeMs = 1500)"),
+    _switchReveal: mk("_switchReveal(item)"),
+    clearReveal: mk("clearReveal()"),
+    _revealInView: inView,
+    _flyReveal:
+      fly ||
+      ((from, to, done) => {
+        flights.push([from, to]);
+        done();
+        return true;
+      }),
+    warn() {},
+  };
+}
+
+// A media cell as far as the reveal touches it: data-* attributes mirrored
+// into dataset like the DOM does, and media/core's _setNotifyHighlight.
+function cell() {
+  const dataset = {};
+  const key = (attr) =>
+    attr.replace(/^data-/, "").replace(/-([a-z])/g, (m, c) => c.toUpperCase());
+  const el = {
+    dataset,
+    isConnected: true,
+    offsetWidth: 150,
+    offsetHeight: 180,
+    classList: { add() {}, remove() {} },
+    scrollIntoView() {},
+    removeAttribute: (attr) => delete dataset[key(attr)],
+  };
+  return {
+    el,
+    get lit() {
+      return dataset.uiHighlight != null;
+    },
+    _setNotifyHighlight(on) {
+      if (on) dataset.uiHighlight = 1;
+      else delete dataset.uiHighlight;
+    },
+  };
+}
+
+test("timed reveal: animates in, fades out at the ttl, then clears", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const host = revealHost({ querySelectorAll: () => [] });
+  const a = cell();
+  host._applyReveal([a], true, { ttl: 5000 });
+  assert.equal(a.lit, true);
+  assert.equal(a.el.dataset.reveal, 1);
+  t.mock.timers.tick(5000);
+  // Fading: colour still on while the out-animation runs.
+  assert.equal(a.el.dataset.reveal, "out");
+  assert.equal(a.lit, true);
+  t.mock.timers.tick(900);
+  assert.equal(a.lit, false);
+  assert.equal(a.el.dataset.reveal, undefined);
+});
+
+test("a newer reveal owns the timer: the old one never un-lights it", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const host = revealHost({ querySelectorAll: () => [] });
+  const a = cell();
+  const b = cell();
+  host._applyReveal([a], true, { ttl: 5000 });
+  t.mock.timers.tick(3000);
+  host._applyReveal([b], true, { ttl: 5000 });
+  t.mock.timers.tick(2500); // past a's original deadline
+  assert.equal(b.lit, true);
+  assert.equal(b.el.dataset.reveal, 1);
+  t.mock.timers.tick(2500); // b's ttl ends: fading
+  assert.equal(b.el.dataset.reveal, "out");
+  t.mock.timers.tick(900);
+  assert.equal(b.lit, false);
+});
+
+test("clearReveal fades every lit cell out and cancels the pending timer", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const a = cell();
+  const n = cell(); // a notification highlight: lit, no data-reveal
+  n._setNotifyHighlight(true);
+  const host = revealHost({
+    querySelectorAll: (sel) =>
+      sel === "[data-ui-highlight]" ? [a, n].filter((c) => c.lit).map((c) => c.el) : [],
+  });
+  host._applyReveal([a], true, { ttl: 5000 });
+  host.clearReveal();
+  assert.equal(host._revealTimer, null);
+  assert.equal(a.el.dataset.reveal, "out");
+  assert.equal(n.el.dataset.reveal, "out");
+  assert.equal(a.lit && n.lit, true); // still on during the fade
+  t.mock.timers.tick(900);
+  assert.equal(a.lit, false);
+  assert.equal(n.lit, false);
+});
+
+test("the same file re-lit mid-fade stays lit", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const a = cell();
+  const host = revealHost({
+    querySelectorAll: (sel) => (sel === "[data-ui-highlight]" && a.lit ? [a.el] : []),
+  });
+  host._applyReveal([a], true, { ttl: 5000 });
+  host.clearReveal(); // a starts fading…
+  host._applyReveal([a], true, { ttl: 5000 }); // …and is revealed again
+  t.mock.timers.tick(900);
+  assert.equal(a.lit, true);
+  assert.equal(a.el.dataset.reveal, 1);
+  // Same for an untimed (notification) reveal landing mid-fade.
+  host.clearReveal();
+  host._applyReveal([a], true);
+  t.mock.timers.tick(900);
+  assert.equal(a.lit, true);
+});
+
+test("without a ttl the highlight stays (notification reveals)", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const host = revealHost({ querySelectorAll: () => [] });
+  const a = cell();
+  host._applyReveal([a], true);
+  t.mock.timers.tick(60000);
+  assert.equal(a.lit, true);
+  assert.equal(a.el.dataset.reveal, undefined);
+});
+
+// ── Switch: the highlight travels from the previous file to the next ───────
+function litDoc(cells) {
+  return {
+    querySelectorAll: (sel) => {
+      const els = cells.map((c) => c.el);
+      if (sel === "[data-ui-highlight]") return els.filter((e) => e.dataset.uiHighlight != null);
+      if (sel === '[data-reveal="out"]') return els.filter((e) => e.dataset.reveal === "out");
+      return [];
+    },
+  };
+}
+
+test("switch: both in view → flies A→B, A cut at take-off, B lands without pop", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const a = cell();
+  const b = cell();
+  let landedAt = null;
+  const host = revealHost(litDoc([a, b]), {
+    inView: () => true,
+    fly(from, to, done) {
+      host.flights.push([from, to]);
+      // At take-off: A already dark, B not lit yet.
+      assert.equal(b.lit, false);
+      landedAt = () => done();
+      return true;
+    },
+  });
+  host._applyReveal([a], true, { ttl: 5000 });
+  host.clearReveal();
+  host._applyReveal([b], true, { ttl: 5000 });
+  assert.deepEqual(host.flights, [[a.el, b.el]]);
+  assert.equal(a.lit, false); // cut, not left fading under the ghost
+  assert.equal(b.lit, false);
+  landedAt();
+  assert.equal(b.lit, true);
+  assert.equal(b.el.dataset.reveal, "land");
+  // The ttl still applies to the switched-to file.
+  t.mock.timers.tick(5000);
+  assert.equal(b.el.dataset.reveal, "out");
+  t.mock.timers.tick(900);
+  assert.equal(b.lit, false);
+});
+
+test("switch skipped when either cell is out of view → fade + pop as before", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const a = cell();
+  const b = cell();
+  const host = revealHost(litDoc([a, b]), { inView: (el) => el === a.el });
+  host._applyReveal([a], true, { ttl: 5000 });
+  host.clearReveal();
+  host._applyReveal([b], true, { ttl: 5000 });
+  assert.deepEqual(host.flights, []);
+  assert.equal(b.lit, true);
+  assert.equal(b.el.dataset.reveal, 1); // the pop-in state
+  assert.equal(a.el.dataset.reveal, "out"); // A fades on its own
+});
+
+test("switch skipped when the animation cannot run (reduced motion)", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const a = cell();
+  const b = cell();
+  const host = revealHost(litDoc([a, b]), {
+    inView: () => true,
+    fly: () => false,
+  });
+  host._applyReveal([a], true, { ttl: 5000 });
+  host.clearReveal();
+  host._applyReveal([b], true, { ttl: 5000 });
+  assert.equal(b.lit, true);
+  assert.equal(b.el.dataset.reveal, 1);
+});
+
+test("no switch from a stale or vanished cell", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const a = cell();
+  const b = cell();
+  const host = revealHost(litDoc([a, b]), { inView: () => true });
+  host._applyReveal([a], true, { ttl: 5000 });
+  host.clearReveal();
+  t.mock.timers.tick(2000); // the folder took too long: no flight
+  host._applyReveal([b], true, { ttl: 5000 });
+  assert.deepEqual(host.flights, []);
+
+  const c = cell();
+  host.clearReveal();
+  b.el.isConnected = false; // grid replaced (folder change)
+  host._applyReveal([c], true, { ttl: 5000 });
+  assert.deepEqual(host.flights, []);
 });
