@@ -1523,10 +1523,10 @@
   }
 
   &__feedback-card {
-    width: 450px;
+    width: 380px;
     max-width: calc(100% - 32px);
-    padding: 32px;
-    gap: 24px;
+    padding: 24px;
+    gap: 18px;
     background: var(--normal-bg);
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 12px;
@@ -1538,12 +1538,12 @@
   &__feedback-header {
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
   }
 
   &__feedback-icon {
-    width: 40px;
-    height: 40px;
+    width: 34px;
+    height: 34px;
     align-items: center;
     justify-content: center;
     background: rgba(84, 182, 132, 0.15);
@@ -1551,16 +1551,16 @@
     flex-shrink: 0;
 
     svg {
-      width: 22px;
-      height: 22px;
+      width: 18px;
+      height: 18px;
       color: #54b684;
     }
   }
 
   &__feedback-title {
     @include drumee.typo(
-      $size: 20px,
-      $line: 28px,
+      $size: 18px,
+      $line: 24px,
       $weight: 700,
       $color: var(--normal-fg)
     );
@@ -1569,13 +1569,13 @@
   &__feedback-stats {
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 12px;
     align-self: center;
   }
 
   &__feedback-stat {
     @include drumee.typo(
-      $size: 14px,
+      $size: 13px,
       $line: 1.4,
       $weight: 400,
       $color: #65656c
@@ -1583,12 +1583,12 @@
   }
 
   &__feedback-stats-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #847eff;
     flex-shrink: 0;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
 
   &__feedback-rating {
@@ -1599,8 +1599,8 @@
 
   &__feedback-prompt {
     @include drumee.typo(
-      $size: 16px,
-      $line: 24px,
+      $size: 15px,
+      $line: 22px,
       $weight: 600,
       $color: var(--normal-fg)
     );
@@ -1612,9 +1612,9 @@
   }
 
   &__feedback-star {
-    width: 36px;
-    height: 36px;
-    padding: 6px;
+    width: 30px;
+    height: 30px;
+    padding: 5px;
     border-radius: 4px;
     background: transparent;
     cursor: pointer;
@@ -1677,14 +1677,14 @@
 
   &__feedback-skip,
   &__feedback-submit {
-    height: 48px;
-    padding: 12px 24px;
+    height: 40px;
+    padding: 8px 20px;
     border-radius: 4px;
     box-sizing: border-box;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    @include drumee.typo($size: 16px, $line: 24px, $weight: 600);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600);
 
     .note-content {
       white-space: nowrap;
@@ -1692,8 +1692,8 @@
   }
 
   &__feedback-skip {
-    flex: 0 1 120px;
-    min-width: 80px;
+    flex: 0 1 100px;
+    min-width: 72px;
     background: #f2f2f7;
     color: var(--normal-fg);
     border: 1px solid var(--border-default);
