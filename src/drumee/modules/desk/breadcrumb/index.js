@@ -99,7 +99,7 @@ class __desk_breadcrumb extends LetcBox {
    */
   _buildContent(data, opt = {}) {
     const section = !!opt.section;
-    this._setSectionMode(section, opt.hideAddress);
+    this._setSectionMode(section, opt.hideAddress, opt.noSwitcher);
     // A label starts a hold; anything else painted here (a path, a workspace
     // context from the switcher, a cleared track) ends it.
     if (section && !_.isEmpty(data)) sectionHold.enter(data, opt);
@@ -217,13 +217,20 @@ class __desk_breadcrumb extends LetcBox {
    *
    * @param {Boolean} section
    * @param {Boolean} [hideAddress] draw no chip at all — the label is redundant
+   * @param {Boolean} [noSwitcher] keep the label, drop the switcher caret
    */
-  _setSectionMode(section, hideAddress) {
+  _setSectionMode(section, hideAddress, noSwitcher) {
     this._section = !!section;
     if (this.el) {
       this.el.dataset.section = section ? 1 : 0;
       if (section && hideAddress) this.el.dataset.hideAddress = 1;
       else delete this.el.dataset.hideAddress;
+      // A utility screen (Notifications, Calendar, Inbox, Contacts, Trash,
+      // Admin console): the chip keeps its label but drops the switcher's
+      // caret and stops opening it (desk/skin/topbar, desk
+      // _crumbClickOpensSwitcher). Self-clearing like hideAddress.
+      if (section && noSwitcher) this.el.dataset.noSwitcher = 1;
+      else delete this.el.dataset.noSwitcher;
     }
     // NOTHING ELSE TO DO. Whether the chip shows its spinner, its crumbs and
     // its caret is decided in desk/skin/topbar.scss from whether the CRUMBS
@@ -516,6 +523,7 @@ class __desk_breadcrumb extends LetcBox {
     // Same reason as hideAddress: a rendering instruction, not a node field,
     // so it has to be taken before _normalizeData drops it.
     const ico = raw.ico || null;
+    const noSwitcher = !!raw.noSwitcher;
     this._context = this._normalizeData(data)[0];
     const filename = this._context && (this._context.filename || this._context.name);
     if (!filename) return this.loadDefault();
@@ -526,7 +534,7 @@ class __desk_breadcrumb extends LetcBox {
     // section screens reachable from the top bar or the rail, the `ico` that
     // control wears (see desk onUiEvent). The switcher's row sends neither.
     const section = !this._context.filetype && !this._context.nid;
-    this._buildContent([{ ...this._context, filename }], { section, hideAddress, ico });
+    this._buildContent([{ ...this._context, filename }], { section, hideAddress, noSwitcher, ico });
   }
 
   /**
