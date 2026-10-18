@@ -2523,7 +2523,7 @@
   "STORAGE_ALERT_FEED": "sent you a storage alert — your usage is high, please review and clear unnecessary files",
   "SUBSCRIPTION_RENEWS_ON": "Your subscription renews on {0}",
   "SUBSCRIPTION_ENDS_ON": "Your plan ends on {0}",
-  "SUBSCRIPTION_ENDS_DESC": "You keep full access until then, after which your workspace returns to the Free plan.",
+  "SUBSCRIPTION_ENDS_DESC": "You keep full access until then, after which your workspace returns to the Free plan",
   "CANCEL_PLAN": "Cancel plan",
   "CANCEL_SUBSCRIPTION": "Cancel subscription",
   "CANCEL_CONFIRM": "Cancel plan",
