@@ -172,6 +172,14 @@
 }
 
 // ══ "Meeting Started" card ═════════════════════════════════════════════════
+// Two classes, to beat window/skin/window.scss: `.window__ui` floors every
+// window at 600x320, and a minimum always wins over the card's own 520px/auto
+// size — the card rendered 600 wide with ~90px of empty white below the text.
+.window-switchcall__ui.window__ui {
+  min-width: 0;
+  min-height: 0;
+}
+
 .window-switchcall {
   &__ui {
     width: 520px;
@@ -240,10 +248,16 @@
 
   &__title-row {
     align-items: center;
+    justify-content: center;
     gap: 8px;
+    max-width: 100%;
   }
 
+  // The invite title ("X is inviting you to join the meeting in Y") runs to two
+  // lines; centred so it sits under the icon like the one-line title does.
   &__title {
+    min-width: 0;
+    text-align: center;
     @include drumee.typo($size: 20px, $line: 28px, $weight: 700, $color: #0b0a21);
   }
 
@@ -288,6 +302,10 @@
 
   &__commands {
     width: 100%;
+    // The legacy block above gives the row a 56px height and 25px margins on
+    // top of __main's own 24px gap — most of the empty band under the text.
+    height: auto;
+    margin: 0;
     gap: 12px;
     padding: 0;
     align-items: stretch;

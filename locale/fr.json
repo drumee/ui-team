@@ -892,6 +892,8 @@
   "MEETING_STARTED": "Réunion démarrée",
   "X_STARTED_MEETING_IN": "{0} a démarré une réunion dans {1}",
   "X_STARTED_A_MEETING": "{0} a démarré une réunion",
+  "X_IS_INVITING_YOU_TO_MEETING_IN": "{0} vous invite à rejoindre la réunion dans {1}",
+  "X_IS_INVITING_YOU_TO_MEETING": "{0} vous invite à rejoindre la réunion",
   "IN_THE_MEETING": "Dans la réunion",
   "NOT_IN_THE_MEETING": "Absent de la réunion",
   "INVITE_PEOPLE": "Inviter des personnes",

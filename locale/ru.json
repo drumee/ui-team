@@ -889,6 +889,8 @@
   "MEETING_STARTED": "Встреча началась",
   "X_STARTED_MEETING_IN": "{0} начал(а) встречу в {1}",
   "X_STARTED_A_MEETING": "{0} начал встречу",
+  "X_IS_INVITING_YOU_TO_MEETING_IN": "{0} приглашает вас присоединиться к встрече в {1}",
+  "X_IS_INVITING_YOU_TO_MEETING": "{0} приглашает вас присоединиться к встрече",
   "IN_THE_MEETING": "На встрече",
   "NOT_IN_THE_MEETING": "Не на встрече",
   "INVITE_PEOPLE": "Пригласить участников",

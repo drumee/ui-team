@@ -9,16 +9,25 @@ const __skl_window_switchcall = function (_ui_) {
   const name =
     origin.username || origin.firstname || origin.lastname || origin.email || "";
 
+  // `details` is mfs_node_attr(room_id) taken against the hub's own db, but a
+  // hub node lives in its owner's db — so for a meeting it comes back empty
+  // and details.filename is undefined. hub_name carries the workspace name.
+  const folder =
+    (data.details && data.details.filename) || data.filename || data.hub_name || "";
+
   if (_ui_.mget(_a.type) === _e.connect) {
     title = LOCALE.X_IS_CALLING_YOU.format(name);
     byline = LOCALE.INCOMING_CALL || "";
+  } else if (data.invited) {
+    // Rung from a meeting's roster (push.js stamps `invited`). The title says
+    // it all, so there is no byline repeating "X started a meeting" — X may
+    // not even be the one who started it.
+    title = folder
+      ? LOCALE.X_IS_INVITING_YOU_TO_MEETING_IN.format(name, folder)
+      : LOCALE.X_IS_INVITING_YOU_TO_MEETING.format(name);
+    byline = null;
   } else {
     title = LOCALE.MEETING_STARTED;
-    // `details` is mfs_node_attr(room_id) taken against the hub's own db, but a
-    // hub node lives in its owner's db — so for a meeting it comes back empty
-    // and details.filename is undefined. hub_name carries the workspace name.
-    const folder =
-      (data.details && data.details.filename) || data.filename || data.hub_name || "";
     // Never render a dangling "started a meeting in " with nothing after it.
     byline = folder
       ? LOCALE.X_STARTED_MEETING_IN.format(name, folder)
@@ -64,7 +73,7 @@ const __skl_window_switchcall = function (_ui_) {
   const body = Skeletons.Box.Y({
     className: `${pfx}__body`,
     debug: __filename,
-    kids: [brandIcon, titleRow, bylineRow],
+    kids: byline == null ? [brandIcon, titleRow] : [brandIcon, titleRow, bylineRow],
   });
 
   const footer = Skeletons.Box.X({
