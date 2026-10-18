@@ -122,7 +122,10 @@ class __push_manager extends winman {
 
       case SERVICE.conference.invite:
         if (data.room_type == _a.meeting) {
-          return this.dispatchRoom(data, options);
+          // Someone in the meeting rang us from its roster (the member card's
+          // Call button), as opposed to the meeting merely starting: the
+          // prompt names the inviter rather than saying "Meeting Started".
+          return this.dispatchRoom({ ...data, invited: 1 }, options);
         }
         if (this._seenInboundCall(data.room_id)) return;
         return this.dispatchInboundCall(data);

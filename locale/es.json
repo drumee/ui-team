@@ -1396,6 +1396,8 @@
   "MEETING_STARTED": "Reunión iniciada",
   "X_STARTED_MEETING_IN": "{0} inició una reunión en {1}",
   "X_STARTED_A_MEETING": "{0} inició una reunión",
+  "X_IS_INVITING_YOU_TO_MEETING_IN": "{0} te invita a unirte a la reunión en {1}",
+  "X_IS_INVITING_YOU_TO_MEETING": "{0} te invita a unirte a la reunión",
   "CALL": "Llamar",
   "IN_THE_MEETING": "En la reunión",
   "NOT_IN_THE_MEETING": "Fuera de la reunión",

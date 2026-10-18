@@ -1116,6 +1116,8 @@
   "MEETING_STARTED": "Meeting Started",
   "X_STARTED_MEETING_IN": "{0} started a meeting in {1}",
   "X_STARTED_A_MEETING": "{0} started a meeting",
+  "X_IS_INVITING_YOU_TO_MEETING_IN": "{0} is inviting you to join the meeting in {1}",
+  "X_IS_INVITING_YOU_TO_MEETING": "{0} is inviting you to join the meeting",
   "SEE_CHAT_THREADS": "See chat threads",
   "CHAT_THREADS": "Chat threads",
   "THREADS": "Threads",

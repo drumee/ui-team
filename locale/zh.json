@@ -890,6 +890,8 @@
   "MEETING_STARTED": "会议已开始",
   "X_STARTED_MEETING_IN": "{0} 在 {1} 发起了会议",
   "X_STARTED_A_MEETING": "{0} 发起了一场会议",
+  "X_IS_INVITING_YOU_TO_MEETING_IN": "{0} 邀请您加入 {1} 中的会议",
+  "X_IS_INVITING_YOU_TO_MEETING": "{0} 邀请您加入会议",
   "IN_THE_MEETING": "在会议中",
   "NOT_IN_THE_MEETING": "不在会议中",
   "INVITE_PEOPLE": "邀请他人",
