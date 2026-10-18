@@ -3057,6 +3057,13 @@ $theme-colors: (
   }
 
   &__attachment-unlink {
+    // Centred, not left to the padding: the thumbnail overlay (20px box, 12px
+    // glyph) and the pending strip (32x24, 12px glyph) both size the box
+    // bigger than the icon, which then sat in its top-left corner.
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
     flex-shrink: 0;
     width: 18px;
     height: 18px;
