@@ -3842,7 +3842,16 @@ class __tasks_panel extends LetcBox {
           files = [];
         }
       }
-      result.linked_files = Array.isArray(files) ? files : [];
+      // task_list names the id `nid`; task_link_file / task_get_linked_files
+      // and every client match (peerPatch, the detail commit's merge, the List
+      // toggle) read `file_nid`. Without this, a card loaded by task.list
+      // never matched: a peer's unlink left the chip, and linking from the
+      // detail panel kept every old entry on top of the server's full list.
+      result.linked_files = Array.isArray(files)
+        ? files.map((f) =>
+            f && f.file_nid == null && f.nid != null ? { ...f, file_nid: f.nid } : f,
+          )
+        : [];
     }
 
     // Subtask link. The server sends null for a top-level task, but a legacy
@@ -7802,6 +7811,22 @@ class __tasks_panel extends LetcBox {
     this._attachments[taskId] = (this._attachments[taskId] || []).filter(
       (f) => f.file_nid !== fileNid,
     );
+    // The card's strip reads the task row, not _attachments. The unlink is
+    // already written, so Update later sends no file op and never patches the
+    // row — and the server's broadcast skips this socket. Patch it here, or
+    // the card keeps the removed file until the next full reload.
+    const task = this._tasks.find((t) => t.id === taskId);
+    if (task && Array.isArray(task.linked_files)) {
+      this._mergeTask({
+        id: taskId,
+        linked_files: task.linked_files.filter(
+          (f) => String(f.file_nid) !== String(fileNid),
+        ),
+      });
+      // The view host sits under the overlay, so this leaves the open detail
+      // (and its unsaved draft) alone.
+      this._repaintBoard();
+    }
     // Surgical update — full _render() would blow away any unsaved
     // title/description/etc. the user is currently editing.
     this._refreshAttachmentsList();
