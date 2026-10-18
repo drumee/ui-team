@@ -10888,6 +10888,10 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: LOCALE.BILLING_SUBSCRIPTION,
       ico: "billing",
+      // A utility screen like Notifications or Trash: the label stays, the
+      // workspace caret (__ws-btn) goes, and the chip no longer opens the
+      // switcher — billing is the account's, not a workspace's.
+      noSwitcher: 1,
     });
     // Extended page -> "Opened billing / plans". Marked HERE rather than on the
     // sidebar item so every route counts: the sidebar entry, the Settings
