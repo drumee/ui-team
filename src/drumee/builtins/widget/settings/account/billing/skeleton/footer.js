@@ -61,6 +61,86 @@ function contactCard(ui) {
 }
 
 /**
+ * "Enterprise & custom plans" card as the Checkout column draws it (Figma
+ * 734-59617, node 1038:153564): icon + copy on one row, the address inline at
+ * the end of the sentence, and the actions on a row of their own below —
+ * Contact sales, plus Manage billing for a subscriber. The plans tabs keep
+ * contactCard() above; the two layouts differ too much to share one tree.
+ *
+ * Manage billing is gated exactly as the plans footer gates it: the Stripe
+ * portal needs a customer id, and payment.portal answers NO_CUSTOMER without
+ * one.
+ * @param {Object} ui - UI instance
+ * @returns {Object} Skeletons component
+ */
+function enterpriseCard(ui) {
+  const fig = `${ui.fig.family}__enterprise`;
+  const email = LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org";
+
+  return Skeletons.Box.Y({
+    className: `${fig}-card`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${fig}-row`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${fig}-icon`,
+            kids: [Skeletons.Image.Svg({ ico: "ph-envelope", className: `${fig}-icon-svg` })],
+          }),
+          Skeletons.Box.Y({
+            className: `${fig}-text`,
+            kids: [
+              Skeletons.Note({
+                className: `${fig}-title`,
+                content: LOCALE.FOOTER_ENTERPRISE_TITLE,
+              }),
+              Skeletons.Box.X({
+                className: `${fig}-desc-row`,
+                kids: [
+                  Skeletons.Note({
+                    className: `${fig}-desc`,
+                    content: LOCALE.FOOTER_ENTERPRISE_DESC,
+                  }),
+                  // A real mailto, so the address can be copied or opened from
+                  // any client — the button below is the guided path.
+                  Skeletons.Note({
+                    className: `${fig}-mail`,
+                    content: email,
+                    tagName: _K.tag.a,
+                    attrOpt: { href: `mailto:${email}` },
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      }),
+      Skeletons.Box.X({
+        className: `${fig}-actions`,
+        kids: [
+          Skeletons.Note({
+            className: `${fig}-btn ${fig}-btn--primary`,
+            content: LOCALE.CONTACT_SALES,
+            service: "contact-sales",
+            uiHandler: [ui],
+            bubble: false,
+          }),
+          ui._hasPaidSub
+            ? Skeletons.Note({
+                className: `${fig}-btn ${fig}-btn--secondary`,
+                content: LOCALE.MANAGE_BILLING || "Manage billing",
+                service: "manage-billing",
+                uiHandler: [ui],
+                bubble: false,
+              })
+            : null,
+        ].filter(Boolean),
+      }),
+    ],
+  });
+}
+
+/**
  * Billing footer. Where the "Additional seat pricing" heading used to sit
  * (removed 2026-07-29 — seats are flat caps since the pricing rebuild, so
  * there is no seat pricing to explain), a subscriber gets the "Manage
@@ -91,3 +171,4 @@ function billing_footer(ui) {
 }
 
 export default billing_footer;
+export { enterpriseCard };

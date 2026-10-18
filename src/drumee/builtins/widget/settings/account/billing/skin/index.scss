@@ -1,6 +1,15 @@
 @use "sass:meta";
 @use "mixins/drumee";
 
+// drumee.typo() takes a $weight but never emits it (see mixins/drumee), so a
+// rule relying on it renders every heading regular. This one sets it.
+@mixin billing-type($size: null, $line: null, $weight: null, $color: null) {
+  @include drumee.typo($size: $size, $line: $line, $color: $color);
+  @if $weight {
+    font-weight: $weight;
+  }
+}
+
 // The standard Drumee text field, as used by both promo inputs in this
 // widget. Skeletons.Entry paints its own inner <input>, so the box is the
 // wrapper and the inner element has to be flattened into it — otherwise the
@@ -544,35 +553,55 @@
   // bordered neutral-50 box that additionally switched to an orange/cream
   // tint for the canceling state (no such treatment exists in the design;
   // both the active and pending-cancel banners share this same grey).
+  // Figma 734-59617, node 1038:153557: a grey card, copy stacked above its
+  // action — title (Buttons/Large) over the description (Body/Medium), 4px
+  // apart, then the button 24px below. A column on every tab now: the old
+  // one-row strip (text left, button right) is gone with the design, and the
+  // skeleton builds it as a Box.Y.
+  //
+  // No margin-top: this shares a row with the campaign strip (see
+  // &__banner-row), and a margin on one half alone would drop it below the
+  // other. The row owns the spacing above.
   &__sub-banner {
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacer-4);
-    // No margin-top: this shares a row with the campaign strip now (see
-    // &__banner-row), and a margin on one half alone would drop it below the
-    // other. The row owns the spacing above, and sizes both halves.
-    // 2026-07-29: the banner dwarfed the rest of the page (18px title in a
-    // 16/24 padding box against 14px card text) — bring its type and box in
-    // line with the plan cards.
-    padding: 10px 12px 10px 16px;
-    border-radius: 12px;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: var(--spacer-6);
+    padding: var(--spacer-4) var(--spacer-4) var(--spacer-4) var(--spacer-6);
+    border-radius: var(--corner-radius-5, 16px);
     background: var(--tertiary-grey-20);
 
     &-text {
+      width: 100%;
       gap: 4px;
     }
 
     &-title {
-      font-weight: 600;
-      font-size: 14px;
-      line-height: 22px;
-      color: var(--tertiary-grey-100); // Grey/black #000000
+      @include billing-type(
+        $size: 18px,
+        $line: 1.2,
+        $weight: 600,
+        $color: var(--tertiary-grey-100)
+      );
     }
 
     &-desc {
-      font-size: 13px;
-      line-height: 1.4;
-      color: var(--primary-purple-100); // Primary/100 #0b0a21
+      @include billing-type(
+        $size: 16px,
+        $line: 1.2,
+        $weight: 400,
+        $color: var(--primary-purple-100)
+      );
+    }
+
+    // "Your plan ends on {date}" once the plan name has taken the title:
+    // the description's size, a step heavier so the date is what stands out.
+    &-ends {
+      @include billing-type(
+        $size: 16px,
+        $line: 1.2,
+        $weight: 500,
+        $color: var(--primary-purple-100)
+      );
     }
 
     &-action {
@@ -581,33 +610,34 @@
       white-space: nowrap;
     }
 
+    // Not drawn in the design, which shows only the canceling state. A text
+    // action with no fill, so it sits flush with the copy rather than being
+    // indented by button padding it has no background to justify.
     &-cancel {
-      color: var(--error-500);
-      // Same face as the banner title (it rendered one step smaller and
-      // bolder than everything beside it, which read as a glitch, not a
-      // choice): 14/22 at 500, the page's control size.
-      font-weight: 500;
-      font-size: 14px;
-      line-height: 22px;
-      padding: 8px 16px;
-      border-radius: 8px;
+      padding: 0;
+      @include billing-type(
+        $size: 16px,
+        $line: 24px,
+        $weight: 500,
+        $color: var(--error-500)
+      );
 
       &:hover {
         text-decoration: underline;
       }
     }
 
-    // Figma 3050-96156: Resume Subscription CTA is primary-50 (#433cc5) —
-    // was the unrelated legacy --primary-500 (#b251fb) purple. Sized with the
-    // slimmed banner.
+    // Buttons/Medium Button on Primary/50, 12px corners.
     &-resume {
-      color: var(--white);
+      padding: var(--spacer-3) var(--spacer-6);
+      border-radius: 12px;
       background: var(--primary-50);
-      font-weight: 600;
-      font-size: 14px;
-      line-height: 22px;
-      padding: 10px 20px;
-      border-radius: 4px;
+      @include billing-type(
+        $size: 16px,
+        $line: 24px,
+        $weight: 600,
+        $color: var(--white)
+      );
 
       &:hover {
         background: var(--primary-90);
@@ -1027,16 +1057,17 @@
   }
 
   &__checkout {
+    // Figma 734-59617: two 520px columns, 80px apart, centred, 24px above and
+    // below. One row here; the container queries further down narrow the gap
+    // and then stack the columns — wrapping alone would drop the summary below
+    // at 1120px, long before the columns are actually short of room.
     &-main {
       width: 100%;
-      gap: var(--spacer-8);
+      gap: 80px;
+      padding: var(--spacer-6) 0;
       align-items: flex-start;
-      // The two columns were locked to one row (nowrap) with a fixed 480px
-      // summary, so as the panel narrowed the form column was squeezed to its
-      // min-content and then the whole row overflowed — measured: 300px of
-      // form at an 820px container, and real overflow by 420px. Wrapping lets
-      // the summary drop below the form before anything is crushed.
-      flex-wrap: wrap;
+      justify-content: center;
+      flex-wrap: nowrap;
     }
 
     &-section {
@@ -1107,9 +1138,9 @@
 
     &-left {
       // min-width:0 lets the column actually shrink — a flex item defaults to
-      // min-width:auto, which is what pinned it at min-content and pushed the
-      // overflow onto the row. The 320px basis is the wrap trigger.
-      flex: 1 1 320px;
+      // min-width:auto, which pins it at min-content and pushes the overflow
+      // onto the row.
+      flex: 0 1 520px;
       min-width: 0;
       gap: var(--spacer-6);
     }
@@ -1128,13 +1159,12 @@
     // became unreachable. Position: sticky alone keeps it pinned while the
     // OUTER page scrolls.
     &-right {
-      // Side by side the summary keeps its 480px and lets the form take the
-      // rest, so it must NOT grow here — allowing that made the summary wider
-      // than the form (700 vs 540 at a 1280 container). The stacked case is
-      // handled by the container query, which gives it the full row.
-      flex: 0 1 480px;
+      // The same 520px as the form, and never wider: allowing it to grow made
+      // the summary outsize the form. The stacked case is handled by the
+      // container query, which gives it the full row.
+      flex: 0 1 520px;
       min-width: 0;
-      gap: var(--spacer-5);
+      gap: var(--spacer-4);
       padding: var(--spacer-6);
       background-color: var(--white);
       border: 1px solid rgba(0, 0, 0, 0.2);
@@ -1145,13 +1175,17 @@
     }
 
     &-section {
-      gap: var(--spacer-4);
+      gap: var(--spacer-3);
     }
 
+    // Body/Sub Title.
     &-section-title {
-      font-weight: 600;
-      font-size: 14px;
-      color: var(--neutral-900);
+      @include billing-type(
+        $size: 16px,
+        $line: 1.2,
+        $weight: 600,
+        $color: var(--primary-purple-100)
+      );
     }
 
     &-storage-buttons,
@@ -1164,8 +1198,14 @@
     &-pill-bar {
       width: 100%;
       padding: var(--spacer-1);
-      border-radius: var(--corner-radius-5); // 12px
+      // 12px. (--corner-radius-5 is 16px — the old `// 12px` note beside it
+      // was wrong, and the track came out rounder than the design.)
+      border-radius: var(--corner-radius-4);
       background-color: var(--tertiary-grey-20);
+      // A hairline one step darker than the track, so the bar reads as a
+      // control against the white page rather than as a grey smudge.
+      border: 1px solid var(--tertiary-grey-30);
+      box-sizing: border-box;
       gap: 0;
     }
 
@@ -1173,8 +1213,10 @@
       flex: 1;
       justify-content: center;
       align-items: center;
-      padding: var(--spacer-2) var(--spacer-6);
-      border-radius: var(--corner-radius-max);
+      padding: 6px var(--spacer-4);
+      // Concentric with the track: its 12px corner less the 4px inset, so
+      // the selected segment's curve runs parallel to the track's.
+      border-radius: var(--corner-radius-3);
       cursor: pointer;
       gap: 4px;
 
@@ -1187,18 +1229,25 @@
       }
     }
 
+    // Body/Large Body.
     &-pill-text {
-      font-size: 16px;
-      line-height: 1.4;
-      color: var(--tertiary-grey-80);
+      @include billing-type(
+        $size: 14px,
+        $line: 1.2,
+        $weight: 400,
+        $color: var(--tertiary-grey-80)
+      );
       white-space: nowrap;
     }
 
     &-pill-discount {
-      font-weight: 600;
-      font-size: 14px;
-      line-height: 24px;
-      color: var(--success);
+      @include billing-type(
+        $size: 13px,
+        $line: 1.2,
+        $weight: 600,
+        $color: var(--success)
+      );
+      white-space: nowrap;
     }
 
     &-storage-button {
@@ -1423,114 +1472,160 @@
       color: var(--neutral-600);
     }
 
-    &-total-label {
-      font-size: 14px;
-      color: var(--neutral-600);
+    // ── Summary column (Figma 737:29585) ──────────────────────────────────
+    &-total {
+      width: 100%;
+      gap: var(--spacer-2);
     }
 
+    &-total-label {
+      @include billing-type(
+        $size: 14px,
+        $line: 1.2,
+        $weight: 400,
+        $color: var(--tertiary-grey-80)
+      );
+    }
+
+    // `flex-end`, not baseline: the design sits "/month" on the bottom of the
+    // 40px figure's 1.1 line box.
     &-total-price {
-      align-items: baseline;
-      gap: var(--spacer-2);
+      align-items: flex-end;
+      gap: 0;
 
       &-amount {
-        font-weight: 700;
-        font-size: 24px;
-        color: var(--neutral-900);
+        @include billing-type(
+          $size: 32px,
+          $line: 1.1,
+          $weight: 600,
+          $color: var(--tertiary-grey-80)
+        );
+        letter-spacing: -0.64px;
+        white-space: nowrap;
       }
 
       &-period {
-        font-weight: 700;
-        font-size: 14px;
-        line-height: 20px;
-        letter-spacing: -0.85px;
-        color: var(--neutral-600);
+        @include billing-type(
+          $size: 16px,
+          $line: 1.1,
+          $weight: 500,
+          $color: var(--tertiary-grey-80)
+        );
+        letter-spacing: -0.32px;
       }
     }
 
+    // The two rules between the summary's groups — stroke black @ 20%.
+    &-divider {
+      width: 100%;
+      height: 0;
+      flex: 0 0 auto;
+      border-top: 1px solid rgba(0, 0, 0, 0.2);
+    }
+
     &-breakdown {
-      align-items: center;
-      border: 1px solid var(--neutral-300);
+      width: 100%;
+      gap: var(--spacer-4);
     }
 
     &-breakdown-item {
-      padding: var(--spacer-3);
-      gap: var(--spacer-3);
       width: 100%;
-      align-items: center;
+      gap: var(--spacer-3);
+      align-items: flex-start;
       justify-content: space-between;
     }
 
     &-breakdown-label {
       flex: 1;
-      font-size: 13px;
-      color: var(--neutral-600);
+      @include billing-type(
+        $size: 14px,
+        $line: 1.2,
+        $weight: 400,
+        $color: var(--tertiary-grey-80)
+      );
     }
 
     &-breakdown-value {
-      font-weight: 700;
-      font-size: 13px;
-      color: var(--neutral-900);
+      @include billing-type(
+        $size: 14px,
+        $line: 1.2,
+        $weight: 600,
+        $color: var(--primary-purple-100)
+      );
+      white-space: nowrap;
+    }
 
-      &-effective-price-per-seat {
-        color: var(--blue-600);
+    // Tinted highlight rows: Total Storage (primary-40 @10%) and Effective
+    // price per seat (cyan @16%). Icon, label, then the value pushed right.
+    &-highlight {
+      width: 100%;
+      box-sizing: border-box;
+      padding: var(--spacer-4);
+      border-radius: 10px;
+      gap: var(--spacer-2);
+      align-items: center;
+
+      &-icon {
+        flex: 0 0 18px;
+        width: 18px;
+        height: 18px;
+
+        svg {
+          width: 18px;
+          height: 18px;
+          display: block;
+          fill: currentColor;
+        }
       }
-    }
-
-    &-breakdown-label-container {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacer-3);
-    }
-
-    // Figma: primary-tinted box (primary-40 @10%), plain dark text — not green.
-    &-breakdown-total-storage {
-      background-color: rgba(89, 80, 255, 0.1);
-      padding: var(--spacer-3);
-      border-radius: var(--corner-radius-3);
-      justify-content: space-between;
 
       &-label {
-        color: var(--neutral-900);
-        font-weight: 600;
-        font-size: 13px;
-        line-height: 20px;
-        letter-spacing: -0.85px;
-        flex: 1;
-        text-align: left;
+        flex: 1 1 auto;
+        min-width: 0;
+        @include billing-type(
+          $size: 14px,
+          $line: 1.2,
+          $weight: 400,
+          $color: var(--primary-purple-100)
+        );
       }
+
       &-value {
-        color: var(--neutral-900);
-        text-align: right;
+        @include billing-type(
+          $size: 14px,
+          $line: 1.2,
+          $weight: 600,
+          $color: var(--primary-purple-100)
+        );
+        white-space: nowrap;
       }
     }
 
-    // Figma: cyan-tinted box (secondary-blue-50 @16%), not the old blue-100.
+    &-breakdown-total-storage {
+      background-color: rgba(89, 80, 255, 0.1);
+
+      .settings-billing__checkout-highlight-icon {
+        color: var(--primary-40);
+      }
+    }
+
     &-breakdown-effective-price-per-seat {
       background-color: rgba(101, 208, 234, 0.16);
-      justify-content: start;
-      border-radius: var(--corner-radius-3);
 
-      .settings-billing__checkout-breakdown-value-effective-price-per-seat {
-        color: var(--secondary-blue-80);
+      .settings-billing__checkout-highlight-icon {
+        color: var(--secondary-blue-60);
       }
     }
 
-    &-breakdown-icon {
-      width: 16px;
-      height: 16px;
-      svg.drumee-picto {
-        fill: none;
-      }
-    }
-
-    // Figma CTA colour is primary-50 (#433cc5) — was the unrelated legacy
-    // --primary-500 (#b251fb) purple.
+    // Figma CTA: primary-50, 12px radius, 16/24 semibold.
     &-checkout-button {
       width: 100%;
-      padding: var(--spacer-4);
+      box-sizing: border-box;
+      padding: var(--spacer-3) var(--spacer-6);
       background-color: var(--primary-50);
       color: var(--white);
-      border-radius: var(--corner-radius-max);
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 20px;
       font-weight: 600;
       justify-content: center;
       align-items: center;
@@ -1616,13 +1711,16 @@
     margin: 0 auto;
   }
 
+  // Figma 734-59617 (node 737:29545): Body/Sub Title — 20px semibold
+  // Primary/100, 16px above the tabs. Was a 32px bold display title that
+  // outweighed everything on the page.
   .settings-billing__page-title {
     font-family: var(--font-main);
-    font-size: 32px;
-    line-height: 40px;
-    font-weight: 700;
-    color: var(--neutral-900);
-    margin-bottom: var(--spacer-6);
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: var(--primary-purple-100);
+    margin-bottom: var(--spacer-4);
   }
 
   // The tab bar (max-width 400px pill) sits centred under the title (design).
@@ -2144,23 +2242,23 @@
     align-items: stretch;
     gap: var(--spacer-3, 12px);
     width: 100%;
-    min-height: 48px;
+    min-height: 40px;
   }
 
   &-input {
     flex: 1 1 auto;
     min-width: 0;
-    @include drumee-entry-box;
+    @include drumee-entry-box(40px);
   }
 
-  // Text CTA — stretch to the same 48px row height; text dead-center.
+  // Text CTA — stretch to the same 40px row height; text dead-center.
   &-apply {
     flex: 0 0 auto;
     align-self: stretch;
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    min-height: 48px;
+    min-height: 40px;
     padding: 0 var(--spacer-4, 16px);
     margin: 0;
     white-space: nowrap;
@@ -2224,7 +2322,21 @@
   opacity: 0.85;
 }
 
-@container billing-content (max-width: 900px) {
+// Below the design's 520 + 80 + 520, give up the gutter before the columns:
+// 40px keeps both columns at 480px (the 4-segment plan bar's natural width)
+// down to 1000px.
+@container billing-content (max-width: 1119px) {
+  .settings-billing__checkout-main {
+    gap: 40px;
+  }
+}
+
+@container billing-content (max-width: 1000px) {
+  .settings-billing__checkout-main {
+    flex-wrap: wrap;
+    gap: var(--spacer-6);
+  }
+
   .settings-billing__checkout-left,
   .settings-billing__checkout-right {
     flex: 1 1 100%;
@@ -2235,16 +2347,16 @@
     position: static;
     top: auto;
   }
-
-  .settings-billing__checkout-main {
-    gap: var(--spacer-6);
-  }
 }
 
 // Fallback for engines without container queries: approximate from the
 // viewport, allowing for the settings sidebar.
 @supports not (container-type: inline-size) {
-  @media screen and (max-width: 1080px) {
+  @media screen and (max-width: 1280px) {
+    .settings-billing__checkout-main {
+      flex-wrap: wrap;
+    }
+
     .settings-billing__checkout-left,
     .settings-billing__checkout-right {
       flex: 1 1 100%;
@@ -2734,6 +2846,138 @@
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
+// Checkout column: subscription banner + Enterprise card (Figma 734-59617)
+// ═════════════════════════════════════════════════════════════════════════════
+// On Checkout the subscription banner heads the form column (skeleton/index.js
+// getContent); the base &__sub-banner rule styles it there as everywhere else.
+.settings-billing__enterprise {
+  &-card {
+    width: 100%;
+    box-sizing: border-box;
+    gap: var(--spacer-4);
+    padding: var(--spacer-4);
+    border-radius: 16px;
+    background-color: var(--white);
+    border: 1px solid var(--tertiary-grey-30);
+  }
+
+  &-row {
+    align-items: center;
+    gap: var(--spacer-3);
+  }
+
+  // The design sizes the tile to the copy beside it (two lines + 4px): a
+  // 36px square, 4px inset, holding a 28px envelope.
+  &-icon {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    box-sizing: border-box;
+    padding: 4px;
+    border-radius: 12px;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(89, 80, 255, 0.1);
+    color: var(--primary-30);
+
+    &-svg,
+    svg {
+      width: 28px;
+      height: 28px;
+      display: block;
+      fill: currentColor;
+    }
+  }
+
+  &-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  &-title {
+    @include billing-type(
+      $size: 14px,
+      $line: 1.2,
+      $weight: 600,
+      $color: var(--primary-purple-100)
+    );
+  }
+
+  // The address runs on from the sentence, wrapping as a unit when the
+  // column is narrow.
+  &-desc-row {
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: 4px;
+  }
+
+  &-desc {
+    @include billing-type(
+      $size: 14px,
+      $line: 1.2,
+      $weight: 400,
+      $color: var(--primary-purple-100)
+    );
+  }
+
+  &-mail {
+    @include billing-type(
+      $size: 14px,
+      $line: 1.2,
+      $weight: 600,
+      $color: var(--primary-40)
+    );
+    text-decoration: underline;
+    text-underline-position: from-font;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--primary-50);
+    }
+  }
+
+  &-actions {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--spacer-2);
+  }
+
+  &-btn {
+    padding: var(--spacer-2) var(--spacer-4);
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    @include billing-type($size: 14px, $line: 20px, $weight: 600);
+    transition:
+      background-color 0.18s ease,
+      transform 0.16s cubic-bezier(0.2, 0.7, 0.2, 1);
+
+    &:active {
+      transform: scale(0.985);
+    }
+
+    &--primary {
+      color: var(--white);
+      background-color: var(--primary-40);
+
+      &:hover {
+        background-color: var(--primary-50);
+      }
+    }
+
+    &--secondary {
+      color: var(--primary-purple-100);
+      background-color: var(--tertiary-grey-20);
+
+      &:hover {
+        background-color: var(--tertiary-grey-30);
+      }
+    }
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 // "Contact sales" dialog (skeleton/sales-mail)
 // ═════════════════════════════════════════════════════════════════════════════
 // Rendered inside window_info's notice card, outside this widget's DOM. Each
@@ -2870,10 +3114,14 @@
     gap: var(--spacer-3);
   }
 
-  .settings-billing__page-title {
-    font-size: 24px;
-    line-height: 30px;
-    margin-bottom: var(--spacer-5);
+  // One step under the 20px desktop title (it used to step DOWN from 32px;
+  // left at 24px it would now be the larger of the two). Prefixed like the
+  // desktop rule, which is (0,3,0): a bare class never won, so phones kept
+  // the full desktop size.
+  .settings-billing[data-page="1"] .settings-billing__page-title {
+    font-size: 18px;
+    line-height: 1.2;
+    margin-bottom: var(--spacer-3);
   }
 
   // The tab bar was a fixed 400px pill with 24px of padding and a 24px gap —
@@ -2910,8 +3158,7 @@
 
   // Banner: the title and the action stop competing for one row. Left as a
   // column, the 4-line title beside a squeezed button becomes two clean blocks.
-  .settings-billing .settings-billing__sub-banner[data-flow="x"] {
-    flex-direction: column;
+  .settings-billing .settings-billing__sub-banner[data-flow] {
     align-items: stretch;
     gap: var(--spacer-3);
     padding: var(--spacer-4);
@@ -2971,9 +3218,8 @@
 
 // Smallest phones (320–360 CSS px, and any split pane that narrow).
 @container billing-page (max-width: 400px) {
-  .settings-billing__page-title {
-    font-size: 21px;
-    line-height: 27px;
+  .settings-billing[data-page="1"] .settings-billing__page-title {
+    font-size: 17px;
   }
 
   .settings-billing__tabs-trigger-item {
