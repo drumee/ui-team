@@ -2897,31 +2897,10 @@ $theme-colors: (
     }
   }
 
-  // Wraps the End (due) picker and its required message (create, detail and
-  // the child creator card). data-missing="1" outlines the field in red.
+  // Wraps the End (due) picker (create, detail and the child creator card).
   &__due-field {
     width: 100%;
     gap: 4px;
-  }
-
-  &__due-missing {
-    @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
-      $color: var(--error, #f6514b)
-    );
-  }
-
-  // !important: ui-core's data-flow rules give every Note display:flex at
-  // higher specificity (same as __title-missing).
-  &__due-field:not([data-missing="1"]) .tasks-panel__due-missing {
-    display: none !important;
-  }
-
-  &__due-field[data-missing="1"] .tasks-panel__due-input {
-    box-shadow:
-      0 0 0 1px var(--error, #f6514b),
-      0 0 0 4px rgba(246, 81, 75, 0.15);
   }
 
   &__attachments {
@@ -3908,7 +3887,7 @@ $theme-colors: (
   }
 
   // !important: ui-core gives every active widget display:flex at higher
-  // specificity (same as __due-missing).
+  // specificity.
   &__due-slot[data-filled="0"] .tasks-panel__due-clear {
     display: none !important;
   }
@@ -9400,10 +9379,6 @@ $theme-colors: (
   // Due date row: the parent's __due-input field, full card width.
   &__subtask-card-date {
     width: 100%;
-
-    .tasks-panel__due-missing {
-      font-size: 11px;
-    }
 
     .tasks-panel__subtask-due-input {
       width: 100%;
