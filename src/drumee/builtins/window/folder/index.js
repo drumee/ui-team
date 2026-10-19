@@ -1,4 +1,5 @@
 const mfsInteract = require("../interact");
+const snap = require("../snap");
 const { EVENT: SPLIT_BODY_EVENT } = require("libs/split-body-signal");
 const {
   VIEW_STATES,
@@ -1482,6 +1483,95 @@ class __window_folder extends mfsInteract {
     if (!view || !view.el) return;
     const v = pct == null ? this._storedFilesSplit() : pct;
     view.el.style.setProperty("--files-w", `${v}%`);
+    this._fitFilePanels();
+  }
+
+  // ---- File panel: a document tiled left over this pane --------------------
+  // Move & Resize "left" on a player opened from this workspace docks it over
+  // the files column, beside the chat (QA, 2026-10-15). It is still its own
+  // window, so this pane keeps it there: above the pane while the pane is the
+  // active window (a click in the chat or on the splitter used to raise the
+  // pane over it, and the document vanished), and as wide as the files column
+  // while the splitter moves.
+
+  /** Players tiled left that belong to this workspace. */
+  _filePanels() {
+    if (typeof Wm === "undefined") return [];
+    const hub = this.mget(_a.hub_id);
+    const out = [];
+    for (const layer of [Wm.headlessLayer, Wm.windowsLayer]) {
+      if (!layer || (layer.isDestroyed && layer.isDestroyed()) || !layer.children) continue;
+      for (const w of layer.children.toArray()) {
+        if (!w || !w.isPlayer || w._tiled !== "left" || !w.el) continue;
+        if (w.isDestroyed && w.isDestroyed()) continue;
+        if (w.mget(_a.hub_id) != hub) continue;
+        out.push(w);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Where a file panel of this workspace goes: from this pane's left edge to
+   * the splitter, full height, in the player's parent coordinates. Null
+   * unless the Files view, with its chat, is showing (snap.tileToSide falls
+   * back to half the screen then).
+   */
+  filePanelBounds(player) {
+    if (!player || !player.el || player.mget(_a.hub_id) != this.mget(_a.hub_id)) return null;
+    if (!this.el || !this.el.isConnected || this.mget(_a.minimize)) return null;
+    const view = this.__folderView;
+    if (!view || !view.el || !showsFileGrid(view.el.dataset.view)) return null;
+    const handle = view.el.querySelector(`.${this.fig.family}__files-splitter`);
+    const origin = player.el.offsetParent || player.el.parentElement;
+    if (!handle || !origin) return null;
+    const h = handle.getBoundingClientRect();
+    const pane = this.el.getBoundingClientRect();
+    const o = origin.getBoundingClientRect();
+    const width = Math.round(h.left - pane.left);
+    if (!h.width || width < 200) return null;
+    return {
+      left: Math.round(pane.left - o.left),
+      top: Math.round(pane.top - o.top),
+      width,
+      height: Math.round(pane.height),
+    };
+  }
+
+  /**
+   * Lift the file panels over this pane while it is the active window and
+   * shows the files (player skin `data-file-panel`); off it, they go back
+   * behind, as any other window.
+   */
+  _syncFilePanels() {
+    const view = this.__folderView;
+    const lift = !!(this.getState && this.getState() == 1 &&
+      view && view.el && showsFileGrid(view.el.dataset.view));
+    for (const p of this._filePanels()) {
+      if (lift) p.el.dataset.filePanel = "1";
+      else delete p.el.dataset.filePanel;
+    }
+  }
+
+  /** Size the file panels to the files column, at most once a frame. */
+  _fitFilePanels() {
+    if (this._fitFilePanelsRaf) return;
+    this._fitFilePanelsRaf = requestAnimationFrame(() => {
+      this._fitFilePanelsRaf = null;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      for (const p of this._filePanels()) {
+        const b = this.filePanelBounds(p);
+        if (b) snap.applyBounds(p, b, { instant: true, minWidth: b.width });
+      }
+    });
+  }
+
+  // The radio sets this pane's active state (data-state) on every raise, from
+  // any path: a click, the WM handing focus back. Keep the file panels in step.
+  setState(state) {
+    const r = super.setState(state);
+    this._syncFilePanels();
+    return r;
   }
 
   _wireFilesSplitter(child) {
@@ -1498,6 +1588,7 @@ class __window_folder extends mfsInteract {
       pct = Math.min(this._FILES_SPLIT_MAX(), Math.max(this._FILES_SPLIT_MIN(), pct));
       this._filesSplitPct = pct;
       view.el.style.setProperty("--files-w", `${pct}%`);
+      this._fitFilePanels();
     };
     const onUp = (e) => {
       if (!dragging) return;
@@ -6627,6 +6718,8 @@ class __window_folder extends mfsInteract {
       view.el.dataset.fromView = prevTab || "";
       view.el.dataset.view = tab;
       this._firstSplitPage(view);
+      // A file panel belongs to the Files view: behind the pane on the others.
+      this._syncFilePanels();
       this._playViewEntrance(view);
       this._restorePanelScroll();
       switch (tab) {
@@ -6709,6 +6802,7 @@ class __window_folder extends mfsInteract {
           return;
         default:
           view.el.dataset.view = "files";
+          this._syncFilePanels();
       }
     };
 

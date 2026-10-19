@@ -459,6 +459,8 @@ class __window_interact_player extends __utils {
    */
   _dragStart(e, ui) {
     this.selector(0);
+    // Moved by hand: no longer tiled, so no longer a workspace's file panel.
+    snap.markTiled(this, null);
     this.triggerMethod(CHANGE_RADIO);
   }
 
@@ -497,6 +499,7 @@ class __window_interact_player extends __utils {
    */
   _resizeStart(e, ui) {
     this.selector(0);
+    snap.markTiled(this, null);
     this._sizeCtrl && this._sizeCtrl.changeState(0);
     this._addResizeShield();
     super._resizeStart(e, ui);
