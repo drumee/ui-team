@@ -7,6 +7,8 @@
 // ===========================================================
 //
 // ===========================================================
+const withFileSwitcher = require("builtins/player/widget/file-switcher/frame");
+
 function __skl_editor_diagram(_ui_) {
   const menu = Skeletons.Box.X({
     debug     : __filename,
@@ -18,7 +20,7 @@ function __skl_editor_diagram(_ui_) {
     },
     kids : [require('./topbar')(_ui_)]
   })
-  const a = require('window/skeleton/content/main')(_ui_, menu)
+  const a = withFileSwitcher(_ui_, require('window/skeleton/content/main')(_ui_, menu))
   a.debug = __filename
   return a
 }

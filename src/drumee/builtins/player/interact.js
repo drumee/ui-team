@@ -847,7 +847,11 @@ class __window_interact_player extends __utils {
    */
   _opensFullFrame() {
     if (Visitor.isMobile()) return false;
-    if (this.mget(_a.kind) === "audio_player") return false;
+    // Audio keeps its compact Music player where there is no panel to sit
+    // beside (share page); on the desk it fills the frame as the others do.
+    if (this.mget(_a.kind) === "audio_player") {
+      return require("builtins/player/widget/file-switcher/frame").enabled(this);
+    }
     return true;
   }
 

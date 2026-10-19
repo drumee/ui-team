@@ -1,3 +1,4 @@
+const withFileSwitcher = require("builtins/player/widget/file-switcher/frame");
 // ===========================================================
 //  Sheet editor window — header + empty body the sheet mounts
 //  into. Same shell shape as window/skeleton/content/main but
@@ -41,11 +42,13 @@ function __skl_editor_sheet(_ui_) {
     name: "dialog",
   });
 
-  return Skeletons.Box.Y({
+  // In the Open-File Switcher frame, like every other viewer opened from a
+  // folder (the panel lists this file's neighbours).
+  return withFileSwitcher(_ui_, Skeletons.Box.Y({
     className: `${_ui_.fig.family}__main ${_ui_.fig.group}__main drive-popup`,
     radio: _a.parent,
     debug: __filename,
     kids: [header, body, dialog],
-  });
+  }));
 }
 module.exports = __skl_editor_sheet;

@@ -8,11 +8,18 @@
  * Open-File Switcher — the "Files" panel on the left of a player
  * (Figma "Drumee 2.0" section 828:94152).
  *
- * Lists the files the user recently viewed and the other files of the
- * folder the open file lives in; clicking one opens it in its own player
- * and closes this one, so the user switches file without going back to the
- * folder. "Create new file" offers Document / Spreadsheet / Presentation,
- * makes the chosen file in the same folder and switches to it.
+ * Lists the files of the folder the viewer was opened from: the ones the
+ * user recently viewed, then the others by type; clicking one opens it in its
+ * own player and closes this one, so the user switches file without going
+ * back to the folder. "Create new file" offers Document / Spreadsheet /
+ * Presentation, makes the chosen file in that folder and switches to it.
+ *
+ * ONE folder for both lists, and the folder the viewer was opened from, not
+ * the open file's (product call, 2026-10-19). Recently viewed used to span
+ * every folder and workspace, and opening one of those replaced "Other
+ * files" with that file's neighbours on every switch; now every row is a
+ * neighbour, the folder is handed from panel to panel (`handoff`) and nothing
+ * moves until the viewer is closed.
  *
  * The host player passes itself as `player`; the panel only reads it
  * (node, permissions) and closes it once the next file is up.
@@ -21,18 +28,29 @@ require("./skin");
 
 const { openMedia, CONTAINER_FILETYPES } = require("libs/open-media");
 const recent = require("./recent");
-const { isScheduleNode } = require("builtins/window/skeleton/toolkit/list-skip");
 const skeleton = require("./skeleton");
+const { groupFiles } = require("./groups");
+const { fileListSkip, isScheduleNode } = require("builtins/window/skeleton/toolkit/list-skip");
 
 const COLLAPSED_KEY = "player-file-switcher:collapsed";
 const MAX_RECENT = 5;
 const READY_POLL_MS = 100;
 const READY_TIMEOUT_MS = 10000;
 
-// What the closing panel hands to the next one (same folder): the folder's
-// files and the scroll position, so the new panel is drawn complete at once
-// instead of empty-then-filled.
+// What the closing panel hands to the next one: the folder it lists (scope),
+// its files and the scroll position, so the new panel is drawn complete at
+// once instead of empty-then-filled. Stamped, and only taken while fresh: a
+// switch into a player without a panel (audio) would otherwise leave it for
+// the next viewer opened from a folder.
 let handoff = null;
+const HANDOFF_TTL_MS = 30000;
+
+function takeHandoff() {
+  const h = handoff;
+  handoff = null;
+  if (!h || !h.at || Date.now() - h.at > HANDOFF_TTL_MS) return null;
+  return h;
+}
 
 function readCollapsed() {
   try {
@@ -106,11 +124,11 @@ class __file_switcher extends LetcBox {
     // The open file stays in the list (on top, just remembered), highlighted
     // as current by the skeleton.
     this._recent = recent.read();
-    const h = handoff;
-    handoff = null;
-    if (h && h.pid === node.pid && h.hub_id === node.hub_id) {
-      this._folder = h.folder;
-    }
+    const h = takeHandoff();
+    // The folder "Other files" lists: the one this viewer was opened from,
+    // carried across switches; the open file's own folder only at the start.
+    this._scope = (h && h.scope) || { pid: node.pid, hub_id: node.hub_id };
+    if (h) this._folder = h.folder || [];
     // Before the first draw: its synchronous head raises _loadingOthers, so
     // "Other files" opens on the skeleton instead of "No files yet".
     this.loadOthers();
@@ -122,9 +140,9 @@ class __file_switcher extends LetcBox {
     }
   }
 
-  /** Files of the open file's folder, newest first; folders left out. */
+  /** Files of the listed folder (_scope), newest first; folders left out. */
   async loadOthers() {
-    const { pid, hub_id } = this.node();
+    const { pid, hub_id } = this._scope || {};
     if (!pid || !hub_id) return;
     this._loadingOthers = true;
     let data;
@@ -143,8 +161,13 @@ class __file_switcher extends LetcBox {
     this._loadingOthers = false;
     if (this.isDestroyed()) return;
     const items = Array.isArray(data) ? data : (data && data.items) || [];
+    // Folders have their own windows. The rest follows the folder's own
+    // listing (toolkit list-skip): a .schedule node is a meeting on the Meet
+    // tab, not a file, and dotfiles stay out until "show hidden files".
+    const hidden = fileListSkip().filename;
     this._folder = items.filter(
       (f) => f && f.nid && !CONTAINER_FILETYPES.includes(f.filetype)
+        && !isScheduleNode(f) && !(hidden && hidden.test(String(f.filename || "")))
     ).map((f) => ({ hub_id, ...f }));
     this.renderLists();
   }
@@ -158,10 +181,27 @@ class __file_switcher extends LetcBox {
     return name.includes(this._query);
   }
 
+  /**
+   * Is a remembered file in the listed folder? By its folder when the row
+   * carries it; a row from before pid was kept is matched against the
+   * listing (so it shows once the listing is in).
+   */
+  inScope(n) {
+    const scope = this._scope || {};
+    if (!n || String(n.hub_id) !== String(scope.hub_id)) return false;
+    if (n.pid) return String(n.pid) === String(scope.pid);
+    return this._folder.some((f) => f.nid === n.nid);
+  }
+
   renderLists() {
-    const recents = this._recent.filter((n) => this.match(n)).slice(0, MAX_RECENT);
     const { nid } = this.node();
-    const others = this._folder.filter((n) => n.nid !== nid && this.match(n));
+    const recents = this._recent
+      .filter((n) => (n.nid === nid || this.inScope(n)) && this.match(n))
+      .slice(0, MAX_RECENT);
+    // The rest of the folder: not the open file, and not a row already up
+    // under Recently viewed (user's call, 2026-10-19: no file twice).
+    const shown = new Set(recents.map((n) => n.nid));
+    const others = this._folder.filter((n) => n.nid !== nid && !shown.has(n.nid) && this.match(n));
     const empty = this._query ? LOCALE.NO_FILE_RESULTS : LOCALE.NO_FILES_YET;
     this.ensurePart("recent-list").then((p) => {
       p.feed(skeleton.rows(this, recents, "recent", empty, nid));
@@ -173,7 +213,7 @@ class __file_switcher extends LetcBox {
       p.feed(
         loading
           ? skeleton.loadingRows(this)
-          : skeleton.rows(this, others, "other", empty)
+          : skeleton.groupedRows(this, groupFiles(others), "other", empty)
       );
     });
   }
@@ -215,15 +255,17 @@ class __file_switcher extends LetcBox {
    * node is fetched again (openMedia), so a recent row whose file is gone
    * alerts and is dropped instead of opening an empty player.
    */
-  async switchTo(nid, hub_id) {
+  async switchTo(nid, hub_id, filetype) {
     const node = this.node();
     if (!nid || !hub_id || nid === node.nid || this._switching) return;
+    // A web page has no viewer: a new tab, as the folder opens it.
+    if (filetype === _a.web) return this.openInTab(nid, hub_id);
     this._switching = 1;
     this.el.dataset.busy = 1;
     const scroll = this.getPart && this.getPart("scroll");
     handoff = {
-      pid: node.pid,
-      hub_id: node.hub_id,
+      at: Date.now(),
+      scope: this._scope,
       folder: this._folder,
       scrollTop: scroll && scroll.el ? scroll.el.scrollTop : 0,
     };
@@ -252,6 +294,45 @@ class __file_switcher extends LetcBox {
     if (p && !p.isDestroyed()) p.goodbye();
   }
 
+  /**
+   * An .html file (filetype web) has no player; the folder opens it in a new
+   * tab (window/manager openContent) and so does the panel. The tab is opened
+   * inside the click, before the node is fetched: opened after an await the
+   * browser blocks it as a popup. This viewer stays up.
+   */
+  async openInTab(nid, hub_id) {
+    const tab = window.open("", "_blank");
+    let url = null;
+    try {
+      const node = await this.fetchService(
+        { service: SERVICE.media.attributes, nid, hub_id },
+        { async: 1 },
+      );
+      if (node && node.nid) {
+        const k = await Kind.waitFor(_a.media);
+        const media = new k({ model: new Backbone.Model(node) });
+        url = media.srcUrl && media.srcUrl();
+      }
+    } catch (e) {
+      this.warn("file-switcher: web page open failed", e);
+    }
+    if (this.isDestroyed()) {
+      if (tab && !url) tab.close();
+      if (tab && url) tab.location.href = url;
+      return;
+    }
+    if (!url) {
+      if (tab) tab.close();
+      Wm.alert(LOCALE.FILE_NOT_FOUND);
+      recent.forget(nid);
+      this._recent = this._recent.filter((n) => n.nid !== nid);
+      this.renderLists();
+      return;
+    }
+    if (tab) tab.location.href = url;
+    else window.open(url, "_blank");
+  }
+
   setCreateMenu(open) {
     this.el.dataset.createMenu = open ? 1 : 0;
   }
@@ -262,7 +343,8 @@ class __file_switcher extends LetcBox {
     if (!name) return;
     if (require("libs/over-limit").guardWrite("write")) return;
     const service = this.createService();
-    const { pid, hub_id } = this.node();
+    // In the listed folder, where the new file will show up.
+    const { pid, hub_id } = this._scope || this.node();
     if (!service || !pid || !hub_id || this._switching) return;
     this.el.dataset.busy = 1;
     let data;
@@ -313,7 +395,7 @@ class __file_switcher extends LetcBox {
       }
 
       case "open-file":
-        return this.switchTo(cmd.mget(_a.nid), cmd.mget(_a.hub_id));
+        return this.switchTo(cmd.mget(_a.nid), cmd.mget(_a.hub_id), cmd.mget(_a.filetype));
 
       case "toggle-create-menu":
         // Collapsed, the "+" opens the full panel with the menu down.

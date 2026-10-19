@@ -5,9 +5,12 @@
  * browser, per user. Only what is needed to draw a row and reopen the file is
  * kept; the file's attributes are fetched again on open, so a stale row (file
  * renamed, moved or deleted since) cannot open the wrong thing.
+ *
+ * The panel shows the ones of the folder it lists (index renderLists), so
+ * `pid` is kept and the list is long enough to hold a few per folder.
  */
 
-const MAX = 10;
+const MAX = 30;
 
 function key() {
   return `player-file-switcher:recent:${Visitor.id}`;
@@ -32,10 +35,10 @@ function write(list) {
 
 /** Put `node` at the head of the list. */
 function remember(node = {}) {
-  const { nid, hub_id, filename, ext, filetype, area } = node;
+  const { nid, hub_id, pid, filename, ext, filetype, area } = node;
   if (!nid || !hub_id) return;
   const rest = read().filter((r) => r.nid !== nid);
-  write([{ nid, hub_id, filename, ext, filetype, area }, ...rest]);
+  write([{ nid, hub_id, pid, filename, ext, filetype, area }, ...rest]);
 }
 
 /** Drop a file that could not be opened any more. */

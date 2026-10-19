@@ -1,3 +1,4 @@
+const withFileSwitcher = require("../../widget/file-switcher/frame");
 
 module.exports = function (ui) {
   const topbar = require("./topbar")(ui);
@@ -7,10 +8,10 @@ module.exports = function (ui) {
     sys_pn: _a.content
   });
 
-  return Skeletons.Box.Y({
+  return withFileSwitcher(ui, Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.family}__main`,
     partHandler: ui,
     kids: [topbar, main]
-  });
+  }));
 }
