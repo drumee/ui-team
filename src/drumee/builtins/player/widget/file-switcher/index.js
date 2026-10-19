@@ -198,10 +198,9 @@ class __file_switcher extends LetcBox {
     const recents = this._recent
       .filter((n) => (n.nid === nid || this.inScope(n)) && this.match(n))
       .slice(0, MAX_RECENT);
-    // The rest of the folder: not the open file, and not a row already up
-    // under Recently viewed (user's call, 2026-10-19: no file twice).
-    const shown = new Set(recents.map((n) => n.nid));
-    const others = this._folder.filter((n) => n.nid !== nid && !shown.has(n.nid) && this.match(n));
+    // The whole folder but the open file, as the folder's own Group view
+    // lists it; a recently viewed file shows in both (user's call, 2026-10-19).
+    const others = this._folder.filter((n) => n.nid !== nid && this.match(n));
     const empty = this._query ? LOCALE.NO_FILE_RESULTS : LOCALE.NO_FILES_YET;
     this.ensurePart("recent-list").then((p) => {
       p.feed(skeleton.rows(this, recents, "recent", empty, nid));
