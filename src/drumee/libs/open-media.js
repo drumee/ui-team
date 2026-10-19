@@ -57,17 +57,35 @@ async function openMedia(data = {}, { fetchService, warn } = {}) {
   const { nid, hub_id } = data;
   let { filetype } = data;
   let node;
-  if (!filetype) {
+  const fetchNode = async () => {
     node = await fetchService({ service: SERVICE.media.attributes, nid, hub_id }, { async: 1 });
     if (!node || !node.nid) {
       Wm.alert(LOCALE.FILE_NOT_FOUND);
-      return undefined;
+      return false;
     }
     filetype = node.filetype;
+    return true;
+  };
+  if (!filetype && !(await fetchNode())) return undefined;
+  let opt = appConfig(filetype, { ...data, ...node });
+  let media = null;
+  if (!opt || !opt.kind) {
+    // A type the map does not name: a Univer sheet saved as .json, a Casual
+    // doc, a note, a script. application() tells those apart from the node's
+    // mimetype, dataType and ext, which it reads through a media model (the
+    // folder hands it the tile's); build one from the node and ask again.
+    if (!node && !(await fetchNode())) return undefined;
+    try {
+      const k = await Kind.waitFor(_a.media);
+      media = new k({ model: new Backbone.Model(node) });
+    } catch (e) {
+      if (warn) warn("[openMedia] could not build media", e);
+      return null;
+    }
+    opt = appConfig(filetype, { ...data, ...node, media });
+    if (!opt || !opt.kind) return null;
   }
-  const opt = appConfig(filetype, { ...data, ...node });
-  if (!opt || !opt.kind) return null;
-  return launchPlayer({ opt, node, nid, hub_id }, { fetchService, warn });
+  return launchPlayer({ opt, node, nid, hub_id, media }, { fetchService, warn });
 }
 
 module.exports = { openMedia, launchPlayer, CONTAINER_FILETYPES };

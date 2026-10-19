@@ -168,7 +168,8 @@ test("a file panel spans the pane's left edge to the splitter", () => {
 
 test("the pane keeps its panels in step with its focus, its tab and its splitter", () => {
   assert.match(FOLDER_SRC, /setState\(state\) \{\s*const r = super\.setState\(state\);\s*this\._syncFilePanels\(\);/);
-  assert.match(FOLDER_SRC, /view\.el\.dataset\.view = tab;\s*\/\/[^\n]*\n\s*this\._syncFilePanels\(\);/);
+  // Right after the view stamp (the first split page may sit in between).
+  assert.match(FOLDER_SRC, /view\.el\.dataset\.view = tab;(?:\s*this\._firstSplitPage\(view\);)?\s*\/\/[^\n]*\n\s*this\._syncFilePanels\(\);/);
   assert.match(FOLDER_SRC, /view\.el\.style\.setProperty\("--files-w", `\$\{pct\}%`\);\s*this\._fitFilePanels\(\);/);
 });
 

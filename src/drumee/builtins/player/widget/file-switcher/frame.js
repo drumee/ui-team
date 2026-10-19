@@ -13,7 +13,7 @@ function enabled(ui) {
   return !!(ui.mget(_a.pid) && ui.mget(_a.hub_id));
 }
 
-module.exports = function withFileSwitcher(ui, root) {
+function withFileSwitcher(ui, root) {
   if (!root || !enabled(ui)) return root;
   const pfx = "file-switcher";
   const kids = root.kids || [];
@@ -27,4 +27,7 @@ module.exports = function withFileSwitcher(ui, root) {
     }),
   ];
   return root;
-};
+}
+
+module.exports = withFileSwitcher;
+module.exports.enabled = enabled;
