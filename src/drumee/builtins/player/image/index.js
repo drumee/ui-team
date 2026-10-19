@@ -923,6 +923,7 @@ class __player_image extends __core {
     let data = this.siblingsData[this._currentSlide]
     let { filename } = data;
     this.model.set(data);
+    if (this._fileSwitcher) this._fileSwitcher.syncCurrent(data);
     this.__playerTitle.set({ content: filename })
     let urls = this.getImageUrls(data);
     this._isPlaying = 1;

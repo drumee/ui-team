@@ -63,7 +63,20 @@ class __file_switcher extends LetcBox {
     } catch (e) {
       n = {};
     }
-    return { ...p.model.toJSON(), ...n };
+    // A file changed in place (audio next, image slideshow) is newer than
+    // either model: the media view still describes the file opened first.
+    return { ...p.model.toJSON(), ...n, ...this._current };
+  }
+
+  /**
+   * The player moved to `node` without a new window (audio next/prev, image
+   * slideshow): record it and redraw, so the highlight follows the file.
+   */
+  syncCurrent(node) {
+    this._current = node;
+    recent.remember(node);
+    this._recent = recent.read();
+    this.renderLists();
   }
 
   /** The doc-editor create service, when this endpoint has one. */
@@ -83,6 +96,8 @@ class __file_switcher extends LetcBox {
    *
    */
   onDomRefresh() {
+    // How the player reaches its panel for syncCurrent.
+    if (this.player) this.player._fileSwitcher = this;
     this.el.dataset.collapsed = readCollapsed() ? 1 : 0;
     this.feed(skeleton(this));
     const node = this.node();
@@ -104,6 +119,15 @@ class __file_switcher extends LetcBox {
         p.el.scrollTop = h.scrollTop;
       });
     }
+  }
+
+  /**
+   *
+   */
+  onBeforeDestroy() {
+    const p = this.player;
+    // A re-fed player has already registered the panel that replaces this one.
+    if (p && p._fileSwitcher === this) p._fileSwitcher = null;
   }
 
   /** Files of the open file's folder, newest first; folders left out. */
@@ -204,6 +228,13 @@ class __file_switcher extends LetcBox {
     if (!nid || !hub_id || nid === node.nid || this._switching) return;
     this._switching = 1;
     this.el.dataset.busy = 1;
+    // The player may hold work a switch would drop (unsaved text).
+    const p = this.player;
+    if (p && _.isFunction(p.confirmLeave) && !(await p.confirmLeave())) {
+      this._switching = 0;
+      if (!this.isDestroyed()) this.el.dataset.busy = 0;
+      return;
+    }
     const scroll = this.getPart && this.getPart("scroll");
     handoff = {
       pid: node.pid,
@@ -232,7 +263,6 @@ class __file_switcher extends LetcBox {
       return;
     }
     if (!r) return;
-    const p = this.player;
     if (p && !p.isDestroyed()) p.goodbye();
   }
 
