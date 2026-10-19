@@ -154,8 +154,8 @@ test("the next file is created in the listed folder, and the handoff carries it"
   assert.match(INDEX_SRC, /const \{ pid, hub_id \} = this\._scope \|\| this\.node\(\);/);
   assert.match(INDEX_SRC, /handoff = \{\s*at: Date\.now\(\),\s*scope: this\._scope,\s*folder: this\._folder,/);
   // Grouped once loaded; the loading skeleton (#740) stands in before that.
-  // The open file is lit in Other files as it is in Recently viewed.
-  assert.match(INDEX_SRC, /loading\s*\?\s*skeleton\.loadingRows\(this\)\s*:\s*skeleton\.groupedRows\(this, groupFiles\(others\), "other", empty, nid\)/);
+  // The open file is lit once, under Recently viewed: Other files gets no currentNid.
+  assert.match(INDEX_SRC, /loading\s*\?\s*skeleton\.loadingRows\(this\)\s*:\s*skeleton\.groupedRows\(this, groupFiles\(others\), "other", empty\)/);
   assert.match(SKEL_SRC, /function groupedRows\(ui, groups, section, empty, currentNid\)/);
 });
 
