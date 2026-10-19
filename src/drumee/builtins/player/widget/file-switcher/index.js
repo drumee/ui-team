@@ -101,7 +101,9 @@ class __file_switcher extends LetcBox {
     this.feed(skeleton(this));
     const node = this.node();
     recent.remember(node);
-    this._recent = recent.read().filter((r) => r.nid !== node.nid);
+    // The open file stays in the list (on top, just remembered), highlighted
+    // as current by the skeleton.
+    this._recent = recent.read();
     const h = handoff;
     handoff = null;
     if (h && h.pid === node.pid && h.hub_id === node.hub_id) {
@@ -153,7 +155,7 @@ class __file_switcher extends LetcBox {
     const others = this._folder.filter((n) => n.nid !== nid && this.match(n));
     const empty = this._query ? LOCALE.NO_FILE_RESULTS : LOCALE.NO_FILES_YET;
     this.ensurePart("recent-list").then((p) => {
-      p.feed(skeleton.rows(this, recents, "recent", empty));
+      p.feed(skeleton.rows(this, recents, "recent", empty, nid));
     });
     this.ensurePart("other-list").then((p) => {
       p.feed(skeleton.rows(this, others, "other", empty));

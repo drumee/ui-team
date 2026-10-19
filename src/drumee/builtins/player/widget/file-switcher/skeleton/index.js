@@ -14,11 +14,11 @@ const CREATE_OPTIONS = [
   { type: "presentation", name: "presentation.pptx", ico: "addmenu-presentation", label: "PRESENTATION" },
 ];
 
-function fileRow(ui, node, section) {
+function fileRow(ui, node, section, current) {
   const pfx = ui.fig.family;
   const name = node.ext ? `${node.filename}.${node.ext}` : node.filename;
   return Skeletons.Box.X({
-    className: `${pfx}__row`,
+    className: `${pfx}__row${current ? ` ${pfx}__row--current` : ""}`,
     service: "open-file",
     uiHandler: [ui],
     nid: node.nid,
@@ -27,6 +27,9 @@ function fileRow(ui, node, section) {
     kids: [
       Skeletons.Element({
         className: `${pfx}__row-icon ${node.area || ""}`,
+        // data-ext lets the skin whiten the office icons' page body, as the
+        // chat attachment chip does.
+        dataset: { ext: String(node.ext || "").toLowerCase() },
         content: nodeIconHtml(node, {
           area: node.area,
           prefix: "file-switcher-icon-",
@@ -38,13 +41,13 @@ function fileRow(ui, node, section) {
   });
 }
 
-/** Rows of one section, or its empty line. */
-function rows(ui, list, section, empty) {
+/** Rows of one section, or its empty line; `currentNid` is the open file. */
+function rows(ui, list, section, empty, currentNid) {
   const pfx = ui.fig.family;
   if (!list.length) {
     return [Skeletons.Note({ className: `${pfx}__empty`, content: empty })];
   }
-  return list.map((node) => fileRow(ui, node, section));
+  return list.map((node) => fileRow(ui, node, section, node.nid === currentNid));
 }
 
 function section(ui, { ico, title, pn }) {

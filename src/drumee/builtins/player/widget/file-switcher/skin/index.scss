@@ -136,7 +136,7 @@
   &__create {
     align-items: center;
     background-color: var(--primary-purple-50);
-    border-radius: 12px;
+    border-radius: 6px;
     color: #fff;
     cursor: pointer;
     gap: 8px;
@@ -260,13 +260,32 @@
 
   &__row {
     align-items: center;
-    border-radius: 8px;
+    border-radius: 4px;
     cursor: pointer;
     gap: 8px;
     min-width: 0;
 
     &:hover {
       background-color: var(--overlay-bg-05);
+    }
+
+    // The open file: already shown, so not a link.
+    &--current,
+    &--current:hover {
+      background-color: var(--primary-50);
+      cursor: default;
+
+      .file-switcher__row-name {
+        color: var(--white, #ffffff);
+        font-weight: 600;
+      }
+
+      // Single-colour glyphs turn white on the brand fill; the office icons
+      // keep their coloured detail (their page body is white already).
+      .file-switcher__row-icon .preview-icon {
+        color: var(--white, #ffffff);
+        fill: var(--white, #ffffff);
+      }
     }
 
     &-icon {
@@ -293,10 +312,31 @@
         width: 30px;
       }
 
+      // Paint the glyph the row's text colour: `lib/svg.scss` only sets
+      // `fill: currentcolor` for .svg-wrapper / .drumee-picto, so a
+      // .preview-icon left alone takes the SVG default of black — wrong in
+      // dark mode (same fix as widget/chat/skin/attachment.scss).
       .preview-icon {
+        color: var(--normal-fg-10, #0b0a21);
+        fill: currentColor;
         flex-shrink: 0;
         height: 22px;
         width: 22px;
+      }
+
+      // Office glyphs come from the raw sprite, where every detail path
+      // carries its own colour EXCEPT the page body, which has no fill and
+      // would default to black behind the blue/green/orange detail.
+      &[data-ext="doc"],
+      &[data-ext="docx"],
+      &[data-ext="xls"],
+      &[data-ext="xlsx"],
+      &[data-ext="ppt"],
+      &[data-ext="pptx"] {
+        .preview-icon {
+          color: var(--white, #ffffff);
+          fill: var(--white, #ffffff);
+        }
       }
     }
 
