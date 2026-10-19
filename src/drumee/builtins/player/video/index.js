@@ -5,6 +5,7 @@ const snap = require('builtins/window/snap');
 const details = require('builtins/player/widget/details');
 const share = require('builtins/player/widget/share');
 const renameInline = require('builtins/player/widget/topbar/rename');
+const withFileSwitcher = require('builtins/player/widget/file-switcher/frame');
 
 // Gear-menu rows that act on the node rather than on the viewer. The MFS
 // view this player was opened from implements all of them, so they are
@@ -80,8 +81,13 @@ class __player_video extends __core {
     this._clampToViewport();
 
     this.ratio = this.height / this.width;
+    // The Open-File Switcher sits beside the video: the window grows by its
+    // width instead of the video shrinking (_clampToViewport left the room).
+    // this.width stays the video's own: parseInfo runs again on reload.
+    const extra = withFileSwitcher.reservedWidth(this);
+    this.size = { ...this.size, width: this.size.width + extra };
     this.$el.height(this.height);
-    this.$el.width(this.width);
+    this.$el.width(this.width + extra);
     return true;
   }
 
@@ -98,7 +104,8 @@ class __player_video extends __core {
     // Usable width excludes the desk sidebar: Wm.$el (the WM container) starts
     // at the sidebar's right edge, so its left offset is the sidebar width.
     const sidebar = Wm.$el ? Wm.$el.offset().left : 0;
-    const max_w = window.innerWidth - 2 * o.marginX - sidebar;
+    const max_w = window.innerWidth - 2 * o.marginX - sidebar
+      - withFileSwitcher.reservedWidth(this);
     const max_h =
       window.innerHeight - o.offsetY - 2 * o.marginY - o.topbarHeight;
     if (this.width > max_w || this.height > max_h) {

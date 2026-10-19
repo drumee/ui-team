@@ -1,3 +1,4 @@
+const withFileSwitcher = require("../../widget/file-switcher/frame");
 
 
 module.exports = function (_ui_) {
@@ -11,5 +12,5 @@ module.exports = function (_ui_) {
     },
     kids : [require('./topbar')(_ui_)]
   })
-  return require('window/skeleton/content/main')(_ui_, menu)
+  return withFileSwitcher(_ui_, require('window/skeleton/content/main')(_ui_, menu))
 }

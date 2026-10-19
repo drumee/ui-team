@@ -8,6 +8,7 @@ const __player = require('player/interact');
 const snap = require('builtins/window/snap');
 const details = require('builtins/player/widget/details');
 const share = require('builtins/player/widget/share');
+const withFileSwitcher = require('builtins/player/widget/file-switcher/frame');
 const renameInline = require('builtins/player/widget/topbar/rename');
 const REMINDER_ID = 'reminder_id';
 
@@ -57,6 +58,9 @@ class __player_text extends __player {
       });
     }
 
+    // The Open-File Switcher sits beside the text: widen the window by it
+    // (a copy — this.size may still be the shared _K.docViewer).
+    this.size = { ...this.size, width: this.size.width + withFileSwitcher.reservedWidth(this) };
     this.style.set({ ...this.size, minWidth: 200, minHeight: 200 });
     this.isEditor = 1;
     this.isPlayer = 1;

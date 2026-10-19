@@ -5,6 +5,7 @@ const snap = require('builtins/window/snap');
 const details = require('builtins/player/widget/details');
 const share = require('builtins/player/widget/share');
 const renameInline = require('builtins/player/widget/topbar/rename');
+const withFileSwitcher = require('builtins/player/widget/file-switcher/frame');
 
 // Gear-menu rows that act on the node rather than on the viewer. The MFS
 // view this player was opened from implements all of them, so they are
@@ -115,12 +116,14 @@ class __player_audio extends __window_interact_player {
     this.width = this.width || this.$el.width();
     this.height = this.height || this.$el.height();
 
-    let max_w = window.innerWidth - 20;
+    // The Open-File Switcher sits beside the player and takes this much.
+    const extra = withFileSwitcher.reservedWidth(this);
+    let max_w = window.innerWidth - 20 - extra;
     let max_h = window.innerHeight - 20;
 
     if (this.width > max_w || this.height > max_h) {
       this.size = fitBoxes(
-        { width: window.innerWidth, height: window.innerHeight },
+        { width: window.innerWidth - extra, height: window.innerHeight },
         { width: this.width, height: this.height },
       );
       this.width = this.size.width;
@@ -133,8 +136,10 @@ class __player_audio extends __window_interact_player {
     }
 
     this.ratio = this.height / this.width;
+    // this.width stays the player's own: parseInfo runs again on every track.
+    this.size = { ...this.size, width: this.size.width + extra };
     this.$el.height(this.height);
-    this.$el.width(this.width);
+    this.$el.width(this.width + extra);
 
     return true;
   }
@@ -433,6 +438,7 @@ class __player_audio extends __window_interact_player {
     const m = this.media.model.toJSON();
     delete m.kind;
     this.mset(m);
+    if (this._fileSwitcher) this._fileSwitcher.syncCurrent(m);
     return this.fetchMediaInfo(() => {
       this.spinner(0);
       this.playNewTrack();

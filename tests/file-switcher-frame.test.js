@@ -101,3 +101,15 @@ test("readCollapsed survives throwing storage", () => {
   assert.equal(withFileSwitcher.readCollapsed(), false);
   assert.doesNotThrow(() => withFileSwitcher.writeCollapsed(true));
 });
+
+test("every file player skeleton wraps its root", () => {
+  const fs = require("node:fs");
+  const path = require("node:path");
+  for (const p of ["audio", "video", "vector", "text", "image", "document"]) {
+    const src = fs.readFileSync(
+      path.join(__dirname, `../src/drumee/builtins/player/${p}/skeleton/index.js`),
+      "utf8"
+    );
+    assert.match(src, /withFileSwitcher\(/, p);
+  }
+});

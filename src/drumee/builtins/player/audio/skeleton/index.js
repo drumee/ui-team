@@ -1,3 +1,4 @@
+import withFileSwitcher from "../../widget/file-switcher/frame";
 // ================================================================== *
 //   Copyright Xialia.com  2011-2021
 //   FILE : /src/drumee/builtins/player/audio/skeleton/index.js
@@ -126,7 +127,7 @@ function __skl_player_audio(_ui_) {
     ]
   });
 
-  return a;
+  return withFileSwitcher(_ui_, a);
 };
 
 export default __skl_player_audio;

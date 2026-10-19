@@ -1,3 +1,4 @@
+const withFileSwitcher = require("../../widget/file-switcher/frame");
 
 const __skl_player_video = (ui) => {
   // The shared topbar widget. It emits `${group}__header` and the "topbar"
@@ -17,7 +18,7 @@ const __skl_player_video = (ui) => {
     kids: [topbar, main],
   });
 
-  return a;
+  return withFileSwitcher(ui, a);
 };
 
 module.exports = __skl_player_video;
