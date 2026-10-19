@@ -333,6 +333,12 @@
       // `fill: currentcolor` for .svg-wrapper / .drumee-picto, so a
       // .preview-icon left alone takes the SVG default of black — wrong in
       // dark mode (same fix as widget/chat/skin/attachment.scss).
+      // Audio / note glyphs are raw 64px SVGs, not a .preview-icon.
+      > svg {
+        height: 22px;
+        width: 22px;
+      }
+
       .preview-icon {
         color: var(--normal-fg-10, #0b0a21);
         fill: currentColor;

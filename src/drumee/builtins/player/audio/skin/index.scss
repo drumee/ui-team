@@ -32,6 +32,21 @@
     min-width: 360px;
     width: 100%;
 
+    // Hosting the Open-File Switcher: the 360px transport keeps its width
+    // and the window grows by the panel (240px + 8px gap; 60px collapsed),
+    // and gets the height the panel's file list needs.
+    &:has(.file-switcher__frame) {
+      max-height: 400px;
+      max-width: 360px + 248px;
+      min-height: 400px;
+      min-width: 360px + 248px;
+    }
+
+    &:has(.file-switcher__ui[data-collapsed="1"]) {
+      max-width: 360px + 68px;
+      min-width: 360px + 68px;
+    }
+
     &[data-device="mobile"] {
       left: 50% !important;
       max-width: calc(100vw - 32px);
@@ -133,6 +148,11 @@
       min-width: 0 !important;
       transform: translateX(-50%) translateY(24px) !important;
       width: calc(100vw - 32px) !important;
+
+      // No room for the Open-File Switcher beside the transport.
+      .file-switcher__ui {
+        display: none;
+      }
     }
   }
 }
