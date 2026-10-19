@@ -199,8 +199,9 @@ class __file_switcher extends LetcBox {
       .filter((n) => (n.nid === nid || this.inScope(n)) && this.match(n))
       .slice(0, MAX_RECENT);
     // The whole folder, as the folder's own Group view lists it, the open
-    // file included and lit as current: nothing moves when a file is opened
-    // (user's call, 2026-10-19). A recently viewed file shows in both.
+    // file included: nothing moves when a file is opened (user's call,
+    // 2026-10-19). A recently viewed file shows in both; the open file is lit
+    // once, under Recently viewed, so no currentNid here.
     const others = this._folder.filter((n) => this.match(n));
     const empty = this._query ? LOCALE.NO_FILE_RESULTS : LOCALE.NO_FILES_YET;
     this.ensurePart("recent-list").then((p) => {
@@ -213,7 +214,7 @@ class __file_switcher extends LetcBox {
       p.feed(
         loading
           ? skeleton.loadingRows(this)
-          : skeleton.groupedRows(this, groupFiles(others), "other", empty, nid)
+          : skeleton.groupedRows(this, groupFiles(others), "other", empty)
       );
     });
   }
