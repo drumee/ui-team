@@ -228,7 +228,7 @@ test("Recently viewed shows the listed folder's files only, the open file always
   };
   renderLists.call(sw);
   assert.deepEqual(fed["recent-list"].map((n) => n.nid), ["cur", "old-in-x", "x2"]);
-  assert.deepEqual(fed["other-list"].map((n) => n.nid), ["k"], "neither the open file nor a recent row shows under Other files");
+  assert.deepEqual(fed["other-list"].map((n) => n.nid), ["old-in-x", "k"], "the open file alone is left out; a recent row shows in both lists");
 });
 
 // ── every viewer opened from a folder carries the panel ─────────────────────
