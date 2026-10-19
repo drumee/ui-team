@@ -101,7 +101,7 @@ module.exports = {
     RADIO_BROADCAST.off("call:minimize", this._onCallMinimize);
     RADIO_BROADCAST.off("call:restore", this._onCallRestore);
     try {
-      RADIO_BROADCAST.trigger("call:ended");
+      RADIO_BROADCAST.trigger("call:ended", { kind: this.mget(_a.kind) });
     } catch (e) { /* non-fatal */ }
   },
 
@@ -238,7 +238,7 @@ module.exports = {
     // full-size window lives back inside the window manager where that screen
     // covers it — so ask the desk to take the screen down.
     try {
-      RADIO_BROADCAST.trigger("call:returned");
+      RADIO_BROADCAST.trigger("call:returned", { kind: this.mget(_a.kind) });
     } catch (e) { /* non-fatal */ }
   },
 
