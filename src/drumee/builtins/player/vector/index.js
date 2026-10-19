@@ -1,4 +1,5 @@
 const __core = require('player/interact');
+const withFileSwitcher = require('builtins/player/widget/file-switcher/frame');
 
 class __player_vector extends __core {
 
@@ -86,6 +87,9 @@ class __player_vector extends __core {
     }, () => {
       // Full-frame owns the geometry; hugging the drawing would undo it.
       if (this._zoomed) return;
+      // The Open-File Switcher fills the window height: an auto height would
+      // let its file list stretch the window past the viewport.
+      if (withFileSwitcher.enabled(this)) return;
       this.$el.css({
         height: _a.auto,
         minHeight: this.__content.$el.height(),

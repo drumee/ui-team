@@ -65,7 +65,7 @@ class __file_switcher extends LetcBox {
     }
     // A file changed in place (audio next, image slideshow) is newer than
     // either model: the media view still describes the file opened first.
-    return { ...p.model.toJSON(), ...n, ...this._current };
+    return { ...p.model.toJSON(), ...n, ...p._switcherCurrent };
   }
 
   /**
@@ -73,7 +73,9 @@ class __file_switcher extends LetcBox {
    * slideshow): record it and redraw, so the highlight follows the file.
    */
   syncCurrent(node) {
-    this._current = node;
+    // Kept on the player: a re-fed skeleton mounts a new panel that must
+    // still know which file is on screen.
+    if (this.player) this.player._switcherCurrent = node;
     recent.remember(node);
     this._recent = recent.read();
     this.renderLists();
@@ -229,8 +231,11 @@ class __file_switcher extends LetcBox {
     this._switching = 1;
     this.el.dataset.busy = 1;
     // The player may hold work a switch would drop (unsaved text).
+    // createFile has already asked before making the file.
     const p = this.player;
-    if (p && _.isFunction(p.confirmLeave) && !(await p.confirmLeave())) {
+    const asked = this._leaveConfirmed;
+    this._leaveConfirmed = 0;
+    if (!asked && p && _.isFunction(p.confirmLeave) && !(await p.confirmLeave())) {
       this._switching = 0;
       if (!this.isDestroyed()) this.el.dataset.busy = 0;
       return;
@@ -278,7 +283,13 @@ class __file_switcher extends LetcBox {
     const service = this.createService();
     const { pid, hub_id } = this.node();
     if (!service || !pid || !hub_id || this._switching) return;
+    // Ask before creating: a Cancel after would leave an empty file behind.
+    const p = this.player;
     this.el.dataset.busy = 1;
+    if (p && _.isFunction(p.confirmLeave) && !(await p.confirmLeave())) {
+      if (!this.isDestroyed()) this.el.dataset.busy = 0;
+      return;
+    }
     let data;
     try {
       data = await this.postService(service, { nid: pid, hub_id, name });
@@ -293,6 +304,7 @@ class __file_switcher extends LetcBox {
       }
       return;
     }
+    this._leaveConfirmed = 1;
     this.switchTo(data.nid, data.hub_id || hub_id);
   }
 

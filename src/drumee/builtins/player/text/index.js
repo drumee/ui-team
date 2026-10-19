@@ -95,6 +95,9 @@ class __player_text extends __player {
         this.__textContent = child;
         this.waitElement(child.el, () => {
           child.el.value = this.mget(_a.content);
+          // The baseline confirmLeave compares against: read back from the
+          // textarea, which turns CRLF into LF.
+          this._savedText = child.el.value;
         })
         break;
       default:
@@ -108,6 +111,7 @@ class __player_text extends __player {
   _saveContent(opt, target) {
     this.postService(opt, { async: 1 }).then((data) => {
       this._changed = 0;
+      this._savedText = opt.content;
       const msg = `${LOCALE.SAVED} > ${data.file_path}`;
       this.ensurePart('acknowledgement').then((ack) => {
         ack.set({ content: msg });
@@ -178,7 +182,8 @@ class __player_text extends __player {
    */
   async confirmLeave() {
     const area = this.__textContent;
-    if (!area || area.el.value === (this.mget(_a.content) || "")) return true;
+    // No baseline yet: the text is still loading, nothing typed to lose.
+    if (!area || this._savedText == null || area.el.value === this._savedText) return true;
     return Wm.confirm({
       title: LOCALE.UNSAVED_CHANGES,
       message: LOCALE.FILE_SWITCHER_UNSAVED_DESC,

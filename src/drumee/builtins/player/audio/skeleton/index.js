@@ -1,9 +1,10 @@
-import withFileSwitcher from "../../widget/file-switcher/frame";
 // ================================================================== *
 //   Copyright Xialia.com  2011-2021
 //   FILE : /src/drumee/builtins/player/audio/skeleton/index.js
 //   TYPE : Skeleton
 // ===================================================================**/
+
+import withFileSwitcher from "../../widget/file-switcher/frame";
 
 function __skl_player_audio(_ui_) {
   const audioFig = `${_ui_.fig.family}`;

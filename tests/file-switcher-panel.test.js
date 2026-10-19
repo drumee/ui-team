@@ -36,25 +36,55 @@ test("syncCurrent records and redraws", () => {
   const n2 = { nid: 2, hub_id: "h" };
   const recent = { remember: spy(), read: () => [n2, n1] };
   const syncCurrent = build("syncCurrent(node)", ["recent"], [recent]);
-  const self = { renderLists: spy() };
+  const self = { player: {}, renderLists: spy() };
   syncCurrent.call(self, n2);
   assert.deepEqual(recent.remember.calls, [[n2]]);
   assert.deepEqual(self._recent, [n2, n1]);
   assert.equal(self.renderLists.calls.length, 1);
 });
 
-test("node() prefers the synced file over a stale media model", () => {
+// Kept on the player, not the panel: a re-fed skeleton (image restart)
+// mounts a new panel that must still know the slide on screen.
+test("syncCurrent keeps the current file on the player", () => {
+  const n2 = { nid: 2, hub_id: "h" };
+  const syncCurrent = build("syncCurrent(node)", ["recent"], [{ remember() {}, read: () => [] }]);
+  const self = { player: {}, renderLists() {} };
+  syncCurrent.call(self, n2);
+  assert.equal(self.player._switcherCurrent, n2);
+});
+
+test("node() prefers the in-place current over a stale media model", () => {
   const node = build("node()");
   const self = {
     player: {
       model: { toJSON: () => ({ nid: 1, pid: 9 }) },
       media: { isDestroyed: () => false, model: { toJSON: () => ({ nid: 1 }) } },
+      _switcherCurrent: { nid: 2 },
     },
-    _current: { nid: 2 },
   };
   const n = node.call(self);
   assert.equal(n.nid, 2);
   assert.equal(n.pid, 9);
+});
+
+test("Cancel in confirmLeave creates no file", async () => {
+  const fakeRequire = () => ({ guardWrite: () => false });
+  const createFile = build("async createFile(name)", ["require"], [fakeRequire]);
+  const self = {
+    player: { confirmLeave: async () => false },
+    el: { dataset: {} },
+    setCreateMenu() {},
+    createService: () => "svc",
+    node: () => ({ nid: 1, pid: 9, hub_id: "h" }),
+    postService: spy(async () => ({ nid: 3 })),
+    switchTo: spy(),
+    isDestroyed: () => false,
+    warn() {},
+  };
+  await createFile.call(self, "document.docx");
+  assert.equal(self.postService.calls.length, 0);
+  assert.equal(self.switchTo.calls.length, 0);
+  assert.equal(self.el.dataset.busy, 0);
 });
 
 function switchSelf(player) {

@@ -205,6 +205,7 @@ class __player_audio extends __window_interact_player {
     this.media = src;
     const { nid, hub_id } = src.actualNode();
     this.mset({ nid, hub_id });
+    if (this._fileSwitcher) this._fileSwitcher.syncCurrent(src.model.toJSON());
     return this.fetchMediaInfo(() => {
       this.media.wait(0);
       this.playNewTrack();
