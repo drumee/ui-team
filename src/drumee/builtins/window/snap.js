@@ -25,6 +25,37 @@ const DEFAULT_MIN_WIDTH = 760;
 const DEFAULT_MIN_HEIGHT = 480;
 
 /**
+ * Record the side a window is tiled to, or that it no longer is (zoomed,
+ * reframed, moved or resized by hand). A player tiled left over its
+ * workspace is that workspace's file panel (window/folder _syncFilePanels).
+ */
+function markTiled(ui, side) {
+  ui._tiled = side || null;
+  if (!ui.el) return;
+  if (side) {
+    ui.el.dataset.tiled = side;
+  } else {
+    delete ui.el.dataset.tiled;
+    delete ui.el.dataset.filePanel;
+  }
+}
+
+/**
+ * Where a player tiled left goes when a workspace pane behind it shows that
+ * workspace's files and chat: the files column, up to the splitter, so the
+ * chat stays beside it. Null otherwise (window/folder filePanelBounds).
+ */
+function filePanelBounds(ui) {
+  if (!ui || !ui.isPlayer || typeof Wm === "undefined" || !Wm.getItemsByKind) return null;
+  for (const w of Wm.getItemsByKind("window_folder") || []) {
+    if (!w || (w.isDestroyed && w.isDestroyed())) continue;
+    const b = typeof w.filePanelBounds === "function" ? w.filePanelBounds(ui) : null;
+    if (b) return b;
+  }
+  return null;
+}
+
+/**
  * The WM canvas: right of the desk sidebar, below the top header. Falls
  * back to the viewport when the desk chrome isn't mounted (DMZ share).
  */
@@ -154,6 +185,7 @@ function toggleZoom(ui, opt) {
     ui._zoomed = true;
   }
   ui.el.dataset.zoomed = ui._zoomed ? 1 : 0;
+  markTiled(ui, null);
   applyBoundsAfterFs(ui, target, opt);
 }
 
@@ -168,6 +200,7 @@ function fillWorkspace(ui, restore, opt = {}) {
   ui._preZoomBounds = restore || snapshotBounds(ui);
   ui._zoomed = true;
   ui.el.dataset.zoomed = 1;
+  markTiled(ui, null);
   applyBounds(
     ui,
     { left: 0, top: 0, width: ws.width, height: ws.height },
@@ -184,19 +217,24 @@ function tileToSide(ui, side, opt = {}) {
   const halfW = Math.floor(ws.width / 2);
   const leftW = halfW;
   const rightW = ws.width - halfW;
-  const bounds =
-    side === "right"
+  // Left over its workspace's files and chat, a player takes the files
+  // column instead of half the screen: the file panel QA expects beside the
+  // chat, whatever the split.
+  const panel = side === "left" ? filePanelBounds(ui) : null;
+  const bounds = panel ||
+    (side === "right"
       ? { left: halfW, top: 0, width: rightW, height: ws.height }
-      : { left: 0, top: 0, width: leftW, height: ws.height };
+      : { left: 0, top: 0, width: leftW, height: ws.height });
   ui._zoomed = false;
   ui._preZoomBounds = null;
   ui.el.dataset.zoomed = 0;
+  markTiled(ui, side);
   // A half-tile is narrower than any sane window minimum on a workspace
   // under 2× that minimum; pass the tile's own width so it can shrink to
   // exactly half the screen.
   applyBoundsAfterFs(ui, bounds, {
     ...opt,
-    minWidth: side === "right" ? rightW : leftW,
+    minWidth: bounds.width,
   });
 }
 
@@ -207,6 +245,7 @@ function reframe(ui, bounds, opt) {
   ui._zoomed = false;
   ui._preZoomBounds = null;
   ui.el.dataset.zoomed = 0;
+  markTiled(ui, null);
   applyBoundsAfterFs(
     ui,
     {
@@ -228,4 +267,6 @@ module.exports = {
   fillWorkspace,
   tileToSide,
   reframe,
+  markTiled,
+  filePanelBounds,
 };
