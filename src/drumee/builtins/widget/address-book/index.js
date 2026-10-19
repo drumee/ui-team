@@ -13,6 +13,14 @@ const idOf = (c) =>
 // Inbox / Call / Add contact apply to it.
 const isChatPartner = (c) => !!c && c.status === "nocontact";
 
+// An invitation not answered yet, either way: "sent" (we invited them),
+// "received" / "invitation" (they invited us). my_contact_show_next returns
+// "sent" and "invitation" rows in the active set too, so without this the
+// same person sat in All and in Pending at once. They belong to Pending only.
+const PENDING_STATUSES = ["sent", "received", "invitation"];
+const isPending = (c) => !!c && PENDING_STATUSES.includes(c.status);
+const isBlockedRow = (c) => c.is_blocked === 1 || c.status === "blocked";
+
 // A contact saved by EMAIL is tied to its account only by the server's
 // linkEmailContacts, after the proc ran — so the proc cannot tell that the
 // person you chat with is that saved contact, and lists them twice. Keep the
@@ -568,13 +576,39 @@ class __address_book extends LetcBox {
   }
 
   /**
+   * The tab that lists a person, unfiltered: All, Pending, Blocked or
+   * Archived — each person is in exactly one. Archived rows are not part of
+   * the active fetch, so they are asked for only when the others miss.
+   * Defaults to All when no tab has them.
+   */
+  async _tabHolding(match) {
+    if (this._contactsOption !== "active") await this._loadContacts("active");
+    for (const tab of ["all", "pending", "blocked"]) {
+      if (this._tabList(tab).some(match)) return tab;
+    }
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.contact.show_contact,
+        hub_id: Visitor.id,
+        option: "archived",
+      });
+      if (Array.isArray(rows) && rows.some(match)) return "archived";
+    } catch (err) {
+      // Not found is the fallback either way.
+    }
+    return "all";
+  }
+
+  /**
    * Select the contact behind a drumate id and show its detail — what a
    * Chat details member row opens (Desk.openContact). Waits for the first
-   * load. The All tab is the one that holds active contacts and colleagues,
-   * so a contact the current tab, search or tag filter hides brings the view
-   * back to All, unfiltered, with its row built and scrolled into view.
-   * Someone who is not in the book gets the not-found screen in the detail
-   * area (named, and with Add contact pre-filled, from `who` when given).
+   * load. A contact the current tab, search or tag filter hides brings the
+   * view to the tab that lists them (an invitation is in Pending, a blocked
+   * or archived contact in their own tab), unfiltered, with its row built and
+   * scrolled into view. Only someone no tab lists gets the not-found screen
+   * in the detail area (named, and with Add contact pre-filled, from `who`
+   * when given) — showing it for a pending, blocked or archived contact made
+   * Add contact answer "already in your contact list".
    *
    * @param {String} uid drumate id
    * @param {Object} [who] { name, email } as the caller knows the person
@@ -587,13 +621,13 @@ class __address_book extends LetcBox {
       c &&
       (c.drumate_id === uid || c.entity === uid || linkedDrumateId(c) === uid);
     if (!this._listForView().some(match)) {
-      if (this._tab !== "all" || this._contactsOption !== "active") {
-        await this.switchTab("all");
-      }
       this._selectedTagId = null;
       this._search = "";
       const input = this.el && this.el.querySelector(`.${this.fig.family}__search-input input`);
       if (input) input.value = "";
+      const tab = await this._tabHolding(match);
+      if (this.isDestroyed && this.isDestroyed()) return;
+      await this.switchTab(tab);
     }
     const list = this._listForView();
     const idx = list.findIndex(match);
@@ -1672,11 +1706,30 @@ class __address_book extends LetcBox {
 
   // ─── View accessors ─────────────────────────────────────────────
 
+  // The Pending tab: invitations received + sent. contact_notification_get
+  // also returns "informed" — the other side already accepted, and the row is
+  // listed in All — so it is left out here.
+  _pendingList() {
+    return [...(this._invitations || []), ...(this._sentInvitations || [])].filter(
+      (c) => c && c.status !== "informed",
+    );
+  }
+
+  // A tab's rows before search / tag filtering. All and Blocked read the
+  // active fetch, Archived the archived one (see switchTab).
+  _tabList(tab) {
+    if (tab === "pending") return this._pendingList();
+    const list = this._contacts.filter((c) => !isPending(c));
+    if (tab === "blocked") return list.filter(isBlockedRow);
+    // Server's my_contact_show_next returns blocked rows inside the active
+    // set; mirror the archived-tab isolation by excluding them from All.
+    if (tab === "all") return list.filter((c) => !isBlockedRow(c));
+    // Archived tab is already filtered server-side (option="archived").
+    return list;
+  }
+
   _listForView() {
-    let list =
-      this._tab === "pending"
-        ? [...this._invitations, ...this._sentInvitations]
-        : this._contacts;
+    let list = this._tabList(this._tab);
 
     if (this._search) {
       const term = this._search.toLowerCase();
@@ -1698,15 +1751,6 @@ class __address_book extends LetcBox {
 
     if (this._tab === "pending") return list;
 
-    const isBlocked = (c) => c.is_blocked === 1 || c.status === "blocked";
-    if (this._tab === "blocked") {
-      list = list.filter(isBlocked);
-    } else if (this._tab === "all") {
-      // Server's my_contact_show_next returns blocked rows inside the active
-      // set; mirror the archived-tab isolation by excluding them from All.
-      list = list.filter((c) => !isBlocked(c));
-    }
-    // Archived tab is already filtered server-side (option="archived").
     if (this._selectedTagId) {
       list = list.filter((c) =>
         (c.tag || []).some((t) => t.tag_id === this._selectedTagId),
@@ -1725,7 +1769,7 @@ class __address_book extends LetcBox {
     return this._selectedKey;
   }
   getInvitations() {
-    return [...(this._invitations || []), ...(this._sentInvitations || [])];
+    return this._pendingList();
   }
   getTags() {
     return this._tags || [];
