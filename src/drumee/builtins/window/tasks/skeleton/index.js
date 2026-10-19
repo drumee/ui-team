@@ -3976,8 +3976,8 @@ function dateFieldDisable(name, start, due) {
 
 // Kids for the date section (shared by the detail panel and the create modal —
 // pass scope "detail" | "create"), per Figma 741:96472: "Start date → End
-// date", two independent pickers. `start_date` is optional; the End date is
-// `due_date` and stays required (its __due-field carries the missing flag).
+// date", two independent pickers. Both are optional; the End date is
+// `due_date`.
 // Each stores ISO (Y-m-d) and displays d/m/Y via altInput. Each calendar is
 // bounded by the other field's date (dateFieldDisable) so the pair can never
 // read end-before-start; the controller re-bounds the other picker after a
@@ -4064,21 +4064,9 @@ function buildDueSectionContent(ui, scope = "detail") {
           className: `${pfx}__due-col`,
           kids: [
             label(LOCALE.END_DATE),
-            // Only the End field is a __due-field: _flagDueMissing flags the
-            // FIRST __due-field it finds, so the Start field must not be one.
-            // The picker and its required-field message share this wrapper, so
-            // the flag (draft._dueMissing, also stamped in place by the
-            // controller) outlines the field and reveals the message.
             Skeletons.Box.Y({
               className: `${pfx}__due-field`,
-              attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
-              kids: [
-                picker("due_date", due),
-                Skeletons.Note({
-                  className: `${pfx}__due-missing`,
-                  content: LOCALE.TASK_DUE_REQUIRED,
-                }),
-              ],
+              kids: [picker("due_date", due)],
             }),
           ],
         }),
@@ -4645,7 +4633,6 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
             // (__due-input) rather than a chip over a native picker.
             Skeletons.Box.Y({
               className: `${pfx}__subtask-card-date ${pfx}__due-field`,
-              attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
               kids: [
                 {
                   kind: "date_picker",
@@ -4672,10 +4659,6 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
                     },
                   },
                 },
-                Skeletons.Note({
-                  className: `${pfx}__due-missing`,
-                  content: LOCALE.TASK_DUE_REQUIRED,
-                }),
               ],
             }),
           ],

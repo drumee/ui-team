@@ -4125,14 +4125,10 @@ class __tasks_panel extends LetcBox {
     // and rebuilding it would tear down the calendar under the click.
     if (name === "subtask-due-date") {
       if (this._subtaskDraft) this._subtaskDraft.due_date = value;
-      if (value) this._clearSubtaskDueMissing("detail-panel", this._subtaskDraft);
       return;
     }
     if (name === "create-subtask-due-date") {
       if (this._createSubtaskDraft) this._createSubtaskDraft.due_date = value;
-      if (value) {
-        this._clearSubtaskDueMissing("create-modal", this._createSubtaskDraft);
-      }
       return;
     }
 
@@ -4147,13 +4143,11 @@ class __tasks_panel extends LetcBox {
       this._createDefaults[name] = value;
       if (name === "title" && value.trim()) this._clearTitleMissing("create");
       if (name === "title" && !titleTooLong(value)) this._clearTitleTooLong("create");
-      if (name === "due_date" && value) this._clearDueMissing("create");
       if (DATE_FIELDS.has(name)) this._syncDateRow("create", name);
     } else if (this._detailDraft && inDetail && inDetail.contains(scopeEl)) {
       this._detailDraft[name] = value;
       if (name === "title" && value.trim()) this._clearTitleMissing("detail");
       if (name === "title" && !titleTooLong(value)) this._clearTitleTooLong("detail");
-      if (name === "due_date" && value) this._clearDueMissing("detail");
       if (DATE_FIELDS.has(name)) this._syncDateRow("detail", name);
     }
   }
@@ -4219,36 +4213,6 @@ class __tasks_panel extends LetcBox {
     if (field) field.classList.remove("is-missing");
   }
 
-  /**
-   * The due date is required too: same in-place flag as the title, on the
-   * __due-field wrapper (outline + message), riding on the draft so a re-feed
-   * of the date section — after a Start/End pick — keeps it.
-   */
-  _flagDueMissing(scope) {
-    const { draft, root } = this._titleScope(scope);
-    if (draft) draft._dueMissing = true;
-    const field =
-      root &&
-      root.querySelector(
-        // The child creator card's date is a __due-field too — skip it.
-        `.${this.fig.family}__due-field:not(.${this.fig.family}__subtask-card-date)`,
-      );
-    if (field) field.dataset.missing = "1";
-  }
-
-  _clearDueMissing(scope) {
-    const { draft, root } = this._titleScope(scope);
-    if (!draft || !draft._dueMissing) return;
-    draft._dueMissing = false;
-    const field =
-      root &&
-      root.querySelector(
-        // The child creator card's date is a __due-field too — skip it.
-        `.${this.fig.family}__due-field:not(.${this.fig.family}__subtask-card-date)`,
-      );
-    if (field) field.dataset.missing = "0";
-  }
-
   async _commitTask() {
     this._captureCreateDraft();
     const draft = this._createDefaults || {};
@@ -4262,9 +4226,6 @@ class __tasks_panel extends LetcBox {
     // Already in marker form (chips serialize to "[@Name](user:uid)").
     const description = String(draft.description || "").trim();
 
-    // Both required fields are flagged in one pass, so the user sees every
-    // missing field at once rather than one per press.
-    if (!dueRaw) this._flagDueMissing("create");
     if (!title) return this._flagTitleMissing("create");
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagTitleTooLong("create");
@@ -4275,7 +4236,7 @@ class __tasks_panel extends LetcBox {
     const childTooLong =
       !!childDraft && titleTooLong(this._readCreateSubtaskTitle());
     if (childTooLong) this._flagSubtaskTitleTooLong("create-modal", childDraft);
-    if (tooLong || childTooLong || !dueRaw) return;
+    if (tooLong || childTooLong) return;
     if (!(await this._gateUnfinishedUploads("create", draft))) return;
 
     this._setSubmitting(".tasks-panel__create-submit", true);
@@ -4574,12 +4535,10 @@ class __tasks_panel extends LetcBox {
     if (!task) return;
     // planDetailCommit drops an empty title and saves everything else, so a
     // cleared title used to quietly snap back to the old one. Refuse instead.
-    const dueMissing = !String(draft.due_date || "").trim();
-    if (dueMissing) this._flagDueMissing("detail");
     if (!String(draft.title || "").trim()) return this._flagTitleMissing("detail");
     const tooLong = titleTooLong(draft.title);
     if (tooLong) this._flagTitleTooLong("detail");
-    if (dueMissing || tooLong) return;
+    if (tooLong) return;
     if (!(await this._gateUnfinishedUploads("detail", draft))) return;
 
     this._setSubmitting(".tasks-panel__detail-submit", true);
@@ -11446,21 +11405,6 @@ class __tasks_panel extends LetcBox {
     if (card) card.dataset.titleMissing = "0";
   }
 
-  _flagSubtaskDueMissing(host, draft) {
-    if (draft) draft._dueMissing = true;
-    const card = this._subtaskCard(host);
-    const field = card && card.querySelector(`.${this.fig.family}__due-field`);
-    if (field) field.dataset.missing = "1";
-  }
-
-  _clearSubtaskDueMissing(host, draft) {
-    if (!draft || !draft._dueMissing) return;
-    draft._dueMissing = false;
-    const card = this._subtaskCard(host);
-    const field = card && card.querySelector(`.${this.fig.family}__due-field`);
-    if (field) field.dataset.missing = "0";
-  }
-
   _subtaskCard(host) {
     const pfx = this.fig.family;
     return this.el && this.el.querySelector(`.${pfx}__${host} .${pfx}__subtask-card`);
@@ -11581,9 +11525,8 @@ class __tasks_panel extends LetcBox {
   _flushCreateSubtaskDraft() {
     const draft = this._createSubtaskDraft;
     if (!draft || !this._readCreateSubtaskTitle()) return;
-    // Runs inside the parent's Create, after the parent's own due date passed
-    // validation — so a child the user typed but never dated takes that date
-    // rather than being dropped without a word.
+    // Runs inside the parent's Create — a child the user typed but never
+    // dated takes the parent's due date (if any).
     if (!draft.due_date && this._createDefaults) {
       draft.due_date = this._createDefaults.due_date || "";
     }
@@ -11603,11 +11546,10 @@ class __tasks_panel extends LetcBox {
     const draft = this._createSubtaskDraft;
     if (!parentDraft || !draft) return;
     const title = this._readCreateSubtaskTitle();
-    if (!draft.due_date) this._flagSubtaskDueMissing("create-modal", draft);
     if (!title) return this._flagSubtaskTitleMissing("create-modal", draft);
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagSubtaskTitleTooLong("create-modal", draft);
-    if (!draft.due_date || tooLong) return;
+    if (tooLong) return;
     if (!Array.isArray(parentDraft.subtasks)) parentDraft.subtasks = [];
     parentDraft.subtasks.push({
       // Local key, not a server id. Named `id` so the shared row skeleton can
@@ -11714,11 +11656,10 @@ class __tasks_panel extends LetcBox {
         `.${this.fig.family}__detail-panel .${this.fig.family}__subtask-card-title input`,
       );
     const title = String((input && input.value) || draft.title || "").trim();
-    if (!draft.due_date) this._flagSubtaskDueMissing("detail-panel", draft);
     if (!title) return this._flagSubtaskTitleMissing("detail-panel", draft);
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagSubtaskTitleTooLong("detail-panel", draft);
-    if (!draft.due_date || tooLong) return;
+    if (tooLong) return;
 
     // _setControlBusy, NOT _setSubmitting: the latter raises the panel-wide
     // _submitting flag that gates commit-task / commit-detail, and creating a
