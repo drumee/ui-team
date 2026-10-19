@@ -165,7 +165,7 @@ function formView(ui) {
         kids: [
           Skeletons.Note({
             className: `${pfx}__btn-label`,
-            content: submitting ? LOCALE.SENDING : LOCALE.SEND_VERIFICATION,
+            content: submitting ? LOCALE.UPDATING : LOCALE.CHANGE_EMAIL,
           }),
         ],
       }),
@@ -175,49 +175,6 @@ function formView(ui) {
   return Skeletons.Box.Y({
     className: `${pfx}__modal ${pfx}__modal--form`,
     kids: [header, fields, footer],
-  });
-}
-
-function resendPanel(ui) {
-  const pfx = ui.fig.family;
-  const resending = ui._resending;
-
-  const link = Skeletons.Box.X({
-    className: `${pfx}__success-resend-link${
-      resending ? " is-loading" : ""
-    }`,
-    service: resending ? null : "change-email-resend",
-    uiHandler: [ui],
-    kids: [
-      Skeletons.Note({
-        className: `${pfx}__success-resend-link-text`,
-        content: resending ? LOCALE.SENDING : LOCALE.RESEND_EMAIL,
-      }),
-    ],
-  });
-
-  return Skeletons.Box.Y({
-    className: `${pfx}__success-resend`,
-    kids: [
-      Skeletons.Note({
-        className: `${pfx}__success-resend-title`,
-        content: LOCALE.DIDNT_RECEIVE_EMAIL,
-      }),
-      Skeletons.Box.X({
-        className: `${pfx}__success-resend-body`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__success-resend-prefix`,
-            content: LOCALE.CHECK_SPAM_FOLDER_OR,
-          }),
-          link,
-          Skeletons.Note({
-            className: `${pfx}__success-resend-suffix`,
-            content: ".",
-          }),
-        ],
-      }),
-    ],
   });
 }
 
@@ -236,14 +193,14 @@ function successView(ui) {
 
   const title = Skeletons.Note({
     className: `${pfx}__title ${pfx}__title--success`,
-    content: LOCALE.EMAIL_VERIFICATION_SENT,
+    content: LOCALE.EMAIL_UPDATED,
   });
 
   const description = Skeletons.Note({
     className: `${pfx}__success-description`,
     content: ui._sentTo
-      ? LOCALE.EMAIL_VERIFICATION_SENT_DESC.format(ui._sentTo)
-      : LOCALE.EMAIL_VERIFICATION_SENT_DESC_GENERIC,
+      ? LOCALE.EMAIL_UPDATED_DESC.format(ui._sentTo)
+      : LOCALE.EMAIL_UPDATED_DESC_GENERIC,
   });
 
   const header = Skeletons.Box.Y({
@@ -255,11 +212,6 @@ function successView(ui) {
       }),
       description,
     ],
-  });
-
-  const resendBlock = Skeletons.Box.Y({
-    className: `${pfx}__success-resend-wrap`,
-    kids: [resendPanel(ui)],
   });
 
   const footer = Skeletons.Box.X({
@@ -281,7 +233,7 @@ function successView(ui) {
 
   return Skeletons.Box.Y({
     className: `${pfx}__modal ${pfx}__modal--success`,
-    kids: [header, resendBlock, footer],
+    kids: [header, footer],
   });
 }
 

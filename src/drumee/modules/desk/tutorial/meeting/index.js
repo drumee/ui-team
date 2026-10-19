@@ -23,11 +23,7 @@ const { isLastScreen, entryScreen } = require('../tours');
  * folder_task. 2.0 puts it at the end of the MEET flow, which is where anyone
  * would actually reach it.
  */
-const SCREENS = [
-  // The empty state. No `desc` — it carries no callout (see _showScreen), and
-  // each preview names itself through the caption under the track.
-  { target: 'es-viewport', anchor: 'es-cta', direction: 'north' },
-];
+const SCREENS = require('./screens');
 
 // How long each preview holds before the track moves on. The same 2s the task
 // tour's carousel uses, and for the same reason: with the CTA now ending the
@@ -67,10 +63,16 @@ class __tutorial_meeting extends LetcBox {
       return;
     }
     // `index` is the card, not the step — the dialog screen ignores it.
-    this.feed(skeleton(this, { ...s, index: this._card }));
+    // Phone layout (host-kit layoutFor): the Figma mobile hero, with a
+    // native swipe deck in place of the timed carousel. `phone` is null at desk.
+    const phone = this.mget('layout') === 'phone' ? s.phone : null;
+    this.feed(phone
+      ? require('./skeleton/phone')(this, { index: this._card })
+      : skeleton(this, { ...s, index: this._card }));
+    if (phone) this._bindDeck();
     const [target, anchor] = await Promise.all([
-      this.ensurePart(s.target),
-      this.ensurePart(s.anchor),
+      this.ensurePart(phone ? phone.target : s.target),
+      this.ensurePart(phone ? phone.target : s.anchor),
     ]);
     // The callout appears on the DIALOG screen only. The carousel screen is a
     // landscape screenshot of the product with a caption under it — a card over
@@ -126,6 +128,8 @@ class __tutorial_meeting extends LetcBox {
     clearTimeout(this._slideTimer);
     this._slideTimer = null;
     if (!this._mayAnimate()) return;
+    // A phone's deck has its own timer (_bindDeck → toolkit autoSlide).
+    if (this.mget('layout') === 'phone') return;
     const s = SCREENS[this._screenIndex];
     // The carousel wraps, so there is no last card to stop on.
     if (!s || s.dialog) return;
@@ -207,7 +211,29 @@ class __tutorial_meeting extends LetcBox {
     this._armAutoSlide();
   }
 
+  /**
+   * Phone: keep the dots, and `_card`, on whatever card the user swiped to —
+   * so a rotation back to the desk layout lands on the same card.
+   */
+  async _bindDeck() {
+    if (this._unbindDeck) this._unbindDeck();
+    this._unbindDeck = null;
+    const [deck, dots] = await Promise.all([this.ensurePart('ph-deck'), this.ensurePart('ph-dots')]);
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!deck || !dots) return;
+    const kit = require('../skeleton/toolkit/phone');
+    const unsync = kit.syncDeck(deck.el, dots.el, (i) => { this._card = i; });
+    // One card on every AUTO_SLIDE_MS, as the task deck; not under
+    // prefers-reduced-motion.
+    const unslide = this._mayAnimate()
+      ? kit.autoSlide(deck.el, () => this._card, AUTO_SLIDE_MS)
+      : () => {};
+    this._unbindDeck = () => { unsync(); unslide(); };
+  }
+
   onBeforeDestroy() {
+    if (this._unbindDeck) this._unbindDeck();
+    this._unbindDeck = null;
     clearTimeout(this._slideTimer);
     this._slideTimer = null;
     if (super.onBeforeDestroy) super.onBeforeDestroy();

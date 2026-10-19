@@ -425,37 +425,95 @@ $nudge: translate(var(--bubble-nudge-x, 0px), var(--bubble-nudge-y, 0px));
   padding: 18px;
 }
 
-// MOBILE: a bottom sheet, not a pointer.
-//
-// 296px of card anchored to a target on a 390px screen has nowhere to go: it
-// covers the thing it is describing, and _keepInView can only push it back
-// inside by moving it over something else. A sheet pinned to the bottom is the
-// pattern the platform already uses for this, and it keeps Back and Next in the
-// one place a thumb reaches — which is what the last two rounds of this bug
-// were about.
-//
-// !important because anchorFor writes left/top/right/bottom inline, per screen,
-// as the whole mechanism of pointing at something. There is no specificity that
-// beats an inline style, and the alternative — teaching the JS about tiers and
-// branching the placement there — would put the same decision in two places and
-// let them disagree. The card is the one element in the tour whose position is
-// worth overriding this way.
-.tutorial-main[data-size="mobile"] .tutorial__bubble-card {
-  left: 12px !important;
-  right: 12px !important;
-  top: auto !important;
-  bottom: 12px !important;
-  width: auto !important;
-  max-width: none !important;
-  // Placement transforms carry the beak offset and the keep-in-view nudge; a
-  // sheet is where it is put.
-  transform: none !important;
-  padding: 18px;
-  border-radius: 14px;
-  box-shadow: 0 -2px 18px rgba(0, 0, 0, 0.18);
+// PHONE (host-kit layoutFor; Figma WtPX8Cj8PO9sjD6TRLeOQL 380:53148 flows): a
+// full-width card that flips above/below its target with the beak at the
+// target's x. This used to be a bottom sheet forced with !important over a card
+// the JS had already anchored and flipped — the two disagreed, and the sheet
+// pointed at nothing. Placement is now JS only (spotlight _placeOnPhone →
+// host-kit phoneAnchor), which writes left/top/bottom/width inline and
+// --beak-px; this block only draws the card.
+.tutorial-main[data-layout="phone"] {
+  .tutorial__bubble-card {
+    padding: 24px;
+    border-radius: 12px;
+    gap: 17px;
+    max-width: none;
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
 
-  // The tail pointed at an anchor the sheet no longer sits beside.
-  &::after { display: none; }
+  .tutorial__bubble-title,
+  .tutorial__bubble-text {
+    font-size: 20px;
+    line-height: 1.1;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  .tutorial__bubble-desc {
+    font-size: 14px;
+    line-height: 1.4;
+    color: #65656c;
+  }
+
+  .tutorial__bubble-footer { gap: 12px; }
+
+  .tutorial__bubble-back,
+  .tutorial__bubble-next {
+    flex: 1;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .tutorial__bubble-back { background: #f2f2f7; color: #84848c; }
+
+  // Centred copy (the workspace frames 380:54800, 385:938): 12 between the
+  // title and its line, 16 down to the button.
+  .tutorial__bubble-card--center {
+    gap: 16px;
+    text-align: center;
+
+    .tutorial__bubble-body { gap: 12px; align-items: stretch; }
+
+    // A Note's copy sits in an inner .note-content that shrinks to its text in
+    // the Note's flex box, so text-align alone left a one-line title at the
+    // left edge (a wrapped desc looked centred only because it was full width).
+    .tutorial__bubble-title,
+    .tutorial__bubble-desc {
+      justify-content: center;
+
+      .note-content { width: 100%; }
+    }
+  }
+  .tutorial__bubble-next { background: #433cc5; color: #fff; }
+
+  // The beak keeps its desktop shape (rotated, clipped square); only WHERE it
+  // sits along the edge changes — at the target's x, not at a start/centre/end.
+  .tutorial__bubble-card[data-direction=north]::after,
+  .tutorial__bubble-card[data-direction=south]::after {
+    left: var(--beak-px, 50%);
+    right: auto;
+  }
+
+  .tutorial__bubble-card[data-direction=east]::after,
+  .tutorial__bubble-card[data-direction=west]::after {
+    top: var(--beak-px, 50%);
+    bottom: auto;
+  }
+}
+
+// TABLET = narrow/compact width + a coarse pointer. Same anchored card as the
+// desktop; the controls grow to a finger-sized target (44px, Apple HIG), and
+// the card widens just enough to hold the taller buttons' padding.
+.tutorial-main[data-touch="1"]:not([data-layout="phone"]) {
+  .tutorial__bubble-back,
+  .tutorial__bubble-next {
+    min-height: 44px;
+    padding: 0 20px;
+  }
+
+  .tutorial__bubble-card { width: 320px; }
 }
 
 // SHORT: the card is competing with the pane for height, so it gives up padding

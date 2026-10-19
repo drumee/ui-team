@@ -20,25 +20,31 @@ function header(ui) {
           }),
         ],
       }),
-      Skeletons.Box.X({
-        className: `${pfx}-actions`,
-        kids: [
-          // Save confirmation pill. Hidden while data-state="0"; saveProfile()
-          // flips it to "1" (success) / "1" + data-variant="error" (failure)
-          // and a timer fades it back out — see _flashSaveStatus().
-          Skeletons.Note({
-            className: `${pfx}-saved`,
-            sys_pn: "save-status",
-            state: 0,
-            content: LOCALE.PROFILE_SAVED || "Profile saved",
-          }),
-          button(ui, {
-            label: LOCALE.SAVE_PROFILE || "Save Profile",
-            className: `${pfx}-save`,
-            priority: "primary",
-            service: "save-profile",
-          }),
-        ],
+    ],
+  });
+}
+
+// Save Profile + its confirmation pill, at the foot of the General Profile
+// fields (the only inputs it saves).
+function profileActions(ui) {
+  const pfx = `${ui.fig.family}__profile`;
+  return Skeletons.Box.X({
+    className: `${pfx}-actions`,
+    kids: [
+      // Save confirmation pill. Hidden while data-state="0"; saveProfile()
+      // flips it to "1" (success) / "1" + data-variant="error" (failure)
+      // and a timer fades it back out — see _flashSaveStatus().
+      Skeletons.Note({
+        className: `${pfx}-saved`,
+        sys_pn: "save-status",
+        state: 0,
+        content: LOCALE.PROFILE_SAVED || "Profile saved",
+      }),
+      button(ui, {
+        label: LOCALE.SAVE_PROFILE || "Save Profile",
+        className: `${pfx}-save`,
+        priority: "primary",
+        service: "save-profile",
       }),
     ],
   });
@@ -123,7 +129,10 @@ function generalProfileCard(ui) {
           entry(ui, {
             label: LOCALE.DISPLAY_NAME || "Display Name",
             name: "display_name",
-            value: profile.firstname || "",
+            // Full name: saveProfile() splits this back into firstname /
+            // lastname, so showing only firstname wiped the last name on
+            // every save.
+            value: [profile.firstname, profile.lastname].filter(Boolean).join(" "),
           }),
           entry(ui, {
             label: LOCALE.USERNAME || "Username",
@@ -152,6 +161,7 @@ function generalProfileCard(ui) {
           }),
         ],
       }),
+      profileActions(ui),
     ],
   });
 
@@ -505,42 +515,37 @@ function billingCard(ui) {
   // names, which would name a plan that no longer exists.
   const planLabel = require("libs/billing").planLabel();
 
-  // Title row: "Current Plan" + "Manage subscription" (Figma 2769-213367,
-  // "Frame 1618872890"). The plan name is a SEPARATE block below it, paired
-  // tightly with the status line — not this row's description — so the
-  // 24px row-to-row gap lands between the title row and the Pro/status
-  // pair, not between "Pro" and its own status line.
-  const planRow = innerItem(ui, {
-    title: LOCALE.CURRENT_PLAN,
-    className: `${pfx}-row`,
-    trailing: button(ui, {
-      label: LOCALE.MANAGE_SUBSCRIPTION,
-      className: `${pfx}-action`,
-      priority: "primary",
-      // Opens settings_billing in the desk modal (wm 'upgrade-plan' -> upgradePlage).
-      service: "open-billing",
-    }),
+  // Plan identity: crown tile + "CURRENT PLAN" eyebrow over the plan name.
+  const plan = Skeletons.Box.X({
+    className: `${pfx}-plan`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}-plan-ico-wrap`,
+        kids: [Skeletons.Image.Svg({ ico: "crown", className: `${pfx}-plan-ico` })],
+      }),
+      Skeletons.Box.Y({
+        className: `${pfx}-plan-text`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}-plan-label`,
+            content: LOCALE.CURRENT_PLAN,
+          }),
+          Skeletons.Note({
+            className: `${pfx}-plan-name`,
+            sys_pn: "billing-plan-name",
+            content: planLabel,
+          }),
+        ],
+      }),
+    ],
   });
 
-  const planNameLine = Skeletons.Note({
-    className: `${pfx}-plan-name`,
-    sys_pn: "billing-plan-name",
-    content: planLabel,
-  });
-
-  // Subscription status line ("renews on … " / "will be canceled on …"),
-  // fed asynchronously by _loadSubscriptionStatus() via the named part —
-  // the design's "Your subscription will be canceled on Feb 27, 2026".
-  const statusLine = Skeletons.Note({
-    className: `${pfx}-status`,
-    sys_pn: "billing-sub-status",
-    partHandler: ui,
-    content: "",
-  });
-
-  const planBlock = Skeletons.Box.Y({
-    className: `${pfx}-plan-block`,
-    kids: [planNameLine, statusLine],
+  const action = button(ui, {
+    label: LOCALE.MANAGE_SUBSCRIPTION,
+    className: `${pfx}-action`,
+    priority: "primary",
+    // Opens settings_billing in the desk modal (wm 'upgrade-plan' -> upgradePlage).
+    service: "open-billing",
   });
 
   return Skeletons.Box.Y({
@@ -550,7 +555,15 @@ function billingCard(ui) {
         title: LOCALE.BILLING_SUBSCRIPTION,
         subtitle: LOCALE.BILLING_SUBSCRIPTION_SUBTITLE,
       }),
-      Skeletons.Box.Y({ className: `${pfx}-list`, kids: [planRow, planBlock] }),
+      // Plan on the left, Manage subscription on the right; the button
+      // wraps under the plan when the card is too narrow for both.
+      Skeletons.Box.X({
+        className: `${pfx}-list`,
+        kids: [
+          Skeletons.Box.Y({ className: `${pfx}-summary`, kids: [plan] }),
+          action,
+        ],
+      }),
     ],
   });
 }
@@ -608,19 +621,15 @@ function settings_body(ui) {
       kids: [generalProfileCard(ui), preferencesCard(ui)],
     }),
     // Figma 2769-277671: Billing, Account Credentials and Danger zone sit in
-    // ONE 3-column row. Referral/invite isn't part of that frame — kept as
-    // its own full-width row instead of crowding the trio.
+    // ONE 3-column row. Referral/invite isn't part of that frame — it pairs
+    // with Linked accounts in the row below instead of crowding the trio.
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-2`,
       kids: [billingCard(ui), accountCredentialsCard(ui), dangerZoneCard(ui)],
     }),
     Skeletons.Box.X({
-      className: `${pfx}__row ${pfx}__row-referral`,
-      kids: [referralCard(ui)],
-    }),
-    Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-3`,
-      kids: [linkedAccountsCard(ui)],
+      kids: [referralCard(ui), linkedAccountsCard(ui)],
     }),
     Skeletons.Wrapper.Y({
       className: `${pfx}__overlay`,

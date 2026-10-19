@@ -15,11 +15,7 @@ const {
 // window_sharebox / window_website. openFileLocation does not attach a media
 // node for these: those windows source their own `media`, and the fix below is
 // only about giving a file VIEWER the node it reads its content through.
-const CONTAINER_FILETYPES = [
-  _a.hub, _a.folder, "personal", "private", "share", "public",
-  // Not a file either — application maps it to window_contact.
-  _a.contact,
-];
+const { launchPlayer } = require("libs/open-media");
 
 const ViewMode = new Map();
 const DEFAULT = "default";
@@ -498,11 +494,20 @@ class __window_mfs extends DrumeeMFS {
     this._setupPartitionObserver(listPart);
     this._partitionFoldersAndFiles(listPart);
 
+    // Runs on EVERY in-place navigation (loadContent), and the handler only
+    // removes itself once a document shows up — so in folders without one a
+    // new copy piled onto the same collection per click. Keep exactly one.
+    const prev = this._prewarmListener;
+    if (prev && prev.collection && prev.handler) {
+      prev.collection.off(_e.add, prev.handler);
+    }
+    this._prewarmListener = null;
     const f = (e) => {
       preloadEditors(e, listPart.collection, f)
     }
     if (!editorPrewarmed) {
       listPart.collection.on(_e.add, f)
+      this._prewarmListener = { collection: listPart.collection, handler: f };
     }
 
     listPart.once(EOD, () => {
@@ -770,6 +775,8 @@ class __window_mfs extends DrumeeMFS {
     setPartitionedStyle(scrollEl);
     this._partitionListPart = null;
     listPart.el.style.visibility = "visible";
+    // The container too — see the same line at the end of _doPartition.
+    scrollEl.style.visibility = "visible";
     return true;
   }
 
@@ -808,6 +815,17 @@ class __window_mfs extends DrumeeMFS {
 
     if (!items.length) {
       if (workspaceWrap || folderWrap || fileWrap) {
+        scrollEl.style.visibility = "visible";
+        scrollEl.dataset.partitioning = 0;
+        listPart.el.style.visibility = "visible";
+        return true;
+      }
+      // The listing came back empty: ui-core's emptyView (`.no-content`) is
+      // all there is, and it has no data-filetype, so it never counts as an
+      // item. Waiting for one hid it through every retry — the skeleton had
+      // already gone (icons-loading ends on eod), so the pane sat blank for
+      // ~3s before the empty state appeared. Nothing to sort: show it.
+      if (scrollEl.querySelector(":scope > .no-content")) {
         scrollEl.style.visibility = "visible";
         scrollEl.dataset.partitioning = 0;
         listPart.el.style.visibility = "visible";
@@ -873,6 +891,14 @@ class __window_mfs extends DrumeeMFS {
 
     this._partitionListPart = null;
     listPart.el.style.visibility = "visible";
+    // AND the scroll container, now — not at _schedulePartitionCleanup. That
+    // timer is 500ms and re-armed by every tile mutation, while the loading
+    // skeleton has already gone (icons-loading ends on the first `data`), so
+    // the pane sat blank in between. Safe to show early: a tile that lands
+    // unpartitioned later stays hidden by the skin's structural guard
+    // (`:not([data-partitioning="0"]) > [data-filetype]`) until the observer
+    // moves it into its section, which the cleanup still settles.
+    scrollEl.style.visibility = "visible";
     return true;
   }
 
@@ -1585,9 +1611,14 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
-   *
+   * @param {Object} source a media widget, or { nid, hub_id, filetype, … }
+   * @param {Object} [known]
+   * @param {Object} [known.node] media.attributes the caller already resolved
+   *   for this nid (a Designation link probes it first) — the player is then
+   *   launched from it instead of asking the server again. Ignored unless its
+   *   nid is the one being opened.
    */
-  async openFileLocation(source) {
+  async openFileLocation(source, { node: knownNode = null } = {}) {
     let data;
     let media;
     let cid;
@@ -1668,42 +1699,16 @@ class __window_mfs extends DrumeeMFS {
     /** Open the player if applicable. A reveal (highlight) skips the player and
      *  falls through to open the parent folder, where the file is highlighted. */
     if (opt.kind && !node && !highlight) {
-      node = await this.fetchService(
-        {
-          service: SERVICE.media.attributes,
-          nid,
-          hub_id,
-        },
-        { async: 1 },
+      // Fetch the node, give the player a media to read its content through,
+      // launch — shared with openers that are not windows (libs/open-media).
+      const known =
+        knownNode && knownNode.nid && `${knownNode.nid}` === `${nid}`
+          ? knownNode
+          : node;
+      return launchPlayer(
+        { opt, node: known, nid, hub_id, media },
+        { fetchService: this.fetchService, warn: this.warn && this.warn.bind(this) },
       );
-      if (!node || !node.nid) {
-        return Wm.alert(LOCALE.FILE_NOT_FOUND);
-      }
-      // Hand the window the media node it will read its CONTENT through.
-      //
-      // editor/note, editor/markdow and player/text all load their body with
-      // `if (this.media) url = this.media.actualNode().url` — no media, no url,
-      // no fetch, and the file opens BLANK. They normally get it by finding the
-      // grid tile (Wm.getItemsByAttr in their initialize), which only works when
-      // the containing folder happens to be on screen. Arriving from a deep link
-      // it is not, so this branch — the one that opens a file whose tile is not
-      // rendered — has always launched them empty.
-      //
-      // Built exactly the way wm's fetchMediaAttributes already builds it for the
-      // audio/video/image/document players, from the attributes just fetched.
-      // Containers are excluded: a folder / workspace window takes its own
-      // `media` and must keep behaving as it does today.
-      if (!opt.media && !CONTAINER_FILETYPES.includes(node.filetype)) {
-        try {
-          const k = await Kind.waitFor(_a.media);
-          opt.media = media || new k({ model: new Backbone.Model(node) });
-        } catch (e) {
-          // Never let this cost the open itself: without media the file still
-          // opens, just as blank as it did before.
-          if (this.warn) this.warn("[openFileLocation] could not build media", e);
-        }
-      }
-      return Wm.launch({ ...opt, ...node }, { explicit: 1 });
     }
 
     /** Open the parent folder if not player found */

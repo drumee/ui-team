@@ -44,6 +44,12 @@ module.exports = function (_ui_, data = {}) {
         content: LOCALE.JOIN_CONFERENCE,
         uiHandler: [_ui_]
       }),
+      // The meeting's attachments, fed by _loadAttachments once the lobby is up.
+      Skeletons.Box.Y({
+        className: `${pfx}__attachments-slot`,
+        sys_pn: "meeting-attachments",
+        partHandler: [_ui_],
+      }),
       Skeletons.Box.Y({
         sys_pn: 'lobby-options',
         className: `${pfx}__setup-options main`,

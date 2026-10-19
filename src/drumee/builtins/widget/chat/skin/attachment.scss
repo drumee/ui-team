@@ -94,7 +94,7 @@
         // a grey `scrollbar-color`; both are restated here so the strip takes
         // the brand pair rather than that default.
         scrollbar-width: thin;
-        scrollbar-color: var(--primary-70) var(--primary-10);
+        scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 
         &::-webkit-scrollbar {
           height: 10px;
@@ -103,11 +103,11 @@
         }
 
         &::-webkit-scrollbar-track {
-          background: var(--primary-10);
+          background: var(--scrollbar-track);
         }
 
         &::-webkit-scrollbar-thumb {
-          background: var(--primary-70);
+          background: var(--scrollbar-thumb);
           border-radius: 6px;
         }
       }
@@ -514,14 +514,14 @@ html[data-theme="dark"] {
       // Unconditional, unlike the light-mode note's ::-webkit- rules: this is
       // the property Chrome actually renders, so gating it on anything would
       // leave the light lavender rail sitting on the dark strip.
-      scrollbar-color: var(--primary-30, #847eff) rgba(255, 255, 255, 0.12);
+      scrollbar-color: var(--scrollbar-thumb) rgba(255, 255, 255, 0.12);
 
       &::-webkit-scrollbar-track {
         background: rgba(255, 255, 255, 0.12);
       }
 
       &::-webkit-scrollbar-thumb {
-        background: var(--primary-30, #847eff);
+        background: var(--scrollbar-thumb);
       }
     }
 

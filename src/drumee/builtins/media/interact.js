@@ -755,6 +755,9 @@ class __media_interact extends media_core {
   select(opt, hide) {
     this.setState(1);
     this.el.dataset.selected = this.mget(_a.state);
+    // Its checkbox too, as unselect() and tick() repaint it: a row picked by
+    // the marquee (window/selection) or by select-all showed no tick.
+    this._changeState("checkbox", "selected", this.mget(_a.state));
     return this.mset(opt);
   }
 
@@ -812,8 +815,34 @@ class __media_interact extends media_core {
     c.once(_e.destroy, (a) => {
       return (this._filename.style.visibility = _a.visible);
     });
+    this._readyRenameField(c, value);
 
     RADIO_CLICK.trigger(_e.click);
+  }
+
+  /**
+   * Once the inline editor's field exists: no spellcheck (a file name is not
+   * prose, and the red squiggle under it read as an error), and — when the
+   * caller asked for `preselect` — focus it with the name selected so typing
+   * replaces it. ui-core's own preselect did not survive in every layout
+   * (list rows lost it), so it is redone here after the value is seeded.
+   */
+  _readyRenameField(entry, value) {
+    const run = () =>
+      requestAnimationFrame(() => {
+        if (!entry || entry.isDestroyed() || !entry.el) return;
+        const field = entry.el.querySelector("textarea, input");
+        if (!field) return;
+        field.spellcheck = false;
+        field.setAttribute("autocomplete", "off");
+        if (!field.value && value) field.value = value;
+        if (entry.mget("preselect")) {
+          field.focus();
+          field.select();
+        }
+      });
+    if (_.isFunction(entry.isReaddy) && entry.isReaddy()) run();
+    else entry.once("input:ready", run);
   }
 
   /**
@@ -1210,10 +1239,13 @@ class __media_interact extends media_core {
           mtime: this.mget(_a.mtime),
           area: this.mget(_a.area),
         };
-        const _raised = args._tourDone ? false : require("libs/tutorial-tours").fire("share", this, {
+        // ON A PHONE TOO: the media menu's Share is a phone's way into this
+        // tour, so it passes the mobile switch (phoneGate).
+        const _Tours = require("libs/tutorial-tours");
+        const _raised = args._tourDone ? false : _Tours.fire("share", this, {
           subject: _subject,
           subject_data: _subjectData,
-        });
+        }, _Tours.phoneGate());
         // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
         // tour teaches the secure-share panel, and the panel was opening while
         // the walkthrough about it was still on screen — visible only once the
@@ -1247,6 +1279,9 @@ class __media_interact extends media_core {
             //               click must still do what it was for; swallowing it
             //               would make Share a dead control.
             if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
+            // ON A PHONE the tour's own Done opened "Who has access" (window
+            // tutorial _handOffMembers), so the link builder stays shut.
+            if (Visitor.isMobile() && Tours.appeared("share")) return;
             this.onUiEvent(cmd, { ...args, _tourDone: 1 });
           });
         }
@@ -1584,6 +1619,9 @@ class __media_interact extends media_core {
     const item = Wm.getWindowPreset(this);
     item.kind = "window_media_details";
     item.wm_unique_id = `window_media_details-${item.nid}`;
+    // Already up: the WM only raises a singleton, so refetch the dates here.
+    const card = Wm.getItemsByAttr("wm_unique_id", item.wm_unique_id)[0];
+    if (card && !card.isDestroyed() && _.isFunction(card.refresh)) card.refresh();
     return Wm.launch(item, { explicit: 1, singleton: 1 });
   }
 
@@ -1799,6 +1837,7 @@ class __media_interact extends media_core {
    * still answers .value, and the ui event above keeps a copy either way.
    */
   async _renameWorkspacePrompt() {
+    if (!this._workspaceRenameAllowed()) return;
     const current = this.mget(_a.filename) || "";
     this.__wsRenameValue = current;
 

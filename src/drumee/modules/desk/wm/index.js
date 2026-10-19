@@ -135,8 +135,10 @@ class __window_manager extends push {
    * identically whether or not the visitor had a session. It is also the only
    * one that loads a note / markdown / text body: openSharedLink resolves those
    * through `if (opt.kind) launch(opt)` with no attributes fetch and no media, so
-   * they would open blank. Files only, by construction — file-deep-link's
-   * urlWantsFile matches nothing else.
+   * they would open blank. Only the two desk "open" shapes reach here —
+   * file-deep-link's urlWantsFile matches nothing else — and a compact one
+   * naming a FOLDER docks into it, exactly as the warm path does (see
+   * openDesignationLink).
    *
    * The legacy `locationOnStart` restore in route() deliberately stays on
    * openSharedLink: that path predates this one and is left exactly as it was.
@@ -145,7 +147,8 @@ class __window_manager extends push {
    */
   openDeepLinkHash(hash) {
     if (!hash) return;
-    return this.openDesignationLink(this._deepLinkPayload(hash));
+    const compact = Visitor.parseModule(hash)[2] === COMPACT_SEGMENT;
+    return this.openDesignationLink(this._deepLinkPayload(hash), { compact });
   }
 
   /**
@@ -179,13 +182,45 @@ class __window_manager extends push {
    * `openFileLocation` exactly as before. Its return value is passed through
    * unchanged for the callers that use it.
    *
+   * A FOLDER Designation link (Lexis 2026-10-05) does not open a floating
+   * window over the workspace root: the docked pane itself walks into the
+   * folder — openNotificationLocation, the proven "land in this workspace, on
+   * this folder" path (access probe, section screen dismissed, breadcrumb and
+   * rail kept in step). Only for the COMPACT form, which only the Designation
+   * link menu row emits (toCompactUrl has no other caller). A LONG `open` link
+   * to a folder also comes from the folder window's "Share link", mail and
+   * external shares, whose recipient may hold a grant on that folder alone and
+   * fail the workspace probe — those keep openFileLocation exactly as before.
+   *
    * @param {Object} payload the parsed deep-link payload (nid, hub_id, filetype…)
+   * @param {Object} [opts]
+   * @param {Boolean} [opts.compact] the payload came from a compact `/o/` link
    */
-  async openDesignationLink(payload = {}) {
+  async openDesignationLink(payload = {}, { compact = false } = {}) {
+    if (compact && payload && payload.hub_id && payload.filetype === _a.folder) {
+      return this._openDesignationFolder(payload);
+    }
     const hub_id = payload && payload.hub_id;
+    // The node's media.attributes as the probe below resolved it — handed to
+    // openFileLocation so it does not ask the server the same question again.
+    let node = null;
     // Already standing in it (warm click from inside the workspace) — mounting
     // again would destroy and rebuild the pane for nothing.
     if (hub_id && !this._findWorkspaceWindow(hub_id)) {
+      // Before the desk is touched: a link opened by a non-member must not
+      // dock a workspace they cannot enter (see _refusedDesignationTarget).
+      if (this._isPlainDesignationTarget(payload)) {
+        const holdCanvas = !this._curWorkspace && !this.headlessPane();
+        if (holdCanvas) this._syncHomeGrid(1);
+        // Both read-only requests at once — see _prefetchWorkspaceRoot.
+        const probe = this._fetchDesignationNode(payload);
+        const root = this._prefetchWorkspaceRoot(hub_id);
+        if (await this._refusedDesignationTarget(payload, holdCanvas, probe)) {
+          return;
+        }
+        node = await probe;
+        await root;
+      }
       try {
         // nid 0 is the server's "this hub's root" shortcut (_rootNid), exactly
         // as openNotificationLocation mounts it: the pane opens at the workspace
@@ -197,7 +232,240 @@ class __window_manager extends push {
         this.warn("openDesignationLink: could not dock the workspace", e);
       }
     }
-    return this.openFileLocation(payload);
+    return this.openFileLocation(payload, { node });
+  }
+
+  /**
+   * media.attributes for a Designation link's node — the probe
+   * _refusedDesignationTarget reads. Never rejects: a failure is null, which
+   * that method reads as "did not resolve", exactly as before.
+   *
+   * @param {Object} target { hub_id, nid }
+   * @returns {Promise<Object|null>}
+   */
+  _fetchDesignationNode({ hub_id, nid } = {}) {
+    return Promise.resolve(
+      this.fetchService(SERVICE.media.attributes, { hub_id, nid }),
+    ).catch(() => null);
+  }
+
+  /**
+   * Ask for the workspace root WHILE the link's own node is being probed,
+   * instead of after it.
+   *
+   * A Designation link used to pay its round trips one after the other: the
+   * node probe, then loadWorkspace's own media.attributes for the root (the
+   * pane mounts only once that answers), then — in openFileLocation — the
+   * node's attributes a second time. Measured on drumee.in for a file link:
+   * ~840 ms from the click to the player launching, ~400 ms of it those
+   * serial and repeated requests.
+   *
+   * This is the SAME request loadWorkspace makes (media.attributes, nid 0) and
+   * its answer is stored under the SAME key loadWorkspace reads, so the pane
+   * mounts at once from it — the path a workspace switched back to already
+   * takes (libs/read-cache) — and loadWorkspace still revalidates it as it
+   * always does. Only a resolvable root is stored; anything else stores
+   * nothing and loadWorkspace fetches exactly as before. Skipped when this
+   * session already remembers the root (loadWorkspace mounts from it anyway).
+   *
+   * @param {String} hub_id
+   * @returns {Promise<void>} never rejects
+   */
+  _prefetchWorkspaceRoot(hub_id) {
+    const nid = this._rootNid(0);
+    const key = `wm:attrs:${hub_id}:${nid}`;
+    if (!hub_id || readCache.peek(key)) return Promise.resolve();
+    return Promise.resolve(
+      this.fetchService(SERVICE.media.attributes, { hub_id, nid }),
+    )
+      .then((attrs) => {
+        if (attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid)) {
+          readCache.set(key, { ...attrs });
+        }
+      })
+      .catch(() => { });
+  }
+
+  /**
+   * The folder half of openDesignationLink: resolve the folder FIRST, and only
+   * then let openNotificationLocation dock the workspace into it.
+   *
+   * A link can be pasted to someone who is not a member of the workspace.
+   * openNotificationLocation's own guard (_canEnterWorkspace) cannot see that
+   * refusal: fetchService does not reject on a 403 — doRequest hands the
+   * response to onServerComplain and RESOLVES undefined (ui-essentials
+   * socket/utils) — and that guard deliberately reads "no data" as "go ahead"
+   * so a network blip never blocks a notification. Measured on drumee.in for a
+   * non-member: media.home and media.attributes both 403 → undefined, the guard
+   * passed, loadWorkspace reset the desk for a pane that never mounted, and the
+   * visitor was left on an endless loading state with nothing said.
+   *
+   * Here a folder that does not resolve stops BEFORE anything on the desk is
+   * touched. The second probe only picks the sentence: the workspace answers
+   * (a member, the folder is gone) → not found; it does not → no access.
+   *
+   * @param {Object} payload the parsed compact payload (nid, hub_id)
+   */
+  async _openDesignationFolder({ hub_id, nid } = {}) {
+    // An empty canvas (a link opened by loading the page) is CLAIMED for the
+    // whole decision, exactly as loadWorkspace claims it before its own round
+    // trip: otherwise settleHomeGrid reads "still probing" as "nothing opened"
+    // and reveals the retired home grid until a workspace paints over it —
+    // seen on drumee.in as 1-2 s of home behind the alert.
+    const holdCanvas = !this._curWorkspace && !this.headlessPane();
+    if (holdCanvas) this._syncHomeGrid(1);
+    // Both read-only requests at once — see _prefetchWorkspaceRoot.
+    const probe = this._fetchDesignationNode({ hub_id, nid });
+    const root = this._prefetchWorkspaceRoot(hub_id);
+    if (await this._refusedDesignationTarget({ hub_id, nid }, holdCanvas, probe)) {
+      return;
+    }
+    const folder = await probe;
+    await root;
+    // The folder's attributes, just resolved, so openNotificationLocation does
+    // not fetch them a second time before navigating into it.
+    const win = await this.openNotificationLocation(
+      { hub_id, nid, filetype: _a.folder },
+      { targetAttrs: folder },
+    );
+    // Nothing mounted after all — give the claim back so the canvas is decided
+    // by settleHomeGrid instead of staying blank.
+    if (holdCanvas && !win && !this._curWorkspace) this._releaseCanvas();
+    return win;
+  }
+
+  /**
+   * Is this payload the shape a Designation link carries — one concrete node,
+   * typed, with nothing else to do? Only those are probed by openDesignationLink.
+   *
+   * The LONG `open` route that also lands there has other emitters, left
+   * exactly as they were: activity chat links (activeTab + message_id), the
+   * websocket channel/meeting links (no filetype, nid 0 or `*`), and any reveal
+   * (highlight, which opens the PARENT, so the node's own attributes are not
+   * the question). Everything else — the compact form always, and viewerLink's
+   * long form — names a node whose media.attributes is the very request
+   * openFileLocation makes next, so probing it first changes only WHEN a refusal
+   * is learned, never WHETHER: before the desk is touched instead of after.
+   *
+   * @param {Object} payload
+   * @returns {Boolean}
+   */
+  _isPlainDesignationTarget(payload = {}) {
+    const { nid, filetype, highlight, activeTab } = payload || {};
+    if (!filetype || !nid) return false;
+    if (`${nid}` === "0" || `${nid}` === "*") return false;
+    if (highlight && `${highlight}` !== "0") return false;
+    if (activeTab) return false;
+    return true;
+  }
+
+  /**
+   * Resolve a Designation link's node BEFORE anything on the desk is touched;
+   * when it does not resolve, land in a workspace and say why.
+   *
+   * fetchService does not reject on a 403 — doRequest hands the response to
+   * onServerComplain and RESOLVES undefined (ui-essentials socket/utils) — so a
+   * non-member's refusal reads as "no data". Measured on drumee.in, for a folder
+   * and then a file: without this the desk docked a workspace that never
+   * mounted (_curWorkspace reset under the visible pane, ~7 s of nothing), and
+   * on a page load the retired home grid came up, followed by a "does not
+   * exist" alert for a file that does exist.
+   *
+   * The second probe only picks the sentence: the workspace answers (a member,
+   * the node is gone) → not found; it does not → no access. The no-access
+   * sentence is the link's own (Theo, 2026-10-13): signed in with an account
+   * that is not a member, "does not exist" read as a broken link, and the
+   * generic workspace sentence never says the link itself is fine — so it
+   * names the cause and both ways out (another account, or ask to be added).
+   *
+   * @param {Object} target { hub_id, nid }
+   * @param {Boolean} holdCanvas the caller claimed an empty canvas
+   * @param {Promise<Object|null>} [probe] the node's attributes, already
+   *   requested by the caller (_fetchDesignationNode); asked here when absent
+   * @returns {Promise<Boolean>} true when refused (and handled)
+   */
+  async _refusedDesignationTarget({ hub_id, nid } = {}, holdCanvas = false, probe = null) {
+    const attrs = await (probe || this._fetchDesignationNode({ hub_id, nid }));
+    if (attrs && attrs.nid) return false;
+    const home = await this.fetchService(SERVICE.media.home, { hub_id })
+      .catch(() => null);
+    // Land FIRST, say why AFTER: opening a workspace closes the alert on its
+    // way (Desk.closeAllPanels and the pane mount), so it is raised only once
+    // the landed pane is up — see _landAfterRefusedLink.
+    const landed = await this._landAfterRefusedLink();
+    if (holdCanvas && !landed) this._releaseCanvas();
+    this.alert(
+      home
+        ? LOCALE.FILE_NOT_FOUND
+        : LOCALE.DESIGNATION_LINK_NO_ACCESS ||
+          LOCALE.WORKSPACE_NO_ACCESS ||
+          LOCALE.WEAK_PRIVILEGE,
+    );
+    return true;
+  }
+
+  /**
+   * Behind a refused link, stand in a workspace — not on the retired home grid.
+   *
+   * Warm (the app was already open): the visitor is still in the workspace they
+   * were in, since nothing on the desk was touched — nothing to do.
+   *
+   * Cold (the link was opened by loading the page): a deep-link boot stands the
+   * remembered-screen restore down so it cannot steal focus from the target
+   * (desk _restoreDeskState, `deepLink` branch). With the target refused, that
+   * leaves NO workspace, and an empty desk renders as the old home grid. So do
+   * what a plain reload would have done: the saved workspace, else the default
+   * — the same pair, in the same order, as _restoreDeskState's saved branch —
+   * with the restore flag held as it holds it, so a late breadcrumb loadHome
+   * cannot wipe the pane being opened.
+   *
+   * Resolves once the landed pane's folder view is mounted (bounded).
+   *
+   * @returns {Promise<Boolean>} whether a workspace stands, or is being opened
+   */
+  async _landAfterRefusedLink() {
+    if (this._curWorkspace) return true;
+    const desk = window.Desk;
+    if (!desk || !_.isFunction(desk._openDefaultWorkspace)) return false;
+    desk._restoreInFlight = true;
+    let landed = false;
+    try {
+      const saved = desk._bootSavedState;
+      if (saved && saved.workspace && _.isFunction(desk._restoreWorkspace)) {
+        // A throw here still falls through to the default below.
+        landed = !!(await desk._restoreWorkspace(saved.workspace).catch(() => false));
+      }
+      if (!landed) landed = !!(await desk._openDefaultWorkspace());
+      // _openDefaultWorkspace returns as soon as loadWorkspace is ENTERED; the
+      // pane mounts after its media.attributes round trip, and an alert raised
+      // before that is closed on the way (measured on drumee.in: gone at once
+      // when raised right after loadWorkspace, still up 6 s later when raised
+      // after the pane's folder view). So wait for the pane itself.
+      if (landed) await this._awaitLandedPane();
+    } catch (e) {
+      this.warn("_landAfterRefusedLink: could not open a workspace", e);
+    } finally {
+      if (_.isFunction(desk._clearRestoreInFlight)) {
+        desk._clearRestoreInFlight(2500);
+      } else {
+        desk._restoreInFlight = false;
+      }
+    }
+    return landed;
+  }
+
+  /**
+   * Resolve once the workspace being opened has a mounted folder view: wait for
+   * loadWorkspace to set _curWorkspace (it does so after its round trip), then
+   * the same readiness _awaitWorkspaceWindow gives openNotificationLocation.
+   * Bounded, like that one — never hangs the caller.
+   */
+  async _awaitLandedPane(tries = 40) {
+    for (let i = 0; i < tries && !this._curWorkspace; i++) {
+      await new Promise((r) => setTimeout(r, 150));
+    }
+    const cur = this._curWorkspace;
+    if (cur && cur.hub_id) await this._awaitWorkspaceWindow(cur.hub_id);
   }
 
   /**
@@ -372,7 +640,7 @@ class __window_manager extends push {
           // too — otherwise shortening a link would silently change where the
           // desk lands, which is exactly the drift the compact form exists to
           // avoid.
-          this.openDesignationLink(compact);
+          this.openDesignationLink(compact, { compact: true });
           return;
         }
         break;
@@ -667,7 +935,14 @@ class __window_manager extends push {
     this.alert(LOCALE.WORKSPACE_NO_ACCESS || LOCALE.WEAK_PRIVILEGE);
     return false;
   }
-  async openNotificationLocation(args = {}) {
+  /**
+   * @param {Object} args the notification / link payload
+   * @param {Object} [known]
+   * @param {Object} [known.targetAttrs] media.attributes the caller already
+   *   holds for the folder to land on; used only when its nid IS that folder,
+   *   otherwise the folder is fetched as usual
+   */
+  async openNotificationLocation(args = {}, { targetAttrs = null } = {}) {
     const {
       hub_id,
       nid,
@@ -752,7 +1027,11 @@ class __window_manager extends push {
       `${win.mget(_a.nid)}` !== `${targetNid}` &&
       _.isFunction(win.refreshContent)
     ) {
-      const attrs = await this.fetchService(SERVICE.media.attributes, {
+      const known =
+        targetAttrs && targetAttrs.nid && `${targetAttrs.nid}` === `${targetNid}`
+          ? targetAttrs
+          : null;
+      const attrs = known || await this.fetchService(SERVICE.media.attributes, {
         hub_id,
         nid: targetNid,
       }).catch((e) => {
@@ -927,11 +1206,17 @@ class __window_manager extends push {
    * (loadWorkspace's feed, the desk's rail highlight) that this is a plain
    * arrival. Anything else unrecognised answers null for the same reason.
    *
+   * Access is an overlay now, not a tab (window/folder/access-column), so it
+   * is read off its own flag: a switch made with it up still lands the next
+   * workspace on Access, as it did when Access was a tab — over Files there,
+   * the tab a fresh pane starts on.
+   *
    * @returns {String|null} "chat" | "task" | "meeting" | "access", or null for
    *   Files
    */
   paneTabToCarry() {
     const pane = this.headlessPane();
+    if (require("window/folder/access-column").accessOpen(pane)) return "access";
     const tab = pane && pane.activeTab;
     return [_a.chat, _a.task, "meeting", "access"].includes(tab) ? tab : null;
   }
@@ -1732,10 +2017,33 @@ class __window_manager extends push {
     // to ask: "is the target already a tile in THIS listing?" Outside the pane
     // it now falls through to the resolve-and-refresh path below, which is the
     // correct handling for a node that is not on screen.
+    //
+    // AND ONLY A FILE TILE. getItemsByAttr on the pane walks every widget in
+    // it, not just its listing, and matches any model carrying that nid. The
+    // pane's team chat is one: it is mounted with the pane's nid, which is the
+    // workspace ROOT. So the workspace crumb (going back from a subfolder to
+    // the root) matched the chat widget, fired open-node on it — which opens
+    // nothing — and returned: the crumbs said "workspace", the grid kept the
+    // subfolder. Only when the chat was mounted with exactly that nid, hence
+    // "occasionally". The listing's own children are the tiles; a folder or
+    // workspace tile is the only kind open-node navigates the pane for.
     const scope = this.headlessPane();
-    const media = scope && _.isFunction(scope.getItemsByAttr)
-      ? scope.getItemsByAttr(_a.nid, data.nid)[0]
-      : null;
+    const tiles = scope && scope.iconsList;
+    const media =
+      tiles &&
+      !(tiles.isDestroyed && tiles.isDestroyed()) &&
+      tiles.children &&
+      _.isFunction(tiles.children.find) &&
+      data.nid != null
+        ? tiles.children.find(
+          (c) =>
+            c &&
+            c.model &&
+            _.isFunction(c.triggerHandlers) &&
+            [_a.folder, _a.hub].includes(c.mget(_a.filetype)) &&
+            `${c.mget(_a.nid)}` === `${data.nid}`,
+        )
+        : null;
     if (media) {
       return media.triggerHandlers({ service: "open-node" });
     }
@@ -1747,78 +2055,144 @@ class __window_manager extends push {
 
     if (!hub_id || !nid) return this.loadWorkspaceNode(node);
 
+    // A PARENT OF WHERE THE PANE STANDS needs no lookup. Walking forward, the
+    // pane pushes the state it had in each folder onto _navStack, so a crumb
+    // or a sidebar row for a folder above us starts loading NOW instead of
+    // after a media.attributes round trip. That round trip still runs, and its
+    // answer is applied over the same node — or, if it disagrees on the node,
+    // its type or the rights, the full path below runs with it.
+    //
+    // Only those captured states (`_live`, window/folder _captureNavState).
+    // After a crumb or sidebar jump the stack is rebuilt from get_path rows,
+    // whose fields (a workspace root's filetype among them) need not match
+    // what media.attributes gives — and the folder's side effects (task scope,
+    // chat, + New) are computed once, from whatever the model holds then.
+    //
+    // Not while the pane stands in a symlinked folder: copyPropertiesFrom
+    // only ever SETS isalink, the stack rows do not carry it, and a stale
+    // truthy isalink would make actualNode() list the link target instead.
+    const pane = this.headlessPane();
+    const stack = pane && !pane.mget(_a.isalink) && Array.isArray(pane._navStack)
+      ? pane._navStack
+      : null;
+    const at = stack
+      ? stack.findIndex(
+        (s) => s && s._live && `${s.nid}` === `${nid}` && `${s.hub_id}` === `${hub_id}`,
+      )
+      : -1;
+
+    const navigate = (attrs) => {
+      const resolved =
+        attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
+      if (!resolved) {
+        this.warn("openWorkspaceFolder: cannot resolve node", {
+          hub_id,
+          nid,
+          attrs,
+        });
+        return;
+      }
+      // THE WORKSPACE PANE, never "the last folder window anywhere".
+      //
+      // This used to be folderWindowIn() with no pool, which answers
+      // getWindowsPool() — headlessLayer whenever a workspace is open — and
+      // takes the LAST window_folder in it. Every explicitly launched window
+      // lands in that layer too, so with a folder popup up ("Open in window",
+      // "Get info", a chat/notification "open location") the click navigated
+      // the popup and the pane the breadcrumb describes never moved: the
+      // crumbs cropped to the clicked ancestor, the grid stayed where it was,
+      // and the only way out of a subfolder was one level at a time.
+      // headlessPane() filters on the flag that tells the two apart.
+      //
+      // Resolved HERE rather than reusing `scope` from before the fetch: a
+      // workspace switch during the round trip replaces the pane, and the
+      // dead one must not be navigated.
+      const currentFolder = this.headlessPane();
+      if (!currentFolder || !_.isFunction(currentFolder.refreshContent)) {
+        // No pane to navigate — a section screen over an empty desk, or a
+        // crumb clicked before the first workspace mounted. Open the target
+        // as a workspace rather than dropping the click on the floor.
+        // An EXPLICIT shape, like the sidebar's own folder rows build:
+        // loadWorkspace prefers actual_home_id/home_id over nid, and this
+        // node's row carries the workspace ROOT in both — spreading it would
+        // open Home instead of the folder that was clicked.
+        return this.loadWorkspace({
+          hub_id,
+          nid: attrs.nid || nid,
+          area: attrs.area || data.area,
+          filename: attrs.filename || data.filename,
+        });
+      }
+      currentFolder.refreshContent(attrs);
+      // refreshContent can't infer the ancestor chain for a deep jump, so the
+      // breadcrumb would keep the previous folder's crumbs. Rebuild it from
+      // get_path, as loadWorkspace does.
+      const deepNid = attrs.nid || nid;
+      // Deferred for the same reason as in loadWorkspace: refreshContent()
+      // above kicks off this folder's media.show_node_by, and get_path issued
+      // in the same tick would reach the endpoint first and hold the listing
+      // behind its temporary-table build (see libs/path-request).
+      _.defer(() => {
+        // Painted at once from the session's last answer for this node, and
+        // again only if the server's differs (path-request).
+        const paint = (path) => {
+          if (_.isEmpty(path)) return;
+          // The pane has moved on (another crumb, a grid folder, a workspace
+          // switch) since this lookup started: this path is not where it is,
+          // and refreshBreadcrumbsUI would rebuild _navStack from it.
+          if (currentFolder.isDestroyed && currentFolder.isDestroyed()) return;
+          if (attrs.nid != null && `${currentFolder.mget(_a.nid)}` !== `${attrs.nid}`) return;
+          if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
+            currentFolder.refreshBreadcrumbsUI(path);
+          // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
+          // folder navigation. refreshBreadcrumbsUI above also mirrors into the
+          // topbar, but only when `currentFolder` is the focused headless
+          // workspace window; this explicit broadcast covers the case where it
+          // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
+          this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
+        };
+        getPath(this, { nid: deepNid, hub_id }, paint)
+          .then(paint)
+          .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
+      });
+    };
+
+    if (at >= 0 && _.isFunction(pane.refreshContent)) {
+      const stacked = { ...stack[at] };
+      // What is above the target stays; the target and everything below it
+      // are no longer ancestors (same crop _navigateToStackIndex makes).
+      // get_path's answer rebuilds it authoritatively right after.
+      pane._navStack = stack.slice(0, at);
+      navigate(stacked);
+      this.fetchService(SERVICE.media.attributes, { hub_id, nid })
+        .then((attrs) => {
+          if (!attrs || !(attrs.actual_home_id || attrs.home_id || attrs.nid)) return;
+          if (pane.isDestroyed && pane.isDestroyed()) return;
+          // Moved on meanwhile: this answer describes a folder we left.
+          if (`${pane.mget(_a.nid)}` !== `${stacked.nid}`) return;
+          // The server disagrees on WHICH node, its type, its root or the rights
+          // over it (the state was captured earlier this session, so this means
+          // something changed since): run the full lookup path with its answer,
+          // exactly as before this shortcut.
+          const differs = (k) =>
+            attrs[k] != null && `${attrs[k]}` !== `${pane.mget(k)}`;
+          if (
+            differs(_a.nid) ||
+            differs(_a.filetype) ||
+            differs(_a.privilege) ||
+            differs(_a.actual_home_id)
+          ) {
+            return navigate(attrs);
+          }
+          pane.mset(attrs);
+        })
+        .catch((e) => this.warn("openWorkspaceFolder: get_attributes failed", e));
+      return;
+    }
+
     // Data provided by the trigger may not be reliable enough. Get fresh one
     this.fetchService(SERVICE.media.attributes, { hub_id, nid })
-      .then((attrs) => {
-        const resolved =
-          attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
-        if (!resolved) {
-          this.warn("openWorkspaceFolder: cannot resolve node", {
-            hub_id,
-            nid,
-            attrs,
-          });
-          return;
-        }
-        // THE WORKSPACE PANE, never "the last folder window anywhere".
-        //
-        // This used to be folderWindowIn() with no pool, which answers
-        // getWindowsPool() — headlessLayer whenever a workspace is open — and
-        // takes the LAST window_folder in it. Every explicitly launched window
-        // lands in that layer too, so with a folder popup up ("Open in window",
-        // "Get info", a chat/notification "open location") the click navigated
-        // the popup and the pane the breadcrumb describes never moved: the
-        // crumbs cropped to the clicked ancestor, the grid stayed where it was,
-        // and the only way out of a subfolder was one level at a time.
-        // headlessPane() filters on the flag that tells the two apart.
-        //
-        // Resolved HERE rather than reusing `scope` from before the fetch: a
-        // workspace switch during the round trip replaces the pane, and the
-        // dead one must not be navigated.
-        const currentFolder = this.headlessPane();
-        if (!currentFolder || !_.isFunction(currentFolder.refreshContent)) {
-          // No pane to navigate — a section screen over an empty desk, or a
-          // crumb clicked before the first workspace mounted. Open the target
-          // as a workspace rather than dropping the click on the floor.
-          // An EXPLICIT shape, like the sidebar's own folder rows build:
-          // loadWorkspace prefers actual_home_id/home_id over nid, and this
-          // node's row carries the workspace ROOT in both — spreading it would
-          // open Home instead of the folder that was clicked.
-          return this.loadWorkspace({
-            hub_id,
-            nid: attrs.nid || nid,
-            area: attrs.area || data.area,
-            filename: attrs.filename || data.filename,
-          });
-        }
-        currentFolder.refreshContent(attrs);
-        // refreshContent can't infer the ancestor chain for a deep jump, so the
-        // breadcrumb would keep the previous folder's crumbs. Rebuild it from
-        // get_path, as loadWorkspace does.
-        const deepNid = attrs.nid || nid;
-        // Deferred for the same reason as in loadWorkspace: refreshContent()
-        // above kicks off this folder's media.show_node_by, and get_path issued
-        // in the same tick would reach the endpoint first and hold the listing
-        // behind its temporary-table build (see libs/path-request).
-        _.defer(() => {
-          // Painted at once from the session's last answer for this node, and
-          // again only if the server's differs (path-request).
-          const paint = (path) => {
-            if (_.isEmpty(path)) return;
-            if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
-              currentFolder.refreshBreadcrumbsUI(path);
-            // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
-            // folder navigation. refreshBreadcrumbsUI above also mirrors into the
-            // topbar, but only when `currentFolder` is the focused headless
-            // workspace window; this explicit broadcast covers the case where it
-            // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
-            this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
-          };
-          getPath(this, { nid: deepNid, hub_id }, paint)
-            .then(paint)
-            .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
-        });
-      })
+      .then(navigate)
       .catch((e) => this.warn("openWorkspaceFolder: get_attributes failed", e));
 
   }

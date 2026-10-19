@@ -123,6 +123,7 @@ export function tooltipBubble(ui, opt = {}) {
     hide_back = false,
     done = false,
     hide_next = false,
+    align = null,
   } = opt;
 
   const p = `${ui.fig.group}__bubble`;
@@ -179,7 +180,9 @@ export function tooltipBubble(ui, opt = {}) {
 
   // A bare bubble keeps the design's look — one bold line, tighter insets —
   // and gains the header and footer so it can be numbered and left.
-  const foot = () => footer();
+  // Nothing to put in it: no footer box at all, so the card ends at its copy
+  // (Figma 380:54800 — the field, not a button, is the way forward).
+  const foot = () => (hide_back && hide_next ? null : footer());
 
   // Progress + copy live in a BODY of their own, with the footer as the card's
   // only other child. That is the frame's own structure (142:40285): the card
@@ -202,10 +205,10 @@ export function tooltipBubble(ui, opt = {}) {
           desc ? Skeletons.Note({ active: 0, className: `${p}-desc`, content: desc }) : null,
         ]),
     foot(),
-  ];
+  ].filter(Boolean);
 
   return Skeletons.Box.Y({
-    className: `${p}-card${text ? ` ${p}-card--bare` : ""}`,
+    className: `${p}-card${text ? ` ${p}-card--bare` : ""}${align === "center" ? ` ${p}-card--center` : ""}`,
     sys_pn: "badge-tooltip",
     partHandler: [ui],
     style,

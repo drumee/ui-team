@@ -19,4 +19,22 @@ function fileListSkip(showHidden = !!localStorage.getItem("showHidden")) {
   return skip;
 }
 
-module.exports = { fileListSkip };
+/**
+ * The same schedule test for code that walks rows itself rather than through
+ * a List.Smart `skip` (the chat's "From workspace" and @-mention file rows).
+ * A schedule has no bytes, so picking one sends an attachment that can never
+ * download.
+ *
+ * @param {Object} item a media listing row
+ * @returns {Boolean}
+ */
+function isScheduleNode(item) {
+  if (!item) return false;
+  return (
+    item.ftype === "schedule" ||
+    item.category === "schedule" ||
+    item.filetype === "schedule"
+  );
+}
+
+module.exports = { fileListSkip, isScheduleNode };

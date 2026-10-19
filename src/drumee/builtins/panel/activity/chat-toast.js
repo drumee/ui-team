@@ -239,11 +239,16 @@ function buildCard(model, url, replacing) {
   const avatar = Skeletons.Box.Y({
     className: `${pfx}__avatar-wrap`,
     kids: [
-      Skeletons.Avatar(
-        (Visitor.avatar && Visitor.avatar(model.author_id)) || "default",
-        `${pfx}__avatar`,
-        senderLabel(model),
-      ),
+      // UserProfile, as the feed row draws its author: it shows the photo, or
+      // the initials when there is none. Avatar(Visitor.avatar(id)) is a bare
+      // background image, so a sender without a photo got an empty square.
+      Skeletons.UserProfile({
+        className: `${pfx}__avatar`,
+        id: model.author_id,
+        firstname: model.firstname,
+        lastname: model.lastname,
+        type: "thumb",
+      }),
       Skeletons.Box.X({
         className: `${pfx}__badge`,
         kids: [Skeletons.Image.Svg({ ico: "noti-chats-circle" })],
@@ -269,7 +274,6 @@ function buildCard(model, url, replacing) {
           Skeletons.Button.Svg({
             className: `${pfx}__close`,
             ico: _a.cross,
-            tooltips: LOCALE.CLOSE,
           }),
         ],
       }),
@@ -334,7 +338,6 @@ function buildScopePicker(model = {}, replacing, wsCount) {
             Skeletons.Button.Svg({
               className: `${pfx}__close`,
               ico: _a.cross,
-              tooltips: LOCALE.CLOSE,
             }),
           ],
         }),
@@ -385,7 +388,6 @@ function buildScopePicker(model = {}, replacing, wsCount) {
           Skeletons.Button.Svg({
             className: `${pfx}__close`,
             ico: _a.cross,
-            tooltips: LOCALE.CLOSE,
           }),
         ],
       }),
@@ -454,10 +456,10 @@ function showChatToast(host, model = {}, url = "") {
     // Never toast my own message. shouldNofity already drops these, but
     // _notify is also reachable from the activity:notify radio channel.
     if (model.author_id && model.author_id == Visitor.id) return;
-    // Muted: the popup is the ONLY thing this suppresses. The row is still
-    // being added to the Notification Center behind us and the badge still
-    // counts it — see mute.js. Placed last of the guards so that a mute can
-    // never mask one of the cheaper structural reasons not to show a card.
+    // Muted: no card. The server also leaves the chat out of the
+    // Notification Center and the badges — see mute.js. Placed last of the
+    // guards so that a mute can never mask one of the cheaper structural
+    // reasons not to show a card.
     if (isPopupMuted(model)) return;
 
     // Replace, never stack: the previous card goes before the new one lands,
@@ -492,7 +494,19 @@ function showChatToast(host, model = {}, url = "") {
  *                          chooser at all.
  */
 function mountCard(host, build, ms) {
-  const layer = typeof Wm !== "undefined" && Wm && Wm.windowsLayer;
+  // NOT windowsLayer — the same trap the meeting toast fell into (wm/push.js
+  // _showMeetingToast, wm/skeleton meeting-toast-layer). While a workspace
+  // pane is open the headless layer takes the active-window lift (wm/skin
+  // __layer, z 50001) over windowsLayer (50000); the two are sibling stacking
+  // contexts, so the card's own z-index could not lift it out and every
+  // direct message landed as a card painted UNDER the Task board / file
+  // grid — "I only find out when I open the Notification Center". The
+  // dedicated toast layer sits above both panes; it falls back to
+  // windowsLayer where there is no desk.
+  const layer =
+    typeof Wm !== "undefined" && Wm
+      ? (_.isFunction(Wm.getMeetingToastPool) && Wm.getMeetingToastPool()) || Wm.windowsLayer
+      : null;
   if (!layer || !layer.append) return null;
 
   const replacing = !!(

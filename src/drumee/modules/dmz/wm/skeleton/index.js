@@ -78,6 +78,31 @@ function _filter_bar(_ui_) {
   });
 }
 
+/**
+ * What the list header part holds for a view mode: the desk folder window's
+ * column header (window/skeleton/content/row) in list mode, with the desk's
+ * class root so its styles apply; nothing otherwise. Fed again by dmz/wm
+ * _toggleFilesLayout — a Box sets its display inline, so CSS cannot hide it.
+ */
+export function listHeaderKids(_ui_, mode) {
+  if (mode !== _a.row) return [];
+  const { listHeader } = require("../../../../builtins/window/skeleton/content/row");
+  return [listHeader(_ui_, { group: "window", selectAll: false, uiHandler: [_ui_] })];
+}
+
+// List view's column header part. Secure-share recipient view only, the one
+// with the group | list | grid toggle.
+function _list_header(_ui_) {
+  if (!(_ui_.shareboxDesk && _ui_.shareboxDesk())) return null;
+  const mode = (_ui_.getViewMode && _ui_.getViewMode()) || _a.icon;
+  return Skeletons.Box.Y({
+    className: `${_ui_.fig.family}__list-header`,
+    sys_pn: "list-header",
+    dataset: { viewMode: mode },
+    kids: listHeaderKids(_ui_, mode),
+  });
+}
+
 function _icons_list(_ui_) {
   return Skeletons.List.Smart({
     className: `${_ui_.fig.family}__icons-list icons-list desk-content`,
@@ -140,6 +165,7 @@ function _desk_content(_ui_) {
     },
     kids: [
       _filter_bar(_ui_),
+      _list_header(_ui_),
       _icons_list(_ui_),
       { kind: "selection", sys_pn: "ref-selection" },
 
@@ -161,7 +187,7 @@ function _desk_content(_ui_) {
         className: `${_ui_.fig.family}__wrapper-modal`,
         name: "modal",
       }),
-    ],
+    ].filter(Boolean),
   });
 }
 

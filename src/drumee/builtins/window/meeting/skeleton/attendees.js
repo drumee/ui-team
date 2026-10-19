@@ -26,6 +26,8 @@ const __window_webinar_attendees = function(_ui_) {
           service   : SERVICE.hub.get_members_by_type,
           type      : 'all',
           hub_id    : _ui_.mget(_a.hub_id),
+          // Profile names, matching the tiles (see membersListApi).
+          names     : 'profile',
           timer     : 500
         }
       })

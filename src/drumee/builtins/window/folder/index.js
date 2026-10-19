@@ -15,7 +15,23 @@ const {
   showSeatLimitReached,
 } = require("libs/billing");
 const readCache = require("libs/read-cache");
-const { ACCESS_TAB, ACCESS_CLOSE, showAccessColumn, closeAccessColumn, showsFileGrid } = require("./access-column");
+const CDHost = require("./chat-details-host");
+const FilesSearch = require("./files-search");
+const ChatSearchHighlight = require("./chat-search-highlight");
+const ResultsPanel = require("./search-results-panel");
+const IconsLoading = require("./icons-loading");
+const { iconsSkeleton, searchStatus } = require("../skeleton/toolkit/icons-skeleton");
+const ChatExportOverlay = require("./chat-export-overlay");
+const Topics = require("./topics");
+const FTBar = require("./file-threads-bar");
+const {
+  ACCESS_TAB,
+  ACCESS_CLOSE,
+  showAccessOverlay,
+  hideAccessOverlay,
+  closeAccessColumn,
+  showsFileGrid,
+} = require("./access-column");
 const {
   SECURE_SHARE_TAB,
   SECURE_SHARE_CLOSE,
@@ -31,10 +47,13 @@ const {
   gridFilesBrowser,
   chatHeaderBar,
   chatSearchBar,
-  searchResults,
   fileThreadPanelContent,
   fileThreadInfoCard,
 } = require("../skeleton/toolkit");
+const {
+  searchResults,
+  searchResultsLoading,
+} = require("../skeleton/toolkit/search-results");
 
 require("./skin");
 
@@ -44,15 +63,10 @@ require("./skin");
 // own compact threshold, and the one meeting-schedule.scss already uses.
 const SCHED_NARROW_PX = 700;
 
-// Workspace file search: one short page of hits, which is all a dropdown over
-// the file grid can show.
-const WS_SEARCH_LIMIT = 20;
-// What to ASK for when the hits still have to pass a subtree fence on this side
-// (a personal workspace — see _wsSearchScope): the service applies its limit
-// before that fence, so asking for exactly 20 could hand back 20 rows from a
-// sibling workspace and leave the dropdown empty. 100 is the service's own cap.
-const WS_SEARCH_FETCH_MAX = 100;
 
+// The migrate tour has been raised by a phone's "Migrate from Google Drive"
+// tap this session (see "launch-gdrive-migration").
+let _phoneMigrateRaised = false;
 
 class __window_folder extends mfsInteract {
   constructor(...args) {
@@ -695,7 +709,10 @@ class __window_folder extends mfsInteract {
    */
   showTutorial(tour, opt = {}) {
     const Tours = require("libs/tutorial-tours");
-    if (!opt.preview && !Tours.claim(tour, this)) return false;
+    // `phone_ok`: a phone's own trigger for this tour (see phoneGate in
+    // libs/tutorial-tours) — it passes the mobile switch, and rides on to the
+    // host, which draws the phone layout for it.
+    if (!opt.preview && !Tours.claim(tour, this, opt.phone_ok ? { phone: true } : undefined)) return false;
     // BROADCAST, do not append.
     //
     // This used to `this.append()` a wrapper and feed the tour into it. That put
@@ -754,6 +771,8 @@ class __window_folder extends mfsInteract {
 
 
   onBeforeDestroy(opt) {
+    // The File threads dropdown's document listeners go with the window.
+    FTBar.unbind(this);
     clearGrouped(this);
     RADIO_BROADCAST.off("workspace-unread", this._onWorkspaceUnread);
     if (this._folderGridSortTimer) {
@@ -764,11 +783,17 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._chatSearchTimer);
       this._chatSearchTimer = null;
     }
-    // Drops the search dropdown's timer and document-level dismisser.
-    this._teardownWorkspaceSearch();
+    // Chat-header search highlight: its observer watches the folder chat.
+    ChatSearchHighlight.stop(this);
+    // Search timer, Esc listener and the loading stamp's list listeners.
+    FilesSearch.teardown(this);
     if (this._mmInviteeBlurTimer) {
       clearTimeout(this._mmInviteeBlurTimer);
       this._mmInviteeBlurTimer = null;
+    }
+    if (this._meetingsChangedTimer) {
+      clearTimeout(this._meetingsChangedTimer);
+      this._meetingsChangedTimer = null;
     }
     this._stopAwaitMeetingReady();
     this._ftTeardown();
@@ -1195,13 +1220,48 @@ class __window_folder extends mfsInteract {
   }
 
   loadContent() {
+    // Same folder → a search re-runs in place; a navigation ends it.
+    if (FilesSearch.onLoadContent(this)) return;
     this.ensurePart(_a.list).then((l) => {
       if (!l || (l.isDestroyed && l.isDestroyed())) return;
       l.restart();
+      // After restart: restart fires a flush eod that would end it at once.
+      IconsLoading.begin(this, l);
       if (this.getViewMode && this.getViewMode() !== _a.row) {
         this._prepareListPartition(l);
       }
     });
+  }
+
+  // The Files list's api (skeleton/toolkit gridFilesBrowser, content/row).
+  // While the toolbar search is active the list shows its results, fed by
+  // ./files-search; an empty api makes the list's own fetch (and its scroll
+  // paging) a no-op so the folder listing cannot page back in underneath.
+  // Its own method, NOT a getCurrentApi override: other callers read
+  // getCurrentApi() for the folder's nid/hub_id (core.js newDocument), and an
+  // empty answer there created "+ New" documents with no target.
+  getListApi() {
+    if (FilesSearch.isSearching(this)) return {};
+    return this.getCurrentApi();
+  }
+
+  // Search hits come from many folders: a drag among them must not renumber
+  // ranks (media.reorder would write them onto files elsewhere) or mark this
+  // folder as hand-arranged.
+  syncOrder(cb) {
+    if (FilesSearch.isSearching(this)) {
+      this._manualArrange = 0;
+      return;
+    }
+    return super.syncOrder(cb);
+  }
+
+  // A restart (WS update for this folder, show/hide hidden files) while
+  // searching re-runs the search; restarting the list itself would fetch
+  // nothing (getListApi is {}) and leave the pane blank under the query.
+  restart(w, type) {
+    if (FilesSearch.onLoadContent(this)) return;
+    return super.restart(w, type);
   }
 
   /**
@@ -1450,6 +1510,9 @@ class __window_folder extends mfsInteract {
   }
 
   onPartReady(child, pn) {
+    // Files-tab chat topics (Figma 869:189953): paint once the parts exist.
+    if (pn === "topic-strip") Topics.refreshStrip(this);
+    if (pn === "ft-bar") FTBar.paint(this);
     // Neither of these returns: window/core's onPartReady tail wires
     // `child.onChildBubble` on every part it sees, and the control these two
     // replace (the old zoom trigger) went through it. Fall through so the
@@ -1469,8 +1532,19 @@ class __window_folder extends mfsInteract {
       this.__chatUnread = child;
       this._paintChatUnread();
     }
+    if (pn === "chat-details-widget") {
+      // widget_chat_details fed by ./chat-details-host openDetails.
+      this.__cdWidget = child;
+      return;
+    }
+    if (pn === "split-dots") {
+      this._splitDots = child;
+      this._syncSplitPage();
+      return;
+    }
     if (pn === "folder-view") {
       this.__folderView = child;
+      this._wireSplitCarousel(child);
       // Restore the user's persisted Files-tab split ratio (default 2:1).
       this._applyFilesSplit();
       // First paint of the split body enters like every later view switch.
@@ -1549,6 +1623,13 @@ class __window_folder extends mfsInteract {
       this.iconsList = child;
       // Row-view header checkbox (window/core); returns below skip core's wiring.
       this._wireRowSelectAll(child);
+      // A view switch rebuilt the list mid-search: refill it with the hits.
+      if (FilesSearch.onListReady(this, child)) return;
+      // A freshly mounted list starts its own first fetch on render, without
+      // loadContent — cover that load too. If it has already answered by
+      // now, end at once rather than wait out the safety timer.
+      IconsLoading.begin(this, child);
+      if (child._started || child._end_of_data) IconsLoading.end(this);
       if (this.getViewMode && this.getViewMode() !== _a.row) {
         this._prepareListPartition(child);
       }
@@ -1572,7 +1653,7 @@ class __window_folder extends mfsInteract {
     }
     // ── Workspace file search (toolbar "Search…") ──
     // The window owns these parts; before this they were the DESK's
-    // ("search-container" / "search-box" / "search-suggestions"), which is why
+    // ("search-container" / "search-box"), which is why
     // the field ran a global, cross-workspace search — and why two open
     // workspaces fought over the desk's single set of refs.
     if (pn === "ws-search-container") {
@@ -1581,14 +1662,6 @@ class __window_folder extends mfsInteract {
     }
     if (pn === "ws-search-box") {
       this._wsSearchBox = child;
-      return;
-    }
-    if (pn === "ws-search-suggestions") {
-      this._wsSearchPanel = child;
-      return;
-    }
-    if (pn === "ws-search-results") {
-      this._wsSearchResults = child;
       return;
     }
     if (pn === "chat-search-input") {
@@ -1683,7 +1756,7 @@ class __window_folder extends mfsInteract {
   }
 
   _captureNavState() {
-    return {
+    const state = {
       area: this.mget(_a.area),
       ext: this.mget(_a.ext),
       filename: this.mget(_a.filename),
@@ -1706,6 +1779,13 @@ class __window_folder extends mfsInteract {
       // Workspace name, so an empty-filename root can label its title/crumb.
       hub_name: this.model.get("hub_name"),
     };
+    // Marks a state taken from this pane's own live model, as opposed to a
+    // get_path row refreshBreadcrumbsUI rebuilds the stack from. Only these
+    // have exactly the shape the pane had when it showed that folder, which is
+    // what lets Wm.openWorkspaceFolder walk back to one without waiting for
+    // media.attributes. Non-enumerable: mset(state) and spreads never see it.
+    Object.defineProperty(state, "_live", { value: 1 });
+    return state;
   }
 
   // The file-type filter is scoped to a single folder view. When moving to
@@ -1717,6 +1797,7 @@ class __window_folder extends mfsInteract {
   _resetFileTypeFilter() {
     if (!this._filterType) return;
     this._filterType = null;
+    this._stampFileFilter();
     const bar = this._fileTypeFilterBar;
     if (!bar || (bar.isDestroyed && bar.isDestroyed()) || !bar.children) return;
     const all =
@@ -1725,6 +1806,15 @@ class __window_folder extends mfsInteract {
     if (all && typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.trigger(`media-filter-${this._id}`, all);
     }
+  }
+
+  // The Files empty state shows its onboarding hero only on the unfiltered
+  // listing; under a Docs/PDF/Images/Other tab an empty answer means "nothing
+  // of that type", and the skin swaps in the plain note on this stamp.
+  _stampFileFilter() {
+    if (!this.el) return;
+    if (this._filterType) this.el.dataset.fileFilter = this._filterType;
+    else delete this.el.dataset.fileFilter;
   }
 
   _navigateToStackIndex(idx) {
@@ -1818,26 +1908,44 @@ class __window_folder extends mfsInteract {
     //
     // Still gated on focused (`state == 1`): headlessLayer can hold more than
     // one workspace pane, and a background one must not retitle the bar.
-    if (
-      window.Wm &&
-      this.mget(_a.headless) &&
-      this.mget(_a.state) == 1 &&
-      _.isFunction(this.updateBreadcrumb)
-    ) {
-      let curNid = this.mget(_a.nid);
-      if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
-        curNid = this.mget(_a.actual_home_id);
-      }
-      this.updateBreadcrumb(
-        {
+    //
+    // DEFERRED ONE TASK, and coalesced. The mirror makes desk_breadcrumb ask
+    // media.get_path, and every navigation reaches here from updateTopbar —
+    // BEFORE the caller's loadContent() sends media.show_node_by. get_path
+    // builds a temporary table server-side, so issued first it held the
+    // folder's own listing behind it (libs/path-request). loadContent resolves
+    // its list part on a microtask, so one macrotask later the listing request
+    // is already out. The model is read when the timer fires, so a burst of
+    // navigations mirrors only where the pane ended up.
+    if (window.Wm && this.mget(_a.headless) && _.isFunction(this.updateBreadcrumb)) {
+      const tok = (this._crumbMirrorTok = (this._crumbMirrorTok || 0) + 1);
+      _.defer(() => {
+        if (tok !== this._crumbMirrorTok) return;
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (this.mget(_a.state) != 1 || !window.Wm) return;
+        const filetype = this.mget(_a.filetype);
+        let curNid = this.mget(_a.nid);
+        if (filetype === _a.hub && this.mget(_a.actual_home_id)) {
+          curNid = this.mget(_a.actual_home_id);
+        }
+        const crumb = {
           nid: curNid,
           hub_id: this.mget(_a.hub_id),
           actual_home_id: this.mget(_a.actual_home_id),
-          filetype: this.mget(_a.filetype),
+          filetype,
           service: "change-workspace",
-        },
-        window.Wm,
-      );
+        };
+        // Enough for desk_breadcrumb to draw a child folder's crumb before
+        // get_path answers (its _optimisticPath). Folders only: a workspace
+        // root is labelled by hub_name, which only get_path knows.
+        if (filetype === _a.folder) {
+          crumb.pid = this.mget(_a.pid);
+          crumb.filename = this.mget(_a.filename);
+          crumb.area = this.mget(_a.area);
+          crumb.privilege = this.mget(_a.privilege);
+        }
+        this.updateBreadcrumb(crumb, window.Wm);
+      });
     }
 
     // The in-window crumb strip lives in the window topbar, which a headless
@@ -1925,12 +2033,15 @@ class __window_folder extends mfsInteract {
         content.feed([
           fileTypeFilterBar(this),
           require("../skeleton/content/row")(this),
+          searchStatus(this),
         ]);
         return;
       }
       content.feed([
         fileTypeFilterBar(this),
         gridFilesBrowser(this),
+        iconsSkeleton(this, "grid"),
+        searchStatus(this),
       ]);
     });
   }
@@ -2035,6 +2146,9 @@ class __window_folder extends mfsInteract {
       case "tab-bar-page":
         return this._showTabCarouselPage(cmd);
 
+      case "split-page":
+        return this._showSplitPage(cmd);
+
       // Tap on the mobile dim layer behind the centred "+ New" card. Same
       // close a leaf row runs, so the card and its backdrop leave together.
       case "close-new-menu":
@@ -2119,6 +2233,20 @@ class __window_folder extends mfsInteract {
         // raised elsewhere — the rail's Files button — that is still on screen.
         // With none in flight, whenDone runs `launch` synchronously, exactly
         // where a bare call would sit, which is every click on this row today.
+        //
+        // EXCEPT THE FIRST ONE ON A PHONE. There this row and the Files empty
+        // state's "Migrate from Google Drive" card (the same service) ARE the
+        // migrate tour's way in — a phone has no rail Files press that raises
+        // it — and the tour's last step is the real import (window/tutorial
+        // _goLive), so it takes the place of the popup rather than preceding
+        // it. Once per session: this tour is earned (mark_on "success"), so the
+        // seen-set alone would keep raising it until an import ran, and a user
+        // who left it early must get the dialog on their next tap.
+        if (!_phoneMigrateRaised && Visitor.isMobile()
+          && this.showTutorial("migrate", { phone_ok: 1 })) {
+          _phoneMigrateRaised = true;
+          return;
+        }
         return Tours.whenDone("migrate", launch);
       }
 
@@ -2249,7 +2377,11 @@ class __window_folder extends mfsInteract {
             // mock of itself — while the panel this tour is about is right
             // here. showTutorial takes the same claim fire() would have taken,
             // so every gate still applies exactly once.
+            // ON A PHONE TOO: the workspace sheet's link action lands here
+            // (mobile-ws-action → workspace-access), and it is a phone's way
+            // into this tour — phone_ok passes the mobile switch.
             raised = this.showTutorial("share", {
+              ...(Visitor.isMobile() ? { phone_ok: 1 } : {}),
               subject: "workspace",
               subject_data: {
                 name: this.mget(_a.hub_name) || this.mget(_a.filename),
@@ -2293,6 +2425,9 @@ class __window_folder extends mfsInteract {
           //               click must still do what it was for; swallowing it
           //               would make Share a dead control.
             if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
+            // ON A PHONE the tour's own Done opens "Who has access" (window
+            // tutorial _handOffMembers); opening here too would toggle it shut.
+            if (Visitor.isMobile() && Tours.appeared("share")) return;
             this.openManageAccess({ members: membersOnly });
           });
         }
@@ -2348,7 +2483,10 @@ class __window_folder extends mfsInteract {
         const value =
           (cmd.mget && cmd.mget(_a.value)) ||
           (cmd.options && cmd.options.value);
+        // A type tab is a FOLDER filter; picking one leaves the search.
+        FilesSearch.exit(this, { reload: false, clearInput: true });
         this._filterType = value && value !== "all" ? value : null;
+        this._stampFileFilter();
         return this.loadContent();
       }
 
@@ -2386,12 +2524,10 @@ class __window_folder extends mfsInteract {
 
       // ── Workspace file search (toolbar "Search…") ──
       // Fired by the search Entry's `watch` on every keystroke (args.value).
+      // Hits show IN the Files list (./files-search); result tiles are plain
+      // media widgets and open through their own open-node.
       case "ws-search-typed":
-        return this._runWorkspaceSearch((args && args.value) || "");
-
-      // A result row → open that file/folder of THIS workspace.
-      case "ws-search-hit":
-        return this._openWorkspaceSearchHit(cmd);
+        return FilesSearch.onTyped(this, (args && args.value) || "");
 
       // ── Team-chat header message search ──
       // Magnifying glass → swap the header for a search bar; back arrow restores
@@ -2411,16 +2547,41 @@ class __window_folder extends mfsInteract {
       case "close-chat-search":
         return this._closeChatSearch();
 
+      // ── Chat details panel (Figma 775:131699): widget_chat_details in the
+      // "chat-details" slot; its own clicks go to the widget, which calls
+      // back through chatDetailsAction (./chat-details-host).
+      case "open-chat-details":
+        return this._openChatDetails();
+
       // ── Team-chat header thread-switch dropdown (Figma 2216-170337) ──
       case "open-thread-menu":
         return this._toggleThreadMenu();
 
       case "thread-menu-general":
         // "# General" → leave the file thread for the team chat, IN PLACE
-        // (no tab switch).
+        // (no tab switch). The Topics row also scopes the chat to General
+        // (no topic messages); the file-thread header's back keeps the scope.
         this._closeThreadMenu();
         this.scopeChatToFile(null);
+        if (cmd && cmd.mget && cmd.mget("topic_scope") === "general") {
+          Topics.scopeChatToTopic(this, "general");
+        }
         return this.scopeChatToFolder(this.mget(_a.nid));
+
+      // ── Folder chat topics (./topics, Figma 867:185782) ──
+      case "topic-new":
+        return Topics.openTopicDialog(this);
+
+      // Files-tab File threads bar.
+      case "ft-bar-toggle":
+        return FTBar.toggle(this);
+
+      case "topic-menu-topic": {
+        this._closeThreadMenu();
+        const topicId = cmd && cmd.mget && cmd.mget("topic_id");
+        if (!topicId) return;
+        return Topics.scopeChatToTopic(this, topicId);
+      }
 
       case "thread-menu-file": {
         // A file row → scope the (already-visible) chat to that file's thread
@@ -2430,6 +2591,7 @@ class __window_folder extends mfsInteract {
         // The skeleton always sets `filename` on the row model.
         const fileLabel = (cmd && cmd.mget && cmd.mget("filename")) || "";
         this._closeThreadMenu();
+        FTBar.close(this);
         return this.scopeChatToFile(fileNid, fileLabel);
       }
 
@@ -2641,20 +2803,39 @@ class __window_folder extends mfsInteract {
         const day = (cmd.mget && cmd.mget("day")) || (cmd.el && cmd.el.dataset.day);
         const hour = Number((cmd.mget && cmd.mget("hour")) ?? (cmd.el && cmd.el.dataset.hour));
         const min = Number((cmd.mget && cmd.mget("min")) ?? (cmd.el && cmd.el.dataset.min)) || 0;
-        return this.openMeetingModal({ at: { day, hour: isNaN(hour) ? 9 : hour, min } });
+        if (!isNaN(hour)) return this.openMeetingModal({ at: { day, hour, min } });
+        // A month square carries a day, not a time: 09:00 — except today once
+        // 09:00 has gone, where that would prefill a meeting already over.
+        // There it is the next half hour, kept early enough that the 1-hour
+        // slot still ends the same day.
+        const now = Dayjs();
+        let at = 9 * 60;
+        if (day === now.format("YYYY-MM-DD")) {
+          const next = Math.ceil((now.hour() * 60 + now.minute() + 1) / 30) * 30;
+          at = Math.min(Math.max(at, next), 22 * 60 + 30);
+        }
+        return this.openMeetingModal({ at: { day, hour: Math.floor(at / 60), min: at % 60 } });
       }
 
       case "open-meeting": {
         // A schedule card on the calendar → edit that meeting.
         const nid = (cmd.mget && cmd.mget(_a.nid)) || (cmd.el && cmd.el.dataset.nid);
         const meeting = (this._meetings || []).find((m) => m.id === nid);
-        return this.openMeetingModal({ meeting });
+        return this.openMeetingModal({ meeting, occurrence: cmd.mget && cmd.mget("stime") });
       }
 
-      case "join-meeting":
+      case "join-meeting": {
         // Join the workspace meeting room (from a calendar card or the editor).
+        // Which meeting rides along: an invitee early for it waits for its
+        // start (server lib/meeting-early). Read before closeMeetingModal,
+        // which forgets the editor's meeting.
+        const schedule_id = (cmd && cmd.mget && cmd.mget(_a.nid)) || this._mmEditNid || null;
+        // And which occurrence: a recurring series is indexed at its NEXT one
+        // as soon as one starts, so the row alone would hold this one back.
+        const schedule_at = (cmd && cmd.mget && cmd.mget("stime")) || this._mmOccurrenceAt || null;
         this.closeMeetingModal();
-        return this._launchMeetingStandalone();
+        return this._launchMeetingStandalone({ schedule_id, schedule_at });
+      }
 
       case "close-meeting-modal":
         return this.closeMeetingModal();
@@ -2801,8 +2982,8 @@ class __window_folder extends mfsInteract {
    * Root cause: wrapper-dialog is `position:absolute; top:132px` INSIDE the
    * window container (window.scss ~line 183), so a 530px-tall card is clipped.
    *
-   * Fix: use a dedicated `wrapper-chat-export` Wrapper appended via `this.append()`
-   * (so Marionette owns the lifecycle), with CSS `position:fixed; inset:0`
+   * Fix: use a dedicated `wrapper-chat-export` Wrapper — a slot the window
+   * skeleton builds (./chat-export-overlay), with CSS `position:fixed; inset:0`
    * (class `widget-chat-export__viewport-backdrop`) applied via `data-chat-export`.
    * A backdrop overlay closes on click-outside. Does NOT touch `wrapper-dialog` so
    * create-folder / rename-folder dialogs are completely unaffected.
@@ -2819,34 +3000,21 @@ class __window_folder extends mfsInteract {
       this.mget(_a.filename) || this.model.get("hub_name") || this.mget(_a.name);
     const folderColor = this._chatExportFolderColor(folderName);
 
-    // Append a dedicated Wrapper to this window so Marionette owns its lifecycle.
-    // The wrapper's __bhv_wrapper behavior auto-sets data-state="open" when it
-    // receives children, and "closed" when empty. We feed immediately after
-    // ensurePart resolves, so it will open automatically.
-    this.append(
-      Skeletons.Wrapper.Y({
-        className: "widget-chat-export__viewport-backdrop",
-        name: "chat-export",
-      }),
-    );
-
-    this.ensurePart("wrapper-chat-export").then((wrapper) => {
-      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
-      this._chatExportWrapper = wrapper;
-
-      this._wireChatExportBackdrop(wrapper);
-
-      // Feed the export widget into the centering container.
-      wrapper.feed({
-        kind: "widget_chat_export",
-        hub_id: this.mget(_a.hub_id),
-        nid: this.mget(_a.nid),
-        name: folderName,
-        // Folder access level (private/share/public/dmz) → drives the icon
-        // colour in the modal, matching the hub icon shown outside.
-        area: this.mget(_a.area),
-        uiHandler: [this],
-      });
+    // Into the window's own "chat-export" slot (./chat-export-overlay) —
+    // never this.append(): a collection update on the window re-attaches
+    // every child and reloads the file grid, the chat and the thread rail.
+    // The wrapper's behavior sets data-state="open" once it has a child.
+    // Returns once the dialog's lazy chunk is in (Chat details' Download tile
+    // spins until then); other callers ignore the value.
+    return ChatExportOverlay.mount(this, {
+      kind: "widget_chat_export",
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      name: folderName,
+      // Folder access level (private/share/public/dmz) → drives the icon
+      // colour in the modal, matching the hub icon shown outside.
+      area: this.mget(_a.area),
+      uiHandler: [this],
     });
   }
 
@@ -2873,31 +3041,18 @@ class __window_folder extends mfsInteract {
       (cmd && _.isFunction(cmd.fullname) && cmd.fullname()) ||
       "";
 
-    this.append(
-      Skeletons.Wrapper.Y({
-        className: "widget-chat-export__viewport-backdrop",
-        name: "chat-export",
-      }),
-    );
-
-    this.ensurePart("wrapper-chat-export").then((wrapper) => {
-      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
-      this._chatExportWrapper = wrapper;
-
-      this._wireChatExportBackdrop(wrapper);
-
-      wrapper.feed({
-        kind: "widget_chat_export",
-        hub_id: this.mget(_a.hub_id),
-        nid: this.mget(_a.nid),
-        // File-scope mode: render the file card + hide the scope picker; the
-        // widget matches file_nid → file_thread_id against export_scope.
-        file_scope: 1,
-        file_nid: `${fileNid}`,
-        filename,
-        area: this.mget(_a.area),
-        uiHandler: [this],
-      });
+    // Same slot as the folder-wide export (./chat-export-overlay).
+    ChatExportOverlay.mount(this, {
+      kind: "widget_chat_export",
+      hub_id: this.mget(_a.hub_id),
+      nid: this.mget(_a.nid),
+      // File-scope mode: render the file card + hide the scope picker; the
+      // widget matches file_nid → file_thread_id against export_scope.
+      file_scope: 1,
+      file_nid: `${fileNid}`,
+      filename,
+      area: this.mget(_a.area),
+      uiHandler: [this],
     });
   }
 
@@ -2941,15 +3096,10 @@ class __window_folder extends mfsInteract {
   /**
    * Tears down the viewport-level chat-export overlay wrapper + its child widget.
    */
+  // Empty the slot — never goodbye()/suppress() it: that takes the wrapper
+  // out of the window's collection and reloads the window's panels.
   _closeChatExportOverlay() {
-    if (this._chatExportWrapper) {
-      if (_.isFunction(this._chatExportWrapper.goodbye)) {
-        this._chatExportWrapper.goodbye();
-      } else if (_.isFunction(this._chatExportWrapper.suppress)) {
-        this._chatExportWrapper.suppress();
-      }
-      this._chatExportWrapper = null;
-    }
+    ChatExportOverlay.unmount(this);
   }
 
   openCreateFolderDialog() {
@@ -3371,12 +3521,18 @@ class __window_folder extends mfsInteract {
     const { stime, etime } = this._meetingRange();
     // Keyed at request time: the range can move while the answer is in flight.
     const cacheKey = this._meetingsCacheKey();
+    // Only the newest request may set _meetings: a live refetch of this week
+    // answering after the user moved to the next one would otherwise repaint
+    // the new range with the old rows.
+    const seq = (this._meetingsFetchSeq || 0) + 1;
+    this._meetingsFetchSeq = seq;
     return Promise.resolve()
       .then(() => this.fetchService(svc, { stime, etime, ...this._meetingScope() }))
       .then((rows) => {
-        this._meetings = this._asMeetingRows(rows);
+        const list = this._asMeetingRows(rows);
         // A copy, not the live array — see _refreshSchedule.
-        readCache.set(cacheKey, this._meetings.slice());
+        readCache.set(cacheKey, list.slice());
+        if (seq === this._meetingsFetchSeq) this._meetings = list;
       })
       .catch(() => {
         this._meetings = this._meetings || [];
@@ -3476,6 +3632,8 @@ class __window_folder extends mfsInteract {
     this._mmAttendees = prefill ? prefill.attendees.slice() : [];
     this._mmRecur = prefill ? { ...prefill.recur } : { freq: "none", until: "" };
     this._mmEditNid = prefill ? prefill.nid : null;
+    // The occurrence the card stood for (a recurring series), for Join.
+    this._mmOccurrenceAt = (prefill && opt.occurrence) || null;
     // Creator of the meeting being edited (null while creating — the current
     // user becomes the creator on submit).
     this._mmCreatedBy = prefill ? prefill.created_by : null;
@@ -3551,6 +3709,7 @@ class __window_folder extends mfsInteract {
     this._mmAttendees = [];
     this._mmRecur = { freq: "none", until: "" };
     this._mmEditNid = null;
+    this._mmOccurrenceAt = null;
     this._mmBusy = {};
     this._mmCapNotice = 0;
     if (this.dialogWrapper) {
@@ -4006,8 +4165,49 @@ class __window_folder extends mfsInteract {
       : LOCALE.MEETING_SAVE_FAILED;
   }
 
+  /**
+   * May this viewer schedule (book/edit) meetings here? room.book/update ask
+   * for the write bit — the same canUpload() test that hides the Schedule
+   * button (meeting-schedule.js). Absent → allowed (fail-open, server gates).
+   */
+  _mayScheduleMeetings() {
+    return typeof this.canUpload !== "function" || !!this.canUpload();
+  }
+
+  /**
+   * The task tab's refusal, for meetings: "You can't schedule meetings because
+   * your current permission level is <role>…". The weekly slots open the form
+   * for anyone, and an admin's demotion can land while it is open, so the
+   * submit (or Delete) is where it is refused. Nothing in the form can be
+   * saved, so it closes behind the popup instead of offering a button that
+   * cannot work.
+   * @param {string} [action] LOCALE key of the refused verb phrase
+   */
+  _sayCannotScheduleMeetings(action = "PERMISSION_ACTION_SCHEDULE_MEETINGS") {
+    const PD = require("libs/permission-denied");
+    if (!PD.saidRecently()) {
+      PD.sayWeakPrivilege(
+        LOCALE[action],
+        PD.workspacePrivilege(this._meetingScope().hub_id) || this.mget(_a.privilege),
+        _K.permission.write,
+      );
+    }
+    this._mmSubmitting = 0;
+    this.closeMeetingModal();
+  }
+
+  // notifyServerDenied never speaks for these 403s — room.book/update are
+  // fetchService (GET) calls, and room.remove is not in its allowlist — which
+  // is what a member whose window still held the old role runs into.
+  _mmRefusedForPrivilege() {
+    const e = this._lastServiceError;
+    const status = e && (e.status || e.error_code);
+    return status == 403 && /room\.(book|update|remove)/.test((e && e.url) || "");
+  }
+
   submitMeetingModal() {
     if (this._mmSubmitting) return;
+    if (!this._mayScheduleMeetings()) return this._sayCannotScheduleMeetings();
     const form = this._readMeetingForm();
     if (!form) return; // no date → do nothing (field stays open)
     // An empty title does NOT create an untitled meeting: room.book substitutes
@@ -4062,6 +4262,7 @@ class __window_folder extends mfsInteract {
       this._refreshSchedule();
     };
     const fail = () => {
+      if (this._mmRefusedForPrivilege()) return this._sayCannotScheduleMeetings();
       this._mmSubmitting = 0;
       this._mmBanner(this._mmFailureMessage("save"));
     };
@@ -4131,7 +4332,13 @@ class __window_folder extends mfsInteract {
   deleteMeetingModal() {
     const nid = this._mmEditNid;
     if (!nid) return this.closeMeetingModal();
-    const fail = () => this._mmBanner(this._mmFailureMessage("delete"));
+    const refused = () => this._sayCannotScheduleMeetings("PERMISSION_ACTION_DELETE_MEETINGS");
+    // room.remove asks for the same write bit as booking.
+    if (!this._mayScheduleMeetings()) return refused();
+    const fail = () => {
+      if (this._mmRefusedForPrivilege()) return refused();
+      this._mmBanner(this._mmFailureMessage("delete"));
+    };
     // Stale reason from an earlier call must not colour this one's message.
     this._lastServiceError = null;
     return this.postService((SERVICE.room && SERVICE.room.remove) || "room.remove", {
@@ -4156,7 +4363,7 @@ class __window_folder extends mfsInteract {
    * Mirrors the team window's startTeamCall. Singleton-guarded so a second
    * click refocuses the running call instead of launching a duplicate.
    */
-  _launchMeetingStandalone() {
+  _launchMeetingStandalone(opts = {}) {
     if (this._launchingMeeting) return;
     this._launchingMeeting = true;
     const startBtn =
@@ -4167,6 +4374,15 @@ class __window_folder extends mfsInteract {
         Wm.getItemByKind("window_meeting") || Wm.getItemByKind("window_connect");
       if (existing && !existing.isDestroyed()) {
         if (typeof existing.raise === "function") existing.raise();
+        // This workspace's own meeting is not "another call": bring it up,
+        // and a waiting room checks again now (window/meeting joinNow).
+        if (
+          typeof existing.joinNow === "function" &&
+          existing.mget(_a.hub_id) == this.mget(_a.hub_id)
+        ) {
+          existing.joinNow();
+          return;
+        }
         Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
         return;
       }
@@ -4198,6 +4414,10 @@ class __window_folder extends mfsInteract {
           area: this.mget(_a.area),
           trigger: this.mget(_a.media) || this,
           media: this.mget(_a.media) || this,
+          // The scheduled meeting joined from, if any (calendar card Join).
+          // webrtc/room join() sends it; "Start a Meeting" has none.
+          schedule_id: opts.schedule_id || undefined,
+          schedule_at: opts.schedule_at || undefined,
           service: "meeting",
           audio: 1,
           video: 1,
@@ -4231,6 +4451,16 @@ class __window_folder extends mfsInteract {
       (this.el &&
         this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`));
     if (el) el.dataset.loading = on ? "1" : "0";
+    // The Chat details "Meeting" tile launches the same call: spin it too.
+    const w = this.__cdWidget;
+    if (w && !(w.isDestroyed && w.isDestroyed())) w.setMeetingLoading(on);
+  }
+
+  // Refresh the Chat details "Meeting" tile in place (label + locked state);
+  // the widget reads the state back through chatDetailsMeetingState.
+  _applyMeetingTileState() {
+    const w = this.__cdWidget;
+    if (w && !(w.isDestroyed && w.isDestroyed())) w.refreshMeetingState();
   }
 
   // Is a standalone meeting window currently live? Meetings are a global Wm
@@ -4257,6 +4487,9 @@ class __window_folder extends mfsInteract {
   // same flags so an initial render is already correct. Only the "Joined" state
   // locks + paints the button ([data-joined="1"]); "Join Meeting" is clickable.
   _applyStartBtnState() {
+    // Before the early return: the tile is on screen even when the Meet tab
+    // (and so the schedule's button) was never opened.
+    this._applyMeetingTileState();
     const el =
       this.el &&
       this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`);
@@ -4524,7 +4757,11 @@ class __window_folder extends mfsInteract {
     // opts.replyData (optional): a captured reply quote to restore in the thread
     // composer (reply-in-thread from a file message).
     if (this.activeTab === _a.chat && !this._isCompactChat()) {
-      if (fileNid) return this._openFileThreadPanel(fileNid, fileLabel, opts.replyData);
+      if (fileNid) {
+        // The thread panel takes the third column — Chat details give way.
+        CDHost.onFileThreadOpen(this);
+        return this._openFileThreadPanel(fileNid, fileLabel, opts.replyData);
+      }
       return this._closeFileThreadPanel();
     }
     // ── Files-tab in-place scoping ──
@@ -4560,14 +4797,21 @@ class __window_folder extends mfsInteract {
         this._chatSearchRestore = null;
         this._hideChatSearchResults();
       }
+      // Never leave a header stuck mid slide-out (see _closeChatSearch).
+      delete bar.el.dataset.closing;
       bar.el.dataset.scope = fileNid ? "file" : general ? "general" : "folder";
       // Stamp the active file so a slow hydrate can't paint into a re-scoped header.
       bar.el.dataset.ftNid = fileNid ? `${fileNid}` : "";
+      // Folder chat topic in the title (./topics headerTitle) on the wide
+      // Chat tab only; the Files tab keeps "Team Chat" — its topic strip
+      // shows the scope (Figma 869:189953).
+      const title = !fileNid && general ? Topics.headerTitle(this) : "";
       bar.feed(
         chatHeaderBar(this, {
           fileNid: fileNid || "",
           label: label || "",
           general: !!general && !fileNid,
+          title,
         }),
       );
       if (fileNid) this._hydrateChatHeaderFile(bar, `${fileNid}`);
@@ -4575,56 +4819,9 @@ class __window_folder extends mfsInteract {
   }
 
   // ── Workspace file search (toolbar "Search…", Figma 43:23955) ──────────
-  // The field is built by window/skeleton/toolkit workspaceSearchBox and is
-  // answered HERE, which is the whole point: it sits above one workspace's
-  // files, so it searches that workspace and nothing else.
+  // The field is built by window/skeleton/toolkit workspaceSearchBox; its
+  // keystrokes and results are ./files-search's (hits show IN the Files list).
   //
-  // `media.search_all` is a scope=hub service — it resolves its DB from the
-  // request hub_id and matches filenames, extensions and indexed content under
-  // that hub only. Before this the same field was the desk's global box: it
-  // asked `desk.search` (every hub the user owns + chat messages across all of
-  // them) and listed the user's WORKSPACES for an empty query.
-  //
-  // hub_id is required and must be the same one the rest of the window uses —
-  // a scope=hub service falls back to the HOST hub when it is missing, which
-  // reads the wrong database and answers nothing (see _runChatSearch).
-  _wsSearchHubId() {
-    return this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
-  }
-
-  // Hub scope is not always workspace scope. A collaborative workspace IS a hub,
-  // so `media.search_all` already fences it exactly — but a PERSONAL workspace
-  // is a folder at the personal hub's root, and that one hub holds every one of
-  // them (see the home-grid listing in wm/index.js). Hub-scoped alone, a search
-  // in one personal workspace would answer with files from its siblings.
-  //
-  // So for those, fence the hits to the workspace's own subtree by path. The
-  // scope is the WORKSPACE, not the folder currently on screen: a search from
-  // three levels deep must still find the workspace's other files. The window
-  // opens AT its workspace and pushes the state it leaves on every forward
-  // navigation (updateTopbar), so the bottom of the nav stack is that root —
-  // and walking back to it empties the stack again, leaving the model as the
-  // root. A window opened straight onto a subfolder (a deep link) scopes to
-  // that subfolder, which is the root it was given.
-  //
-  // Returns "" when there is nothing to fence on, which degrades to the hub —
-  // never to anything wider than it.
-  _wsSearchScope() {
-    const root = (this._navStack && this._navStack[0]) || {
-      filetype: this.mget(_a.filetype),
-      ownpath: this.mget(_a.ownpath),
-    };
-    if (root.filetype === _a.hub) return "";
-    const p = this._wsNormalizePath(root.ownpath);
-    return p && p !== "/" ? p : "";
-  }
-
-  // media.file_path is a name path from the hub root ("/Docs/report.pdf"), and
-  // the procs that expose it as `ownpath` do not all collapse repeated slashes.
-  _wsNormalizePath(v) {
-    return `${v || ""}`.replace(/\/+/g, "/").replace(/\/$/, "");
-  }
-
   // Ctrl/Cmd+Shift+F lands here (desk _focusSearch → _focusWorkspaceSearch):
   // on desktop this field IS the file search, the desk owns no box of its own.
   // The Entry builds its <input> asynchronously, so a press arriving before the
@@ -4636,199 +4833,6 @@ class __window_folder extends mfsInteract {
     if (!input) return false;
     input.focus();
     return true;
-  }
-
-  // Every keystroke (Entry `watch`). Debounced, and a monotonic token drops
-  // stale answers so a slower earlier query cannot overwrite a newer one.
-  _runWorkspaceSearch(text) {
-    const q = `${text || ""}`.trim().replace(/\s+/g, " ");
-    if (this._wsSearchTimer) clearTimeout(this._wsSearchTimer);
-    // seo_search_unified drops terms shorter than 2 chars and answers an empty
-    // list, so close the dropdown instead of asking. An empty field is NOT a
-    // request for "everything" — that is exactly what used to list every
-    // workspace here.
-    if (q.length < 2) {
-      this._wsSearchToken = (this._wsSearchToken || 0) + 1; // cancel in-flight
-      return this._hideWorkspaceSearch();
-    }
-    // The row widget is a lazily imported kind; warm it while the query is in
-    // flight so the first hits render as rows rather than as placeholders that
-    // fill in a hop later. Fire-and-forget — the rows resolve either way.
-    if (Kind && _.isFunction(Kind.waitFor)) {
-      Kind.waitFor("workspace_item").catch(() => {});
-    }
-    this._wsSearchTimer = setTimeout(() => {
-      this._wsSearchTimer = null;
-      const hub_id = this._wsSearchHubId();
-      if (!hub_id) return;
-      const token = (this._wsSearchToken = (this._wsSearchToken || 0) + 1);
-      const scope = this._wsSearchScope();
-      this.fetchService(
-        {
-          service:
-            (SERVICE.media && SERVICE.media.search_all) || "media.search_all",
-          hub_id,
-          string: q,
-          page: 1,
-          limit: scope ? WS_SEARCH_FETCH_MAX : WS_SEARCH_LIMIT,
-        },
-        { async: 1 },
-      )
-        .then((res) => {
-          if (token !== this._wsSearchToken) return;
-          this._showWorkspaceSearch(this._wsSearchRows(res, hub_id, scope));
-        })
-        .catch(() => {
-          if (token !== this._wsSearchToken) return;
-          this._showWorkspaceSearch([]);
-        });
-    }, 250);
-  }
-
-  // Normalize the response and fence it to this workspace.
-  //  - a single hit comes back as a bare object, not a one-element array;
-  //  - hub_id is re-checked even though the service is hub-scoped, so a row
-  //    from anywhere else can never be rendered as a hit of this workspace;
-  //  - `scope` fences a personal workspace to its own subtree (_wsSearchScope);
-  //  - the proc computes each row's privilege (user_permission) but does not
-  //    filter on it, so drop rows that explicitly report no read right. Rows
-  //    with no privilege field at all are kept: the viewer has this workspace
-  //    open, so "unknown" means the proc told us nothing, not "denied".
-  _wsSearchRows(res, hub_id, scope) {
-    let rows = res;
-    if (!_.isArray(rows)) {
-      rows = (res && (res.data || res.rows)) || (res && res.nid ? [res] : []);
-    }
-    if (!_.isArray(rows)) rows = [];
-    const READ = _K.permission.read;
-    return rows
-      .filter((r) => r && (r.nid || r.id))
-      .filter((r) => r.hub_id == null || `${r.hub_id}` === `${hub_id}`)
-      .filter((r) => {
-        if (!scope) return true;
-        // Fail CLOSED: a row whose path cannot be read cannot be shown to be
-        // inside this workspace, and "this workspace only" is the promise the
-        // field makes. `ownpath` alone — `file_path` carries the hub's own name
-        // as a prefix, so it does not compare against a within-hub scope.
-        const path = this._wsNormalizePath(r.ownpath);
-        if (!path) return false;
-        return path === scope || path.indexOf(`${scope}/`) === 0;
-      })
-      .filter((r) => {
-        if (r.privilege == null) return true;
-        const p = Number(r.privilege);
-        return !Number.isFinite(p) || (p & READ) === READ;
-      })
-      .slice(0, WS_SEARCH_LIMIT);
-  }
-
-  _showWorkspaceSearch(rows) {
-    const pfx = `${this.fig.family}-topbar`;
-    // `result_type` is what makes workspace_item render a RESULT row (icon +
-    // name) instead of a sidebar workspace row with a folder-tree chevron.
-    const items = rows.map((r) => ({
-      ...r,
-      kind: "workspace_item",
-      nid: r.nid || r.id,
-      hub_id: r.hub_id || this._wsSearchHubId(),
-      result_type: "file",
-      nodeRole: "result",
-      service: "ws-search-hit",
-      uiHandler: [this],
-    }));
-    return this.ensurePart("ws-search-results").then((p) => {
-      if (!p || (p.isDestroyed && p.isDestroyed())) return;
-      p.feed(
-        items.length
-          ? items
-          : [
-              Skeletons.Note({
-                className: `${pfx}__search-empty`,
-                content: LOCALE.NO_RESULTS,
-              }),
-            ],
-      );
-      this._openWorkspaceSearchPanel();
-    });
-  }
-
-  _openWorkspaceSearchPanel() {
-    const panel = this._wsSearchPanel;
-    if (!panel || (panel.isDestroyed && panel.isDestroyed())) return;
-    if (panel.el && panel.el.dataset.state !== "1") panel.setState(1);
-    if (this._wsSearchDismiss) return;
-    // Click anywhere outside the field + dropdown closes it. mousedown, so the
-    // dropdown is gone before the click lands on whatever is underneath.
-    this._wsSearchDismiss = (e) => {
-      const box = this._wsSearchContainer;
-      if (box && box.el && box.el.contains(e.target)) return;
-      this._hideWorkspaceSearch();
-    };
-    document.addEventListener("mousedown", this._wsSearchDismiss);
-    // Escape closes it too, and only while it is open. Nothing is
-    // preventDefault-ed: the desk's own Escape hotkey ignores keys pressed
-    // inside a text entry, so this is the only handler that can answer here,
-    // but a press from elsewhere must still reach whatever else wants it.
-    this._wsSearchEsc = (e) => {
-      if (e.key === "Escape") this._hideWorkspaceSearch();
-    };
-    document.addEventListener("keydown", this._wsSearchEsc);
-  }
-
-  // Timer + the document-level listener only. Split out so teardown can drop
-  // them without touching parts that are already being destroyed.
-  _teardownWorkspaceSearch() {
-    if (this._wsSearchTimer) {
-      clearTimeout(this._wsSearchTimer);
-      this._wsSearchTimer = null;
-    }
-    this._wsSearchToken = (this._wsSearchToken || 0) + 1; // cancel in-flight
-    if (this._wsSearchDismiss) {
-      document.removeEventListener("mousedown", this._wsSearchDismiss);
-      this._wsSearchDismiss = null;
-    }
-    if (this._wsSearchEsc) {
-      document.removeEventListener("keydown", this._wsSearchEsc);
-      this._wsSearchEsc = null;
-    }
-  }
-
-  _hideWorkspaceSearch() {
-    this._teardownWorkspaceSearch();
-    const panel = this._wsSearchPanel;
-    if (panel && !(panel.isDestroyed && panel.isDestroyed())) {
-      panel.setState(0);
-      const results = this._wsSearchResults;
-      if (results && !(results.isDestroyed && results.isDestroyed())) {
-        results.feed([]);
-      }
-    }
-  }
-
-  // A result row was clicked: open the hit. openFileLocation resolves what that
-  // means — a file whose tile is already on screen opens through the tile, an
-  // unrendered one opens in its viewer, and a folder opens as a folder window
-  // (its own tile navigates this window in place, as a double-click does). Same
-  // path the notification deep links and the desk's own search hits use, so
-  // there is one answer to "open this node" in the product.
-  _openWorkspaceSearchHit(cmd) {
-    const hit = cmd && cmd.model ? cmd.model.toJSON() : {};
-    const nid = hit.nid || hit.id;
-    if (!nid) return;
-    this._hideWorkspaceSearch();
-    const box = this._wsSearchBox;
-    if (box && box._input && _.isFunction(box.setValue)) box.setValue("");
-    // Only the node fields, never the row's own widget options: `kind`
-    // ("workspace_item"), uiHandler and service ride on the model too, and two
-    // of application()'s branches spread the caller's object OVER their own
-    // kind — which would try to launch a sidebar row as a window.
-    return this.openFileLocation({
-      nid,
-      hub_id: hit.hub_id || this._wsSearchHubId(),
-      pid: hit.pid || hit.parent_id || 0,
-      filetype: hit.filetype || hit.ftype || hit.category,
-      area: hit.area || this.mget(_a.area),
-    });
   }
 
   // ── Team-chat header message search ───────────────────────────────────
@@ -4858,29 +4862,55 @@ class __window_folder extends mfsInteract {
     });
   }
 
-  // Back arrow → tear down the results overlay and restore the pre-search header.
+  // Back arrow → tear down the results and restore the pre-search header once
+  // the field has slid back out (skin data-closing; at once with reduced
+  // motion).
   _closeChatSearch() {
     this._hideChatSearchResults();
     const r =
       this._chatSearchRestore || { fileNid: "", label: "", general: false };
     this._chatSearchRestore = null;
-    return this._updateChatHeader(r.fileNid, r.label, r.general);
+    return this.ensurePart("chat-header-bar").then((bar) => {
+      if (!bar || !bar.el || (bar.isDestroyed && bar.isDestroyed())) return;
+      const input = bar.el.querySelector(`.${this.fig.group}__chat-search-input`);
+      if (bar.el.dataset.scope !== "search" || !input) {
+        return this._updateChatHeader(r.fileNid, r.label, r.general);
+      }
+      if (bar.el.dataset.closing === "1") return; // already sliding out
+      bar.el.dataset.closing = "1";
+      return new Promise((done) =>
+        ResultsPanel.afterAnimation(input, done),
+      ).then(() => {
+        // A scope switch re-fed the header meanwhile: it wins.
+        if (bar.el.dataset.scope !== "search") return;
+        return this._updateChatHeader(r.fileNid, r.label, r.general);
+      });
+    });
   }
 
   // Run a backend message search over the FULL history of the conversation the
   // search bar sits above (folder-chat): #General team chat when not file-scoped,
-  // else the open file thread. Debounced; queries < 2 chars hide the overlay
-  // (the server returns [] anyway). A monotonic token discards stale responses
-  // so a slower earlier query cannot overwrite a newer one.
+  // else the open file thread. Show AND close follow the debounced change, so
+  // clearing and retyping quickly never flickers the card: a settled query
+  // < 2 chars (empty included) closes it (the server returns [] anyway), a
+  // settled query opens it at once with placeholders until the reply lands.
+  // A monotonic token discards stale responses so a slower earlier query
+  // cannot overwrite a newer one.
   _runChatSearch(text) {
     const q = `${text || ""}`.trim();
     if (this._chatSearchTimer) clearTimeout(this._chatSearchTimer);
-    if (q.length < 2) {
-      this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
-      return this._hideChatSearchResults();
-    }
+    this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
     this._chatSearchTimer = setTimeout(() => {
+      this._chatSearchTimer = null;
+      if (q.length < 2) return this._hideChatSearchResults();
       const token = (this._chatSearchToken = (this._chatSearchToken || 0) + 1);
+      this._showChatSearchLoading(token);
+      // The results replace the skeleton no sooner than SKELETON_MIN_MS after
+      // it appeared (search-results-panel holdSkeleton).
+      const shownAt = Date.now();
+      // Mark the query in the conversation behind the overlay (all loaded
+      // messages + attachment filenames), independent of the server reply.
+      ChatSearchHighlight.start(this, q);
       // Scope = the folder-chat's current file thread (empty = team chat). Pass
       // file_nid too: the thread id resolves asynchronously, so on an in-place
       // file thread it can still be empty here — the server then resolves the
@@ -4905,57 +4935,76 @@ class __window_folder extends mfsInteract {
           },
           { async: 1 },
         )
-          .then((res) => {
-            // Drop stale / superseded responses.
-            if (token !== this._chatSearchToken) return;
-            const rows = _.isArray(res)
-              ? res
-              : (res && (res.data || res.rows)) || [];
-            this._showChatSearchResults(rows);
-          })
-          .catch(() => {
-            if (token !== this._chatSearchToken) return;
-            this._showChatSearchResults([]);
-          });
+          .then(
+            (res) =>
+              _.isArray(res) ? res : (res && (res.data || res.rows)) || [],
+            () => [],
+          )
+          .then((rows) =>
+            ResultsPanel.holdSkeleton(shownAt).then(() => {
+              // Drop stale / superseded responses (also those that went stale
+              // while the skeleton was held).
+              if (token !== this._chatSearchToken) return;
+              this._showChatSearchResults(rows, token);
+            }),
+          );
       });
     }, 250);
   }
 
-  _showChatSearchResults(rows) {
+  // Open the card with placeholder rows while channel.search is in flight.
+  _showChatSearchLoading(token) {
     return this.ensurePart("search-results").then((panel) => {
+      // Closed or superseded while the part resolved.
+      if (token !== this._chatSearchToken) return;
       if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
         return;
-      panel.feed(searchResults(this, rows));
-      panel.el.dataset.open = "1";
+      panel.feed(searchResultsLoading(this));
+      ResultsPanel.open(panel.el);
     });
   }
 
+  _showChatSearchResults(rows, token) {
+    return this.ensurePart("search-results").then((panel) => {
+      if (token !== this._chatSearchToken) return;
+      if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
+        return;
+      panel.feed(searchResults(this, rows));
+      ResultsPanel.open(panel.el);
+    });
+  }
+
+  // Shared search teardown (short query, back arrow, header re-feed, revoked
+  // thread): drops the results AND the highlight in the conversation.
   _hideChatSearchResults() {
     if (this._chatSearchTimer) {
       clearTimeout(this._chatSearchTimer);
       this._chatSearchTimer = null;
     }
     this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
+    ChatSearchHighlight.stop(this);
     const panel = this._searchResultsPart;
     if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
-      panel.el.dataset.open = "0";
-      panel.feed([]);
+      // Animated; the rows stay while the card fades and the next query
+      // re-feeds them.
+      ResultsPanel.close(panel.el);
     }
   }
 
-  // A result row → close the search and scroll to the message if it is currently
-  // loaded in the conversation list (older/unloaded messages just close search).
+  // A result row → scroll the conversation below the results to the message if
+  // it is loaded, giving it the stronger "current" highlight. The results stay
+  // open (pick another one); the back arrow or an emptied field closes them.
+  // Older, unloaded messages do nothing.
   _jumpToSearchResult(cmd) {
     const messageId = cmd && cmd.mget && cmd.mget("message_id");
-    this._closeChatSearch();
     if (!messageId) return;
     return this.ensurePart("folder-chat").then((chat) => {
       const list = chat && chat.__list;
       if (!list || !_.isFunction(list.getItemsByAttr)) return;
       const hit = list.getItemsByAttr("message_id", `${messageId}`)[0];
-      if (hit && hit.el && _.isFunction(hit.el.scrollIntoView)) {
-        hit.el.scrollIntoView({ block: "center" });
-      }
+      if (!hit || !hit.el) return;
+      ChatSearchHighlight.markCurrent(this, hit.el);
+      ChatSearchHighlight.scrollToHit(list.__container, hit.el);
     });
   }
 
@@ -5247,6 +5296,9 @@ class __window_folder extends mfsInteract {
         chat.setScopedFolderNid(this.mget(_a.nid));
     });
     this._updateChatHeader(null, "", true);
+    // The Files-tab bar is hidden on the wide Chat tab.
+    Topics.onChatTabEnter(this);
+    FTBar.close(this);
     this._populateThreadRail();
   }
 
@@ -5255,6 +5307,8 @@ class __window_folder extends mfsInteract {
   _exitChatTabLayout() {
     this._closeFileThreadPanel();
     this._updateChatHeader(null, "", false);
+    // Repaint the Files strip for the current topic scope.
+    Topics.onFilesTabEnter(this);
   }
 
   // Tell the team chat which folder we moved into.
@@ -5312,7 +5366,7 @@ class __window_folder extends mfsInteract {
         if (generation !== this._ftThreadRequestGeneration()) return;
         if (!menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
         menu.feed(
-          require("./skeleton/thread-menu")(this, { items, scopedNid }),
+          require("./skeleton/thread-menu")(this, { items, scopedNid, ...Topics.menuOpts(this) }),
         );
         menu.el.dataset.open = "1";
         this._bindThreadMenuOutside(menu);
@@ -5321,7 +5375,9 @@ class __window_folder extends mfsInteract {
       this.ensurePart("folder-chat").then((chat) => {
         const scopedNid = chat && chat.scopedFileNid ? chat.scopedFileNid : "";
         // Fetch failure → still open with General + Download (no file rows).
-        this._fetchThreadList().then((items) => render(items, scopedNid));
+        Promise.all([this._fetchThreadList(), Topics.fetchTopics(this)]).then(([items]) =>
+          render(items, scopedNid),
+        );
       });
     });
   }
@@ -5343,10 +5399,13 @@ class __window_folder extends mfsInteract {
     const svc =
       (SERVICE.channel && SERVICE.channel.file_thread_list_by_folder) ||
       "channel.file_thread_list_by_folder";
+    // File threads follow the chat's topic: # General lists the threads
+    // started outside any topic, a topic the ones started in it.
+    const topic_id = Topics.current(this);
     // Keyed at request time: the folder can change while this is in flight.
     const cacheKey = this._threadListCacheKey();
     return this.fetchService(
-      { service: svc, folder_nid, hub_id, page: 1 },
+      { service: svc, folder_nid, hub_id, topic_id, page: 1 },
       { async: 1 },
     )
       .then((res) => {
@@ -5359,7 +5418,7 @@ class __window_folder extends mfsInteract {
 
   _threadListCacheKey() {
     const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
-    return `channel.threads:${hub_id || ""}:${this.mget(_a.nid)}`;
+    return `channel.threads:${hub_id || ""}:${this.mget(_a.nid)}:${Topics.current(this)}`;
   }
 
   // ── Full Chat-tab thread rail (Figma 2328-115485) ─────────────────────
@@ -5397,6 +5456,7 @@ class __window_folder extends mfsInteract {
               items,
               scopedNid,
               variant: "rail",
+              ...Topics.menuOpts(this),
             }),
           );
         };
@@ -5420,13 +5480,15 @@ class __window_folder extends mfsInteract {
             painted = readCache.signature(known);
           }
         }
-        return this._fetchThreadList().then((items) => {
+        const topicsBefore = readCache.signature(Topics.menuOpts(this).topics);
+        return Promise.all([this._fetchThreadList(), Topics.fetchTopics(this)]).then(([items]) => {
           if (this.isDestroyed && this.isDestroyed()) return;
           if (!rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
           // Folder changed mid-fetch → discard this stale response.
           if (`${this.mget(_a.nid)}` !== folderNid) return;
           if (generation !== this._ftThreadRequestGeneration()) return;
-          if (painted !== null && painted === readCache.signature(items)) return;
+          const topicsSame = topicsBefore === readCache.signature(Topics.menuOpts(this).topics);
+          if (painted !== null && painted === readCache.signature(items) && topicsSame) return;
           paint(items);
         });
       });
@@ -5446,6 +5508,7 @@ class __window_folder extends mfsInteract {
         items: this._threadRailItems,
         scopedNid: scopedNid || "",
         variant: "rail",
+        ...Topics.menuOpts(this),
       }),
     );
   }
@@ -5453,11 +5516,46 @@ class __window_folder extends mfsInteract {
   // True when `rail` already shows exactly (items, scopedNid) — the caller can
   // skip its feed. Otherwise records the new signature and answers false.
   _sameThreadRailPaint(rail, items, scopedNid) {
-    const sig = readCache.signature({ items, scopedNid: scopedNid || "" });
+    // Topics (list + scope) are part of what the rail shows.
+    const { topics, topicId, canCreateTopic } = Topics.menuOpts(this);
+    const sig = readCache.signature({ items, scopedNid: scopedNid || "", topics, topicId, canCreateTopic });
     const hasRows = !!(rail.children && rail.children.length);
     if (hasRows && rail._threadRailSig === sig) return true;
     rail._threadRailSig = sig;
     return false;
+  }
+
+  // ── Chat details panel (Figma 775:131699) ─────────────────────────────
+  // The panel is widget_chat_details; this window is its host
+  // (./chat-details-host, tested against a fake window).
+  _openChatDetails() {
+    return CDHost.toggleDetails(this);
+  }
+
+  _closeChatDetails() {
+    return CDHost.closeDetails(this);
+  }
+
+  // widget_topic_create host contract (./topics)
+  topicCreate(args) {
+    return Topics.createTopic(this, args);
+  }
+
+  topicDialogClose() {
+    return Topics.closeTopicDialog(this);
+  }
+
+  // widget_chat_details host contract
+  chatDetailsAction(name, payload) {
+    return CDHost.hostAction(this, name, payload);
+  }
+
+  chatDetailsThreads() {
+    return CDHost.threads(this);
+  }
+
+  chatDetailsMeetingState() {
+    return CDHost.meetingState(this);
   }
 
   _closeThreadMenu() {
@@ -5717,6 +5815,19 @@ class __window_folder extends mfsInteract {
       this._closeFileThreadPanel();
     }
     if (this._scopedFileNid) this.scopeChatToFile(null);
+    // Topics belong to a folder: another folder starts on # General; its topics
+    // and file threads replace the strip's and the bar's.
+    Topics.onFolderChange(this);
+    // One task later, for the same reason as the breadcrumb mirror in
+    // refreshBreadcrumbsUI: the caller sends this folder's show_node_by right
+    // after updateTopbar returns, and topic_list must not be queued ahead of
+    // it. onFolderChange above already cleared the strip; fetchTopics drops an
+    // answer for a folder we have since left.
+    _.defer(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      Topics.refreshStrip(this);
+    });
+    FTBar.onFolderChange(this);
     this.scopeChatToFolder(this.mget(_a.nid));
     // The rail lists the *current* folder's threads — refetch on navigation,
     // but only while the Chat tab is showing it (else it repopulates on entry).
@@ -5819,7 +5930,25 @@ class __window_folder extends mfsInteract {
   }
 
   showFolderTab(tab) {
+    // Access is not a tab: it overlays the one that is up (./access-column),
+    // so it leaves `activeTab` — and everything keyed on it — alone.
+    if (tab === ACCESS_TAB) return this._openAccessOverlay();
+    // …and a tab pressed while one is still waiting for the split body wins.
+    this._accessOpenId = null;
     if (this.activeTab === tab) {
+      // The rail pressed for the tab that is under an Access overlay: the
+      // overlay goes, the tab stays.
+      hideAccessOverlay(this);
+      // The rail pressed for the pane that is already up. The desk raises the
+      // pane right after (_railTab / _railAccess), and a live call brought back
+      // from its tile meanwhile fills the canvas INSIDE the window manager at
+      // the same z as the pane — so the raise only hid the call behind the
+      // pane instead of parking it. The next thing to take the pane's focus (a
+      // confirm card, a role dropdown) dropped its lift and handed the whole
+      // canvas back to the call: every role change or removal in the Access
+      // matrix "jumped to the meeting". Park it here too, as a tab change does
+      // below; a no-op when nothing is live or the call is already docked.
+      this._parkLiveCall();
       this.syncNewCtrlVisibility();
       return;
     }
@@ -5829,6 +5958,13 @@ class __window_folder extends mfsInteract {
     // after those writes — where it used to be, inside switchView — it forced
     // a synchronous style+layout flush of the window on every rail click.
     this._stashPanelScroll();
+    // Any other tab takes an Access overlay down. AFTER the stash, so the
+    // panels it hid keep the offsets they were saved with; switchView below
+    // restores them.
+    hideAccessOverlay(this, { restore: false });
+    // Chat details stands in for the Files-view chat column only: any tab
+    // switch closes it, so coming back to Files shows the conversation.
+    this._closeChatDetails();
     const prevTab = this.activeTab;
     this.activeTab = tab;
     // Opening Task, Meet or Files clears that rail pill (panel_activity marks what is
@@ -5910,6 +6046,7 @@ class __window_folder extends mfsInteract {
       // Who has access switch animation (skin/index.scss). Empty on first show.
       view.el.dataset.fromView = prevTab || "";
       view.el.dataset.view = tab;
+      this._firstSplitPage(view);
       this._playViewEntrance(view);
       this._restorePanelScroll();
       switch (tab) {
@@ -5949,11 +6086,6 @@ class __window_folder extends mfsInteract {
           // flags that), in which case it must be redrawn now.
           this._schedRefresh = this._refreshSchedule({ quiet: !this._schedStale });
           this._schedStale = 0;
-          return;
-        case ACCESS_TAB:
-          // The rail's Access: the file grid and its gutter stay, and the
-          // members panel takes the chat panel's column (./access-column).
-          showAccessColumn(this, view);
           return;
         case SECURE_SHARE_TAB:
           // "Manage access" on a share-area workspace: the same column, with
@@ -6018,6 +6150,95 @@ class __window_folder extends mfsInteract {
       this.__folderView = view;
       return switchView(view);
     });
+  }
+
+  /**
+   * The rail's Access: the members panel over the tab that is up — Files,
+   * Chat, Task or Meet — which stays the window's tab underneath
+   * (./access-column). Lexis, 2026-10-12: it used to switch the window to
+   * Files first.
+   *
+   * The secure-share view is the exception: it is an access panel of its own
+   * in the chat column, so it gives way to Files first, exactly as it did when
+   * Access was a tab of its own.
+   *
+   * A live call is parked as on any rail press (see the same-tab branch of
+   * showFolderTab): the desk raises the pane right after.
+   *
+   * @returns {Object|null|Promise} the mounted panel on re-entry, null on
+   *   first mount, a promise while the split body is still mounting
+   */
+  _openAccessOverlay() {
+    // Switched in this same handler: the switch has stashed and will restore
+    // the scroll itself, so the overlay must not stash again (see there).
+    const fromSecureShare = this.activeTab === SECURE_SHARE_TAB;
+    if (fromSecureShare) this.showFolderTab("files");
+    const overlayOpt = fromSecureShare ? { stash: false } : undefined;
+    this._parkLiveCall();
+    this.syncNewCtrlVisibility();
+    const view = this.__folderView;
+    if (view && !(view.isDestroyed && view.isDestroyed())) {
+      return showAccessOverlay(this, view, overlayOpt);
+    }
+    // Not mounted yet (a carried "access" on a fresh pane). A tab press
+    // meanwhile wins: showFolderTab clears the id.
+    const openId = _.uniqueId("folder-access-");
+    this._accessOpenId = openId;
+    return this.ensurePart("folder-view").then((v) => {
+      if (this._accessOpenId !== openId || !v || (v.isDestroyed && v.isDestroyed())) {
+        return null;
+      }
+      this._accessOpenId = null;
+      this.__folderView = v;
+      return showAccessOverlay(this, v, overlayOpt);
+    });
+  }
+
+  /**
+   * Files always opens on its first page. On a narrow window the Files view is
+   * a two-page carousel (files, then Team Chat — skin/index.scss, the compact
+   * `[data-view="files"]` rule); pressing Files must show the files, not
+   * whichever page the user last swiped to. A no-op on a wide window, where
+   * the split body does not scroll sideways.
+   */
+  _firstSplitPage(view) {
+    const el = view && view.el;
+    if (el && el.dataset && el.dataset.view === "files") el.scrollLeft = 0;
+    this._syncSplitPage();
+  }
+
+  // ── Mobile split-body carousel footer ────────────────────────────────
+  // Same recipe as the tab-bar carousel above: the split body's own scroll is
+  // the one source of truth (swipe, dot press, the first-page reset), and the
+  // footer's data-page follows it, rAF-throttled.
+  _wireSplitCarousel(child) {
+    if (!child || !child.el) return;
+    let queued = 0;
+    child.el.addEventListener("scroll", () => {
+      if (queued) return;
+      queued = 1;
+      requestAnimationFrame(() => {
+        queued = 0;
+        this._syncSplitPage();
+      });
+    }, { passive: true });
+  }
+
+  _syncSplitPage() {
+    const view = this.__folderView;
+    const dots = this._splitDots;
+    if (!view || !view.el || !dots || !dots.el) return;
+    const w = view.el.clientWidth;
+    const page = w > 0 ? Math.round(view.el.scrollLeft / w) : 0;
+    if (`${page}` !== dots.el.dataset.page) dots.el.dataset.page = `${page}`;
+  }
+
+  // Dot press: scroll a whole page; the listener above then moves data-page.
+  _showSplitPage(cmd) {
+    const view = this.__folderView;
+    if (!view || !view.el || !cmd || !cmd.el) return;
+    const page = Number(cmd.el.dataset.page) || 0;
+    view.el.scrollTo({ left: page * view.el.clientWidth, behavior: "smooth" });
   }
 
   /**
@@ -6647,7 +6868,47 @@ class __window_folder extends mfsInteract {
     else if (svc === "hub.member_joined" || svc === "hub.members_changed") {
       this._onMemberJoined(data || {});
     }
+    // A meeting was booked, edited or removed on this hub — from another
+    // member, or from this user's phone (server-team room._broadcast).
+    else if (svc === "room.book" || svc === "room.update" || svc === "room.remove") {
+      this._onMeetingsChanged(data || {});
+    }
     return super.handleWsEvent(args);
+  }
+
+  // Refetch the Meet tab's calendar once per burst: booking with invitees is
+  // two calls (room.book, then room.update), so two frames. Only repaints the
+  // "meeting-panel" part — an open meeting modal lives in "wrapper-dialog" and
+  // keeps what is typed in it. A tab never opened has nothing on screen and
+  // fetches on first open; a hidden one is flagged stale by _refreshSchedule.
+  _onMeetingsChanged(data = {}) {
+    if (!this._meetingPanelMounted) return;
+    const { hub_id } = this._meetingScope();
+    if (data.hub_id && hub_id && `${data.hub_id}` !== `${hub_id}`) return;
+    if (this._meetingsChangedTimer) return;
+    this._meetingsChangedTimer = setTimeout(() => {
+      this._meetingsChangedTimer = null;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      // A repaint re-creates the grid, which then opens at its top: put it
+      // back where the viewer left it, unless they moved to another view or
+      // range meanwhile. After layout — the new grid cannot scroll before.
+      const shown = this._schedBody();
+      const top = shown ? shown.scrollTop : null;
+      const key = this._schedFadeKey;
+      this._refreshSchedule({ quiet: true }).then(() => {
+        if (top == null) return;
+        requestAnimationFrame(() => {
+          const body = this._schedBody();
+          if (body && this._schedFadeKey === key && body.scrollTop !== top) body.scrollTop = top;
+        });
+      });
+    }, 250);
+  }
+
+  // The Meet tab's scrolling grid body, when it is on screen.
+  _schedBody() {
+    const panel = this.getPart && this.getPart("meeting-panel");
+    return (panel && panel.el && panel.el.querySelector(`.${this.fig.family}__meeting-sched-body`)) || null;
   }
 
   // Server-side handler: server-team/service/lib/notify-member-joined.js.
@@ -6718,6 +6979,12 @@ class __window_folder extends mfsInteract {
     // demotion leaves a working create/upload menu on a view-only member's
     // screen (and a promotion leaves them without one until they reopen).
     this.syncNewCtrlVisibility();
+    // The task panel got `may_write` once, at mount. Left stale, a demoted
+    // member's edits went past its write guard to a server 403.
+    const tasks = this._taskPanel;
+    if (tasks && !(tasks.isDestroyed && tasks.isDestroyed())) {
+      tasks.mset("may_write", !!(this.canUpload && this.canUpload()));
+    }
   }
 
   // Chat is granted at the "View & chat" tier and above — i.e. any privilege
@@ -6742,12 +7009,15 @@ class __window_folder extends mfsInteract {
     // The thread rail and the file-thread side panel are SIBLINGS of the chat
     // panel in the Chat-tab grid (their own columns), not descendants — gating
     // only .window__chat-panel left a downgraded member able to read the file
-    // thread list and, on opening one, its whole conversation. Flag all three.
+    // thread list and, on opening one, its whole conversation. Flag all of
+    // them, Chat details included (member list, media, links).
     this.$el
       .find(
-        ".window__chat-panel, .window__file-thread-panel, .window__thread-rail",
+        ".window__chat-panel, .window__chat-details, .window__file-thread-panel, .window__thread-rail",
       )
       .attr("data-chat_gated", gated);
+    // A live downgrade must not leave the details panel open on screen.
+    if (gated) this._closeChatDetails();
   }
 
   // Gate the merged "+ New" button (upload / create / gdrive-import) on BOTH
@@ -6769,15 +7039,20 @@ class __window_folder extends mfsInteract {
   // apply to the file grid, so showing it on Chat/Task/Meeting would
   // misrepresent what it does.
   syncNewCtrlVisibility() {
-    const newCtrl = this.getPart && this.getPart("new-ctrl");
-    if (!newCtrl || !newCtrl.el) return;
-    // Access keeps the file grid on screen, and "+ New" operates on that grid.
-    const onFiles = showsFileGrid(this.activeTab);
     // canUpload() returns the masked bitmask (truthy number), not a boolean.
     // Over-limit read-only trumps the node privilege: creating adds bytes,
     // and the REST clamp refuses it regardless of what this node allows.
     const mayCreate = !!(this.canUpload && this.canUpload())
       && !require("libs/over-limit").isLocked();
+    // The Files empty state's action cards (folder/skin/files-empty-state.scss)
+    // offer the same creates as "+ New", so they share its gate. Stamped
+    // BEFORE the new-ctrl lookup: a window whose toolbar has no + New must
+    // still answer, and the skin fails closed without the stamp.
+    if (this.el) this.el.dataset.canCreate = mayCreate ? "1" : "0";
+    const newCtrl = this.getPart && this.getPart("new-ctrl");
+    if (!newCtrl || !newCtrl.el) return;
+    // Access keeps the file grid on screen, and "+ New" operates on that grid.
+    const onFiles = showsFileGrid(this.activeTab);
     const visible = onFiles && mayCreate ? 1 : 0;
 
     // ui-core registers sys_pn parts during onBeforeRender, before its onRender

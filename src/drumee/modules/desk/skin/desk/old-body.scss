@@ -1320,7 +1320,7 @@
                 // color: #89929E;
                 -moz-osx-font-smoothing: grayscale;
                 -webkit-font-smoothing: antialiased;
-                font-family: "Roboto-Regular", sans-serif;
+                font-family: var(--font-main);
             }
         }
         input {
@@ -1343,7 +1343,7 @@
                 // color: #89929E;
                 -moz-osx-font-smoothing: grayscale;
                 -webkit-font-smoothing: antialiased;
-                font-family: "Roboto-Regular", sans-serif;
+                font-family: var(--font-main);
             }
         }
     }
@@ -3299,7 +3299,7 @@ $wrapper-width: 1252px;
         font-size: 13px;
         cursor: pointer;
         margin-left: 17px;
-        font-family: "Roboto-Regular", sans-serif;
+        font-family: var(--font-main);
         &__hidden {
             display: none;
         }
@@ -3316,7 +3316,7 @@ $wrapper-width: 1252px;
         color: #494949;
         -moz-osx-font-smoothing: grayscale;
         -webkit-font-smoothing: antialiased;
-        font-family: "Roboto-Light", sans-serif;
+        font-family: var(--font-main);
         align-items: center;
         // .note-content, .root-node {
         //     overflow: hidden;
@@ -3771,7 +3771,7 @@ $wrapper-width: 1252px;
         &-input {
             input {
                 font-size: 14px;
-                font-family: $roboto-light;
+                font-family: var(--font-main);
             }
             .entry-wrapper, .entry {
                 width: 100%;
@@ -4223,7 +4223,7 @@ $wrapper-width: 1252px;
             left: -230px;
             border-radius: 4px;
             color: #4A90E2 !important;
-            font: 14px/19px "Roboto-light";
+            font: 14px/19px var(--font-main);
             box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
             &:after {
                 content: "";
@@ -4278,7 +4278,7 @@ $wrapper-width: 1252px;
 }
 .share-info {
     &__block {
-        font-family: "Roboto-Light", sans-serif;
+        font-family: var(--font-main);
         font-size: 12px;
         width: 180px;
         min-height: 150px;
@@ -4320,11 +4320,11 @@ $wrapper-width: 1252px;
     &__period {
         padding-top: 10px;
         color: #736c6c;
-        font-family: "Roboto-light", sans-serif;
+        font-family: var(--font-main);
         font-size: 10px;
         span {
             color: #FA8540;
-            font-family: "Roboto-bold", sans-serif;
+            font-family: var(--font-main);
         }
     }
 }
@@ -4799,7 +4799,7 @@ $wrapper-width: 1252px;
     left: -230px;
     border-radius: 4px;
     color: #4A90E2 !important;
-    font: 14px/19px "Roboto-light";
+    font: 14px/19px var(--font-main);
     box-shadow: 0 5px 8px 1px rgba(63, 79, 117, 0.13), 0 6px 16px 0 rgba(86, 65, 113, 0.08), 0 2px 14px 0 rgba(194, 185, 203, 0);
     &:after {
         content: "";
@@ -4869,7 +4869,7 @@ SHARE-BOX REFACTORING
     // }
     .share-info {
         &__block {
-            font-family: "Roboto-Light", sans-serif;
+            font-family: var(--font-main);
             font-size: 12px;
             width: 180px;
             min-height: 150px;
@@ -4912,11 +4912,11 @@ SHARE-BOX REFACTORING
         &__period {
             padding-top: 10px;
             color: #736c6c;
-            font-family: "Roboto-light", sans-serif;
+            font-family: var(--font-main);
             font-size: 10px;
             span {
                 color: #FA8540;
-                font-family: "Roboto-bold", sans-serif;
+                font-family: var(--font-main);
             }
         }
     }
@@ -4977,7 +4977,7 @@ SHARE-BOX REFACTORING
                     color: #494949;
                     -moz-osx-font-smoothing: grayscale;
                     -webkit-font-smoothing: antialiased;
-                    font-family: "Roboto-Light", sans-serif;
+                    font-family: var(--font-main);
                     .note-content, .root-node {
                         overflow: hidden;
                         .root-node {

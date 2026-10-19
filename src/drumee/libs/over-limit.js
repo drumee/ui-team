@@ -156,6 +156,33 @@ function daysLeft() {
   return Math.max(0, Math.ceil(s / 86400));
 }
 
+/**
+ * Where "Resolve now" sends an Owner/Admin — shared by the top banner and the
+ * popup so the two buttons can never disagree.
+ *
+ * Storage over → the Admin Console's Storage tab: it breaks usage down per
+ * workspace and per user, which is the fastest way to find what to delete.
+ * Seats only → the console's default Member tab, where Remove access lives.
+ * Both flags → Storage first; the banner stays up for the seat half.
+ *
+ * Free/Pro have no console (libs/billing.needsAdminConsoleUpgrade) and
+ * toggle-apps would answer with the upsell, so for them this returns null and
+ * the caller falls back to its own non-console path.
+ *
+ * @returns {{event:String, arg?:Object}|null} a RADIO_BROADCAST to raise
+ */
+function resolveTarget() {
+  const c = current();
+  if (!c) return null;
+  const { needsAdminConsoleUpgrade } = require("libs/billing");
+  if (needsAdminConsoleUpgrade()) return null;
+  if (c.flags?.storage) {
+    return { event: "desk:open-admin-console", arg: { tab: "storage" } };
+  }
+  if (c.flags?.seats) return { event: "desk:open-admin-console" };
+  return null;
+}
+
 /** The message a refused write should carry, by what the user attempted. */
 function blockedMessage(kind) {
   if (kind === "invite") {
@@ -259,6 +286,7 @@ module.exports = {
   isAdmin,
   snoozedForMe,
   daysLeft,
+  resolveTarget,
   refresh,
   blockedMessage,
   notifyBlocked,

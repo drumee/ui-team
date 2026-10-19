@@ -73,7 +73,9 @@ function hubOfRow(r) {
  */
 function kindOfRow(r) {
   if (!r) return null;
-  if (r.category === 'teamchat') return 'chat';
+  // A meeting start/end kept from a workspace the user muted carries `muted`:
+  // its cnt also counted the hidden chat messages, so the Chat pill skips it.
+  if (r.category === 'teamchat') return r.muted ? null : 'chat';
   if (TASK_EVENTS.has(r.event)) return 'task';
   if (r.event === 'meeting_notice') {
     return r.meeting_kind === 'cancelled' ? null : 'meeting';

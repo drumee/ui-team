@@ -16,6 +16,30 @@
  */
 const isEmail = (v) => !!v && String(v).includes('@');
 
+const escapeHtml = (v) =>
+  String(v).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[c]);
+
+/** "< 1 min" | "45 min" | "1 h 05 min"; "" when unknown or negative. */
+const formatMeetingDuration = (seconds) => {
+  const s = Number(seconds);
+  if (!Number.isFinite(s) || s < 0) return '';
+  const min = LOCALE.MEETING_LOG_MIN || 'min';
+  const total = Math.floor(s / 60);
+  if (total < 1) return `< 1 ${min}`;
+  if (total < 60) return `${total} ${min}`;
+  const h = Math.floor(total / 60);
+  const m = String(total % 60).padStart(2, '0');
+  return `${h} ${LOCALE.MEETING_LOG_HOUR || 'h'} ${m} ${min}`;
+};
+
+/** Clock time of a unix-seconds stamp, date-prefixed when not today. */
+const logTime = (ts) => {
+  const d = Dayjs.unix(ts).locale(Visitor.language());
+  return d.isSame(Dayjs(), 'day') ? d.format('h:mm A') : d.format('D MMM h:mm A');
+};
+
 /**
  * Who started/ended the meeting. `md.by` is frozen into the message when the
  * card is posted, and cards written before the poster's profile had loaded
@@ -41,7 +65,7 @@ const resolveAuthor = (md, m) => {
   return name || md.by || e.email || m.email || 'Someone';
 };
 
-module.exports = function (m) {
+module.exports = function meetingEvent(m) {
   let md = m.metadata || {};
   if (typeof md === 'string') {
     try { md = JSON.parse(md); } catch (e) { md = {}; }
@@ -55,7 +79,7 @@ module.exports = function (m) {
     m.message_type === 'meeting.end' || md.meeting_status === 'ended';
   const isStart = !isEnded;
 
-  const by = resolveAuthor(md, m);
+  const by = escapeHtml(resolveAuthor(md, m));
   const title = md.filename || LOCALE.MEETING || 'Meeting';
   const verb = isStart ? LOCALE.STARTED_A_MEETING : LOCALE.ENDED_THE_MEETING;
 
@@ -79,6 +103,26 @@ module.exports = function (m) {
         <span>${LOCALE.MEETING_ENDED}</span>
       </span>`;
 
+  // Timeline: start = the card row's ctime; end = metadata.ended_at, stamped
+  // once by channel_meeting_end / onRoomEmptied. Cards ended before ended_at
+  // existed keep a bare "Ended" line.
+  const row = (time, text) => `<div class="${fig}__meeting-card-log-row">
+      <span class="${fig}__meeting-card-log-time">${time}</span>
+      <span class="${fig}__meeting-card-log-text">${text}</span>
+    </div>`;
+  const startedAt = Number(m.ctime) || 0;
+  const endedAt = Number(md.ended_at) || 0;
+  const rows = [];
+  if (startedAt > 0) {
+    rows.push(row(logTime(startedAt), (LOCALE.MEETING_LOG_STARTED_BY || 'Started by {0}').replace('{0}', by)));
+  }
+  if (isEnded) {
+    const ended = LOCALE.MEETING_LOG_ENDED || 'Ended';
+    const duration = endedAt && startedAt ? formatMeetingDuration(endedAt - startedAt) : '';
+    rows.push(row(endedAt ? logTime(endedAt) : '', duration ? `${ended} · ${duration}` : ended));
+  }
+  const log = rows.length ? `<div class="${fig}__meeting-card-log">${rows.join('')}</div>` : '';
+
   return `<div class="${fig}__meeting-card ${isStart ? 'start' : 'end'}">
     <div class="${fig}__meeting-card-head">
       ${badge}
@@ -86,8 +130,11 @@ module.exports = function (m) {
       ${dot}
     </div>
     <span class="${fig}__meeting-card-sub">${by} ${verb}</span>
+    ${log}
     <div class="${fig}__meeting-card-foot">
       ${action}
     </div>
   </div>`;
 };
+
+module.exports.formatMeetingDuration = formatMeetingDuration;

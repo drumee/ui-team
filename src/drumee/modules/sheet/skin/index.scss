@@ -11,16 +11,7 @@
 // refines the few things a raw token swap does not cover (brand green, shadow).
 
 $bar-height: 48px;
-$font-stack: var(
-  --font-main,
-  -apple-system,
-  BlinkMacSystemFont,
-  "Segoe UI",
-  Roboto,
-  Helvetica,
-  Arial,
-  sans-serif
-);
+$font-stack: var(--font-main);
 
 // The framework stamps an inline height:100% on the module/widget els, but the
 // router body only has min-height:100vh (no resolvable `height`), so 100%

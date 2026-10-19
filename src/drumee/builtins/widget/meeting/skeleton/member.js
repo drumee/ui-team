@@ -83,24 +83,28 @@ module.exports = function (_ui_) {
       });
     }
   } else {
-    let callLabel = LOCALE.CALL || "Call";
-    let callService = "call-member";
-    let btnDataset;
-    if (callState === "calling") {
-      callLabel = LOCALE.CALLING || "Calling…";
-      callService = null;
-      btnDataset = { state: "calling" };
-    } else if (callState === "joined") {
-      callLabel = LOCALE.JOINED || "Joined";
-      callService = null;
-      btnDataset = { state: "joined" };
-    }
+    // Ring states come from the meeting window (window/meeting/member-call.js).
+    // "calling" and "joined" are inert; a ring's outcome (declined / no answer
+    // / offline) shows for a few seconds and stays clickable to call again.
+    const CALL_LABELS = {
+      calling: LOCALE.CALLING,
+      joined: LOCALE.JOINED,
+      declined: LOCALE.DECLINED,
+      no_answer: LOCALE.CALL_NO_ANSWER,
+      offline: LOCALE.OFFLINE,
+    };
+    const known = Object.prototype.hasOwnProperty.call(CALL_LABELS, callState);
+    const busy = callState === "calling" || callState === "joined";
+    // data-call, not data-state: the button's own toggle state owns data-state.
+    // attrOpt, because a bare dataset is dropped at render.
+    const callAttr = known ? { "data-call": callState } : undefined;
     actionBtn = Skeletons.Button.Label({
       className: `${pfx}__member-call-btn`,
       ico: "meet-camera",
-      label: callLabel,
-      service: callService,
-      dataset: btnDataset,
+      label: known ? CALL_LABELS[callState] : LOCALE.CALL,
+      service: busy ? null : "call-member",
+      attrOpt: callAttr,
+      dataset: known ? { call: callState } : undefined,
       uiHandler: [_ui_],
     });
   }

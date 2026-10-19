@@ -1,6 +1,7 @@
 const __room = require('builtins/webrtc/room/jitsi');
 
 const { timestamp } = require("@drumee/ui-essentials")
+const { startOnce, beginEarlyMedia, joinAfterEarlyMedia } = require("./call-start");
 
 // The floating call frame. Was the Figma 734x600; a 1:1 call is one or two
 // faces and a row of controls, and at that size it covered most of the desk
@@ -10,6 +11,11 @@ const CONNECT_H = 520;
 // Keep-out from the edges of the work area, used only when the area is smaller
 // than the window and there is nothing left to centre.
 const CONNECT_INSET = 16;
+// An offline callee is rung this long before the call ends as "No answer",
+// with the invite retried every OFFLINE_RETRY_MS meanwhile — the retry is what
+// reaches them if they come online while it rings.
+const OFFLINE_RING_MS = 45000;
+const OFFLINE_RETRY_MS = 3000;
 
 class __window_connect extends __room {
 
@@ -349,17 +355,39 @@ class __window_connect extends __room {
 
 
   /**
+   * Join the conference — once, however many pushes ask. See ./call-start.
+   */
+  startConnection(args = {}) {
+    if (this.isOnine) return Promise.resolve();
+    return startOnce(this, () => this._startConnection(args));
+  }
+
+  /**
    *
    */
-  async startConnection(args = {}) {
+  async _startConnection(args = {}) {
     //let user = this.callee || this.caller;
-    if (this.isOnine) return;
     let isCallee = 0;
     if (this.caller) {
       isCallee = 1;
     }
-    let room = await this.join({ isCallee, ...args });
+    // Camera/mic are requested NOW, alongside conference.join, instead of
+    // after the join round trip and the in-call skeleton (prepareConference
+    // reuses this request). See ./call-start.
+    beginEarlyMedia(this);
+    let room = await joinAfterEarlyMedia(this, () => this.join({ isCallee, ...args }));
+    if (!room && this._startupMediaFailed) {
+      // The server join may have gone through: tell the server we left, but
+      // keep the window open on the reason (prepareConference's own message
+      // never runs on this path; leaveRoom() would close it unread).
+      this.sendRoomSignaling(SERVICE.conference.leave).catch(() => {});
+      this.stateMessage(this.mediaErrorMessage(this._mediaError));
+      this.defaultState(_a.cancel);
+      return;
+    }
     if (!room || !room.user) {
+      // The early media request may have opened the camera/mic: release it.
+      Promise.resolve(this.unload && this.unload()).catch(() => {});
       this.stateMachine('permissionDenied');
       return;
     }
@@ -371,6 +399,81 @@ class __window_connect extends __room {
     return room;
   }
 
+
+  /**
+   * The callee had no live session when we dialed. Keep the window in 'dial'
+   * (ring-back already playing) and retry conference.invite until it reaches
+   * one of their sessions or OFFLINE_RING_MS runs out. Staying in 'dial' keeps
+   * Cancel on the usual path: it revokes and logs the missed call like any
+   * unanswered call.
+   *
+   * Reaching a session does not end the retries. A session that has just come
+   * online has its socket live a few seconds before its desk listens for
+   * pushes, so the first invite to land can be dropped there. Until the
+   * deadline the invite is re-sent for the SAME room (room_id is on the model
+   * from the first reply), and the callee rings once per room
+   * (desk/wm/push.js). Past the deadline a reached call simply keeps ringing,
+   * like a call to an online callee.
+   *
+   * @param {Object} callee
+   */
+  _ringOffline(callee) {
+    this._stopOfflineRing();
+    const deadline = Date.now() + OFFLINE_RING_MS;
+    const ringing = () => !this.isDestroyed() && !this._ending && this.state === 'dial';
+    let reached = false;
+    const retry = async () => {
+      this._offlineRingTimer = null;
+      if (!ringing()) return;
+      if (Date.now() >= deadline) {
+        if (!reached) this._noAnswer();
+        return;
+      }
+      let guest = null;
+      try {
+        guest = await this.sendRoomSignaling(SERVICE.conference.invite, {
+          guest_id: callee.drumate_id
+        });
+      } catch (e) {
+        this.warn("offline ring: invite retry failed", e);
+      }
+      if (!ringing()) return;
+      if (guest && guest.cross_call) {
+        this.stateMessage(LOCALE.X_IS_CALLING_YOU.format(callee.display));
+        Visitor.muteSound();
+        this.handleCrossCall(guest);
+        return;
+      }
+      if (guest && guest.room_id && !reached) {
+        reached = true;
+        this.mset(guest);
+      }
+      this._offlineRingTimer = setTimeout(retry, OFFLINE_RETRY_MS);
+    };
+    this._offlineRingTimer = setTimeout(retry, OFFLINE_RETRY_MS);
+  }
+
+  _stopOfflineRing() {
+    if (this._offlineRingTimer) {
+      clearTimeout(this._offlineRingTimer);
+      this._offlineRingTimer = null;
+    }
+  }
+
+  // Nobody picked up an offline-rung call. Same signal (and missed-call log)
+  // the Cancel button sends, then the terminal panel instead of a bare close.
+  async _noAnswer() {
+    this._stopOfflineRing();
+    this.beforeLeavingState = _a.none;
+    try {
+      await this.sendRoomSignaling(SERVICE.conference.revoke, {
+        callee: this.callee,
+      });
+    } catch (e) {
+      this.warn("offline ring: revoke failed", e);
+    }
+    this.showCallEnded(LOCALE.CALL_NO_ANSWER);
+  }
 
   /**
    * 
@@ -476,11 +579,20 @@ class __window_connect extends __room {
           this.handleCrossCall(guest);
           return;
         }
-        if (!guest || guest.offline || !guest.room_id) {
+        if (guest && guest.offline) {
+          // Ring an offline callee like any phone would: ring-back on our
+          // side while the invite is retried, so they get the call if they
+          // come online in time. See _ringOffline.
+          // Same tone the callee hears (push.js) — one call ringtone.
+          Visitor.playSound(_K.ringtones.call, 10);
+          this._ringOffline(callee);
+          break;
+        }
+        if (!guest || !guest.room_id) {
           this.stateMachine('offline');
           return;
         }
-        Visitor.playSound(_K.dialtones.rinback, 10);
+        Visitor.playSound(_K.ringtones.call, 10);
         try {
           console.log("[ROOMDBG] dial: invite returned", {
             guest_room_id: guest && guest.room_id, guest_nid: guest && guest.nid,
@@ -930,7 +1042,9 @@ class __window_connect extends __room {
         // One screen at a time: block starting a share while the peer is
         // presenting (belt-and-suspenders with the disabled button). The
         // active local presenter is never locked, so they can still stop.
-        if (this._shareLocked && !this._presentingLocally) return;
+        if (this._shareLocked && !this._presentingLocally) {
+          return this._explainShareLocked(cmd);
+        }
         super.onUiEvent(cmd, args);
         break;
 
@@ -946,6 +1060,7 @@ class __window_connect extends __room {
   }
 
   onBeforeDestroy(opt) {
+    this._stopOfflineRing();
     // Drop the reactions picker's document click-listener if open at teardown.
     this._closeReactionsPicker();
     // Un-park (if parked), release the broadcasts and tell the desk the call is

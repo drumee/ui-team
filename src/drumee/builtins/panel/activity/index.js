@@ -5,20 +5,27 @@ const CATEGORIES = {
   media: "mediaCount",
 }
 const WS_EVENT = "ws:event";
+// A feed page is drawn this many rows first, the rest FEED_CHUNK_ROWS per task
+// (see _firstRowsFirst).
+const FEED_FIRST_ROWS = 12;
+const FEED_CHUNK_ROWS = 10;
 // The tab set is declared once, in the tab bar skeleton, and imported here so
 // the panel and the bar can never disagree about which buckets exist.
 const { BUCKETS: TAB_BUCKETS, DEFAULT_BUCKET } = require('./skeleton/tabbar');
+// Header Filter popup (All / Unread / Bookmarked), declared once in its skeleton.
+const { VIEW_FILTERS, buttonLabel: viewFilterLabel } = require('./skeleton/view-filter');
 // Round 3 Phase 2: the real-time chat card. Built to Figma
 // (58208:83650) — see chat-toast.js for the measurements and the rules.
 const { showChatToast, killChatToast } = require('./chat-toast');
-// Round 3 Phase 3: which popups the user has switched off. Read once here and
-// refreshed from every mute_set — never per message. Suppresses the CARD only:
-// the feed, the badge and the tab counts are untouched by design.
-const { loadMuteState } = require('./mute');
+// Which chats the user muted. Read once here and refreshed from every
+// mute_set — never per message. Suppresses the card, the OS notification and
+// its sound; the server leaves muted chats out of the feed and the counts.
+const { loadMuteState, muteState, isPopupMuted } = require('./mute');
 const { hubCounts, latestTime } = require('./hub-counts');
 require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { ownWorkspaceName } = require('libs/workspace-label');
 
 class __panel_activity extends LetcBox {
   constructor(...args) {
@@ -60,6 +67,9 @@ class __panel_activity extends LetcBox {
     // [data-unread="1"]). Before this the panel opened unread-only, so a row
     // was filtered out the moment it was read.
     this._unreadsOnly = 0;
+    // Header Filter (skeleton/view-filter): '' = no filter, the panel as above.
+    // _unreadsOnly is derived from it in _applyViewFilter.
+    this._viewFilter = '';
     // Selected Notification Center tab. 'all' = no bucket scope, so the very
     // first render requests the same unscoped feed the panel always has.
     this._filter = DEFAULT_BUCKET;
@@ -74,17 +84,13 @@ class __panel_activity extends LetcBox {
     document.addEventListener("visibilitychange", this.onVisibilityChange);
     this.onWsMessage = this.onWsMessage.bind(this)
     this._last_notified = 0;
-    // Fire and forget: the panel must come up whether or not this answers, and
-    // it never rejects. Until it lands nothing is muted, which is the safe
-    // direction — a failed read shows a popup that should have been silenced,
-    // where the opposite default would silence one that should have shown.
-    loadMuteState(this);
   }
 
   /**
    * 
    */
   _hide() {
+    this._closeViewFilter();
     this.el.dataset.anim = "out";
     this.setState(0)
     this.activityState = 0
@@ -94,6 +100,12 @@ class __panel_activity extends LetcBox {
    * @param {*} e 
    */
   _onOutsideClick(e, source) {
+    // The Filter popup closes on any click outside itself and its button, on
+    // every device, before the panel-level rules below.
+    const target = e && e.target;
+    if (!(target && target.closest && target.closest('.panel-activity__vf'))) {
+      this._closeViewFilter();
+    }
     // Clicks coming from a sidebar toggle button are owned by
     // Desk.togglePanel / toggle-activity — bail so we don't race the
     // toggle handler and immediately reopen what it just closed.
@@ -131,6 +143,7 @@ class __panel_activity extends LetcBox {
     // outlive the panel — along with its pending dismiss timer.
     killChatToast(this);
     if (this._untrackCanvas) this._untrackCanvas();
+    if (this._feedRestChannel) this._feedRestChannel.port1.close();
   }
 
   /**
@@ -186,6 +199,17 @@ class __panel_activity extends LetcBox {
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_CLICK.on(_e.click, this._onOutsideClick)
     this.visible = !document.hidden;
+    // Fire and forget: the panel must come up whether or not this answers, and
+    // it never rejects. Until it lands nothing is muted, which is the safe
+    // direction — a failed read shows a popup that should have been silenced,
+    // where the opposite default would silence one that should have shown.
+    //
+    // Here, NOT in initialize: ui-core's Box binds this.fetchService only
+    // after super() returns, and initialize runs inside super(). Called from
+    // there, loadMuteState found no fetchService and returned without asking,
+    // so the cache never loaded — popups ignored a saved mute after a reload
+    // and the account menu always read "Mute notifications".
+    if (!muteState().loaded) loadMuteState(this);
     this.feed(require('./skeleton')(this));
     this.ensurePart(_a.list).then((p) => {
       this.refreshActivity()
@@ -201,12 +225,34 @@ class __panel_activity extends LetcBox {
    */
   onPartReady(child, pn) {
     if (pn === _a.list && child && child.on) {
+      // First, so it sees the rows as the server sent them (the hooks below
+      // stamp day headers into them): page 1's signature for _refreshFeed.
+      child.on(_e.data, (rows) => this._noteFeedPage(child, rows));
+      child.on(_e.eod, () => this._noteFeedEnd(child));
+      child.on(_e.error, () => {
+        this._feedSwap = null;
+        this._dropFeedRest();
+        this._setFeedLoading(false);
+      });
+      // ui-core List.Smart maps a fetched page through prepare() right before
+      // adding it; pagination still reads the full page in handleResponse.
+      const prepare = child.prepare;
+      if (_.isFunction(prepare)) {
+        child.prepare = (data) => this._firstRowsFirst(child, prepare.call(child, data));
+      }
       // renderData() emits this with the page's raw rows just before mapping
       // them into item models — the one place the whole page is visible in
       // order, which is what day grouping needs.
       child.on(_e.data, (rows) => this._stampDayHeaders(child, rows));
       // Same page of raw rows: the saved ones among them are pinned on top.
       child.on(_e.data, (rows) => this._collectPinned(child, rows));
+      // An EMPTY first page never emits `data` (ui-core handleResponse goes
+      // straight to eod), which would leave the pinned block unbuilt: the
+      // Unread / All filters on a view with nothing unread. Build it from the
+      // snapshots alone then.
+      child.on(_e.eod, () => {
+        if (this._pinCollected !== this._pinCycle) this._collectPinned(child, []);
+      });
       // The first page is down (rows or none): the feed has painted. A
       // reload's screen restore waits on this (libs/items-ready).
       child.once(_e.eod, () => markItemsReady(this));
@@ -272,6 +318,18 @@ class __panel_activity extends LetcBox {
    * @returns 
    */
   getCurrentApi() {
+    const api = this._feedApi();
+    // Page 1 of a (re)started feed: fetch the pinned rows for the same view in
+    // parallel, so they land together with the first page (_collectPinned).
+    const list = this.__list;
+    if (!list || (list._curPage || 1) <= 1) this._startPinned();
+    return api;
+  }
+
+  /**
+   * The feed request for the current tab and filter, without side effects.
+   */
+  _feedApi() {
     const api = {
       service: SERVICE.activity.get_feed,
       hub_id: Visitor.id,
@@ -286,11 +344,207 @@ class __panel_activity extends LetcBox {
     // Mentions / Shares tabs; the server defaults it to 'all', which is what the
     // old All tab sent anyway — so dropping it changes nothing.
     if (this._filter && this._filter !== DEFAULT_BUCKET) api.bucket = this._filter;
-    // Page 1 of a (re)started feed: fetch the pinned rows for the same view in
-    // parallel, so they land together with the first page (_collectPinned).
-    const list = this.__list;
-    if (!list || (list._curPage || 1) <= 1) this._startPinned();
     return api;
+  }
+
+  // ── Feed repaint without the blink ─────────────────────────────────
+  //
+  // ui-core's list.restart() empties the list and only THEN fetches: the panel
+  // sat blank for the whole request (get_feed ≈ 0.6–0.9 s on drumee.in), the
+  // list's spinner (spinnerWait 500) came up in it, and every row was rebuilt
+  // — avatars included, which ui-core's UserProfile paints empty until its
+  // image loads. restart() ran on every tab-visible return (onVisibilityChange
+  // → refreshActivity), on every live refresh and on every tab / filter switch.
+  //  * _swapFeed: page 1 again, but the old rows stay until the new ones land
+  //    and are replaced in one go (ui-core renderData cleanSet()s page 1).
+  //  * _refreshFeed: a background refresh; reads page 1 first and leaves the
+  //    list alone when nothing in it changed.
+
+  // Page 1 as the server sent it + today's day key (a row's "Today" caption
+  // becomes "Yesterday" overnight with no change in the data). Order-free:
+  // get_feed returns rows sharing a timestamp in no fixed order (two
+  // share_open rows swapped places between two calls on drumee.in), and a real
+  // change always changes a row itself.
+  _feedSignature(rows) {
+    const set = (_.isArray(rows) ? rows : []).map((r) => JSON.stringify(r)).sort();
+    return `${this._dayKey(Dayjs().unix())}|${set.join('\n')}`;
+  }
+
+  // Feed `data` hook, before any other: page 1 is in.
+  // 🚨 try/catch is load-bearing, as in _stampDayHeaders.
+  _noteFeedPage(list, rows) {
+    try {
+      if (!_.isArray(rows) || (list && (list._curPage || 1) > 1)) return;
+      // Same task as the cleanSet that draws them: no frame shows them dimmed.
+      this._setFeedLoading(false);
+      this._feedSig = this._feedSignature(rows);
+      if (!this._feedSwap) return;
+      this._feedSwap = null;
+      // A new page 1 replaces the old rows: show it from its top, as the
+      // emptied list of restart() used to.
+      const scroller = this.el && this.el.querySelector(`.${this.fig.family}__feed`);
+      if (scroller) scroller.scrollTop = 0;
+    } catch (e) {
+      this.warn('[panel_activity] feed signature failed', e);
+    }
+  }
+
+  // Feed `eod`: an EMPTY page 1 never emits `data`, so a swap ends here with
+  // the old rows still in the list — clear them (the list's empty view shows).
+  _noteFeedEnd(list) {
+    if (!list || (list._curPage || 1) > 1) return;
+    this._setFeedLoading(false);
+    if (this._feedSig == null) this._feedSig = this._feedSignature([]);
+    if (!this._feedSwap) return;
+    this._feedSwap = null;
+    this._dropFeedRest();
+    if (list.collection && list.collection.length) list.collection.reset();
+  }
+
+  // A tab / filter switch waits ~0.3–0.8 s for get_feed while the rows of the
+  // tab just left stay up; the skin dims them and runs a line under the tab
+  // bar. Set at the click, not after a delay: a switch that shows nothing for
+  // half a second reads as lag. Background refreshes never set it.
+  _setFeedLoading(on) {
+    if (this.el && this.el.dataset) this.el.dataset.feedLoading = on ? '1' : '0';
+  }
+
+  // get_feed sends ~117 rows as page 1 here, and each row is ~10 ui-core
+  // widgets: ≈18 ms a row, 2.1 s for the page, all of it on the main thread
+  // before anything showed (measured on drumee.in, Task → All). The panel shows
+  // about eight rows, so draw FEED_FIRST_ROWS now and append the rest at the
+  // end, a chunk per task. A next page flushes what is left first, so the
+  // order never changes.
+  _firstRowsFirst(list, items) {
+    if (!_.isArray(items)) return items;
+    // Only a fetched page (renderData, still `_waiting`); a direct feed()
+    // (ui-core's server-error line) replaces the list whole.
+    if (!list._waiting) {
+      this._dropFeedRest();
+      return items;
+    }
+    if ((list._curPage || 1) > 1) {
+      this._flushFeedRest(list);
+      return items;
+    }
+    this._dropFeedRest();
+    if (items.length <= FEED_FIRST_ROWS) return items;
+    this._feedRest = items.slice(FEED_FIRST_ROWS);
+    this._scheduleFeedRest(list, this._feedRestGen);
+    return items.slice(0, FEED_FIRST_ROWS);
+  }
+
+  // One task per chunk, through a MessageChannel: the browser still paints and
+  // takes clicks between two chunks, and unlike setTimeout it is not throttled
+  // in a background tab (down to once a minute), which left the list half
+  // drawn on the way back to it.
+  _scheduleFeedRest(list, gen) {
+    if (!this._feedRestChannel) {
+      this._feedRestChannel = new MessageChannel();
+      this._feedRestChannel.port1.onmessage = (e) => this._feedRestTick(e.data);
+    }
+    this._feedRestList = list;
+    this._feedRestChannel.port2.postMessage(gen);
+  }
+
+  _feedRestTick(gen) {
+    const list = this._feedRestList;
+    if (gen !== this._feedRestGen || !list || list.isDestroyed()) return;
+    const chunk = this._feedRest.splice(0, FEED_CHUNK_ROWS);
+    if (chunk.length) this._appendFeedRows(list, chunk);
+    if (this._feedRest.length) this._scheduleFeedRest(list, gen);
+  }
+
+  _flushFeedRest(list) {
+    const rest = this._feedRest || [];
+    this._dropFeedRest();
+    if (rest.length && !list.isDestroyed()) this._appendFeedRows(list, rest);
+  }
+
+  // Rows not drawn yet belong to a page that is being replaced.
+  _dropFeedRest() {
+    this._feedRestGen = (this._feedRestGen || 0) + 1;
+    this._feedRest = [];
+  }
+
+  // _appendPage (our ui-core patch) attaches only the new rows; add() would
+  // re-attach every row already there.
+  _appendFeedRows(list, rows) {
+    if (_.isFunction(list._appendPage)) list._appendPage(rows);
+    else list.collection.add(rows);
+  }
+
+  /**
+   * restart() without emptying the list first, and without ui-core's spinner:
+   * the old rows stay up, and a tab / filter switch has its own loading line
+   * (_setFeedLoading).
+   */
+  _swapFeed(list) {
+    if (!list || list.isDestroyed()) {
+      this._setFeedLoading(false);
+      return;
+    }
+    // Before restart()'s own eod flush, which must not settle this swap.
+    this._feedSwap = null;
+    this._dropFeedRest();
+    list.trigger(_e.eod);
+    this._feedGen = (this._feedGen || 0) + 1;
+    this._feedSig = null;
+    this._feedSwap = { gen: this._feedGen };
+    const spinner = list.mget(_a.spinner);
+    list.model.set({ spinner: false }, { silent: true });
+    try {
+      list.start(0);
+    } finally {
+      // Read synchronously inside start() → fetch().
+      list.model.set({ spinner }, { silent: true });
+    }
+  }
+
+  /**
+   * Background refresh of the feed (tab back in view, a live update, the bell
+   * opened): repaint only if page 1 changed. Costs the one get_feed restart()
+   * did when nothing changed, a second one when something did.
+   */
+  async _refreshFeed(list) {
+    if (!list || list.isDestroyed()) return;
+    const gen = this._feedGen || 0;
+    const sig = this._feedSig;
+    let rows = null;
+    if (sig != null && !this._feedSwap) {
+      const { service, ...api } = this._feedApi();
+      try {
+        rows = await this.fetchService(service, {
+          ...api,
+          page: 1,
+          pagelength: list.mget('pagelength') || _K.pagelength,
+        });
+      } catch (e) {
+        rows = null;
+      }
+      // A tab / filter switch (or another refresh) took over meanwhile.
+      if (list.isDestroyed() || gen !== (this._feedGen || 0)) return;
+      if (rows != null && this._feedSignature(rows) === this._feedSig) {
+        // The feed is unchanged, but a row bookmarked on another device may
+        // not be on page 1: re-read the pinned rows as every restart did.
+        // _renderPinned skips an unchanged block.
+        this._startPinned({ keepReady: true });
+        this._buildPinned(_.isArray(rows) ? rows : []);
+        this._refreshRowTimes(list);
+        return;
+      }
+    }
+    this._swapFeed(list);
+  }
+
+  // Rows kept by _refreshFeed still print the "… ago" of when they were built.
+  _refreshRowTimes(list) {
+    for (const part of [list, this._vfPart('saved')]) {
+      if (!part || !part.children) continue;
+      part.children.each((row) => {
+        if (row && row.refreshTime) row.refreshTime();
+      });
+    }
   }
 
   /**
@@ -461,12 +715,31 @@ class __panel_activity extends LetcBox {
       //   return;
       // }
 
-      case 'toggle-unreads':
-        this._unreadsOnly = this._unreadsOnly ? 0 : 1;
-        this.ensurePart('unread-toggle').then((p) => {
-          if (p && p.el) p.el.dataset.state = this._unreadsOnly ? '1' : '0';
-        });
-        return this.ensurePart(_a.list).then((list) => list.restart());
+      // Header Filter popup. Picking a radio only moves the pending choice;
+      // Apply commits it, Clear goes back to no filter.
+      case 'view-filter-open':
+        return this._toggleViewFilter();
+
+      case 'view-filter-close':
+        return this._closeViewFilter();
+
+      case 'view-filter-pick': {
+        const pick = cmd.mget && cmd.mget(_a.name);
+        const popup = this._vfPart('view-filter-popup');
+        if (popup && popup.el && VIEW_FILTERS.indexOf(pick) !== -1) popup.el.dataset.pick = pick;
+        return '';
+      }
+
+      case 'view-filter-apply': {
+        const popup = this._vfPart('view-filter-popup');
+        const pick = popup && popup.el && popup.el.dataset.pick;
+        this._closeViewFilter();
+        return this._applyViewFilter(VIEW_FILTERS.indexOf(pick) !== -1 ? pick : '');
+      }
+
+      case 'view-filter-clear':
+        this._closeViewFilter();
+        return this._applyViewFilter('');
 
       case 'clear-all':
         return this._clearAll();
@@ -664,7 +937,7 @@ class __panel_activity extends LetcBox {
       p.feed([]);
       if (this.el && this.el.dataset) this.el.dataset.hasPriority = '0';
     });
-    if (this.__list && !this.__list.isDestroyed()) this.__list.restart();
+    if (this.__list && !this.__list.isDestroyed()) this._swapFeed(this.__list);
     RADIO_BROADCAST.trigger('activity-update', { unread_count: 0 });
     this._renderTabCounts();
   }
@@ -952,17 +1225,53 @@ class __panel_activity extends LetcBox {
   //    read state, so it always wins;
   //  * the server snapshot (activity.bookmark_rows) for a saved row whose page
   //    is not loaded. Its read state is unknown, so it is served read, and it
-  //    is not used under Unread ON, which lists only what is still unread.
+  //    is not used under the Unread filter, which lists only what is still
+  //    unread (the All filter does use it: it pins every saved row).
   // get_feed itself is untouched: the feed pages, their pagination and the
   // mobile client see exactly what they saw before.
 
-  _startPinned() {
+  // keepReady: a background re-read (_refreshFeed) keeps the Bookmarked
+  // filter's empty line where it is instead of hiding it until the fetch lands.
+  _startPinned({ keepReady = false } = {}) {
     this._pinCycle = (this._pinCycle || 0) + 1;
     this._pinnedRows = new Map();
     this._pinnedReady = false;
     this._pinnedQueue = [];
+    if (!keepReady && this.el && this.el.dataset) this.el.dataset.savedReady = '0';
     const bucket = (this._filter && this._filter !== DEFAULT_BUCKET) ? this._filter : null;
-    this._pinnedFetch = this._unreadsOnly ? Promise.resolve([]) : this._fetchPinned(bucket);
+    // Only the Unread filter goes without snapshots (they are served read). The
+    // All filter runs the unread feed too but pins every saved row.
+    if (this._viewFilter === 'unread') {
+      this._pinnedFetch = Promise.resolve([]);
+    } else if (this._viewFilter === 'all') {
+      // Its list is the UNREAD feed, so the saved READ rows of the full feed's
+      // first page (the ones with no snapshot, saved on mobile or before
+      // snapshots existed) would be missing next to the unfiltered view. Read
+      // that page as well; listed after the snapshots, live rows win.
+      this._pinnedFetch = Promise.all([this._fetchPinned(bucket), this._fetchLiveSaved(bucket)])
+        .then(([snapshots, live]) => [...snapshots, ...live]);
+    } else {
+      this._pinnedFetch = this._fetchPinned(bucket);
+    }
+  }
+
+  // Saved rows of the full feed's first page (read + unread), for the All filter.
+  async _fetchLiveSaved(bucket) {
+    try {
+      const api = {
+        hub_id: Visitor.id,
+        unread_only: 0,
+        page: 1,
+        pagelength: (this.__list && this.__list.mget('pagelength')) || _K.pagelength,
+      };
+      if (bucket) api.bucket = bucket;
+      const rows = await this.fetchService(SERVICE.activity.get_feed, api);
+      return (_.isArray(rows) ? rows : [])
+        .filter((r) => r && r.bookmark_key && parseInt(r.is_saved, 10) === 1);
+    } catch (e) {
+      this.warn('[panel_activity] saved feed rows failed', e);
+      return [];
+    }
   }
 
   async _fetchPinned(bucket) {
@@ -987,23 +1296,11 @@ class __panel_activity extends LetcBox {
   _collectPinned(list, rows) {
     try {
       if (!_.isArray(rows)) return;
-      const live = rows.filter((r) => r && r.bookmark_key && parseInt(r.is_saved, 10) === 1);
       if (!list || (list._curPage || 1) <= 1) {
-        const cycle = this._pinCycle;
-        (this._pinnedFetch || Promise.resolve([])).then((snapshots) => {
-          if (cycle !== this._pinCycle) return;
-          const map = new Map();
-          for (const r of snapshots || []) {
-            if (r && r.bookmark_key) map.set(r.bookmark_key, r);
-          }
-          for (const r of [...live, ...(this._pinnedQueue || [])]) map.set(r.bookmark_key, { ...r });
-          this._pinnedQueue = [];
-          this._pinnedRows = map;
-          this._pinnedReady = true;
-          this._renderPinned();
-        });
+        this._buildPinned(rows);
         return;
       }
+      const live = this._savedRows(rows);
       for (const r of live) {
         if (this._pinnedRows && this._pinnedRows.has(r.bookmark_key)) continue;
         if (!this._pinnedReady) {
@@ -1015,6 +1312,33 @@ class __panel_activity extends LetcBox {
     } catch (e) {
       this.warn('[panel_activity] pinned rows failed', e);
     }
+  }
+
+  _savedRows(rows) {
+    return rows.filter((r) => r && r.bookmark_key && parseInt(r.is_saved, 10) === 1);
+  }
+
+  // Page 1 of the feed (`rows`) is in: build the pinned set once the snapshots
+  // fetched by _startPinned are in too.
+  _buildPinned(rows) {
+    const live = this._savedRows(rows);
+    const cycle = this._pinCycle;
+    this._pinCollected = cycle;
+    (this._pinnedFetch || Promise.resolve([])).then((snapshots) => {
+      if (cycle !== this._pinCycle) return;
+      const map = new Map();
+      for (const r of snapshots || []) {
+        if (r && r.bookmark_key) map.set(r.bookmark_key, r);
+      }
+      for (const r of [...live, ...(this._pinnedQueue || [])]) map.set(r.bookmark_key, { ...r });
+      this._pinnedQueue = [];
+      this._pinnedRows = map;
+      this._pinnedReady = true;
+      this._renderPinned();
+      // The Bookmarked filter's empty line waits for this (skin).
+      this._markHasSaved();
+      if (this.el && this.el.dataset) this.el.dataset.savedReady = '1';
+    });
   }
 
   _pinnedTime(row) {
@@ -1078,6 +1402,8 @@ class __panel_activity extends LetcBox {
   _viewsWithKey(key) {
     const out = [];
     if (!key) return out;
+    // A row still waiting to be drawn would be built from its old state.
+    if (this.__list && this._feedRest && this._feedRest.length) this._flushFeedRest(this.__list);
     for (const part of [this.__saved, this.__list]) {
       if (!part || part.isDestroyed() || !part.children) continue;
       part.children.each((v) => {
@@ -1330,8 +1656,56 @@ class __panel_activity extends LetcBox {
    */
   _setTab(bucket) {
     this._filter = bucket || DEFAULT_BUCKET;
+    this._setFeedLoading(true);
     this.updatePriorityListUnified(this._mergedRows || []);
-    this.ensurePart(_a.list).then((list) => list.restart());
+    this.ensurePart(_a.list).then((list) => this._swapFeed(list));
+  }
+
+  // ── Header Filter (All / Unread / Bookmarked) ──────────────────────
+  //
+  // Lexis 2026-09-28. Built on the two views the panel already had, so
+  // nothing new is asked of the server:
+  //  * ''         — no filter: full feed, bookmarked rows pinned on top.
+  //  * unread     — exactly the old Unreads toggle ON.
+  //  * all        — the unread feed with EVERY bookmarked row pinned on top
+  //                 (snapshots included, read or unread).
+  //  * bookmarked — the pinned block alone: the skin hides the feed and the
+  //                 priority rows under data-view-filter="bookmarked". The feed
+  //                 still loads its first page, whose saved rows replace their
+  //                 snapshots with the live ones (true text and read state).
+
+  // A part by name, synchronously; null while it is not rendered.
+  _vfPart(name) {
+    const part = this._branches && this._branches[name];
+    return part && !part.isDestroyed() ? part : null;
+  }
+
+  _toggleViewFilter() {
+    const popup = this._vfPart('view-filter-popup');
+    if (!popup || !popup.el) return;
+    if (popup.el.dataset.open === '1') return this._closeViewFilter();
+    // Reopened, it shows the filter in force, not a choice left un-applied.
+    popup.el.dataset.pick = this._viewFilter || VIEW_FILTERS[0];
+    popup.el.dataset.open = '1';
+  }
+
+  _closeViewFilter() {
+    const popup = this._vfPart('view-filter-popup');
+    if (popup && popup.el) popup.el.dataset.open = '0';
+  }
+
+  _applyViewFilter(filter) {
+    const next = VIEW_FILTERS.indexOf(filter) !== -1 ? filter : '';
+    const button = this._vfPart('view-filter-button');
+    if (button && button.el) button.el.dataset.active = next ? '1' : '0';
+    const label = this._vfPart('view-filter-label');
+    if (label && label.el) label.el.innerText = viewFilterLabel(next);
+    if (next === this._viewFilter) return;
+    this._viewFilter = next;
+    if (this.el && this.el.dataset) this.el.dataset.viewFilter = next || 'none';
+    this._unreadsOnly = (next === 'unread' || next === 'all') ? 1 : 0;
+    this._setFeedLoading(true);
+    return this.ensurePart(_a.list).then((list) => this._swapFeed(list));
   }
 
 
@@ -1476,7 +1850,7 @@ class __panel_activity extends LetcBox {
   // isn't mounted yet (first open renders it fresh anyway).
   refreshFeed() {
     return this.ensurePart(_a.list).then((list) => {
-      if (list && list.restart && !list.isDestroyed()) list.restart();
+      if (list && !list.isDestroyed()) return this._refreshFeed(list);
     });
   }
 
@@ -1786,7 +2160,7 @@ class __panel_activity extends LetcBox {
     this.updatePriorityListUnified(merged);
     if (!this.mget(_a.state)) return;
     if (this.__list && !this.__list.isDestroyed()) {
-      this.__list.restart()
+      this._refreshFeed(this.__list);
       return
     }
     this.feed(require('./skeleton')(this));
@@ -2141,6 +2515,10 @@ class __panel_activity extends LetcBox {
     this._meetingItems = (this._meetingItems || []).filter(m => m.item_key !== key);
     this._meetingItems.unshift({
       ...data,
+      // The push carries the workspace's shared name (yp.hub profile), which
+      // a desk rename never writes. Name it the way this desk does, as the
+      // stored rollup for the same meeting will after the next refresh.
+      hub_name: ownWorkspaceName(hub_id) || data.hub_name,
       kind: 'activity_item',
       category: 'meeting',
       type: 'meeting',
@@ -2255,6 +2633,14 @@ class __panel_activity extends LetcBox {
     ) {
       showChatToast(this, opt, url);
     }
+
+    // Muted chat: no OS notification and no drip either — the card above has
+    // already stood down on its own. Only chat posts are judged: mute is a
+    // chat setting, and invites / tasks / shares keep notifying.
+    if (
+      (data.service === SERVICE.chat.post || data.service === SERVICE.channel.post) &&
+      isPopupMuted(opt)
+    ) return;
 
     if (!window.Notification) return;
     if (Notification.permission === "denied") return;

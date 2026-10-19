@@ -13,6 +13,7 @@ const { inviteWorkspaceScope } = require("libs/invite-scope");
 // with no session. Armed at module scope in index.web.js, consumed below.
 const fileDeepLink = require("libs/file-deep-link");
 const { openSupportMail } = require("libs/support");
+const { showToast, clearToast } = require("libs/toast");
 
 // Widgets that own a modal or panel Escape should close BEFORE the window that
 // hosts it. Opt-in: each implements onEscape() and returns true when it consumed
@@ -41,6 +42,8 @@ const DESK_BILLING_LOADER_DELAY = 220;
 // they share, which also gives it their mutual exclusion for free.
 const folderIcon = require("media/grid/template/folder");
 const { groupWorkspaces } = require("libs/workspace-groups");
+const workspacePins = require("libs/workspace-pins");
+const { fetchSiblingFolders } = require("libs/folder-siblings");
 const { restoreScreen, pollFor, withTimeout } = require("libs/screen-restore");
 const { lightUtilityButton } = require("libs/utility-light");
 const {
@@ -48,6 +51,10 @@ const {
   SECURE_SHARE_CLOSE,
   SECURE_SHARE_VIEW_EVENT,
 } = require("window/folder/secure-share-column");
+const {
+  ACCESS_CLOSE,
+  accessOpen: accessOverlayOpen,
+} = require("window/folder/access-column");
 
 const INBOX_SLOT = "settings-main-slot";
 
@@ -104,6 +111,31 @@ const RAIL_NAV_SERVICES = new Set([
   "rail-task",
   "rail-meet",
   "rail-access",
+]);
+
+// Services that take the user off the Settings screen: a workspace tab or
+// switch, Home, and the other full-canvas screens that share its slot. With
+// unsaved profile edits, _guardSettingsLeave asks first. The slide-outs
+// (Notifications, Contacts, Trash) are absent on purpose: they open OVER
+// Settings and leave it standing, edits included.
+const SETTINGS_LEAVE_SERVICES = new Set([
+  ...RAIL_NAV_SERVICES,
+  "rail-home",
+  "workspace-access",
+  "switch-workspace",
+  "switch-workspace-row",
+  "load-workspace",
+  "focus-folder-tab",
+  "guest-join-open-workspace",
+  "open-search-hit",
+  "toggle-inbox",
+  "toggle-chat",
+  "toggle-calendar",
+  "toggle-help",
+  "toggle-apps",
+  "upgrade-plan",
+  "open-org-view",
+  "new-department",
 ]);
 
 // Longest a utility icon may spin. A hung chunk or request must leave the
@@ -235,6 +267,13 @@ class desk_module extends LetcBox {
     this._onWindowTutorial = this._onWindowTutorial.bind(this);
     RADIO_BROADCAST.on("window-tutorial:mount", this._onWindowTutorial);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
+    // The account menu's mute row is built before the mute state is read, and
+    // is not rebuilt when it is pressed — repaint it whenever the cache moves.
+    RADIO_BROADCAST.on(
+      require("builtins/panel/activity/mute").MUTE_CHANGED,
+      this._paintMuteRow,
+      this,
+    );
     // Rail Files / Chat / Task / Meet pills: new counts, or another workspace in front.
     RADIO_BROADCAST.on("workspace-unread", this._writeRailCounts, this);
     RADIO_BROADCAST.on("workspace:focus", this._writeRailCounts, this);
@@ -702,6 +741,28 @@ class desk_module extends LetcBox {
     }
   }
 
+  /**
+   * Repaint the account menu's "Mute notifications" row from the mute cache.
+   *
+   * In place, rather than by re-feeding the topbar: the row is built once with
+   * the desk — before the panel's first mute_state read lands — and pressing
+   * it does not rebuild the menu, so without this it kept reading "Mute
+   * notifications" after a successful mute and for a user already muted.
+   * Silent no-op when the row is absent (endpoint missing, mobile sheet).
+   */
+  _paintMuteRow() {
+    const row = _.isFunction(this.getPart) ? this.getPart("account-mute-row") : null;
+    if (!row || !row.el || (_.isFunction(row.isDestroyed) && row.isDestroyed())) return;
+    const { muteState } = require("builtins/panel/activity/mute");
+    const look = require("./skeleton/topbar").muteRowLook(!!(muteState() || {}).global);
+    row.model.set({ label: look.label, chartId: look.ico });
+    row.render();
+    row.el.classList.toggle(
+      `${this.fig.family}-topbar__account-menu-item--muted`,
+      look.modifier === "muted",
+    );
+  }
+
   _onWmMinimize(event, winInstance) {
     if (!winInstance || !winInstance.isFolder) return;
     const entry = this._openFolders.get(winInstance.cid);
@@ -802,6 +863,7 @@ class desk_module extends LetcBox {
    *
    */
   onDestroy() {
+    clearToast(this);
     if (this._usageTimer) {
       clearInterval(this._usageTimer);
       this._usageTimer = null;
@@ -868,6 +930,11 @@ class desk_module extends LetcBox {
       );
     }
     RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
+    RADIO_BROADCAST.off(
+      require("builtins/panel/activity/mute").MUTE_CHANGED,
+      this._paintMuteRow,
+      this,
+    );
     RADIO_BROADCAST.off("workspace-unread", this._writeRailCounts, this);
     RADIO_BROADCAST.off("workspace:focus", this._writeRailCounts, this);
     RADIO_BROADCAST.off("chat:read", this._writeRailCounts, this);
@@ -1509,6 +1576,11 @@ class desk_module extends LetcBox {
         clearInterval(this._invitedLoaderTimer);
         this._invitedLoaderTimer = null;
         if (w.goodbye) w.goodbye();
+        setTimeout(() => {
+          try {
+            if (!(w.isDestroyed && w.isDestroyed()) && _.isFunction(w.destroy)) w.destroy();
+          } catch (e) { /* already gone */ }
+        }, 1500);
         return;
       }
       seen = true;
@@ -1536,6 +1608,15 @@ class desk_module extends LetcBox {
       this._invitedLoaderTimer = null;
     }
     if (w.goodbye) w.goodbye();
+    // goodbye() fades the toast out on an animation frame tween; in a
+    // background tab (frames throttled) the tween can stall and leave a
+    // half-transparent ghost over the workspace that just opened. Give the
+    // fade its time, then take the window down for certain.
+    setTimeout(() => {
+      try {
+        if (!(w.isDestroyed && w.isDestroyed()) && _.isFunction(w.destroy)) w.destroy();
+      } catch (e) { /* already gone */ }
+    }, 1500);
   }
 
   /**
@@ -1991,6 +2072,43 @@ class desk_module extends LetcBox {
     }
 
     return null;
+  }
+
+  /**
+   * GUARD UNSAVED PROFILE EDITS. When `service` would take the user off a
+   * visible Settings screen whose General Profile card has unsaved edits,
+   * hold it and let Settings ask "Save changes / Discard" (settings_main
+   * confirmLeave). On save or discard the same event is dispatched again —
+   * the card is clean by then, so it passes straight through. On "stay" the
+   * rail row or topbar icon the click already lit is put back out, since
+   * the screen did not change.
+   *
+   * Not covered: links that navigate through location.hash (notification
+   * rows), which never pass through here, and logout. Reload / tab close is
+   * covered by Settings' own beforeunload prompt.
+   *
+   * @returns {Boolean} true when the event was held
+   */
+  _guardSettingsLeave(cmd, service, args) {
+    const name = service === _e.home ? "rail-home" : service;
+    if (!SETTINGS_LEAVE_SERVICES.has(name)) return false;
+    // The slot itself, not _currentScreenService(): that answers with a
+    // slide-out (Trash, Contacts…) open over Settings, and leaving from there
+    // hides Settings all the same.
+    const slot = this.getPart && this.getPart("settings-main-slot");
+    const settings = slot && slot.children && slot.children.last();
+    if (!settings || !settings.el || settings.el.dataset.anim === "out") return false;
+    if (!_.isFunction(settings.hasUnsavedProfile)) return false;
+    if (!settings.hasUnsavedProfile()) return false;
+    settings.confirmLeave().then((leave) => {
+      if (leave) return this.onUiEvent(cmd, args);
+      if (cmd && _.isFunction(cmd.mget) && cmd.mget("railRow")) {
+        this._railUnlight();
+      } else if (this._isUtilityBtn(cmd) && _.isFunction(cmd.setState)) {
+        cmd.setState(0);
+      }
+    });
+    return true;
   }
 
   /** Headless workspace pane currently mounted in Wm, or null. */
@@ -2827,6 +2945,23 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Open the Contacts panel on one person's detail (a Chat details member
+   * row). Open-only, like openContactPanel: a Contacts panel already up just
+   * moves its selection.
+   *
+   * @param {String} uid drumate id
+   * @param {Object} [who] { name, email }: names the not-found screen when
+   *   they are no contact
+   */
+  async openContact(uid, who = {}) {
+    if (!uid) return;
+    await this.togglePanel("address_book", "chat-panel", true);
+    const p = await this.ensurePart("chat-panel");
+    const widget = p && p.children && p.children.last && p.children.last();
+    if (widget && widget.showContact) return widget.showContact(uid, who);
+  }
+
+  /**
    *
    */
   async onDomRefresh() {
@@ -3207,8 +3342,9 @@ class desk_module extends LetcBox {
   _writeActivityCount(unread) {
     const n = parseInt(unread, 10) || 0;
     const content = n > 99 ? "99+" : String(n);
-    // Three surfaces: the desktop cluster's bell, the phone bar's bell, and
-    // the go-to sheet's notifications tile. (The old drawer's 'activity-count'
+    // Three surfaces: the desktop cluster's bell, the phone bar's go-to
+    // button (which opens the sheet the notifications tile lives in), and
+    // that tile. (The old drawer's 'activity-count'
     // is gone with the drawer.) They read the same number, so they are filled
     // from one place — updating only some left the others permanently unmarked.
     ["activity-count-top", "activity-count-mobile", "activity-count-sheet"].forEach((pn) => {
@@ -3394,6 +3530,9 @@ class desk_module extends LetcBox {
         .map((r) => `${r.hub_id || r.id}:${r.filename || r.name}:${r.area}`)
         .join("|");
     const before = sig(this._workspaces);
+    // The pins ride the same refresh: a tab that slept through a push from
+    // another device catches up here, at no extra cadence.
+    this._refreshPins();
     // force:1, so this cannot re-enter the stale branch that called it.
     this._wsRevalidating = this._fetchWorkspaces(1)
       .then((rows) => {
@@ -3498,7 +3637,21 @@ class desk_module extends LetcBox {
    * @returns {Array} [{ label, rows }] — empty groups omitted
    */
   _groupWorkspaces(rows) {
-    return groupWorkspaces(rows);
+    // PINNED FIRST, above every type heading, in the user's own order (Lexis,
+    // 2026-10-07). A pinned workspace leaves its type's group rather than being
+    // listed twice. Done here rather than in libs/workspace-groups so the
+    // invite popup's picker, which calls that lib directly, is unchanged.
+    const { pinned, rest } = workspacePins.split(
+      rows,
+      this._pinnedKeys(),
+      (r) => this._workspaceKey(r),
+    );
+    const groups = groupWorkspaces(rest);
+    if (!pinned.length) return groups;
+    return [
+      { label: `${LOCALE.PINNED} (${pinned.length})`, rows: pinned, pinned: 1 },
+      ...groups,
+    ];
   }
 
   /**
@@ -3621,8 +3774,13 @@ class desk_module extends LetcBox {
     if (!list && !head) return;
     const rows = await this._fetchWorkspaces(force);
     if (!rows.length) {
-      if (head) head.clear();
-      return list
+      if (head && this._wsMenuMode !== "folders") head.clear();
+      // The list is about to hold the empty note, not folders.
+      if (list && this._wsMenuMode !== "folders") this._folderFeedSig = null;
+      // FOLDER MODE owns the list (_prepareSwitcherMode). A revalidation or a
+      // workspace:refresh landing while it is open must not paint workspaces
+      // over the sibling folders.
+      return list && this._wsMenuMode !== "folders"
         ? list.feed([
             Skeletons.Note({
               className: "desk-module-topbar__ws-empty",
@@ -3659,12 +3817,13 @@ class desk_module extends LetcBox {
 
     const cn = "desk-module-topbar";
     const curKey = this._workspaceKey(cur);
-    const rowFor = (row) => {
+    const rowFor = (row, pinned) => {
       const hubId = row.hub_id || row.id;
       const wsKey = this._workspaceKey(row);
       // By KEY, not by hub_id: personal workspaces all share the user's, so
       // comparing ids marked every one of them current at once.
       const isCurrent = !!wsKey && wsKey === curKey;
+      if (pinned) return this._pinnedWorkspaceRow(row, wsKey, hubId, isCurrent, glyph);
       return Skeletons.Box.X({
         className: `${cn}__ws-item`,
         service: "switch-workspace",
@@ -3701,25 +3860,562 @@ class desk_module extends LetcBox {
     // them and each group gets a heading instead of one undifferentiated list.
     // `group`, not `list` — the outer `list` is the part being fed, and
     // shadowing it here would read as though the section fed itself.
-    const section = (label, group) =>
+    const section = (label, group, pinned) =>
       group.length
         ? [
-            Skeletons.Note({
-              className: `${cn}__ws-section`,
-              content: label,
-            }),
-            ...group.map(rowFor),
+            pinned
+              ? Skeletons.Box.X({
+                  className: `${cn}__ws-section ${cn}__ws-section--pinned`,
+                  kids: [
+                    Skeletons.Image.Svg({
+                      ico: "ph-push-pin-fill",
+                      className: `${cn}__ws-section-pin`,
+                    }),
+                    Skeletons.Note({ content: label }),
+                  ],
+                })
+              : Skeletons.Note({
+                  className: `${cn}__ws-section`,
+                  content: label,
+                }),
+            ...group.map((r) => rowFor(r, pinned)),
           ]
         : [];
 
-    if (list) {
+    if (list && this._wsMenuMode !== "folders") {
+      // The list now holds workspaces: a later folder feed must not be skipped
+      // as "already on screen".
+      this._folderFeedSig = null;
       list.feed(
-        this._groupWorkspaces(rows).flatMap((g) => section(g.label, g.rows)),
+        this._groupWorkspaces(rows).flatMap((g) => section(g.label, g.rows, g.pinned)),
       );
+      this._bindPinnedDrag(list);
+      if (_.isFunction(this._afterPaint)) this._afterPaint(() => this._revealSwitcherCurrent());
     }
 
     // ── Header (Figma 48:36991) ──────────────────────────────────────────
-    if (head) this._feedWorkspaceHead(head, rows, cur);
+    // Folder mode heads the panel with the open FOLDER (_feedFolderHead).
+    if (head && this._wsMenuMode !== "folders") this._feedWorkspaceHead(head, rows, cur);
+  }
+
+  // ── Pinned workspaces (Lexis, 2026-10-07) ────────────────────────────────
+  //
+  // The rules (order, pin/unpin/move, which pins are shown) live in
+  // libs/workspace-pins. These methods only read and write the user's settings
+  // and redraw the switcher.
+
+  /** The user's pinned workspace keys, newest pin first. */
+  _pinnedKeys() {
+    const settings = _.isFunction(Visitor.settings) ? Visitor.settings() : null;
+    return workspacePins.readPins(_.isObject(settings) ? settings : null);
+  }
+
+  /** The open workspace's switcher key, or null with none open. */
+  _currentWorkspaceKey() {
+    return this._workspaceKey((window.Wm && window.Wm._curWorkspace) || null);
+  }
+
+  /**
+   * One row of the PINNED section: the regular row's glyph and name, then the
+   * pin (press = unpin, after a confirm) and the drag grip.
+   *
+   * NO kidsOpt, unlike the regular row. ui-core merges a box's kidsOpt into
+   * every kid with the PARENT's value winning, so `active: 0` there would
+   * silence the unpin button too. The inert kids carry it individually, as the
+   * phone sheet's header does for the same reason.
+   *
+   * `draggable` + `data-pin-key` are what _bindPinnedDrag reads.
+   */
+  _pinnedWorkspaceRow(row, wsKey, hubId, isCurrent, glyph) {
+    const cn = "desk-module-topbar";
+    const name = row.filename || row.name || "";
+    return Skeletons.Box.X({
+      className: `${cn}__ws-item ${cn}__ws-item--pinned`,
+      service: "switch-workspace",
+      uiHandler: [this],
+      wsKey,
+      wsHubId: hubId,
+      attrOpt: {
+        "data-current": isCurrent ? "1" : "0",
+        "data-area": row.area || "",
+        "data-pin-key": wsKey || "",
+        draggable: "true",
+      },
+      kids: [
+        Skeletons.Element({
+          className: `${cn}__ws-item-icon ${row.area || ""}`,
+          content: glyph(row),
+          active: 0,
+        }),
+        Skeletons.Note({
+          className: `${cn}__ws-item-name`,
+          content: name,
+          active: 0,
+        }),
+        Skeletons.Button.Svg({
+          ico: "ph-push-pin-fill",
+          className: `${cn}__ws-item-unpin`,
+          service: "workspace-unpin-row",
+          wsKey,
+          // The BROWSER's tooltip, not ui-core's `tooltips`: that one is a
+          // node inside the button, so it took the pin's red, widened the row
+          // and put a horizontal scrollbar on the list.
+          attrOpt: {
+            title: LOCALE.UNPIN_WORKSPACE,
+            "aria-label": LOCALE.UNPIN_WORKSPACE,
+          },
+          uiHandler: [this],
+        }),
+        Skeletons.Image.Svg({
+          ico: "ph-dots-six-vertical",
+          className: `${cn}__ws-item-grip`,
+          active: 0,
+        }),
+      ],
+    });
+  }
+
+  /**
+   * Add the Pin / Unpin row to the ⋯ menu's keys, just above the way out
+   * (Move to trash / Leave workspace), the place Lexis' mock gives it. Shared
+   * by the desktop ⋯ and the phone's sheet through _resolveWorkspaceActions.
+   *
+   * An EMPTY list stays empty: that is how the ⋯ knows the workspace's tile is
+   * missing and the grid has to be fetched (_toggleWorkspaceMenu).
+   */
+  _withPinAction(keys) {
+    if (!keys || !keys.length) return keys;
+    const wsKey = this._currentWorkspaceKey();
+    if (!wsKey) return keys;
+    const k = this._pinnedKeys().includes(wsKey) ? "unpinWorkspace" : "pinWorkspace";
+    const out = keys.slice();
+    const last = out.length - 1;
+    if (out[last] !== _a.trash && out[last] !== "leaveWorkspace") {
+      out.push(k);
+    } else if (out[last - 1] === "separator") {
+      out.splice(last - 1, 0, k);
+    } else {
+      out.splice(last, 0, k, "separator");
+    }
+    return out;
+  }
+
+  /**
+   * Pin, unpin or move one workspace. The switcher redraws at once; the server
+   * then applies the SAME operation to the list it holds and answers with the
+   * whole list, which this tab adopts — so a device signed in long ago cannot
+   * write its old copy back over pins made elsewhere. Every other open session
+   * of the user gets the new list pushed (_onPinsPushed).
+   *
+   * Operations are queued so they reach the server in the order they were made.
+   * The server's answer is adopted only for the LAST one queued: an earlier
+   * answer would briefly undo a change still on its way.
+   *
+   * On failure the user is told and the list is re-read from the server.
+   *
+   * @param {String} op pin | unpin | move
+   * @param {String} key switcher key
+   * @param {String|null} [before] move only: the key to land before, null = last
+   * @returns {Promise<Boolean>} whether it was saved
+   */
+  _pinOp(op, key, before = null) {
+    const prev = this._pinnedKeys();
+    const local =
+      op === "pin" ? workspacePins.pin(prev, key)
+        : op === "unpin" ? workspacePins.unpin(prev, key)
+          : workspacePins.move(prev, key, before);
+    if (_.isEqual(prev, local)) return Promise.resolve(true);
+    this._setLocalPins(local);
+    const seq = (this._pinSeq = (this._pinSeq || 0) + 1);
+    const svc = SERVICE.drumate && SERVICE.drumate.pinned_workspaces;
+    // A server without the op service yet (UI deployed first): the plain
+    // settings write this feature started with.
+    const send = () =>
+      svc
+        ? this.postService({ service: svc, op, key, before: before || "", hub_id: Visitor.id })
+        : this.postService({
+          service: SERVICE.drumate.update_settings,
+          settings: { [workspacePins.SETTINGS_KEY]: local },
+          hub_id: Visitor.id,
+        });
+    const run = () => {
+      this._pinInFlight = (this._pinInFlight || 0) + 1;
+      return send()
+        .then((res) => {
+          const list = res && res[workspacePins.SETTINGS_KEY];
+          if (seq === this._pinSeq && Array.isArray(list)) {
+            this._setLocalPins(workspacePins.readPins(res));
+          }
+          return true;
+        })
+        .catch((e) => {
+          this.warn && this.warn("[ws-pin] save failed", e);
+          if (window.Wm && _.isFunction(window.Wm.alert)) {
+            window.Wm.alert(LOCALE.PIN_WORKSPACE_FAILED);
+          }
+          this._pinsStale = 1;
+          return false;
+        })
+        .finally(() => {
+          this._pinInFlight -= 1;
+          // A push from another device landed while this tab was waiting, or
+          // the write failed: the order of the two answers is not known, so
+          // ask the server once what the list is now.
+          if (!this._pinInFlight && this._pinsStale) this._refreshPins();
+        });
+    };
+    this._pinWrite = (this._pinWrite || Promise.resolve()).then(run, run);
+    return this._pinWrite;
+  }
+
+  /**
+   * Re-read the pins from the server and redraw. One small GET, run only when
+   * the list is known or suspected to be behind: after a failed write, after a
+   * push that crossed this tab's own request, and on the switcher's existing
+   * background refresh (_revalidateWorkspaces) — which covers a tab that slept
+   * through a push. Never on a timer.
+   */
+  _refreshPins() {
+    const svc = SERVICE.drumate && SERVICE.drumate.pinned_workspaces;
+    if (!svc) return Promise.resolve(false);
+    this._pinsStale = 0;
+    return Promise.resolve(this.fetchService(svc, { op: "get", hub_id: Visitor.id }))
+      .then((res) => {
+        const list = res && res[workspacePins.SETTINGS_KEY];
+        // Something was changed meanwhile; its own answer is the newer truth.
+        if (!Array.isArray(list) || this._pinInFlight) return false;
+        if (!_.isEqual(workspacePins.readPins(res), this._pinnedKeys())) {
+          this._setLocalPins(workspacePins.readPins(res));
+        }
+        return true;
+      })
+      .catch(() => false);
+  }
+
+  /**
+   * Another tab or device changed the pins (server push, via Wm). Adopt the
+   * list — unless this tab has its own change on the way, in which case the
+   * order of the two is unknown and the list is re-read once it lands.
+   */
+  _onPinsPushed(data) {
+    const list = data && data[workspacePins.SETTINGS_KEY];
+    if (!Array.isArray(list)) return;
+    if (this._pinInFlight) {
+      this._pinsStale = 1;
+      return;
+    }
+    const next = workspacePins.readPins(data);
+    if (!_.isEqual(next, this._pinnedKeys())) this._setLocalPins(next);
+  }
+
+  /** Put `keys` into Visitor's settings and redraw the switcher list. */
+  _setLocalPins(keys) {
+    const cur = _.isFunction(Visitor.settings) ? Visitor.settings() : null;
+    Visitor.set({
+      settings: {
+        ...(_.isObject(cur) ? cur : {}),
+        [workspacePins.SETTINGS_KEY]: keys,
+      },
+    });
+    if (this._wsListPart) this._renderWorkspaceMenu(this._wsListPart);
+  }
+
+  /** Unpin, after the user confirms (Duy, 2026-10-07). */
+  _confirmUnpinWorkspace(wsKey) {
+    const wm = window.Wm;
+    if (!wsKey || !wm || !_.isFunction(wm.confirm)) return;
+    const row = (this._workspaces || []).find((r) => this._workspaceKey(r) === wsKey);
+    const name = (row && (row.filename || row.name)) || "";
+    return wm
+      .confirm({
+        title: LOCALE.UNPIN_WORKSPACE,
+        // Escaped: the message is rendered as markup and the name is whatever
+        // the workspace's admins typed.
+        message: LOCALE.MSG_UNPIN_WORKSPACE.format(_.escape(name)),
+        confirm: LOCALE.UNPIN,
+        confirm_type: "primary",
+        cancel: LOCALE.CANCEL,
+        cancel_type: "secondary",
+        mode: "hbf",
+      })
+      .then(() => this._pinOp("unpin", wsKey))
+      .catch(() => {});
+  }
+
+  /**
+   * Drag a pinned row to reorder the pins. HTML5 drag and drop, as the docs
+   * editor's tab rail does, delegated on the list element so it survives every
+   * re-feed of the rows. Bound once per element.
+   *
+   * Only rows carrying `data-pin-key` (the pinned ones) take part; the drag is
+   * tagged internal and stopped here so the desk's file-drop machinery never
+   * treats it as an upload (same as the tasks board).
+   */
+  _bindPinnedDrag(list) {
+    const root = list && list.el;
+    if (!root || root.__wsPinDragBound) return;
+    root.__wsPinDragBound = 1;
+    const rowOf = (t) => {
+      const row = t && _.isFunction(t.closest) ? t.closest("[data-pin-key]") : null;
+      return row && root.contains(row) && row.dataset.pinKey ? row : null;
+    };
+    const clear = () => {
+      root.querySelectorAll("[data-pin-drop]").forEach((n) => n.removeAttribute("data-pin-drop"));
+    };
+    root.addEventListener("dragstart", (e) => {
+      const row = rowOf(e.target);
+      if (!row) return;
+      e.stopPropagation();
+      this._pinDragKey = row.dataset.pinKey;
+      row.dataset.pinDragging = "1";
+      try {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", this._pinDragKey);
+      } catch (err) {
+        /* the stopPropagation above still holds */
+      }
+      try {
+        e.dataTransfer.setData(_K.internalDragType, "1");
+      } catch (err) {
+        /* some engines refuse custom types */
+      }
+    });
+    root.addEventListener("dragenter", (e) => {
+      if (this._pinDragKey) e.stopPropagation();
+    });
+    root.addEventListener("dragover", (e) => {
+      if (!this._pinDragKey) return;
+      e.stopPropagation();
+      const row = rowOf(e.target);
+      if (!row) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+      clear();
+      if (row.dataset.pinKey === this._pinDragKey) return;
+      const b = row.getBoundingClientRect();
+      row.dataset.pinDrop = e.clientY < b.top + b.height / 2 ? "before" : "after";
+    });
+    root.addEventListener("drop", (e) => {
+      const key = this._pinDragKey;
+      if (!key) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const row = rowOf(e.target);
+      const where = row && row.dataset.pinDrop;
+      clear();
+      if (!row || !where) return;
+      const pins = this._pinnedKeys();
+      const target = row.dataset.pinKey;
+      const i = pins.indexOf(target);
+      if (i === -1) return;
+      // "after X" is "before whatever follows X", or the end.
+      const beforeKey = where === "before" ? target : (pins[i + 1] || null);
+      this._pinOp("move", key, beforeKey);
+    });
+    root.addEventListener("dragend", () => {
+      this._pinDragKey = null;
+      clear();
+      root.querySelectorAll("[data-pin-dragging]").forEach((n) => n.removeAttribute("data-pin-dragging"));
+    });
+  }
+
+  /**
+   * PICK WHAT THE SWITCHER LISTS, each time it opens.
+   *
+   * The address decides: deeper than the workspace (`aaaa / abc`) → the
+   * folders at the open folder's level (abc, asdasd, test); the workspace
+   * alone or a section label → the workspaces. Asked of the breadcrumb, which
+   * holds the crumbs on screen, so the menu cannot describe another place.
+   *
+   * The mode is stamped on the chip as data-ws-mode, which is what hides the
+   * workspace header and "New workspaces" in folder mode (desk/skin/topbar).
+   * On the chip, not the menu: the chip is the switcher's button and outlives
+   * nothing it should not — a topbar re-feed builds both afresh, and the next
+   * open stamps again.
+   */
+  _prepareSwitcherMode() {
+    const crumb = _.isFunction(this.getPart) ? this.getPart("breadcrumb") : null;
+    const scope = crumb && _.isFunction(crumb.siblingScope) ? crumb.siblingScope() : null;
+    const prev = this._wsMenuMode || "workspaces";
+    const mode = scope ? "folders" : "workspaces";
+    this._wsMenuMode = mode;
+    const chip = this._crumbGroupPart;
+    if (chip && chip.el && chip.el.dataset) chip.el.dataset.wsMode = mode;
+    if (mode === "folders") {
+      return Promise.resolve(this._renderFolderSiblings(scope)).catch(() => {});
+    }
+    // Coming back from folder mode: the list still holds folders.
+    if (prev === "folders" && this._wsListPart) {
+      return Promise.resolve(this._renderWorkspaceMenu(this._wsListPart)).catch(() => {});
+    }
+  }
+
+  /**
+   * Fill the switcher list with the open folder's siblings.
+   *
+   * A level seen before paints at once from memory and is then refreshed; a
+   * new one paints empty and fills when show_node_by answers. An answer for a
+   * level the user has since left — or after the panel went back to
+   * workspaces — is dropped: it would list the wrong folders.
+   */
+  async _renderFolderSiblings(scope) {
+    const alive = (p) => !!(p && p.el && !(p.isDestroyed && p.isDestroyed()));
+    if (!scope || !alive(this._wsListPart)) return;
+    this._folderScopeKey = scope.key;
+    // The key is the PARENT; the open folder is tracked too, or a late answer
+    // for abc would mark abc current after the user moved to test.
+    this._folderScopeCur = scope.currentNid;
+    this._feedFolderHead(scope);
+    const cache = this._folderSiblings || (this._folderSiblings = {});
+    const cached = cache[scope.key];
+    this._feedFolderSiblings(this._wsListPart, scope, cached || []);
+    let rows = null;
+    try {
+      rows = await fetchSiblingFolders(
+        (params) => this.fetchService(SERVICE.media.show_node_by, params),
+        scope,
+      );
+    } catch (e) {
+      this.warn && this.warn("[ws-menu] sibling folders failed", e);
+    }
+    if (
+      this._wsMenuMode !== "folders"
+      || this._folderScopeKey !== scope.key
+      || this._folderScopeCur !== scope.currentNid
+    ) {
+      return;
+    }
+    if (!alive(this._wsListPart)) return;
+    if (!rows) {
+      if (!cached) this._feedFolderSiblings(this._wsListPart, scope, []);
+      return;
+    }
+    cache[scope.key] = rows;
+    this._feedFolderSiblings(this._wsListPart, scope, rows);
+  }
+
+  /**
+   * FOLDER MODE'S HEADER: the open folder, in the same slot and the same
+   * shape (__ws-head) the workspace switcher heads with the open workspace,
+   * so the two panels read alike. Name and glyph only: the workspace header's
+   * link and ⋯ act on the workspace.
+   */
+  _feedFolderHead(scope) {
+    const head = this._wsHeadPart;
+    if (!head || !head.el || (head.isDestroyed && head.isDestroyed())) return;
+    const cn = "desk-module-topbar";
+    const area = scope.area || "";
+    head.feed([
+      Skeletons.Element({
+        className: `${cn}__ws-head-icon ${area}`,
+        content: folderIcon({
+          area,
+          filetype: _a.folder,
+          role: "",
+          widgetId: _.uniqueId("ws-head-icon-"),
+          isAttachment: 1,
+        }),
+      }),
+      Skeletons.Box.X({
+        className: `${cn}__ws-head-name`,
+        kids: [
+          Skeletons.Note({
+            className: `${cn}__ws-head-name-text`,
+            content: scope.currentName || "",
+          }),
+        ],
+      }),
+    ]);
+  }
+
+  /**
+   * One group label ("In aaaa", the parent) and one row per sibling, built
+   * with the workspace rows' own classes so they look and hover the same.
+   * The open folder is marked data-current, like the open workspace is; it
+   * also heads the panel (_feedFolderHead), as the open workspace does.
+   */
+  _feedFolderSiblings(list, scope, rows) {
+    const cn = "desk-module-topbar";
+    const sig = `${scope.key}|${scope.currentNid}|${rows
+      .map((r) => `${r.nid}:${r.filename || r.name || ""}`)
+      .join(",")}`;
+    if (list === this._folderFeedList && sig === this._folderFeedSig) return;
+    this._folderFeedList = list;
+    this._folderFeedSig = sig;
+    if (!rows.length) {
+      return list.feed([
+        Skeletons.Note({
+          className: `${cn}__ws-empty`,
+          content: LOCALE.NO_CONTENT || "",
+        }),
+      ]);
+    }
+    // A GROUP LABEL, like the workspace list's "INTERNAL": "In aaaa" says
+    // whose folders these are. It used to be the parent drawn as its crumb,
+    // full size with its glyph, and read as one more row to pick.
+    const label = scope.parentName
+      ? (LOCALE.FOLDERS_IN || "In {0}").format(scope.parentName)
+      : LOCALE.FOLDERS || "";
+    list.feed([
+      Skeletons.Note({
+        className: `${cn}__ws-section`,
+        content: label,
+      }),
+      ...rows.map((row) => {
+        const area = row.area || scope.area || "";
+        const isCurrent = `${row.nid}` === `${scope.currentNid}`;
+        return Skeletons.Box.X({
+          className: `${cn}__ws-item`,
+          service: "switch-folder",
+          uiHandler: [this],
+          folderNid: row.nid,
+          folderHubId: row.hub_id || scope.hub_id,
+          folderArea: area,
+          attrOpt: {
+            "data-current": isCurrent ? "1" : "0",
+            "data-area": area,
+          },
+          kidsOpt: { active: 0 },
+          kids: [
+            Skeletons.Element({
+              className: `${cn}__ws-item-icon ${area}`,
+              content: folderIcon({
+                area,
+                filetype: _a.folder,
+                role: "",
+                widgetId: _.uniqueId("ws-folder-icon-"),
+                isAttachment: 1,
+              }),
+            }),
+            Skeletons.Note({
+              className: `${cn}__ws-item-name`,
+              content: row.filename || row.name || "",
+            }),
+          ],
+        });
+      }),
+    ]);
+    // Rows arrive after the panel opened: bring the open folder into view.
+    if (_.isFunction(this._afterPaint)) this._afterPaint(() => this._revealSwitcherCurrent());
+  }
+
+  /**
+   * A sibling row was picked: open that folder in the workspace pane — the
+   * entry point the breadcrumb's own crumbs use, which also re-resolves the
+   * address. The folder already open is not a destination.
+   */
+  _switchFolder(cmd) {
+    const get = (k) => (cmd && _.isFunction(cmd.mget) ? cmd.mget(k) : null);
+    const nid = get("folderNid");
+    const hub_id = get("folderHubId");
+    if (!nid || !hub_id) return;
+    const crumb = _.isFunction(this.getPart) ? this.getPart("breadcrumb") : null;
+    const scope = crumb && _.isFunction(crumb.siblingScope) ? crumb.siblingScope() : null;
+    if (scope && `${scope.currentNid}` === `${nid}`) return;
+    // window.Wm, never a bare `Wm` (see _renderWorkspaceMenu).
+    const wm = window.Wm;
+    if (!wm || !_.isFunction(wm.openWorkspaceFolder)) return;
+    wm.openWorkspaceFolder({ hub_id, nid, area: get("folderArea"), filetype: _a.folder });
   }
 
   /**
@@ -3852,6 +4548,11 @@ class desk_module extends LetcBox {
       _cur && `${_cur.hub_id}` === `${wsHub}` ? _cur.nid : w.mget && w.mget(_a.nid),
     );
     if (!tile || !_.isFunction(tile._commitRename)) return false;
+    // Admins and up only. Answer "handled" so the caller does not fall back
+    // to the dialog, which would be refused just the same.
+    if (_.isFunction(tile._workspaceRenameAllowed) && !tile._workspaceRenameAllowed()) {
+      return true;
+    }
 
     const box = this._wsRenamePart;
     if (!box || !box.el || (box.isDestroyed && box.isDestroyed())) return false;
@@ -4393,12 +5094,14 @@ class desk_module extends LetcBox {
       const label = (kids.find((x) => x && x.content != null) || {}).content;
       if (!label) continue;
       const isRename = k === _a.rename;
+      // Pin / Unpin are the desk's too (see _toggleWorkspaceMenu).
+      const isPin = k === "pinWorkspace" || k === "unpinWorkspace";
       out.push({
         key: k,
         label,
         ico,
         service: isRename ? "workspace-rename" : row.service,
-        onDesk: isRename ? 1 : 0,
+        onDesk: isRename || isPin ? 1 : 0,
       });
     }
     return out;
@@ -4489,11 +5192,17 @@ class desk_module extends LetcBox {
               // `share` workspace, but sharing already has two doors — the
               // header's chain icon and the rail's Access — and a third one
               // here is the duplication this menu was just cleared of.
-              && k !== "secureShare" && k !== _a.share),
+              && k !== "secureShare" && k !== _a.share
+              // RENAME — admins and up only (Duy, 2026-10-07). The builder
+              // offers it to anyone who can organise, which is right for a
+              // folder; on a workspace the tile says whether it is allowed.
+              && (k !== _a.rename
+                || !_.isFunction(media._workspaceRenameAllowed)
+                || media._workspaceRenameAllowed())),
         )
       : [];
 
-    return { w, media, target, keys };
+    return { w, media, target, keys: this._withPinAction(keys) };
   }
 
   /**
@@ -4591,6 +5300,11 @@ class desk_module extends LetcBox {
           // the topbar, which is the desk's own chrome; the tile still owns
           // the commit (its _commitRename carries the holder-scoped payload),
           // but it does not own the label being edited.
+          row.uiHandler = [this];
+        }
+        // PIN / UNPIN act on the user's settings, not on the tile: the desk
+        // answers them, as it answers Rename.
+        if (row && (k === "pinWorkspace" || k === "unpinWorkspace")) {
           row.uiHandler = [this];
         }
         return row;
@@ -5098,15 +5812,23 @@ class desk_module extends LetcBox {
     // along with the chip.
     const chip = this._crumbGroupPart;
     if (!chip || !chip.el || !chip.el.querySelector) return false;
+    // THE CARET ALWAYS OPENS. It is drawn in every state — loading, a deeper
+    // path, a section screen (desk/skin/topbar.scss) — so it must never be a
+    // dead glyph. The panel lives inside __ws-wrapper, not inside __ws-btn, so
+    // this cannot catch a click meant for a row in the open dropdown.
+    if (target && _.isFunction(target.closest)
+      && target.closest(".desk-module-topbar__ws-btn")) {
+      return true;
+    }
     if (!chip.el.querySelector(".breadcrumb-item__icon")
       || !chip.el.querySelector(".breadcrumb-item__filename")) {
       return false;
     }
-    // A DEEPER PATH HAS NO SWITCHER: topbar.scss hides __ws-wrapper once the
-    // crumb track holds more than one item, so there is nothing to open.
-    if (chip.el.querySelector(".desk-breadcrumb__content > :nth-child(2)")) {
-      return false;
-    }
+    // On a deeper path the current crumb is a folder, and its NAME opens the
+    // switcher too, as the workspace's name does on the workspace: in folder
+    // mode the panel lists folders (_prepareSwitcherMode), so it is the same
+    // panel the caret beside it opens. The crumbs above it still navigate back
+    // (the data-current test below).
     if (!target || !_.isFunction(target.closest)) return true;
     // THE PANEL IS NOT THE CHIP, even though it is inside it.
     //
@@ -5136,8 +5858,7 @@ class desk_module extends LetcBox {
     const crumb = target.closest(".breadcrumb-item__main");
     if (!crumb) return true;
     // A SECTION label carries no service — there is nothing to browse to — so
-    // it is not a destination either. It is handled again in the toggle, which
-    // refuses to open a workspace list over Settings or Trash.
+    // it is not a destination either.
     if (crumb.classList && crumb.classList.contains("breadcrumb-item__main--section")) {
       return true;
     }
@@ -5155,15 +5876,74 @@ class desk_module extends LetcBox {
   _toggleWorkspaceSwitcher() {
     const menu = this._wsSwitcher;
     if (!menu || !menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
-    // A SECTION screen has no workspace in the bar for the panel to hang off,
-    // and the chip paints no ground there — see the `:has()` rule in
-    // desk/skin/topbar.scss. Offering the list would be a control the chip is
-    // not drawing.
-    if (this.el && this.el.querySelector) {
-      const bc = this.el.querySelector(".desk-breadcrumb__ui[data-section='1']");
-      if (bc) return;
+    // Opens on a SECTION screen too: the caret is drawn there (see
+    // desk/skin/topbar.scss), and the list is a way back into a workspace.
+    //
+    // OPENING decides what it lists (_prepareSwitcherMode) — the same
+    // open test _closeWorkspaceSwitcher uses. Closing leaves the list alone.
+    const open = menu.isOpen || (menu.mget && menu.mget(_a.state));
+    if (!open) {
+      this._prepareSwitcherMode();
+      this._placeSwitcherPanel();
     }
     if (_.isFunction(menu._triggerToggle)) menu._triggerToggle();
+    if (!open) this._afterPaint(() => this._revealSwitcherCurrent());
+  }
+
+  // Two frames: one for the menu to open, one for its rows to lay out.
+  _afterPaint(fn) {
+    if (typeof requestAnimationFrame !== "function") return fn();
+    requestAnimationFrame(() => requestAnimationFrame(fn));
+  }
+
+  /**
+   * OPEN THE PANEL UNDER THE CRUMB IT IS ABOUT.
+   *
+   * The panel is absolute in __crumb-group and sat at its left edge, under the
+   * workspace, whatever it listed. On a folder path it lists the open folder's
+   * level, so on "abd / share-list-test / zz-folder-18 ⌄" it opened under
+   * "abd", a long way from the caret just pressed. It now starts under the
+   * current crumb (desk/skin/topbar --ws-panel-left), which on the workspace
+   * itself is the left edge as before, and is pulled back left when it would
+   * run off the window.
+   */
+  _placeSwitcherPanel() {
+    const chip = this._crumbGroupPart && this._crumbGroupPart.el;
+    if (!chip || !_.isFunction(chip.querySelector) || !chip.style) return;
+    const crumb = chip.querySelector('.breadcrumb-item__main[data-current="1"]');
+    let left = 0;
+    if (crumb && _.isFunction(crumb.getBoundingClientRect)) {
+      left = Math.max(0, crumb.getBoundingClientRect().left - chip.getBoundingClientRect().left);
+    }
+    chip.style.setProperty("--ws-panel-left", `${Math.round(left)}px`);
+    this._afterPaint(() => {
+      const panel = chip.querySelector(".desk-module-topbar__ws-wrapper .menu-topic-items__wrapper");
+      if (!panel || !_.isFunction(panel.getBoundingClientRect)) return;
+      const over = panel.getBoundingClientRect().right - (window.innerWidth - 12);
+      if (over > 0) {
+        chip.style.setProperty("--ws-panel-left", `${Math.round(Math.max(0, left - over))}px`);
+      }
+    });
+  }
+
+  /**
+   * SCROLL THE OPEN ROW INTO VIEW. The list scrolls inside a bounded panel and
+   * always opened at its top, so in a long one (22 folders, the open one 19th)
+   * the row the panel is about was out of sight. Centred, so the sticky
+   * heading cannot cover it; left alone when it is already in view. Called
+   * on open and again whenever the rows are fed, since folder rows arrive
+   * after the panel opens.
+   */
+  _revealSwitcherCurrent() {
+    const list = this._wsListPart && this._wsListPart.el;
+    if (!list || !_.isFunction(list.querySelector)) return;
+    const row = list.querySelector('.desk-module-topbar__ws-item[data-current="1"]');
+    if (!row) return;
+    const box = list.getBoundingClientRect();
+    if (!box.height) return;
+    const r = row.getBoundingClientRect();
+    if (r.top >= box.top && r.bottom <= box.bottom) return;
+    list.scrollTop += r.top - box.top - (box.height - r.height) / 2;
   }
 
   /**
@@ -5474,7 +6254,12 @@ class desk_module extends LetcBox {
     }
     if (this.isDestroyed && this.isDestroyed()) return false;
 
-    const first = rows && rows[0];
+    // The FIRST PINNED workspace when there is one (Lexis, 2026-10-07: it is
+    // the one that shows up when the user enters Drumee), else the first row.
+    const first = rows && (
+      workspacePins.firstPinned(rows, this._pinnedKeys(), (r) => this._workspaceKey(r))
+      || rows[0]
+    );
     await this._showEmptyWorkspaceScreen(!first);
     if (!first) return false;
 
@@ -6045,11 +6830,11 @@ class desk_module extends LetcBox {
    *   screen the user has already left.
    * @returns {Promise<Boolean>} whether the tour was asked for
    */
-  async _raiseRailTour(tour, seq) {
+  async _raiseRailTour(tour, seq, gate) {
     await this._whenToursIdle();
     if (this.isDestroyed && this.isDestroyed()) return false;
     if (seq !== undefined && (this._navSeq || 0) !== seq) return false;
-    return require("libs/tutorial-tours").fire(tour, this);
+    return require("libs/tutorial-tours").fire(tour, this, null, gate);
   }
 
   /**
@@ -6084,7 +6869,7 @@ class desk_module extends LetcBox {
    * @param {String} tour the tour that tab is about
    * @returns {Promise}
    */
-  async _railTabWithTour(tab, tour) {
+  async _railTabWithTour(tab, tour, gate) {
     // THIS PRESS SUPERSEDES THE ONE BEFORE IT. See _navigated: the previous
     // press may have parked a tab switch on its tour's release, and ending
     // that tour below is exactly what fires it.
@@ -6099,7 +6884,7 @@ class desk_module extends LetcBox {
     // is up comes down is what lets that one skip its fade: a tour being
     // replaced by another tour has nothing to reveal, while a tour that is
     // simply ending is uncovering the window on purpose. See _endWindowTour.
-    const offerable = require("libs/tutorial-tours").offerable(tour, this);
+    const offerable = require("libs/tutorial-tours").offerable(tour, this, gate);
     this._endWindowTourUnlessAbout(tab, { immediate: offerable });
     if (!w) await this._openDefaultWorkspace();
     if (this.isDestroyed && this.isDestroyed()) return;
@@ -6117,7 +6902,7 @@ class desk_module extends LetcBox {
     // then resolved, fire() claimed the now-free tour and mounted a fresh
     // migrate tour straight over the Calendar the user had just opened.
     if (this._windowTourIs(tour)) return this._railTab(tab);
-    const raised = await this._raiseRailTour(tour, seq);
+    const raised = await this._raiseRailTour(tour, seq, gate);
     // Whatever the wait inside was for, a navigation during it wins: the user
     // has gone elsewhere, so neither a tour nor this tab lands on top of it.
     if ((this._navSeq || 0) !== seq) return;
@@ -7057,10 +7842,18 @@ class desk_module extends LetcBox {
     // before it parked, and the _endWindowTourUnlessAbout below is what would
     // otherwise set that off.
     this._navigated();
-    if (this.el) this.el.dataset.mtab = "access";
     // Same as _railTab, and for the same reason: an open-but-unraised pane is
     // not "no workspace". See _railWorkspace.
     const w = this._railWorkspace();
+    // A TOGGLE (Lexis, 2026-10-12): pressed while the members overlay is on
+    // screen, the rail's Access closes it exactly as the panel's ✕ does — the
+    // tab underneath stays and the rail is lit on it again. At once, before
+    // the section-screen exit and the tour wait below, which only an OPEN
+    // needs (same shape as the header's "workspace-access" toggle).
+    if (opt && opt.members && this._accessOverlayOnScreen(w)) {
+      return w.onUiEvent(w, { service: ACCESS_CLOSE });
+    }
+    if (this.el) this.el.dataset.mtab = "access";
     // Same as _railTab: Access is workspace content, so it cannot be reached
     // from behind a section screen either.
     this._leaveSectionScreen(w);
@@ -7102,6 +7895,32 @@ class desk_module extends LetcBox {
         members: opt && opt.members ? 1 : 0,
       });
     }
+  }
+
+  /**
+   * Is the rail's Access overlay up AND what the user is looking at — so that
+   * a press of Access means "close it"?
+   *
+   * Up but covered is not on screen: a section screen in settings-main-slot
+   * (Calendar, Inbox, Settings…), the Invite popup, or a popup window raised
+   * over the pane. A press then is the user asking to SEE Access, and the
+   * open path brings it back to the front (_leaveSectionScreen, raise).
+   *
+   * @param {Object} [w] the workspace window the rail acts on
+   * @returns {Boolean}
+   */
+  _accessOverlayOnScreen(w) {
+    if (!w || (w.isDestroyed && w.isDestroyed())) return false;
+    if (!accessOverlayOpen(w) || !_.isFunction(w.onUiEvent)) return false;
+    if (this._invitePopup && !(this._invitePopup.isDestroyed && this._invitePopup.isDestroyed())) {
+      return false;
+    }
+    const crumb = _.isFunction(this.getPart) ? this.getPart("breadcrumb") : null;
+    if (crumb && _.isFunction(crumb.isSectionMode) && crumb.isSectionMode()) return false;
+    // The same "is the pane raised" test Wm.loadWorkspace makes before it
+    // lifts the pane on a re-click.
+    if (w.el && w.el.dataset && w.el.dataset.state !== "1") return false;
+    return true;
   }
 
   /** Keep the topbar actions enabled when the breadcrumb context changes. */
@@ -7643,6 +8462,15 @@ class desk_module extends LetcBox {
           // desk is still restoring behind the overlay and there has been no
           // wizard to warm anything during — a different situation with its own
           // timing, and not the one being fixed.
+          //
+          // ON A PHONE TOO. Finishing the wizard is the one moment the
+          // workspace tour is owed whatever the `mobile_tours` rollout switch
+          // says (libs/tutorial-tours allowPhone). It does not hand off to
+          // migrate on a phone (_chainMigrateTour); the phone's other tours
+          // come from their own taps (phoneGate). Harmless on a desktop.
+          if (postOnboarding) {
+            require("libs/tutorial-tours").allowPhone(["workspace"]);
+          }
           const delay = postOnboarding ? 0 : 2000;
           setTimeout(() => {
             if (this._launchHomeTutorial(explicit, forced)) return;
@@ -8216,6 +9044,20 @@ class desk_module extends LetcBox {
       is_support: 1,
     };
 
+    await this.openPeerChat(peer);
+    return true;
+  }
+
+  /**
+   * Open the Inbox panel on a 1:1 conversation with `peer`.
+   *
+   * Shared by Contact Support and the Contacts panel's Inbox action. Nothing
+   * is written server-side: chat.post creates the thread on the first message.
+   *
+   * @param {Object} peer  needs `entity_id`; display fields ride along as meta
+   */
+  async openPeerChat(peer) {
+    if (!peer || !peer.entity_id) return;
     const part = this.getPart && this.getPart(INBOX_SLOT);
     const child =
       part && !part.isEmpty() && part.children && part.children.last();
@@ -8223,17 +9065,16 @@ class desk_module extends LetcBox {
     // The chat panel is a keep-alive slot: once mounted it is hidden and
     // reshown rather than rebuilt, and togglePanel's mounted-widget branch
     // returns before it can pass options down. Drive the live widget directly
-    // so an already-open inbox switches to the support conversation instead
+    // so an already-open inbox switches to the requested conversation instead
     // of revealing whatever was last open — or toggling itself shut.
     if (child && _.isFunction(child.openPeer)) {
       this.closeOtherSidebarPanels(INBOX_SLOT);
       this._showPanel(part);
       await child.openPeer(peer.entity_id, peer);
-      return true;
+      return;
     }
 
     await this.togglePanel("chat_p2p", INBOX_SLOT, true, { open_peer: peer });
-    return true;
   }
 
   /**
@@ -10570,6 +11411,10 @@ class desk_module extends LetcBox {
     if (pointerDragged || !window.Wm) {
       return;
     }
+    // Leaving Settings with unsaved profile edits: ask first, and replay this
+    // same event once the user has saved or discarded. Before everything
+    // else, so a cancelled leave has spun no icon and closed no panel.
+    if (this._guardSettingsLeave(cmd, service, args)) return;
     // A topbar utility icon: spin it and lock its siblings until its screen is
     // up. The inner call is this same method, told apart by _utilityInner.
     if (this._utilityInner !== cmd && this._isUtilityBtn(cmd)) {
@@ -10855,6 +11700,9 @@ class desk_module extends LetcBox {
       // a backdrop tap from also closing the panel standing behind the card.
       // Renaming it here would silently re-break those two.
       case "mobile-close-drawer":
+        // The tours mount in the overlay this service is wired to. A tap on a
+        // tour is not a tap on the drawer backdrop.
+        if (this.el && this.el.dataset && (this.el.dataset.deskTour || this.el.dataset.windowTour)) return;
         return this._closeMobileSearch();
 
       case "toggle-sidebar-pin":
@@ -10975,6 +11823,27 @@ class desk_module extends LetcBox {
       case "workspace-menu":
         return this._toggleWorkspaceMenu(cmd);
 
+      // ⋯ menu (desktop) or the phone sheet's action row: pin or unpin the
+      // OPEN workspace. Unpinning asks first.
+      case "workspace-pin":
+      case "workspace-unpin": {
+        this._closeWorkspaceMenu();
+        const wsKey = this._currentWorkspaceKey();
+        if (!wsKey) return;
+        if (service === "workspace-unpin") return this._confirmUnpinWorkspace(wsKey);
+        return this._pinOp("pin", wsKey);
+      }
+
+      // The pin on a row of the switcher's PINNED section.
+      case "workspace-unpin-row":
+        return this._confirmUnpinWorkspace(cmd.mget("wsKey"));
+
+
+      // Switcher row in FOLDER mode (_feedFolderSiblings) → open that sibling.
+      // The panel goes with the gesture, as for a workspace row.
+      case "switch-folder":
+        this._closeWorkspaceSwitcher();
+        return this._switchFolder(cmd);
 
       // Switcher row → open that workspace. Same entry point the sidebar list
       // used, so area handling, panel cleanup and the breadcrumb update are
@@ -11058,7 +11927,9 @@ class desk_module extends LetcBox {
         // on the home grid — it is drawn on a window or not at all — and if
         // that fallback did open a workspace, the chat pane is exactly what the
         // user is now looking at.
-        return this._railTabWithTour(_a.chat, _a.chat);
+        // ON A PHONE TOO: the bottom bar's Chat is a phone's way into this
+        // tour, so it passes the mobile switch (phoneGate).
+        return this._railTabWithTour(_a.chat, _a.chat, require("libs/tutorial-tours").phoneGate());
       }
       case "rail-task": {
         // Contextual tour, on the first press of Task in the rail.
@@ -11091,7 +11962,8 @@ class desk_module extends LetcBox {
         // is written when — and only when — "Create your first task" is
         // pressed. Until then the claim keeps succeeding and the rail keeps
         // offering it.
-        return this._railTabWithTour(_a.task, "folder_task");
+        // ON A PHONE TOO, from the bottom bar's Task (phoneGate).
+        return this._railTabWithTour(_a.task, "folder_task", require("libs/tutorial-tours").phoneGate());
       }
       case "rail-meet": {
         // Contextual tour, on a press of Meet in the rail — the gesture this
@@ -11112,7 +11984,8 @@ class desk_module extends LetcBox {
         // the user is not on". An in-window tour cannot land on the home grid —
         // it is drawn on a window or not at all — and _onTourTrigger is what
         // routes this one there.
-        return this._railTabWithTour("meeting", "meeting");
+        // ON A PHONE TOO, from the bottom bar's Meet (phoneGate).
+        return this._railTabWithTour("meeting", "meeting", require("libs/tutorial-tours").phoneGate());
       }
       // The rail's Access and the switcher header's link icon do the identical
       // thing — hand `folder-manage-access` to the active workspace window,
@@ -11171,9 +12044,9 @@ class desk_module extends LetcBox {
       case "workspace-rename-save":
         return this._saveWorkspaceRename();
 
-      // Mute popup CARDS for every workspace — an empty hub_id is the global
-      // scope in activity/mute.js. It suppresses the interrupting card only:
-      // the Notification Center keeps every row, the badge and the counts.
+      // Mute every chat — an empty hub_id is the global scope in
+      // activity/mute.js: no card, OS notification or push, and the server
+      // leaves chat rows out of the Notification Center and the badges.
       //
       // The cache is refreshed from the server's own response inside setMute,
       // never from what we asked for, so it cannot drift from the database.
@@ -11185,8 +12058,16 @@ class desk_module extends LetcBox {
         const next = !(muteState() || {}).global;
         return setMute(this, "", next).then(({ ok }) => {
           if (!ok) return Wm.alert(LOCALE.MUTE_FAILED);
-          // Rebuild the topbar so the row reflects the new state; the menu has
-          // already closed itself (persistence: once) by the time this lands.
+          // The row itself is repainted by _paintMuteRow, which listens for
+          // the cache change setMute just broadcast; the menu has already
+          // closed itself (persistence: once) by the time this lands — so a
+          // small toast is the visible answer to the click. Worded from what
+          // the server now holds, not from what was asked.
+          const muted = !!(muteState() || {}).global;
+          showToast(this, {
+            part: this.getPart("desk-toast"),
+            message: muted ? LOCALE.MUTE_DONE_ALL : LOCALE.UNMUTE_DONE_ALL,
+          });
           if (_.isFunction(this._syncWorkspaceTopbar)) this._syncWorkspaceTopbar();
           return RADIO_BROADCAST.trigger("breadcrumb:content");
         });

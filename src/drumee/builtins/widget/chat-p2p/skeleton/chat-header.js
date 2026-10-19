@@ -174,13 +174,14 @@ module.exports = function (ui, contact) {
     kids: [
       videoBtn,
       phoneBtn,
-      // `show-more` has no handler in chat_p2p — the button is inert. Leave it
-      // where it has always been, but keep it out of the support thread rather
-      // than offer a user in need of help a control that does nothing.
+      // Chat details for this conversation (widget_chat_details, via
+      // ./chat-details-host). Not in the support thread.
       talkingToSupport ? null : Skeletons.Button.Svg({
         ico: 'menu_expand',
-        className: `${fig}__header-btn`,
-        service: 'show-more',
+        className: `${fig}__header-btn ${fig}__details-btn`,
+        service: 'toggle-chat-details',
+        sys_pn: 'details-btn',
+        partHandler: ui,
         uiHandler: [ui]
       }),
       closeBtn

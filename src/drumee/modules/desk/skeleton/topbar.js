@@ -9,28 +9,6 @@ const { createEntries } = require("./create-items");
 // means rather than a second copy that can disagree.
 const { muteState, muteService } = require("builtins/panel/activity/mute");
 
-const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
-  Skeletons.Button.Label({
-    ico,
-    label,
-    name,
-    className: `${pfx}__add-menu-item ${opts.iconClass || ""}`,
-    dataset: { highlight: opts.highlight ? 1 : 0 },
-    service,
-    uiHandler: [ui],
-  });
-
-// The tablet "more" menu splices these in. Rows come from ./create-items, the
-// one list this menu, the "+ New" dropdown below and the mobile drawer's
-// `create` mode all read — see that file for the mayWrite rule.
-const addItems = (pfx, ui, mayWrite) =>
-  createEntries(mayWrite).map((e) =>
-    addMenuItem(pfx, ui, e.ico, e.label, e.service, e.name, {
-      highlight: e.highlight,
-      iconClass: e.iconClass,
-    }),
-  );
-
 const newMenuRow = (pfx, ui, {
   ico,
   label,
@@ -152,15 +130,7 @@ const deskNewMenu = (pfx, ui, mayWrite) => {
 
 module.exports = function (ui) {
   const pfx = `${ui.fig.family}-topbar`;
-  // Same two questions the "+ New" dropdown asks, resolved once for the whole
-  // topbar: may this viewer create things in the workspace they are in, and may
-  // they manage its members? Both fail open when there is no workspace context
-  // (the user's own desk) or the privilege cannot be read.
   // (utilityCluster is defined below this component — hoisted function.)
-  const mayWrite =
-    typeof ui._curWorkspaceCanWrite === "function" ? ui._curWorkspaceCanWrite() : true;
-  const mayManage =
-    typeof ui._curWorkspaceCanManage === "function" ? ui._curWorkspaceCanManage() : true;
 
   return Skeletons.Box.X({
     debug: __filename,
@@ -192,10 +162,8 @@ module.exports = function (ui) {
           // radius, the inset and the hover ground, and .breadcrumb-item__tab
           // no longer paints one of its own (breadcrumb/item/skin).
           //
-          // The switcher stays the breadcrumb's IMMEDIATE next sibling inside
-          // here, which is load-bearing: topbar.scss hides the caret on section
-          // screens through `.desk-breadcrumb__ui[data-section="1"] + …`, and
-          // an element between the two would break that selector silently.
+          // The caret is always shown (topbar.scss); only the inline rename
+          // takes it out of the row.
           Skeletons.Box.X({
             className: `${pfx}__crumb-group`,
             // THE WHOLE CHIP OPENS THE SWITCHER, not the caret alone.
@@ -227,10 +195,6 @@ module.exports = function (ui) {
               // desk._renameWorkspaceInline feeds an editor into it, and
               // `&:empty { display: none }` in the skin keeps an empty one out
               // of the chip entirely.
-              //
-              // AFTER the switcher, never between it and the breadcrumb: the
-              // section-screen caret rule noted above depends on those two
-              // staying adjacent siblings.
               //
               // Here rather than on the switcher card's own header, where the
               // name is also drawn: picking Rename in the ⋯ flyout is a click
@@ -267,44 +231,6 @@ module.exports = function (ui) {
           // "New workspace" — the one thing the old New menu offered that the
           // workspace toolbar does not — lives in the workspace switcher
           // dropdown instead.
-
-          // Tablet-only consolidated menu (768px ≤ width < 1024px).
-          // Flattened: nesting Skeletons.Menu inside another Menu's `items`
-          // breaks menu_topic's outside-click handling, so the six Add
-          // entries are spliced in at the top instead of behind a sub-menu.
-          Skeletons.Menu({
-            className: `${pfx}__more-wrapper`,
-            direction: _a.down,
-            opening: _e.click,
-            persistence: _a.once,
-            sys_pn: "moremenu",
-            partHandler: [ui],
-            trigger: Skeletons.Button.Label({
-              ico: "bars",
-              className: `${pfx}__more-btn`,
-            }),
-            items: require("libs/over-limit").isLocked()
-              // Read-only: creating, uploading and inviting are all paused —
-              // the consolidated tablet menu keeps nothing actionable.
-              ? []
-              : [
-                ...addItems(pfx, ui, mayWrite),
-                !mayWrite ? "" : Skeletons.Button.Label({
-                  ico: "app-upload",
-                  className: `${pfx}__more-menu-item`,
-                  label: LOCALE.UPLOAD,
-                  service: _e.upload,
-                  uiHandler: [ui],
-                }),
-                !mayManage ? "" : Skeletons.Button.Label({
-                  ico: "topbar-invite",
-                  className: `${pfx}__more-menu-item`,
-                  label: LOCALE.INVITE || "Invite",
-                  service: "invite-member",
-                  uiHandler: [ui],
-                }),
-              ],
-          }),
         ],
       }),
 
@@ -421,6 +347,19 @@ function utilityCluster(pfx, ui) {
 }
 
 /**
+ * How the account menu's mute row reads for a given GLOBAL mute state. Shared
+ * with the desk, which repaints the row in place (_paintMuteRow) when the
+ * state changes, so the built row and the repainted one cannot disagree.
+ *
+ * @param {Boolean} muted
+ */
+function muteRowLook(muted) {
+  return muted
+    ? { ico: "bell-simple", label: LOCALE.UNMUTE, modifier: "muted" }
+    : { ico: "bell-simple-slash", label: LOCALE.MUTE_NOTIFICATIONS, modifier: null };
+}
+
+/**
  * Avatar + its dropdown — Figma 59:55943. Sits last in the utility cluster.
  *
  * This is where Settings, Get Help and Log out live in the new shell: the
@@ -428,11 +367,10 @@ function utilityCluster(pfx, ui) {
  * this menu carries them. Every row fires a service the desk already handles,
  * so nothing here is new behaviour.
  *
- * "Mute notifications" mutes popup cards for EVERY workspace — an empty
- * hub_id is what activity/mute.js calls the global scope. It suppresses the
- * interrupting card and nothing else: a muted user keeps every row in the
- * Notification Center, keeps the unread badge and keeps the tab counts. Muting
- * is "stop talking to me", not "stop recording".
+ * "Mute notifications" mutes EVERY chat — an empty hub_id is what
+ * activity/mute.js calls the global scope: no card, OS notification or push,
+ * and the server leaves chat rows out of the Notification Center and the
+ * badges. Meeting start/end and bookmarks stay.
  *
  * The row reflects state, so it reads Unmute once muted. State comes from the
  * cache activity/mute.js already keeps (loaded at panel boot and refreshed
@@ -480,7 +418,7 @@ function userMenu(pfx, ui) {
     label: LOCALE[code] || code.toUpperCase(),
   }));
 
-  const row = ({ ico, label, service, on_click, modifier }) =>
+  const row = ({ ico, label, service, on_click, modifier, sys_pn }) =>
     Skeletons.Button.Label({
       ico,
       className: `${pfx}__account-menu-item${modifier ? ` ${pfx}__account-menu-item--${modifier}` : ""}`,
@@ -488,6 +426,7 @@ function userMenu(pfx, ui) {
       service,
       on_click,
       uiHandler: [ui],
+      ...(sys_pn ? { sys_pn, partHandler: ui } : {}),
     });
 
   // ── Language ─────────────────────────────────────────────────────────────
@@ -622,10 +561,12 @@ function userMenu(pfx, ui) {
         // Hidden when the endpoint is absent — see the note above.
         muteService("mute_set")
           ? row({
-              ico: muted ? "bell-simple" : "bell-simple-slash",
-              label: muted ? LOCALE.UNMUTE : LOCALE.MUTE_NOTIFICATIONS,
+              ...muteRowLook(muted),
               service: "toggle-mute-all",
-              modifier: muted ? "muted" : null,
+              // Named so the desk can repaint it in place (_paintMuteRow):
+              // the state is read after this menu is built, and the menu is
+              // not rebuilt when the row is pressed.
+              sys_pn: "account-mute-row",
             })
           : null,
         row({
@@ -800,3 +741,4 @@ function workspaceSwitcher(pfx, ui) {
 // desk still owns the MOBILE search card, which is global on purpose and builds
 // its own field in skeleton/index.js.
 
+module.exports.muteRowLook = muteRowLook;

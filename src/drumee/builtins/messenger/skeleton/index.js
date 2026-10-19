@@ -33,7 +33,11 @@ const __skl_messenger = function (ui) {
       content: ui.mget(_a.content),
       mode: _a.interactive,
       placeholder: ui.getPlaceholder(),
-      autofocus: ui.mget('autofocus'),
+      // NOT handed to the RichText: ui-core's editable autofocus is a plain
+      // focus(), which scrolls every scrollable ancestor to reveal the
+      // composer — on a phone it slid the folder's Files carousel to the chat
+      // page. The messenger focuses it itself, without scrolling (index.js
+      // _autofocus).
       className: `${ui.fig.family}__content`,
       service: _e.submit,
       shift_enter_delay: ui.mget('shift_enter_delay') || 1200,

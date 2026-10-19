@@ -1,5 +1,7 @@
 const { colorFromName, copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
 const nodeIconHtml = require("./node-icon");
+const { chatEmptyState } = require("./skeleton/empty-state");
+const { fileListSkip, isScheduleNode } = require("window/skeleton/toolkit/list-skip");
 require("./skin");
 
 /**
@@ -17,6 +19,26 @@ require("./skin");
  * call), not a top-level constant.
  */
 const isHubScopedChat = (scope) => scope === _a.folder || scope === "workspace";
+
+/**
+ * media.search_names failures that drop a file mention to the bounded
+ * show_node_by listing (still permission-checked server side) instead of
+ * closing the dropdown. Any other readable failure stays fail-closed.
+ *
+ * - SEARCH_NAMES_UNSUPPORTED_CONTEXT: secure-share/DMZ keeps its
+ *   token-authoritative list behavior.
+ * - SEARCH_NAMES_PROJECTION_NOT_READY: the database has no READY name
+ *   projection yet (an existing workspace that was never rebuilt).
+ * - SEARCH_NAMES_UNAVAILABLE: the server answered non-200. ui-essentials
+ *   consumes that body before handing the Response to onServerComplain, so
+ *   fetchService resolves nothing and the server's reason is unreadable here.
+ */
+const SEARCH_NAMES_UNAVAILABLE = "SEARCH_NAMES_UNAVAILABLE";
+const MENTION_LISTING_FALLBACK = new Set([
+  "SEARCH_NAMES_UNSUPPORTED_CONTEXT",
+  "SEARCH_NAMES_PROJECTION_NOT_READY",
+  SEARCH_NAMES_UNAVAILABLE,
+]);
 
 const cleanMentionText = (value) =>
   value == null ? "" : String(value).trim();
@@ -169,6 +191,8 @@ class __widget_chat extends LetcBox {
         ? `${this.mget("scoped_file_nid")}`
         : "";
       this.scopedFileLabel = this.mget("scoped_file_label") || "";
+      // Folder chat topic scope at mount (the folder window passes "general").
+      this.scopedTopicId = this._initialTopic();
       this.fileThreadId = "";
       this.fileThreadInfoLoaded = false;
       // storage_key override keeps a coexisting second instance's messenger
@@ -527,11 +551,16 @@ class __widget_chat extends LetcBox {
       postData.message_id = data.message_id;
       if (area === _a.ticket) postData.ticket_id = data.ticket_id;
     }
+    // Inside a folder chat topic: the server moves only that topic's cursor,
+    // so the workspace chat is not read — do not announce it (rail pill).
+    const topic = this.scopedTopicId || "all";
+    const inTopic = !isPrivate && topic !== "all" && topic !== "general";
+    if (inTopic) postData.topic_id = topic;
     this._lastReadAt = now;
     this._readDebt = false;
     this.postService(postData);
     this._clearUnreadRows();
-    this._announceChatRead();
+    if (!inTopic) this._announceChatRead();
   }
 
   /**
@@ -1692,6 +1721,10 @@ class __widget_chat extends LetcBox {
             sys_pn: "desk-picker-list",
             partHandler: this,
             api,
+            // Same rows as the workspace grid: no meeting `schedule` nodes
+            // (no bytes — sending one hangs at 0%), dotfiles only under
+            // showHidden. See window/skeleton/toolkit/list-skip.
+            skip: fileListSkip(),
             // List.Smart merges the function's result into each item before
             // the row is built, so every row is a full skeleton of its own.
             itemsOpt: (list, item) => this._deskPickerRow(item, current),
@@ -2266,7 +2299,68 @@ class __widget_chat extends LetcBox {
     if (this.getScopedNid()) {
       api.nid = this.getScopedNid();
     }
+    // Folder chat topic: "general" = without topic messages, an id = that
+    // topic; "all" (default) = the whole folder chat, as before topics.
+    const topic = this.scopedTopicId || "all";
+    if (topic !== "all") api.topic_id = topic;
+    // A topic belongs to one folder; the workspace team chat reads the whole
+    // hub (no scopedNid), so name the folder the topic lives in — the post
+    // folder — or the server cannot check the topic and answers [].
+    if (topic !== "all" && topic !== "general" && !api.nid && this.getPostNid()) {
+      api.nid = this.getPostNid();
+    }
     return api;
+  }
+
+  /**
+   * Scope the folder chat to a topic: "all" (null), "general", or a topic id
+   * (window/folder/topics.js). Restarts the list; remembers each scope's
+   * scroll position like setScopedFileNid.
+   */
+  setScopedTopic(topicId) {
+    const next = topicId ? `${topicId}` : "all";
+    const prev = this.scopedTopicId || "all";
+    if (prev === next) return;
+    this._topicScroll = this._topicScroll || {};
+    if (this.__list && this.__list.__container) {
+      this._topicScroll[prev] = this.__list.__container.scrollTop;
+    }
+    this.scopedTopicId = next;
+    this.ensurePart(_a.list).then((list) => {
+      if (!list || !_.isFunction(list.restart)) return;
+      list.restart();
+      const targetScroll = this._topicScroll && this._topicScroll[next];
+      if (typeof targetScroll === "number" && _.isFunction(list.once)) {
+        list.once(_e.ready, () => {
+          if (list.__container) list.__container.scrollTop = targetScroll;
+        });
+      }
+    });
+  }
+
+  /** Topic scope at mount: the descriptor's scoped_topic, else "all". */
+  _initialTopic() {
+    return (this.mget && this.mget("scoped_topic")) || "all";
+  }
+
+  /** channel.post payload + the topic, when the scope is a topic id. */
+  _withTopic(api) {
+    const topic = this.scopedTopicId || "all";
+    if (topic !== "all" && topic !== "general") api.topic_id = topic;
+    return api;
+  }
+
+  /** The topic a message belongs to (metadata._topic_id), "" when none. */
+  _messageTopicId(data = {}) {
+    let meta = data.metadata;
+    if (typeof meta === "string") {
+      try {
+        meta = JSON.parse(meta);
+      } catch (e) {
+        meta = {};
+      }
+    }
+    return `${(meta && meta._topic_id) || data._topic_id || ""}`;
   }
 
   // Un-freeze once the user navigates away from the SCOPE_GONE scope (e.g.
@@ -2345,6 +2439,10 @@ class __widget_chat extends LetcBox {
     }
     this.ensurePart(_a.list).then((list) => {
       if (!list || !_.isFunction(list.restart)) return;
+      // The empty state depends on the scope: an empty FILE thread is not an
+      // empty team chat (skeleton/empty-state.js). ui-core re-reads the
+      // placeholder on every empty answer, so swap it before the restart.
+      list.mset(_a.placeholder, chatEmptyState(this));
       const prevSpinner = list.mget(_a.spinner);
       if (prevSpinner) list.mset(_a.spinner, false);
       list.restart();
@@ -2586,6 +2684,17 @@ class __widget_chat extends LetcBox {
    */
   matchesScopedChannel(data = {}) {
     if (_.isArray(data)) data = data[0] || {};
+    if (!this._matchesScopedChannelBase(data)) return false;
+    // File-thread mode is its own conversation: topics do not apply.
+    if (this.scopedFileNid) return true;
+    const topic = this.scopedTopicId || "all";
+    if (topic === "all") return true;
+    const own = this._messageTopicId(data);
+    return topic === "general" ? !own : own === topic;
+  }
+
+  // The folder / file-thread rule, before topics (matchesScopedChannel).
+  _matchesScopedChannelBase(data = {}) {
     if (this.scopedFileNid) {
       // File-thread mode: a message belongs here only if it targets THIS thread.
       // The folder-visible root card (message_type file.thread) is broadcast on
@@ -2770,6 +2879,9 @@ class __widget_chat extends LetcBox {
             attachment: attachments,
             hub_id: this.hubId,
           };
+          // A thread belongs to the topic it is started from (the server
+          // reads it on the first message only).
+          this._withTopic(api);
           break;
         }
         api = {
@@ -2784,6 +2896,8 @@ class __widget_chat extends LetcBox {
         if (this.getPostNid()) {
           api.nid = this.getPostNid();
         }
+        // …and topic_id to a folder chat topic (metadata._topic_id).
+        this._withTopic(api);
         break;
 
       case _a.privateRoom:
@@ -4138,7 +4252,9 @@ class __widget_chat extends LetcBox {
     });
     if (!this._isFileMentionRequestCurrent(requestToken)) return [];
 
-    const errorCode = this._mentionErrorCode(response);
+    // A real empty result is []; nothing at all means the server refused.
+    const errorCode = response == null ?
+      SEARCH_NAMES_UNAVAILABLE : this._mentionErrorCode(response);
     if (errorCode) {
       const error = new Error(errorCode);
       error.code = errorCode;
@@ -4153,6 +4269,32 @@ class __widget_chat extends LetcBox {
       throw error;
     }
     return { rows: rows.slice(0, 6), canonical: true };
+  }
+
+  /**
+   * One settled non-blank filter: the scoped server search, or the bounded
+   * listing when the search cannot answer (MENTION_LISTING_FALLBACK).
+   */
+  async _searchOrListMentionFiles(folderHubId, folderNid, filter, requestToken) {
+    try {
+      return await this._searchMentionFiles(
+        folderHubId,
+        folderNid,
+        filter,
+        requestToken,
+      );
+    } catch (error) {
+      if (!MENTION_LISTING_FALLBACK.has(this._mentionErrorCode(error))) {
+        throw error;
+      }
+      return this._fetchMentionFiles(
+        folderHubId,
+        folderNid,
+        filter,
+        requestToken,
+        { boundedFallback: true },
+      );
+    }
   }
 
   async _fetchDirectMentionFiles(folderHubId, folderNid, requestToken) {
@@ -4187,7 +4329,13 @@ class __widget_chat extends LetcBox {
         if (!item) continue;
         const nid = item.nid || item.id;
         const filetype = item.filetype || item.ftype;
-        if (!nid || filetype === _a.hub || filetype === "root" || seen.has(`${nid}`)) {
+        if (
+          !nid ||
+          filetype === _a.hub ||
+          filetype === "root" ||
+          isScheduleNode(item) ||
+          seen.has(`${nid}`)
+        ) {
           continue;
         }
         seen.add(`${nid}`);
@@ -4300,7 +4448,7 @@ class __widget_chat extends LetcBox {
         pageFingerprints.add(fingerprint);
 
         for (const item of pageRows) {
-          if (!item || item.filetype === _a.hub) continue;
+          if (!item || item.filetype === _a.hub || isScheduleNode(item)) continue;
           const filename = item.filename || item.user_filename || "";
           const mentionPath = folder.path
             ? `${folder.path}/${filename}`
@@ -4430,31 +4578,13 @@ class __widget_chat extends LetcBox {
               return;
             }
             try {
-              const result = await this._searchMentionFiles(
+              resolve(await this._searchOrListMentionFiles(
                 fileScope.hubId,
                 fileScope.nid,
                 searchFilter,
                 requestToken,
-              );
-              resolve(result);
+              ));
             } catch (error) {
-              // Secure-share/DMZ keeps its existing token-authoritative list
-              // behavior.  Every other search failure stays fail-closed.
-              if (this._mentionErrorCode(error) ===
-                "SEARCH_NAMES_UNSUPPORTED_CONTEXT") {
-                try {
-                  resolve(await this._fetchMentionFiles(
-                    fileScope.hubId,
-                    fileScope.nid,
-                    searchFilter,
-                    requestToken,
-                    { boundedFallback: true },
-                  ));
-                } catch (fallbackError) {
-                  reject(fallbackError);
-                }
-                return;
-              }
               reject(error);
             }
           }, 120);
@@ -4555,7 +4685,7 @@ class __widget_chat extends LetcBox {
           rows: contacts.map(mentionMemberDebugRow),
         });
 
-        files = files.filter((f) => f.filetype !== _a.hub);
+        files = files.filter((f) => f.filetype !== _a.hub && !isScheduleNode(f));
 
         // One row per person. contact_rooms answers one row per CONTACT
         // record, and a person can be in the address book twice (imported and

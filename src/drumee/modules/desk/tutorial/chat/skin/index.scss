@@ -714,3 +714,408 @@
   .tutorial-chat__main { min-width: 0; }
   .tutorial-chat__bubble { max-width: 82%; }
 }
+
+// PHONE (chat/skeleton/phone.js) — Figma flow "Chat" 386:55908: 386:55913
+// hero, 386:56395 stream, 386:56600 action sheet, 386:56858 / 386:57195 the
+// file thread. Values are the frames'.
+.tutorial-phone.tutorial-chat__phone {
+  background: #f2f2f7;
+
+  .tutorial-phone__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  // The composer sits on the nav band: grey to the bottom edge as the frames
+  // draw it, not the toolkit's fade to white.
+  .tutorial-phone__nav {
+    background: none;
+  }
+
+  // The round buttons (back, search, more, the composer +) are bare on this
+  // tour's grey: no white fill.
+  .tutorial-phone__circle {
+    background: transparent;
+  }
+
+  // …except the one being taught: lit, it is the frame's white button with
+  // its hairline (the + on 386:56395), standing out of the scrim.
+  .tutorial-phone__circle.is-lit {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  &[data-view="hero"] .tutorial-phone__body {
+    padding: 24px;
+  }
+
+  &[data-view="hero"] .tutorial-phone__hero {
+    flex: 1;
+    min-height: 0;
+    padding-top: 0;
+  }
+
+  // What each thread frame holds back to 20%.
+  &[data-view="thread-open"] {
+    .tutorial-phone__top,
+    .tutorial-chat__ph-thread,
+    .tutorial-phone__composer-row { opacity: 0.2; }
+  }
+
+  &[data-view="thread-reply"] {
+    .tutorial-phone__top,
+    .tutorial-chat__ph-head,
+    .tutorial-chat__ph-thread { opacity: 0.2; }
+  }
+}
+
+.tutorial-chat__ph {
+  // ── hero (386:56345) ───────────────────────────────────────────────────────
+  &-hero-card {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(93, 84, 255, 0.05) 0%, #5950ff 100%);
+  }
+
+  &-hero-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+  }
+
+  // ── stream ─────────────────────────────────────────────────────────────────
+  &-day {
+    align-self: center;
+    padding: 4px 16px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.05);
+    font-size: 12px;
+    line-height: 1.4;
+    color: #65656c;
+    white-space: nowrap;
+  }
+
+  &-msg--own {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  &-msg--in {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  &-avatar {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #e5e5ea;
+  }
+
+  &-in-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  &-name {
+    font-size: 10px;
+    line-height: 1.4;
+    font-weight: 700;
+    color: #0b0a21;
+  }
+
+  &-bubble {
+    width: 100%;
+    max-width: 320px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 0 16px 16px 16px;
+    background: #fff;
+    font-size: 14px;
+    line-height: 1.2;
+    color: #0b0a21;
+    white-space: pre-line;
+  }
+
+  &-msg--own &-bubble {
+    border-radius: 16px 0 16px 16px;
+    background: #ffa8dc;
+    line-height: 1.4;
+  }
+
+  // Not the last of a run: the corner moves to the bottom (386:56858).
+  &-msg--own &-bubble[data-tail="0"] {
+    border-radius: 16px 16px 0 16px;
+  }
+
+  &-time {
+    padding-top: 4px;
+    font-size: 10px;
+    line-height: 1.4;
+    color: #84848c;
+    white-space: nowrap;
+  }
+
+  &-file {
+    display: flex;
+    align-items: stretch;
+    gap: 9.284px;
+  }
+
+  &-file-tile {
+    width: 36px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    background: #f2f2f7;
+  }
+
+  &-file-ico {
+    width: 25.6px;
+    height: 25.6px;
+  }
+
+  &-file-meta {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    white-space: nowrap;
+  }
+
+  &-file-name {
+    font-size: 14px;
+    line-height: 1.4;
+    color: #0b0a21;
+  }
+
+  &-file-size {
+    font-size: 12px;
+    line-height: 1.4;
+    color: #34343a;
+  }
+
+  // ── message action sheet (386:56755) ───────────────────────────────────────
+  &-act {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 411px;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 40px;
+    border-radius: 32px 32px 0 0;
+    background: #fff;
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
+
+  &-reacts {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px;
+    opacity: 0.2;
+  }
+
+  &-react {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 0;
+    box-sizing: border-box;
+    border-radius: 40px;
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &-react-ico {
+    width: 28px;
+    height: 28px;
+    object-fit: cover;
+  }
+
+  &-act-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+
+  &-tiles {
+    display: flex;
+    gap: 8px;
+  }
+
+  &-tile {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.05);
+    opacity: 0.2;
+  }
+
+  &-tile[data-lit="1"] {
+    background: #fff;
+    opacity: 1;
+  }
+
+  &-tile-ico {
+    width: 22px;
+    height: 22px;
+    color: #0b0a21;
+  }
+
+  &-tile-label {
+    font-size: 16px;
+    line-height: 1.2;
+    color: #0b0a21;
+    white-space: nowrap;
+  }
+
+  &-rule {
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+  }
+
+  &-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    opacity: 0.2;
+  }
+
+  &-item-ico {
+    width: 19.2px;
+    height: 19.2px;
+    flex: none;
+  }
+
+  &-item-label {
+    font-size: 16px;
+    line-height: 1.2;
+    color: #0b0a21;
+  }
+
+  &-item[data-danger="1"] &-item-label {
+    color: #d74e49;
+  }
+
+  // ── file thread header (386:56862) ─────────────────────────────────────────
+  &-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  &-head-main {
+    min-width: 0;
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  &-head-clip {
+    width: 38px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    background: rgba(89, 80, 255, 0.1);
+  }
+
+  &-head-clip-ico {
+    width: 22px;
+    height: 22px;
+  }
+
+  &-head-meta {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &-head-file {
+    font-size: 14px;
+    line-height: 1.2;
+    color: #0b0a21;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &-head-sum {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #65656c;
+    white-space: nowrap;
+  }
+
+  &-head-sum-ico {
+    width: 16.8px;
+    height: 16.8px;
+  }
+
+  // The frame's list bullet before the age — a row, or the bullet stacks over
+  // the Note's inner block.
+  &-head-when {
+    display: flex;
+    align-items: center;
+  }
+
+  &-head-when::before {
+    content: "•";
+    margin: 0 7px 0 6px;
+  }
+
+  &-head-open {
+    flex: none;
+    font-size: 14px;
+    line-height: 1.2;
+    color: #5950ff;
+    white-space: nowrap;
+  }
+
+  &-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}

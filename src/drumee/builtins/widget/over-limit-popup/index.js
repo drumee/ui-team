@@ -19,7 +19,6 @@
  * the popup is open closes it by itself.
  */
 const OverLimit = require("libs/over-limit");
-const { needsAdminConsoleUpgrade } = require("libs/billing");
 const { closeWmPopup } = require("libs/wm-popup");
 
 class __over_limit_popup extends LetcBox {
@@ -85,33 +84,20 @@ class __over_limit_popup extends LetcBox {
     const service = args.service || cmd.mget(_a.service);
     switch (service) {
       case "over-limit-resolve": {
-        const c = OverLimit.current() || {};
         this._close();
-        // Seats, on a plan that HAS the console: the members page owns the
-        // Remove access flow, so send them straight to it. Both flags → seats
-        // first; the banner stays up for the storage half.
+        // Plans WITH the console: OverLimit.resolveTarget() picks the tab —
+        // Storage for a storage overage (per-workspace usage, delete from
+        // there), Members for seats only. Shared with the top banner.
         //
-        // EVERYTHING ELSE NOW GOES TO THE ORGANISATION SCREEN (Lexis,
-        // 2026-09-16). Until now this branch was the only one, so the commonest
-        // shape of all — a storage-only violation, which is what a downgrade to
-        // Free looks like — closed the popup and did nothing whatsoever, leaving
-        // the reader to find the right screen themselves.
-        //
-        // The console cannot be that screen for them either: Free and Pro sit
-        // below it (libs/billing.needsAdminConsoleUpgrade) and dropping to one
-        // of those is precisely how an account lands here, so the one CTA meant
-        // to fix the problem would have opened an upsell.
-        //
-        // The organisation screen is gated on membership and ROLE, never on
-        // tier, so it opens for exactly this reader: the block only ever exists
-        // for an organisation (the server returns null for domain 1) and
-        // "Resolve now" is only drawn for an owner/admin, whose privilege
-        // clears the screen's own can_browse bar by construction. It lists
-        // every department and every workspace in the org — the index to work
-        // through, and the companion to the seat row's existing instruction to
-        // remove members from each workspace's own list.
-        if (c.flags?.seats && !needsAdminConsoleUpgrade()) {
-          RADIO_BROADCAST.trigger("desk:open-admin-console");
+        // Free/Pro sit below the console (libs/billing.needsAdminConsoleUpgrade)
+        // and dropping to one is precisely how an account lands here, so for
+        // them the console would only be an upsell. They go to the
+        // ORGANISATION SCREEN instead (2026-09-16): it is gated on membership
+        // and role, never tier, and lists every workspace in the org — the
+        // index to work through.
+        const target = OverLimit.resolveTarget();
+        if (target) {
+          RADIO_BROADCAST.trigger(target.event, target.arg);
           return;
         }
         RADIO_BROADCAST.trigger("desk:open-org-view");

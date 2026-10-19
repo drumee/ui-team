@@ -103,6 +103,7 @@ const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
 const {
   mayCreateTask,
   subtaskBadge,
+  assigneeUids,
   formatDue: formatDueDate,
   FILTER_DIMS,
   FILTER_DUE,
@@ -116,11 +117,21 @@ const make = function (ui) {
   // Always rendered, shown only while its `__title-field` carries
   // `is-missing` — the panel toggles that class in place (_flagTitleMissing),
   // so a blocked submit doesn't need a re-feed that would wipe other edits.
-  const titleMissingNote = () =>
+  // Its sibling for an over-long title: shown while the field carries
+  // `is-too-long` (_flagTitleTooLong).
+  const titleMissingNote = () => [
     Skeletons.Note({
       className: `${pfx}__title-missing`,
       content: LOCALE.TASK_TITLE_REQUIRED,
-    });
+    }),
+    Skeletons.Note({
+      className: `${pfx}__title-too-long`,
+      content: LOCALE.TASK_TITLE_TOO_LONG,
+    }),
+  ];
+  // The title field's flag classes, from the draft (survive a re-feed).
+  const titleFlags = (d) =>
+    `${d && d._titleMissing ? " is-missing" : ""}${d && d._titleTooLong ? " is-too-long" : ""}`;
   // Phone flag stamped directly onto the popups / list / gantt roots (see
   // `data-mobile` below). Driven from JS rather than a CSS media/container
   // query because the panel lives in a resizable window — the viewport is
@@ -413,9 +424,10 @@ const make = function (ui) {
       uiHandler: [ui],
       taskColumn: colKey,
       kids: [
+        Skeletons.Image.Svg({ ico: "app-add", className: `${pfx}__add-ico` }),
         Skeletons.Note({
           className: `${pfx}__add-label`,
-          content: `+ ${LOCALE.NEW_TASK}`,
+          content: LOCALE.NEW_TASK,
         }),
       ],
     });
@@ -1013,14 +1025,10 @@ const make = function (ui) {
       ],
     });
 
-    // Due-date section is a stable sub-part so the Duration toggle can re-feed
-    // just this block (swap single <-> range picker + flip the switch) without
-    // a full-panel _render() that flickers and steals focus. Content lives in
-    // buildDueSectionContent so the controller can re-feed it via ensurePart.
+    // Date section (Start → End pickers). Content lives in
+    // buildDueSectionContent, shared with the create modal.
     const dueRow = Skeletons.Box.Y({
       className: `${pfx}__detail-row`,
-      sys_pn: "due-section",
-      partHandler: ui,
       kids: buildDueSectionContent(ui),
     });
 
@@ -1084,8 +1092,9 @@ const make = function (ui) {
       kids: buildAttachmentRowsContent(ui, attachments, detail.id),
     });
 
-    // "Child task items" — the metadata sidebar, under Due date (Figma
-    // 58471:222398). A re-feedable part of its own (see
+    // "Subtasks" — the main column, between Files and the Activity feed
+    // (Figma 692:100991, "Child task items-desktop-detail"). A re-feedable
+    // part of its own (see
     // buildSubtaskRowsContent) so adding or ticking a child never rebuilds the
     // panel around the user's edits.
     //
@@ -1319,7 +1328,7 @@ const make = function (ui) {
       className: `${pfx}__detail-header`,
       kids: [
         Skeletons.Box.Y({
-          className: `${pfx}__title-field ${pfx}__detail-title-field${dDraft._titleMissing ? " is-missing" : ""}`,
+          className: `${pfx}__title-field ${pfx}__detail-title-field${titleFlags(dDraft)}`,
           kids: [
             // Textarea (not Entry) so a long title wraps and stays fully
             // visible in the update popup instead of being clipped past the
@@ -1336,7 +1345,7 @@ const make = function (ui) {
               watch: "task-input-changed",
               uiHandler: [ui],
             }),
-            titleMissingNote(),
+            ...titleMissingNote(),
           ],
         }),
         Skeletons.Button.Svg({
@@ -1389,7 +1398,12 @@ const make = function (ui) {
                   // Description, then Attachments beneath it, then the Activity
                   // feed — a single stacked column (Attachments no longer sits
                   // to the right of the Description).
-                  kids: [descriptionRow, attachmentsList, commentsSection],
+                  kids: [
+                    descriptionRow,
+                    attachmentsList,
+                    subtasksSection,
+                    commentsSection,
+                  ].filter(Boolean),
                 }),
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-side`,
@@ -1399,9 +1413,6 @@ const make = function (ui) {
                     assigneeRow,
                     reporterRow,
                     dueRow,
-                    // Figma 58471:222398 puts "Child task items" here, in the
-                    // metadata column directly under Due date.
-                    subtasksSection,
                   ].filter(Boolean),
                 }),
               ],
@@ -1717,14 +1728,14 @@ const make = function (ui) {
               className: `${pfx}__modal-main`,
               kids: [
                 Skeletons.Box.Y({
-                  className: `${pfx}__create-field ${pfx}__title-field${draft?._titleMissing ? " is-missing" : ""}`,
+                  className: `${pfx}__create-field ${pfx}__title-field${titleFlags(draft)}`,
                   kids: [
                     Skeletons.Note({
                       className: `${pfx}__create-label`,
                       content: LOCALE.TASK_TITLE,
                     }),
                     titleControl,
-                    titleMissingNote(),
+                    ...titleMissingNote(),
                   ],
                 }),
                 field(
@@ -1732,6 +1743,19 @@ const make = function (ui) {
                   descControl,
                   `${pfx}__create-field-grow`,
                 ),
+                // "Subtasks", same block the detail panel carries, between the
+                // description and the files (Figma "New task") — here it
+                // queues children on the draft instead of posting them, and
+                // _commitTask creates them once the parent has an id. Its own
+                // re-feedable part for the same reason as the detail one:
+                // adding a child must not rebuild the title / description
+                // editors the user is typing into.
+                Skeletons.Box.Y({
+                  className: `${pfx}__subtasks`,
+                  sys_pn: "create-subtask-rows",
+                  partHandler: ui,
+                  kids: buildSubtaskRowsContent(ui, null, "create"),
+                }),
                 // Pinned to the column foot (see skin __create-files) so the
                 // search/upload bar lines up with the actions in the right column.
                 field(
@@ -1754,25 +1778,10 @@ const make = function (ui) {
                 ),
                 assigneeField,
                 reporterField,
-                // Due-date section: same Duration UI as the detail panel. A
-                // stable sub-part so the toggle re-feeds only this block.
+                // Date section: same Start/End pickers as the detail panel.
                 Skeletons.Box.Y({
                   className: `${pfx}__create-field`,
-                  sys_pn: "create-due-section",
-                  partHandler: ui,
                   kids: buildDueSectionContent(ui, "create"),
-                }),
-                // "Child task items", same block the detail panel carries —
-                // here it queues children on the draft instead of posting them,
-                // and _commitTask creates them once the parent has an id. Its
-                // own re-feedable part for the same reason as the detail one:
-                // adding a child must not rebuild the title / description
-                // editors the user is typing into.
-                Skeletons.Box.Y({
-                  className: `${pfx}__subtasks`,
-                  sys_pn: "create-subtask-rows",
-                  partHandler: ui,
-                  kids: buildSubtaskRowsContent(ui, null, "create"),
                 }),
                 // Pinned to the column foot (see skin __create-actions) so it
                 // lines up with the file search/upload bar in the left column.
@@ -2151,9 +2160,9 @@ const make = function (ui) {
   // there are, and deriving both from one array is what keeps them in step.
   const viewDefs = [
     ["board", LOCALE.TASK_VIEW_BOARD, "square-split-horizontal"],
+    ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
     ["calendar", LOCALE.TASK_VIEW_CALENDAR, "calendar"],
     ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
-    ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
     ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
   ];
 
@@ -2212,12 +2221,18 @@ const make = function (ui) {
 
   // Right-side controls (Figma 2040-53814): calendar/gantt granularity when
   // those views are active, then the create buttons, then the shared Filter.
-  const newTaskBtn = !mayCreateTask(ui) ? "" : Skeletons.Note({
+  const newTaskBtn = !mayCreateTask(ui) ? "" : Skeletons.Box.X({
     className: `${pfx}__viewbar-new`,
-    content: `+ ${LOCALE.NEW_TASK}`,
     bubble: 0,
     service: "add-task",
     uiHandler: [ui],
+    kids: [
+      Skeletons.Image.Svg({ ico: "app-add", className: `${pfx}__viewbar-new-ico` }),
+      Skeletons.Note({
+        className: `${pfx}__viewbar-new-label`,
+        content: LOCALE.NEW_TASK,
+      }),
+    ],
   });
   const newBoardBtn = !mayCreateTask(ui) ? "" : Skeletons.Box.X({
     className: `${pfx}__viewbar-board`,
@@ -2225,7 +2240,7 @@ const make = function (ui) {
     service: "add-board",
     uiHandler: [ui],
     kids: [
-      Skeletons.Image.Svg({ ico: "plus", className: `${pfx}__viewbar-board-ico` }),
+      Skeletons.Image.Svg({ ico: "app-add", className: `${pfx}__viewbar-board-ico` }),
       Skeletons.Note({
         className: `${pfx}__viewbar-board-label`,
         content: LOCALE.NEW_BOARD,
@@ -3778,23 +3793,6 @@ function attachmentRowDescriptor(ui, f, taskId) {
   return fileCard(ui, f, { committed: true, taskId });
 }
 
-// Whole days a start..end span covers, inclusive (same day = 1); 0 if either
-// endpoint is missing/invalid.
-function dueDurationDays(startIso, endIso) {
-  if (!startIso || !endIso) return 0;
-  const s = new Date(startIso);
-  const e = new Date(endIso);
-  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
-  return Math.round((e - s) / 86400000) + 1;
-}
-
-// "N day(s)" readout for a range; "" when the range is incomplete.
-function dueSummaryText(startIso, endIso) {
-  if (!startIso || !endIso) return "";
-  const n = dueDurationDays(startIso, endIso);
-  return `${n} ${n === 1 ? LOCALE.DURATION_DAY : LOCALE.DURATION_DAYS}`;
-}
-
 // Custom flatpickr `position` (used because the calendar is appendTo:body and
 // the due-input lives in a narrow right rail): float the calendar to the LEFT
 // of the input, beside it, so it opens into the wide center area instead of
@@ -3843,142 +3841,159 @@ function positionDueCalendarLeft(instance) {
   cal.style.top = `${top + scrollY}px`;
 }
 
-// Kids for a Due-date section (shared by the detail panel and the create
-// modal — pass scope "detail" | "create"): the label row ("Due date" +
-// "Duration" toggle), the picker, and (range mode) a live duration readout.
-// Duration OFF → one date picker (due_date). ON → one range picker showing
-// "start → end" in a single field (per Figma), storing ISO (Y-m-d) while
-// displaying d/m/Y via altInput. New-user guidance: the range calendar shows a
-// step hint ("Select start date" → "Select end date"), and a live "N days"
-// readout beside the Duration label confirms the span. Kept standalone so the
-// Duration toggle can re-feed just this sub-part in place.
+/**
+ * flatpickr `disable` rules: no day before today, EXCEPT the dates the field
+ * already holds.
+ *
+ * Not `minDate: "today"`: flatpickr filters its starting dates through the
+ * same enabled-check, so a stored due date that has since gone past (an
+ * overdue task, or a child pre-filled from one) was silently dropped — the
+ * field rendered EMPTY while the draft still held the date. Required-field
+ * validation then passed on a value nobody could see, and Create/Update saved
+ * it. Keeping the stored days enabled makes the field show what will be sent.
+ *
+ * @param {...String} kept  the field's current dates (Y-m-d; empties ignored)
+ */
+function noPastDaysExcept(...kept) {
+  const keep = new Set(
+    kept.filter(Boolean).map((d) => Dayjs(d).format("YYYY-MM-DD")),
+  );
+  const today = Dayjs().startOf("day");
+  return [
+    (d) => Dayjs(d).isBefore(today) && !keep.has(Dayjs(d).format("YYYY-MM-DD")),
+  ];
+}
+
+/**
+ * flatpickr `disable` rules for one of the two date fields ("start_date" or
+ * "due_date"): no past day, and nothing the other field rules out — Start
+ * never after End, End never before Start. The field's OWN stored day stays
+ * enabled (see noPastDaysExcept): flatpickr drops a disabled starting date
+ * and the field would render empty over a saved value. Shared by the skeleton
+ * and the controller, which re-bounds the other picker after each pick.
+ */
+function dateFieldDisable(name, start, due) {
+  const isStart = name === "start_date";
+  const own = isStart ? start : due;
+  const other = isStart ? due : start;
+  const disable = noPastDaysExcept(own);
+  if (other) {
+    const day = (d) => Dayjs(d).format("YYYY-MM-DD");
+    const out = isStart
+      ? (d) => Dayjs(d).isAfter(Dayjs(other), "day")
+      : (d) => Dayjs(d).isBefore(Dayjs(other), "day");
+    disable.push((d) => day(d) !== own && out(d));
+  }
+  return disable;
+}
+
+// Kids for the date section (shared by the detail panel and the create modal —
+// pass scope "detail" | "create"), per Figma 741:96472: "Start date → End
+// date", two independent pickers. `start_date` is optional; the End date is
+// `due_date` and stays required (its __due-field carries the missing flag).
+// Each stores ISO (Y-m-d) and displays d/m/Y via altInput. Each calendar is
+// bounded by the other field's date (dateFieldDisable) so the pair can never
+// read end-before-start; the controller re-bounds the other picker after a
+// pick.
 function buildDueSectionContent(ui, scope = "detail") {
   const pfx = ui.fig.family;
   const isCreate = scope === "create";
   const draft = (isCreate ? ui.getCreateDraft() : ui.getDetailDraft()) || {};
-  // Disable picking days in the past (both create and detail); flatpickr still
-  // shows an existing past due date, it just can't be (re)selected earlier.
-  const minDate = "today";
+  const start = draft.start_date || "";
+  const due = draft.due_date || "";
 
-  // Tag the calendar for theming; when `withHint`, also inject a step hint that
-  // guides the two-click range pick. The hint updates via a pushed onChange
-  // hook (pushed, not assigned, so the widget's own publish still fires).
-  const onReady = (withHint) => (_d, _s, instance) => {
+  // Tag the calendar so it can be themed without bleeding into other pickers.
+  const onReady = (_d, _s, instance) => {
     const cc = instance && instance.calendarContainer;
-    if (!cc) return;
-    cc.classList.add("tasks-panel__flatpickr");
-    if (!withHint) return;
-    let hint = cc.querySelector(".tasks-panel__dp-hint");
-    if (!hint) {
-      hint = document.createElement("div");
-      hint.className = "tasks-panel__dp-hint";
-      cc.prepend(hint);
-    }
-    const sync = () => {
-      const n = instance.selectedDates.length;
-      hint.textContent =
-        n === 1
-          ? LOCALE.SELECT_END_DATE
-          : n === 0
-            ? LOCALE.SELECT_START_DATE
-            : "";
-    };
-    sync();
-    if (Array.isArray(instance.config.onChange)) {
-      instance.config.onChange.push(sync);
-    }
+    if (cc) cc.classList.add("tasks-panel__flatpickr");
   };
 
-  const picker = draft.duration_on
-    ? {
-        kind: "date_picker",
-        className: `${pfx}__due-input ${pfx}__due-input--range`,
-        innerClass: `${pfx}__due-input-inner`,
-        name: "due_range",
-        ranges: true,
-        placeholder: LOCALE.SELECT_START_DATE,
-        // Seed [start, end]; a lone due_date opens the range at that day.
-        value: [draft.start_date, draft.due_date].filter(Boolean),
-        service: "task-input-changed",
-        uiHandler: [ui],
-        vendorOpt: {
-          dateFormat: "Y-m-d",
-          altInput: true,
-          altFormat: "d/m/Y",
-          rangeSeparator: "  →  ",
-          minDate,
-          appendTo: document.body,
-          position: positionDueCalendarLeft,
-          onReady: onReady(true),
-        },
-      }
-    : {
-        kind: "date_picker",
-        className: `${pfx}__due-input`,
-        innerClass: `${pfx}__due-input-inner`,
-        name: "due_date",
-        placeholder: LOCALE.SELECT_DATE,
-        // Empty (not today): a new task has no due date until one is picked —
-        // the widget reads an explicit empty `value` as "nothing selected".
-        value: draft.due_date || "",
-        service: "task-input-changed",
-        uiHandler: [ui],
-        // appendTo: body escapes the panel's overflow clip; onReady tags the
-        // calendar so it can be themed without bleeding into other pickers.
-        vendorOpt: {
-          dateFormat: "Y-m-d",
-          altInput: true,
-          altFormat: "d/m/Y",
-          // Spelled out (vendorOpt wins over the widget's own default): an
-          // unset due date stays unset. The panel reads this input back on
-          // commit, so a picker that seeded itself with today would silently
-          // stamp every new task with its creation date.
-          defaultDate: draft.due_date || null,
-          minDate,
-          appendTo: document.body,
-          position: positionDueCalendarLeft,
-          onReady: onReady(false),
-        },
-      };
+  const picker = (name, value) => {
+    return {
+      kind: "date_picker",
+      className: `${pfx}__due-input`,
+      innerClass: `${pfx}__due-input-inner`,
+      name,
+      placeholder: LOCALE.DATE_PLACEHOLDER,
+      // Empty (not today): a field holds no date until one is picked — the
+      // widget reads an explicit empty `value` as "nothing selected".
+      value,
+      service: "task-input-changed",
+      uiHandler: [ui],
+      // appendTo: body escapes the panel's overflow clip.
+      vendorOpt: {
+        dateFormat: "Y-m-d",
+        altInput: true,
+        altFormat: "d/m/Y",
+        // Spelled out (vendorOpt wins over the widget's own default): an unset
+        // date stays unset. The panel reads these inputs back on commit, so a
+        // picker that seeded itself with today would silently stamp the task.
+        defaultDate: value || null,
+        disable: dateFieldDisable(name, start, due),
+        appendTo: document.body,
+        position: positionDueCalendarLeft,
+        onReady,
+      },
+    };
+  };
+
+  const label = (content) =>
+    Skeletons.Note({ className: `${pfx}__${scope}-label`, content });
 
   return [
     Skeletons.Box.X({
-      className: `${pfx}__due-head`,
+      className: `${pfx}__due-range`,
       kids: [
-        Skeletons.Note({
-          className: `${pfx}__${scope}-label`,
-          content: LOCALE.DUE_DATE,
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__due-duration`,
+        Skeletons.Box.Y({
+          className: `${pfx}__due-col`,
           kids: [
-            Skeletons.Note({
-              className: `${pfx}__due-duration-label`,
-              content: LOCALE.DURATION,
+            label(LOCALE.START_DATE),
+            Skeletons.Box.Y({
+              className: `${pfx}__due-slot`,
+              // "1" shows the clear button in place of the calendar glyph; the
+              // controller flips it as Start changes (_syncDateRow).
+              attrOpt: { "data-filled": start ? "1" : "0" },
+              kids: [
+                picker("start_date", start),
+                // × back to a single-date task. Figma draws no clear control;
+                // without one a pointer user could never drop a Start.
+                Skeletons.Button.Svg({
+                  className: `${pfx}__due-clear`,
+                  ico: "cross",
+                  bubble: 0,
+                  service: "clear-start-date",
+                  uiHandler: [ui],
+                  tooltips: LOCALE.CLEAR,
+                }),
+              ],
             }),
-            // Live duration readout sits beside the label (range mode only);
-            // the controller refreshes it on each pick.
-            ...(draft.duration_on
-              ? [
-                  Skeletons.Note({
-                    className: `${pfx}__due-summary`,
-                    content: dueSummaryText(draft.start_date, draft.due_date),
-                  }),
-                ]
-              : []),
-            Skeletons.Box.X({
-              className: `${pfx}__toggle`,
-              attrOpt: { "data-on": draft.duration_on ? "1" : "0" },
-              bubble: 0,
-              service: "toggle-duration",
-              uiHandler: [ui],
-              kids: [Skeletons.Box.X({ className: `${pfx}__toggle-knob` })],
+          ],
+        }),
+        Skeletons.Image.Svg({ ico: "arrow-right", className: `${pfx}__due-arrow` }),
+        Skeletons.Box.Y({
+          className: `${pfx}__due-col`,
+          kids: [
+            label(LOCALE.END_DATE),
+            // Only the End field is a __due-field: _flagDueMissing flags the
+            // FIRST __due-field it finds, so the Start field must not be one.
+            // The picker and its required-field message share this wrapper, so
+            // the flag (draft._dueMissing, also stamped in place by the
+            // controller) outlines the field and reveals the message.
+            Skeletons.Box.Y({
+              className: `${pfx}__due-field`,
+              attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
+              kids: [
+                picker("due_date", due),
+                Skeletons.Note({
+                  className: `${pfx}__due-missing`,
+                  content: LOCALE.TASK_DUE_REQUIRED,
+                }),
+              ],
             }),
           ],
         }),
       ],
     }),
-    picker,
   ];
 }
 
@@ -4079,9 +4094,14 @@ const SUBTASK_SERVICES = {
     priority: "set-subtask-priority",
     status: "set-subtask-status",
     toggleDone: "toggle-subtask-complete",
+    rowMenu: "toggle-subtask-row-menu",
+    rowPriority: "set-subtask-row-priority",
+    rowStatus: "set-subtask-row-status",
+    rowAssignee: "toggle-subtask-row-assignee",
     open: "open-detail",
     remove: "remove-task",
     titleField: "subtask-title",
+    dateField: "subtask-due-date",
   },
   create: {
     add: "add-create-subtask",
@@ -4091,20 +4111,28 @@ const SUBTASK_SERVICES = {
     priority: "set-create-subtask-priority",
     status: "set-create-subtask-status",
     toggleDone: "toggle-create-subtask-done",
+    rowMenu: "toggle-create-subtask-row-menu",
+    rowPriority: "set-create-subtask-row-priority",
+    rowStatus: "set-create-subtask-row-status",
+    rowAssignee: "toggle-create-subtask-row-assignee",
     // A queued child has no id yet, so there is nothing to open.
     open: null,
     remove: "remove-create-subtask",
     titleField: "create-subtask-title",
+    dateField: "create-subtask-due-date",
   },
 };
 
 /**
- * "Child task items" block — Figma 58471:222398 / 58471:222650.
+ * "Subtasks" block — Figma 692:100991 ("Child task items-desktop-detail").
  *
- * Lives in the RIGHT sidebar, under Due date (that is where the design puts it;
- * the earlier written spec had said between Description and Attachments).
- * Header, then the existing children, then the inline creator card when one is
- * open.
+ * Lives in the MAIN column: between Files and Activity on the detail card,
+ * between Description and Files on the create modal. Header with the + button,
+ * the done-share progress rail, then one card per child — title, a Priority
+ * chip, a Status chip, the assignee avatar and ✕ — and the inline creator card
+ * when one is open. Each chip and the avatar open their own menu on that row;
+ * a pick on an existing child goes through the List view's inline write path
+ * (_commitListField), a pick on a queued child edits the draft row.
  *
  * Two scopes share it:
  *  - "detail" (default) — the children of the open task, straight from the
@@ -4146,45 +4174,30 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
   const metaOf = (list, key) => list.find((x) => x.key === key) || null;
 
   // ── Header: label + "Add child work item" caption + the ＋ ──────────────
+  const rowMenu = ui.getSubtaskRowMenu(scope);
+  const members = ui.getMembers() || [];
+  // A queued child keeps its people on `assignees`; a saved one answers
+  // through the panel (unknown members dropped, as on the board).
+  const assigneesOf = (t) =>
+    isCreate ? (Array.isArray(t.assignees) ? t.assignees : []) : assigneeUids(t, ui);
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
   const header = Skeletons.Box.X({
     className: `${pfx}__subtask-header`,
     kids: [
-      Skeletons.Box.Y({
-        className: `${pfx}__subtask-header-text`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__subtask-heading`,
-            content: LOCALE.SUBTASKS,
-          }),
-          Skeletons.Note({
-            className: `${pfx}__subtask-subheading`,
-            content: LOCALE.ADD_SUBTASK,
-          }),
-        ],
+      Skeletons.Note({
+        className: `${pfx}__subtask-heading`,
+        content: LOCALE.SUBTASKS,
       }),
-      // done/total is not in the Figma frames, but the written spec calls for a
-      // count and the header is the only place it fits in this column.
-      total
-        ? Skeletons.Note({
-            className: `${pfx}__subtask-count`,
-            content: `${done}/${total}`,
-            attrOpt: { "data-complete": done === total ? "1" : "0" },
-          })
-        : null,
       canAdd
         ? Skeletons.Button.Svg({
             className: `${pfx}__subtask-add`,
-            // app-add, NOT "plus": that glyph is a filled disc with the plus
-            // knocked out of it, so colouring the svg painted a solid black
-            // circle. app-add is the bare 12px plus stroke.
             ico: "app-add",
             bubble: 0,
             service: svc.add,
             uiHandler: [ui],
-            // See gantt.js: the bare string form renders the tooltip as
-            // inline text inside the button and hides the icon.
             tooltips: {
-              content: LOCALE.CREATE_CHILD_TASK,
+              content: LOCALE.CREATE_SUBTASK,
               className: `${pfx}__tip`,
             },
           })
@@ -4192,86 +4205,54 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
     ].filter(Boolean),
   });
 
-  // ── An existing child ───────────────────────────────────────────────────
-  // Not specified in the Figma frames (they only show the creator), so this
-  // keeps the earlier design, compacted for the ~220px sidebar column: the
-  // status toggle, the title, and a priority dot rather than a full pill.
-  const subRow = (t) => {
-    const isDone = ui.isDoneStatus(t.status);
-    const pm = metaOf(priorities, t.priority || "medium");
-    const due = t.due_date ? formatDueDate(t.due_date) : "";
-    return Skeletons.Box.X({
-      className: `${pfx}__subtask-row`,
-      bubble: 0,
-      // Queued rows have nowhere to open to, so create scope leaves the row
-      // itself inert — its ✕ and its checkbox are the only controls.
-      service: svc.open,
-      uiHandler: svc.open ? [ui] : null,
-      taskId: t.id,
-      attrOpt: { "data-done": isDone ? "1" : "0" },
-      kids: [
-        Skeletons.Button.Svg({
-          className: `${pfx}__subtask-check`,
-          ico: "app-check",
-          bubble: 0,
-          service: svc.toggleDone,
-          uiHandler: [ui],
-          taskId: t.id,
-          attrOpt: { "data-done": isDone ? "1" : "0" },
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__subtask-text`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__subtask-title`,
-              content: t.title || "",
-            }),
-            due
-              ? Skeletons.Note({
-                  className: `${pfx}__subtask-meta`,
-                  content: due,
-                })
-              : null,
-          ].filter(Boolean),
-        }),
-        t.priority && pm
-          ? Skeletons.Note({
-              className: `${pfx}__subtask-dot`,
-              styleOpt: { background: pm.color },
-            })
-          : null,
-        // Same one-click remove the board card, gantt row and calendar chip
-        // already carry, so a child is deletable from where it is listed
-        // instead of only after opening it.
-        Skeletons.Button.Svg({
-          className: `${pfx}__subtask-del`,
-          ico: "cross",
-          bubble: 0,
-          service: svc.remove,
-          uiHandler: [ui],
-          taskId: t.id,
-        }),
-      ].filter(Boolean),
-    });
-  };
+  // Figma "progress bar": a 4px rail with the done share filled in, "N% Done"
+  // at its right. Only once there is something to measure.
+  const progress = total
+    ? Skeletons.Box.X({
+        className: `${pfx}__subtask-progress`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${pfx}__subtask-progress-track`,
+            kids: [
+              Skeletons.Box.X({
+                className: `${pfx}__subtask-progress-fill`,
+                styleOpt: { width: `${pct}%` },
+                attrOpt: { "data-complete": done === total ? "1" : "0" },
+              }),
+            ],
+          }),
+          Skeletons.Note({
+            className: `${pfx}__subtask-progress-label`,
+            content: `${pct}% ${LOCALE.DONE}`,
+          }),
+        ],
+      })
+    : null;
 
-  // ── Creator card (Figma) ────────────────────────────────────────────────
-  // Bordered card: title + ✕ on the first row, then the Priority / Due date /
-  // Status chips, then Create. The Figma frame has no Create button — it
-  // assumes Enter — but the panel's own Update sits right below the card, so
-  // "fill it in and press save" hit Update, which commits the PARENT and closes
-  // the panel. Enter still commits; the button is the discoverable path.
-  const chip = (kind, label, dot, extraClass) =>
+  // Which menu is open: the creator card's lives on its draft, a row's is
+  // {id, kind} per scope (see getSubtaskRowMenu).
+  const menuOpenFor = (row, kind) =>
+    row
+      ? !!rowMenu && rowMenu.id === row.id && rowMenu.kind === kind
+      : !!draft && draft.menu === kind;
+
+  // One chip for the creator card (`row` null → the draft) and for every
+  // existing child (`row` → that child): same look, same menu, different
+  // service so the panel knows whether to write to the server or the draft.
+  const chip = (kind, label, dot, extraClass, row) =>
     Skeletons.Box.X({
-      className: `${pfx}__subtask-chip${extraClass ? " " + extraClass : ""}`,
+      className: `${pfx}__subtask-chip${row ? ` ${pfx}__subtask-row-chip` : ""}${
+        extraClass ? " " + extraClass : ""
+      }`,
       attrOpt: {
         "data-kind": kind,
-        "data-open": draft && draft.menu === kind ? "1" : "0",
+        "data-open": menuOpenFor(row, kind) ? "1" : "0",
       },
       bubble: 0,
-      service: kind === "date" ? null : svc.menu,
-      uiHandler: kind === "date" ? null : [ui],
+      service: row ? svc.rowMenu : svc.menu,
+      uiHandler: [ui],
       menuKind: kind,
+      ...(row ? { taskId: row.id } : {}),
       kids: [
         dot
           ? Skeletons.Note({
@@ -4284,51 +4265,38 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
           content: label,
         }),
         Skeletons.Image.Svg({
-          ico: kind === "date" ? "calendar" : "apps-caret-down",
+          ico: "apps-caret-down",
           className: `${pfx}__subtask-chip-ico`,
         }),
-        // The native picker sits invisibly over the whole chip so the click
-        // opens the platform date UI. Its change is caught by a delegated
-        // listener on the panel root (the card is rebuilt on every re-feed, so
-        // a per-node listener would not survive).
-        kind === "date"
-          ? Skeletons.Element({
-              tagName: "input",
-              className: `${pfx}__subtask-date-input`,
-              // data-scope: the change listener is delegated on the panel root
-              // (the card is rebuilt on every re-feed), so it has to read off
-              // the node which of the two drafts it is editing.
-              attrOpt: {
-                type: "date",
-                value: (draft && draft.due_date) || "",
-                "data-scope": scope,
-              },
-            })
-          : null,
-        // The dropdown is a child of the chip that opened it, not of the card:
-        // absolutely positioned against the card it dropped below the WHOLE
-        // form, nowhere near the control that was clicked. __subtask-chip is
-        // position:relative, so anchoring here puts it under its own chip.
-        draft && draft.menu === kind ? menu(kind) : null,
+        menuOpenFor(row, kind) ? menu(kind, row) : null,
       ].filter(Boolean),
     });
 
-  const menu = (kind) => {
-    if (!draft || !kind || kind === "date") return null;
+  const menu = (kind, row) => {
+    const sel = row || draft;
+    if (!sel || !kind) return null;
+    if (kind === "assignee") return assigneeMenu(row);
     const isPriority = kind === "priority";
     const items = isPriority
       ? priorities.map((p) => ({
           key: p.key,
           label: LOCALE[p.label] || p.key,
           color: p.color,
-          selected: draft.priority === p.key,
+          selected: sel.priority === p.key,
         }))
       : cols.map((c) => ({
           key: c.key,
           label: c.name || LOCALE[c.label] || c.key,
           color: c.color,
-          selected: draft.status === c.key,
+          selected: sel.status === c.key,
         }));
+    const pick = row
+      ? isPriority
+        ? svc.rowPriority
+        : svc.rowStatus
+      : isPriority
+        ? svc.priority
+        : svc.status;
     return Skeletons.Box.Y({
       className: `${pfx}__subtask-menu`,
       attrOpt: { "data-kind": kind },
@@ -4338,10 +4306,11 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
           className: `${pfx}__subtask-menu-item`,
           attrOpt: { "data-selected": i.selected ? "1" : "0" },
           bubble: 0,
-          service: isPriority ? svc.priority : svc.status,
+          service: pick,
           uiHandler: [ui],
           taskPriority: i.key,
           taskStatus: i.key,
+          ...(row ? { taskId: row.id } : {}),
           kids: [
             Skeletons.Note({
               className: `${pfx}__subtask-menu-dot`,
@@ -4357,11 +4326,160 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
     });
   };
 
+  // The avatar's menu: every workspace member, ticked when assigned. A click
+  // toggles that one person; the menu stays up for a second pick.
+  const assigneeMenu = (row) => {
+    if (!row || !members.length) return null;
+    const current = assigneesOf(row).map(String);
+    return Skeletons.Box.Y({
+      className: `${pfx}__subtask-menu ${pfx}__subtask-menu--people`,
+      attrOpt: { "data-kind": "assignee" },
+      bubble: 0,
+      kids: members.map((m) => {
+        const uid = m.id != null ? m.id : m.uid;
+        return Skeletons.Box.X({
+          className: `${pfx}__subtask-menu-item`,
+          attrOpt: { "data-selected": current.includes(String(uid)) ? "1" : "0" },
+          bubble: 0,
+          service: svc.rowAssignee,
+          uiHandler: [ui],
+          taskId: row.id,
+          memberUid: uid,
+          kids: [
+            Skeletons.UserProfile({
+              className: `${pfx}__subtask-menu-avatar`,
+              id: uid,
+              firstname: m.firstname,
+              lastname: m.lastname,
+              auto_color: 1,
+              live_status: 0,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__subtask-menu-label`,
+              content: fullName(m) || m.email || "",
+            }),
+          ],
+        });
+      }),
+    });
+  };
+
+  // Figma: a 32px circle — the first assignee's avatar, or the user glyph on a
+  // grey disc when nobody is assigned; "+N" beside it for the rest.
+  const assigneeButton = (t) => {
+    const uids = assigneesOf(t);
+    const first = uids.length ? ui.getMember(uids[0]) : null;
+    const open = menuOpenFor(t, "assignee");
+    return Skeletons.Box.X({
+      className: `${pfx}__subtask-assignee`,
+      attrOpt: {
+        "data-open": open ? "1" : "0",
+        "data-set": uids.length ? "1" : "0",
+      },
+      bubble: 0,
+      service: svc.rowMenu,
+      uiHandler: [ui],
+      menuKind: "assignee",
+      taskId: t.id,
+      kids: [
+        first
+          ? Skeletons.UserProfile({
+              className: `${pfx}__subtask-assignee-avatar`,
+              id: uids[0],
+              firstname: first.firstname,
+              lastname: first.lastname,
+              auto_color: 1,
+              live_status: 0,
+            })
+          : Skeletons.Image.Svg({
+              ico: "apps-user-circle",
+              className: `${pfx}__subtask-assignee-ico`,
+            }),
+        uids.length > 1
+          ? Skeletons.Note({
+              className: `${pfx}__subtask-assignee-more`,
+              content: `+${uids.length - 1}`,
+            })
+          : null,
+        open ? menu("assignee", t) : null,
+      ].filter(Boolean),
+    });
+  };
+
+  const subRow = (t) => {
+    const isDone = ui.isDoneStatus(t.status);
+    const pm = metaOf(priorities, t.priority || "medium");
+    const sm = metaOf(cols, t.status);
+    return Skeletons.Box.X({
+      className: `${pfx}__subtask-row`,
+      bubble: 0,
+      attrOpt: { "data-done": isDone ? "1" : "0" },
+      kids: [
+        // The title is the way INTO the child (detail only); the controls
+        // beside it act on the row in place.
+        Skeletons.Note({
+          className: `${pfx}__subtask-title`,
+          content: t.title || "",
+          bubble: 0,
+          service: svc.open,
+          uiHandler: svc.open ? [ui] : null,
+          taskId: t.id,
+        }),
+        // Figma lays the row on a grid — title | 110 | 110 | 110 — so the
+        // chips line up down the list; each sits at the start of its cell.
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-cell`,
+          kids: [
+            chip(
+              "priority",
+              pm ? LOCALE[pm.label] || pm.key : LOCALE.PRIORITY,
+              pm && pm.color,
+              null,
+              t,
+            ),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-cell`,
+          kids: [
+            chip(
+              "status",
+              sm ? sm.name || LOCALE[sm.label] || sm.key : LOCALE.STATUS,
+              sm && sm.color,
+              null,
+              t,
+            ),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-row-end`,
+          kids: [
+            assigneeButton(t),
+            Skeletons.Button.Svg({
+              className: `${pfx}__subtask-del`,
+              ico: "cross",
+              bubble: 0,
+              service: svc.remove,
+              uiHandler: [ui],
+              taskId: t.id,
+            }),
+          ],
+        }),
+      ],
+    });
+  };
+
   const creator = () => {
     const pm = metaOf(priorities, draft.priority);
     const sm = metaOf(cols, draft.status);
     return Skeletons.Box.Y({
       className: `${pfx}__subtask-card`,
+      // Required-title flag. Rides on the draft so a re-feed (chip menu, a
+      // peer's push) keeps it; the controller also flips it in place.
+      attrOpt: {
+        "data-title-missing": draft._titleMissing ? "1" : "0",
+        "data-title-too-long": draft._titleTooLong ? "1" : "0",
+      },
       bubble: 0,
       kids: [
         Skeletons.Box.X({
@@ -4392,6 +4510,15 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
             }),
           ],
         }),
+        // Always built, shown only while the card is flagged (see skin).
+        Skeletons.Note({
+          className: `${pfx}__subtask-title-missing`,
+          content: LOCALE.TASK_TITLE_REQUIRED,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__subtask-title-too-long`,
+          content: LOCALE.TASK_TITLE_TOO_LONG,
+        }),
         Skeletons.Box.X({
           className: `${pfx}__subtask-card-chips`,
           kids: [
@@ -4401,20 +4528,47 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
               pm && pm.color,
             ),
             chip(
-              "date",
-              draft.due_date ? formatDueDate(draft.due_date) : LOCALE.DUE_DATE,
-              null,
-            ),
-          ],
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__subtask-card-chips`,
-          kids: [
-            chip(
               "status",
               sm ? sm.name || LOCALE[sm.label] || sm.key : LOCALE.STATUS,
               sm && sm.color,
             ),
+          ],
+        }),
+        // Due date on a row of its own, as the same flatpickr field the parent's
+        // Due date uses (__due-input) rather than a chip over a native picker.
+        Skeletons.Box.Y({
+          className: `${pfx}__subtask-card-date ${pfx}__due-field`,
+          attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
+          kids: [
+            {
+              kind: "date_picker",
+              className: `${pfx}__due-input ${pfx}__subtask-due-input`,
+              innerClass: `${pfx}__due-input-inner`,
+              name: svc.dateField,
+              placeholder: LOCALE.DUE_DATE,
+              value: draft.due_date || "",
+              service: "task-input-changed",
+              uiHandler: [ui],
+              vendorOpt: {
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                // Explicit null keeps an unset due date unset (see the parent's
+                // picker in buildDueSectionContent).
+                defaultDate: draft.due_date || null,
+                disable: noPastDaysExcept(draft.due_date),
+                appendTo: document.body,
+                position: positionDueCalendarLeft,
+                onReady: (_d, _s, instance) => {
+                  const cc = instance && instance.calendarContainer;
+                  if (cc) cc.classList.add("tasks-panel__flatpickr");
+                },
+              },
+            },
+            Skeletons.Note({
+              className: `${pfx}__due-missing`,
+              content: LOCALE.TASK_DUE_REQUIRED,
+            }),
           ],
         }),
         // Explicit Create. The Figma frame has no button — it assumes Enter —
@@ -4443,6 +4597,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
 
   return [
     header,
+    progress,
     ...subs.map(subRow),
     draft && canAdd ? creator() : null,
     // Only when there is genuinely nothing: with the creator open the block is
@@ -4583,6 +4738,6 @@ make.buildHistoryListContent = buildHistoryListContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;
 make.buildDueSectionContent = buildDueSectionContent;
+make.dateFieldDisable = dateFieldDisable;
 make.buildColumnMenuContent = buildColumnMenuContent;
-make.dueSummaryText = dueSummaryText;
 module.exports = make;

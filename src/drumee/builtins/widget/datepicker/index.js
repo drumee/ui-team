@@ -11,6 +11,12 @@ class __datepicker extends LetcBox {
   }
 
   initialize(opt = {}) {
+    // Vendor CSS BEFORE our skin: style-loader appends a <style> per module in
+    // require order, and the skin overrides flatpickr at equal specificity
+    // (e.g. `.flatpickr-day.today:hover { color: #fff }` vs the skin's day
+    // colour). Loaded after the skin, flatpickr won those ties and today's
+    // number went white on the pale hover circle.
+    require("flatpickr/dist/flatpickr.min.css");
     require("./skin");
     super.initialize(opt);
     this.model.atLeast({
@@ -26,7 +32,6 @@ class __datepicker extends LetcBox {
 
   async onDomRefresh() {
     const flatpickr = (await import("flatpickr")).default;
-    await import("flatpickr/dist/flatpickr.min.css");
 
     this._input = document.createElement("input");
     this._input.id = `${this._id}-input`;

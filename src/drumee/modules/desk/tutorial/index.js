@@ -1,7 +1,8 @@
 require('./skin');
 const Tours = require('libs/tutorial-tours');
 const { tour, flaggedIds, stepChrome } = require('./tours');
-const { REFLOW_MS, tierFor, screensFor, buildStepWidgets } = require('./host-kit');
+const { REFLOW_MS, tierFor, screensFor, buildStepWidgets, layoutFor } = require('./host-kit');
+const { relayoutStep } = require('./layout');
 
 const SVC_OPT = { async: 1 };
 
@@ -45,6 +46,9 @@ class tutorial_main extends LetcBox {
     this.declareHandlers();
     this._stepIndex = 0;
     this._tour = tour(this.mget('tour'));
+    // Phone or desk, from the viewport (host-kit layoutFor). Read before the
+    // payloads are built because every payload carries it.
+    this._layout = layoutFor(typeof window !== 'undefined' ? window.innerWidth : 0, this._phoneAllowed());
     this._widgets = this._buildWidgets(this._tour);
     // ?tutorial=<id>&step=<n> — 1-based, clamped. Only useful for a multi-step
     // tour; for the rest it is always 0 and costs nothing.
@@ -116,7 +120,7 @@ class tutorial_main extends LetcBox {
    * @returns {Array}
    */
   _buildWidgets(t) {
-    return buildStepWidgets(this, t, { canCreate: this._canCreate() });
+    return buildStepWidgets(this, t, { canCreate: this._canCreate(), layout: this._layout });
   }
 
   onDomRefresh() {
@@ -217,13 +221,15 @@ class tutorial_main extends LetcBox {
    * awaiting parts that never mount would simply hang.
    */
   _applyChrome() {
+    // No rail at phone: each step draws its own phone chrome (top bar, tab bar).
+    if (this._layout === 'phone') return;
     const step = (this._tour.steps || [])[this._stepIndex];
     const { rail } = stepChrome(step);
     const sidebar = require('./skeleton/sidebar');
     // navItems, not railItems: the slot is replaced whole, so the org's Dept.
     // entry has to come back with the workspace tabs or the org-home rail —
     // which has no tabs at all — is fed an empty list and renders bare.
-    this.ensurePart('rail-nav').then((p) => p.feed(sidebar.navItems(this, rail)));
+    this.ensurePart('rail-nav').then((p) => p && p.feed(sidebar.navItems(this, rail)));
   }
 
   /**
@@ -235,8 +241,54 @@ class tutorial_main extends LetcBox {
    *
    * @returns {Boolean} whether either value changed
    */
+  /**
+   * Phone or desk, from the viewport, and whether the pointer is a finger.
+   *
+   * On a flip the MOUNTED step redraws its current screen in the new layout
+   * (relayoutStep), exactly as the window host does. Not a re-feed: the step
+   * instance holds what the user has done — the name typed into the live
+   * create form, the type picked, the workspace already created — and a fresh
+   * step would drop all of it (an invite sent after a rotation would silently
+   * go nowhere). The shell needs no swap: the rail is hidden at the mobile
+   * tier, which is the same width as the phone layout.
+   *
+   * The phone layout is only offered when phone tours are switched on
+   * (`mobile_tours`) or the tour is an explicit preview — until then a narrow
+   * desktop window keeps today's layout.
+   *
+   * @returns {Boolean} whether the layout changed
+   */
+  _applyLayout() {
+    if (typeof window === 'undefined') return false;
+    const layout = layoutFor(window.innerWidth, this._phoneAllowed());
+    const touch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    if (this.el && this.el.dataset) {
+      this.el.dataset.layout = layout;
+      this.el.dataset.touch = touch ? '1' : '0';
+    }
+    this._touch = touch;
+    if (layout === this._layout) return false;
+    this._layout = layout;
+    this._widgets = this._widgets.map((w) => ({ ...w, layout }));
+    relayoutStep(this._currentStep(), layout);
+    this._applyChrome();
+    return true;
+  }
+
+  /** Phone layout: on once phone tours are, and always for a preview. */
+  _phoneAllowed() {
+    return !!this.mget('preview') || !!this.mget('phone_ok')
+      || !!(Tours.mobileToursOn && Tours.mobileToursOn(this._tour && this._tour.id));
+  }
+
+  _currentStep() {
+    const part = this.getPart && this.getPart(_a.content);
+    return part && part.children && part.children.last();
+  }
+
   _applySize() {
     if (!this.el || !this.el.dataset || typeof window === 'undefined') return false;
+    this._applyLayout();
     // Which tour is running, for the skins. Stamped here rather than in a
     // second method because this is already the one place that writes to the
     // root's dataset, and it runs before the shell is fed. The workspace tour
@@ -597,8 +649,14 @@ class tutorial_main extends LetcBox {
    */
   _chainMigrateTour(pane) {
     if (this._migrateChained || !_.isFunction(this.once)) return;
+    // NOT ON A PHONE. There the migrate tour is the user's to start — from the
+    // Files empty state's or the + New menu's "Migrate from Google Drive"
+    // (window/folder "launch-gdrive-migration") — not a continuation of this
+    // one.
+    if (this._layout === 'phone') return;
     if (!pane || !_.isFunction(pane.showTutorial)) return;
     this._migrateChained = true;
+    const preview = !!this.mget('preview');
     this.once(_e.destroy, () => {
       // `this` is gone by now — deliberately nothing off it is touched. The
       // pane was captured above and is the only thing this needs.
@@ -608,7 +666,10 @@ class tutorial_main extends LetcBox {
         // throw the confetti on the migrate tour's first screen. A workspace
         // has just been made, opened and confirmed on screen; the same tour
         // raised from the rail has no such moment behind it.
-        pane.showTutorial('migrate', { celebrate: 1 });
+        // A preview run hands on as a preview: it is exempt from the seen-set
+        // and the phone gate on the way in, exactly as this tour was — without
+        // it a `?tutorial=workspace` / T.show() run on a phone ended here.
+        pane.showTutorial('migrate', { celebrate: 1, ...(preview ? { preview: 1 } : {}) });
       } catch (e) {
         // A chained tour is never load-bearing for the tour that chained it.
       }
@@ -739,6 +800,12 @@ class tutorial_main extends LetcBox {
       // The step made a workspace. The host is what opens it and hands on to
       // the next tour, because both outlive the step — the tour is coming down
       // around them.
+      // The step entered or left a screen the user is filling in (the real
+      // create form, the invite card). Stamped for the skin: Skip hides there,
+      // because those screens carry their own exits.
+      case 'step-live':
+        if (this.el && this.el.dataset) this.el.dataset.live = args.live ? '1' : '0';
+        break;
       case 'workspace-created': {
         const ws = args.workspace || {};
         if (ws.hub_id) this._createdWorkspace = ws;

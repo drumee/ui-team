@@ -342,13 +342,27 @@ class __media_core extends DrumeeMFS {
     return items;
   }
 
+  /**
+   * Whether this node may be renamed by the viewer as far as the WORKSPACE
+   * rule goes. Renaming a workspace is an admin act (Duy, 2026-10-07): an
+   * admin's rename reaches every member, and a member below admin renaming it
+   * for themselves only made the same workspace go by different names. Files
+   * and folders are untouched (true). Tested on filetype, not `isHub`, which
+   * is also true for a folder that merely contains workspaces.
+   */
+  _workspaceRenameAllowed() {
+    if (this.mget(_a.filetype) !== _a.hub) return true;
+    return !!this.canAdmin();
+  }
+
   contextmenuItemsForHub() {
     let fileItems = [];
     // Over-limit: upload + invite are paused — omit them from the kebab so
     // the menu doesn't offer actions the REST clamp will refuse.
     const locked = require("libs/over-limit").isLocked();
     if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems = ['openInWindow', _a.separator, _a.rename];
+      fileItems = ['openInWindow', _a.separator];
+      if (this._workspaceRenameAllowed()) fileItems.push(_a.rename);
       if (!locked) fileItems.push(_a.upload);
       fileItems.push(_a.download, _a.separator, _a.info);
       if (!locked && this._canInviteToHub()) {
@@ -415,8 +429,17 @@ class __media_core extends DrumeeMFS {
       // if (this.canShare()) sections.push([_a.share]);
       /** 4 — details: members + roles via the folder settings panel */
       sections.push([_a.info]);
-      /** 5 — outside-world share link (share area only) */
-      if (this.mget(_a.area) === _a.share) sections.push(['secureShare']);
+      /** 5 — the area's link, split the same way the file menu splits it:
+       *  external workspace (`share`) → outside-world share link; internal
+       *  workspace (`private`) → Designation link, which a fellow member opens
+       *  in their own desk (Lexis 2026-10-05: folders too, not only files).
+       *  Never on a WORKSPACE: the desk switcher's ⋯ menu is built from this
+       *  same builder (see 6), and a workspace is not "a folder in" one. */
+      if (this.mget(_a.area) === _a.share) {
+        sections.push(['secureShare']);
+      } else if (this.mget(_a.area) === _a.private && !this._isWorkspace()) {
+        sections.push(['designationLink']);
+      }
       /** 6 — trash last. On a WORKSPACE this row may be "Leave workspace"
        *  instead: the desk switcher's ⋯ menu is built from this same builder
        *  (modules/desk/index.js _resolveWorkspaceActions), so the workspace
@@ -1673,6 +1696,9 @@ class __media_core extends DrumeeMFS {
   select(opt, hide) {
     this.setState(1);
     this.el.dataset.selected = this.mget(_a.state);
+    // Its checkbox too, as unselect() and tick() repaint it: a row picked by
+    // the marquee (window/selection) or by select-all showed no tick.
+    this._changeState("checkbox", "selected", this.mget(_a.state));
     return this.mset(opt);
   }
 
@@ -1831,6 +1857,7 @@ class __media_core extends DrumeeMFS {
     if (!this.isGranted(_K.permission.delete) && !this.isHub) {
       return;
     }
+    if (!this._workspaceRenameAllowed()) return;
     if (pointerDragged) {
       return;
     }
@@ -2364,6 +2391,8 @@ class __media_core extends DrumeeMFS {
     if (_.isEmpty(value)) {
       return;
     }
+    // Every rename path ends here (grid, switcher chip, dialog).
+    if (!this._workspaceRenameAllowed()) return;
     if (value === this.mget(_a.filename)) {
       try {
         this.entry.softDestroy();

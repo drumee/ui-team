@@ -161,6 +161,14 @@ class __migrate_gdrive_popup extends LetcBox {
 
   _render() {
     this.feed(require('./skeleton')(this));
+    this._animateBar();
+  }
+
+  /** Each render brings a new fill: run it from where the last one stood. */
+  _animateBar() {
+    if (!this.el || !this.fig) return;
+    this._barMemo = this._barMemo || {};
+    require('libs/progress-fill').animateFill(this.el, `.${this.fig.family}__progress-fill`, this._barMemo);
   }
 
   async _refreshScope() {
@@ -239,6 +247,7 @@ class __migrate_gdrive_popup extends LetcBox {
       this._jobSnap = snap.job;
       this._state = snap.state;
       this._cancelRequested = snap.cancelRequested;
+      this._cancelLate = snap.cancelLate;
       if (snap.state === 'in-progress') this._installCancelDelegate();
     }
     this._render();

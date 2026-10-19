@@ -4,6 +4,8 @@
  * whenever the active window navigates, and renders the path.
  * ==================================================================== */
 const { getPath } = require("libs/path-request");
+// Aliased: the widget's own method is called siblingScope too.
+const { siblingScope: scopeOfPath } = require("libs/folder-siblings");
 const { createSectionHold } = require("./section-hold");
 
 // Shared by every instance: the topbar re-feed destroys this widget and mounts
@@ -242,6 +244,18 @@ class __desk_breadcrumb extends LetcBox {
   }
 
   /**
+   * The level the address is on, for the topbar switcher: the open folder's
+   * parent and siblings when the track is deeper than the workspace, null
+   * otherwise (workspace alone, a section label, or nothing painted yet).
+   * Read from `_data`, the raw get_path rows _buildContent painted — the
+   * crumbs on screen, so the menu and the address cannot disagree.
+   */
+  siblingScope() {
+    if (this._section) return null;
+    return scopeOfPath(this._data);
+  }
+
+  /**
    * Clear the track (no path items).
    *
    * This used to ALSO reset the whole desk back to the legacy all-workspaces
@@ -341,11 +355,17 @@ class __desk_breadcrumb extends LetcBox {
    * Resolve a node's full path (workspace → folders) and render it. The
    * workspace is the leftmost crumb — there is no Home anchor in front of it.
    */
-  _updatePath(nid, hub_id) {
+  _updatePath(nid, hub_id, hint) {
     if (!nid || !hub_id) {
       this.warn("Require node data")
       return;
     }
+    // Latest request wins. get_path answers out of order (a deep folder is
+    // slower than its parent), so without this a quick in-then-out left the
+    // crumbs of the folder the user had already walked away from.
+    const seq = (this._pathSeq = (this._pathSeq || 0) + 1);
+    // Don't make the bar wait a round trip for what is already known.
+    this._optimisticPath(nid, hub_id, hint);
     // Shared in-flight request: Wm.loadWorkspace asks for this exact path in
     // the same instant on a folder open (libs/path-request). A path this
     // session has already resolved paints at once and is repainted only if the
@@ -358,6 +378,7 @@ class __desk_breadcrumb extends LetcBox {
       // the same job, confusing to debug. Same guard window_folder's
       // _resolveMissingTitle uses on this call.
       if (this.isDestroyed && this.isDestroyed()) return;
+      if (seq !== this._pathSeq) return;
       if (_.isEmpty(data)) return;
       // A section label is up and not being left: this answer is an echo of
       // the workspace load behind it (a reload's restore), not a navigation.
@@ -365,6 +386,46 @@ class __desk_breadcrumb extends LetcBox {
       this._buildContent(data)
     };
     getPath(this, { nid, hub_id }, paint).then(paint)
+  }
+
+  /**
+   * Paint the track the destination is certain to have, before get_path.
+   *
+   *   - an ANCESTOR already on the track (a parent crumb, a sidebar row for a
+   *     folder above us): crop to it;
+   *   - a CHILD of the current last crumb (opening a folder from the grid):
+   *     append it, from the name and parent the pane mirrored with it.
+   *
+   * Anything else (a deep jump, another workspace, a section label up) paints
+   * nothing here and waits for get_path exactly as before. get_path's answer
+   * then repaints only if it differs (_buildContent's signature guard).
+   */
+  _optimisticPath(nid, hub_id, hint) {
+    if (this._section || sectionHold.holds()) return;
+    const cur = this._data;
+    if (!_.isArray(cur) || !cur.length) return;
+    const same = (a, b) => a != null && b != null && `${a}` === `${b}`;
+    const at = cur.findIndex((r) => r && same(r.nid, nid) && same(r.hub_id, hub_id));
+    if (at >= 0) {
+      if (at < cur.length - 1) this._buildContent(cur.slice(0, at + 1));
+      return;
+    }
+    const last = cur[cur.length - 1];
+    if (!hint || !hint.filename || !last) return;
+    if (!same(last.hub_id, hub_id) || !same(last.nid, hint.pid)) return;
+    this._buildContent([
+      ...cur,
+      {
+        hub_id,
+        nid,
+        pid: hint.pid,
+        filename: hint.filename,
+        filetype: _a.folder,
+        area: hint.area || last.area,
+        hub_name: last.hub_name,
+        privilege: hint.privilege,
+      },
+    ]);
   }
 
   /**
@@ -389,7 +450,7 @@ class __desk_breadcrumb extends LetcBox {
   _onBrowse(data) {
     let { nid, hub_id, actual_home_id, filetype } = data;
     if (filetype == _a.hub && actual_home_id) nid = actual_home_id
-    this._updatePath(nid, hub_id)
+    this._updatePath(nid, hub_id, data)
   }
 
   /**

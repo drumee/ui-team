@@ -43,7 +43,7 @@
       --dmz-popup-text: #0b0a21;
       --dmz-popup-cta: #433cc5;
       --dmz-popup-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
-      --dmz-popup-font: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --dmz-popup-font: var(--font-main);
 
       background-color: var(--dmz-popup-surface);
       border-radius: 12px;

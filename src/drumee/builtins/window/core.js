@@ -1434,14 +1434,16 @@ class __window_core extends __utils {
         this.iconsList.model.set({
           skip: require("./skeleton/toolkit/list-skip").fileListSkip(true),
         });
-        this.iconsList.restart();
+        // The window's restart, so a window that overrides it (the folder's
+        // search mode) gets to answer.
+        this.restart();
         break;
       case "hide-hidden-files":
         localStorage.removeItem("showHidden");
         this.iconsList.model.set({
           skip: require("./skeleton/toolkit/list-skip").fileListSkip(false),
         });
-        this.iconsList.restart();
+        this.restart();
         break;
       case "export-to-server":
       case "import-from-server":

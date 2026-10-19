@@ -18,6 +18,18 @@ class __trash_item extends LetcBox {
   }
 
   /**
+   * Restore / delete wait on a server round-trip (purge re-measures the
+   * domain's storage, so it can take a few seconds). Dim the row and stop
+   * clicks at once so it does not read as a dead button that invites a
+   * second click; the panel clears it if the request fails.
+   */
+  setBusy(on) {
+    if (!this.el) return;
+    if (on) this.el.dataset.busy = 1;
+    else delete this.el.dataset.busy;
+  }
+
+  /**
    * 
    * @param {*} cmd 
    * @param {*} args 

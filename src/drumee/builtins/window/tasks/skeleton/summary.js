@@ -58,9 +58,9 @@ module.exports = function (ui) {
     if (ui.isDoneStatus(t.status) && done && weekAgo && done >= weekAgo)
       completed7d++;
 
-    // Avg time per task = mean planned duration. A Duration task spans
-    // start_date → due_date inclusive (13 → 17 July = 5 days, matching the
-    // detail panel's "5 days" chip); a single-date task counts as 1 day;
+    // Avg time per task = mean planned duration. A task with a Start date spans
+    // start_date → due_date inclusive (13 → 17 July = 5 days); a single-date
+    // task counts as 1 day;
     // tasks with no due date don't contribute.
     if (t.due_date) {
       let days = 1;

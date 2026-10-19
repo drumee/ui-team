@@ -18,6 +18,7 @@ html {
 @include meta.load-css("dialog");
 @include meta.load-css("sidebar");
 @include meta.load-css("meeting-toast");
+@include meta.load-css("desk-toast");
 
 .desk-module {
   // Where the padded canvas actually begins, published once so every
@@ -1649,5 +1650,20 @@ html {
   .desk-module-topbar__actions-cluster {
     opacity: 0.4;
     pointer-events: none;
+  }
+}
+
+// A TOUR ON THE MOBILE DESK. Both tour hosts mount in the overlay, whose
+// open state pins it to a 50000 stacking context — so the tour's own 100001
+// counts only inside it, and the mobile topbar (99999), its action row and the
+// bottom rail would paint over the tour and take its taps (the Skip pill sits
+// exactly where the topbar's buttons are). The phone tour draws its own
+// chrome, so the real one stands down for the tour's life.
+.desk-module[data-desk-tour="1"],
+.desk-module[data-window-tour="1"] {
+  .desk-module__mobile-topbar,
+  .desk-module__mobile-actions,
+  .desk-module__mrail {
+    display: none;
   }
 }

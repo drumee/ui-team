@@ -114,19 +114,37 @@
       white-space: nowrap;
     }
 
-    &[data-state="calling"],
-    &[data-state="joined"] {
+    &[data-call="calling"],
+    &[data-call="joined"] {
       cursor: default;
       pointer-events: none;
     }
 
-    &[data-state="calling"] {
+    &[data-call="calling"] {
       background-color: rgba(250, 133, 64, 0.18);
       svg { color: #fa8540; }
       .note-content { color: #fa8540; }
     }
 
-    &[data-state="joined"] {
+    // Ring outcomes: shown briefly, still clickable to call again.
+    &[data-call="declined"] {
+      background-color: rgba(229, 62, 62, 0.12);
+      svg { color: #e53e3e; }
+      .note-content { color: #e53e3e; }
+
+      &:hover { background-color: rgba(229, 62, 62, 0.24); }
+    }
+
+    &[data-call="no_answer"],
+    &[data-call="offline"] {
+      background-color: rgba(113, 128, 150, 0.14);
+      svg { color: #718096; }
+      .note-content { color: #718096; }
+
+      &:hover { background-color: rgba(113, 128, 150, 0.26); }
+    }
+
+    &[data-call="joined"] {
       background-color: rgba(46, 184, 113, 0.18);
       opacity: 0.75;
       svg { color: #2eb871; }

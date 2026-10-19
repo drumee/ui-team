@@ -47,7 +47,12 @@ function heading(state) {
   }
 }
 
-module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
+/**
+ * The import's content for its current state — the form, the progress, or the
+ * result. Shared by the desk dialog below and the phone sheet
+ * (./phone.js live), which draw it in different frames.
+ */
+function liveBody(ui, snap = {}, dest = {}, opt = {}) {
   const pfx = ui.fig.family;
   const state = snap.state || 'loading';
   const note = (c, content, extra = {}) =>
@@ -170,7 +175,10 @@ module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
     const sm = summaryOf(job);
     const isDone = state === 'done';
     const line = (LOCALE.MIGRATE_GDRIVE_SUMMARY_BASE || 'Imported {0} files in {1} folders.')
-      .replace('{0}', sm.processed).replace('{1}', sm.folders);
+      .replace('{0}', sm.processed).replace('{1}', sm.folders)
+      + (sm.existing
+        ? ' ' + (LOCALE.MIGRATE_GDRIVE_SUMMARY_EXISTING || '{0} already existed, skipped.').replace('{0}', sm.existing)
+        : '');
     const extra = sm.failures.length
       ? (LOCALE.MIGRATE_GDRIVE_SUMMARY_ERRORS || '{0} errors.').replace('{0}', sm.failures.length)
       : sm.skipped.length
@@ -186,6 +194,9 @@ module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
       note('live-summary', extra ? `${line} ${extra}` : line,
         { dataset: { kind: sm.failures.length ? 'error' : 'ok' } }),
       reason ? note('live-status', reason, { dataset: { kind: 'error' } }) : null,
+      (isDone && snap.cancelLate) ? note('live-status',
+        LOCALE.MIGRATE_GDRIVE_CANCEL_TOO_LATE
+          || 'The migration had already finished before it could be cancelled.') : null,
       Skeletons.Box.X({
         className: `${pfx}__live-actions`,
         kids: [
@@ -197,10 +208,21 @@ module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
       }),
     ].filter(Boolean);
   }
+  return body;
+}
+
+module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
+  const pfx = ui.fig.family;
+  const state = snap.state || 'loading';
+  const note = (c, content, extra = {}) =>
+    Skeletons.Note({ className: `${pfx}__${c}`, content, ...extra });
+  const body = liveBody(ui, snap, dest, opt);
 
   return Skeletons.Box.Y({
     className: `${pfx}__stage ${pfx}__stage--live`,
-    kids: [filesPane(ui, {}), Skeletons.Box.Y({
+    // `opt.pane`: what sits behind the dialog. The phone layout passes its own
+    // pane (migrate/skeleton/phone.js) so the sheet rises over a phone screen.
+    kids: [(opt.pane || filesPane)(ui, {}), Skeletons.Box.Y({
       className: `${pfx}__overlay`,
       kids: [Skeletons.Box.Y({
         className: `${pfx}__backdrop`,
@@ -230,3 +252,7 @@ module.exports = function (ui, snap = {}, dest = {}, opt = {}) {
     })],
   });
 };
+
+module.exports.liveBody = liveBody;
+module.exports.heading = heading;
+module.exports.FORM = FORM;

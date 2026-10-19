@@ -116,7 +116,7 @@ class Drumee extends Marionette.Application {
     body.style.color = "white";
     body.style.lineHeight = 1.5;
     body.style.fontSize = "24px";
-    body.style.fontFamily = "Roboto-Regular,sans-serif";
+    body.style.fontFamily = "var(--font-main)";
     const a = document.getElementById('--router');
     a.style.margin = "auto";
     a.style.width = "100%";

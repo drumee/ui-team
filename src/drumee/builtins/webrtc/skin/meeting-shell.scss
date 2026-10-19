@@ -345,6 +345,9 @@
     max-height: calc(100% - 32px);
     pointer-events: none;
     z-index: 99999;
+    // The avatar below is sized in cq units. Without a size container they
+    // fall back to the VIEWPORT, so the avatar was always the 72px cap.
+    container-type: size;
 
     &:empty {
       display: none;
@@ -1960,6 +1963,13 @@
       opacity: 0.4;
       pointer-events: none;
       cursor: not-allowed;
+    }
+
+    // ...except the share button: it stays clickable while locked so the click
+    // can say WHO is sharing (screenshare.js _explainShareLocked) instead of
+    // silently doing nothing.
+    &.screen[data-disabled="1"] {
+      pointer-events: auto;
     }
   }
 
