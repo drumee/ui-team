@@ -12,7 +12,9 @@
   box-shadow: none;
 }
 
-.player__main:has(.file-switcher__frame) {
+// Keyed on the host class the frame stamps (vector's root has no player__main),
+// :has() keeping the (0,2,0) weight the old .player__main:has() rule had.
+.file-switcher__host:has(.file-switcher__frame) {
   background-color: var(--normal-bg-90);
   box-shadow: none;
 }

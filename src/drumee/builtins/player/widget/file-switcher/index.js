@@ -22,9 +22,9 @@ require("./skin");
 const { openMedia, CONTAINER_FILETYPES } = require("libs/open-media");
 const recent = require("./recent");
 const { isScheduleNode } = require("builtins/window/skeleton/toolkit/list-skip");
+const { readCollapsed, writeCollapsed } = require("./frame");
 const skeleton = require("./skeleton");
 
-const COLLAPSED_KEY = "player-file-switcher:collapsed";
 const MAX_RECENT = 5;
 const READY_POLL_MS = 100;
 const READY_TIMEOUT_MS = 10000;
@@ -33,22 +33,6 @@ const READY_TIMEOUT_MS = 10000;
 // files and the scroll position, so the new panel is drawn complete at once
 // instead of empty-then-filled.
 let handoff = null;
-
-function readCollapsed() {
-  try {
-    return localStorage.getItem(COLLAPSED_KEY) === "1";
-  } catch (e) {
-    return false;
-  }
-}
-
-function writeCollapsed(v) {
-  try {
-    localStorage.setItem(COLLAPSED_KEY, v ? "1" : "0");
-  } catch (e) {
-    // The toggle still works for this window.
-  }
-}
 
 class __file_switcher extends LetcBox {
   /**
