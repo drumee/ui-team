@@ -1717,9 +1717,13 @@ class __address_book extends LetcBox {
 
   // A tab's rows before search / tag filtering. All and Blocked read the
   // active fetch, Archived the archived one (see switchTab).
+  // The book lists only people the user has added. my_contact_show_next also
+  // returns chat partners (status "nocontact": messaged or called, never
+  // added) — a contact deleted after a chat came straight back as one, so
+  // Delete looked like it did nothing. They are left out of every tab.
   _tabList(tab) {
     if (tab === "pending") return this._pendingList();
-    const list = this._contacts.filter((c) => !isPending(c));
+    const list = this._contacts.filter((c) => !isPending(c) && !isChatPartner(c));
     if (tab === "blocked") return list.filter(isBlockedRow);
     // Server's my_contact_show_next returns blocked rows inside the active
     // set; mirror the archived-tab isolation by excluding them from All.
