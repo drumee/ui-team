@@ -48,9 +48,24 @@
     height: 100%;
     padding: 12px;
     width: 240px;
+    // Collapse / expand slides between the two widths. Clipped so the labels,
+    // shown as soon as data-collapsed flips, don't spill out while it grows.
+    overflow: hidden;
+    transition: width 220ms ease;
 
     &[data-collapsed="1"] {
       width: 60px;
+    }
+
+    // Kept on one line so a half-open panel clips them instead of wrapping.
+    .file-switcher__title,
+    .file-switcher__create-label,
+    .file-switcher__section-title {
+      white-space: nowrap;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
     }
 
     &[data-busy="1"] .file-switcher__scroll,
@@ -352,18 +367,71 @@
     @include drumee.typo($size: 12px, $line: 1.4, $color: var(--tertiary-grey-70));
   }
 
-  // Collapsed: one 36px column of icons, "Files" on top expands it back.
+  // "Other files" while its listing loads (skeleton loadingRows): same
+  // geometry as &__row, so the real rows replace it without a jump.
+  &__row-skeletons {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  &__row-skeleton {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    height: 30px;
+
+    &-icon {
+      flex: 0 0 30px;
+      height: 30px;
+      border-radius: 6px;
+    }
+
+    &-line {
+      flex: 0 1 70%;
+      height: 10px;
+      border-radius: 5px;
+    }
+
+    &:nth-child(even) &-line {
+      flex-basis: 50%;
+    }
+
+    &-icon,
+    &-line {
+      animation: file-switcher-skeleton-pulse 1.4s ease-in-out infinite;
+      background: var(--overlay-bg-05);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &-icon,
+      &-line {
+        animation: none;
+      }
+    }
+  }
+
+  // Collapsed: one 36px column of icons; the split-panel toggle takes the
+  // "Files" title's place on top and expands it back (toggle-panel).
   &__ui[data-collapsed="1"] {
+    // The 36px icon column has no room for a scrollbar: hide it, keep the
+    // wheel / touch / keyboard scroll (overflow-y stays auto).
+    .file-switcher__scroll {
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
     .file-switcher__head {
       justify-content: center;
     }
 
-    .file-switcher__title {
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .file-switcher__toggle,
+    .file-switcher__title,
     .file-switcher__search-input,
     .file-switcher__create-label,
     .file-switcher__section-title,
@@ -389,8 +457,25 @@
     }
 
     .file-switcher__section-head,
-    .file-switcher__row {
+    .file-switcher__row,
+    .file-switcher__row-skeleton {
       justify-content: center;
     }
+
+    .file-switcher__row-skeleton-line {
+      display: none;
+    }
+  }
+}
+
+// Namespaced: @keyframes is global.
+@keyframes file-switcher-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
   }
 }
