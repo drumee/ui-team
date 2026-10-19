@@ -7,6 +7,8 @@ const {
   clearGrouped,
   groupViewState,
   nextGroupViewState,
+  loadViewState,
+  saveViewState,
 } = require("../skeleton/toolkit/file-group");
 
 const {
@@ -552,8 +554,7 @@ class __window_folder extends mfsInteract {
       // and then a map lookup each.
       Kind.waitFor("tutorial_share").catch(() => { });
     }
-    setGrouped(this, true);
-    this.setViewMode(_a.icon, false);
+    this._applySavedViewState();
     // Team-chat unread count for the chat card header (see _paintChatUnread).
     this._onWorkspaceUnread = () => this._paintChatUnread();
     RADIO_BROADCAST.on("workspace-unread", this._onWorkspaceUnread);
@@ -769,6 +770,14 @@ class __window_folder extends mfsInteract {
   }
 
 
+
+  // Open in the Group / List / Grid view the user last picked (Group when
+  // nothing is saved). Window-local view mode, never the process-wide default.
+  _applySavedViewState() {
+    const state = loadViewState();
+    setGrouped(this, state === "group");
+    this.setViewMode(state === "list" ? _a.row : _a.icon, false);
+  }
 
   onBeforeDestroy(opt) {
     // The File threads dropdown's document listeners go with the window.
@@ -2015,6 +2024,8 @@ class __window_folder extends mfsInteract {
     // not leak "row" into the process-wide ViewMode default, or the next
     // Share/Search/Transferbox to open would inherit list view from it.
     this.setViewMode(state === "list" ? _a.row : _a.icon, false);
+    // Remembered for the next page load (_applySavedViewState).
+    saveViewState(state);
     // The active-segment CSS keys off `data-state` on the toggle BOX, and cmd.el
     // is now the pressed segment — so resolve the box rather than stamping the
     // segment. The toolbar is rebuilt below and fileViewToggle recomputes this

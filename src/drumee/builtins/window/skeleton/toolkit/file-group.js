@@ -177,6 +177,37 @@ function clearGrouped(ui) {
 //   group -> (1, icon)    list -> (0, row)    grid -> (0, icon)
 const VIEW_STATES = ["group", "list", "grid"];
 
+// The last position the user picked, kept across page refreshes. Same
+// localStorage-with-try/catch shape as the theme preference (router/theme.js):
+// private mode or disabled storage falls back to Group, the original default.
+const VIEW_STATE_KEY = "drumee.files.viewState";
+
+function _defaultStorage() {
+  try {
+    return globalThis.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+function loadViewState(storage = _defaultStorage()) {
+  try {
+    const saved = storage && storage.getItem(VIEW_STATE_KEY);
+    return VIEW_STATES.includes(saved) ? saved : "group";
+  } catch {
+    return "group";
+  }
+}
+
+function saveViewState(state, storage = _defaultStorage()) {
+  if (!storage || !VIEW_STATES.includes(state)) return;
+  try {
+    storage.setItem(VIEW_STATE_KEY, state);
+  } catch {
+    /* storage disabled — the choice just won't survive a refresh */
+  }
+}
+
 // Which position the window is showing right now.
 function groupViewState(ui, viewMode) {
   if (isGrouped(ui)) return "group";
@@ -206,6 +237,9 @@ module.exports = {
   isSectioned,
   setGrouped,
   clearGrouped,
+  VIEW_STATE_KEY,
+  loadViewState,
+  saveViewState,
   groupViewState,
   nextGroupViewState,
   blocksGroupedArrange,
