@@ -1281,6 +1281,7 @@
   "UNTITLED_DOCUMENT": "Untitled document",
   "DOC": "Doc",
   "UNSAVED_CHANGES": "Unsaved changes",
+  "FILE_SWITCHER_UNSAVED_DESC": "此文件的更改尚未保存。仍要切换文件吗？",
   "UNSAVED_PROFILE_CHANGES_DESC": "You've changed your profile. Save the changes before you leave?",
   "ALL_CHANGES_SAVED": "All changes saved",
   "CURRENT_PLAN": "当前计划",

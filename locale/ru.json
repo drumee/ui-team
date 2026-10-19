@@ -1281,6 +1281,7 @@
   "UNTITLED_DOCUMENT": "Untitled document",
   "DOC": "Doc",
   "UNSAVED_CHANGES": "Unsaved changes",
+  "FILE_SWITCHER_UNSAVED_DESC": "Изменения в этом файле не сохранены. Всё равно переключиться на другой файл?",
   "UNSAVED_PROFILE_CHANGES_DESC": "You've changed your profile. Save the changes before you leave?",
   "ALL_CHANGES_SAVED": "All changes saved",
   "CURRENT_PLAN": "Текущий план",

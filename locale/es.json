@@ -327,6 +327,7 @@
   "UNTITLED_DOCUMENT": "Untitled document",
   "DOC": "Doc",
   "UNSAVED_CHANGES": "Unsaved changes",
+  "FILE_SWITCHER_UNSAVED_DESC": "Los cambios en este archivo no se han guardado. ¿Cambiar de archivo de todos modos?",
   "UNSAVED_PROFILE_CHANGES_DESC": "You've changed your profile. Save the changes before you leave?",
   "ALL_CHANGES_SAVED": "All changes saved",
   "CURRENT_PLAN": "Plan actual",

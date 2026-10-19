@@ -169,6 +169,23 @@ class __player_text extends __player {
 
 
   /**
+   * Asked by the Open-File Switcher before it closes this player for another
+   * file: true when nothing typed would be lost, else the user's choice.
+   */
+  async confirmLeave() {
+    const area = this.__textContent;
+    if (!area || area.el.value === (this.mget(_a.content) || "")) return true;
+    return Wm.confirm({
+      title: LOCALE.UNSAVED_CHANGES,
+      message: LOCALE.FILE_SWITCHER_UNSAVED_DESC,
+      confirm: LOCALE.LEAVE,
+      confirm_type: "primary",
+      cancel: LOCALE.CANCEL,
+      cancel_type: "secondary",
+    }).then(() => true, () => false);
+  }
+
+  /**
    * Upon DOM refresh, after element actually insterted into DOM
    */
 

@@ -1281,6 +1281,7 @@
   "UNTITLED_DOCUMENT": "Untitled document",
   "DOC": "Doc",
   "UNSAVED_CHANGES": "Unsaved changes",
+  "FILE_SWITCHER_UNSAVED_DESC": "ការផ្លាស់ប្តូរលើឯកសារនេះមិនទាន់បានរក្សាទុកទេ។ នៅតែប្តូរឯកសារឬ?",
   "UNSAVED_PROFILE_CHANGES_DESC": "You've changed your profile. Save the changes before you leave?",
   "ALL_CHANGES_SAVED": "All changes saved",
   "CURRENT_PLAN": "ផែនការបច្ចុប្បន្ន",
