@@ -21,6 +21,7 @@ require("./skin");
 
 const { openMedia, CONTAINER_FILETYPES } = require("libs/open-media");
 const recent = require("./recent");
+const { isScheduleNode } = require("builtins/window/skeleton/toolkit/list-skip");
 const skeleton = require("./skeleton");
 
 const COLLAPSED_KEY = "player-file-switcher:collapsed";
@@ -60,6 +61,7 @@ class __file_switcher extends LetcBox {
     this._query = "";
     this._folder = [];
     this._recent = [];
+    this._loadingOthers = false;
   }
 
   /** The player this panel sits in. */
@@ -109,19 +111,22 @@ class __file_switcher extends LetcBox {
     if (h && h.pid === node.pid && h.hub_id === node.hub_id) {
       this._folder = h.folder;
     }
+    // Before the first draw: its synchronous head raises _loadingOthers, so
+    // "Other files" opens on the skeleton instead of "No files yet".
+    this.loadOthers();
     this.renderLists();
     if (h && h.scrollTop) {
       this.ensurePart("scroll").then((p) => {
         p.el.scrollTop = h.scrollTop;
       });
     }
-    this.loadOthers();
   }
 
   /** Files of the open file's folder, newest first; folders left out. */
   async loadOthers() {
     const { pid, hub_id } = this.node();
     if (!pid || !hub_id) return;
+    this._loadingOthers = true;
     let data;
     try {
       data = await this.fetchService({
@@ -135,6 +140,7 @@ class __file_switcher extends LetcBox {
     } catch (e) {
       data = null;
     }
+    this._loadingOthers = false;
     if (this.isDestroyed()) return;
     const items = Array.isArray(data) ? data : (data && data.items) || [];
     this._folder = items.filter(
@@ -144,6 +150,9 @@ class __file_switcher extends LetcBox {
   }
 
   match(node) {
+    // A scheduled meeting is an MFS node with no bytes to open — never listed,
+    // same as the Files grid (list-skip).
+    if (isScheduleNode(node)) return false;
     if (!this._query) return true;
     const name = `${node.filename || ""}.${node.ext || ""}`.toLowerCase();
     return name.includes(this._query);
@@ -157,8 +166,15 @@ class __file_switcher extends LetcBox {
     this.ensurePart("recent-list").then((p) => {
       p.feed(skeleton.rows(this, recents, "recent", empty, nid));
     });
+    // Only while nothing is known yet: a folder handed over by the previous
+    // panel is drawn at once and refreshed in place.
+    const loading = this._loadingOthers && !this._folder.length;
     this.ensurePart("other-list").then((p) => {
-      p.feed(skeleton.rows(this, others, "other", empty));
+      p.feed(
+        loading
+          ? skeleton.loadingRows(this)
+          : skeleton.rows(this, others, "other", empty)
+      );
     });
   }
 
