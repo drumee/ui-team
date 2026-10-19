@@ -25,7 +25,7 @@ Module._resolveFilename = function (req, ...rest) {
   }
   return origResolve.call(this, req, ...rest);
 };
-const { groupFiles, sectionOf, ORDER } = require("../src/drumee/builtins/player/widget/file-switcher/groups");
+const { groupFiles, sectionOf, ORDER, LABEL } = require("../src/drumee/builtins/player/widget/file-switcher/groups");
 
 const INDEX_SRC = read("src/drumee/builtins/player/widget/file-switcher/index.js");
 const RECENT_SRC = read("src/drumee/builtins/player/widget/file-switcher/recent.js");
@@ -34,47 +34,52 @@ const SKEL_SRC = read("src/drumee/builtins/player/widget/file-switcher/skeleton/
 
 const f = (filename, ext, filetype, extra = {}) => ({ nid: `${filename}.${ext}`, filename, ext, filetype, ...extra });
 
-test("files fall into Documents / Spreadsheets / Images / Videos / Audio / Other", () => {
-  assert.equal(sectionOf(f("a", "docx", "document")), "documents");
-  assert.equal(sectionOf(f("a", "pptx", "document")), "documents");
-  assert.equal(sectionOf(f("a", "pdf", "document")), "documents");
-  assert.equal(sectionOf(f("a", "md", "markdown")), "documents");
-  assert.equal(sectionOf(f("a", "txt", "text")), "documents");
-  assert.equal(sectionOf(f("a", "xlsx", "document")), "spreadsheets");
-  assert.equal(sectionOf(f("a", "csv", "text")), "spreadsheets");
+test("files fall into the folder's own Group view sections", () => {
+  assert.equal(sectionOf(f("a", "docx", "document")), "doc");
+  assert.equal(sectionOf(f("a", "txt", "text")), "doc");
+  assert.equal(sectionOf(f("a", "xlsx", "document")), "sheet");
+  assert.equal(sectionOf(f("a", "csv", "text")), "sheet");
   // A Univer sheet saved as .json, its marker in the stored metadata text.
   assert.equal(
     sectionOf(f("Sheet 09-09", "json", "app-data", { metadata: JSON.stringify({ dataType: "sheet.univer" }) })),
-    "spreadsheets",
+    "sheet",
   );
-  assert.equal(sectionOf(f("a", "png", "image")), "images");
-  assert.equal(sectionOf(f("a", "svg", "vector")), "images");
-  assert.equal(sectionOf(f("a", "mov", "video")), "videos");
-  assert.equal(sectionOf(f("a", "mp3", "audio")), "audio");
+  assert.equal(sectionOf(f("a", "pptx", "document")), "slide");
+  assert.equal(sectionOf(f("a", "pdf", "document")), "pdf");
+  assert.equal(sectionOf(f("a", "png", "image")), "media");
+  assert.equal(sectionOf(f("a", "mov", "video")), "media");
+  assert.equal(sectionOf(f("a", "mp3", "audio")), "media");
+  assert.equal(sectionOf(f("a", "md", "markdown")), "markdown");
+  assert.equal(sectionOf(f("a", "json", "app-data", { metadata: "not json" })), "json");
+  assert.equal(sectionOf(f("a", "html", "web")), "html");
   assert.equal(sectionOf(f("a", "py", "script")), "other");
-  assert.equal(sectionOf(f("a", "json", "app-data", { metadata: "not json" })), "other");
-  assert.equal(sectionOf(f("dev test", "schedule", "schedule")), "other");
+  // Never a Folders section: folders have windows of their own.
+  assert.equal(sectionOf(f("sub", "", "folder")), "other");
 });
 
-test("groupFiles keeps the section order, labels each, and drops empty ones", () => {
+test("groupFiles keeps the Group view order and labels, and drops empty sections", () => {
+  const { GROUP_ORDER, GROUP_LABEL } = require("../src/drumee/builtins/window/skeleton/toolkit/file-group");
+  assert.deepEqual(ORDER, GROUP_ORDER.filter((k) => k !== "folder"));
   const groups = groupFiles([
     f("clip", "mp3", "audio"), f("shot", "png", "image"), f("plan", "xlsx", "document"),
     f("notes", "docx", "document"), f("rec", "mov", "video"), f("tool", "py", "script"),
-    f("second", "docx", "document"),
+    f("second", "docx", "document"), f("deck", "pptx", "document"), f("paper", "pdf", "document"),
+    f("readme", "md", "markdown"), f("conf", "json", "app-data"), f("page", "html", "web"),
   ]);
   assert.deepEqual(groups.map((g) => g.key), ORDER);
-  assert.deepEqual(groups.map((g) => g.label), ["DOCUMENTS", "SPREADSHEETS", "IMAGES", "VIDEOS", "AUDIO", "OTHER"]);
-  assert.deepEqual(groups[0].items.map((n) => n.filename), ["notes", "second"], "order within a group is kept");
-  assert.deepEqual(groupFiles([f("a", "docx", "document")]).map((g) => g.key), ["documents"]);
+  assert.deepEqual(groups.map((g) => g.label), ORDER.map((k) => GROUP_LABEL[k]));
+  assert.deepEqual(groups.map((g) => g.label).slice(0, 5), ["GROUP_DOCUMENTATION", "SPREADSHEET", "PRESENTATION", "GROUP_PDF", "MEDIA"]);
+  assert.deepEqual(groups[0].items.map((n) => n.filename), ["notes", "second"], "order within a section is kept");
+  assert.deepEqual(groups[4].items.map((n) => n.filename), ["clip", "shot", "rec"], "pictures, videos and sound share Media, as on the folder");
+  assert.deepEqual(groupFiles([f("a", "docx", "document")]).map((g) => g.key), ["doc"]);
   assert.deepEqual(groupFiles([]), []);
 });
 
-test("SPREADSHEETS is in every locale", () => {
+test("every section label exists in every locale", () => {
   for (const l of ["en", "fr", "es", "ru", "zh", "km"]) {
     const d = JSON.parse(read(`locale/${l}.json`));
-    for (const k of ["DOCUMENTS", "SPREADSHEETS", "IMAGES", "VIDEOS", "AUDIO", "OTHER"]) {
-      assert.ok(d[k], `${l} ${k}`);
-    }
+    for (const k of ORDER) assert.ok(d[LABEL[k]], `${l} ${LABEL[k]}`);
+    assert.equal(d.SPREADSHEETS, undefined, `${l}: no key of the panel's own`);
   }
 });
 
