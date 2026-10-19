@@ -154,7 +154,8 @@ test("the next file is created in the listed folder, and the handoff carries it"
   assert.match(INDEX_SRC, /const \{ pid, hub_id \} = this\._scope \|\| this\.node\(\);/);
   assert.match(INDEX_SRC, /handoff = \{\s*at: Date\.now\(\),\s*scope: this\._scope,\s*folder: this\._folder,/);
   // Grouped once loaded; the loading skeleton (#740) stands in before that.
-  assert.match(INDEX_SRC, /loading\s*\?\s*skeleton\.loadingRows\(this\)\s*:\s*skeleton\.groupedRows\(this, groupFiles\(others\), "other", empty\)/);
+  // The open file is lit in Other files as it is in Recently viewed.
+  assert.match(INDEX_SRC, /loading\s*\?\s*skeleton\.loadingRows\(this\)\s*:\s*skeleton\.groupedRows\(this, groupFiles\(others\), "other", empty, nid\)/);
   assert.match(SKEL_SRC, /function groupedRows\(ui, groups, section, empty, currentNid\)/);
 });
 
@@ -228,7 +229,7 @@ test("Recently viewed shows the listed folder's files only, the open file always
   };
   renderLists.call(sw);
   assert.deepEqual(fed["recent-list"].map((n) => n.nid), ["cur", "old-in-x", "x2"]);
-  assert.deepEqual(fed["other-list"].map((n) => n.nid), ["old-in-x", "k"], "the open file alone is left out; a recent row shows in both lists");
+  assert.deepEqual(fed["other-list"].map((n) => n.nid), ["old-in-x", "cur", "k"], "the whole folder, the open file included; a recent row shows in both lists");
 });
 
 // ── every viewer opened from a folder carries the panel ─────────────────────
