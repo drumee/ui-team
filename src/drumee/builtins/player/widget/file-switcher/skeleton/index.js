@@ -50,6 +50,25 @@ function rows(ui, list, section, empty, currentNid) {
   return list.map((node) => fileRow(ui, node, section, node.nid === currentNid));
 }
 
+const LOADING_ROWS = 4;
+
+/**
+ * Placeholder rows for "Other files" while the folder listing is in flight:
+ * the real row's geometry (30px icon + name), static and decorative.
+ */
+function loadingRows(ui, count = LOADING_ROWS) {
+  const c = `${ui.fig.family}__row-skeleton`;
+  const row = `<div class="${c}" aria-hidden="true"><div class="${c}-icon"></div><div class="${c}-line"></div></div>`;
+  // The column lives in the markup: a Skeletons.Element is itself a row
+  // flexbox at framework specificity.
+  return [
+    Skeletons.Element({
+      className: `${c}-host`,
+      content: `<div class="${c}s">${row.repeat(count)}</div>`,
+    }),
+  ];
+}
+
 function section(ui, { ico, title, pn }) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
@@ -73,7 +92,7 @@ function __skl_file_switcher(ui) {
   const head = Skeletons.Box.X({
     className: `${pfx}__head`,
     kids: [
-      // Collapsed, the title is the only way back to the full panel.
+      // Hidden while collapsed: the toggle below stands in for it there.
       Skeletons.Note({
         className: `${pfx}__title`,
         content: LOCALE.FILES,
@@ -163,5 +182,7 @@ function __skl_file_switcher(ui) {
 }
 
 __skl_file_switcher.rows = rows;
+__skl_file_switcher.loadingRows = loadingRows;
+__skl_file_switcher.LOADING_ROWS = LOADING_ROWS;
 
 module.exports = __skl_file_switcher;
