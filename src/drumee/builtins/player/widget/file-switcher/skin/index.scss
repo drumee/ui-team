@@ -6,13 +6,17 @@
 // Figma 828:94211: the panel and the viewer are two white cards, 8px apart,
 // on the desk grey — so a player hosting the panel drops its own frame and
 // lets the two cards draw it.
-.player__ui:has(.file-switcher__frame) {
+// `.editor__*` too: the markdown and note editors are players by class
+// (editor/markdow extends player/interact) but carry the editor group.
+.player__ui:has(.file-switcher__frame),
+.editor__ui:has(.file-switcher__frame) {
   background-color: var(--normal-bg-90);
   border-color: transparent;
   box-shadow: none;
 }
 
-.player__main:has(.file-switcher__frame) {
+.player__main:has(.file-switcher__frame),
+.editor__main:has(.file-switcher__frame) {
   background-color: var(--normal-bg-90);
   box-shadow: none;
 }
@@ -273,6 +277,18 @@
     gap: 8px;
   }
 
+  // A type group's title inside "Other files" (../groups).
+  &__group {
+    @include drumee.typo($size: 11px, $line: 1.4, $color: var(--tertiary-grey-70));
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    &:not(:first-child) {
+      margin-top: 8px;
+    }
+  }
+
   &__row {
     align-items: center;
     border-radius: 4px;
@@ -435,6 +451,7 @@
     .file-switcher__search-input,
     .file-switcher__create-label,
     .file-switcher__section-title,
+    .file-switcher__group,
     .file-switcher__row-name,
     .file-switcher__empty {
       display: none;

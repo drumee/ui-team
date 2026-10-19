@@ -23,6 +23,8 @@ function fileRow(ui, node, section, current) {
     uiHandler: [ui],
     nid: node.nid,
     hub_id: node.hub_id,
+    // A web page opens in a new tab rather than a viewer (index openInTab).
+    filetype: node.filetype,
     section,
     kids: [
       Skeletons.Element({
@@ -69,6 +71,27 @@ function loadingRows(ui, count = LOADING_ROWS) {
   ];
 }
 
+/**
+ * Rows of one section split into titled type groups (../groups), or its
+ * empty line. Collapsed, the titles go with the names (skin).
+ */
+function groupedRows(ui, groups, section, empty, currentNid) {
+  const pfx = ui.fig.family;
+  if (!groups.length) {
+    return [Skeletons.Note({ className: `${pfx}__empty`, content: empty })];
+  }
+  const out = [];
+  for (const g of groups) {
+    out.push(Skeletons.Note({
+      className: `${pfx}__group`,
+      content: LOCALE[g.label],
+      dataset: { group: g.key },
+    }));
+    for (const node of g.items) out.push(fileRow(ui, node, section, node.nid === currentNid));
+  }
+  return out;
+}
+
 function section(ui, { ico, title, pn }) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
@@ -99,6 +122,8 @@ function __skl_file_switcher(ui) {
         service: "expand-panel",
         uiHandler: [ui],
       }),
+      // The one control left in the collapsed column (Figma 873:221431):
+      // the same toggle, in place of the title, brings the panel back.
       Skeletons.Button.Svg({
         ico: "square-split-horizontal",
         className: `${pfx}__toggle`,
@@ -184,5 +209,6 @@ function __skl_file_switcher(ui) {
 __skl_file_switcher.rows = rows;
 __skl_file_switcher.loadingRows = loadingRows;
 __skl_file_switcher.LOADING_ROWS = LOADING_ROWS;
+__skl_file_switcher.groupedRows = groupedRows;
 
 module.exports = __skl_file_switcher;

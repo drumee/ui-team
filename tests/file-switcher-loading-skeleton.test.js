@@ -15,10 +15,14 @@ const SRC = fs.readFileSync(
 );
 global.MAX_RECENT = 5;
 global.LOCALE = { NO_FILE_RESULTS: "none", NO_FILES_YET: "empty" };
+// "Other files" is grouped by type (groupedRows + groupFiles); the stub keeps
+// the flat row list these tests read.
 global.skeleton = {
   rows: (ui, list, section, empty) => ({ rows: list.map((n) => n.nid), section, empty }),
+  groupedRows: (ui, groups, section, empty) => ({ rows: groups.flatMap((g) => g.items.map((n) => n.nid)), section, empty }),
   loadingRows: () => "LOADING",
 };
+global.groupFiles = (list) => (list.length ? [{ key: "other", label: "OTHER", items: list }] : []);
 const renderLists = eval(`(${sliceFunction(SRC, "renderLists()")})`);
 
 function panel(state) {

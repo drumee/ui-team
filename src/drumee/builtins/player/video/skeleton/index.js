@@ -1,4 +1,6 @@
 
+const withFileSwitcher = require("../../widget/file-switcher/frame");
+
 const __skl_player_video = (ui) => {
   // The shared topbar widget. It emits `${group}__header` and the "topbar"
   // sys_pn itself, which are what make the window draggable — see the note
@@ -10,14 +12,14 @@ const __skl_player_video = (ui) => {
     sys_pn: _a.content,
   });
 
-  const a = Skeletons.Box.Y({
+  // In the Open-File Switcher frame, as the document and image viewers are:
+  // a video used to open alone, full screen, with no panel to switch from.
+  return withFileSwitcher(ui, Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.group}__main`,
     partHandler: ui,
     kids: [topbar, main],
-  });
-
-  return a;
+  }));
 };
 
 module.exports = __skl_player_video;

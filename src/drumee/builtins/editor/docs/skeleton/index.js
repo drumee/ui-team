@@ -1,3 +1,4 @@
+const withFileSwitcher = require("builtins/player/widget/file-switcher/frame");
 // ===========================================================
 //  Casual Docs editor window — header + body the DocxEditor
 //  mounts into (mirrors the sheet editor skeleton).
@@ -48,11 +49,13 @@ function __skl_editor_docs(_ui_) {
     kids: [tabs, body],
   });
 
-  return Skeletons.Box.Y({
+  // In the Open-File Switcher frame, like every other viewer opened from a
+  // folder (the panel lists this file's neighbours).
+  return withFileSwitcher(_ui_, Skeletons.Box.Y({
     className: `${_ui_.fig.family}__main ${_ui_.fig.group}__main drive-popup`,
     radio: _a.parent,
     debug: __filename,
     kids: [header, row, dialog],
-  });
+  }));
 }
 module.exports = __skl_editor_docs;
