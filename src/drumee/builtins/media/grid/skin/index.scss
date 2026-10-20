@@ -175,49 +175,6 @@
     &:before { @include grid-cell-fill(var(--primary-10)); }
   }
 
-  // Timed reveal ("Show in folder", Wm._applyReveal with a ttl): the same
-  // fill, animated — pops in once, then holds until the ttl.
-  &:not([data-selected="1"])[data-ui-highlight="1"][data-reveal="1"] {
-    &:before {
-      animation: media-reveal-fill 0.6s ease-out forwards;
-
-      @media (prefers-reduced-motion: reduce) {
-        animation: none;
-      }
-    }
-  }
-
-  // Switch landing (Wm._switchReveal): the highlight flew in from the previous
-  // file (.media-reveal-ghost), so no pop — it arrives lit and pulses once.
-  &:not([data-selected="1"])[data-ui-highlight="1"][data-reveal="land"] {
-    &:before {
-      animation: media-reveal-land 0.8s ease-in-out forwards;
-
-      @media (prefers-reduced-motion: reduce) {
-        animation: none;
-      }
-    }
-  }
-
-  // Clearing any highlight (ttl over, or a newer reveal — Wm._fadeOutReveal):
-  // the fill's COLOUR eases to transparent. A transition, not an opacity
-  // animation: the attributes are removed when it ends, and an animation
-  // would end with them — the fill snapped back to full and the base 0.15s
-  // transition faded it a second time (a flash). Here it is already
-  // transparent when they go. `animation: none` lets the colour fade from
-  // wherever a pulse left the fill. 900ms = _fadeOutReveal's fadeMs.
-  &:not([data-selected="1"])[data-ui-highlight="1"][data-reveal="out"] {
-    &:before {
-      animation: none;
-      background-color: transparent;
-      transition: background-color 0.9s cubic-bezier(0.4, 0, 0.2, 1);
-
-      @media (prefers-reduced-motion: reduce) {
-        transition: none;
-      }
-    }
-  }
-
   &[data-selected="1"] {
     // Subtle fill on selected item instead of bordered frame.
     // Padding around the cell so the highlight looks like a soft shape

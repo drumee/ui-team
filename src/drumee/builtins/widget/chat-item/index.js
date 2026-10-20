@@ -1,7 +1,7 @@
 const { toggleState, colorFromName, copyToClipboard } = require("@drumee/ui-essentials");
 const { isSupportEntity, supportMarkup } = require("libs/support");
-// How long "Show in folder" keeps the file lit (ms) before it fades out
-// (Wm._fadeOutReveal, media/grid skin [data-reveal="out"]).
+// How long "Show in folder" keeps the file lit (ms) before Wm._applyReveal
+// unlights it.
 const REVEAL_TTL = 5000;
 require("./skin");
 class ___widget_chatItem extends LetcBox {
