@@ -56,27 +56,20 @@
 
 // Timed reveal fill (skin/index.scss [data-reveal="1"]): rides the cell's
 // :before fill. Opacity + scale only — the colour comes from the
-// data-ui-highlight rule, so selection/hover keep owning theirs.
+// data-ui-highlight rule, so selection/hover keep owning theirs. ONE flash:
+// it pops in and holds. No dip after it — a dip back to full read as a second
+// flash on top of the pop.
 @keyframes media-reveal-fill {
   0% {
     opacity: 0;
     transform: scale(0.92);
   }
 
-  12% {
+  50% {
     opacity: 1;
     transform: scale(1.04);
   }
 
-  20% {
-    transform: scale(1);
-  }
-
-  40% {
-    opacity: 0.45;
-  }
-
-  60%,
   100% {
     opacity: 1;
     transform: scale(1);

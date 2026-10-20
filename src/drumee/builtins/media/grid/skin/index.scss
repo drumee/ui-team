@@ -176,10 +176,10 @@
   }
 
   // Timed reveal ("Show in folder", Wm._applyReveal with a ttl): the same
-  // fill, animated — pops in and pulses once, then holds until the ttl.
+  // fill, animated — pops in once, then holds until the ttl.
   &:not([data-selected="1"])[data-ui-highlight="1"][data-reveal="1"] {
     &:before {
-      animation: media-reveal-fill 1.6s ease-in-out forwards;
+      animation: media-reveal-fill 0.6s ease-out forwards;
 
       @media (prefers-reduced-motion: reduce) {
         animation: none;

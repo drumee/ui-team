@@ -2014,8 +2014,8 @@ class __window_mfs extends DrumeeMFS {
    * it into view with a one-off flash. The highlight is cleared when the file is
    * opened or its window closes (media/core.js).
    *
-   * With `opt.ttl` (ms) the highlight is timed instead: `data-reveal` runs the
-   * pop/pulse animation (media/grid skin) and the highlight fades out
+   * With `opt.ttl` (ms) the highlight is timed instead: `data-reveal` runs a
+   * single pop-in (media/grid skin), with no ring flash, and the highlight fades out
    * (_fadeOutReveal) when the ttl ends. Right after a clearReveal(), when the
    * old cell and the new one are both in view, the highlight SWITCHES: it
    * flies across (_flyReveal) and lands with the pulses only
@@ -2034,10 +2034,15 @@ class __window_mfs extends DrumeeMFS {
           if (item.el.scrollIntoView) {
             item.el.scrollIntoView({ behavior: "smooth", block: "center" });
           }
-          item.el.classList.add("media-highlight");
-          setTimeout(() => {
-            if (item.el) item.el.classList.remove("media-highlight");
-          }, 1200);
+          // The ring flash is for the persistent (notification) highlight
+          // only. A timed reveal already pops its fill in; ringing on top of
+          // that, on its own timeline, read as a second flash.
+          if (!(ttl > 0)) {
+            item.el.classList.add("media-highlight");
+            setTimeout(() => {
+              if (item.el) item.el.classList.remove("media-highlight");
+            }, 1200);
+          }
         }
         if (item._setNotifyHighlight) item._setNotifyHighlight(true);
         if (ttl > 0) {
