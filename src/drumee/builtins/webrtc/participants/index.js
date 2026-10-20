@@ -154,14 +154,13 @@ class __participants_manager extends LetcBox {
     let items = this.collection.length;
     //this.verbose("AAA:106", items, this);
     this.el.dataset.remote = items;
-    if (items <= 2) {
-      this.el.dataset.p2p = "yes";
+    this.el.dataset.p2p = items <= 2 ? "yes" : "no";
+    this.el.style.gridAutoRows = '';
+    if (!items) {
       this.el.style.gridTemplateColumns = '';
       this.el.style.gridTemplateRows = '';
-      this.el.style.gridAutoRows = '';
       return;
     }
-    this.el.dataset.p2p = "no";
     let height = this.el.innerHeight();
     let width = this.el.innerWidth();
     if (ui && ui.size) {
