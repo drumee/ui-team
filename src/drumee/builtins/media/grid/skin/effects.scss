@@ -54,62 +54,6 @@
   }
 }
 
-// Timed reveal fill (skin/index.scss [data-reveal="1"]): rides the cell's
-// :before fill. Opacity + scale only — the colour comes from the
-// data-ui-highlight rule, so selection/hover keep owning theirs.
-@keyframes media-reveal-fill {
-  0% {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-
-  12% {
-    opacity: 1;
-    transform: scale(1.04);
-  }
-
-  20% {
-    transform: scale(1);
-  }
-
-  40% {
-    opacity: 0.45;
-  }
-
-  60%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-// Switch landing (skin/index.scss [data-reveal="land"]): already lit when it
-// arrives, so only the single pulse of media-reveal-fill.
-@keyframes media-reveal-land {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.45;
-  }
-}
-
-// The highlight travelling between two files (Wm._flyReveal): a copy of the
-// cell fill, absolutely placed in the cells' common positioned ancestor and
-// moved by the Web Animations call. Multiply keeps the icons it crosses
-// visible under the tint.
-.media-reveal-ghost {
-  position: absolute;
-  z-index: 1;
-  pointer-events: none;
-  background-color: var(--primary-10);
-  border-radius: var(--corner-radius-3);
-  mix-blend-mode: multiply;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-}
-
 .media-highlight {
   border-radius: 8px;
   animation: media-highlight-flash 1.2s ease-out 1;

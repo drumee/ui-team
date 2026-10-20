@@ -48,11 +48,16 @@ const __skl_window_switchcall = function (_ui_) {
     ],
   });
 
+  // The live dot rides INSIDE the title text, after its last word. As a flex
+  // sibling it was pinned to the row's right edge as soon as a long title
+  // (an invite naming its workspace) wrapped and the title took the full width.
   const titleRow = Skeletons.Box.X({
     className: `${pfx}__title-row`,
     kids: [
-      Skeletons.Note({ className: `${pfx}__title`, content: title }),
-      Skeletons.Note({ className: `${pfx}__live-dot` }),
+      Skeletons.Note({
+        className: `${pfx}__title`,
+        content: `${_.escape(title)}<span class="${pfx}__live-dot"></span>`,
+      }),
     ],
   });
 

@@ -255,19 +255,35 @@
 
   // The invite title ("X is inviting you to join the meeting in Y") runs to two
   // lines; centred so it sits under the icon like the one-line title does.
+  // Balanced so a long workspace name does not leave "(2)" alone on the last
+  // line; a name with no spaces still breaks; capped at three lines.
   &__title {
     min-width: 0;
+    max-width: 100%;
     text-align: center;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
     @include drumee.typo($size: 20px, $line: 28px, $weight: 700, $color: #0b0a21);
+
+    .note-content {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
   }
 
+  // Inline, at the end of the title text (skeleton).
   &__live-dot {
+    display: inline-block;
+    vertical-align: middle;
+    margin: -3px 0 0 8px;
     width: 10px;
     height: 10px;
+    box-sizing: border-box;
     border-radius: 50%;
     border: 1px solid var(--primary-40, #5950ff);
     position: relative;
-    flex-shrink: 0;
 
     &::after {
       content: "";
@@ -328,7 +344,9 @@
       color: #0b0a21;
       border: none;
       width: auto;
-      &:hover { background: #e5e5ea; }
+      // Override the legacy hover above as well (2px border, pale
+      // rollback text), which made Dismiss look disabled under the pointer.
+      &:hover { background: #e5e5ea; color: #0b0a21; border: none; }
     }
 
     .ctrl-button.accept {

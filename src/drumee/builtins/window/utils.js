@@ -1865,148 +1865,15 @@ class __window_mfs extends DrumeeMFS {
    * Drop every soft highlight a previous reveal left behind, so the next one
    * points at one file only. The highlight is DOM-only (media/core
    * _setNotifyHighlight), so this clears the attribute wherever it sits —
-   * both view-mode twins included. Each one fades out (_fadeOutReveal).
+   * both view-mode twins included.
    */
   clearReveal() {
     clearTimeout(this._revealTimer);
     this._revealTimer = null;
-    const lit = Array.from(document.querySelectorAll("[data-ui-highlight]"));
-    for (const el of lit) {
+    for (const el of document.querySelectorAll("[data-ui-highlight]")) {
       el.classList.remove("media-highlight");
-      this._fadeOutReveal(el);
-    }
-    // Remembered so the reveal that follows can SWITCH from here (_applyReveal
-    // → _flyReveal) instead of fading one and popping the other.
-    this._revealPrev = lit.length ? { els: lit, at: Date.now() } : null;
-  }
-
-  /**
-   * The cell a switch flies FROM: what clearReveal just took down, if that
-   * was moments ago and one of its cells (view-mode twins included) is still
-   * laid out — a folder change replaces the grid, and then there is nothing
-   * on screen to fly from. Consumed: one switch per clear.
-   * @param {Number} [maxAgeMs]
-   * @returns {HTMLElement|null}
-   */
-  _revealSwitchFrom(maxAgeMs = 1500) {
-    const prev = this._revealPrev;
-    this._revealPrev = null;
-    if (!prev || Date.now() - prev.at > maxAgeMs) return null;
-    return (
-      prev.els.find(
-        (el) => el.isConnected && (el.offsetWidth > 0 || el.offsetHeight > 0),
-      ) || null
-    );
-  }
-
-  /**
-   * Fully visible: inside the viewport and inside every clipping ancestor (the
-   * grid scroller, the pane). A switch only flies between two cells you can
-   * both see; anything else scrolls and pops as before.
-   * @param {HTMLElement} el
-   * @returns {Boolean}
-   */
-  _revealInView(el) {
-    if (!el || !el.getBoundingClientRect) return false;
-    const r = el.getBoundingClientRect();
-    if (!r.width || !r.height) return false;
-    if (r.top < 0 || r.left < 0 || r.bottom > window.innerHeight || r.right > window.innerWidth) {
-      return false;
-    }
-    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
-      const cs = window.getComputedStyle(p);
-      if (!/(auto|scroll|hidden|clip)/.test(`${cs.overflowX} ${cs.overflowY}`)) continue;
-      const pr = p.getBoundingClientRect();
-      if (r.top < pr.top || r.bottom > pr.bottom || r.left < pr.left || r.right > pr.right) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * The switch: a copy of the highlight fill (.media-reveal-ghost, media/grid
-   * effects) glides from one cell to the other, then `done()` lights the
-   * destination. Mounted in the cells' nearest POSITIONED common ancestor, not
-   * on <body>: desk panes are stacking contexts of their own, and a body-level
-   * overlay can end up behind the pane it is meant to cross. Inside, it shares
-   * the cells' stacking context and scrolls with them. Multiply-blended, so it
-   * tints the icons it passes over instead of hiding them. Returns false
-   * (nothing started) under reduced motion or without the Web Animations API
-   * — the caller falls back to fade + pop.
-   * @param {HTMLElement} fromEl
-   * @param {HTMLElement} toEl
-   * @param {Function} done
-   * @returns {Boolean}
-   */
-  _flyReveal(fromEl, toEl, done) {
-    const reduce =
-      window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || !document.body || !document.body.animate) return false;
-    const up = new Set();
-    for (let p = fromEl.parentElement; p; p = p.parentElement) up.add(p);
-    let host = toEl.parentElement;
-    while (host && !up.has(host)) host = host.parentElement;
-    while (
-      host &&
-      host !== document.body &&
-      window.getComputedStyle(host).position === "static"
-    ) {
-      host = host.parentElement;
-    }
-    host = host || document.body;
-    const hr = host.getBoundingClientRect();
-    // In the host's padding box, scroll included; the fill overhangs the cell
-    // by 6px on every side (media/grid skin :before).
-    const box = (el) => {
-      const r = el.getBoundingClientRect();
-      return {
-        left: `${r.left - hr.left - host.clientLeft + host.scrollLeft - 6}px`,
-        top: `${r.top - hr.top - host.clientTop + host.scrollTop - 6}px`,
-        width: `${r.width + 12}px`,
-        height: `${r.height + 12}px`,
-      };
-    };
-    const from = box(fromEl);
-    const to = box(toEl);
-    const ghost = document.createElement("div");
-    ghost.className = "media-reveal-ghost";
-    Object.assign(ghost.style, from);
-    host.appendChild(ghost);
-    let finished = false;
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      ghost.remove();
-      done();
-    };
-    const anim = ghost.animate([from, to], {
-      duration: 420,
-      easing: "cubic-bezier(0.2, 0.8, 0.2, 1)",
-      fill: "forwards",
-    });
-    anim.onfinish = finish;
-    anim.oncancel = finish;
-    return true;
-  }
-
-  /**
-   * Take one cell's highlight down with an animation instead of a cut:
-   * `data-reveal="out"` eases the fill colour to transparent (media/grid
-   * skin), and the attributes go once it has. A timeout,
-   * not animationend: with reduced motion there is no animation to end.
-   * A cell lit again meanwhile (data-reveal back to "1") is left alone.
-   * @param {HTMLElement} el
-   * @param {Number} [fadeMs] matches the [data-reveal="out"] transition
-   */
-  _fadeOutReveal(el, fadeMs = 900) {
-    if (!el || !el.dataset) return;
-    el.dataset.reveal = "out";
-    setTimeout(() => {
-      if (el.dataset.reveal !== "out") return;
       el.removeAttribute("data-ui-highlight");
-      el.removeAttribute("data-reveal");
-    }, fadeMs);
+    }
   }
 
   /**
@@ -2014,14 +1881,11 @@ class __window_mfs extends DrumeeMFS {
    * it into view with a one-off flash. The highlight is cleared when the file is
    * opened or its window closes (media/core.js).
    *
-   * With `opt.ttl` (ms) the highlight is timed instead: `data-reveal` runs the
-   * pop/pulse animation (media/grid skin) and the highlight fades out
-   * (_fadeOutReveal) when the ttl ends. Right after a clearReveal(), when the
-   * old cell and the new one are both in view, the highlight SWITCHES: it
-   * flies across (_flyReveal) and lands with the pulses only
-   * (`data-reveal="land"`), skipping the scroll it does not need. Only the latest timed reveal owns the timer — a newer
-   * one, or clearReveal(), cancels it, so an old timer never un-lights the
-   * file that is lit now.
+   * With `opt.ttl` (ms) the highlight is timed instead ("Show in folder"): the
+   * cell is just lit, with no flash or other animation, and unlit when the ttl
+   * ends. Only the latest timed reveal owns the timer — a newer one, or
+   * clearReveal(), cancels it, so an old timer never un-lights the file that
+   * is lit now.
    */
   _applyReveal(cells, scrollFirst, opt = {}) {
     const ttl = Number(opt.ttl) || 0;
@@ -2029,23 +1893,20 @@ class __window_mfs extends DrumeeMFS {
     cells.forEach((item, i) => {
       if (!item || !item.el) return;
       try {
-        if (i === 0 && ttl > 0 && this._switchReveal(item)) return;
         if (i === 0 && scrollFirst) {
           if (item.el.scrollIntoView) {
             item.el.scrollIntoView({ behavior: "smooth", block: "center" });
           }
-          item.el.classList.add("media-highlight");
-          setTimeout(() => {
-            if (item.el) item.el.classList.remove("media-highlight");
-          }, 1200);
+          // The ring flash is for the persistent (notification) highlight
+          // only; a timed reveal is a plain highlight.
+          if (!(ttl > 0)) {
+            item.el.classList.add("media-highlight");
+            setTimeout(() => {
+              if (item.el) item.el.classList.remove("media-highlight");
+            }, 1200);
+          }
         }
         if (item._setNotifyHighlight) item._setNotifyHighlight(true);
-        if (ttl > 0) {
-          item.el.dataset.reveal = 1;
-        } else if (item.el.dataset.reveal === "out") {
-          // Lit again mid-fade: cancel the fade so its timer leaves it on.
-          item.el.removeAttribute("data-reveal");
-        }
       } catch (e) {
         if (this.warn) this.warn("[openFileLocation] highlight failed", e);
       }
@@ -2054,37 +1915,10 @@ class __window_mfs extends DrumeeMFS {
       this._revealTimer = setTimeout(() => {
         this._revealTimer = null;
         for (const item of cells) {
-          if (item && item.el) this._fadeOutReveal(item.el);
+          if (item && item.el) item.el.removeAttribute("data-ui-highlight");
         }
       }, ttl);
     }
-  }
-
-  /**
-   * Switch the highlight onto `item` from the cell clearReveal just took down,
-   * when both are in view. The old cell is cut at once — the ghost IS its fill
-   * leaving — and `item` is lit when the ghost lands. Returns false when there
-   * is no switch to make, and the caller reveals as usual.
-   * @param {Object} item media cell widget
-   * @returns {Boolean}
-   */
-  _switchReveal(item) {
-    const fromEl = this._revealSwitchFrom();
-    if (!fromEl || fromEl === item.el) return false;
-    if (!this._revealInView(fromEl) || !this._revealInView(item.el)) return false;
-    const prev = Array.from(document.querySelectorAll('[data-reveal="out"]'));
-    const lit = () => {
-      if (item.isDestroyed && item.isDestroyed()) return;
-      if (item._setNotifyHighlight) item._setNotifyHighlight(true);
-      item.el.dataset.reveal = "land";
-    };
-    if (!this._flyReveal(fromEl, item.el, lit)) return false;
-    for (const el of prev) {
-      if (el === item.el) continue;
-      el.removeAttribute("data-ui-highlight");
-      el.removeAttribute("data-reveal");
-    }
-    return true;
   }
 
   /**
