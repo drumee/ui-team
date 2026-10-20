@@ -1354,8 +1354,9 @@
       background-color: var(--primary-50, #433cc5);
     }
 
-    // N×N grid: for 3+ participants the participants manager sets an explicit
-    // grid-template (repeat(column,1fr) / repeat(row,1fr)) inline. Reset every
+    // N×N grid: for any participant count the participants manager sets an
+    // explicit grid-template (repeat(column,1fr) / repeat(row,1fr)) inline,
+    // sized from the box's area per tile so tiles stay roughly square. Reset every
     // tile to flow into its grid cell so the layout rebalances as people join,
     // instead of falling back to the base absolute positioning.
     &[data-mode="normal"] {
@@ -1383,10 +1384,9 @@
       }
     }
 
+    // Two tiles: the grid itself comes inline like any other count; this only
+    // overrides the base skin's p2p picture-in-picture positioning.
     &[data-mode="normal"][data-remote="2"] {
-      grid-template-columns: 1fr;
-      grid-template-rows: 1fr 1fr;
-
       .endpoint-local,
       .remote-user {
         position: relative;
