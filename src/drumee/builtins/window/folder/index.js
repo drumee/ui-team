@@ -2011,13 +2011,8 @@ class __window_folder extends mfsInteract {
     // WINDOW navigation is private to that window and must not retitle the
     // bar). Hence the explicit window.Wm below.
     //
-    // Gated on being the pane ON SCREEN, not on focus: headlessLayer can hold
-    // more than one workspace pane, and a background one must not retitle the
-    // bar. Focus (`state == 1`) was the old gate, and it skipped nearly every
-    // navigation: every window and the desk share the one wm-radio channel,
-    // so a preview, the editor, a popup or a desk click drops the pane to 0,
-    // and a folder tile (bubble: 0) never raises it back. Prod kept the old
-    // path in the bar after any other window had been opened (2026-10-20).
+    // Still gated on focused (`state == 1`): headlessLayer can hold more than
+    // one workspace pane, and a background one must not retitle the bar.
     //
     // DEFERRED ONE TASK, and coalesced. The mirror makes desk_breadcrumb ask
     // media.get_path, and every navigation reaches here from updateTopbar —
@@ -2032,12 +2027,7 @@ class __window_folder extends mfsInteract {
       _.defer(() => {
         if (tok !== this._crumbMirrorTok) return;
         if (this.isDestroyed && this.isDestroyed()) return;
-        const wm = window.Wm;
-        if (!wm) return;
-        const onScreen =
-          wm._curWorkspacePane ||
-          (_.isFunction(wm.headlessPane) ? wm.headlessPane() : null);
-        if (onScreen !== this) return;
+        if (this.mget(_a.state) != 1 || !window.Wm) return;
         const filetype = this.mget(_a.filetype);
         let curNid = this.mget(_a.nid);
         if (filetype === _a.hub && this.mget(_a.actual_home_id)) {
