@@ -11,6 +11,7 @@
   "FILE_UPDATED_ACTION": " 已更新",
   "MIGRATE_FROM_GDRIVE": "从 Google Drive 迁移",
   "TASK_COMMENTED_ACTION": "评论了： ",
+  "FILE_EDITED_ACTION": "编辑了 ",
   "TASK_PRIORITY_ACTION": "更改了优先级： ",
   "TASK_PRIORITY_TO": " → ",
   "TASK_MOVED_ACTION": " 已移动",

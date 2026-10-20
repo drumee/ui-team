@@ -113,6 +113,15 @@ function meetingTime(stime) {
   return `${day}, ${d.format('h:mm A')}`;
 }
 
+// "Report" + "docx" -> "Report.docx": node filenames are stored without their
+// extension, and the owner should recognise the file at a glance.
+function fileLabel(filename, ext) {
+  const f = String(filename || '');
+  const e = String(ext || '');
+  if (!e || f.toLowerCase().endsWith(`.${e.toLowerCase()}`)) return f;
+  return `${f}.${e}`;
+}
+
 function getActivityMeta(ui, data) {
   const name = ui.getItemName();
   const cnt = parseInt(data.cnt, 10) || 0;
@@ -415,6 +424,25 @@ function getActivityMeta(ui, data) {
   }
 
   switch (ui.mget(_a.category)) {
+    // "<actor> edited / commented on <your file>" — addressed to the file's
+    // owner (server-team lib/file-owner-notify). A comment brings its own text,
+    // shown under the sentence so the owner can read it before opening.
+    case 'file_edited':
+    case 'file_commented': {
+      const commented = ui.mget(_a.category) === 'file_commented';
+      return {
+        before: commented ? LOCALE.TASK_COMMENTED_ACTION : LOCALE.FILE_EDITED_ACTION,
+        label: fileLabel(data.filename || name, data.ext),
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+        ico: commented ? 'noti-chat-teardrop-dots' : 'noti-shooting-star',
+        tone: BADGE.brand,
+        folder: data.folder_name,
+        quote: commented ? (data.comment || '') : '',
+      };
+    }
+
     case 'hub_invite':
       // Never fall back to `name` for hub_invite — that resolver chains
       // through surname/sender fields and ends up showing the inviter's
@@ -1027,6 +1055,10 @@ module.exports = function (ui) {
     uiHandler: ui,
     kids: [
       Skeletons.Note({ className: `${pfx}__text`, content: text }),
+      // The comment a file_commented row is about, quoted on one line.
+      meta.quote
+        ? Skeletons.Note({ className: `${pfx}__quote`, content: escapeHtml(`“${meta.quote}”`) })
+        : null,
       metaLine,
       answer,
     ].filter(Boolean),

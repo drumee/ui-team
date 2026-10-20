@@ -11,6 +11,7 @@
   "FILE_UPDATED_ACTION": " has been updated",
   "MIGRATE_FROM_GDRIVE": "Migrate from Google Drive",
   "TASK_COMMENTED_ACTION": "commented on ",
+  "FILE_EDITED_ACTION": "edited ",
   "TASK_PRIORITY_ACTION": "set the priority of ",
   "TASK_PRIORITY_TO": " to ",
   "TASK_MOVED_ACTION": " has been moved",

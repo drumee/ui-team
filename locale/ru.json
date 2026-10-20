@@ -11,6 +11,7 @@
   "FILE_UPDATED_ACTION": " обновлено",
   "MIGRATE_FROM_GDRIVE": "Перенести из Google Drive",
   "TASK_COMMENTED_ACTION": "оставил(а) комментарий к ",
+  "FILE_EDITED_ACTION": "отредактировал(а) ",
   "TASK_PRIORITY_ACTION": "изменил(а) приоритет ",
   "TASK_PRIORITY_TO": " на ",
   "TASK_MOVED_ACTION": " перемещено",
