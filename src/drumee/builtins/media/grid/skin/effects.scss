@@ -41,7 +41,7 @@
 }
 
 // One-off "reveal" flash for a file opened from a notification — toggled on the
-// media item root by Wm._highlightNode (see window/utils.js). Two quick pulses
+// media item root by Wm._highlightNode (see window/utils.js). One quick pulse
 // of an accent ring; falls back to a blue if --main isn't themed.
 @keyframes media-highlight-flash {
   0%,
@@ -63,22 +63,20 @@
     transform: scale(0.92);
   }
 
-  8% {
+  12% {
     opacity: 1;
     transform: scale(1.04);
   }
 
-  14% {
+  20% {
     transform: scale(1);
   }
 
-  28%,
-  52% {
+  40% {
     opacity: 0.45;
   }
 
-  40%,
-  64%,
+  60%,
   100% {
     opacity: 1;
     transform: scale(1);
@@ -86,17 +84,14 @@
 }
 
 // Switch landing (skin/index.scss [data-reveal="land"]): already lit when it
-// arrives, so only the two pulses of media-reveal-fill.
+// arrives, so only the single pulse of media-reveal-fill.
 @keyframes media-reveal-land {
   0%,
-  30%,
-  60%,
   100% {
     opacity: 1;
   }
 
-  15%,
-  45% {
+  50% {
     opacity: 0.45;
   }
 }
@@ -117,7 +112,7 @@
 
 .media-highlight {
   border-radius: 8px;
-  animation: media-highlight-flash 1.2s ease-out 2;
+  animation: media-highlight-flash 1.2s ease-out 1;
 }
 
 // Drag-arrange insertion bar fade-in (bar itself: skin/index.scss

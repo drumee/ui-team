@@ -176,10 +176,10 @@
   }
 
   // Timed reveal ("Show in folder", Wm._applyReveal with a ttl): the same
-  // fill, animated — pops in and pulses twice, then holds until the ttl.
+  // fill, animated — pops in and pulses once, then holds until the ttl.
   &:not([data-selected="1"])[data-ui-highlight="1"][data-reveal="1"] {
     &:before {
-      animation: media-reveal-fill 2.4s ease-in-out forwards;
+      animation: media-reveal-fill 1.6s ease-in-out forwards;
 
       @media (prefers-reduced-motion: reduce) {
         animation: none;
@@ -188,10 +188,10 @@
   }
 
   // Switch landing (Wm._switchReveal): the highlight flew in from the previous
-  // file (.media-reveal-ghost), so no pop — it arrives lit and pulses twice.
+  // file (.media-reveal-ghost), so no pop — it arrives lit and pulses once.
   &:not([data-selected="1"])[data-ui-highlight="1"][data-reveal="land"] {
     &:before {
-      animation: media-reveal-land 1.6s ease-in-out forwards;
+      animation: media-reveal-land 0.8s ease-in-out forwards;
 
       @media (prefers-reduced-motion: reduce) {
         animation: none;
