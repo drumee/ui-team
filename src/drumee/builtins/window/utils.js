@@ -2037,7 +2037,7 @@ class __window_mfs extends DrumeeMFS {
           item.el.classList.add("media-highlight");
           setTimeout(() => {
             if (item.el) item.el.classList.remove("media-highlight");
-          }, 2400);
+          }, 1200);
         }
         if (item._setNotifyHighlight) item._setNotifyHighlight(true);
         if (ttl > 0) {
