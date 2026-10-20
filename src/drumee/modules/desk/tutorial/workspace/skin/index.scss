@@ -53,15 +53,6 @@ $card-scale: 0.85;
     color: var(--normal-fg);
   }
 
-  &__wsd-close {
-    width: 20px;
-    height: 20px;
-    cursor: default;
-
-    svg { width: 100%; height: 100%; }
-    color: var(--normal-fg-20);
-  }
-
   // ── Name ──────────────────────────────────────────────────────────────────
   &__wsd-field,
   &__wsd-types {
