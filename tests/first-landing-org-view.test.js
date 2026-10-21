@@ -19,7 +19,7 @@ const ORG_SRC = fs.readFileSync(path.join(ROOT, "src/drumee/modules/desk/org-vie
 
 global._a = Object.assign(global._a || {}, { kind: "kind", folder: "folder", hub: "hub" });
 global._ = global._ || { isFunction: (f) => typeof f === "function", uniqueId: (p) => `${p}1` };
-global.LOCALE = { PERSONAL: "Personal", OTHER_WORKSPACES: "Other workspaces", WORKSPACE: "workspace", WORKSPACES: "workspaces", NO_DEPARTMENTS_YET: "none" };
+global.LOCALE = { PERSONAL: "Personal", OTHER_WORKSPACES: "Other workspaces", WORKSPACE: "workspace", WORKSPACES: "workspaces", NO_WORKSPACES: "none" };
 
 // The static registry the sliced methods read off the class.
 global.desk_module = {
@@ -561,4 +561,37 @@ test("Other / Personal are unframed so their cards share the ungrouped grid's co
   }
   // After the department frame, so it wins at equal specificity.
   assert.ok(at > scss.indexOf("  &__section {"), "declared after &__section");
+});
+
+// ── org view: no departments ────────────────────────────────────────────────
+
+const DEPTS = {
+  sections: [
+    { department: { id: "d1", name: "Eng", member_count: 4 }, workspaces: [{ hub_id: "h2", area: "private", filename: "Api", members: 2 }] },
+    { department: { id: "d2", name: "Ops", member_count: 0 }, workspaces: [] },
+  ],
+  ungrouped: ORG.ungrouped,
+};
+
+test("a workspace filed in a department is a card in the one bare grid, departments first", () => {
+  const kids = sections("org", {}, DEPTS, true);
+  assert.equal(kids.length, 1);
+  assert.equal(kids[0].className, "org__grid org__grid--ungrouped");
+  assert.deepEqual(kids[0].kids.map((c) => c.wsHubId), ["h2", "h1"]);
+});
+
+test("no department header, rename, delete or + New workspace is drawn", () => {
+  const all = flat(sections("org", {}, DEPTS, true, PERSONAL, []));
+  assert.ok(!all.some((n) => n.content === "Eng" || n.content === "Ops"));
+  assert.ok(!all.some((n) => /department/.test(String(n.service || ""))));
+  assert.ok(!all.some((n) => n.sys_pn && String(n.sys_pn).startsWith("dept-head:")));
+  assert.ok(!all.some((n) => n.content === "none"), "no empty note while there are workspaces");
+});
+
+test("the + New menu offers no New department", () => {
+  const src = fs.readFileSync(path.join(ROOT, "src/drumee/modules/desk/org-view/skeleton/index.js"), "utf8");
+  const menu = src.slice(src.indexOf("function newMenu("), src.indexOf("module.exports = function"));
+  assert.ok(menu.includes('service: "new-workspace-form"'));
+  assert.ok(menu.includes('service: "launch-gdrive-migration"'));
+  assert.ok(!menu.includes('"new-department"'));
 });
