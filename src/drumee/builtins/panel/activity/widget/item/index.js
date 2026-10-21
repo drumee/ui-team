@@ -106,7 +106,7 @@ function isFileOwnerCategory(category) {
  * or the player would be wiped or buried when the workspace pane mounts.
  * Best-effort: without Wm the reveal hash alone still lands on the file.
  */
-function openFileOwnerActivity({ hub_id, nid, filetype, ext, pid, filename, message_id, ts }, { fetchService, openMedia } = {}) {
+function openFileOwnerActivity({ hub_id, nid, filetype, ext, pid, filename, message_id, focus, ts }, { fetchService, openMedia } = {}) {
   const wm = window.Wm;
   const reveal = { hub_id, nid, filetype, pid: `${pid || "0"}`, highlight: "1", ts: `${ts}` };
   if (!wm || !_.isFunction(wm.openNotificationLocation)) {
@@ -119,6 +119,9 @@ function openFileOwnerActivity({ hub_id, nid, filetype, ext, pid, filename, mess
       if (message_id && _.isFunction(pane.scopeChatToFile)) {
         return openThreadComment(pane, { nid, filename, message_id });
       }
+      // A comment INSIDE the document: the editor that opens this nid takes
+      // it and opens the file on that comment (builtins/editor/pending-focus).
+      if (focus && typeof focus === "object") require("builtins/editor/pending-focus").set(nid, focus);
       return openRevealedFile(wm, { hub_id, nid, filetype, ext, filename }, { fetchService, openMedia });
     })
     .catch((e) => console.warn("[activity] file-owner notification open failed", e));
@@ -769,6 +772,7 @@ class __activity_item extends LetcBox {
         pid: this.mget('pid') || parent_id,
         filename: this.mget('filename'),
         message_id: this.mget('message_id'),
+        focus: this.mget('focus'),
         ext: this.mget('ext'),
         ts,
       }, { fetchService: this.fetchService && this.fetchService.bind(this) });

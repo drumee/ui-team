@@ -11,6 +11,8 @@ const docTabs = require("./tabs");
 const collab = require("./collab");
 // Live comment threads into the saved file, and back into a re-created room.
 const liveComments = require("./live-comments");
+// "Open this file on that comment", left by a notification click.
+const pendingFocus = require("builtins/editor/pending-focus");
 // A room counts as changed for this long after its last update: covers the
 // export Casual runs before handing the bytes to FileSource.save.
 const LIVE_SETTLE_MS = 2000;
@@ -71,6 +73,11 @@ class __docs_state extends DrumeeMFS {
    */
   onDomRefresh() {
     if (this._mounted) return;
+    // A "<A> commented on <file>" click opens the file ON that comment.
+    if (!this._focusAsked) {
+      this._focusAsked = 1;
+      this._focusPendingComment();
+    }
     this.containerId = `${this.mget(_a.widgetId)}-docs-state`;
     this.el.setAttribute(_a.id, this.containerId);
     // Co-editing when the gateway answers: the room is the nid, CasualEditor
@@ -866,6 +873,58 @@ class __docs_state extends DrumeeMFS {
     this._roomSynced = 1;
     const want = docTabs.roomId(this._collab.nid, tabs, active);
     if (this._room && want !== this._room) this.showTab(active);
+  }
+
+  /**
+   * The comment a notification asked this file to open on (pending-focus):
+   * bring its tab up, wait for its highlight to be in the document, then put
+   * the caret in it -- exactly what a click on the highlight does: the
+   * comments panel opens with that thread expanded and the anchor marked.
+   * Gives up silently (the file stays open) when the comment never shows.
+   */
+  async _focusPendingComment() {
+    const target = pendingFocus.take(this.mget(_a.nid));
+    const id = target ? Number(target.comment_id) : NaN;
+    if (!Number.isFinite(id) || id <= 0) return;
+    const editor = this.editor;
+    const cancelled = () => !!this._destroyed;
+    if (target.tab_id && editor && editor.getTabs && editor.activeTabId && editor.selectTab) {
+      const known = await pendingFocus.waitFor(
+        () => editor.getTabs().some((t) => t.id === target.tab_id),
+        { timeout: 10000, cancelled },
+      );
+      if (known && editor.activeTabId() !== target.tab_id) await editor.selectTab(target.tab_id);
+    }
+    // In a Live room the content (and so the highlight) arrives after mount.
+    const found = await pendingFocus.waitFor(() => {
+      const ref = this.currentRef();
+      const pe = ref && ref.getEditorRef && ref.getEditorRef();
+      const view = pe && pe.getView && pe.getView();
+      if (!view) return null;
+      let pos = null;
+      view.state.doc.descendants((n, p) => {
+        if (pos != null) return false;
+        if (n.isText && n.marks.some((m) => m.type.name === "comment" && Number(m.attrs.commentId) === id)) {
+          pos = p;
+          return false;
+        }
+        return true;
+      });
+      return pos == null ? null : { pe, pos };
+    }, { timeout: 20000, cancelled });
+    if (!found) return;
+    try {
+      found.pe.scrollToPosition(found.pos);
+      found.pe.setSelection(found.pos + 1);
+    } catch (e) {
+      this.warn("docs_state: could not open the comment", e);
+    }
+    // A RESOLVED thread is skipped by that path; its collapsed card opens on
+    // a click.
+    setTimeout(() => {
+      const card = this.el && this.el.querySelector(`[data-comment-id="${id}"][data-comment-resolved="true"]`);
+      if (card && typeof card.click === "function") card.click();
+    }, 600);
   }
 
   /** The editor handle of the tab currently on screen. */

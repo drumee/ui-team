@@ -25,6 +25,7 @@ const DELEGATED_SERVICES = [
 const { loadPdfDocument, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const { openSelectionDocument } = require('./selection')
 const { applyLivePrivilege, hasWriteBit } = require('window/live-privilege');
+const pendingFocus = require('builtins/editor/pending-focus');
 const WS_EVENT = "ws:event";
 const EDITOR_READY_FALLBACK_MS = 2500;
 const EDITOR_READY_EVENTS = new Set(['onDocumentReady', 'onAppReady', 'docEditorReady']);
@@ -874,6 +875,11 @@ class __player_document extends PlayerInteract {
       const _ot = this.mget('owner_edit_token');
       if (_ot) url += `&otoken=${encodeURIComponent(_ot)}`;
     }
+    // Opened from a "<A> commented on <file>" notification: the editor opens
+    // ON that comment (its editorConfig.actionLink). Any other open carries no
+    // comment, so its URL is byte-identical.
+    const focus = pendingFocus.take(nid) || pendingFocus.take(this.mget(_a.nid));
+    if (focus && focus.comment_guid) url += `&comment=${encodeURIComponent(focus.comment_guid)}`;
 
     this._editorOrigin = new URL(url).origin;
     this._editorReady = false;

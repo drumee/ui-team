@@ -12,6 +12,7 @@ import "@casualoffice/sheets/styles";
 // stays empty ("click vào nó không chèn được chart").
 import "@univerjs/ui/facade";
 import { contentUrl } from "builtins/editor/content-url";
+const pendingFocus = require("builtins/editor/pending-focus");
 
 // Casual Sheets does NOT bundle Univer locale strings; it only forwards a
 // `locales` prop to Univer. Without it Univer's LocaleService is "not
@@ -314,6 +315,8 @@ class __sheet_state extends DrumeeMFS {
           // Co-editing (Casual Sheets server behind /-/<ep>/sheets/): join
           // the room named after the file nid once the server answers.
           this._maybeAttachCollab(api);
+          // A "<A> commented on <file>" click opens the file ON that comment.
+          this._focusPendingComment(api);
         },
         onError: (e) => {
           this.warn("CasualSheets error", e);
@@ -404,6 +407,55 @@ class __sheet_state extends DrumeeMFS {
       /** fall back to the last snapshot handed to us */
     }
     return this._snapshot || this._pendingData || null;
+  }
+
+  /**
+   * The comment a notification asked this file to open on (pending-focus):
+   * open its thread the way a click on the cell does. Gives up silently (the
+   * file stays open) when the comment never shows.
+   */
+  _focusPendingComment(api) {
+    const target = pendingFocus.take(this.mget(_a.nid) || (this.editor && this.editor.mget(_a.nid)));
+    if (!target || !target.comment_id || !target.sub_unit_id || !api) return;
+    const cancelled = () => !!this._destroyed;
+    // The comment as the LIVE workbook has it. The unit is re-created once
+    // after onReady (loadSnapshot) and again when co-editing attaches, so its
+    // id is read on every try, never kept.
+    const find = () => {
+      const wb = api.univer && api.univer.getActiveWorkbook && api.univer.getActiveWorkbook();
+      const sheet = wb && wb.getSheetBySheetId && wb.getSheetBySheetId(target.sub_unit_id);
+      const comment = sheet && sheet.getCommentById && sheet.getCommentById(target.comment_id);
+      return comment ? { wb, sheet } : null;
+    };
+    pendingFocus
+      .waitFor(find, { timeout: 15000, cancelled })
+      // Settle past the snapshot reload and the permission grants (async,
+      // 300/1500 ms after onReady), then look again: the popup belongs to the
+      // unit that stays.
+      .then((hit) => (hit ? new Promise((r) => setTimeout(r, 1800)).then(find) : null))
+      .then((hit) => {
+        if (cancelled()) return;
+        if (hit) {
+          // Univer's own "open this thread": switches sheet, scrolls to the
+          // cell, shows the comment popup (what a click on the cell does).
+          return api.executeCommand("thread-comment-ui.operation.set-active-comment", {
+            unitId: hit.wb.getId(),
+            subUnitId: target.sub_unit_id,
+            commentId: target.comment_id,
+          });
+        }
+        // The thread is gone (deleted, or resolved and hidden): at least land
+        // on its sheet and cell.
+        const wb = api.univer && api.univer.getActiveWorkbook && api.univer.getActiveWorkbook();
+        const sheet = wb && wb.getSheetBySheetId && wb.getSheetBySheetId(target.sub_unit_id);
+        if (sheet && sheet.activate) sheet.activate();
+        if (sheet && target.ref && sheet.getRange) {
+          const range = sheet.getRange(target.ref);
+          if (range && range.activate) range.activate();
+        }
+        return null;
+      })
+      .catch((e) => this.warn("sheet_state: could not open the comment", e));
   }
 
   /**

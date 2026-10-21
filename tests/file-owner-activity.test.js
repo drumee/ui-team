@@ -142,3 +142,29 @@ test("categories, label, copy and wiring", () => {
     assert.ok(json.TASK_COMMENTED_ACTION, `TASK_COMMENTED_ACTION missing in ${l}`);
   }
 });
+
+test("a comment inside a document leaves its focus for the editor that opens the file", async () => {
+  const path = require("node:path");
+  const Module = require("node:module");
+  const real = Module._resolveFilename;
+  Module._resolveFilename = function (req, ...rest) {
+    if (req === "builtins/editor/pending-focus") return path.join(__dirname, "../src/drumee/builtins/editor/pending-focus.js");
+    return real.call(this, req, ...rest);
+  };
+  global.require = require;
+  try {
+    stubWm({ pane: {} });
+    const opened = [];
+    openFileOwnerActivity(
+      { hub_id: "h1", nid: "nF", filetype: "text", ext: "udoc", focus: { comment_id: "621000001", tab_id: "t1" }, ts: 1 },
+      { openMedia: (d) => opened.push(d.nid) },
+    );
+    await flush();
+    await flush();
+    const PF = require("../src/drumee/builtins/editor/pending-focus");
+    assert.deepEqual(PF.take("nF"), { comment_id: "621000001", tab_id: "t1" });
+    assert.deepEqual(opened, ["nF"]);
+  } finally {
+    Module._resolveFilename = real;
+  }
+});
