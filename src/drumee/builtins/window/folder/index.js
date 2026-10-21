@@ -6331,6 +6331,23 @@ class __window_folder extends mfsInteract {
       });
   }
 
+  // Deep link from a folder-chat notification: scope the chat to the topic its
+  // latest message is in ("general" for one outside any topic). The chat opens
+  // on # General, which leaves topic messages out, so a message posted in a
+  // topic was not on screen. The topics are fetched first so the header names
+  // the topic; one this folder no longer has leaves the scope as it is — a
+  // missing topic would show an empty chat.
+  openChatTopic(topicId) {
+    if (!topicId) return Promise.resolve();
+    const id = `${topicId}`;
+    return Topics.fetchTopics(this).then((topics) => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const known = id === "general" || (topics || []).some((t) => `${t.id}` === id);
+      if (!known || Topics.current(this) === id) return;
+      return Topics.scopeChatToTopic(this, id);
+    });
+  }
+
   // Deep link from a task mention/assignment notification on a window that is
   // ALREADY open: show the Task tab and open that task's detail. The mount-time
   // `open_task_id` (read in the tasks panel's initialize) only ever fires on a

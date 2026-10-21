@@ -952,6 +952,7 @@ class __window_manager extends push {
       open_task_id,
       open_meeting_nid,
       open_meeting_stime,
+      topic_id,
     } = args;
     if (!hub_id) {
       this.warn("openNotificationLocation: missing hub_id", args);
@@ -1085,6 +1086,11 @@ class __window_manager extends push {
       win.openMeetingDeepLink(open_meeting_nid, open_meeting_stime);
     } else if (activeTab && _.isFunction(win.showFolderTab)) {
       win.showFolderTab(activeTab);
+      // A folder-chat notification names the topic its message is in: the
+      // chat opens on # General, which leaves topic messages out.
+      if (activeTab === _a.chat && topic_id && _.isFunction(win.openChatTopic)) {
+        win.openChatTopic(topic_id);
+      }
     }
     // Keep the rail agreeing with the screen. loadWorkspace does not touch it
     // (it is desk chrome, rebuilt with nothing) — the defect Lexis reported for
