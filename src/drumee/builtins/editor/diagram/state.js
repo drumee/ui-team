@@ -333,8 +333,18 @@ class __diagram_state extends DrumeeMFS {
         dataType : "diagram.state"
       }
     };
-    this.postService(opt, { async: 1 });
-    this._diagram.isModified = false;
+    // Modified stays set until the server took the file, so a save that
+    // fails is not mistaken for a saved diagram (saveBeforeClose).
+    return this.postService(opt, { async: 1 })
+      .then((data) => {
+        if (data && data.nid) this._diagram.isModified = false;
+        return data;
+      })
+      .catch((e) => {
+        // The server-error path already notifies the user.
+        this.warn("diagram_state: save failed", e);
+        return null;
+      });
   }
 
   /**

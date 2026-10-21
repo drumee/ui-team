@@ -54,6 +54,19 @@ class __editor_diagram extends __player {
   }
 
   /**
+   * Save the diagram before the window goes away (the Open-File Switcher
+   * closes this editor to show the next file); it is otherwise only saved
+   * on the floppy icon. Resolves true once nothing is left to save, false
+   * when the save did not go through so the caller keeps the window open.
+   */
+  async saveBeforeClose() {
+    const st = this._diagram;
+    if (!st || !st._diagram || !st._diagram.isModified) return true;
+    await st.save();
+    return !st._diagram.isModified;
+  }
+
+  /**
    * User Interaction Evant Handler
    * @param {View} cmd
    * @param {Object} args

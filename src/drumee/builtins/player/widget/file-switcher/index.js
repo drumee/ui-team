@@ -251,6 +251,23 @@ class __file_switcher extends LetcBox {
   }
 
   /**
+   * Save the edits of the viewer this panel sits in, through its own
+   * `saveBeforeClose()` (the editors have one, a viewer has nothing to
+   * save). Resolves false when the editor could not save, so the caller
+   * leaves it open; the editor itself tells the user why.
+   */
+  async saveBeforeSwitch() {
+    const p = this.player;
+    if (!p || p.isDestroyed() || typeof p.saveBeforeClose !== "function") return true;
+    try {
+      return (await p.saveBeforeClose()) !== false;
+    } catch (e) {
+      this.warn("file-switcher: save before switch failed", e);
+      return false;
+    }
+  }
+
+  /**
    * Open `nid` in its own player, then close this one — only once the new
    * player is drawn on top of it, so the desk never shows in between. The
    * node is fetched again (openMedia), so a recent row whose file is gone
@@ -263,6 +280,14 @@ class __file_switcher extends LetcBox {
     if (filetype === _a.web) return this.openInTab(nid, hub_id);
     this._switching = 1;
     this.el.dataset.busy = 1;
+    // The file being left may hold edits (markdown, text, docs, sheet,
+    // diagram): they are saved first, and a save that fails keeps the user
+    // on that file, so nothing typed is lost to the switch.
+    if (!(await this.saveBeforeSwitch())) {
+      this._switching = 0;
+      if (!this.isDestroyed()) this.el.dataset.busy = 0;
+      return;
+    }
     const scroll = this.getPart && this.getPart("scroll");
     handoff = {
       at: Date.now(),
@@ -270,10 +295,15 @@ class __file_switcher extends LetcBox {
       folder: this._folder,
       scrollTop: scroll && scroll.el ? scroll.el.scrollTop : 0,
     };
+    // The editors save new files into, and refresh the tile of, their
+    // `target` window (the folder the first file was opened from); the next
+    // player inherits it, as this one closes before that next save.
+    const p0 = this.player;
+    const target = p0 && p0.target && !p0.target.isDestroyed() ? p0.target : undefined;
     let r;
     try {
       r = await openMedia(
-        { nid, hub_id },
+        { nid, hub_id, target },
         { fetchService: this.fetchService.bind(this), warn: this.warn.bind(this) }
       );
     } catch (e) {

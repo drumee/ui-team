@@ -91,6 +91,29 @@ class __editor_docs extends __player {
   }
 
   /**
+   * Flush what was typed since the last autosave before the window goes
+   * away (the Open-File Switcher closes this editor to show the next file).
+   * Resolves true once nothing is left to save, false when the save failed
+   * (the editor already alerted) so the caller keeps the window open.
+   */
+  async saveBeforeClose() {
+    if (!this._changed) return true;
+    const st = this._doc;
+    if (st && st._saveTimer) {
+      clearTimeout(st._saveTimer);
+      st._saveTimer = null;
+    }
+    // A save already in flight (autosave) finishes first; edits made during
+    // it leave _changed set, and the round below picks them up.
+    const started = Date.now();
+    while (this._saving && Date.now() - started < 15000) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    if (this._changed && !this._saving) await this.saveContent();
+    return !this._changed;
+  }
+
+  /**
    * Drive the header's "All changes saved" label (part "save-status"), the
    * way the Casual/Google-Docs demo shows autosave state.
    * @param {"saved"|"saving"|"unsaved"} state
@@ -536,7 +559,7 @@ class __editor_docs extends __player {
       opt.p = opt.pid;
       return this._saveContent(opt, Wm, stamp);
     }
-    this._saveContent(opt, target, stamp);
+    return this._saveContent(opt, target, stamp);
   }
 
   /**
@@ -572,7 +595,7 @@ class __editor_docs extends __player {
    *                        request was in flight keep the doc dirty.
    */
   _saveContent(opt, target, stamp) {
-    this.postService(opt, { async: 1 })
+    const saving = this.postService(opt, { async: 1 })
       .then((data) => {
         if (!data || !data.nid) {
           this.warn("__editor_docs: save returned no node", data);
@@ -618,8 +641,8 @@ class __editor_docs extends __player {
         // guard first so this single legitimate follow-up is allowed through;
         // it carries the freshly adopted nid, so it REPLACES (no duplicate).
         this._saving = 0;
-        if (!opt.replace) this.saveContent();
-        else this.setSaveStatus(editedMeanwhile ? "unsaved" : "saved");
+        if (!opt.replace) return this.saveContent();
+        this.setSaveStatus(editedMeanwhile ? "unsaved" : "saved");
       })
       .catch((e) => {
         this._saving = 0;
@@ -628,6 +651,8 @@ class __editor_docs extends __player {
         const status = e && (e.status || e.error_code);
         Wm.alert(status == 403 ? LOCALE.WEAK_PRIVILEGE : LOCALE.ERROR_NETWORK);
       });
+    this._savePromise = saving;
+    return saving;
   }
 
   /**
