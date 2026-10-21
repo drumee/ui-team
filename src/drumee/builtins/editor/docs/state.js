@@ -2,13 +2,21 @@ import { createElement, createRef } from "react";
 import { createRoot } from "react-dom/client";
 import { DocxEditor } from "@casualoffice/docs/react";
 import { CasualEditor } from "@casualoffice/docs";
-import { serializeDocx } from "@casualoffice/docs/core";
+import { serializeDocx, attemptSelectiveSave, parseDocx } from "@casualoffice/docs/core";
 import "@casualoffice/docs/styles.css";
 import { contentUrl } from "builtins/editor/content-url";
 const docTabs = require("./tabs");
 
 // Co-editing helpers: gateway probe, Drumee FileSource adapter, identity.
 const collab = require("./collab");
+// Live comment threads into the saved file, and back into a re-created room.
+const liveComments = require("./live-comments");
+// A room counts as changed for this long after its last update: covers the
+// export Casual runs before handing the bytes to FileSource.save.
+const LIVE_SETTLE_MS = 2000;
+// How long after "connected" a room is given to receive its threads from the
+// gateway before an empty map is taken as a room re-created from the file.
+const LIVE_SEED_DELAY_MS = 2500;
 
 // A guaranteed-valid minimal blank .docx (OOXML: [Content_Types], _rels, an empty
 // word/document.xml). NEW docs mount through the same documentBuffer path an
@@ -548,6 +556,75 @@ class __docs_state extends DrumeeMFS {
       filename: () =>
         (editor && editor.mget(_a.filename)) || this.mget(_a.filename) || "Untitled document",
     };
+    // Per room (= per document tab): its collab state, whether its Y.Doc has
+    // changed since the last save, and the bytes it was opened with.
+    const live = (this._live = this._live || new Map());
+    const liveRoom = (room) => {
+      let entry = live.get(String(room));
+      if (!entry) {
+        entry = { dirty: false, lastUpdateAt: 0 };
+        live.set(String(room), entry);
+      }
+      return entry;
+    };
+    ctx.onOpened = (room, bytes) => {
+      liveRoom(room).bytes = bytes;
+    };
+    // Idle only when the room's Y.Doc is known and has not changed since its
+    // last save; any doubt -> not idle -> the save goes out as before.
+    ctx.isIdle = (room) => {
+      const entry = live.get(String(room));
+      return !!(entry && entry.ydoc && !entry.dirty);
+    };
+    ctx.prepareBytes = (room, bytes) => {
+      const entry = live.get(String(room));
+      const map = entry && entry.state && entry.state.commentsMap;
+      return liveComments.withComments(bytes, map, attemptSelectiveSave);
+    };
+    ctx.onSaved = (room, startedAt) => {
+      const entry = live.get(String(room));
+      // A change shortly before the save started may not be in the bytes
+      // Casual exported: keep the room dirty, the next tick saves it.
+      if (entry && entry.lastUpdateAt < startedAt - LIVE_SETTLE_MS) entry.dirty = false;
+    };
+    // Called with every collab state of a room, on screen or not.
+    const trackRoom = (room, state) => {
+      const entry = liveRoom(room);
+      entry.state = state;
+      const ydoc = state && state.commentsMap && state.commentsMap.doc;
+      if (ydoc && entry.ydoc !== ydoc && typeof ydoc.on === "function") {
+        if (entry.unsub) entry.unsub();
+        const onUpdate = () => {
+          entry.dirty = true;
+          entry.lastUpdateAt = Date.now();
+        };
+        ydoc.on("update", onUpdate);
+        entry.unsub = () => ydoc.off("update", onUpdate);
+        entry.ydoc = ydoc;
+      }
+      if (state && state.status === "connected" && !entry.seedTimer) {
+        entry.seedTimer = setTimeout(() => {
+          const now = live.get(String(room));
+          if (!now || !now.state || this._destroyed) return;
+          liveComments
+            .seedComments(now.state.commentsMap, now.bytes, parseDocx)
+            .then((n) => {
+              if (n) console.log("[DOCS] restored", n, "comment threads into room", room);
+            });
+        }, LIVE_SEED_DELAY_MS);
+      }
+    };
+    const untrackRoom = (room) => {
+      const entry = live.get(String(room));
+      if (!entry) return;
+      if (entry.unsub) entry.unsub();
+      clearTimeout(entry.seedTimer);
+      live.delete(String(room));
+    };
+    this._untrackRoom = untrackRoom;
+    // This peer's own comment-id range (Casual issue #257).
+    if (!this._commentIdBase) this._commentIdBase = liveComments.peerCommentIdBase();
+
     const fileSource = collab.makeFileSource(editor, ctx);
     // Kept so flushCollabSave() can push bytes through the very same adapter
     // the autosave uses when Casual exposes no flush handle.
@@ -601,6 +678,7 @@ class __docs_state extends DrumeeMFS {
         const pane = this._panes.get(room);
         if (!pane) continue;
         this._panes.delete(room);
+        untrackRoom(room);
         try {
           pane.root.unmount();
           pane.host.remove();
@@ -643,9 +721,20 @@ class __docs_state extends DrumeeMFS {
         autosaveInterval: 4000,
         // File → Save / Ctrl+S inside Casual: with no onSave prop the shell
         // DOWNLOADS a .docx; route it to Drumee's save (autosave flush).
+        //
+        // Casual calls onSave from EVERY save, its own autosave included, and
+        // that autosave persists through FileSource.save right after. Flushing
+        // on each call queued one more save behind the running one, which
+        // called onSave again: a save about every second for as long as the
+        // document stayed open. So only a save that nothing persisted shortly
+        // after -- a File -> Save -- is flushed.
         onSave: () => {
           if (room !== this._room) return;
-          if (editor && typeof editor.saveContent === "function") editor.saveContent();
+          const askedAt = Date.now();
+          setTimeout(() => {
+            if (this._destroyed || fileSource.lastSaveAt(room) >= askedAt) return;
+            if (editor && typeof editor.saveContent === "function") editor.saveContent();
+          }, 1500);
         },
         showRuler: true,
         // Hidden tabs keep running, so every callback belongs to ONE room and
@@ -657,7 +746,11 @@ class __docs_state extends DrumeeMFS {
           this._autosave = state;
           if (editor && editor.setSaveStatus) editor.setSaveStatus(mapStatus(state));
         },
+        // Comment ids partitioned per peer: two peers commenting at once
+        // cannot overwrite each other's thread (live-comments).
+        docxEditorProps: { commentIdBase: this._commentIdBase },
         onCollabState: (state) => {
+          trackRoom(room, state);
           if (room !== this._room) return;
           this._collabState = state;
           if (state && state.status === "connected" && !this._raisedOnce) {
@@ -941,6 +1034,9 @@ class __docs_state extends DrumeeMFS {
           }
         }
         this._panes.clear();
+      }
+      if (this._live) {
+        for (const room of Array.from(this._live.keys())) this._untrackRoom(room);
       }
     } catch (e) {
       /** already gone */

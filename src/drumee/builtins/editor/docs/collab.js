@@ -126,10 +126,17 @@ function userIdentity() {
  * FileSource adapter over Drumee media services.
  *
  * @param {View} editor   the editor_docs window (postService, mset, status)
- * @param {Object} ctx    { hub_id, pid, filename() }
+ * @param {Object} ctx    { hub_id, pid, filename() }, plus optional hooks
+ *   onOpened(room, bytes)        the bytes a room was opened with
+ *   isIdle(room) -> bool         nothing changed in the room since its last save
+ *   prepareBytes(room, bytes)    async, the bytes to actually save
+ *   onSaved(room, startedAt)     a save of the room succeeded
  */
 function makeFileSource(editor, ctx) {
   const ext = "udoc";
+  // Per room: when it last asked to save, and the etag of its last save.
+  const lastSaveAt = new Map();
+  const lastEtag = new Map();
   const status = (s) => {
     if (editor && editor.setSaveStatus) editor.setSaveStatus(s);
   };
@@ -178,6 +185,9 @@ function makeFileSource(editor, ctx) {
         /** not our JSON wrapper */
       }
       if (!bytes) bytes = base64ToAb(BLANK_DOCX_B64);
+      // The bytes this room starts from: its stored comment threads can be
+      // put back into a room the gateway re-creates (live-comments).
+      if (ctx.onOpened) ctx.onOpened(id, bytes);
       return { bytes, name: ctx.filename(), etag: String(Date.now()) };
     },
 
@@ -187,6 +197,10 @@ function makeFileSource(editor, ctx) {
      * replace with the same bytes (same double-save the sheet editor does).
      */
     async save(id, bytes, opts = {}) {
+      // When this room last asked to persist: lets the window tell Casual's
+      // own autosave apart from a File → Save nobody persists (state.js).
+      const startedAt = Date.now();
+      lastSaveAt.set(String(id), startedAt);
       // Circuit breaker. Casual autosaves every few seconds for as long as the
       // document is dirty, and a save that can never succeed (the node was
       // trashed under the open window, the visitor lost write access) turned
@@ -201,7 +215,20 @@ function makeFileSource(editor, ctx) {
         status("unsaved");
         throw new Error("autosave paused after repeated failures");
       }
+      // Casual's autosave fires on a timer whether or not anything changed
+      // (22 saves in 30 s from a user who only opened a doc, drumee.in
+      // 2026-10-21). Nothing has changed in the room since the last save:
+      // the stored file is already current. Only for an existing node, never
+      // for a Save the user pressed, and only when the window can tell.
+      const existing = docTabs.splitRoom(id).nid;
+      if (existing && !opts.manual && ctx.isIdle && ctx.isIdle(id)) {
+        status("saved");
+        return { id: existing, etag: String(lastEtag.get(String(id)) || startedAt) };
+      }
       status("saving");
+      // The room's comment threads into word/comments.xml (live-comments):
+      // Casual's Live export leaves them out.
+      if (ctx.prepareBytes) bytes = await ctx.prepareBytes(id, bytes);
       // Document tabs: these bytes are ONE tab of the file, so they are merged
       // into the tab the room stands for and the whole list is written back.
       // Writing `{docx}` alone here would drop every other tab.
@@ -260,8 +287,11 @@ function makeFileSource(editor, ctx) {
           editor._changed = 0;
           editor._saveFailures = 0;
         }
+        if (ctx.onSaved) ctx.onSaved(id, startedAt);
         status("saved");
-        return { id: nid, etag: String(Date.now()) };
+        const etag = String(Date.now());
+        lastEtag.set(String(id), etag);
+        return { id: nid, etag };
       } catch (e) {
         if (editor) {
           editor._saveFailures = (editor._saveFailures || 0) + 1;
@@ -303,6 +333,11 @@ function makeFileSource(editor, ctx) {
 
     watchRecent() {
       return () => {};
+    },
+
+    /** When `room` last asked to save (epoch ms), 0 if never. */
+    lastSaveAt(room) {
+      return lastSaveAt.get(String(room)) || 0;
     },
   };
 }
