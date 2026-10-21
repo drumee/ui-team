@@ -132,6 +132,7 @@
   "CONFIRM_CANCEL": "您确定要取消吗？",
   "CONFIRM_DELETE": "确认删除",
   "CONFIRM_QUIT": "您确定要退出此页面吗？",
+  "UNSAVED_CLOSE_ANYWAY": "更改未能保存。仍要关闭并放弃更改吗？",
   "CONFIRM_RETRIEVE": "此元素已被删除。您想要检索它吗？",
   "CONFIRM_YOUR_NEW_PASSWORD": "请确认您的新密码",
   "PW_RULE_MATCH": "密码一致",

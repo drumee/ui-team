@@ -666,8 +666,7 @@ class __editor_docs extends __player {
         this.saveContent();
         break;
       case _e.close:
-        this.goodbye();
-        return;
+        return this.closeAfterSave();
       case "direct-rename":
         return this.renameFromChrome();
       case "toggle-doc-tabs":

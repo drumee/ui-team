@@ -604,6 +604,7 @@
   "CONFIRM_DELETE": "Confirm deletion of",
   "CONFIRM_PASSWORD_LABEL": "CONFIRM YOUR PASSWORD",
   "CONFIRM_QUIT": "Are you sure you want to quit this page ?",
+  "UNSAVED_CLOSE_ANYWAY": "No se pudieron guardar los cambios. ¿Cerrar de todos modos y perderlos?",
   "CONTACT": "Contact",
   "CONTACTS": "Contacts",
   "COOKIES_REQUIRED": "For convenience and safety reasons, connection to drumee.com requires cookies to be activated on your web browser.",

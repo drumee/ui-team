@@ -132,6 +132,7 @@
   "CONFIRM_CANCEL": "Etes-vous sûr(e) de vouloir annuler ?",
   "CONFIRM_DELETE": "Confirmer la suppression de",
   "CONFIRM_QUIT": "Etes-vous sûr(e) de vouloir quitter cette page ?",
+  "UNSAVED_CLOSE_ANYWAY": "Vos modifications n'ont pas pu être enregistrées. Fermer quand même et les perdre ?",
   "CONFIRM_RETRIEVE": "Cet élément a déjà été supprimé. Voulez-vous le restituer ?",
   "CONFIRM_YOUR_NEW_PASSWORD": "Confirmez votre nouveau mot de passe",
   "PW_RULE_MATCH": "Les mots de passe correspondent",

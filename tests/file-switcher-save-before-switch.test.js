@@ -271,6 +271,76 @@ test("the saves can be awaited: every editor hands its request back", () => {
   assert.match(SRC.sheet, /if \(!opt\.replace\) \{\n\s+return this\.saveContent\(\);/);
 });
 
+// ---------------------------------------------------------------- X button
+
+const INTERACT = read("src/drumee/builtins/player/interact.js");
+
+test("X button: an editor saves first and closes once the server has it; a viewer closes at once", async () => {
+  const closeAfterSave = fn(INTERACT, "async closeAfterSave()", { Wm: {}, LOCALE: {} });
+  let calls = [];
+  const viewer = { isDestroyed: () => false, goodbye: () => calls.push("goodbye"), warn() {}, closeAfterSave };
+  await viewer.closeAfterSave();
+  assert.deepEqual(calls, ["goodbye"]);
+
+  calls = [];
+  const editor = {
+    ...viewer,
+    async saveBeforeClose() {
+      calls.push("save");
+      return true;
+    },
+  };
+  await editor.closeAfterSave();
+  assert.deepEqual(calls, ["save", "goodbye"]);
+});
+
+test("X button: a save that fails asks before closing, and a No keeps the editor open", async () => {
+  let answer = { response: "confirm" };
+  let asked = 0;
+  const closeAfterSave = fn(INTERACT, "async closeAfterSave()", {
+    Wm: { confirm: async () => (asked++, answer) },
+    LOCALE: { UNSAVED_CLOSE_ANYWAY: "close anyway?" },
+  });
+  let calls = [];
+  const editor = {
+    isDestroyed: () => false,
+    goodbye: () => calls.push("goodbye"),
+    warn: () => calls.push("warn"),
+    saveBeforeClose: async () => false,
+    closeAfterSave,
+  };
+  await editor.closeAfterSave();
+  assert.equal(asked, 1);
+  assert.deepEqual(calls, ["goodbye"]);
+
+  calls = [];
+  answer = { response: "cancel" };
+  await editor.closeAfterSave();
+  assert.deepEqual(calls, []);
+
+  // A save that throws is logged and lands on the same question.
+  calls = [];
+  answer = { response: "confirm" };
+  editor.saveBeforeClose = async () => {
+    throw new Error("export failed");
+  };
+  await editor.closeAfterSave();
+  assert.deepEqual(calls, ["warn", "goodbye"]);
+});
+
+test("every editor's close button goes through closeAfterSave; the question exists in the six locales", () => {
+  for (const name of ["docs", "sheet", "markdown", "text", "note"]) {
+    assert.match(SRC[name], /case _e\.close:\n\s+return this\.closeAfterSave\(\);/, name);
+  }
+  // The diagram editor inherits the base player's close case.
+  assert.match(INTERACT, /case _e\.close:\n\s+return this\.closeAfterSave\(\);/);
+  assert.doesNotMatch(SRC.diagram, /case _e\.close/);
+  for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
+    const l = JSON.parse(read(`locale/${lang}.json`));
+    assert.ok(l.UNSAVED_CLOSE_ANYWAY && l.UNSAVED_CLOSE_ANYWAY.length > 10, lang);
+  }
+});
+
 test("text viewer: typing marks the file unsaved (it had no such flag)", () => {
   assert.match(SRC.text, /child\.el\.addEventListener\("input", \(\) => \{\n\s+this\._changed = 1;/);
   // The flag is read by the switch and cleared by a save that returned a node.

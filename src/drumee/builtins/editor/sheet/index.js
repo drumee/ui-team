@@ -626,8 +626,7 @@ class __editor_sheet extends __player {
         this.saveContent();
         break;
       case _e.close:
-        this.goodbye();
-        return;
+        return this.closeAfterSave();
       // Gear-menu Rename — inline-edit the title (the "player-title" part),
       // committing via SERVICE.media.rename. Same helper the office player uses.
       case "direct-rename":

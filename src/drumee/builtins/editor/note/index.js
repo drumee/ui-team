@@ -363,7 +363,7 @@ class ___editor_note extends __player {
         reader.readAsDataURL(args.file);
         break;
       case _e.close:
-        this.goodbye();
+        return this.closeAfterSave();
       default:
         super.onUiEvent(cmd, args)
     }

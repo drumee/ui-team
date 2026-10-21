@@ -79,6 +79,7 @@
   "CONFIRM_DELETE": "Confirm deletion of",
   "CONFIRM_PASSWORD_LABEL": "CONFIRM YOUR PASSWORD",
   "CONFIRM_QUIT": "Are you sure you want to quit this page ?",
+  "UNSAVED_CLOSE_ANYWAY": "Your changes could not be saved. Close anyway and lose them?",
   "CONFIRM_YOUR_NEW_PASSWORD": "Confirm your new password",
   "CONFIRM_RETRIEVE": "This element has already been deleted. Do you want to retrieve it?",
   "CONTACT": "Contact",
