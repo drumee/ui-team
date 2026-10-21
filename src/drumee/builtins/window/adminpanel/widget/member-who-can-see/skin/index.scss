@@ -53,18 +53,6 @@
     overflow: hidden;
   }
 
-  &__member-list {
-    & *::-webkit-scrollbar {
-      height: 100%;
-      width: 5px !important;
-    }
-
-    & *::-webkit-scrollbar-thumb {
-      background-color: var(--default-scrollbar-color);
-      cursor: pointer;
-    }
-  }
-
   &__selection-content {
     width: 100%;
 

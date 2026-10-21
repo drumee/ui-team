@@ -169,7 +169,8 @@
   overflow-x: hidden;
   overflow-y: auto;
   width: 100%;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+    var(--scrollbar-track, transparent);
   scrollbar-width: thin;
   height: 100%;
 }

@@ -251,10 +251,6 @@
       height: 100%;
       padding: var(--spacer-4);
     }
-
-    & .list-smart__container::-webkit-scrollbar {
-      width: 7px !important;
-    }
   }
 
   &__control {

@@ -481,15 +481,11 @@ $tint: rgba(89, 80, 255, 0.1);
     min-height: 0;
     max-height: 280px;
     overflow-y: auto;
-    // Room for the 4px Primary/30 scrollbar the design draws beside the rows.
+    // Room for the scrollbar beside the rows.
     padding-right: 8px;
-    // Standard properties only where the webkit pseudo-elements do not exist:
-    // Chrome ignores every ::-webkit-scrollbar rule once these are set, and
-    // falls back to a default bar with stepper arrows.
-    @supports not selector(::-webkit-scrollbar) {
-      scrollbar-width: thin;
-      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-    }
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
 
     // An OPEN ROLE MENU LIFTS THE CLIP. The menu is absolutely positioned
     // below its row inside this scroller, so with overflow:auto it opens into
@@ -499,25 +495,6 @@ $tint: rgba(89, 80, 255, 0.1);
     // this bug. Scrolling is suspended only while the menu is open.
     &:has(.invite-popup__role-options[data-state="1"]) {
       overflow: visible;
-    }
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: var(--scrollbar-track);
-      border-radius: 22px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb);
-      border-radius: 28px;
-    }
-
-    // The design's bar is a bare 4px track; no stepper arrows.
-    &::-webkit-scrollbar-button {
-      display: none;
     }
   }
 
