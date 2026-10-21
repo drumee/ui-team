@@ -64,15 +64,18 @@ class __calendar_main extends LetcBox {
     this.declareHandlers();
 
     // Month, unless the entry point NAMED a view: the Daily Reminder card's
-    // [My calendar] asks for today in `day` view. Validated against VIEW_KEYS,
+    // meetings tile asks for today in `day` view. Validated against VIEW_KEYS,
     // so a malformed or stale option can only ever fall back to the default —
     // an unknown string would otherwise reach GRIDS[view] in the skeleton and
     // silently render the month grid under a toolbar claiming something else.
     const startView = this.mget("startView");
     this._view = VIEW_KEYS.includes(startView) ? startView : "month";
     this._cursor = ymd(Dayjs());
-    // Not persisted, by spec: the filter resets to All every session.
-    this._filter = "all";
+    // Not persisted, by spec: the filter resets to All every session — unless
+    // the entry point names one: the Daily Reminder's due-tasks tile opens on
+    // Task, its meetings tile on Meeting. Validated like startView.
+    const startFilter = this.mget("startFilter");
+    this._filter = FILTER_KEYS.includes(startFilter) ? startFilter : "all";
     // Personal | Team. Team — every row calendar.list sends — is the default:
     // it is the set this screen showed before the toggle existed, and the
     // Daily Reminder's task and meeting tiles count workspace items only, so a
@@ -208,8 +211,9 @@ class __calendar_main extends LetcBox {
   /**
    * Point the screen at `view`, on TODAY — for an entry point that names one
    * rather than taking the screen as the user left it. The Daily Reminder
-   * card's [My calendar] is the only such caller today: it opens the month
-   * view on the current month.
+   * card is the only such caller today: [My calendar] opens the month view on
+   * All, the due-tasks tile the month view on Task, the meetings tile the day
+   * view on Meeting (Lexis, 2026-10-20).
    *
    * A FRESH mount reads the same thing from its `startView` option, and that
    * is the path that matters most, because the kind may still be lazy-loading
@@ -219,29 +223,31 @@ class __calendar_main extends LetcBox {
    * already on screen where an open-only togglePanel is a deliberate no-op,
    * never sees launch options and would otherwise keep the view it was left on.
    *
-   * It also puts the toolbar back on Team and All. The card's tiles count
-   * workspace items, so a screen left on Personal, or on one kind only, would
-   * open without the very items the card just counted.
+   * It also puts the toolbar back on Team, and on `filter` (All when the
+   * caller names none). The card's tiles count workspace items, so a screen
+   * left on Personal, or on another kind, would open without the very items
+   * the card just counted.
    *
    * No-op when the screen is already exactly there, so the fresh-mount path —
    * which just read the same view from its options — does not pay for a second
    * fetch of the window it is already loading.
    */
-  focusView(view) {
+  focusView(view, filter) {
     if (!VIEW_KEYS.includes(view)) return;
+    if (!FILTER_KEYS.includes(filter)) filter = "all";
     const today = ymd(Dayjs());
     if (
       this._view === view &&
       this._cursor === today &&
       this._audience === "team" &&
-      this._filter === "all"
+      this._filter === filter
     ) {
       return;
     }
     this._view = view;
     this._cursor = today;
     this._audience = "team";
-    this._filter = "all";
+    this._filter = filter;
     // Same pairing every cursor/view change in onUiEvent uses: a toolbar
     // dropdown left open would hang over a grid it no longer describes.
     this._closeMenus();
