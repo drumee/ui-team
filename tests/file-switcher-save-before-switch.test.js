@@ -188,6 +188,32 @@ for (const name of ["docs", "sheet"]) {
   });
 }
 
+test("docs in co-editing (Live): the pending Casual autosave is flushed on close even with no dirty flag", async () => {
+  const saveBeforeClose = fn(SRC.docs, "async saveBeforeClose()");
+  let saves = 0;
+  const self = {
+    _changed: 0,
+    _saving: 0,
+    _saveState: "saved",
+    _doc: { _collab: { nid: "n", hub_id: "h" } },
+    async saveContent() {
+      saves++;
+      this._saveState = "saved";
+    },
+    saveBeforeClose,
+  };
+  // Live mode keeps no _changed: the flush goes out regardless.
+  assert.equal(await self.saveBeforeClose(), true);
+  assert.equal(saves, 1);
+  // The flush failed (header left on "Unsaved changes"): keep the editor open.
+  self.saveContent = async function () {
+    saves++;
+    this._saveState = "unsaved";
+  };
+  assert.equal(await self.saveBeforeClose(), false);
+  assert.equal(saves, 2);
+});
+
 for (const name of ["markdown", "text"]) {
   test(`${name}: saveBeforeClose saves when something was typed, reports a save that did not go through`, async () => {
     const saveBeforeClose = fn(SRC[name], "async saveBeforeClose()");

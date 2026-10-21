@@ -97,8 +97,16 @@ class __editor_docs extends __player {
    * (the editor already alerted) so the caller keeps the window open.
    */
   async saveBeforeClose() {
-    if (!this._changed) return true;
     const st = this._doc;
+    // Co-editing (Live): Casual keeps the dirty state and autosaves on its
+    // own timer, _changed is never set, so the pending autosave is flushed
+    // outright (collab.js answers at once when nothing changed since the
+    // last save). Only "Unsaved changes" left on the header means it failed.
+    if (st && st._collab) {
+      await this.saveContent();
+      return this._saveState !== "unsaved";
+    }
+    if (!this._changed) return true;
     if (st && st._saveTimer) {
       clearTimeout(st._saveTimer);
       st._saveTimer = null;
