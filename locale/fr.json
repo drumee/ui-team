@@ -1285,6 +1285,7 @@
   "UNTITLED_DOCUMENT": "Document sans titre",
   "DOC": "Doc",
   "UNSAVED_CHANGES": "Modifications non enregistrées",
+  "DOC_SAVE_FAILED": "Vos dernières modifications n'ont pas pu être enregistrées. Rouvrez le document et appuyez sur Enregistrer.",
   "UNSAVED_PROFILE_CHANGES_DESC": "Vous avez modifié votre profil. Enregistrer les modifications avant de quitter ?",
   "ALL_CHANGES_SAVED": "Toutes les modifications sont enregistrées",
   "CURRENT_PLAN": "Formule actuelle",

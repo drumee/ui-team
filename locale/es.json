@@ -328,6 +328,7 @@
   "UNTITLED_DOCUMENT": "Untitled document",
   "DOC": "Doc",
   "UNSAVED_CHANGES": "Unsaved changes",
+  "DOC_SAVE_FAILED": "No se pudieron guardar los últimos cambios. Vuelva a abrir el documento y pulse Guardar.",
   "UNSAVED_PROFILE_CHANGES_DESC": "You've changed your profile. Save the changes before you leave?",
   "ALL_CHANGES_SAVED": "All changes saved",
   "CURRENT_PLAN": "Plan actual",
