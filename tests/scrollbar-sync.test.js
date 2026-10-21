@@ -181,30 +181,69 @@ test("::-webkit-scrollbar blocks outside the floor only hide", () => {
   report(v);
 });
 
+// Every webkit-only hide in `src`: a ::-webkit-scrollbar block that hides the
+// bar (display:none or a zero width/height) while the rule that owns it does
+// not also say scrollbar-width: none. Each selector in a list is checked on its
+// own. A bare `&::-webkit-scrollbar` is owned by the enclosing rule and a flat
+// `.x::-webkit-scrollbar` by the sibling `.x { }` rules; a compound `&`
+// selector (`&__list::…`, `& .b::…`) cannot be resolved here, so it is
+// reported rather than passed.
+const isHide = (body) => {
+  const decls = ownBody(body)
+    .split(";")
+    .map((d) => norm(d.replace(/!important/, "")))
+    .filter(Boolean);
+  return decls.length > 0 && decls.every((d) => HIDE_DECL.test(d));
+};
+
+function webkitOnlyHides(src) {
+  const out = [];
+  for (const m of src.matchAll(/[^{};]*::-webkit-scrollbar(?![-\w)])[^{;}]*\{/g)) {
+    const open = m.index + m[0].length - 1;
+    if (!isHide(blockAt(src, open))) continue;
+    const line = lineOf(src, m.index + m[0].search(/\S/));
+    for (const part of m[0].slice(0, -1).split(",")) {
+      if (!/::-webkit-scrollbar(?![-\w])/.test(part)) continue;
+      const sel = part.replace(/::-webkit-scrollbar.*$/s, "").trim();
+      let owner = "";
+      if (sel === "&" || sel === "") {
+        const o = enclosingOpen(src, m.index + m[0].length - 1);
+        if (o >= 0) owner = ownBody(blockAt(src, o));
+      } else if (!sel.startsWith("&")) {
+        const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        for (const r of src.matchAll(new RegExp(`(^|[}\\s;])${esc}\\s*\\{`, "g"))) {
+          owner += ownBody(blockAt(src, r.index + r[0].length - 1));
+        }
+      }
+      if (!/scrollbar-width\s*:\s*none/.test(owner)) out.push({ line, sel: sel || "&" });
+    }
+  }
+  return out;
+}
+
 test("hide blocks also set scrollbar-width: none", () => {
   const v = [];
   for (const { rel, src } of FILES) {
-    for (const { idx, open } of webkitBlocks(src)) {
-      if (!/display\s*:\s*none/.test(blockAt(src, open))) continue;
-      // `&::-webkit-scrollbar` lives inside its owner; a flat
-      // `.x::-webkit-scrollbar` has its owner as a sibling `.x { }` rule.
-      const sel = src.slice(src.lastIndexOf("}", idx) + 1, idx).split(/[{;]/).pop().trim();
-      let owner = "";
-      if (sel.startsWith("&") || sel === "") {
-        const o = enclosingOpen(src, idx);
-        if (o >= 0) owner = ownBody(blockAt(src, o));
-      } else {
-        const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        for (const m of src.matchAll(new RegExp(`(^|[}\\s;])${esc}\\s*\\{`, "g"))) {
-          owner += ownBody(blockAt(src, m.index + m[0].length - 1));
-        }
-      }
-      if (!/scrollbar-width\s*:\s*none/.test(owner)) {
-        v.push(`${rel}:${lineOf(src, idx)} webkit-only hide (${sel || "&"})`);
-      }
-    }
+    for (const h of webkitOnlyHides(src)) v.push(`${rel}:${h.line} webkit-only hide (${h.sel})`);
   }
   report(v);
+});
+
+test("webkitOnlyHides flags every webkit-only hide shape", () => {
+  const flags = (scss) => webkitOnlyHides(stripComments(scss)).length > 0;
+  // Clean shapes stay clean.
+  assert.equal(flags(".a { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }"), false);
+  assert.equal(flags(".a { scrollbar-width: none; }\n.a::-webkit-scrollbar { display: none; }"), false);
+  // A width/height hide is a hide too.
+  assert.equal(flags(".a { &::-webkit-scrollbar { width: 0; } }"), true);
+  // A compound `&` selector's owner is the child, not the enclosing rule.
+  assert.equal(flags(".a { scrollbar-width: none; &__list::-webkit-scrollbar { display: none; } }"), true);
+  assert.equal(flags(".a { scrollbar-width: none; & .b::-webkit-scrollbar { display: none; } }"), true);
+  // Every selector in a list is checked, not only the first.
+  assert.equal(
+    flags(".a { scrollbar-width: none; }\n.a::-webkit-scrollbar, .b::-webkit-scrollbar { display: none; }"),
+    true,
+  );
 });
 
 test("floor declares the canonical pair on html *", () => {
