@@ -8,29 +8,12 @@
 // Figma's field fill (overlay light mode at 5%).
 $field-bg: rgba(0, 0, 0, 0.05);
 
-// Same thin bar as ui-core's .list-smart__container (3px, thin), on the theme
-// tokens the global `html .list-smart__container` override uses
-// (router/skin/index.scss) so it follows light/dark like every list.
+// The app's one bar (router/skin/index.scss), on the theme tokens so it
+// follows light/dark like every list.
 @mixin thin-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
     var(--scrollbar-track, transparent);
-
-  &::-webkit-scrollbar {
-    width: 3px;
-    max-width: 3px;
-    cursor: pointer;
-  }
-
-  &::-webkit-scrollbar-track {
-    background-color: var(--scrollbar-track, transparent);
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22));
-    border-radius: 3px;
-    cursor: pointer;
-  }
 }
 
 .window-folder {
@@ -84,29 +67,14 @@ $field-bg: rgba(0, 0, 0, 0.05);
     }
   }
 
-  // The scrolling column. The right padding keeps the 4px bar 16px clear of
+  // The scrolling column. The right padding keeps the bar 16px clear of
   // the fields, as drawn.
   &__meeting-modal-body {
     gap: 16px;
     min-height: 0;
     overflow-y: auto;
     padding-right: 16px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-30, #847eff) $field-bg;
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: $field-bg;
-      border-radius: 22px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--primary-30, #847eff);
-      border-radius: 28px;
-    }
+    @include thin-scrollbar;
   }
 
   &__meeting-modal-field {
