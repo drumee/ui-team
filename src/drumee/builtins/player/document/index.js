@@ -42,6 +42,8 @@ const SVC_SET_PRIVILEGE =
 
 // How long the "your role changed" notice stays up before it dismisses itself.
 const ROLE_NOTICE_MS = 5000;
+/** How long the "could not save" notice stays up after a close. */
+const SAVE_NOTICE_MS = 15000;
 // A user can have the same document open in several windows, and every one of
 // them hears the privilege push. The notice is about the account, not the
 // document, so it is shown once per change — module scope, not instance.
@@ -878,9 +880,15 @@ class __player_document extends PlayerInteract {
     this._editorOrigin = new URL(url).origin;
     this._editorReady = false;
     this._onEditorMessage = (e) => {
-      if (this._editorReady) return;
       if (this._editorOrigin && e.origin !== this._editorOrigin) return;
       const data = e.data;
+      // The editor page names its document-server session key as it loads;
+      // goodbye() hands it to the flush so the save is addressed for sure.
+      if (data && data.type === 'drumee-editor-key' && data.key) {
+        this._editorKey = String(data.key);
+        return;
+      }
+      if (this._editorReady) return;
       const ev = (data && (data.event || data.type)) || data;
       if (EDITOR_READY_EVENTS.has(ev)) {
         this._hideEditorProgress();
@@ -986,11 +994,34 @@ class __player_document extends PlayerInteract {
     details.close(this);
     this.el.style.visibility = 'hidden';
     const { nid, hub_id } = this.actualNode();
+    const payload = { nid, hub_id };
+    if (this._editorKey) payload.key = this._editorKey;
     const waited = new Promise((r) => setTimeout(r, FLUSH_WAIT_MS));
-    Promise.race([this.postService(svc, { nid, hub_id }).catch(() => null), waited])
-      .then(() => {
+    Promise.race([this.postService(svc, payload).catch(() => null), waited])
+      .then((reply) => {
+        // No reply (network, or the wait ran out): the document server still
+        // saves on its own delay. An explicit "not saved" is the one answer to
+        // pass on, so the user reopens and presses Save instead of trusting it.
+        if (reply && reply.saved === false) this._showSaveFailedNotice();
         if (!this.isDestroyed()) super.goodbye(...args);
       });
+  }
+
+  /** The close-save did not reach the file: say so, once, after the window went. */
+  _showSaveFailedNotice() {
+    Wm.info({
+      message: LOCALE.DOC_SAVE_FAILED,
+      variant: 'notice',
+      dismiss_after: SAVE_NOTICE_MS,
+      actions: [
+        {
+          label: LOCALE.CLOSE,
+          priority: 'primary',
+          // No uiHandler: the toast window closes itself.
+          service: _e.close,
+        },
+      ],
+    });
   }
 
   /** The editor's flush service, while this window edits a desk document. */
