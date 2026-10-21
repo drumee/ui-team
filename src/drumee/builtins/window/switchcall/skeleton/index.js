@@ -48,15 +48,19 @@ const __skl_window_switchcall = function (_ui_) {
     ],
   });
 
-  // The live dot rides INSIDE the title text, after its last word. As a flex
-  // sibling it was pinned to the row's right edge as soon as a long title
-  // (an invite naming its workspace) wrapped and the title took the full width.
+  // "● LIVE" pill under the icon, on its own line so a long, wrapping title
+  // never pushes it around.
+  const livePill = Skeletons.Note({
+    className: `${pfx}__live`,
+    content: `<span class="${pfx}__live-dot"></span>${_.escape(LOCALE.LIVE || "Live")}`,
+  });
+
   const titleRow = Skeletons.Box.X({
     className: `${pfx}__title-row`,
     kids: [
       Skeletons.Note({
         className: `${pfx}__title`,
-        content: `${_.escape(title)}<span class="${pfx}__live-dot"></span>`,
+        content: _.escape(title),
       }),
     ],
   });
@@ -78,7 +82,10 @@ const __skl_window_switchcall = function (_ui_) {
   const body = Skeletons.Box.Y({
     className: `${pfx}__body`,
     debug: __filename,
-    kids: byline == null ? [brandIcon, titleRow] : [brandIcon, titleRow, bylineRow],
+    kids:
+      byline == null
+        ? [brandIcon, livePill, titleRow]
+        : [brandIcon, livePill, titleRow, bylineRow],
   });
 
   const footer = Skeletons.Box.X({
