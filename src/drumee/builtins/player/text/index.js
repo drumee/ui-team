@@ -91,6 +91,11 @@ class __player_text extends __player {
         this.__textContent = child;
         this.waitElement(child.el, () => {
           child.el.value = this.mget(_a.content);
+          // What the user types is unsaved until the next save
+          // (saveBeforeClose reads the flag when the viewer is switched).
+          child.el.addEventListener("input", () => {
+            this._changed = 1;
+          });
         })
         break;
       default:
@@ -102,7 +107,11 @@ class __player_text extends __player {
    *
    */
   _saveContent(opt, target) {
-    this.postService(opt, { async: 1 }).then((data) => {
+    const saving = this.postService(opt, { async: 1 }).then((data) => {
+      if (!data || !data.nid) {
+        this.warn("text_viewer: save returned no node", data);
+        return;
+      }
       this._changed = 0;
       const msg = `${LOCALE.SAVED} > ${data.file_path}`;
       this.ensurePart('acknowledgement').then((ack) => {
@@ -112,16 +121,17 @@ class __player_text extends __player {
         container.setState(1);
         setTimeout(() => container.setState(0), 1000);
       });
-      let [file] = target.getItemsByAttr(_a.nid, data.nid);
+      // The target is whatever window was active: a player has no listing.
+      let [file] = target && target.getItemsByAttr ? target.getItemsByAttr(_a.nid, data.nid) : [];
       if (!file) {
         const item = {
-          kind: target._getKind ? target._getKind() : undefined,
+          kind: target && target._getKind ? target._getKind() : undefined,
           filetype: _a.text,
           logicalParent: target,
           ...data,
         };
         delete item.replace;
-        if (target.insertMedia) target.insertMedia(item, 0);
+        if (target && target.insertMedia) target.insertMedia(item, 0);
         this.mset(data);
         return;
       }
@@ -130,7 +140,12 @@ class __player_text extends __player {
         file.restart("media:modified");
       }
       this.mset(data);
+    }).catch((e) => {
+      // The server-error path already notifies the user.
+      this.warn("text_viewer: save failed", e);
     });
+    this._savePromise = saving;
+    return saving;
   }
 
   /**
@@ -164,7 +179,20 @@ class __player_text extends __player {
       convert_to: 'txt',
     };
     if (!replace) opt.position = 0;
-    this._saveContent(opt, target);
+    return this._saveContent(opt, target);
+  }
+
+  /**
+   * Save what was typed before the window goes away (the Open-File Switcher
+   * closes this viewer to show the next file); a text file is otherwise
+   * only saved on the floppy icon. Resolves true once nothing is left to
+   * save, false when the save did not go through so the caller keeps the
+   * window open.
+   */
+  async saveBeforeClose() {
+    if (!this._changed) return true;
+    await this.saveContent();
+    return !this._changed;
   }
 
 

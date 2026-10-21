@@ -62,6 +62,29 @@ class __editor_sheet extends __player {
   }
 
   /**
+   * Flush the edits the autosave has not written yet before the window goes
+   * away (the Open-File Switcher closes this editor to show the next file).
+   * Resolves true once nothing is left to save, false when the save failed
+   * (the editor already alerted) so the caller keeps the window open.
+   */
+  async saveBeforeClose() {
+    if (!this._changed) return true;
+    const st = this._sheet;
+    if (st && st._saveTimer) {
+      clearTimeout(st._saveTimer);
+      st._saveTimer = null;
+    }
+    // A save already in flight (autosave) finishes first; edits made during
+    // it leave _changed set, and the round below picks them up.
+    const started = Date.now();
+    while (this._saving && Date.now() - started < 15000) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    if (this._changed && !this._saving) await this.saveContent();
+    return !this._changed;
+  }
+
+  /**
    * Open at the standard large editor size and let the base window handle
    * placement / clamping — mirrors the diagram editor (the other canvas
    * editor). A hand-rolled size here fought the base display()'s own fit +
@@ -427,14 +450,14 @@ class __editor_sheet extends __player {
       opt.p = opt.pid;
       return this._saveContent(opt, Wm);
     }
-    this._saveContent(opt, target);
+    return this._saveContent(opt, target);
   }
 
   /**
    *
    */
   _saveContent(opt, target) {
-    this.postService(opt, { async: 1 })
+    const saving = this.postService(opt, { async: 1 })
       .then((data) => {
         if (!data || !data.nid) {
           this.warn("__editor_sheet: save returned no node", data);
@@ -490,10 +513,9 @@ class __editor_sheet extends __player {
         // carries the adopted nid → REPLACE) is allowed through.
         this._saving = 0;
         if (!opt.replace) {
-          this.saveContent();
-        } else {
-          this.setSaveStatus("saved");
+          return this.saveContent();
         }
+        this.setSaveStatus("saved");
       })
       .catch((e) => {
         this._saving = 0;
@@ -502,6 +524,8 @@ class __editor_sheet extends __player {
         const status = e && (e.status || e.error_code);
         Wm.alert(status == 403 ? LOCALE.WEAK_PRIVILEGE : LOCALE.ERROR_NETWORK);
       });
+    this._savePromise = saving;
+    return saving;
   }
 
   /**
