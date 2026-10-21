@@ -182,10 +182,10 @@
 
 .window-switchcall {
   &__ui {
-    width: 520px;
+    width: 460px;
     height: auto;
     min-height: 0;
-    left: calc(50vw - 260px);
+    left: calc(50vw - 230px);
     top: calc(50vh - 160px);
     background-color: #ffffff;
     border: none;
@@ -227,9 +227,9 @@
   }
 
   &__brand {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
     background: rgba(89, 80, 255, 0.1);
     align-items: center;
     justify-content: center;
@@ -238,12 +238,12 @@
 
   &__brand-icon {
     display: flex;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     color: var(--primary-40, #5950ff);
     align-items: center;
     justify-content: center;
-    svg { width: 24px; height: 24px; fill: currentColor; }
+    svg { width: 28px; height: 28px; fill: currentColor; }
   }
 
   &__title-row {
@@ -263,7 +263,7 @@
     text-align: center;
     text-wrap: balance;
     overflow-wrap: anywhere;
-    @include drumee.typo($size: 20px, $line: 28px, $weight: 700, $color: #0b0a21);
+    @include drumee.typo($size: 20px, $line: 28px, $weight: 600, $color: #0b0a21);
 
     .note-content {
       display: -webkit-box;
@@ -273,25 +273,35 @@
     }
   }
 
-  // Inline, at the end of the title text (skeleton).
+  // "● LIVE" pill between the icon and the title (skeleton).
+  &__live {
+    width: auto;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: rgba(89, 80, 255, 0.1);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 600, $color: var(--primary-40, #5950ff));
+
+    .note-content {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+  }
+
   &__live-dot {
     display: inline-block;
-    vertical-align: middle;
-    margin: -3px 0 0 8px;
-    width: 10px;
-    height: 10px;
-    box-sizing: border-box;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    border: 1px solid var(--primary-40, #5950ff);
-    position: relative;
-
-    &::after {
-      content: "";
-      position: absolute;
-      inset: 2px;
-      border-radius: 50%;
-      background: var(--primary-40, #5950ff);
-    }
+    background: var(--primary-40, #5950ff);
+    flex-shrink: 0;
   }
 
   &__byline-row {
@@ -359,9 +369,9 @@
     }
   }
 
-  // Phones: the 520px card + viewport-centered offset would overflow; fit it
+  // Phones: the 460px card + viewport-centered offset would overflow; fit it
   // to the screen with a small margin instead.
-  @media (max-width: 560px) {
+  @media (max-width: 500px) {
     &__ui {
       width: calc(100vw - 24px);
       left: 12px;
