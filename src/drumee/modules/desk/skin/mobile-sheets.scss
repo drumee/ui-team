@@ -163,34 +163,13 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  // The desktop switcher's bar (`__ws-list` in desk/skin/topbar.scss): 4px,
-  // faint track, rounded --primary-70 thumb. Both halves of the pair are
-  // needed — `scrollbar-width` alone leaves Firefox drawing its default grey
-  // while Chrome takes the brand colour from the pseudo-elements.
-  //
-  // SCOPED THROUGH THE HOST on purpose. What this replaces is the global
-  // `.box` scrollbar (skin/lib/container.scss): a 5px bar on a rgba(0,0,0,.1)
-  // track with a --default-scrollbar-color thumb — which is
-  // rgba(250,133,64,.6), the wide orange bar down the side of this list.
-  // `.desk-module__msheet-list` and `.box` are both a single class, so on equal
-  // specificity the winner would depend on which stylesheet the bundle emits
-  // last. The host adds a second class and settles it outright.
+  // The app's one bar (router/skin/index.scss), the same as the desktop
+  // switcher's `__ws-list`. Scoped through the host so it outranks any
+  // single-class rule on the list regardless of bundle order.
   &__msheet-host &__msheet-list {
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: var(--scrollbar-track);
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb);
-      border-radius: 4px;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   // The desktop's __ws-new (desk/skin/topbar.scss), as a sheet row: Figma
