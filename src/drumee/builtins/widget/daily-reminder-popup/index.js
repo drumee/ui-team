@@ -23,8 +23,10 @@
  *
  * The three stat tiles are click targets too (Lexis, 2026-10-10): unread
  * messages → the desk's `toggle-inbox`, due tasks and meetings today → the
- * same Personal Calendar the button opens. Both go through _openDeskScreen,
- * for the same reasons.
+ * same Personal Calendar the button opens. Since 2026-10-20 (Lexis) each
+ * calendar tile narrows it to its own kind: due tasks → month view on the Task
+ * filter, meetings → TODAY in day view on the Meeting filter. All of them go
+ * through _openDeskScreen, for the same reasons.
  *
  * Maybe later and ✕ are the same action: close, write nothing. There is no
  * server-side "seen" state at all.
@@ -208,9 +210,8 @@ class __daily_reminder_popup extends LetcBox {
       case "daily-reminder-close":
         return this._close();
 
-      // [My calendar], the calendar row, and the due-tasks and meetings
-      // tiles → the Personal Calendar. See the header for why this delegates
-      // instead of opening the panel itself.
+      // [My calendar] and the calendar row → the Personal Calendar. See the
+      // header for why this delegates instead of opening the panel itself.
       //
       // `calendarView: "month"` — lands on the month grid of the current
       // month (Lexis, 2026-09-29; DAY view before that). Named rather than
@@ -220,6 +221,25 @@ class __daily_reminder_popup extends LetcBox {
       // instance that was only revealed. See desk `_openCalendar`.
       case "daily-reminder-calendar":
         return this._openDeskScreen(cmd, { service: "toggle-calendar", calendarView: "month" });
+
+      // The due-tasks tile → the same month grid, on the Task filter only
+      // (Lexis, 2026-10-20). Month, like the button: the count includes
+      // overdue tasks, which a day view would hide.
+      case "daily-reminder-tasks":
+        return this._openDeskScreen(cmd, {
+          service: "toggle-calendar",
+          calendarView: "month",
+          calendarFilter: "task",
+        });
+
+      // The meetings tile counts TODAY's meetings → today in day view, on the
+      // Meeting filter only (Lexis, 2026-10-20).
+      case "daily-reminder-meetings":
+        return this._openDeskScreen(cmd, {
+          service: "toggle-calendar",
+          calendarView: "day",
+          calendarFilter: "meeting",
+        });
 
       // The unread-messages tile → the Inbox (Lexis, 2026-10-10). The desk's
       // `toggle-inbox` is open-only (togglePanel(…, true)), so an Inbox the

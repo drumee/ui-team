@@ -10889,18 +10889,21 @@ class desk_module extends LetcBox {
    *
    * @param {String} [view] "month" | "week" | "day". When given, the screen
    *   opens on TODAY in that view instead of wherever it was last left — the
-   *   Daily Reminder card asks for "month".
+   *   Daily Reminder card asks for "month", or "day" from its meetings tile.
    *   Every other entry point omits it and keeps the existing behaviour
    *   exactly: no options, so the keep-alive reveal still applies.
+   * @param {String} [filter] "all" | "task" | "meeting" — the toolbar's kind
+   *   filter, only alongside a view. The Daily Reminder's due-tasks tile asks
+   *   for "task", its meetings tile for "meeting"; omitted means All.
    */
-  _openCalendar(view) {
+  _openCalendar(view, filter) {
     // Launch options reach a FRESH mount only — and passing any makes
     // togglePanel drop a parked instance and remount, which is precisely what
     // a named view needs. This is the mechanism the billing preselect and the
     // armed department form already use. It is also the only way to reach a
     // kind that is still lazy-importing when the promise below settles: there
     // is nothing but a loader placeholder to call a method on at that point.
-    const opt = view ? { startView: view } : undefined;
+    const opt = view ? { startView: view, startFilter: filter } : undefined;
     const opening = this.togglePanel(
       "calendar_main",
       "settings-main-slot",
@@ -10923,7 +10926,7 @@ class desk_module extends LetcBox {
       const child = p.children.last();
       if (!child || (child.isDestroyed && child.isDestroyed())) return;
       if (child.isLazyClass || !_.isFunction(child.focusView)) return;
-      child.focusView(view);
+      child.focusView(view, filter);
     });
   }
 
@@ -11869,8 +11872,8 @@ class desk_module extends LetcBox {
         // Most callers — the rail, the topbar cluster, the phone go-to grid,
         // the reload-restore — want the screen as the user left it, so they
         // name no view and the keep-alive reveal is unchanged. The Daily
-        // Reminder card names one: `month`.
-        return this._openCalendar(args.calendarView);
+        // Reminder card names one (and, from its tiles, a kind filter).
+        return this._openCalendar(args.calendarView, args.calendarFilter);
       }
 
       // Switcher header ⋯ → the open workspace's own menu, built the way a
