@@ -533,7 +533,7 @@ class ___widget_chatItem extends LetcBox {
         child.onAddKid = () => {
           // The real card is in the DOM — the placeholder has done its job.
           this._clearAttachmentSkeleton();
-          this.triggerHandlers({ service: "attachment-grown" });
+          this._tellChat({ service: "attachment-grown" });
         };
         // A just-sent message draws its cards from the staged nodes right
         // away; the list's own fetch is disabled until the echo (see
@@ -546,9 +546,36 @@ class ___widget_chatItem extends LetcBox {
           // placeholder cannot be found yet — flag it for the ceiling call
           // that runs right after the append.
           this._previewFed = true;
-          this.triggerHandlers({ service: "attachment-grown" });
+          this._tellChat({ service: "attachment-grown" });
         }
         break;
+    }
+  }
+
+  /**
+   * Tell the chat about something this row did on its own (a card arrived),
+   * without the bubble triggerHandlers sends up the tree after it.
+   *
+   * That bubble reaches the window holding the chat, and window/core answers
+   * any bubble by raising the window — right for a click, wrong here. In a
+   * workspace pane the cards load after the pane mounts, so a file opened over
+   * the pane (a Designation link) was pushed behind it a second or two later,
+   * once per card: it flashed, then looked closed.
+   *
+   * `bubble: 0` is ui-core's own switch for "do not bubble"; it is put back
+   * at once, so clicks on this row still raise its window.
+   *
+   * @param {Object} args the service payload, as for triggerHandlers
+   */
+  _tellChat(args) {
+    const had = this.model.has(_a.bubble);
+    const bubble = this.model.get(_a.bubble);
+    this.model.set(_a.bubble, 0, { silent: true });
+    try {
+      this.triggerHandlers(args);
+    } finally {
+      if (had) this.model.set(_a.bubble, bubble, { silent: true });
+      else this.model.unset(_a.bubble, { silent: true });
     }
   }
 
@@ -2230,7 +2257,7 @@ class ___widget_chatItem extends LetcBox {
     await this.ensurePart("attachment-files");
     this.__attachmentFiles.feed(cards);
 
-    this.triggerHandlers({ service: "attachment-reponse" });
+    this._tellChat({ service: "attachment-reponse" });
   }
 
   /**
