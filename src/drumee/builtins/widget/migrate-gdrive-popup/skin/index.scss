@@ -216,13 +216,8 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     }
 
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-    &::-webkit-scrollbar { width: 8px; }
-    &::-webkit-scrollbar-track { background: transparent; }
-    &::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb);
-      border-radius: var(--corner-radius-max);
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   // 28px inset and a 20px rhythm — the mock's, and tighter through the body

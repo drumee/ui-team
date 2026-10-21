@@ -43,15 +43,6 @@
     width: 100%;
     margin-top: 10px;
     flex:1;
-    & *::-webkit-scrollbar {
-      height: 100%;
-      width: 2px;
-    }
-    
-    & *::-webkit-scrollbar-thumb {
-      background-color: var(--default-scrollbar-color);
-      cursor: pointer;
-    }
   }
 
   &__note {

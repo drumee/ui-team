@@ -29,15 +29,8 @@
 @mixin cd-scroll {
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: 3px;
-  }
+  scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+    var(--scrollbar-track, transparent);
 }
 
 .widget-chat-details__ui {
