@@ -745,6 +745,10 @@ class __activity_item extends LetcBox {
         if (folder_nid) {
           hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${folder_nid}&filetype=folder&pid=${parent_id}&activeTab=${_a.chat}`;
           if (message_id) hash = hash + `&message_id=${message_id}`;
+          // The topic the latest message is in (server: _stampChatTopics), so
+          // the chat does not open on # General without it.
+          const topic_id = this.mget('topic_id');
+          if (topic_id) hash = hash + `&topic_id=${encodeURIComponent(topic_id)}`;
           location.hash = hash + `&ts=${ts}`;
           this.triggerHandlers({ service: 'read-activity', hub_id, nid: folder_nid, item_type, changelog_id })
           break;
