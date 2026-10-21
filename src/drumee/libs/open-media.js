@@ -69,7 +69,11 @@ async function openMedia(data = {}, { fetchService, warn } = {}) {
   if (!filetype && !(await fetchNode())) return undefined;
   let opt = appConfig(filetype, { ...data, ...node });
   let media = null;
-  if (!opt || !opt.kind) {
+  // A Casual doc / sheet (.udoc / .usheet) is "text" by category, so the map
+  // names the text viewer; its own editor is told apart only through a media
+  // model, by extension.
+  const ext = String((node && node.ext) || data.ext || "").toLowerCase();
+  if (!opt || !opt.kind || ext === "udoc" || ext === "usheet") {
     // A type the map does not name: a Univer sheet saved as .json, a Casual
     // doc, a note, a script. application() tells those apart from the node's
     // mimetype, dataType and ext, which it reads through a media model (the

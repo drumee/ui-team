@@ -24,7 +24,7 @@ function sliceTop(src, name) {
 global._ = { isFunction: (f) => typeof f === "function" };
 global._a = { chat: "chat" };
 const openFileOwnerActivity = new Function(
-  `${sliceTop(ITEM, "openThreadComment")}\n${sliceTop(ITEM, "openFileOwnerActivity")}; return openFileOwnerActivity;`,
+  `const TILE_WAIT_MS = 4000; const TILE_POLL_MS = 20;\n${sliceTop(ITEM, "openRevealedFile")}\n${sliceTop(ITEM, "openThreadComment")}\n${sliceTop(ITEM, "openFileOwnerActivity")}; return openFileOwnerActivity;`,
 )();
 const isFileOwnerCategory = new Function(`${sliceTop(ITEM, "isFileOwnerCategory")}; return isFileOwnerCategory;`)();
 const fileLabel = new Function(`${sliceTop(SKEL, "fileLabel")}; return fileLabel;`)();
@@ -42,17 +42,31 @@ function stubWm({ pane }) {
   return calls;
 }
 
-test("an edit lands on the file in its folder, then opens it in its player", async () => {
+test("an edit opens the revealed tile the way a double-click does (Casual docs/sheets route by their tile)", async () => {
+  const calls = stubWm({ pane: {} });
+  const nodes = [];
+  let polls = 0;
+  window.Wm._findMediaByNid = (nid) => (++polls < 3 ? null : { triggerHandlers: (a) => nodes.push([nid, a.service]) });
+  openFileOwnerActivity(
+    { hub_id: "h1", nid: "n1", filetype: "text", ext: "udoc", pid: "p1", filename: "Untitled document", ts: 5 },
+    { openMedia: () => assert.fail("the tile was found: no openMedia") },
+  );
+  await new Promise((r) => setTimeout(r, 150));
+  assert.deepEqual(nodes, [["n1", "open-node"]]);
+  assert.equal(calls[0][0], "reveal");
+});
+
+test("without a tile finder the edit falls back to openMedia, carrying the extension", async () => {
   const calls = stubWm({ pane: {} });
   const opened = [];
   const fetchService = () => {};
   openFileOwnerActivity(
-    { hub_id: "h1", nid: "n1", filetype: "document", pid: "p1", filename: "Report", ts: 5 },
+    { hub_id: "h1", nid: "n1", filetype: "document", ext: "docx", pid: "p1", filename: "Report", ts: 5 },
     { fetchService, openMedia: (data, opt) => opened.push([data, opt.fetchService]) },
   );
   await flush();
   assert.deepEqual(calls[0], ["reveal", { hub_id: "h1", nid: "n1", filetype: "document", pid: "p1", highlight: "1", ts: "5" }]);
-  assert.deepEqual(opened, [[{ hub_id: "h1", nid: "n1", filetype: "document", filename: "Report" }, fetchService]]);
+  assert.deepEqual(opened, [[{ hub_id: "h1", nid: "n1", filetype: "document", ext: "docx", filename: "Report" }, fetchService]]);
   assert.equal(calls.filter((c) => c[0] === "open").length, 0, "never Wm.openFileLocation");
 });
 

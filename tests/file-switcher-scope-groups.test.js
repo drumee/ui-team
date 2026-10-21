@@ -294,6 +294,17 @@ test("openMedia tells a Univer .json sheet apart through a media model", async (
   await openMedia({ nid: "d1", hub_id: "H", filetype: "document" }, { fetchService });
   assert.equal(launches[1].opt.kind, "document_reader");
   assert.equal(launches[1].media, null);
+  // A Casual doc / sheet is "text" by category: the map names text_viewer, yet
+  // it must go through the media model, which routes it by extension.
+  const udocConfig = (filetype, opt) => (opt.media && opt.media.model.ext === "udoc" ? { kind: "editor_docs", media: opt.media } : { kind: "text_viewer" });
+  const openUdoc = new Function(
+    "appConfig", "launchPlayer", "SERVICE", "LOCALE", "Wm", "Kind", "Backbone", "_a",
+    `return ${OPEN_SRC.match(/async function openMedia\([\s\S]*?\n\}/)[0]}`,
+  )(udocConfig, async (args) => { launches.push(args); return true; }, { media: { attributes: "media.attributes" } },
+    { FILE_NOT_FOUND: "gone" }, { alert() {} }, { waitFor: async () => function (o) { this.model = o.model; } },
+    { Model: function (n) { Object.assign(this, n); } }, { media: "media" });
+  await openUdoc({ nid: "u1", hub_id: "H", filetype: "text", ext: "udoc" }, { fetchService: async () => ({ nid: "u1", filetype: "text", ext: "udoc" }) });
+  assert.equal(launches[2].opt.kind, "editor_docs");
   // Still nothing for a type nobody can open.
   assert.equal(await openMedia({ nid: "x", hub_id: "H", filetype: "app-data" }, { fetchService: async () => ({ nid: "x", filetype: "app-data" }) }), null);
 });

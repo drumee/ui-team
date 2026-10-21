@@ -106,7 +106,7 @@ function isFileOwnerCategory(category) {
  * or the player would be wiped or buried when the workspace pane mounts.
  * Best-effort: without Wm the reveal hash alone still lands on the file.
  */
-function openFileOwnerActivity({ hub_id, nid, filetype, pid, filename, message_id, ts }, { fetchService, openMedia } = {}) {
+function openFileOwnerActivity({ hub_id, nid, filetype, ext, pid, filename, message_id, ts }, { fetchService, openMedia } = {}) {
   const wm = window.Wm;
   const reveal = { hub_id, nid, filetype, pid: `${pid || "0"}`, highlight: "1", ts: `${ts}` };
   if (!wm || !_.isFunction(wm.openNotificationLocation)) {
@@ -119,10 +119,37 @@ function openFileOwnerActivity({ hub_id, nid, filetype, pid, filename, message_i
       if (message_id && _.isFunction(pane.scopeChatToFile)) {
         return openThreadComment(pane, { nid, filename, message_id });
       }
-      const open = openMedia || require("libs/open-media").openMedia;
-      return open({ hub_id, nid, filetype, filename }, { fetchService });
+      return openRevealedFile(wm, { hub_id, nid, filetype, ext, filename }, { fetchService, openMedia });
     })
     .catch((e) => console.warn("[activity] file-owner notification open failed", e));
+}
+
+// Open the file the reveal just landed on the way a double-click on its tile
+// does ("open-node"), so every type reaches its own player or editor — a
+// Casual doc or sheet included, which the tile's media model routes by
+// extension. The tile renders a moment after the landing, hence the wait;
+// without it, openMedia from the node's attributes.
+const TILE_WAIT_MS = 4000;
+const TILE_POLL_MS = 200;
+function openRevealedFile(wm, data, { fetchService, openMedia } = {}) {
+  const canFind = _.isFunction(wm._findMediaByNid);
+  return new Promise((resolve) => {
+    let waited = canFind ? 0 : TILE_WAIT_MS;
+    const tick = () => {
+      const tile = canFind ? wm._findMediaByNid(data.nid) : null;
+      if (tile && _.isFunction(tile.triggerHandlers)) {
+        tile.triggerHandlers({ service: "open-node" });
+        return resolve(tile);
+      }
+      if (waited >= TILE_WAIT_MS) {
+        const open = openMedia || require("libs/open-media").openMedia;
+        return resolve(open(data, { fetchService }));
+      }
+      waited += TILE_POLL_MS;
+      setTimeout(tick, TILE_POLL_MS);
+    };
+    tick();
+  });
 }
 
 // Scope the pane's chat to the file's thread, then scroll to the comment. On
@@ -742,6 +769,7 @@ class __activity_item extends LetcBox {
         pid: this.mget('pid') || parent_id,
         filename: this.mget('filename'),
         message_id: this.mget('message_id'),
+        ext: this.mget('ext'),
         ts,
       }, { fetchService: this.fetchService && this.fetchService.bind(this) });
       this.triggerHandlers({ service: 'read-activity', hub_id, nid, item_type, item_key, changelog_id });
