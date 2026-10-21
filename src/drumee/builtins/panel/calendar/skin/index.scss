@@ -15,19 +15,26 @@
 // `thin` reserves ~10px, and only on a region that actually overflows — a quiet
 // cell keeps its full width and a busy one spends 10px on the bar that earns it.
 //
-// $rest is the thumb at rest, $thumb on hover. A month cell passes rest:
-// transparent — 42 of them would stripe the grid, and the cell has the pinned
-// "+N" as its standing overflow signal. A region with no such label (the
-// all-day strip) keeps the bar inked, because then it is the only thing saying
-// "there is more below".
-@mixin quiet-scroll($thumb: var(--scrollbar-thumb), $rest: transparent) {
+// The bar is the app's one bar (router/skin/index.scss). A month cell hides it
+// at rest — 42 of them would stripe the grid, and the cell has the pinned "+N"
+// as its standing overflow signal — and shows it on hover. A region with no
+// such label (the all-day strip) passes $inked: true and keeps the bar, because
+// then it is the only thing saying "there is more below".
+@mixin quiet-scroll($inked: false) {
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: $rest transparent;
 
-  &:hover {
-    scrollbar-color: $thumb transparent;
+  @if $inked {
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
+  } @else {
+    scrollbar-color: transparent transparent;
+
+    &:hover {
+      scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+        var(--scrollbar-track, transparent);
+    }
   }
 }
 
@@ -653,17 +660,10 @@
     border-left: 1px solid var(--overlay-bg-05);
     overflow: auto;
 
-    // The screen's primary scroll — always inked, unlike the cell's. Declared
-    // here for the same reason as quiet-scroll: left alone, this Box.Y takes
-    // skin/lib/container.scss's global `.drumee-box` bar, which is the desk's
-    // old 5px orange. That reads as a foreign object on a screen whose accent
-    // is indigo, and it left the calendar wearing three unrelated scrollbars.
+    // The screen's primary scroll — always inked, unlike the cell's.
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-
-    &:hover {
-      scrollbar-color: var(--scrollbar-thumb) transparent;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   &__empty {
@@ -825,7 +825,8 @@
     // told the region moves. The "+N" says there is more; the bar says how
     // to reach it without leaving the month.
     &[data-overflow="1"] {
-      scrollbar-color: var(--scrollbar-thumb) transparent;
+      scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+        var(--scrollbar-track, transparent);
     }
   }
 
@@ -1203,7 +1204,7 @@
     // Inked at rest: this strip has no "+N" label, so with a hidden bar a
     // twelve-task day would show two or three cards and say nothing about the
     // rest.
-    @include quiet-scroll($rest: var(--border-strong));
+    @include quiet-scroll($inked: true);
   }
 
   // `1 0 auto`, never `1 1 auto` + `min-height: 0`: the hour rules are
@@ -1594,16 +1595,6 @@
 
     // Fixed height, scrolls inside: four lines, then the bar. Not resizable —
     // a drag handle would fight the bar for the same corner.
-    //
-    // The bar follows the reference design: no visible track, a grey
-    // rounded thumb inset 2px inside a 10px gutter, and small grey arrow
-    // buttons at either end. ::-webkit-scrollbar only — Chrome lets
-    // scrollbar-width / -color override the pseudo-elements, so those are kept
-    // to engines without them (Firefox draws no arrows; it gets the colours).
-    //
-    // The field's wrapper holds the vertical padding and a 4px right gutter,
-    // so the bar sits inside the field instead of being clipped by its 8px
-    // corner radius.
     textarea {
       display: block;
       resize: none;
@@ -1611,58 +1602,9 @@
       padding: 2px 6px 2px 10px;
       overflow-x: hidden;
       overflow-y: auto;
-
-      &::-webkit-scrollbar {
-        width: 10px;
-        background: transparent;
-      }
-
-      &::-webkit-scrollbar-track {
-        background: transparent;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background-color: var(--scrollbar-thumb);
-        // Transparent border + padding-box clip = a 6px thumb inset in the
-        // 10px gutter, with fully rounded ends.
-        border: 2px solid transparent;
-        background-clip: padding-box;
-        border-radius: 999px;
-        cursor: pointer;
-
-        &:hover {
-          background-color: rgba(60, 60, 67, 0.45);
-        }
-      }
-
-      // One arrow per end (the "single-button" pair), drawn as a small
-      // triangle; the double-button pairs Chrome would also offer are hidden.
-      &::-webkit-scrollbar-button:single-button {
-        display: block;
-        height: 10px;
-        background-color: transparent;
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: 8px 8px;
-        cursor: pointer;
-      }
-
-      &::-webkit-scrollbar-button:single-button:vertical:decrement {
-        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M5 3 L8 7 L2 7 Z' fill='%23a1a1a6'/></svg>");
-      }
-
-      &::-webkit-scrollbar-button:single-button:vertical:increment {
-        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M2 3 L8 3 L5 7 Z' fill='%23a1a1a6'/></svg>");
-      }
-
-      &::-webkit-scrollbar-button:double-button {
-        display: none;
-      }
-
-      @supports not selector(::-webkit-scrollbar) {
-        scrollbar-width: thin;
-        scrollbar-color: var(--scrollbar-thumb) transparent;
-      }
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+        var(--scrollbar-track, transparent);
     }
   }
 
@@ -2413,7 +2355,7 @@
     // is more. Room on the right keeps each ✕ clear of it.
     max-height: 120px;
     padding-right: 4px;
-    @include quiet-scroll($rest: var(--border-default));
+    @include quiet-scroll($inked: true);
   }
 
   // Hide rules here must beat ui-core's `.drumee-widget[data-flow=…]
@@ -2559,7 +2501,7 @@
   &__modal[data-form="task"] &__modal-col--main {
     // Room for the bar, so it never sits on a row's ✕.
     padding-right: 8px;
-    @include quiet-scroll($rest: var(--border-default));
+    @include quiet-scroll($inked: true);
   }
 
   &__modal[data-form="task"] &__field {
@@ -3039,7 +2981,7 @@
     border-radius: 8px;
     background: var(--normal-bg-elevated);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-    @include quiet-scroll($rest: var(--border-default));
+    @include quiet-scroll($inked: true);
   }
 
   &__modal[data-form="task"] &__fsearch-results[data-open="0"] {
