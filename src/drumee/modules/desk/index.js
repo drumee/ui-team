@@ -12199,27 +12199,42 @@ class desk_module extends LetcBox {
         // @drumee/admin-console plugin. Load it on demand, then render it in the
         // settings-main-slot panel (full-width, in-desk). apps_main does its own
         // privilege gating (upsell for non-admins), so the item stays visible to all.
-        RADIO_BROADCAST.trigger("breadcrumb:context", {
-          filename: LOCALE.ADMIN_CONSOLE,
-          ico: "top-apps",
-        });
-        // See _railUnlight. AFTER the upsell gate above — a personal plan gets
-        // a modal over the workspace it is still looking at, not a screen — and
-        // beside the breadcrumb retitle, which already commits to the console
-        // before the plugin chunk lands and is the same bet on the same hop.
-        this._railUnlight();
+        //
         // `tab` rides in from desk:open-admin-console — the storage overage
         // asks for the Storage tab, where the per-workspace cleanup is. The
         // plugin validates it against the tabs this role may see and falls
         // back to its own default, so an unknown value cannot strand anyone.
         const consoleTab = args?.tab;
         const consoleOpt = consoleTab ? { tab: consoleTab } : undefined;
-        if (Kind.get("apps_main")) {
+        const openConsole = () => {
+          RADIO_BROADCAST.trigger("breadcrumb:context", {
+            filename: LOCALE.ADMIN_CONSOLE,
+            ico: "top-apps",
+          });
+          // See _railUnlight. AFTER the upsell gate above — a personal plan
+          // gets a modal over the workspace it is still looking at, not a
+          // screen — and beside the breadcrumb retitle, the same commitment.
+          this._railUnlight();
           return this.togglePanel("apps_main", "settings-main-slot", true, consoleOpt);
-        }
+        };
+        if (Kind.get("apps_main")) return openConsole();
+        // COMMIT ONLY ONCE THE KIND EXISTS. loadPlugin resolves as soon as the
+        // plugin file has run, whether or not it registered apps_main (the
+        // toolkit seeds it carries fire `addons:registered` first), and
+        // waitFor then answers null. Retitling and calling togglePanel before
+        // knowing that cleared the org view / screen in the slot and fed it a
+        // kind that does not exist: the bar read "Admin Console" over the bare
+        // workspace and every later click was dead (report 2026-10-21). A
+        // failed load now leaves the screen exactly as it was.
         return Kind.loadPlugin({ name: "admin-console", kind: "apps_main" })
           .then(() => Kind.waitFor("apps_main"))
-          .then(() => this.togglePanel("apps_main", "settings-main-slot", true, consoleOpt))
+          .then((k) => {
+            if (!k) {
+              this.warn && this.warn("admin-console loaded but apps_main is not registered");
+              return;
+            }
+            return openConsole();
+          })
           .catch((e) => this.warn && this.warn("admin-console load failed", e));
       }
 
