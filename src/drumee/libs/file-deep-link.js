@@ -115,6 +115,13 @@ function arm(hash) {
  */
 function captureFromUrl() {
   if (!urlWantsFile()) return false;
+  // The address bar mirrors the visitor's location (libs/location-url). A
+  // reload of such an entry is no link arrival while desk-state restore has a
+  // remembered screen to put back; with nothing remembered, the URL is all
+  // there is, so it is opened like the link it is. Only window/history/storage
+  // are read there — safe this early in the boot.
+  const locationUrl = require("libs/location-url");
+  if (locationUrl.isMirrorEntry() && locationUrl.restsOnReload()) return false;
   try {
     arm(String(window.location.hash || ""));
   } catch (e) {
