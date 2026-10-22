@@ -206,18 +206,31 @@ function blockedForNow() {
 }
 
 /**
- * A window closing announces nothing on the breadcrumb channel (measured: a
- * docked player closed by its X), so watch Wm's two layers for a child coming
- * or going as well. Attached lazily — the layers mount after start() — and
- * once per layer.
+ * Not every window announces itself on the breadcrumb channel — a docked
+ * player closed by its X, or an editor (editor_docs) raised, says nothing
+ * (both measured on the dev endpoint). So watch Wm's two layers directly: a
+ * window coming or going (childList), or a window's own data-state flipping,
+ * which is how the window manager marks the active one. data-state on
+ * anything deeper (toggle buttons inside a window) is ignored. Attached
+ * lazily — the layers mount after start() — and once per layer.
  */
 function watchLayers() {
   const wm = window.Wm;
-  if (!wm || !_watched) return;
+  if (!wm || !_watched || typeof MutationObserver !== "function") return;
   for (const layer of [wm.windowsLayer, wm.headlessLayer]) {
-    if (!layer || !_.isFunction(layer.on) || _watched.has(layer)) continue;
-    _watched.add(layer);
-    layer.on("add:child remove:child", () => schedule());
+    const el = layer && layer.el;
+    if (!el || _watched.has(el)) continue;
+    _watched.add(el);
+    new MutationObserver((list) => {
+      if (list.some((m) => m.type === "childList" || m.target.parentElement === el)) {
+        schedule();
+      }
+    }).observe(el, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-state"],
+    });
   }
 }
 

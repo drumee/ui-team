@@ -97,10 +97,13 @@ function view(attrs, { state, media } = {}) {
     isDestroyed: () => false,
   };
 }
-const layer = (views) => ({
-  children: { toArray: () => views },
-  on(ev, fn) { (this.listeners = this.listeners || []).push([ev, fn]); },
-});
+const layer = (views) => ({ el: { tag: "layer" }, children: { toArray: () => views } });
+// Records what libs/location-url observes, and lets a test fire mutations.
+const observers = [];
+global.MutationObserver = class {
+  constructor(cb) { this.cb = cb; }
+  observe(el, opts) { this.el = el; this.opts = opts; observers.push(this); }
+};
 function desk({ screen = false, restoring = false } = {}) {
   global.window.Desk = {
     _mainScreenOnTop: () => screen,
@@ -288,15 +291,38 @@ test("plain '#/desk' and a routed wm hash are written over", () => {
   }
 });
 
-test("a window closing is noticed through Wm's layers (attached once)", () => {
+test("windows coming, going or being raised are noticed through Wm's layers", async () => {
   reset();
   wm({ panes: [pane(ROOT_PANE)] });
+  const before = observers.length;
   locationUrl.sync();
   locationUrl.sync();
-  for (const l of [Wm.headlessLayer, Wm.windowsLayer]) {
-    assert.equal(l.listeners.length, 1);
-    assert.equal(l.listeners[0][0], "add:child remove:child");
+  const mine = observers.slice(before);
+  assert.equal(mine.length, 2); // one per layer, attached once
+  for (const o of mine) {
+    assert.equal(o.opts.childList, true);
+    assert.deepEqual(o.opts.attributeFilter, ["data-state"]);
   }
+  const layerEl = Wm.headlessLayer.el;
+  const o = mine.find((x) => x.el === layerEl);
+  // An editor raised: its own data-state flips → a sync is scheduled.
+  const docs = view({ kind: "editor_docs", filetype: "text", nid: "d1", hub_id: "hubA" }, { state: 1 });
+  const p = pane(ROOT_PANE);
+  p.el.dataset.state = "0";
+  wm({ panes: [p, docs] });
+  Wm.headlessLayer.el = layerEl;
+  o.cb([{ type: "attributes", target: { parentElement: layerEl } }]);
+  for (let i = 0; i < 100 && loc.hash !== "#/desk/wm/o/d1/hubA/text"; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
+  assert.equal(loc.hash, "#/desk/wm/o/d1/hubA/text");
+  // A toggle deep inside a window is not a raise.
+  const writes = hist.writes;
+  wm({ panes: [pane(ROOT_PANE)] });
+  Wm.headlessLayer.el = layerEl;
+  o.cb([{ type: "attributes", target: { parentElement: { tag: "button-row" } } }]);
+  await new Promise((r) => setTimeout(r, 400));
+  assert.equal(hist.writes, writes);
 });
 
 test("start() listens on the breadcrumb channel once", () => {
