@@ -3265,5 +3265,7 @@
   "MIGRATE_PHONE_LINK_PLACEHOLDER": "Pega el enlace",
   "MIGRATE_PHONE_VERIFY_IMPORT": "Verificar e importar",
   "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE": "Empieza a hablar del archivo en el hilo de chat",
-  "DMZ_MEETING_PASSWORD_PROTECTED": "Esta reunión está protegida. Introduce la contraseña para continuar."
+  "DMZ_MEETING_PASSWORD_PROTECTED": "Esta reunión está protegida. Introduce la contraseña para continuar.",
+  "DMZ_MEETING_EMAIL_REQUIRED": "El organizador requiere tu correo electrónico antes de que puedas unirte a esta reunión.",
+  "DMZ_MEETING_EMAIL_SHARED": "Tu correo electrónico se compartirá con el propietario de la reunión."
 }

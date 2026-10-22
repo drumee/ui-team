@@ -3264,5 +3264,7 @@
   "MIGRATE_PHONE_LINK_PLACEHOLDER": "粘贴链接",
   "MIGRATE_PHONE_VERIFY_IMPORT": "验证并导入",
   "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE": "开始在聊天讨论串中讨论该文件",
-  "DMZ_MEETING_PASSWORD_PROTECTED": "此会议受密码保护。请输入密码以继续。"
+  "DMZ_MEETING_PASSWORD_PROTECTED": "此会议受密码保护。请输入密码以继续。",
+  "DMZ_MEETING_EMAIL_REQUIRED": "组织者要求您先提供电子邮箱，才能加入此会议。",
+  "DMZ_MEETING_EMAIL_SHARED": "您的电子邮箱将与会议所有者共享。"
 }
