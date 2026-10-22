@@ -10,9 +10,40 @@
 // _syncMenuDismiss in ../index.js).
 const { VIEWS, FILTERS, AUDIENCES, rangeLabel, day, ymd } = require("./helpers");
 
-// The personal task and meeting forms open from "+ New" (Figma 1693:164274).
-// A task also opens from a day cell's "+".
+// The personal task and meeting forms open from "+ New" (Figma 1693:164274),
+// and from a day cell's "+", which opens the same Task / Meeting menu due that
+// day (dayMenu below).
 const SHOW_NEW_BUTTON = true;
+
+// Icon + label row, built the way the desk topbar's own "New" menu builds
+// one (modules/desk/skeleton/topbar.js → newMenuRow): a Box.X carrying the
+// service, with the icon and the label as inert kids.
+//
+// NOT Skeletons.Button.Label. Its template renders the sprite as
+// `<svg class="full …">` — width:100%/height:100% — and Button.Label gives
+// the icon no box of its own, so inside a text-height menu row the svg
+// claimed the whole 150px width and shoved the label out of the dropdown.
+// An Image.Svg/Button.Svg in a pinned wrapper (see __menu-ico in the skin)
+// is the shape the rest of the app uses for exactly this reason.
+//
+// `calDay` (a day cell's menu) names the day the form opens due on.
+function newMenuRow(ui, ico, label, service, calDay) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.X({
+    className: `${pfx}__menu-item`,
+    bubble: 0,
+    service,
+    uiHandler: [ui],
+    ...(calDay ? { calDay } : {}),
+    // See __range above — a kid left interactive swallows the click before
+    // triggerHandlers runs.
+    kidsOpt: { active: 0 },
+    kids: [
+      Skeletons.Image.Svg({ ico, className: `${pfx}__menu-ico` }),
+      Skeletons.Note({ className: `${pfx}__menu-label`, content: label }),
+    ],
+  });
+}
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -300,38 +331,13 @@ module.exports = function (ui) {
   });
 
   // ── + New ▾ ────────────────────────────────────────────────────────────────
-  // Icon + label row, built the way the desk topbar's own "New" menu builds
-  // one (modules/desk/skeleton/topbar.js → newMenuRow): a Box.X carrying the
-  // service, with the icon and the label as inert kids.
-  //
-  // NOT Skeletons.Button.Label. Its template renders the sprite as
-  // `<svg class="full …">` — width:100%/height:100% — and Button.Label gives
-  // the icon no box of its own, so inside a text-height menu row the svg
-  // claimed the whole 150px width and shoved the label out of the dropdown.
-  // An Image.Svg/Button.Svg in a pinned wrapper (see __menu-ico in the skin)
-  // is the shape the rest of the app uses for exactly this reason.
-  const newMenuRow = (ico, label, service) =>
-    Skeletons.Box.X({
-      className: `${pfx}__menu-item`,
-      bubble: 0,
-      service,
-      uiHandler: [ui],
-      // See __range above — a kid left interactive swallows the click before
-      // triggerHandlers runs.
-      kidsOpt: { active: 0 },
-      kids: [
-        Skeletons.Image.Svg({ ico, className: `${pfx}__menu-ico` }),
-        Skeletons.Note({ className: `${pfx}__menu-label`, content: label }),
-      ],
-    });
-
   const newMenu = ui.isMenuOpen("new")
     ? Skeletons.Box.Y({
         className: `${pfx}__menu`,
         attrOpt: { "data-anchor": "new" },
         kids: [
-          newMenuRow("noti-list-checks", LOCALE.TASK, "cal-new-task"),
-          newMenuRow("noti-video-camera", LOCALE.MEETING, "cal-new-meeting"),
+          newMenuRow(ui, "noti-list-checks", LOCALE.TASK, "cal-new-task"),
+          newMenuRow(ui, "noti-video-camera", LOCALE.MEETING, "cal-new-meeting"),
         ],
       })
     : null;
@@ -385,5 +391,23 @@ module.exports.row = function (ui) {
     sys_pn: "toolbar",
     partHandler: ui,
     kids: module.exports(ui),
+  });
+};
+
+/**
+ * A day cell's "+" menu: the "+ New" dropdown's Task / Meeting rows, each
+ * opening its form due on `calDay`. Fed into the page's floating day-menu slot
+ * (../index.js _toggleDayMenu), never into the grid, so opening it repaints
+ * nothing under it.
+ */
+module.exports.dayMenu = function (ui, calDay) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__menu`,
+    attrOpt: { "data-anchor": "day" },
+    kids: [
+      newMenuRow(ui, "noti-list-checks", LOCALE.TASK, "cal-new-task", calDay),
+      newMenuRow(ui, "noti-video-camera", LOCALE.MEETING, "cal-new-meeting", calDay),
+    ],
   });
 };
