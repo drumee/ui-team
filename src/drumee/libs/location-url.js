@@ -141,13 +141,15 @@ function currentHash() {
   }
   if (!wm) return HOME_HASH;
 
-  // The focused floating window first: it paints over the docked pane.
-  const floating = (wm.windowsLayer && wm.windowsLayer.children)
-    ? wm.windowsLayer.children.toArray().filter(alive)
-    : [];
-  const active = floating.find(
-    (v) => v.el.dataset && v.el.dataset.state === "1" && !~~v.mget(_a.minimize),
-  );
+  // The active window first — a player / editor, or a folder window. Floating
+  // ones paint over the docked layer; players are usually DOCKED (headless)
+  // next to the workspace pane, so both layers are asked.
+  const views = (l) => (l && l.children ? l.children.toArray().filter(alive) : []);
+  const floating = views(wm.windowsLayer);
+  const docked = views(wm.headlessLayer);
+  const isActive = (v) =>
+    v.el.dataset && v.el.dataset.state === "1" && !~~v.mget(_a.minimize);
+  const active = floating.find(isActive) || docked.find(isActive);
   if (active) {
     if (active.mget("link_scope")) return null;
     const hash = active.mget(_a.kind) === "window_folder"
@@ -157,11 +159,9 @@ function currentHash() {
   }
 
   // Else the docked workspace pane — the focused one, or the last mounted.
-  const panes = (wm.headlessLayer && wm.headlessLayer.children)
-    ? wm.headlessLayer.children.toArray().filter(
-      (v) => alive(v) && v.mget(_a.kind) === "window_folder" && !!v.mget(_a.headless),
-    )
-    : [];
+  const panes = docked.filter(
+    (v) => v.mget(_a.kind) === "window_folder" && !!v.mget(_a.headless),
+  );
   const pane = panes.find((v) => ~~v.mget(_a.state) === 1) || panes[panes.length - 1];
   if (!pane) return HOME_HASH;
   if (pane.mget("link_scope")) return null;

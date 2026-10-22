@@ -181,6 +181,18 @@ test("an open file is the location; closing / minimising it falls back to the fo
   assert.equal(locationUrl.currentHash(), "#/desk/wm/o/root1/hubA/folder");
 });
 
+test("a DOCKED player (headless layer, beside the pane) is the location too", () => {
+  reset();
+  const media = { actualNode: () => ({ nid: "img1", hub_id: "hubA" }), mget: () => "image" };
+  const docked = view({ kind: "image_viewer", filetype: "image", nid: "img1", hub_id: "hubA", headless: 1 }, { state: 1, media });
+  const p = pane(ROOT_PANE);
+  p.el.dataset.state = "0";
+  wm({ panes: [p, docked] });
+  assert.equal(locationUrl.currentHash(), "#/desk/wm/o/img1/hubA/image");
+  wm({ panes: [p] }); // closed
+  assert.equal(locationUrl.currentHash(), "#/desk/wm/o/root1/hubA/folder");
+});
+
 test("a shortcut's player names its target, like the Internal Link row", () => {
   reset();
   const media = { actualNode: () => ({ nid: "target", hub_id: "hubT" }), mget: () => "image" };
