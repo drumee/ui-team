@@ -19,6 +19,16 @@ function appConfig(filetype, data) {
 }
 
 /**
+ * A Casual doc / sheet (.udoc / .usheet) is "text" by category, so the map
+ * names the text viewer — which shows the stored JSON; its own editor is told
+ * apart only through a media model, by extension.
+ */
+function isCasualFile(ext) {
+  const e = String(ext || "").toLowerCase();
+  return e === "udoc" || e === "usheet";
+}
+
+/**
  * Launch the player `opt` describes for (nid, hub_id), fetching the node's
  * attributes when the caller has none. The player gets a media node to read
  * its CONTENT through (editor/note, editor/markdow and player/text load their
@@ -45,6 +55,13 @@ async function launchPlayer({ opt, node, nid, hub_id, media }, { fetchService, w
       if (warn) warn("[openMedia] could not build media", e);
     }
   }
+  // Callers resolve `opt` from the category alone (openFileLocation: a desk
+  // link carries filetype "text"), so a Casual doc / sheet arrives here aimed
+  // at the text viewer. Route it by extension, as its tile does.
+  if (opt.media && isCasualFile(node.ext)) {
+    const routed = appConfig(node.filetype, { ...node, media: opt.media });
+    if (routed && routed.kind) opt = { ...opt, kind: routed.kind };
+  }
   return Wm.launch({ ...opt, ...node }, { explicit: 1 });
 }
 
@@ -69,11 +86,7 @@ async function openMedia(data = {}, { fetchService, warn } = {}) {
   if (!filetype && !(await fetchNode())) return undefined;
   let opt = appConfig(filetype, { ...data, ...node });
   let media = null;
-  // A Casual doc / sheet (.udoc / .usheet) is "text" by category, so the map
-  // names the text viewer; its own editor is told apart only through a media
-  // model, by extension.
-  const ext = String((node && node.ext) || data.ext || "").toLowerCase();
-  if (!opt || !opt.kind || ext === "udoc" || ext === "usheet") {
+  if (!opt || !opt.kind || isCasualFile((node && node.ext) || data.ext)) {
     // A type the map does not name: a Univer sheet saved as .json, a Casual
     // doc, a note, a script. application() tells those apart from the node's
     // mimetype, dataType and ext, which it reads through a media model (the

@@ -266,9 +266,10 @@ test("every viewer skeleton is wrapped in the Open-File Switcher frame", () => {
 // ── a type the application map does not name still opens from the panel ──────
 test("openMedia tells a Univer .json sheet apart through a media model", async () => {
   const OPEN_SRC = read("src/drumee/libs/open-media.js");
+  const isCasualFile = new Function(`return ${OPEN_SRC.match(/function isCasualFile\([\s\S]*?\n\}/)[0]}`)();
   const launches = [];
   const openMedia = new Function(
-    "appConfig", "launchPlayer", "SERVICE", "LOCALE", "Wm", "Kind", "Backbone", "_a",
+    "appConfig", "launchPlayer", "SERVICE", "LOCALE", "Wm", "Kind", "Backbone", "_a", "isCasualFile",
     `return ${OPEN_SRC.match(/async function openMedia\([\s\S]*?\n\}/)[0]}`,
   )(
     // application(): names "document" directly; "app-data" only once it can read the media's dataType.
@@ -284,6 +285,7 @@ test("openMedia tells a Univer .json sheet apart through a media model", async (
     { waitFor: async () => function (o) { this.model = o.model; } },
     { Model: function (n) { Object.assign(this, n); } },
     { media: "media" },
+    isCasualFile,
   );
   const node = { nid: "s1", filetype: "app-data", dataType: "sheet.univer", mimetype: "application/json" };
   const fetchService = async () => node;
@@ -298,13 +300,45 @@ test("openMedia tells a Univer .json sheet apart through a media model", async (
   // it must go through the media model, which routes it by extension.
   const udocConfig = (filetype, opt) => (opt.media && opt.media.model.ext === "udoc" ? { kind: "editor_docs", media: opt.media } : { kind: "text_viewer" });
   const openUdoc = new Function(
-    "appConfig", "launchPlayer", "SERVICE", "LOCALE", "Wm", "Kind", "Backbone", "_a",
+    "appConfig", "launchPlayer", "SERVICE", "LOCALE", "Wm", "Kind", "Backbone", "_a", "isCasualFile",
     `return ${OPEN_SRC.match(/async function openMedia\([\s\S]*?\n\}/)[0]}`,
   )(udocConfig, async (args) => { launches.push(args); return true; }, { media: { attributes: "media.attributes" } },
     { FILE_NOT_FOUND: "gone" }, { alert() {} }, { waitFor: async () => function (o) { this.model = o.model; } },
-    { Model: function (n) { Object.assign(this, n); } }, { media: "media" });
+    { Model: function (n) { Object.assign(this, n); } }, { media: "media" }, isCasualFile);
   await openUdoc({ nid: "u1", hub_id: "H", filetype: "text", ext: "udoc" }, { fetchService: async () => ({ nid: "u1", filetype: "text", ext: "udoc" }) });
   assert.equal(launches[2].opt.kind, "editor_docs");
   // Still nothing for a type nobody can open.
   assert.equal(await openMedia({ nid: "x", hub_id: "H", filetype: "app-data" }, { fetchService: async () => ({ nid: "x", filetype: "app-data" }) }), null);
+});
+
+// ── a desk link to a Casual doc / sheet opens its editor, not the stored JSON ─
+test("launchPlayer routes a .udoc / .usheet aimed at the text viewer to its editor", async () => {
+  const OPEN_SRC = read("src/drumee/libs/open-media.js");
+  const isCasualFile = new Function(`return ${OPEN_SRC.match(/function isCasualFile\([\s\S]*?\n\}/)[0]}`)();
+  const launched = [];
+  // application(): the category alone names text_viewer; a media model routes by extension.
+  const appConfig = (filetype, opt) => {
+    const ext = opt.media && opt.media.model.ext;
+    if (ext === "udoc") return { kind: "editor_docs", media: opt.media };
+    if (ext === "usheet") return { kind: "editor_sheet", media: opt.media };
+    return { kind: filetype === "text" ? "text_viewer" : "document_reader" };
+  };
+  const launchPlayer = new Function(
+    "appConfig", "isCasualFile", "CONTAINER_FILETYPES", "SERVICE", "LOCALE", "Wm", "Kind", "Backbone",
+    `return ${OPEN_SRC.match(/async function launchPlayer\([\s\S]*?\n\}/)[0]}`,
+  )(
+    appConfig, isCasualFile, ["hub", "folder"], { media: { attributes: "media.attributes" } }, { FILE_NOT_FOUND: "gone" },
+    { alert() {}, launch: (o) => { launched.push(o); return true; } },
+    { waitFor: async () => function (o) { this.model = o.model; } },
+    { Model: function (n) { Object.assign(this, n); } },
+  );
+  // What openFileLocation hands over for a desk link: opt from the category only.
+  for (const [ext, kind] of [["udoc", "editor_docs"], ["usheet", "editor_sheet"], ["txt", "text_viewer"]]) {
+    await launchPlayer({ opt: { kind: "text_viewer" }, node: { nid: "n", hub_id: "H", filetype: "text", ext }, nid: "n", hub_id: "H" }, {});
+    assert.equal(launched[launched.length - 1].kind, kind, ext);
+    assert.ok(launched[launched.length - 1].media, `${ext} gets a media to read its content through`);
+  }
+  // Any other type keeps the kind its caller resolved.
+  await launchPlayer({ opt: { kind: "document_reader" }, node: { nid: "d", hub_id: "H", filetype: "document", ext: "docx" }, nid: "d", hub_id: "H" }, {});
+  assert.equal(launched[launched.length - 1].kind, "document_reader");
 });
