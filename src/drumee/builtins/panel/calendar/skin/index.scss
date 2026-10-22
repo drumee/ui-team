@@ -87,6 +87,9 @@
   }
 
   &__page {
+    // The box a workspace task's quick-open card is fitted to (see
+    // &__modal-wrapper below).
+    position: relative;
     width: 100%;
     height: 100%;
     min-width: 0;
@@ -515,9 +518,33 @@
     }
 
     // Drawn 116px wide over a 107px button: its rows are a fixed 100px.
-    &[data-anchor="new"] {
+    // The day cell's "+" menu is the same two rows.
+    &[data-anchor="new"],
+    &[data-anchor="day"] {
       min-width: 116px;
     }
+  }
+
+  // A day cell's "+" menu (index.js _toggleDayMenu): one fixed slot on the
+  // page, placed under the "+" in viewport coordinates — the grid scrolls and
+  // a week column clips, so it cannot hang from the cell itself. Above the
+  // grid and the toolbar's own menus; under the modal wrapper (20000).
+  //
+  // (0,3,0) for the hide: the `.drumee-widget[data-flow]` flex rule is (0,2,0).
+  &__day-menu-slot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 50;
+  }
+
+  &__page > &__day-menu-slot:not([data-open="1"]) {
+    display: none;
+  }
+
+  // Inside the slot the menu is in flow; the slot carries the position.
+  &__day-menu-slot > &__menu {
+    position: static;
   }
 
   // 12/1.4 rows on 8px; the current choice and the hovered row take the
@@ -778,6 +805,11 @@
     }
   }
 
+  // The "+" stays up while its menu is open, pointer in the menu or not.
+  &__day-add[data-open="1"] {
+    opacity: 1;
+  }
+
   // A 20px line packed to the right: the hover "+", 10px, then the date in
   // the corner (Figma 1693:180986).
   &__day-head {
@@ -886,14 +918,12 @@
     //                          meeting hands over to the workspace that owns
     //                          it (_openInWorkspace). Both kinds open, whatever
     //                          can_write says.
-    //   personal + task
-    //   + writable             opens this screen's own editable modal.
-    //
-    // A PERSONAL MEETING is deliberately in neither list. It has no workspace
-    // to go to, and _openMeetingForm is create-only — there is no edit form for
-    // it anywhere — so it opens nothing and must not offer a pointer. It did
-    // before this rule was split, which was the affordance lying about a dead
-    // click.
+    //   personal + writable    a task or a meeting opens this screen's own
+    //                          editable modal (_openTaskForm, or
+    //                          _openMeetingForm on the row). A personal
+    //                          meeting is writable only for its creator —
+    //                          room.update is creator-only — so anyone else
+    //                          gets no pointer, as the click opens nothing.
     //
     // SCOPED AWAY FROM AN OCCURRENCE, not overridden after it. A generated
     // occurrence shares its series' id, so it is not its own record and opens
@@ -903,7 +933,7 @@
     // pointer would win on a recurring personal task.
     &:not([data-occurrence="1"]) {
       &[data-scope="workspace"],
-      &[data-scope="personal"][data-kind="task"][data-writable="1"] {
+      &[data-scope="personal"][data-writable="1"] {
         cursor: pointer;
       }
     }
@@ -1322,19 +1352,29 @@
       animation: calendar-main-fade-in 0.15s ease;
     }
 
-    // The personal task, meeting and invite-link cards (Figma 1693:196080):
-    // no scrim and no blur. The sidebar and top bar stay as they are and only
-    // this page fades to 20% under the card (rule below). The layer still
-    // covers the viewport, so nothing behind the card takes a click while it
-    // is open. The workspace task's quick-open keeps the glass: the board's
-    // card is drawn for it.
+    // The personal task, meeting and invite-link forms, and the workspace
+    // task's quick-open card a chip opens (Figma 1693:196080): no scrim and no
+    // blur. The sidebar and top bar stay as they are and only this page fades
+    // to 20% under the card (rule below). The layer still covers the viewport,
+    // so nothing behind the card takes a click while it is open.
     &[data-state="open"]:has(
         .calendar-main__modal[data-form="task"],
         .calendar-main__modal[data-form="meeting"],
-        .calendar-main__modal[data-form="invite-link"]
+        .calendar-main__modal[data-form="invite-link"],
+        .calendar-main__modal[data-form="task-quick-open"]
       ) {
       background: transparent;
       backdrop-filter: none;
+    }
+
+    // The workspace task's quick-open card is fitted to THIS page rather than
+    // centred in the viewport: the layer covers the page's own box, so the
+    // board's backdrop — the `task-modal` size container its card is measured
+    // against (window/tasks/skin) — is the page, and the card is centred on it
+    // (&__modal[data-form="task-quick-open"] .tasks-panel__detail-panel). The
+    // sidebar and top bar stay outside the layer.
+    &:has(.calendar-main__modal[data-form="task-quick-open"]) {
+      position: absolute;
     }
 
     &:empty {
@@ -1353,7 +1393,8 @@
         :is(
           .calendar-main__modal[data-form="task"],
           .calendar-main__modal[data-form="meeting"],
-          .calendar-main__modal[data-form="invite-link"]
+          .calendar-main__modal[data-form="invite-link"],
+          .calendar-main__modal[data-form="task-quick-open"]
         )
     )
     > :not(.calendar-main__modal-wrapper):not(.calendar-main__toast-slot) {
@@ -1393,9 +1434,9 @@
     }
 
     // Workspace task quick-open: only a frame for the board's own panel, whose
-    // card (1697:50129) brings its own size, surface and backdrop. The box
-    // fills the wrapper so the board's absolutely placed backdrop has an area
-    // to centre its card in.
+    // card (1697:50129) brings its own surface. The box fills the wrapper so
+    // the board's absolutely placed backdrop has the whole page to centre its
+    // card in.
     &[data-form="task-quick-open"] {
       width: 100%;
       height: 100%;
@@ -1408,6 +1449,85 @@
       box-shadow: none;
       animation: none;
     }
+  }
+
+  // The board's card brings its own glass backdrop (window/tasks/skin,
+  // &__detail-backdrop: a 5% wash and a 30px blur over its host). Here that
+  // would blur the faded page the other cards sit on, so inside this frame
+  // only, it goes clear and the card takes the task form's shadow stack
+  // (1693:198659). The board's own detail view is untouched.
+  &__modal[data-form="task-quick-open"] .tasks-panel__detail-backdrop {
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  // Fitted to the page and downsized. The board caps this card at 1272×739
+  // and centres it with a 40px / 32px inset (window/tasks/skin, &__root--quick
+  // and &__detail-panel); here it is centred on the faded page with 32px of it
+  // showing all round, capped at 1040×680, and takes the compact metrics the
+  // board itself only uses below 760px of height, at every height. (0,4,0)+
+  // selectors, over the board's `@container task-modal` tiers (0,3,0), which
+  // still tighten further on a short page.
+  &__modal[data-form="task-quick-open"] .tasks-panel__detail-panel {
+    width: min(1040px, calc(100% - 64px));
+    height: min(680px, calc(100% - 64px));
+    max-width: none;
+    max-height: none;
+    padding: 16px 20px;
+    gap: 14px;
+    border-radius: 16px;
+    box-shadow:
+      0 7px 5px rgba(0, 0, 0, 0.05),
+      0 40px 40px rgba(0, 0, 0, 0.15),
+      0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+    .tasks-panel__detail-title textarea {
+      padding: 2px 6px;
+      font-size: 18px;
+      line-height: 24px;
+      min-height: 26px;
+      max-height: 52px;
+    }
+
+    .tasks-panel__modal-body {
+      gap: 20px;
+    }
+
+    .tasks-panel__modal-main {
+      gap: 14px;
+    }
+
+    .tasks-panel__modal-side {
+      padding: 0 16px;
+      gap: 14px;
+    }
+
+    .tasks-panel__detail-row {
+      gap: 8px;
+    }
+
+    .tasks-panel__detail-actions {
+      padding-top: 10px;
+    }
+  }
+
+  // The board's loading skeleton (window/tasks/skeleton skelRows: pulsing
+  // bars in Files, Comments and History while each one is fetched) is not
+  // drawn on a card opened from a chip. Hidden, not removed: the rows keep
+  // their room, so nothing jumps when the real content lands, and the section
+  // still does not claim to be empty while its fetch is in flight.
+  &__modal[data-form="task-quick-open"] .tasks-panel__skel-row {
+    visibility: hidden;
+  }
+
+  // …nor the board's own first-load skeleton (window/tasks/skin, `__ui:not(
+  // [data-painted="1"])::after`: three columns of pulsing cards over the whole
+  // host until the panel's first render). Here the panel draws one card, not a
+  // board, so for its first moment that skeleton painted a task board across
+  // the calendar page and then swapped it for the card. The faded page stays
+  // as it is until the card lands.
+  &__modal[data-form="task-quick-open"] .tasks-panel__ui:not([data-painted="1"])::after {
+    content: none;
   }
 
   // The task card's columns. Scoped under the modal's data-form for weight:
@@ -1675,9 +1795,9 @@
   // 17px, the frame's trailing glyph; primary like its pencil once active.
   &__password-eye {
     display: flex;
-    flex: 0 0 17px;
-    width: 17px;
-    height: 17px;
+    flex: 0 0 15px;
+    width: 15px;
+    height: 15px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -1882,11 +2002,18 @@
   // hairline, 12px radius — icon, label over hint, checkbox — and, while the
   // box is ticked, the password field 12px under the row (the card's gap; the
   // field is display:none otherwise, so the gap goes with it).
+  // The Require-email and password cards, stacked (Figma 12px, downsized).
+  &__invite {
+    gap: 8px;
+  }
+
+  // The theme's border token rather than the frame's 5% hairline, which
+  // all but vanished on the white card; it flips for dark mode.
   &__invite-group {
     gap: 8px;
     padding: 8px 10px;
     box-sizing: border-box;
-    border: 1px solid var(--border-muted);
+    border: 1px solid var(--border-default);
     border-radius: 12px;
   }
 
@@ -1928,8 +2055,9 @@
     width: 16px;
     height: 16px;
     border-radius: 4px;
-    // The frame's hairline (rgba 0,0,0,.05), filled #433cc5 once ticked.
-    border: 1px solid var(--border-muted);
+    // A visible edge on the unticked box (the frame's 5% hairline read as no
+    // box at all); filled #433cc5 once ticked.
+    border: 1px solid var(--border-strong);
     box-sizing: border-box;
     position: relative;
 
@@ -1938,17 +2066,19 @@
       border-color: var(--primary-50);
 
       // Tick drawn in CSS: a sprite <use> cannot be recoloured across the
-      // symbol boundary here.
+      // symbol boundary here. Centred on the box, then rotated; the 1px lift
+      // puts the tick's visual weight — its long arm — on the centre line.
       &::after {
         content: "";
         position: absolute;
-        left: 4px;
-        top: 1px;
-        width: 5px;
-        height: 9px;
+        left: 50%;
+        top: 50%;
+        width: 4px;
+        height: 8px;
+        box-sizing: border-box;
         border-right: 2px solid var(--gray-white);
         border-bottom: 2px solid var(--gray-white);
-        transform: rotate(45deg);
+        transform: translate(-50%, -60%) rotate(45deg);
       }
     }
   }
@@ -1957,23 +2087,45 @@
     gap: 8px;
   }
 
+  // "Restrict access to specific emails or domains" (Figma 53:53994): the
+  // label and its ⓘ on the left, the 40×20 switch on the right — Primary/30
+  // when on — then, while it is on, the chips and the entry field.
   &__switch-row {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding-top: 8px;
     cursor: pointer;
   }
 
+  &__switch-text {
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
   &__switch-label {
-    @include drumee.typo($size: 11px, $line: 14px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-10));
+  }
+
+  &__switch-info {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    color: var(--normal-fg-20);
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentcolor;
+    }
   }
 
   &__switch {
     flex: 0 0 auto;
-    width: 30px;
-    height: 16px;
-    border-radius: 999px;
+    width: 40px;
+    height: 20px;
+    border-radius: 12px;
     background: var(--normal-bg-40);
     position: relative;
     transition: background 0.15s ease-out;
@@ -1983,56 +2135,94 @@
       position: absolute;
       top: 2px;
       left: 2px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      border-radius: 12px;
       background: var(--gray-white);
       transition: transform 0.15s ease-out;
     }
 
     &[data-on="1"] {
-      background: var(--primary-40);
+      background: var(--primary-30, #847eff);
 
       &::after {
-        transform: translateX(14px);
+        transform: translateX(20px);
       }
     }
   }
 
+  // The list under the switch: 12px below the row, the field 8px under the
+  // chips. Shown and hidden by data-open (index.js _syncInviteDom).
   &__recipients {
-    gap: 6px;
+    gap: 8px;
+    padding-top: 4px;
   }
 
   &__chips {
-    gap: 6px;
+    gap: 8px;
     flex-wrap: wrap;
   }
 
+  // Figma 53:54002: Tiny Body on the 5% wash, 4px radius, 8px between the
+  // address and its 14px ✕. The "+N" is the same chip without the ✕.
   &__email-chip {
     align-items: center;
-    gap: 4px;
-    padding: 3px 4px 3px 8px;
-    border-radius: 999px;
-    background: var(--normal-bg-80);
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--overlay-bg-05);
     max-width: 100%;
+    box-sizing: border-box;
   }
 
-  &__email-chip-text {
-    @include drumee.typo($size: 11px, $line: 16px, $color: var(--normal-fg));
+  &__email-chip-text,
+  &__email-chip--more {
+    @include drumee.typo($size: 10px, $line: 1.4, $color: var(--normal-fg-20));
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
+  &__email-chip--more {
+    cursor: pointer;
+
+    &:hover {
+      background: var(--normal-bg-80);
+    }
+  }
+
   &__email-chip-remove {
-    flex: 0 0 auto;
+    display: flex;
+    flex: 0 0 14px;
     width: 14px;
     height: 14px;
     cursor: pointer;
     color: var(--normal-fg-20);
 
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentcolor;
+    }
+
     &:hover {
       color: var(--signal-error, #d74e49);
+    }
+  }
+
+  // "Enter email or domain and press Enter…" — Mini Body on the 5% wash,
+  // 8px around it (12px on the left), 4px radius.
+  &__recipient-input {
+    border-radius: 4px;
+
+    input {
+      padding: 8px 8px 8px 12px;
+      @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-10));
+
+      &::placeholder {
+        color: var(--normal-fg-20);
+      }
     }
   }
 
@@ -2145,20 +2335,21 @@
   }
 
   // ── invite link ready (meeting-form.js inviteLink) ────────────────────────
-  // Figma 1693:163906: one filled row, 12px padding on an 8px radius — link
-  // glyph, the link at 60% ink cut with an ellipsis, a copy button.
+  // Figma 1693:163906, downsized: one filled row, 8px / 10px padding on an
+  // 8px radius — link glyph, the link at 60% ink cut with an ellipsis, a copy
+  // button.
   &__link-row {
     align-items: center;
     gap: 8px;
-    padding: 12px;
+    padding: 8px 10px;
     border-radius: 8px;
     background: var(--overlay-bg-05);
   }
 
   &__link-ico {
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     color: var(--normal-fg-50);
 
     svg {
@@ -2176,7 +2367,7 @@
     min-width: 0;
     overflow: hidden;
     opacity: 0.6;
-    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg-10));
 
     .note-content {
       min-width: 0;
@@ -2188,9 +2379,9 @@
 
   &__link-copy {
     display: flex;
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
@@ -2325,8 +2516,8 @@
 
   &__files-ico,
   &__file-ico {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     flex: none;
   }
 
@@ -2338,7 +2529,7 @@
   &__files-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     // About four and a half rows, so a fifth one visibly continues. The
     // scrollbar stays drawn (not only on hover) — it is the only sign there
     // is more. Room on the right keeps each ✕ clear of it.
@@ -2390,9 +2581,9 @@
     // A row in the scrolling list overflows it; it never squashes to fit.
     flex-shrink: 0;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     min-width: 0;
-    font-size: 13px;
+    font-size: 12px;
   }
 
   // The Word / Excel / PowerPoint glyphs draw their back page with no fill of
@@ -2417,8 +2608,8 @@
   }
 
   &__file-remove {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
     flex: none;
   }
@@ -2705,12 +2896,24 @@
     justify-content: space-between;
   }
 
+  // The "+" beside the Subtasks label, at the label's 13px line. The sprite
+  // <svg> is pinned to the box, or it draws at its own size.
   &__modal[data-form="task"] &__subtasks-add {
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+    display: flex;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     color: var(--normal-fg-10);
+
+    svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      fill: currentcolor;
+    }
   }
 
   &__modal[data-form="task"] &__subtasks-body {
@@ -3116,9 +3319,10 @@
 // (data-moved) is left where they put it, and on a mobile device (up to 800px)
 // the card is the sheet its own skin pins (data-device="mobile").
 //
-// The workspace task's quick-open card has the same footer in the same place:
-// the board's card capped at 739px (window/tasks/skin, &__root--quick), centred,
-// 32px padding, 38px buttons, so (100vh - 739px) / 2 + 78px.
+// The workspace task's quick-open card is centred on the calendar page (see
+// &__modal-wrapper), at most 680px tall with 32px of page under it: its
+// buttons (16px of card padding, 38px tall) sit about 110px up on a short
+// screen, and half the spare height higher on a tall one.
 @media (min-width: 651px) {
   body:has(.calendar-main__modal[data-form="task"])
     .window-upload-progress__ui:not([data-moved="1"]):not([data-device="mobile"]) {
@@ -3127,7 +3331,7 @@
 
   body:has(.calendar-main__modal[data-form="task-quick-open"])
     .window-upload-progress__ui:not([data-moved="1"]):not([data-device="mobile"]) {
-    bottom: max(130px, calc((100vh - 739px) / 2 + 78px)) !important;
+    bottom: max(110px, calc((100vh - 680px) / 2 + 62px)) !important;
   }
 
   // Collapsed — how these forms start it (runBundle `collapsed`), since their
@@ -3135,7 +3339,7 @@
   // corner, 8px in. That corner is clear on every one of them: under the task
   // card's left column there is its 32px padding plus the margin below the
   // card (clear from 667px of height up), the quick-open card's footer row is
-  // empty left of Cancel, and the meeting card is centred and 400px wide.
+  // empty left of Cancel, and the meeting card is centred and 760px wide.
   // Expanded (by the user, or for the unfinished-upload question) it goes
   // back to the lifted spot above.
   body:has(
@@ -3151,21 +3355,15 @@
 }
 
 // ── personal meeting modal (skeleton/meeting-form.js) ────────────────────────
-// Figma 1693:163829 (portrait, the default), 1693:166935 (landscape) and
-// 1693:163906 (invite link ready), downsized: 400px cards, 20px padding
-// inside a 1px hairline, 14px between head, body and the full-width action,
-// 16px radius. Scoped to the two forms' data-form, so the task card
-// and the base compact card are untouched.
+// Figma 1693:163829 / 1693:200549 and 1693:163906 (invite link ready),
+// downsized: 20px padding inside a 1px hairline, 14px between head, body and
+// the full-width action, 16px radius. Scoped to the two forms' data-form, so
+// the task card and the base compact card are untouched.
 //
-// One tree, two layouts. The body is a column — the portrait frame — and only
-// on a short, wide screen do its two columns sit side by side as in the
-// landscape frame (2 × 340px + 20px + padding, a 750px card). The height bar is the
-// portrait card in its shortest state, password OFF, under the modal's 88vh
-// cap: a window too short to show that card whole gets the landscape layout.
-// With the password on, the portrait card grows by the field and its body
-// scrolls inside the cap. The width bar is the landscape card plus a 16px
-// margin each side; a pane that is short AND narrower than that keeps the
-// single column.
+// The meeting form is two sides — title, date and the time row on the left,
+// Invite on the right — in a 760px card, stacked into one 400px column on a
+// narrow screen (≤ 700px). Editing an existing meeting has no Invite, so that
+// form, and the invite-link card, stay one 400px column.
 .calendar-main {
   &__modal[data-form="meeting"],
   &__modal[data-form="invite-link"] {
@@ -3231,6 +3429,25 @@
     border-radius: 4px;
     @include drumee.typo($size: 13px, $line: 20px, $color: var(--gray-white));
     font-weight: 600;
+  }
+
+  // The meeting form's actions size to their labels at the foot's right end
+  // (the base &__modal-foot is a right-packed row) rather than spanning the
+  // card; Delete keeps its own margin-right: auto, so it sits on the left.
+  &__modal[data-form="meeting"] &__button {
+    flex: 0 0 auto;
+    min-width: 120px;
+  }
+
+  // Meeting Information (an existing meeting): Delete and Update together at
+  // the foot's right end, 12px apart, rather than pushed to its two ends.
+  &__modal[data-form="meeting"][data-mode="edit"] &__modal-foot {
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  &__modal[data-form="meeting"][data-mode="edit"] &__button--danger {
+    margin-right: 0;
   }
 
   // ── body ───────────────────────────────────────────────────────────────────
@@ -3304,28 +3521,12 @@
     pointer-events: none;
   }
 
-  // Attachments (not in the frames): the drop zone at the Title field's
-  // height and type, its dashed edge kept as the drop affordance.
-  &__modal[data-form="meeting"] &__files {
-    padding: 8px 10px;
-    border-radius: 8px;
-  }
-
-  &__modal[data-form="meeting"] &__files-hint {
-    opacity: 1;
-    @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg-20));
-  }
-
-  // ── landscape (Figma 1693:166935) ──────────────────────────────────────────
-  // 725px: the password-off portrait card measures 638.7px on stage, and 88vh
-  // holds it whole from a 726px window up — a 1440×900 laptop's Chrome
-  // (≈788-813px inside) keeps the portrait frame. (0,3,0) selectors: the
-  // body's Box.Y flow rule is (0,2,0).
-  @media (max-height: 725px) and (min-width: 782px) {
-    // The window is ≥ 782px here, so the cap only bites if the wrapper is
-    // ever narrower than the window (it is the full viewport today).
-    &__modal[data-form="meeting"] {
-      width: min(750px, calc(100vw - 32px));
+  // ── two sides (left: what; right: when and who) ───────────────────────────
+  // (0,3,0) selectors: the body's Box.Y flow rule is (0,2,0). Each side takes
+  // half; the right one's time row needs ~300px, which a 760px card leaves it.
+  @media (min-width: 701px) {
+    &__modal[data-form="meeting"][data-mode="create"] {
+      width: min(760px, calc(100vw - 32px));
     }
 
     &__modal[data-form="meeting"] &__modal-body--split {
@@ -3335,7 +3536,88 @@
     }
 
     &__modal[data-form="meeting"] &__modal-col {
-      flex: 0 0 340px;
+      flex: 1 1 0;
     }
+  }
+}
+
+// Start date → End date in the quick-open card's 300px rail (the board draws
+// it for a 380px one). At the board's metrics each field needs ~133px — a 16px
+// date, 12px in, a 36px slot for the calendar glyph — and the rail leaves it
+// ~106px, so the date was cut ("dd/mm/yyy") and the glyph sat on it. Here the
+// fields are compact (13px, 10px in, a 28px glyph slot: ~110px), the gaps
+// tighter, and the arrow is centred on the fields from their foot rather than
+// at the board's fixed 47px. Should the rail still be too narrow for two
+// (< 255px inside it: 2 × 110 + the arrow and gaps need 252 — a container
+// query measures the content box, so the 300px rail reads 265), the row
+// stacks Start over End instead of clipping either. The rail is the size
+// container: its width comes from its flex basis, not its content.
+.calendar-main__modal[data-form="task-quick-open"] .tasks-panel__detail-panel {
+  .tasks-panel__modal-side {
+    container-type: inline-size;
+    container-name: cal-rail;
+  }
+
+  .tasks-panel__due-range {
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  .tasks-panel__due-col {
+    gap: 8px;
+  }
+
+  .tasks-panel__due-input {
+    input {
+      padding: 8px 28px 8px 10px;
+      font-size: 13px;
+      line-height: 18px;
+      text-overflow: ellipsis;
+    }
+
+    &::after {
+      right: 8px;
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  .tasks-panel__due-clear {
+    right: 4px;
+  }
+
+  // (34px field − 16px glyph) / 2 above the field's foot.
+  .tasks-panel__due-arrow {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    margin: 0 0 9px;
+  }
+}
+
+@container cal-rail (max-width: 255px) {
+  .calendar-main__modal[data-form="task-quick-open"] .tasks-panel__due-range {
+    flex-wrap: wrap !important;
+  }
+
+  .calendar-main__modal[data-form="task-quick-open"] .tasks-panel__due-col {
+    flex: 1 1 100%;
+  }
+
+  .calendar-main__modal[data-form="task-quick-open"] .tasks-panel__due-arrow {
+    display: none;
+  }
+}
+
+// The quick-open card's right rail at the page-fitted card's size: 300px, not
+// the board's 380px. Only while the card is wide enough to seat it — below
+// 900px the board's own narrow tier stacks the rail under the main column at
+// full width, and a fixed width here would undo that.
+@container task-modal (min-width: 901px) {
+  .calendar-main__modal[data-form="task-quick-open"]
+    .tasks-panel__detail-panel
+    .tasks-panel__modal-side {
+    flex-basis: 300px;
+    width: 300px;
   }
 }

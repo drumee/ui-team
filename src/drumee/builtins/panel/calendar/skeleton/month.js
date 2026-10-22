@@ -139,7 +139,8 @@ module.exports = function (ui) {
     // never hear it. The things that DO something keep their own service and
     // stay active, and that same stopPropagation keeps them from also firing
     // the cell: a chip opens its item, "+N" opens the Day view, a chip's ×
-    // deletes, and the "+" adds exactly as the cell does.
+    // deletes, and the "+" opens the Task / Meeting menu for that day
+    // (index.js "cal-day-menu").
     return Skeletons.Box.Y({
       className: `${pfx}__day`,
       bubble: 0,
@@ -155,14 +156,14 @@ module.exports = function (ui) {
           className: `${pfx}__day-head`,
           active: 0,
           kids: [
-            // Right-packed: the hover-revealed quick-add, then the date in
+            // Right-packed: the hover-revealed "+" menu, then the date in
             // the corner. A text glyph rather than the `plus` sprite: the
             // sprite symbol cannot be recoloured across the <use> boundary
             // and renders invisible (same reason as the board calendar).
             Skeletons.Box.X({
               className: `${pfx}__day-add`,
               bubble: 0,
-              service: "cal-day-add",
+              service: "cal-day-menu",
               uiHandler: [ui],
               calDay: key,
               // Without this the "+" glyph swallows the click and the day

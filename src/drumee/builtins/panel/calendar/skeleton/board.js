@@ -12,8 +12,10 @@
 //         columns under them. The canvas scrolls, not the cell.
 //
 // The whole cell adds a task due that day (index.js "cal-day-add"), like the
-// month square; so every container in it is inert and only the chips and the
-// "+" keep a service of their own — see the note in skeleton/month.js dayCell.
+// month square, and its "+" opens the Task / Meeting menu for that day
+// ("cal-day-menu"); so every container in it is inert and only the chips and
+// the "+" keep a service of their own — see the note in skeleton/month.js
+// dayCell.
 const { chip } = require("./chip");
 const { ymd, itemsByDay } = require("./helpers");
 
@@ -32,7 +34,7 @@ module.exports = function (ui, days, mode) {
     Skeletons.Box.X({
       className: `${pfx}__day-add`,
       bubble: 0,
-      service: "cal-day-add",
+      service: "cal-day-menu",
       uiHandler: [ui],
       calDay: key,
       kidsOpt: { active: 0 },

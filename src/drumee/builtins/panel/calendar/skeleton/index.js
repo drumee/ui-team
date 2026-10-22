@@ -122,6 +122,15 @@ module.exports = function (ui) {
         partHandler: ui,
       }),
 
+      // A day cell's "+" menu (Task / Meeting), fed and placed under the "+"
+      // by index.js _toggleDayMenu. One floating slot for the whole page, so
+      // opening the menu never repaints the grid it hangs over.
+      Skeletons.Box.Y({
+        className: `${pfx}__day-menu-slot`,
+        sys_pn: "cal-day-menu",
+        partHandler: ui,
+      }),
+
       Skeletons.Wrapper.Y({
         className: `${pfx}__modal-wrapper`,
         name: "cal-modal",

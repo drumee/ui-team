@@ -24,6 +24,7 @@ const {
   passesFilter,
   viewRange,
   rowStart,
+  fromEpoch,
   day,
   ymd,
   dateOnly,
@@ -43,6 +44,19 @@ const { rangeDisable } = require("./skeleton/date-field");
 // west of UTC that is the day before, and every save would move the task back
 // a day. Sending the instant itself back is refused outright (task.update fails).
 const dateOf = (v) => dateOnly(v) || "";
+
+// One "Restrict access" entry as the guest gate matches it (server dmz.js
+// _emailMatchesAllowed): an email address, or a domain written "@domain".
+// A bare "domain.tld" is taken as that domain. Lower-cased; anything else is
+// refused (null).
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DOMAIN = /^@?([a-z0-9-]+\.)+[a-z]{2,}$/;
+function recipientEntry(raw) {
+  const v = String(raw || "").trim().toLowerCase();
+  if (EMAIL.test(v)) return v;
+  if (DOMAIN.test(v)) return v.startsWith("@") ? v : `@${v}`;
+  return null;
+}
 
 // task.search_files also lists folders and the hub root; a task links files.
 const NOT_ATTACHABLE = ["folder", "hub", "root", "schedule"];
@@ -135,6 +149,8 @@ class __calendar_main extends LetcBox {
       document.removeEventListener("keydown", this._formKeys, true);
       this._formKeys = null;
     }
+    // Its listeners live on `document` and `window`.
+    this._closeDayMenu();
     if (this._reloadTimer) {
       clearTimeout(this._reloadTimer);
       this._reloadTimer = null;
@@ -204,6 +220,7 @@ class __calendar_main extends LetcBox {
    */
   onPanelHidden() {
     this._parked = true;
+    this._closeDayMenu();
   }
 
   /**
@@ -444,6 +461,9 @@ class __calendar_main extends LetcBox {
   }
 
   _render() {
+    // The page feed rebuilds the day-menu slot empty and the "+" it hangs
+    // from, so an open day menu has nothing left to point at.
+    this._closeDayMenu();
     // Which range the next paint draws. The scroll rules below key on it: the
     // same range re-fed is a repaint, a different one is a new screen.
     const key = `${this._view}:${this._cursor}`;
@@ -602,6 +622,8 @@ class __calendar_main extends LetcBox {
 
   /** Open `name`, or close it if it is the one already open. */
   _toggleMenu(name) {
+    // One dropdown at a time, the day cell's "+" menu included.
+    this._closeDayMenu();
     this._openMenu = this._openMenu === name ? null : name;
     return this._renderToolbar();
   }
@@ -659,6 +681,113 @@ class __calendar_main extends LetcBox {
     this._menuDismiss = null;
   }
 
+  // ── a day cell's "+" menu ──────────────────────────────────────────────────
+  //
+  // The "+ New" dropdown's Task / Meeting rows, opened from a day cell's "+"
+  // and due that day. It is NOT a fifth toolbar menu: those live in the
+  // toolbar row and repaint with it, while this one hangs from a cell in the
+  // grid, and rebuilding the grid to open it would destroy the "+" that was
+  // clicked. So it is fed into one floating slot on the page (skeleton/index.js
+  // "cal-day-menu"), placed under the "+" in viewport coordinates, and closed by
+  // a click anywhere else, Escape, a scroll or a resize — any of which would
+  // leave it pointing at the wrong place.
+
+  /** Open the menu under the clicked "+", or close it if that "+" owns it. */
+  _toggleDayMenu(cmd) {
+    const key = cmd && cmd.mget && cmd.mget("calDay");
+    const anchor = cmd && cmd.el;
+    const same = this._dayMenu && this._dayMenu.anchor === anchor;
+    this._closeDayMenu();
+    if (same || !key || !anchor) return;
+
+    // One dropdown at a time.
+    if (this._openMenu) {
+      this._closeMenus();
+      this._renderToolbar();
+    }
+
+    const slot = _.isFunction(this.getPart) ? this.getPart("cal-day-menu") : null;
+    if (!slot || (slot.isDestroyed && slot.isDestroyed()) || !slot.el) return;
+    this._dayMenu = { key, anchor, slot };
+    anchor.dataset.open = "1";
+    slot.el.dataset.open = "1";
+    slot.feed(require("./skeleton/toolbar").dayMenu(this, key));
+    this._placeDayMenu();
+    // The rows are laid out after the feed: clamp once they have a size.
+    requestAnimationFrame(() => this._placeDayMenu());
+    this._bindDayMenuDismiss();
+  }
+
+  /**
+   * Under the "+", 4px below it and starting at its left edge; above it when
+   * the viewport has no room below; never past the viewport's edges.
+   */
+  _placeDayMenu() {
+    const m = this._dayMenu;
+    if (!m || !m.slot.el || !m.anchor.isConnected) return;
+    const GAP = 4;
+    const EDGE = 8;
+    const a = m.anchor.getBoundingClientRect();
+    const el = m.slot.el;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const below = a.bottom + GAP;
+    const top = below + h <= vh - EDGE || a.top - GAP - h < EDGE ? below : a.top - GAP - h;
+    el.style.top = `${Math.max(EDGE, top)}px`;
+    el.style.left = `${Math.max(EDGE, Math.min(a.left, vw - w - EDGE))}px`;
+  }
+
+  _closeDayMenu() {
+    const m = this._dayMenu;
+    this._dayMenu = null;
+    this._unbindDayMenuDismiss();
+    if (!m) return;
+    if (m.anchor) delete m.anchor.dataset.open;
+    if (m.slot && !(m.slot.isDestroyed && m.slot.isDestroyed()) && m.slot.el) {
+      delete m.slot.el.dataset.open;
+      m.slot.feed([]);
+    }
+  }
+
+  _bindDayMenuDismiss() {
+    if (this._dayMenuDismiss) return;
+    const close = () => this._closeDayMenu();
+    // Capture phase, like the toolbar's: a click outside closes the menu
+    // before it reaches what it was aimed at. A click on the menu itself is
+    // left to its row's service, and one on the "+" that owns it to
+    // _toggleDayMenu, which closes it — closing here first would make that
+    // toggle open it again.
+    const onClick = (ev) => {
+      const m = this._dayMenu;
+      const t = ev && ev.target;
+      if (!m || !t || !t.closest) return;
+      if (m.slot.el && m.slot.el.contains(t)) return;
+      if (m.anchor.contains(t)) return;
+      close();
+    };
+    const onKey = (ev) => {
+      if (ev.key === "Escape") close();
+    };
+    this._dayMenuDismiss = { onClick, onKey, close };
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("keydown", onKey, true);
+    // Capture, so a scroll anywhere — the grid, a week column — counts.
+    document.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+  }
+
+  _unbindDayMenuDismiss() {
+    const d = this._dayMenuDismiss;
+    if (!d) return;
+    this._dayMenuDismiss = null;
+    document.removeEventListener("click", d.onClick, true);
+    document.removeEventListener("keydown", d.onKey, true);
+    document.removeEventListener("scroll", d.close, true);
+    window.removeEventListener("resize", d.close);
+  }
+
   // ── forms ──────────────────────────────────────────────────────────────────
 
   _openTaskForm(row) {
@@ -710,8 +839,13 @@ class __calendar_main extends LetcBox {
     }
   }
 
-  _openMeetingForm() {
+  /**
+   * The meeting form: a new personal meeting, or — given a personal meeting's
+   * calendar row — that meeting, prefilled, to update or delete.
+   */
+  _openMeetingForm(row) {
     this._closeMenus();
+    if (row) return this._openMeetingEdit(row);
     const base = day(this._pendingDay) || day(this._cursor) || Dayjs();
     this._form = {
       kind: "meeting",
@@ -721,6 +855,35 @@ class __calendar_main extends LetcBox {
         date: ymd(base),
         start: { hour: 11, minute: "00", meridiem: "AM" },
         end: { hour: 12, minute: "00", meridiem: "PM" },
+        require_email: false,
+        restrict: false,
+        recipients: [],
+        password_on: false,
+        files: [],
+      },
+    };
+    this._pendingDay = null;
+    this._renderModal();
+  }
+
+  _openMeetingEdit(row) {
+    const start = fromEpoch(row.stime) || Dayjs();
+    const end = fromEpoch(row.etime) || start.add(30, "minute");
+    // The form's 12-hour clock parts, the inverse of _epochFor.
+    const clock = (d) => ({
+      hour: d.hour() % 12 || 12,
+      minute: String(d.minute()).padStart(2, "0"),
+      meridiem: d.hour() < 12 ? "AM" : "PM",
+    });
+    this._form = {
+      kind: "meeting",
+      mode: "edit",
+      row,
+      draft: {
+        title: row.title || "",
+        date: ymd(start),
+        start: clock(start),
+        end: clock(end),
         require_email: false,
         restrict: false,
         recipients: [],
@@ -967,7 +1130,7 @@ class __calendar_main extends LetcBox {
     const list = (this._form && this._form.draft.recipients) || [];
     const part = _.isFunction(this.getPart) ? this.getPart("form-recipient-chips") : null;
     if (!part || !part.el) return;
-    part.feed(recipientChips(this, list));
+    part.feed(recipientChips(this, list, this._form && this._form.recipientsExpanded));
     part.el.setAttribute("data-count", String(list.length));
   }
 
@@ -975,7 +1138,7 @@ class __calendar_main extends LetcBox {
   //
   // Files upload the moment they are added (upload-progress window, the route
   // the Task tab takes) into the personal hub's hidden task folder; the commit
-  // only links the nids (_linkTaskFiles / _linkMeetingFiles). Every callback
+  // only links the nids (_linkTaskFiles). Every callback
   // checks it still belongs to the open form: the modal can close, or another
   // open, while bytes are in flight.
 
@@ -1354,7 +1517,8 @@ class __calendar_main extends LetcBox {
    * open modal. A paste into the title or description stays text.
    */
   _onPasteFiles(e) {
-    if (!this._form || (this._form.kind !== "task" && this._form.kind !== "meeting")) return;
+    // The task form only: the meeting form takes no attachments.
+    if (!this._form || this._form.kind !== "task") return;
     const t = e && e.target;
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
     const files = Array.from((e.clipboardData && e.clipboardData.files) || []);
@@ -1395,17 +1559,6 @@ class __calendar_main extends LetcBox {
       if (!Array.isArray(res)) failed.push(file_nid);
     }
     return failed;
-  }
-
-  async _linkMeetingFiles(nid, nids) {
-    if (!nids || !nids.length) return true;
-    const res = await this.postService({
-      service: (SERVICE.room && SERVICE.room.link_files) || "room.link_files",
-      hub_id: this._personalHub,
-      nid,
-      file_nids: nids,
-    });
-    return !!(res && Array.isArray(res.attachments));
   }
 
   /** Edit mode: the task's current files, as removable chips. */
@@ -2037,6 +2190,17 @@ class __calendar_main extends LetcBox {
   async _submitMeeting() {
     const draft = this._absorbFormText();
     if (!this._validateRequired(draft)) return;
+    // "Restrict access" with nobody on the list would be an open link that
+    // looks restricted: refused until an address or domain is added.
+    if (
+      this._form.mode !== "edit" &&
+      draft.require_email &&
+      draft.restrict &&
+      !(draft.recipients || []).length
+    ) {
+      if (typeof Butler !== "undefined") Butler.say(LOCALE.SECURE_SHARE_EMAIL_REQUIRED);
+      return;
+    }
     const title = String(draft.title || "").trim();
     if (!draft.date) return;
     if (!(await this._gateFiles(this._form))) return;
@@ -2083,6 +2247,10 @@ class __calendar_main extends LetcBox {
       return;
     }
 
+    if (this._form && this._form.mode === "edit") {
+      return this._updateMeeting(this._form, draft, title, stime, end);
+    }
+
     const bookSvc = (SERVICE.room && SERVICE.room.book) || "room.book";
     const linkSvc =
       (SERVICE.room && SERVICE.room.public_link) || "room.public_link";
@@ -2099,18 +2267,6 @@ class __calendar_main extends LetcBox {
       etime: end,
     };
 
-    // Invitees. The server ALREADY implements per-email invitation — a
-    // 'no_traversal' dmz grant plus real mail from the butler/external-meeting
-    // template (room.js _commit_invitation) — but that method currently has no
-    // caller, so `recipients` would be inert. The form therefore does not draw
-    // the "Require email" / "Restrict access" rows that set these flags, and
-    // this branch never runs today; once room.book (or a room.invite) is wired
-    // to that call, drawing the rows again (skeleton/meeting-form.js) is the
-    // only change needed here.
-    if (draft.require_email && draft.restrict && draft.recipients.length) {
-      payload.recipients = draft.recipients.map((email) => ({ email, name: email }));
-    }
-
     const node = await this.postService({ service: bookSvc, ...payload });
     const nid = node && (node.id || node.nid);
     if (!nid) {
@@ -2118,13 +2274,17 @@ class __calendar_main extends LetcBox {
       return;
     }
 
-    // Before public_link, which grants the link whatever is attached when it runs.
-    const linked = await this._linkMeetingFiles(nid, A.nidsToLink(draft.files));
-    if (!linked) this._showToast(LOCALE.CAL_FILES_NOT_ATTACHED, "error");
-
-    // Link + optional password. public_link accepts `password` today.
+    // Link + its gate: an optional password, and "Require email to view" with
+    // its optional "Restrict access" list — both enforced at the guest gate
+    // (server dmz.js), which matches addresses and "@domain" entries.
     const linkPayload = { service: linkSvc, hub_id: this._personalHub, nid };
     if (draft.password_on && draft.password) linkPayload.password = draft.password;
+    if (draft.require_email) {
+      linkPayload.require_email = 1;
+      if (draft.restrict && (draft.recipients || []).length) {
+        linkPayload.allowed_emails = draft.recipients;
+      }
+    }
     const answer = await this.postService(linkPayload);
     const link = answer && answer.link;
 
@@ -2134,6 +2294,60 @@ class __calendar_main extends LetcBox {
     // not underneath it — a reload now would re-feed the card it just opened.
     this._dirty = true;
     this._renderModal();
+  }
+
+  /**
+   * Save an edited personal meeting. Two narrow room.update calls rather than
+   * one `flag: "all"`: "all" also rewrites the agenda (cleared unless resent)
+   * and the attendee list (replaced by whatever is sent), neither of which this
+   * form shows. "title" renames, "when" moves the date and both epochs; the
+   * recurrence, the agenda, the attendees and the attachments are kept.
+   */
+  async _updateMeeting(form, draft, title, stime, etime) {
+    const row = form.row || {};
+    const nid = row.nid || row.id;
+    const svc = (SERVICE.room && SERVICE.room.update) || "room.update";
+    const scope = { service: svc, hub_id: this._personalHub, nid };
+    const base = day(draft.date);
+    const renamed = title !== (row.title || "")
+      ? await this.postService({ ...scope, flag: "title", title })
+      : true;
+    const moved = await this.postService({
+      ...scope,
+      flag: "when",
+      date: base ? base.format("LLLL") : "",
+      stime,
+      etime,
+    });
+    // postService never rejects: a refusal (NOT_MEETING_OWNER) or a transport
+    // failure answers {error} or nothing.
+    if (!renamed || renamed.error || !moved || moved.error) {
+      Wm.alert(LOCALE.ERROR_NETWORK);
+      return;
+    }
+    this._form = null;
+    await this._reload();
+  }
+
+  async _deleteMeeting() {
+    const row = (this._form && this._form.mode === "edit" && this._form.row) || null;
+    if (!row || this._submitting) return;
+    this._submitting = true;
+    try {
+      const res = await this.postService({
+        service: (SERVICE.room && SERVICE.room.remove) || "room.remove",
+        hub_id: this._personalHub,
+        nid: row.nid || row.id,
+      });
+      if (!res || res.error) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+        return;
+      }
+      this._form = null;
+      await this._reload();
+    } finally {
+      this._submitting = false;
+    }
   }
 
   async _removeItem(cmd) {
@@ -2208,6 +2422,17 @@ class __calendar_main extends LetcBox {
       return;
     }
     if (row.scope === "workspace" && row.kind === "task") return this._openQuickTask(row);
+    // A personal meeting is edited here, in this screen's own meeting form: it
+    // lives in the caller's own hub, which has no Meeting tab to hand it to.
+    // The creator only (room.update / room.remove are creator-only), and never
+    // from one occurrence of a series, for the same reason as the task above.
+    if (row.scope === "personal" && row.kind === "meeting" && row.can_write) {
+      if (occurrence) {
+        this.warn("calendar: an occurrence of a recurring item is not editable", id);
+        return;
+      }
+      return this._openMeetingForm(row);
+    }
     // The occurrence's OWN start, so the workspace's Meeting tab anchors on
     // the date the user clicked rather than on the series origin.
     const stime = Number(cmd.mget("itemStime")) || 0;
@@ -2411,10 +2636,16 @@ class __calendar_main extends LetcBox {
       case "cal-toggle-new-menu":
         return this._toggleMenu("new");
 
+      // From "+ New", or from a day cell's "+" menu, whose rows name the day
+      // the form opens due on.
       case "cal-new-task":
-        return this._openTaskForm(null);
       case "cal-new-meeting":
-        return this._openMeetingForm();
+        if (cmd.mget("calDay")) this._pendingDay = cmd.mget("calDay");
+        this._closeDayMenu();
+        return service === "cal-new-task" ? this._openTaskForm(null) : this._openMeetingForm();
+
+      case "cal-day-menu":
+        return this._toggleDayMenu(cmd);
 
       case "cal-day-add":
         this._pendingDay = cmd.mget("calDay");
@@ -2538,16 +2769,29 @@ class __calendar_main extends LetcBox {
 
       case "cal-add-recipient": {
         if (!this._form) return;
+        // Only an Enter commits — the Entry also reports other statuses.
+        if (args && args.__inputStatus && args.__inputStatus !== _a.commit) return;
         const part = await this.ensurePart("form-recipient");
         const input = part && part.el && part.el.querySelector("input");
-        const value = input ? String(input.value || "").trim() : "";
-        if (!value) return;
+        const entry = recipientEntry(input ? input.value : "");
+        if (!entry) {
+          if (input && String(input.value || "").trim() && typeof Butler !== "undefined") {
+            Butler.say(LOCALE.ENTER_EMAIL_OR_DOMAIN);
+          }
+          return;
+        }
         const list = this._form.draft.recipients || [];
-        if (!list.includes(value)) list.push(value);
+        if (!list.includes(entry)) list.push(entry);
         this._form.draft.recipients = list;
         if (input) input.value = "";
         return this._renderRecipients();
       }
+
+      // "+N": show every allowed email / domain, so each can be removed.
+      case "cal-expand-recipients":
+        if (!this._form) return;
+        this._form.recipientsExpanded = true;
+        return this._renderRecipients();
 
       case "cal-remove-recipient": {
         if (!this._form) return;
@@ -2600,6 +2844,8 @@ class __calendar_main extends LetcBox {
         return this._submitTask();
       case "cal-delete-task":
         return this._deleteTask();
+      case "cal-delete-meeting":
+        return this._deleteMeeting();
       case "cal-submit-meeting":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
           return;
