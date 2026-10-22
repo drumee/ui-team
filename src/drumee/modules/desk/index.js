@@ -2996,7 +2996,7 @@ class desk_module extends LetcBox {
     // support account itself, and the inbox badges support conversations.
     // Failure is already swallowed into null — nothing here depends on it.
     this.supportContact();
-    this._installOrgViewMirror();
+    // _installOrgViewMirror runs from onPartReady("settings-main-slot").
     this._installWsMenuMirror();
     this._installUtilityLights();
   }
@@ -3074,30 +3074,38 @@ class desk_module extends LetcBox {
    * An attribute on the root is matched against the root and nothing else. The
    * observer is scoped to the slot the screen actually mounts into
    * (togglePanel -> "settings-main-slot"), so it cannot re-create the cost.
+   *
+   * INSTALLED FROM onPartReady, NOT ensurePart. ui-core's ensurePart resolves
+   * by `this.off(_e.part.ready)` with no handler, which drops EVERY pending
+   * ensurePart on the desk, not just its own. At boot this one queued behind
+   * top-bar / desk-content / others, lost its listener to whichever resolved
+   * first, and never ran — the flag was never stamped, and none of the rules
+   * keyed on it ever applied on stage. onPartReady also re-installs on a
+   * re-fed skeleton, where a once-resolved part would be the dead old slot.
+   *
+   * @param {Object} p the settings-main-slot part
    */
-  _installOrgViewMirror() {
-    this.ensurePart("settings-main-slot").then((p) => {
-      if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
-      const root = this.el;
-      if (!root || !root.dataset || typeof MutationObserver !== "function") return;
-      if (this._orgViewObserver) this._orgViewObserver.disconnect();
-      // Same test the selector made: an org-view root that is not animating out
-      // and has actually drawn its __main. `data-anim !== "out"` is the desk's
-      // own liveness test (see the `topChild` read in _sectionScreenService).
-      const SEL = '.desk-org-view__ui:not([data-anim="out"]) .desk-org-view__main';
-      const sync = () => {
-        if (p.el.querySelector(SEL)) root.dataset.deskOrgview = "1";
-        else delete root.dataset.deskOrgview;
-      };
-      this._orgViewObserver = new MutationObserver(sync);
-      this._orgViewObserver.observe(p.el, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["data-anim"],
-      });
-      sync();
+  _installOrgViewMirror(p) {
+    if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
+    const root = this.el;
+    if (!root || !root.dataset || typeof MutationObserver !== "function") return;
+    if (this._orgViewObserver) this._orgViewObserver.disconnect();
+    // Same test the selector made: an org-view root that is not animating out
+    // and has actually drawn its __main. `data-anim !== "out"` is the desk's
+    // own liveness test (see the `topChild` read in _sectionScreenService).
+    const SEL = '.desk-org-view__ui:not([data-anim="out"]) .desk-org-view__main';
+    const sync = () => {
+      if (p.el.querySelector(SEL)) root.dataset.deskOrgview = "1";
+      else delete root.dataset.deskOrgview;
+    };
+    this._orgViewObserver = new MutationObserver(sync);
+    this._orgViewObserver.observe(p.el, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-anim"],
     });
+    sync();
   }
 
 
@@ -8435,6 +8443,11 @@ class desk_module extends LetcBox {
       case "desk-content":
         this.content_wrapper = child;
         return;
+
+      // Pass the child: see _installOrgViewMirror for why not ensurePart.
+      case "settings-main-slot":
+        this._installOrgViewMirror(child);
+        break;
 
       case "desk-wrapper":
         return (this.desk_wrapper = child);
