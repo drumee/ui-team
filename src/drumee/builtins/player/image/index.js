@@ -186,7 +186,8 @@ class __player_image extends __core {
       switch (this.mget(_a.area)) {
         case _a.share:
           details.push({ id: 'secure-share', label: LOCALE.SHARE, icon: 'ctxmenu-share', service: 'secure-share' });
-          break;
+          // falls through — an external workspace also gets the Internal Link
+          // (Lexis 2026-10-21); `editable` already excludes DMZ.
         case _a.private:
           afterInfo.push({ id: 'designation-link', label: LOCALE.DESIGNATION_LINK, icon: 'app-share', service: 'designation-link' });
           break;

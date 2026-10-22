@@ -91,12 +91,15 @@ function menu(ui) {
     });
   }
 
-  // The link flavour on top of that is area-dependent. `share` has none of
-  // its own — the Share row above already covers it.
+  // The link flavour on top of that is area-dependent. `share` adds the
+  // Internal Link below, beside the Share row above.
   // Rows that sit below Get info rather than above it.
   const afterInfo = [];
   if (editable) {
     switch (ui.mget(_a.area)) {
+      // External workspace: the Internal Link sits beside Share (Lexis
+      // 2026-10-21) — it is for members, and `editable` already excludes DMZ.
+      case _a.share:
       case _a.private:
         afterInfo.push({
           id: "designation-link",

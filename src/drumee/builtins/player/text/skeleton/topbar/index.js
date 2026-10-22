@@ -101,7 +101,8 @@ function menu(ui) {
           icon: "ctxmenu-share",
           service: "secure-share",
         });
-        break;
+        // falls through — an external workspace also gets the Internal Link
+        // (Lexis 2026-10-21); `editable` already excludes DMZ.
       case _a.private:
         afterInfo.push({
           id: "designation-link",

@@ -1017,6 +1017,29 @@ class __media_interact extends media_core {
   }
 
   /**
+   * The desk "open" link behind the Internal Link row (service
+   * `designation-link`). Internal workspace: viewerLink(), exactly as before.
+   * External workspace (area `share`, Lexis 2026-10-21): viewerLink() answers
+   * the GUEST share-room link there (hub.get_external_room_attr) — the Share
+   * row's business, not this one's — so the same desk link viewerLink() builds
+   * for every other area is built here, from the same fields.
+   * @returns {Promise<String>}
+   */
+  _internalLinkUrl() {
+    if (this.mget(_a.area) !== _a.share) return this.viewerLink();
+    const node = this.actualNode();
+    const filetype = this.mget(_a.filetype);
+    const data = new URLSearchParams({
+      nid: node.nid || this.mget(_a.nid),
+      hub_id: node.hub_id || this.mget(_a.hub_id),
+      kind: require("window/configs/application")(filetype, "").kind,
+      filetype,
+    }).toString();
+    const { endpoint } = bootstrap();
+    return Promise.resolve(`${endpoint}${_K.module.desk}/wm/open/${data}`.replace(/\/+/g, '/'));
+  }
+
+  /**
    * @param {Letc} cmd
    * @param {Object} args
    */
@@ -1337,7 +1360,7 @@ class __media_interact extends media_core {
         return;
       }
       case "designation-link":
-        this.viewerLink().then((url) => {
+        this._internalLinkUrl().then((url) => {
           setTimeout(async () => {
             // Shortened for the human who pastes it (Lexis, 2026-08-18): ~103
             // chars down to ~62. Applied HERE and not inside viewerLink(),

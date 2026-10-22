@@ -1831,7 +1831,7 @@
   "NO_LABELS": "Пока нет меток",
   "SEARCH_FILES": "Поиск файлов…",
   "LINK_FILE": "Связать",
-  "DESIGNATION_LINK": "Ссылка назначения",
+  "DESIGNATION_LINK": "Внутренняя ссылка",
   "LINKED": "Связано",
   "NO_FILE_RESULTS": "Нет подходящих файлов",
   "LINKED_FILES": "Файлы",
