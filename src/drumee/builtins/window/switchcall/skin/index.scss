@@ -220,9 +220,14 @@
     &:hover { background: rgba(0, 0, 0, 0.06); color: #0b0a21; }
   }
 
+  // Every row is pinned to the full card width and centres its own content,
+  // so nothing depends on a Note's intrinsic width or on text-align being
+  // inherited through ui-core's inner .note-content.
   &__body {
+    width: 100%;
     height: auto;
     align-items: center;
+    text-align: center;
     gap: 12px;
   }
 
@@ -247,6 +252,7 @@
   }
 
   &__title-row {
+    width: 100%;
     align-items: center;
     justify-content: center;
     gap: 8px;
@@ -258,16 +264,21 @@
   // Balanced so a long workspace name does not leave "(2)" alone on the last
   // line; a name with no spaces still breaks; capped at three lines.
   &__title {
+    width: 100%;
     min-width: 0;
     max-width: 100%;
+    justify-content: center;
     text-align: center;
     text-wrap: balance;
     overflow-wrap: anywhere;
     @include drumee.typo($size: 20px, $line: 28px, $weight: 600, $color: #0b0a21);
 
     .note-content {
+      width: 100%;
+      text-align: center;
       display: -webkit-box;
       -webkit-box-orient: vertical;
+      -webkit-box-pack: center;
       -webkit-line-clamp: 3;
       overflow: hidden;
     }
@@ -306,6 +317,7 @@
 
   &__byline-row {
     align-items: center;
+    justify-content: center;
     gap: 8px;
     max-width: 100%;
   }
@@ -364,6 +376,9 @@
       color: #ffffff;
       border: none;
       width: auto;
+      // The legacy block's margin-right: 30px outranks the margin: 0 above
+      // and pushed both buttons 30px left of centre.
+      margin: 0;
       .note-content { color: #ffffff; }
       &:hover { background: var(--primary-50, #433cc5); }
     }
