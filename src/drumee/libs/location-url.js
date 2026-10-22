@@ -54,6 +54,7 @@ let _timer = null;
 let _holdUntil = 0;
 let _retries = 0;
 let _started = false;
+const _watched = typeof WeakSet === "function" ? new WeakSet() : null;
 
 /**
  * Is the current history entry one this module wrote, still showing the hash
@@ -205,11 +206,28 @@ function blockedForNow() {
 }
 
 /**
+ * A window closing announces nothing on the breadcrumb channel (measured: a
+ * docked player closed by its X), so watch Wm's two layers for a child coming
+ * or going as well. Attached lazily — the layers mount after start() — and
+ * once per layer.
+ */
+function watchLayers() {
+  const wm = window.Wm;
+  if (!wm || !_watched) return;
+  for (const layer of [wm.windowsLayer, wm.headlessLayer]) {
+    if (!layer || !_.isFunction(layer.on) || _watched.has(layer)) continue;
+    _watched.add(layer);
+    layer.on("add:child remove:child", () => schedule());
+  }
+}
+
+/**
  * Write the visitor's location into the address bar now, if allowed.
  * @returns {Boolean} true when the URL now shows the location
  */
 function sync() {
   try {
+    watchLayers();
     if (blockedForGood()) return false;
     if (blockedForNow()) {
       if (_retries++ < MAX_RETRIES) schedule(Math.max(RETRY_MS, _holdUntil - Date.now()));

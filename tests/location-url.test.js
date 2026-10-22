@@ -37,6 +37,7 @@ const hist = {
   },
 };
 global.window = { location: loc, history: hist };
+Object.defineProperty(global, "Wm", { get: () => global.window.Wm });
 global.location = loc;
 global.history = hist;
 
@@ -96,7 +97,10 @@ function view(attrs, { state, media } = {}) {
     isDestroyed: () => false,
   };
 }
-const layer = (views) => ({ children: { toArray: () => views } });
+const layer = (views) => ({
+  children: { toArray: () => views },
+  on(ev, fn) { (this.listeners = this.listeners || []).push([ev, fn]); },
+});
 function desk({ screen = false, restoring = false } = {}) {
   global.window.Desk = {
     _mainScreenOnTop: () => screen,
@@ -281,6 +285,17 @@ test("plain '#/desk' and a routed wm hash are written over", () => {
     wm({ panes: [pane(ROOT_PANE)] });
     assert.equal(locationUrl.sync(), true, h);
     assert.equal(loc.hash, "#/desk/wm/o/root1/hubA/folder", h);
+  }
+});
+
+test("a window closing is noticed through Wm's layers (attached once)", () => {
+  reset();
+  wm({ panes: [pane(ROOT_PANE)] });
+  locationUrl.sync();
+  locationUrl.sync();
+  for (const l of [Wm.headlessLayer, Wm.windowsLayer]) {
+    assert.equal(l.listeners.length, 1);
+    assert.equal(l.listeners[0][0], "add:child remove:child");
   }
 });
 
