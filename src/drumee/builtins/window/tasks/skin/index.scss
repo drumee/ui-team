@@ -7285,15 +7285,21 @@ $theme-colors: (
   }
 
   // Footer — "Remove selected" + "N of M ⟳" (Figma 867:104812).
+  // "Remove selected" is pinned out of flow so showing it neither grows the
+  // footer (it's 32px vs the count's 16px) nor shifts the centred count.
   &__list-foot {
+    position: relative;
     flex: 0 0 auto;
     align-items: center;
-    gap: 10px;
     padding: 12px;
   }
 
   &__list-remove {
-    flex: 0 0 auto;
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    z-index: 1;
     padding: 8px 14px;
     border-radius: 10px;
     background: rgba(246, 81, 75, 0.1);
@@ -10028,6 +10034,9 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
   }
   .tasks-panel__list-foot {
     padding: 12px 8px;
+  }
+  .tasks-panel__list-remove {
+    left: 8px;
   }
 }
 
