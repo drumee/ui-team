@@ -9,7 +9,7 @@
 // drawn as the frame's cards and chips (skeleton/chip.js), so its items are not
 // all one height and the "+N" below is counted from each item's own.
 const { chip, hasPill } = require("./chip");
-const { ymd, day, rowStart } = require("./helpers");
+const { ymd, day, itemsByDay } = require("./helpers");
 
 // A busy day renders EVERY item and the cell scrolls — skin/index.scss makes
 // __day-body the scroll container — and a "+N" footer, pinned to the bottom of
@@ -38,6 +38,11 @@ const { ymd, day, rowStart } = require("./helpers");
 // a cell shows more than the floor would and "+N" can run ahead of what is
 // actually out of sight; nothing is ever hidden, so it still reads as "this
 // day runs past the fold".
+// The "+N" footer is hidden for now: the cell grows to 2× its floor and
+// scrolls instead (skin &__day). Flip to bring it back; `more` is still
+// counted either way for data-overflow.
+const SHOW_DAY_MORE = false;
+
 const FIT = {
   body: 115,
   gap: 10,
@@ -81,29 +86,13 @@ module.exports = function (ui) {
   const todayKey = ymd(today);
   const anchorMonth = anchor.month();
 
-  // Group the visible rows by day. Meetings sort before tasks within a day, and
-  // meetings sort by start time — a timed item above an all-day one reads as the
-  // agenda it is.
-  const byDay = {};
-  ui.getVisibleItems().forEach((row) => {
-    const s = rowStart(row);
-    if (!s) return;
-    const k = ymd(s);
-    (byDay[k] = byDay[k] || []).push(row);
-  });
-  Object.keys(byDay).forEach((k) => {
-    byDay[k].sort((a, b) => {
-      if (a.kind !== b.kind) return a.kind === "meeting" ? -1 : 1;
-      if (a.kind === "meeting") return (a.stime || 0) - (b.stime || 0);
-      return String(a.title).localeCompare(String(b.title));
-    });
-  });
+  const byDay = itemsByDay(ui.getVisibleItems());
 
   const dayBody = (list, key) => {
     if (!list.length) return null;
     const kids = list.map((row) => chip(ui, row, { compact: 1 }));
     const more = list.length - fitCount(list);
-    if (more > 0) {
+    if (SHOW_DAY_MORE && more > 0) {
       kids.push(
         Skeletons.Note({
           className: `${pfx}__day-more`,
