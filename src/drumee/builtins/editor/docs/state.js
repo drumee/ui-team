@@ -294,6 +294,7 @@ class __docs_state extends DrumeeMFS {
             api ? Object.keys(api).filter((k) => typeof api[k] === "function").length : "null");
           this._apiHandle = api;
           this._nudgeResize();
+          this._decorateSingleTitleBar();
           // The editor is now fully mounted — make sure the window sits
           // above the desk's Files folder (see editor._raiseAboveDesk).
           if (this.editor && this.editor._raiseAboveDesk) this.editor._raiseAboveDesk();
@@ -351,6 +352,51 @@ class __docs_state extends DrumeeMFS {
    * Drumee's current theme: its write becomes a no-op and, not being "auto",
    * it installs no OS listener.
    */
+  /**
+   * Figma 1319:146667: the header starts with a 40px file glyph before the
+   * document name. Casual's title bar has none (its logo is hidden), so one
+   * is placed first — inside Drumee's name box in co-editing (`box`), else
+   * first in the bar. Idempotent: the observers re-run it on every render.
+   *
+   * @param {Element} bar   Casual's [data-testid="title-bar"]
+   * @param {Element} box   the co-editing name box, when there is one
+   */
+  _decorateTitleBar(bar, box) {
+    const host = box || bar;
+    if (!host || host.querySelector(":scope > .editor-docs__file-glyph")) return;
+    const glyph = document.createElement("span");
+    glyph.className = "editor-docs__file-glyph";
+    glyph.innerHTML =
+      '<svg width="32" height="32" aria-hidden="true"><use href="#--icon-addmenu-document"></use></svg>';
+    host.insertBefore(glyph, host.firstChild);
+  }
+
+  /**
+   * Single-user shell (DocxEditor): no name box is injected, so the glyph
+   * goes straight into Casual's title bar, re-applied when Casual re-renders
+   * it (a rename re-renders the whole bar).
+   */
+  _decorateSingleTitleBar() {
+    const root = this.el;
+    if (!root) return;
+    const run = () => {
+      try {
+        const bar = root.querySelector('[data-testid="title-bar"]');
+        if (bar) this._decorateTitleBar(bar, null);
+      } catch (e) {
+        /** editor gone */
+      }
+    };
+    run();
+    if (!this._glyphObs) {
+      this._glyphObs = new MutationObserver(() => {
+        clearTimeout(this._glyphTimer);
+        this._glyphTimer = setTimeout(run, 80);
+      });
+      this._glyphObs.observe(root, { childList: true, subtree: true });
+    }
+  }
+
   /**
    * Hide Casual's "Help" menubar menu (Report issue / About Casual Editor /
    * shortcuts): Drumee's gear menu offers "Contact us" instead. DocxEditor
@@ -447,6 +493,7 @@ class __docs_state extends DrumeeMFS {
             box.appendChild(input);
             this._nameBox = box;
           }
+          this._decorateTitleBar(bar, box);
           if (box.parentElement !== bar) bar.insertBefore(box, bar.firstChild);
           const input = box.querySelector("input");
           if (input && document.activeElement !== input) {
@@ -1075,6 +1122,11 @@ class __docs_state extends DrumeeMFS {
         this._helpObs = null;
       }
       clearTimeout(this._helpTimer);
+      if (this._glyphObs) {
+        this._glyphObs.disconnect();
+        this._glyphObs = null;
+      }
+      clearTimeout(this._glyphTimer);
       clearInterval(this._veilPoll);
       if (this._root) this._root.unmount();
       if (this._host) {

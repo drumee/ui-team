@@ -1,0 +1,206 @@
+/** ================================================================== *
+#   FILE : /src/drumee/builtins/editor/skin/file-viewer.scss
+#   TYPE : Shared skin — the Drumee 2.0 "File viewer" chrome of the
+#          Casual Docs / Casual Sheets windows (Figma 1319:50973)
+# ===================================================================**/
+
+// Tokens, straight from the Figma (Drumee 2.0 GLOBAL_VARS).
+$fv-ink: #0b0a21; // Primary/100
+$fv-grey90: #34343a;
+$fv-grey80: #65656c;
+$fv-grey40: #d1d1d6;
+$fv-grey30: #e5e5ea;
+$fv-grey20: #f2f2f7;
+$fv-primary10: #e4e3ff;
+$fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
+
+.editor-docs,
+.editor-sheet {
+  // ---- Header action cluster ------------------------------------------
+  // Share pill, then four 48px buttons (Download / gear / Move & Resize /
+  // Close), 16px apart. A pressed/open button sits on Grey/20, radius 12.
+  .drumee-topbar__actions {
+    align-items: center;
+    gap: 16px;
+    height: 48px;
+  }
+
+  .drumee-topbar__actions .icon,
+  .drumee-topbar__menu,
+  .drumee-topbar__snap-wrapper,
+  .drumee-topbar__snap-trigger {
+    border-radius: 12px;
+    color: $fv-ink;
+    height: 48px;
+    width: 48px;
+  }
+
+  .drumee-topbar__actions .icon svg,
+  .drumee-topbar__snap-trigger svg {
+    color: $fv-ink;
+    height: 24px;
+    width: 24px;
+  }
+
+  .drumee-topbar__actions .icon:hover,
+  .drumee-topbar__menu:hover,
+  .drumee-topbar__snap-wrapper:hover {
+    background-color: $fv-grey20;
+  }
+
+  .drumee-topbar__actions .icon:hover svg,
+  .drumee-topbar__snap-trigger:hover {
+    color: $fv-ink;
+  }
+
+  // The trigger inside the gear / snap wrappers fills them (no second box).
+  .drumee-topbar__menu > .icon,
+  .drumee-topbar__snap-wrapper > .icon {
+    border-radius: 12px;
+    height: 48px;
+    width: 48px;
+
+    &:hover {
+      background-color: transparent;
+    }
+  }
+
+  // Share: 40px pill on Primary/10, LockKey 20px + 16px semibold label.
+  .editor-chrome__share {
+    align-items: center;
+    background-color: $fv-primary10;
+    border-radius: 40px;
+    color: $fv-ink;
+    cursor: pointer;
+    display: inline-flex;
+    flex-shrink: 0;
+    font: 600 16px/1.2 var(--font-main);
+    gap: 8px;
+    height: 40px;
+    padding: 0 20px;
+    white-space: nowrap;
+
+    svg {
+      color: $fv-ink;
+      fill: currentColor;
+      height: 20px;
+      width: 20px;
+    }
+
+    &:hover {
+      background-color: darken($fv-primary10, 4%);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+  }
+
+  // "All changes saved" — 12px muted, sits before the Share pill.
+  .drumee-topbar__status {
+    align-self: center;
+    color: $fv-grey80;
+    font: 400 12px/16px var(--font-main);
+    margin: 0 4px 0 0;
+    white-space: nowrap;
+  }
+
+  // ---- Gear dropdown (Figma 1364:120251) --------------------------------
+  // 164 wide, 8px inset, 4px between rows; rows are 12px regular ink text
+  // with a 16px glyph; the open row sits on Grey/20.
+  .drumee-topbar__menu-panel {
+    top: calc(100% + 4px);
+  }
+
+  .drumee-topbar__menu-items {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: $fv-shadow;
+    gap: 4px;
+    padding: 8px;
+    width: 164px;
+  }
+
+  .drumee-topbar__menu-item {
+    border-radius: 4px;
+    color: $fv-ink;
+    font: 400 12px/1.4 var(--font-main);
+    gap: 4px;
+    padding: 4px;
+
+    &:not([data-state="disable"]):hover {
+      background-color: $fv-grey20;
+    }
+
+    &.separator {
+      background-color: $fv-grey30;
+    }
+
+    &.trash {
+      color: $fv-ink;
+    }
+  }
+
+  .drumee-topbar__menu-icon {
+    color: $fv-ink;
+    height: 16px;
+    width: 16px;
+  }
+
+  .drumee-topbar__menu-chevron {
+    font-size: 12px;
+    width: 12px;
+  }
+
+  .drumee-topbar__submenu {
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: $fv-shadow;
+    gap: 4px;
+    padding: 8px;
+  }
+
+  // ---- Move & Resize popover (Figma 1366:113526) ------------------------
+  // White card, radius 8, the "Move & Resize" label left-aligned over four
+  // 32px tiles 12px apart; the current layout's tile sits on Grey/20.
+  .drumee-topbar__snap-menu {
+    align-items: stretch;
+    background-color: #fff;
+    border: 0;
+    border-radius: 8px;
+    box-shadow: $fv-shadow;
+    gap: 4px;
+    padding: 8px;
+    right: 0;
+    top: calc(100% + 4px);
+  }
+
+  .drumee-topbar__snap-label {
+    color: $fv-ink;
+    font: 400 12px/1.4 var(--font-main);
+    text-align: left;
+  }
+
+  .drumee-topbar__snap-presets {
+    gap: 12px;
+  }
+
+  .drumee-topbar__snap-preset {
+    border-radius: 4px;
+    height: 32px;
+    width: 32px;
+
+    &:hover,
+    &[data-active="1"] {
+      background-color: $fv-grey20;
+    }
+  }
+
+  .drumee-topbar__snap-glyph {
+    border-color: $fv-grey80;
+  }
+
+  .drumee-topbar__snap-glyph-fill {
+    background-color: $fv-grey80;
+  }
+}

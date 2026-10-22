@@ -4,6 +4,7 @@
 # ===================================================================**/
 @use 'mixins/drumee';
 @use '../../skin/topbar.scss';
+@use '../../skin/file-viewer';
 
 .sheet {
   &__ui {
@@ -40,13 +41,23 @@
   // `.editor-sheet__header`. Make the title row read like the Casual demo's:
   // one flat block, same chrome colour as Casual's menu row right below it
   // (`#eef1f5`), no divider — so logo + name + menus form a single header.
-  > .editor__main > .editor__header.container {
+  // Figma 1337:16842: a white 70px header — 36px glyph, 18px name, then
+  // Casual's menu row under the name (styled below so the two rows read as
+  // one block) — with the Share pill + 48px actions centred on its height,
+  // 20px from the right edge. This Drumee row is the name row only.
+  // The Open-File Switcher frame nests the header under its stage, hence
+  // the second selector.
+  > .editor__main > .editor__header.container,
+  .file-switcher__stage > .editor__header.container {
+    position: relative;
     width: 100%;
-    height: 52px;
-    min-height: 52px;
+    height: 42px;
+    min-height: 42px;
     border: 0;
     z-index: 200;
-    background-color: var(--doc-chrome, #eef1f5);
+    background-color: #fff;
+    padding: 12px 0 0;
+    box-sizing: border-box;
 
     &[data-header="0"] {
       display: none;
@@ -55,11 +66,13 @@
     .drumee-topbar__bar {
       height: 100%;
       background: transparent;
-      padding: 0 12px 0 14px;
+      padding: 0 20px;
+      align-items: flex-start;
     }
     .drumee-topbar__actions {
-      align-items: center;
-      gap: 2px;
+      position: absolute;
+      top: 12px;
+      right: 20px;
     }
   }
 
@@ -92,25 +105,31 @@
     gap: 10px;
     min-width: 0;
   }
-  // 32px coloured sheet logo, like the demo's.
+  // 36px sheet glyph (Figma 1319:176155), centred on name + menu rows.
   .drumee-topbar__filetype {
-    width: 32px;
-    height: 32px;
-    flex: 0 0 32px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    margin-top: 5px;
+    background-color: transparent;
     .drumee-topbar__filetype-icon {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
     }
+  }
+  .drumee-topbar__identity {
+    gap: 12px;
+    align-items: flex-start;
   }
 
   // Demo/Google-Sheets document title: 16px regular, quiet until hovered,
   // click-to-edit (renameInline swaps in the input below).
   .drumee-topbar__title.editor-sheet__editable-title {
     cursor: text;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 400;
-    line-height: 24px;
-    color: var(--normal-fg-10, #202124);
+    line-height: 22px;
+    color: #0b0a21;
     padding: 2px 8px;
     border-radius: 6px;
     border: 1px solid transparent;
@@ -127,10 +146,10 @@
   }
   .drumee-topbar__title-input {
     font-family: inherit;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 400;
-    line-height: 24px;
-    color: var(--normal-fg-10, #202124);
+    line-height: 22px;
+    color: #0b0a21;
     padding: 2px 8px;
     border-radius: 6px;
     border: 1px solid var(--active-border, #5950ff);
@@ -251,18 +270,20 @@
 .editor-sheet[data-theme="light"] .sheet-state {
   background-color: #ffffff;
   color: #201f1e;
-  --color-surface-strip: #eef1f5;
+  // Figma 1337:16842: every chrome strip is white; the toolbar and the
+  // sheet tabs get their green tints below.
+  --color-surface-strip: #ffffff;
   --color-surface: #ffffff;
   --color-text: #201f1e;
   --color-text-secondary: #605e5c;
-  --color-divider: #edeff3;
+  --color-divider: rgba(0, 0, 0, 0.05);
   --color-hover: rgba(15, 23, 42, 0.045);
   --color-selected: rgba(14, 116, 144, 0.11);
   --color-accent: #0e7490;
   [data-testid="casual-sheets"],
   [data-testid="casual-sheets"] * {
-    --cs-chrome-bg: #eef1f5 !important;
-    --cs-chrome-border: #edeff3 !important;
+    --cs-chrome-bg: #ffffff !important;
+    --cs-chrome-border: rgba(0, 0, 0, 0.05) !important;
     --cs-chrome-input-bg: #ffffff !important;
     --cs-chrome-fg: #201f1e !important;
     --cs-chrome-muted: #605e5c !important;
@@ -595,5 +616,126 @@ body > div:has(> [class*="univer-popup"]) {
 
   &[data-theme="dark"] .editor-loading__text {
     color: #aab2c2;
+  }
+}
+
+// ── Drumee 2.0 "File viewer" (Figma 1337:16842) ────────────────────────────
+// Casual Sheets' chrome strips, laid out as the design: the menu row right
+// under the name (68px in: 20 edge + 36 glyph + 12 gap), the toolbar as a
+// 44px pill on the green tint inset 20px, a white formula bar, and a 40px
+// sheet-tab bar with the active tab on the green tint.
+.editor-sheet[data-theme="light"] .sheet-state {
+  [data-testid="cs-menubar"] {
+    height: 30px;
+    // Casual's own inline padding (2px 6px) — the row starts under the name.
+    padding: 0 20px 8px 68px !important;
+    gap: 16px;
+    border: 0;
+    background: #fff !important;
+    align-items: flex-start;
+
+    button {
+      font: 400 14px/1.2 var(--font-main);
+      color: #34343a;
+      padding: 3px 0;
+      height: auto;
+      min-height: 0;
+      border-radius: 4px;
+
+      &:hover,
+      &[data-state="open"],
+      &[aria-expanded="true"] {
+        color: #0b0a21;
+        background: transparent;
+      }
+    }
+  }
+
+  [data-testid="casual-sheets-toolbar"] {
+    box-sizing: border-box;
+    height: 44px;
+    margin: 0 20px 12px;
+    padding: 6px 16px;
+    gap: 8px;
+    border: 0;
+    border-radius: 40px;
+    background: rgba(61, 222, 140, 0.1) !important;
+    color: #0b0a21;
+
+    // Group dividers.
+    > div:empty,
+    > span:empty {
+      background: #d1d1d6;
+    }
+
+    // The design's bar is shorter than Casual's: clipboard (keyboard and the
+    // context menu have it), the font-size steppers (the size box stays),
+    // merge, and the trailing Format Cells / chart / pivot (all under the
+    // Format and Insert menus) are left out, with the divider before them.
+    > div:has(> button[aria-label^="Paste ("]),
+    > div:has(> button[aria-label="Increase font size"]),
+    > div:has(> button[aria-label="Decrease font size"]),
+    > div:has(> button[aria-label="Merge cells"]),
+    > div:has(> button[aria-label="Format Cells…"]),
+    > div:has(> button[aria-label="Insert chart"]),
+    > div:has(> button[aria-label="Insert PivotTable"]),
+    > div:has(+ div:has(> button[aria-label="Format Cells…"])) {
+      display: none !important;
+    }
+
+    // Whatever still overflows a narrow window scrolls, without a bar.
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  [data-testid="casual-sheets-formula-bar"] {
+    height: 40px;
+    padding: 4px 20px;
+    border: 0;
+    background: #fff !important;
+    font-family: var(--font-main);
+  }
+
+  [data-testid="casual-sheets-tabs"] {
+    height: 40px !important;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 0 20px 0 48px !important;
+    gap: 24px;
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    background: #fff !important;
+    font-family: var(--font-main);
+    align-items: center;
+
+    // "+" first, as in the design ([+] [≡] [Sheet1]).
+    [data-testid="cs-tab-add"] {
+      order: -1;
+      width: 24px;
+      height: 24px;
+      color: #0b0a21;
+    }
+
+    button[aria-selected="true"],
+    button[data-active="true"] {
+      height: 40px !important;
+      padding: 0 12px !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: rgba(61, 222, 140, 0.15) !important;
+      color: #54b684 !important;
+      font-size: 16px;
+    }
+  }
+
+  [data-testid="casual-sheets-status-bar"] {
+    border: 0;
+    background: #fff !important;
+    color: #65656c;
+    font-family: var(--font-main);
   }
 }

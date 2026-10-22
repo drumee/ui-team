@@ -2,6 +2,7 @@
 #   FILE : /src/drumee/builtins/editor/docs/skin
 #   TYPE : Component style — Casual Docs (DocxEditor) window
 # ===================================================================**/
+@use "../../skin/file-viewer";
 
 // The Drumee player window sets user-select:none (drag chrome). That inherits
 // onto the ProseMirror editing surface and blocks typing — re-enable selection
@@ -348,7 +349,7 @@
   // no class or test id of its own.
   div:has(> [data-testid="presence-cluster"]) {
     flex-direction: row-reverse;
-    margin-right: 150px;
+    margin-right: 0;
   }
   [data-testid="presence-cluster"] {
     gap: 10px;
@@ -364,18 +365,20 @@
   .editor-docs__collab-name {
     display: flex;
     align-items: center;
-    margin: 0 8px 0 12px;
+    margin: 0;
+    min-width: 0;
 
     input {
-      font: 400 16px/1.2 var(--font-main);
-      color: #1f2328;
+      font: 400 18px/1.2 var(--font-main);
+      color: #0b0a21;
       background: transparent;
       border: 0;
       outline: none;
-      padding: 4px 8px;
+      padding: 2px 8px;
       border-radius: 6px;
-      min-width: 120px;
-      max-width: 320px;
+      min-width: 160px;
+      max-width: 46ch;
+      text-overflow: ellipsis;
 
       &:hover {
         background: #f1f3f4;
@@ -576,15 +579,22 @@
   // presence cluster and the autosave label that share the row.
   // NOTE the shared topbar names its rows by `fig.group` → `.editor__header`
   // (not `.editor-docs__header`).
-  > .editor__main > .editor__header.container {
+  // Figma 1319:146667: the header is 75px — glyph + name on the first row,
+  // File / Edit / View … on the second (docs_state lays Casual's title bar
+  // out as that grid, below) — and the Share pill + 48px actions are
+  // centred on its full height, 10px from the right edge.
+  // The Open-File Switcher frame nests the header under its stage (which is
+  // position:relative), hence the second selector.
+  > .editor__main > .editor__header.container,
+  .file-switcher__stage > .editor__header.container {
     position: absolute;
     top: 0;
     right: 0;
     left: auto;
     width: auto;
-    height: 48px;
+    height: 75px;
     min-height: 0;
-    padding: 0 12px 0 0;
+    padding: 0 10px 0 0;
     border: 0;
     background: transparent;
     z-index: 200;
@@ -670,5 +680,152 @@
   }
   100% {
     transform: translateX(333%);
+  }
+}
+
+// ── Drumee 2.0 "File viewer" (Figma 1319:146667) ───────────────────────────
+// Casual's chrome, laid out and coloured as the design: white header in two
+// rows (40px glyph + 18px name, then the menu row), the formatting bar as a
+// 40px pill on Overlay/blue inset 16px, the panel rail on the LEFT, and the
+// Drumee font everywhere.
+.editor-docs .docs-state {
+  // Casual paints its title bar, toolbar wrapper and status bar with
+  // --doc-chrome, and the ground around the page with --doc-bg: the design
+  // has them all white, the paper drawn by a hairline instead of a shadow.
+  --doc-chrome: #ffffff;
+  --doc-bg: #ffffff;
+
+  .paged-editor__pages {
+    background: #fff;
+  }
+
+  .layout-page {
+    border: 1px solid #c7c7c7;
+    border-bottom: 0;
+    box-shadow: none !important;
+  }
+
+  .ep-root {
+    font-family: var(--font-main);
+  }
+
+  // Title bar → 3-column, 2-row grid. Children, in Casual's order: the name
+  // box (Drumee's, with the glyph), the menu row, the presence/status group.
+  // The right padding leaves room for the floating Drumee action cluster
+  // (Share 116 + 4 x 48 + 3 x 16 gaps + 10 edge).
+  [data-testid="title-bar"] {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 0;
+    row-gap: 6px;
+    height: 75px;
+    box-sizing: border-box;
+    padding: 8px 390px 8px 8px;
+    border: 0;
+    background: #fff;
+
+    > :nth-child(1) {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    // The menu row: starts under the name text (glyph 40 + name padding 8).
+    > :nth-child(2) {
+      grid-column: 1 / span 2;
+      grid-row: 2;
+      padding: 0 0 0 48px !important;
+      overflow: visible;
+    }
+
+    > :nth-child(3) {
+      grid-column: 2 / span 2;
+      grid-row: 1;
+      justify-self: end;
+      padding: 0 !important;
+    }
+
+    button[aria-haspopup="menu"] {
+      font: 400 14px/1.2 var(--font-main);
+      color: #34343a;
+      padding: 3px 8px;
+      border-radius: 4px;
+      height: auto;
+      min-height: 0;
+
+      &:hover,
+      &[data-state="open"] {
+        background: #f2f2f7;
+        color: #0b0a21;
+      }
+    }
+  }
+
+  // The 40px file glyph (docs_state._decorateTitleBar).
+  .editor-docs__file-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    padding: 4px;
+    box-sizing: border-box;
+    border-radius: 6px;
+
+    svg {
+      width: 32px;
+      height: 32px;
+      display: block;
+    }
+  }
+
+  // Formatting bar: a pill on Overlay/blue, 40px, 16px in from the card.
+  .ep-root [data-testid="formatting-bar"] {
+    margin: 0 16px 10px !important;
+    padding: 6px 8px !important;
+    min-height: 40px;
+    gap: 4px;
+    background: rgba(113, 163, 244, 0.1) !important;
+    border-radius: 100px;
+    color: #0b0a21;
+
+    > div {
+      border-color: #d1d1d6 !important;
+    }
+
+    button {
+      color: #0b0a21;
+      border-radius: 4px;
+    }
+  }
+
+  // The comments / history / outline rail: Casual floats it at the right
+  // edge; the design has it at the LEFT of the page, 48px tiles.
+  [data-testid="panel-rail"] {
+    left: 8px !important;
+    right: auto !important;
+    padding: 12px 8px;
+    border: 0;
+    background: #fff;
+
+    button {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      color: #0b0a21;
+
+      svg {
+        width: 24px;
+        height: 24px;
+      }
+    }
+  }
+
+  [data-testid="status-bar"] {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    color: #65656c;
+    font-family: var(--font-main);
   }
 }

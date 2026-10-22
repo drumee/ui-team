@@ -2,6 +2,7 @@ const __player = require("player/interact");
 const renameInline = require("builtins/player/widget/topbar/rename");
 const { attachHelpContactMenu } = require("builtins/editor/help-contact-menu");
 const collab = require("./collab");
+const chrome = require("builtins/editor/chrome");
 const docTabs = require("./tabs");
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 
@@ -621,6 +622,8 @@ class __editor_docs extends __player {
           if (!b || !b.getItemsByAttr) continue;
           let [file] = b.getItemsByAttr(_a.nid, data.nid);
           if (file) {
+            // The tile the first save created: the gear menu acts on it.
+            chrome.adoptNode(this, file);
             if (file.restart) {
               file.mset(data);
               file.restart("media:modified");
@@ -682,6 +685,9 @@ class __editor_docs extends __player {
       case "contact-support":
         return this.contactSupport();
       default:
+        // Share / Download / Get info / Move & Resize / node actions
+        // (editor/chrome); the rest is player chrome and belongs to the base.
+        if (chrome.handleService(this, cmd, args)) return;
         if (super.onUiEvent) super.onUiEvent(cmd, args);
     }
   }
