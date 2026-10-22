@@ -12,6 +12,7 @@ const { inviteWorkspaceScope } = require("libs/invite-scope");
 // "Open this file once I am signed in" — a Designation link opened by a visitor
 // with no session. Armed at module scope in index.web.js, consumed below.
 const fileDeepLink = require("libs/file-deep-link");
+const locationUrl = require("libs/location-url");
 const { openSupportMail } = require("libs/support");
 const { showToast, clearToast } = require("libs/toast");
 
@@ -1854,7 +1855,8 @@ class desk_module extends LetcBox {
   // still starts on Home; two tabs never overwrite each other.
 
   static get _DESK_STATE_KEY() {
-    return "drumee.desk.lastScreen";
+    // Shared with libs/location-url, which asks whether a reload will restore.
+    return locationUrl.DESK_STATE_KEY;
   }
 
   /** service string ↔ sidebar nav item (sys_pn) for the restorable screens */
@@ -1998,6 +2000,41 @@ class desk_module extends LetcBox {
       (child.mget && child.mget(_a.kind)) ||
       (child.el.dataset && child.el.dataset.kind);
     return kind === "desk_org_view";
+  }
+
+  /**
+   * Is a full-canvas screen (Inbox, Calendar, Settings, Apps, Help, Billing,
+   * the organisation screen) covering the desk? The same top-child read as
+   * _orgViewOnScreen, for any kind. libs/location-url rests the address bar on
+   * "#/desk/wm/home" while one is.
+   *
+   * @returns {Boolean}
+   */
+  _mainScreenOnTop() {
+    const slot = this.getPart && this.getPart("settings-main-slot");
+    const child = slot && slot.children && slot.children.last && slot.children.last();
+    if (!child || (child.isDestroyed && child.isDestroyed()) || !child.el) return false;
+    return !(child.el.dataset && child.el.dataset.anim === "out");
+  }
+
+  /**
+   * Opening or closing a full-canvas screen announces nothing on the
+   * breadcrumb channel libs/location-url listens to, so watch the slot itself:
+   * a child coming or going, or its data-anim flipping in / out.
+   *
+   * @param {LetcBox} p the settings-main-slot part
+   */
+  _installLocationUrlWatch(p) {
+    if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
+    if (typeof MutationObserver !== "function") return;
+    if (this._locationUrlObserver) this._locationUrlObserver.disconnect();
+    this._locationUrlObserver = new MutationObserver(() => locationUrl.schedule());
+    this._locationUrlObserver.observe(p.el, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-anim"],
+    });
   }
 
   /**
@@ -2278,6 +2315,11 @@ class desk_module extends LetcBox {
     } catch (e) {
       /* sessionStorage unavailable — fall through to the hash check */
     }
+    // The address bar mirrors the visitor's location (libs/location-url): an
+    // entry the desk wrote itself is a resting hash like "home", not a link.
+    // When a reload had nothing to restore, file-deep-link armed it instead and
+    // the relay check above has already answered.
+    if (locationUrl.isMirrorEntry()) return false;
     const path = Visitor.parseModule() || [];
     if (path[1] === "wm") {
       // Compare against the literal resting segment — `_a.home` is not
@@ -8447,6 +8489,7 @@ class desk_module extends LetcBox {
       // Pass the child: see _installOrgViewMirror for why not ensurePart.
       case "settings-main-slot":
         this._installOrgViewMirror(child);
+        this._installLocationUrlWatch(child);
         break;
 
       case "desk-wrapper":
