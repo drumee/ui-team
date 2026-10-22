@@ -2454,8 +2454,8 @@ $theme-colors: (
   // drawing them.
   &__skel-row {
     // Full width in the two column lists (comments, history). The attachment
-    // strip is a WRAPPING row, so its rows take a chip's width instead — see
-    // the override below.
+    // strip is a WRAPPING row, so its rows also pin flex-basis — see the
+    // override below.
     width: 100%;
     align-items: flex-start;
     gap: 8px;
@@ -2496,15 +2496,26 @@ $theme-colors: (
     }
   }
 
-  // An attachment row is a single chip, so it carries no avatar, takes a
-  // chip's width in the wrapping strip, and its bar stands in for the whole
-  // card rather than for a line of prose.
+  // An attachment row is a single chip, so it carries no avatar and its bar
+  // stands in for the whole card rather than for a line of prose. It spans the
+  // full width of the section (one bar per line of the wrapping strip) rather
+  // than a chip's width, so the placeholder reads as the section loading, not
+  // as a couple of oddly blank files.
   &__skel-row[data-shape="attachments"] {
-    width: 180px;
+    width: 100%;
+    flex: 0 0 100%;
     padding: 0;
   }
 
+  // The bars sit side by side as chips, sharing the row equally.
+  &__skel-row[data-shape="attachments"] &__skel-lines {
+    flex-direction: row;
+    gap: 8px;
+  }
+
   &__skel-row[data-shape="attachments"] &__skel-bar {
+    flex: 1 1 0;
+    min-width: 0;
     height: 32px;
     border-radius: 8px;
   }
@@ -2903,6 +2914,9 @@ $theme-colors: (
   }
 
   &__attachment-rows {
+    // Spans the section, so full-width content (the loading bars) has a full
+    // width to fill rather than the shrink-wrapped width of its chips.
+    width: 100%;
     gap: 8px;
     // Cards wrap into a strip; overflow scrolls instead of clipping.
     flex-wrap: wrap;

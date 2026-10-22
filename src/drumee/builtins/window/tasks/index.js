@@ -4838,7 +4838,13 @@ class __tasks_panel extends LetcBox {
     // Three fetches follow, and the card is about to be drawn without any of
     // them. Flag all three BEFORE the render, or it paints the empty states
     // for one frame before the skeleton could replace them.
-    this._loading = { attachments: 1, comments: 1, history: 1 };
+    // Attachments are the exception when the list row already says there are
+    // none (task_list ships linked_files): skeleton rows for a section that
+    // will settle empty just flash and collapse. The fetch still runs, so a
+    // file linked since the list loaded is fed in when it lands.
+    const knownNoFiles =
+      task && Array.isArray(task.linked_files) && !task.linked_files.length;
+    this._loading = { attachments: knownNoFiles ? 0 : 1, comments: 1, history: 1 };
     this._renderOverlays();
     this._refreshAttachments(id).then(() => {
       if (this._detailId !== id) return;

@@ -4105,7 +4105,9 @@ function skelRows(pfx, shape, n) {
   const LINES = {
     comments: ["38%", "82%"],
     history: ["64%"],
-    attachments: ["100%"],
+    // One row of chips side by side rather than a line of prose: no inline
+    // width, the skin shares the row out equally between them.
+    attachments: [null, null, null, null],
   };
   const withDot = shape !== "attachments";
   return Array.from({ length: n }, (_, i) =>
@@ -4125,7 +4127,7 @@ function skelRows(pfx, shape, n) {
               // Stagger the rows a little so they pulse as a group rather than
               // blinking in lockstep.
               styleOpt: {
-                width: w,
+                ...(w ? { width: w } : {}),
                 "animation-delay": `${(i * 2 + j) * 0.08}s`,
               },
             }),
@@ -4143,7 +4145,7 @@ const isLoading = (ui, key) => !!(ui.isLoading && ui.isLoading(key));
 
 function buildAttachmentRowsContent(ui, attachments, taskId) {
   const pfx = ui.fig.family;
-  if (isLoading(ui, "attachments")) return skelRows(pfx, "attachments", 2);
+  if (isLoading(ui, "attachments")) return skelRows(pfx, "attachments", 1);
   if (!attachments || !attachments.length) {
     return [
       Skeletons.Note({
