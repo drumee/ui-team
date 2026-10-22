@@ -24,11 +24,9 @@ const {
   passesFilter,
   viewRange,
   rowStart,
-  fromEpoch,
   day,
   ymd,
   dateOnly,
-  DAY_START_HOUR,
 } = require("./skeleton/helpers");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { modalKids } = require("./skeleton");
@@ -461,7 +459,7 @@ class __calendar_main extends LetcBox {
     // height to set scrollTop against until the frame settles.
     _.defer(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
-      this._placeHoursScroll(keep);
+      this._restoreGridScroll(keep);
     });
   }
 
@@ -471,45 +469,14 @@ class __calendar_main extends LetcBox {
   }
 
   /**
-   * The hour canvas draws all 24 hours (skeleton/hours.js — the frame the
-   * workspace Meet tab's schedule uses), so an unscrolled week/day grid opens
-   * on empty night hours. Two different jobs, and conflating them is how a
-   * grid either fights the user or strands them at midnight:
-   *
-   *   range CHANGED (view switch, next/prev, a day picked) → land on the
-   *     earliest timed item in view with one row of context above it, or on the
-   *     working hours when nothing is scheduled. Same rule, and the same
-   *     default hour, as window/folder/index.js _scrollScheduleIntoView.
-   *   range the SAME, page merely re-fed (a live push, a filter repaint, a
-   *     modal closing) → put the user back where they were. _render rebuilds
-   *     the whole page, so without this every push threw the grid to midnight.
-   *
-   * Month doesn't scroll by hour and is left alone in the first case.
+   * A page merely re-fed on the same range (a live push, a filter repaint, a
+   * modal closing) puts the user back where they were: _render rebuilds the
+   * whole page, so without this every push threw the grid back to the top. A
+   * new range (view switch, next/prev, a day picked) opens at the top.
    */
-  _placeHoursScroll(keep) {
+  _restoreGridScroll(keep) {
     const grid = this._gridEl();
-    if (!grid) return;
-    if (keep != null) {
-      grid.scrollTop = keep;
-      return;
-    }
-    if (grid.getAttribute("data-view") === "month") return;
-
-    const hours = this.getVisibleItems()
-      .filter((row) => row.kind === "meeting" && row.stime)
-      .map((row) => fromEpoch(row.stime))
-      .filter(Boolean)
-      .map((d) => d.hour());
-    const hour = hours.length ? Math.min(...hours) : DAY_START_HOUR;
-
-    // Measured, not assumed: the row height is a token (--cal-hour-height) and
-    // the responsive block is free to change it.
-    const rule = grid.querySelector(`.${this.fig.family}__hour-rule`);
-    const rowH = (rule && rule.getBoundingClientRect().height) || 0;
-    if (!rowH) return;
-    // One row of context above the first item, clamped to the top. The header
-    // is sticky but in flow, so its height cancels out of the arithmetic.
-    grid.scrollTop = Math.max(0, (hour - 1) * rowH);
+    if (grid && keep != null) grid.scrollTop = keep;
   }
 
   /**
@@ -2450,18 +2417,6 @@ class __calendar_main extends LetcBox {
         return this._openMeetingForm();
 
       case "cal-day-add":
-        this._pendingDay = cmd.mget("calDay");
-        return this._openTaskForm(null);
-
-      // A square on the week/day canvas → the create-TASK popup, due that
-      // day. It used to open the meeting form at that hour, which is what the
-      // Meet tab's cells do — but this calendar is where a user plans their
-      // own day, and a task is the thing they add most. The hour clicked is
-      // deliberately not used: a task's due_date is a calendar DATE with no
-      // time (see skeleton/hours.js), so the task lands in that day's all-day
-      // strip, which is where every task on this canvas lives. A meeting is
-      // still one click away in "+ New".
-      case "cal-slot-add":
         this._pendingDay = cmd.mget("calDay");
         return this._openTaskForm(null);
 

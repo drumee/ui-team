@@ -1,8 +1,7 @@
 @use "mixins/drumee";
 
 // A scroll region small enough that the desk's standard scrollbar would be
-// furniture: the month day cell (~164px wide, ~91px on mobile) and the week/day
-// all-day strip.
+// furniture: the month day cell (~164px wide, ~91px on mobile).
 //
 // Standard properties only, no ::-webkit-scrollbar. Two reasons. Chrome (152
 // here) gives `scrollbar-width` precedence over the legacy pseudo-element, so a
@@ -18,8 +17,8 @@
 // The bar is the app's one bar (router/skin/index.scss). A month cell hides it
 // at rest — 42 of them would stripe the grid, and the cell has the pinned "+N"
 // as its standing overflow signal — and shows it on hover. A region with no
-// such label (the all-day strip) passes $inked: true and keeps the bar, because
-// then it is the only thing saying "there is more below".
+// such label passes $inked: true and keeps the bar, because then it is the
+// only thing saying "there is more below".
 @mixin quiet-scroll($inked: false) {
   overflow-y: auto;
   overflow-x: hidden;
@@ -72,13 +71,13 @@
   // here rather than 17px. Six rows do not fit a 900px screen at either height;
   // the frame scrolls its month too.
   --cal-cell-min: 170px;
-  // Hour-canvas geometry, matched to the workspace Meet tab's schedule grid
-  // (window/folder/skin/meeting-schedule.scss: 72px rows, an 85px hour gutter)
-  // so the day and week views read as the same calendar in both places. The
-  // row height is also what skeleton/hours.js's 24 rows are measured against
-  // when the widget scrolls the grid onto the first item.
-  --cal-hour-height: 72px;
-  --cal-hour-gutter: 85px;
+  // The month grid's rules: the cells' right/bottom and the frame
+  // around them (__month), and the week/day board's the same way.
+  // Bolder than the frames' 5% hairline; --border-default flips with the theme.
+  --cal-month-line: 1px solid var(--border-default);
+  // The Day view's column: its meetings row and its task columns share it, so
+  // both lay out the same number of equal columns at any width.
+  --cal-board-col: 280px;
 
   &__ui {
     width: 100%;
@@ -150,7 +149,7 @@
   }
 
   &__toolbar-right {
-    gap: 8px;
+    gap: 6px;
   }
 
   // ‹ Today › — one grey capsule, the arrows inline with the label. Every
@@ -348,18 +347,18 @@
     position: relative;
   }
 
-  // The three buttons share one box: 41px tall, 24px each side, r=12. The
-  // height is set rather than left to 12px of padding because the view
-  // caret and New's plus are 20px — the design lets them overhang the 17px
-  // line, and padding alone would make those two buttons 44px.
+  // The three buttons share one box: 32px tall, 14px each side, r=10 — a
+  // compact size, so the four controls sit under the ‹ Today › pill's 37px
+  // instead of towering over it. The height is set rather than left to
+  // padding because the view caret and New's plus overhang the label's line.
   &__view-button,
   &__filter-button,
   &__new-button {
     align-items: center;
-    gap: 8px;
-    height: 41px;
-    padding: 0 24px;
-    border-radius: 12px;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 10px;
     box-sizing: border-box;
     cursor: pointer;
     user-select: none;
@@ -379,15 +378,15 @@
 
   &__view-ico,
   &__view-caret {
-    width: 17px;
-    height: 17px;
+    width: 15px;
+    height: 15px;
     flex: 0 0 auto;
     color: currentColor;
   }
 
   &__view-caret {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     transition: transform 0.15s ease-out;
   }
 
@@ -397,13 +396,13 @@
 
   &__view-label,
   &__filter-label {
-    @include drumee.typo($size: 14px, $line: 1.2, $color: inherit);
+    @include drumee.typo($size: 13px, $line: 1.2, $color: inherit);
     font-weight: 400;
   }
 
   // ≡ — the funnel's three lines sit 4px from the label. The sprite is cropped
-  // to the lines themselves (15x8), so it is centred in the design's 17px box
-  // rather than stretched to fill it.
+  // to the lines themselves (13x7), so it is centred in a 15px box rather
+  // than stretched to fill it.
   &__filter-button {
     gap: 4px;
   }
@@ -411,34 +410,40 @@
   // Not a Box, so `display` is ours to set.
   &__filter-ico {
     display: flex;
-    flex: 0 0 17px;
-    width: 17px;
-    height: 17px;
+    flex: 0 0 15px;
+    width: 15px;
+    height: 15px;
     align-items: center;
     justify-content: center;
 
     svg {
-      width: 15px;
-      height: 8px;
+      width: 13px;
+      height: 7px;
       fill: currentColor;
     }
   }
 
   // Personal | Team — the active half on brand inside a grey trough, both
   // labels regular weight.
+  // 32px overall, like the buttons beside it: 3px trough + 26px items.
   &__audience {
     align-items: center;
-    padding: 4px;
+    height: 32px;
+    padding: 3px;
     background: var(--normal-bg-90);
-    border-radius: 12px;
+    border-radius: 10px;
+    box-sizing: border-box;
   }
 
   &__audience-item {
-    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg));
+    @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg));
     font-weight: 400;
+    align-items: center;
     justify-content: center;
-    padding: 8px 24px;
-    border-radius: 8px;
+    height: 26px;
+    padding: 0 14px;
+    border-radius: 7px;
+    box-sizing: border-box;
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
@@ -466,19 +471,19 @@
   // currentColor reaches it through the <use>.
   &__new-plus {
     display: flex;
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       fill: currentColor;
     }
   }
 
   &__new-label {
-    @include drumee.typo($size: 14px, $line: 1.2, $color: inherit);
+    @include drumee.typo($size: 13px, $line: 1.2, $color: inherit);
     font-weight: 600;
   }
 
@@ -653,11 +658,8 @@
     flex: 1 1 auto;
     min-height: 0;
     min-width: 0;
-    // Cells draw right+bottom only, so the container supplies the top and left
-    // edges. Same 5%-black hairline as the cells — otherwise the frame reads
-    // heavier than the lines inside it.
-    border-top: 1px solid var(--overlay-bg-05);
-    border-left: 1px solid var(--overlay-bg-05);
+    // No frame of its own: every view draws its ruled frame under the weekday
+    // header (__month, __board).
     overflow: auto;
 
     // The screen's primary scroll — always inked, unlike the cell's.
@@ -677,13 +679,8 @@
   }
 
   // ── month grid ────────────────────────────────────────────────────────────
-  // The month header sits ABOVE the ruled grid (Figma 1693:181977), so in
-  // this view the grid's frame starts under it: __weekdays draws the top rule
-  // and __month the left one. Week and day keep the frame on __grid.
-  &__grid[data-view="month"] {
-    border-top: 0;
-    border-left: 0;
-  }
+  // The month header sits ABOVE the ruled grid (Figma 1693:181977), so the
+  // frame starts under it: __month draws the whole frame.
 
   &__weekdays {
     flex: 0 0 auto;
@@ -691,8 +688,6 @@
     top: 0;
     z-index: 5;
     background: var(--normal-bg);
-    // Doubles as the grid's top rule, so it matches the cell hairline.
-    border-bottom: 1px solid var(--overlay-bg-05);
   }
 
   // Figma 1697:48528: short day names, centred, 14/1.2 in grey ink, 12px
@@ -716,14 +711,32 @@
     }
   }
 
+  // The ruled frame. It must never shrink below its rows: with
+  // `flex: 1 1 auto; min-height: 0` the scroller squeezed it to the visible
+  // height while the six rows (170px floors, growing to 2×) overflowed it, so
+  // its left rule stopped part-way down as soon as the grid scrolled. Now it
+  // is as tall as the rows and at least the grid's height.
+  //
+  // The cells draw right+bottom rules, so the last column and the last row
+  // drop theirs and the frame supplies them — otherwise those edges would
+  // read 2px.
   &__month {
-    flex: 1 1 auto;
-    min-height: 0;
-    border-left: 1px solid var(--overlay-bg-05);
+    flex: 1 0 auto;
+    border: var(--cal-month-line);
   }
 
+  &__week-row > &__day:last-child {
+    border-right: 0;
+  }
+
+  &__week-row:last-child > &__day {
+    border-bottom: 0;
+  }
+
+  // A row shares the grid's height like before, but also grows with its
+  // busiest cell, up to that cell's 2× cap (&__day max-height).
   &__week-row {
-    flex: 1 1 0;
+    flex: 1 0 auto;
     min-height: var(--cal-cell-min);
     align-items: stretch;
   }
@@ -738,10 +751,12 @@
   &__day {
     flex: 1 1 0;
     min-width: 0;
+    // A busy day grows to twice the row floor, then its body scrolls.
+    max-height: calc(2 * var(--cal-cell-min));
     padding: 12px;
     gap: 10px;
-    border-right: 1px solid var(--overlay-bg-05);
-    border-bottom: 1px solid var(--overlay-bg-05);
+    border-right: var(--cal-month-line);
+    border-bottom: var(--cal-month-line);
     overflow: hidden;
     // The whole square adds a task (skeleton/month.js dayCell). The pointer
     // and the "+" revealed on hover are the cue. There is deliberately no hover
@@ -816,17 +831,14 @@
     flex: 1 1 auto;
     min-height: 0;
     gap: var(--cal-gap);
-    @include quiet-scroll;
+    // Scrolls by wheel / touch with no bar at all, even when hovered or
+    // overflowing — the cell's 2× growth shows most of a busy day already.
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
 
-    // A cell that actually runs past the fold keeps its thumb inked at rest.
-    // The transparent default is right for the 40-odd cells that fit their
-    // day — 42 resting bars would stripe the grid — but it is wrong for the
-    // one or two that do not, which is exactly where the user needs to be
-    // told the region moves. The "+N" says there is more; the bar says how
-    // to reach it without leaving the month.
-    &[data-overflow="1"] {
-      scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
-        var(--scrollbar-track, transparent);
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 
@@ -838,6 +850,8 @@
   // that gap too; without it a chip stays visible in the sliver between the
   // last gap and the footer. With the 10px gap that makes the footer 26px
   // tall, which is the height skeleton/month.js reserves for it.
+  //
+  // Not rendered for now (SHOW_DAY_MORE in skeleton/month.js).
   &__day-more {
     @include drumee.typo($size: 11px, $line: 16px, $color: var(--primary-40));
     font-weight: 600;
@@ -1047,24 +1061,6 @@
     white-space: normal;
   }
 
-  &__chip-status {
-    align-items: center;
-    gap: 4px;
-    margin-top: auto;
-  }
-
-  &__chip-status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    flex: 0 0 auto;
-  }
-
-  &__chip-status-label {
-    @include drumee.typo($size: 10px, $line: 14px, $color: var(--normal-fg-20));
-    font-weight: 500;
-  }
-
   // Hover delete (personal + writable items only — skeleton/chip.js): the
   // frame's 16px Phosphor X (1697:48544), in ink, red under the pointer.
   //
@@ -1120,213 +1116,24 @@
     transform: none;
   }
 
-  // The hour block is a tall card: the button belongs in its top-right
-  // corner, beside the title line, not halfway down the block.
+  // The schedule card is a tall card: the button belongs in its top-right
+  // corner, beside the time line, not halfway down the card.
   &__chip[data-compact="0"] > &__chip-remove {
     top: 4px;
     transform: none;
   }
 
-  // ── hour canvas (week + day) ───────────────────────────────────────────────
-  &__hours-head {
-    flex: 0 0 auto;
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    background: var(--normal-bg);
-    border-bottom: 1px solid var(--border-default);
-    align-items: stretch;
-  }
-
-  &__hours-head-spacer {
-    flex: 0 0 var(--cal-hour-gutter);
-    border-right: 1px solid var(--border-default);
-  }
-
-  &__hours-head-cell {
-    flex: 1 1 0;
-    min-width: 0;
-    padding: 12px;
-    gap: 2px;
-    border-right: 1px solid var(--border-default);
-    // The whole cell adds a task that day (skeleton/hours.js headCell).
-    cursor: pointer;
-
-    // Today is the DATE in brand ink, not a wash over the column — the Meet
-    // tab's rule. The wash was invisible as a marker on the day view (there is
-    // only ever one column, so the whole grid went lavender) and it tinted
-    // every chip sitting on it.
-    &[data-today="1"] .calendar-main__hours-head-num {
-      color: var(--primary-40);
-    }
-  }
-
-  // Stacked num-over-name, the Meet tab's schedule header. It was a baseline
-  // ROW here, which is the one shape that made the same day read differently
-  // in the two calendars. Its cell, not the date alone, is the day's "add"
-  // target.
-  &__hours-head-date {
-    align-items: flex-start;
-    gap: 2px;
-  }
-
-  // 18/24 in body ink, brand when today — the Meet tab's __meeting-sched-day-
-  // num, at the weight it actually renders (regular; see the note on __nav).
-  &__hours-head-num {
-    @include drumee.typo($size: 18px, $line: 24px, $color: var(--normal-fg));
-    font-weight: 400;
-    font-variant-numeric: tabular-nums;
-  }
-
-  &__hours-head-name {
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
-  }
-
-  // All-day strip. Tasks live here rather than at an invented hour: due_date
-  // carries no time (see skeleton/hours.js).
-  //
-  // Bounded, because this strip sits inside the sticky header and had neither a
-  // cap nor an overflow: twelve all-day tasks grew the header to 593px and
-  // squeezed the hour canvas to 106px, and thirty made the header taller than
-  // the scroll viewport — pinned at top:0, so its own lower half became
-  // unreachable.
-  //
-  // Its own spacing, not the month cell's: 8px between cards, as the week
-  // frame stacks them (1693:187899), and room for two cards of either kind —
-  // two 86.8px workspace cards, or three personal ones — before it scrolls. Its
-  // 144px cap held about six of the old one-line chips but not two workspace
-  // cards; at this height the sticky header can take 40px more of the screen.
-  &__allday {
-    gap: 8px;
-    flex: 0 1 auto;
-    min-height: 0;
-    max-height: 184px;
-    // Inked at rest: this strip has no "+N" label, so with a hidden bar a
-    // twelve-task day would show two or three cards and say nothing about the
-    // rest.
-    @include quiet-scroll($inked: true);
-  }
-
-  // `1 0 auto`, never `1 1 auto` + `min-height: 0`: the hour rules are
-  // fixed-height and shrink-proof, so a squeezed body did not compress them —
-  // it let them spill past the column's own borders. Now the canvas keeps its
-  // intrinsic height and __grid scrolls, which is where the scrolling belongs.
-  &__hours-body {
-    flex: 1 0 auto;
-    align-items: stretch;
-  }
-
-  &__hours-gutter {
-    flex: 0 0 var(--cal-hour-gutter);
-    border-right: 1px solid var(--border-default);
-  }
-
-  // Centred and pinned to the top of its row, on its own hour line — the Meet
-  // tab's hour column. It used to sit bottom-right in 11px grey with no rule
-  // beside it, which read as a caption under the hour above rather than a
-  // label for the hour beside it.
-  &__hour-label {
-    flex: 0 0 var(--cal-hour-height);
-    height: var(--cal-hour-height);
-    padding-top: 12px;
-    align-items: center;
-    justify-content: flex-start;
-    border-bottom: 1px solid var(--border-muted);
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
-    font-variant-numeric: tabular-nums;
-  }
-
-  &__hours-col {
-    flex: 1 1 0;
-    min-width: 0;
-    position: relative;
-    border-right: 1px solid var(--border-default);
-  }
-
-  &__hour-rules {
-    flex: 1 1 auto;
-  }
-
-  // Also the click target: a square opens the create-task popup due that day
-  // (index.js "cal-slot-add"). The tint on hover is what says so — the row
-  // carries no glyph, exactly like the Meet tab's cells.
-  //
-  // A chip sitting over this row is NOT a descendant of it (the blocks are
-  // their own absolutely-positioned layer), so hovering a meeting does not
-  // light up the band underneath and offer to book over it.
-  &__hour-rule {
-    flex: 0 0 var(--cal-hour-height);
-    height: var(--cal-hour-height);
-    position: relative;
-    border-bottom: 1px solid var(--border-muted);
-    cursor: pointer;
-
-    &:hover {
-      background: var(--overlay-bg-05);
+  // ── board chips (week / day) ─────────────────────────────────────────────
+  // The schedule card (1693:188959): the time in brand ink, the bold title, the
+  // agenda line — 12px each, one line each, on the meeting wash with its brand
+  // bar (see &__chip[data-kind="meeting"]).
+  &__chip[data-kind="meeting"][data-board="1"] {
+    .calendar-main__chip-time {
+      @include drumee.typo($size: 12px, $line: 1.2, $color: var(--primary-40));
+      font-weight: 600;
     }
 
-    // Dashed half-hour divider — the Meet tab draws the same line the same way
-    // (a real dashed border, not the faint gradient this row used to paint).
-    // An ::after, and explicitly pointer-events:none, so the line cannot take
-    // the click that belongs to the hour band it sits inside.
-    &::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 50%;
-      border-top: 1px dashed var(--border-strong);
-      pointer-events: none;
-    }
-  }
-
-  // Timed blocks sit over the rules. Geometry (top/height/left/width) is inline
-  // because it is data — see skeleton/hours.js.
-  &__hour-blocks {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-  }
-
-  // The timed block — the frame's weekly schedule card (1693:188958): the
-  // bold title on its own line and the agenda line under it, one line each, on
-  // the meeting wash with its brand bar (see &__chip[data-kind="meeting"]).
-  // Hover opens it to its full text. `height` / `min-height` / `left` /
-  // `width` are inline because they are data (skeleton/hours.js).
-  &__hour-blocks > .calendar-main__chip {
-    position: absolute;
-    pointer-events: auto;
-    align-items: stretch;
-    box-sizing: border-box;
-    // Hairline gutter so adjacent concurrent blocks read as separate.
-    margin-right: 2px;
-    overflow: hidden;
-
-    &:hover {
-      // Above its neighbours while expanded. The skeleton sets `height`
-      // inline, so releasing it needs !important; `min-height` (also inline)
-      // is what stops a long block shrinking to its text.
-      z-index: 6;
-      height: auto !important;
-      overflow: visible;
-      box-shadow: 0 6px 16px rgba(11, 10, 33, 0.18);
-    }
-
-    // The title is what the block is FOR, so it never shrinks and the agenda
-    // below it clips instead.
-    .calendar-main__chip-title {
-      flex: 0 0 auto;
-    }
-
-    // Clear of the remove button, while it shows.
-    &:has(> .calendar-main__chip-remove):hover .calendar-main__chip-title {
-      padding-right: 18px;
-    }
-
-    // Body/Mini Body in ink, like the title — not the grey two-line caption
-    // the base rule draws.
     .calendar-main__chip-desc {
-      flex: 0 0 auto;
       @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg));
       display: block;
       -webkit-line-clamp: unset;
@@ -1338,11 +1145,155 @@
       }
     }
 
-    &:hover .calendar-main__chip-title,
-    &:hover .calendar-main__chip-desc {
+    // Clear of the remove button, which sits level with the time.
+    &:has(> .calendar-main__chip-remove):hover .calendar-main__chip-time {
+      padding-right: 18px;
+    }
+  }
+
+  // The Day view's task card (2069:181433): the name wraps rather than
+  // ellipsizes, and the description sits under it in grey, 4px below.
+  &__chip[data-kind="task"][data-detail="1"] {
+    gap: 8px;
+
+    .calendar-main__chip-title,
+    .calendar-main__chip-title .note-content {
       white-space: normal;
       overflow-wrap: anywhere;
     }
+
+    .calendar-main__chip-desc {
+      @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-20));
+      -webkit-line-clamp: 3;
+    }
+  }
+
+  // ── week / day board (skeleton/board.js) ───────────────────────────────────
+  // Figma 1693:187899 (week) and 2066:180690 (day): the month cell's language —
+  // 12px padding, 10px between the date line and the items, the month's rules —
+  // on full-height columns instead of an hour ruler.
+  //
+  // nowrap !important: ui-core's `.drumee-box[data-flow="x"]` (0,2,0) wraps a
+  // row, and a wrapped row sizes its line to its tallest column, which would
+  // let a busy week column push the board past the canvas.
+  &__board {
+    border: var(--cal-month-line);
+    flex-wrap: nowrap !important;
+    align-items: stretch;
+  }
+
+  // Week: the board is the canvas and each column scrolls its own items.
+  &__grid[data-view="week"] &__board {
+    flex: 1 1 0;
+    min-height: calc(2 * var(--cal-cell-min));
+  }
+
+  // Day: the board grows with the day and the canvas scrolls.
+  &__grid[data-view="day"] &__board {
+    flex: 1 0 auto;
+  }
+
+  &__board-day {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+    padding: 12px;
+    gap: 10px;
+    border-right: var(--cal-month-line);
+    background: var(--normal-bg);
+    // The whole column adds a task that day, as the month square does.
+    cursor: pointer;
+    transition: background 0.12s ease-out;
+
+    &:last-child {
+      border-right: 0;
+    }
+
+    &[data-today="1"] .calendar-main__board-num {
+      color: var(--primary-40);
+    }
+
+    &:hover .calendar-main__day-add {
+      opacity: 1;
+    }
+  }
+
+  // The hovered week column washes grey (2066:62175). Not the Day view's one
+  // cell: that is the whole canvas.
+  &__grid[data-view="week"] &__board-day:hover {
+    background: var(--overlay-bg-05);
+  }
+
+  // Week: the hover "+" left, the date right, on a 20px line. Day: the date
+  // leads and the "+" follows it.
+  &__board-head {
+    flex: 0 0 auto;
+    min-height: 20px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  &__grid[data-view="day"] &__board-head {
+    justify-content: flex-start;
+  }
+
+  &__board-num {
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  // Buttons/Large Button: 18/1.2 semibold, in black ink.
+  &__grid[data-view="day"] &__board-num {
+    @include drumee.typo($size: 18px, $line: 1.2, $color: var(--normal-fg));
+    font-weight: 600;
+  }
+
+  &__board-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 10px;
+  }
+
+  // A week column scrolls by wheel / touch with no bar, as the month cell does.
+  &__grid[data-view="week"] &__board-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  // Day: the meetings side by side (2069:181425), wrapping onto another row on
+  // a busy day, then the task cards packed into columns (2069:181431). Both use
+  // --cal-board-col with the same gap, so a grid track and a column come out
+  // the same width and the two groups line up. (0,3,0) selectors: the
+  // `.drumee-widget[data-flow]` flex rule is (0,2,0), and multi-column layout
+  // needs a block container.
+  &__board-body > &__board-meetings[data-flow] {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--cal-board-col), 1fr));
+    gap: 10px;
+  }
+
+  &__board-body > &__board-tasks[data-flow] {
+    display: block;
+    column-width: var(--cal-board-col);
+    column-gap: 10px;
+
+    > .calendar-main__chip {
+      break-inside: avoid;
+      margin-bottom: 10px;
+    }
+  }
+
+  // The Day header names the day in full, over the start of its one cell.
+  &__grid[data-view="day"] &__weekday {
+    justify-content: flex-start;
+    padding-left: 0;
   }
 
   // ── modal ─────────────────────────────────────────────────────────────────
@@ -1371,9 +1322,42 @@
       animation: calendar-main-fade-in 0.15s ease;
     }
 
+    // The personal task, meeting and invite-link cards (Figma 1693:196080):
+    // no scrim and no blur. The sidebar and top bar stay as they are and only
+    // this page fades to 20% under the card (rule below). The layer still
+    // covers the viewport, so nothing behind the card takes a click while it
+    // is open. The workspace task's quick-open keeps the glass: the board's
+    // card is drawn for it.
+    &[data-state="open"]:has(
+        .calendar-main__modal[data-form="task"],
+        .calendar-main__modal[data-form="meeting"],
+        .calendar-main__modal[data-form="invite-link"]
+      ) {
+      background: transparent;
+      backdrop-filter: none;
+    }
+
     &:empty {
       display: none;
     }
+  }
+
+  // The page under one of those cards, at the frame's 20%: header, toolbar
+  // and grid — never the toast slot, whose confirmation must stay readable.
+  &__page > :not(.calendar-main__modal-wrapper):not(.calendar-main__toast-slot) {
+    transition: opacity 0.15s ease;
+  }
+
+  &__page:has(
+      > .calendar-main__modal-wrapper[data-state="open"]
+        :is(
+          .calendar-main__modal[data-form="task"],
+          .calendar-main__modal[data-form="meeting"],
+          .calendar-main__modal[data-form="invite-link"]
+        )
+    )
+    > :not(.calendar-main__modal-wrapper):not(.calendar-main__toast-slot) {
+    opacity: 0.2;
   }
 
   &__modal {
@@ -1398,11 +1382,14 @@
     // Meeting and invite link: the Figma cards, in the "personal meeting
     // modal" block at the end.
 
-    // Task: the Figma card, 1080×720 (1693:198659 / 1693:198307). The rest
-    // of its rules are in the "personal task modal" block at the end.
+    // Task: the Figma card (1693:198659 / 1693:198307, drawn at 1080×720),
+    // downsized to 800px wide and as tall as its fields, up to 600px — a fixed
+    // height left a band of empty card under them with the actions pinned to
+    // its floor. Past the cap the columns scroll. The rest of its rules are in
+    // the "personal task modal" block at the end.
     &[data-form="task"] {
-      width: min(1080px, calc(100vw - 32px));
-      height: min(720px, 88vh);
+      width: min(800px, calc(100vw - 32px));
+      max-height: min(600px, 88vh);
     }
 
     // Workspace task quick-open: only a frame for the board's own panel, whose
@@ -1434,10 +1421,11 @@
     flex: 1 1 0;
   }
 
-  // The "Card detail" right column (1693:198307): 358px, which is what gives
-  // each Start / End field the frame's 153px. The left one takes the rest.
+  // The "Card detail" right column (1693:198307, 358px in the frame): 280px
+  // in the downsized card, ~124px per Start / End field. The left one takes
+  // the rest.
   &__modal[data-form="task"] &__modal-col--side {
-    flex: 0 1 358px;
+    flex: 0 1 280px;
   }
 
   // The invite block's sub-blocks (today the password field) are always
@@ -1620,9 +1608,9 @@
   // transparent pass-throughs.
   &__password {
     width: 100%;
-    height: 40.8px;
+    height: 34px;
     box-sizing: border-box;
-    padding: 0 12px;
+    padding: 0 10px;
     gap: 8px;
     align-items: center;
     overflow: hidden;
@@ -1786,19 +1774,22 @@
   // 12 it filled it exactly, and zoom or DPR rounding then tipped the card
   // into a sideways scroll. space-between still spreads it to the frame's
   // positions.
+  // Start → End on ONE row: two 132px pickers, the arrow and 8px gaps ask
+  // 296px of the 360px column, so the pair no longer wraps End onto a second
+  // row at the downsized card's width.
   &__time-row {
     align-items: flex-start;
     justify-content: space-between;
-    gap: 10px;
+    gap: 8px;
   }
 
   &__time-arrow {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
-    // The frame's arrow sits 35px down: the 19px label, its 12px gap, then
-    // level with the middle of the 33px boxes.
-    margin-top: 35px;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    // Level with the middle of the 28px boxes: the 15.6px label, its 6px gap,
+    // then 14px less half the arrow.
+    margin-top: 28px;
     color: var(--normal-fg-20);
 
     svg {
@@ -1811,13 +1802,13 @@
 
   &__time {
     align-items: flex-start;
-    gap: 8px;
+    gap: 6px;
   }
 
   &__time-part {
     align-items: center;
-    gap: 4px;
-    width: 43px;
+    gap: 3px;
+    width: 34px;
   }
 
   &__time-input {
@@ -1837,13 +1828,13 @@
     input {
       width: 100%;
       box-sizing: border-box;
-      padding: 8px 4px;
+      padding: 6px 2px;
       border: 0;
       background: transparent;
       outline: none;
       text-align: center;
       font-variant-numeric: tabular-nums;
-      @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+      @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg-10));
       font-family: inherit;
     }
   }
@@ -1851,25 +1842,24 @@
   &__time-caption {
     text-align: center;
     white-space: nowrap;
-    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-50));
+    @include drumee.typo($size: 11px, $line: 1.3, $color: var(--normal-fg-50));
   }
 
   &__time-colon {
     width: 5px;
     text-align: center;
-    @include drumee.typo($size: 16px, $line: 38px, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 14px, $line: 28px, $color: var(--normal-fg-10));
   }
 
-  // 12px from the minute box in the frame: the row's 8px gap plus this 4px.
+  // AM over PM, as tall together as a box and its caption.
   &__meridiem {
-    flex: 0 0 56px;
-    width: 56px;
-    margin-left: 4px;
-    gap: 4px;
+    flex: 0 0 40px;
+    width: 40px;
+    gap: 3px;
   }
 
   &__meridiem-item {
-    height: 27.5px;
+    height: 22px;
     box-sizing: border-box;
     align-items: center;
     justify-content: center;
@@ -1878,7 +1868,7 @@
     background: var(--overlay-bg-05);
     cursor: pointer;
     text-align: center;
-    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 12px, $line: 1.2, $color: var(--normal-fg-20));
 
     &[data-active="1"] {
       border-color: var(--radio-on-border);
@@ -1893,8 +1883,8 @@
   // box is ticked, the password field 12px under the row (the card's gap; the
   // field is display:none otherwise, so the gap goes with it).
   &__invite-group {
-    gap: 12px;
-    padding: 12px;
+    gap: 8px;
+    padding: 8px 10px;
     box-sizing: border-box;
     border: 1px solid var(--border-muted);
     border-radius: 12px;
@@ -1902,14 +1892,14 @@
 
   &__toggle-row {
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     cursor: pointer;
   }
 
   &__toggle-ico {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
     color: var(--normal-fg-20);
 
     svg {
@@ -2297,8 +2287,7 @@
       min-width: 640px;
     }
 
-    &__hours-head,
-    &__hours-body {
+    &__grid[data-view="week"] &__board {
       min-width: 640px;
     }
   }
@@ -2458,23 +2447,29 @@
 }
 
 // ── personal task modal (skeleton/task-form.js) ──────────────────────────────
-// Figma 1693:198659 (create) and 1693:198307 (edit): a 1080×720 card with 32px
-// of padding, a 24px/600 heading, 16px labels over filled fields, and the
-// actions at the foot of the right column. Scoped to [data-form="task"]; the
+// Figma 1693:198659 (create) and 1693:198307 (edit), downsized: an 800px card
+// as tall as its fields, 20px of padding, an 18px/600 heading, 13px labels
+// over filled fields, and the actions at the foot of the right column. Scoped to [data-form="task"]; the
 // meeting and invite-link cards have their own block after this one.
 // Every selector here is at least (0,3,0), over ui-core's
 // `.drumee-widget[data-flow]` (0,2,0).
 .calendar-main {
   &__modal[data-form="task"] {
-    padding: 32px;
-    gap: 32px;
-    border-radius: 24px;
+    padding: 20px;
+    gap: 16px;
+    border-radius: 16px;
+    // Figma 1693:198659 on the faded page: a soft contact shadow, a wide
+    // ambient one, and the overlay's -12px lift.
+    box-shadow:
+      0 7px 5px rgba(0, 0, 0, 0.05),
+      0 40px 40px rgba(0, 0, 0, 0.15),
+      0 25px 50px -12px rgba(0, 0, 0, 0.25);
     // The columns scroll, not the card.
     overflow: hidden;
   }
 
   &__modal[data-form="task"] &__modal-title {
-    @include drumee.typo($size: 24px, $line: 1.1, $color: var(--normal-fg-800));
+    @include drumee.typo($size: 18px, $line: 1.2, $color: var(--normal-fg-800));
     font-weight: 600;
     min-width: 0;
     overflow: hidden;
@@ -2489,12 +2484,12 @@
   // Two columns at the card's full height: the left one scrolls on its own,
   // the right one pins its actions to the bottom.
   &__modal[data-form="task"] &__modal-body--split {
-    gap: 32px;
+    gap: 20px;
     align-items: stretch;
   }
 
   &__modal[data-form="task"] &__modal-col {
-    gap: 32px;
+    gap: 14px;
     min-height: 0;
   }
 
@@ -2505,37 +2500,37 @@
   }
 
   &__modal[data-form="task"] &__field {
-    gap: 12px;
+    gap: 6px;
   }
 
   &__modal[data-form="task"] &__field-label {
-    @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 13px, $line: 1.3, $color: var(--normal-fg-10));
     font-weight: 400;
   }
 
-  // Title and Description: 12px of padding on a 16px/1.4 line — 46px with
+  // Title and Description: 7px of padding on a 13px/1.4 line — 34.2px with
   // the 1px focus border.
   &__modal[data-form="task"] &__input input {
-    padding: 11px 12px;
-    @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10));
+    padding: 7px 10px;
+    @include drumee.typo($size: 13px, $line: 1.4, $color: var(--normal-fg-10));
   }
 
   &__modal[data-form="task"] &__textarea {
-    padding: 10px 4px 10px 0;
+    padding: 7px 4px 7px 0;
   }
 
   // Two lines, then the field scrolls. The frame's sample note is one line.
   // min-height: a global textarea rule sets 100px.
   &__modal[data-form="task"] &__textarea textarea {
-    height: 45px;
+    height: 36px;
     min-height: 0;
-    padding: 0 8px 0 12px;
-    @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10));
+    padding: 0 8px 0 10px;
+    @include drumee.typo($size: 13px, $line: 1.4, $color: var(--normal-fg-10));
   }
 
   // ── status / priority pills ────────────────────────────────────────────────
   &__modal[data-form="task"] &__pills {
-    gap: 8px;
+    gap: 6px;
   }
 
   &__modal[data-form="task"] &__pill {
@@ -2547,9 +2542,9 @@
 
   // Status: 24px, dot and a 12px/500 label; the lit one on the brand tint.
   &__modal[data-form="task"] &__pills--status &__pill {
-    height: 24px;
-    gap: 8px;
-    padding: 2px 12px;
+    height: 22px;
+    gap: 6px;
+    padding: 2px 10px;
     border-radius: 16px;
 
     &[data-active="1"] {
@@ -2559,21 +2554,21 @@
   }
 
   &__modal[data-form="task"] &__pills--status &__pill-dot {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   &__modal[data-form="task"] &__pills--status &__pill-label,
   &__modal[data-form="task"] &__pills--status &__pill[data-active="1"] &__pill-label {
-    @include drumee.typo($size: 12px, $line: 20px, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 11px, $line: 18px, $color: var(--normal-fg-10));
     font-weight: 500;
   }
 
-  // Priority: 32px, label only; the lit one is filled with its own colour —
+  // Priority: 24px, label only; the lit one is filled with its own colour —
   // the dot, which carries that colour inline, grows to cover the pill.
   &__modal[data-form="task"] &__pills--priority &__pill {
-    height: 32px;
-    padding: 2px 16px;
+    height: 24px;
+    padding: 2px 12px;
     border-radius: 100px;
     overflow: hidden;
 
@@ -2598,7 +2593,7 @@
   &__modal[data-form="task"] &__pills--priority &__pill-label,
   &__modal[data-form="task"] &__pills--priority &__pill[data-active="1"] &__pill-label {
     position: relative;
-    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 12px, $line: 1.2, $color: var(--normal-fg-10));
     font-weight: 400;
   }
 
@@ -2613,7 +2608,7 @@
 
   // ── Start → End ────────────────────────────────────────────────────────────
   &__modal[data-form="task"] &__dates {
-    gap: 16px;
+    gap: 8px;
     align-items: center;
 
     > .calendar-main__field {
@@ -2623,18 +2618,18 @@
   }
 
   &__modal[data-form="task"] &__dates-arrow {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     color: var(--normal-fg-10);
   }
 
   &__modal[data-form="task"] &__date-box {
     position: relative;
     align-items: center;
-    gap: 12px;
-    height: 38px;
-    padding: 0 16px;
+    gap: 6px;
+    height: 32px;
+    padding: 0 10px;
     box-sizing: border-box;
     border: 1px solid transparent;
     border-radius: 8px;
@@ -2659,7 +2654,7 @@
       border: 0;
       background: transparent;
       cursor: pointer;
-      @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10));
+      @include drumee.typo($size: 13px, $line: 1.4, $color: var(--normal-fg-10));
     }
   }
 
@@ -2686,12 +2681,12 @@
   &__modal[data-form="task"] &__button {
     flex: 1 1 0;
     min-width: 0;
-    height: 36px;
+    height: 30px;
     padding: 0 8px;
     margin: 0;
     border: 0;
-    border-radius: 12px;
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--gray-white));
+    border-radius: 8px;
+    @include drumee.typo($size: 13px, $line: 20px, $color: var(--gray-white));
     font-weight: 600;
   }
 
@@ -2711,19 +2706,24 @@
   }
 
   &__modal[data-form="task"] &__subtasks-add {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
     cursor: pointer;
     color: var(--normal-fg-10);
   }
 
   &__modal[data-form="task"] &__subtasks-body {
-    gap: 12px;
+    gap: 8px;
+  }
+
+  // An empty list takes no room (Subtasks with nothing under it).
+  &__modal[data-form="task"] &__subtasks-body:not(:has(.calendar-main__subtask)) {
+    display: none;
   }
 
   &__modal[data-form="task"] &__subtask-list {
-    gap: 8px;
+    gap: 6px;
   }
 
   &__modal[data-form="task"] &__subtask-progress {
@@ -2759,8 +2759,8 @@
   // grid; its avatar slot is not drawn).
   &__modal[data-form="task"] &__subtask {
     align-items: center;
-    gap: 12px;
-    padding: 8px;
+    gap: 8px;
+    padding: 6px;
     box-sizing: border-box;
     border: 1px solid var(--border-muted);
     border-radius: 12px;
@@ -2783,7 +2783,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg-10));
   }
 
   &__modal[data-form="task"] &__subtask-input {
@@ -2792,14 +2792,14 @@
 
     input {
       width: 100%;
-      height: 32px;
+      height: 28px;
       box-sizing: border-box;
-      padding: 0 10px;
+      padding: 0 8px;
       border: 1px solid transparent;
       border-radius: 8px;
       outline: none;
       background: var(--overlay-bg-05);
-      @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+      @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg-10));
 
       &:focus {
         border-color: var(--active-border);
@@ -2809,7 +2809,7 @@
 
   &__modal[data-form="task"] &__subtask-cell,
   &__modal[data-form="task"] &__subtask-end {
-    flex: 0 0 110px;
+    flex: 0 0 96px;
     min-width: 0;
   }
 
@@ -2831,16 +2831,16 @@
   &__modal[data-form="task"] &__subtask-chip {
     align-items: center;
     gap: 4px;
-    height: 32px;
+    height: 26px;
     max-width: 100%;
-    padding: 2px 12px;
+    padding: 2px 10px;
     box-sizing: border-box;
     border: 1px solid var(--border-muted);
     border-radius: 16px;
     cursor: pointer;
 
     &[data-kind="priority"] {
-      padding: 2px 16px;
+      padding: 2px 12px;
       border-radius: 100px;
     }
 
@@ -2855,7 +2855,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 12px, $line: 1.2, $color: var(--normal-fg-10));
   }
 
   &__modal[data-form="task"] &__subtask-chip-ico {
@@ -2902,7 +2902,7 @@
 
   &__modal[data-form="task"] &__subtask-option-label {
     white-space: nowrap;
-    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg-10));
   }
 
   // ── files: Search file + Upload over paperclip chips ──────────────────────
@@ -2916,8 +2916,8 @@
     position: relative;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    padding: 12px;
+    gap: 8px;
+    padding: 4px 4px 4px 10px;
     border-radius: 8px;
     background: var(--overlay-bg-05);
   }
@@ -2932,7 +2932,7 @@
       border: 0;
       outline: none;
       background: transparent;
-      @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10));
+      @include drumee.typo($size: 13px, $line: 1.4, $color: var(--normal-fg-10));
 
       &::placeholder {
         color: var(--normal-fg-20);
@@ -2943,11 +2943,11 @@
   &__modal[data-form="task"] &__fsearch-upload {
     flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
-    height: 32px;
-    padding: 6px 24px;
+    gap: 6px;
+    height: 26px;
+    padding: 4px 12px;
     box-sizing: border-box;
-    border-radius: 4px;
+    border-radius: 6px;
     background: var(--primary-50);
     cursor: pointer;
 
@@ -2957,13 +2957,13 @@
   }
 
   &__modal[data-form="task"] &__fsearch-upload-ico {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     color: var(--gray-white);
   }
 
   &__modal[data-form="task"] &__fsearch-upload-label {
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--gray-white));
+    @include drumee.typo($size: 12px, $line: 18px, $color: var(--gray-white));
     font-weight: 600;
     white-space: nowrap;
   }
@@ -3005,7 +3005,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 4px;
-    padding: 4px;
+    padding: 2px 0 0;
   }
 
   &__modal[data-form="task"] &__fchips[data-count="0"] {
@@ -3040,9 +3040,9 @@
   }
 
   &__modal[data-form="task"] &__fchip-ico {
-    flex: 0 0 17px;
-    width: 17px;
-    height: 17px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     color: var(--normal-fg-10);
   }
 
@@ -3122,7 +3122,7 @@
 @media (min-width: 651px) {
   body:has(.calendar-main__modal[data-form="task"])
     .window-upload-progress__ui:not([data-moved="1"]):not([data-device="mobile"]) {
-    bottom: max(130px, calc((100vh - min(720px, 88vh)) / 2 + 76px)) !important;
+    bottom: max(130px, calc((100vh - min(600px, 88vh)) / 2 + 60px)) !important;
   }
 
   body:has(.calendar-main__modal[data-form="task-quick-open"])
@@ -3135,7 +3135,7 @@
   // corner, 8px in. That corner is clear on every one of them: under the task
   // card's left column there is its 32px padding plus the margin below the
   // card (clear from 667px of height up), the quick-open card's footer row is
-  // empty left of Cancel, and the meeting card is centred and 460px wide.
+  // empty left of Cancel, and the meeting card is centred and 400px wide.
   // Expanded (by the user, or for the unfinished-upload question) it goes
   // back to the lifted spot above.
   body:has(
@@ -3152,14 +3152,14 @@
 
 // ── personal meeting modal (skeleton/meeting-form.js) ────────────────────────
 // Figma 1693:163829 (portrait, the default), 1693:166935 (landscape) and
-// 1693:163906 (invite link ready): 460px cards, 32px padding inside a 1px
-// hairline (the frames' 33), 24px between head, body and the full-width
-// action, 24px radius. Scoped to the two forms' data-form, so the task card
+// 1693:163906 (invite link ready), downsized: 400px cards, 20px padding
+// inside a 1px hairline, 14px between head, body and the full-width action,
+// 16px radius. Scoped to the two forms' data-form, so the task card
 // and the base compact card are untouched.
 //
 // One tree, two layouts. The body is a column — the portrait frame — and only
 // on a short, wide screen do its two columns sit side by side as in the
-// landscape frame (2 × 394px + 24px, an 878px card). The height bar is the
+// landscape frame (2 × 340px + 20px + padding, a 750px card). The height bar is the
 // portrait card in its shortest state, password OFF, under the modal's 88vh
 // cap: a window too short to show that card whole gets the landscape layout.
 // With the password on, the portrait card grows by the field and its body
@@ -3169,13 +3169,16 @@
 .calendar-main {
   &__modal[data-form="meeting"],
   &__modal[data-form="invite-link"] {
-    width: min(460px, calc(100vw - 32px));
-    padding: 32px;
-    gap: 24px;
-    border-radius: 24px;
+    width: min(400px, calc(100vw - 32px));
+    padding: 20px;
+    gap: 14px;
+    border-radius: 16px;
+    // The task card's shadow stack (1693:198659): with the page faded rather
+    // than blurred behind it, the heavier glass-era shadow read as a smudge.
     box-shadow:
-      0 7px 10px rgba(0, 0, 0, 0.09),
-      0 40px 80px rgba(0, 0, 0, 0.3);
+      0 7px 5px rgba(0, 0, 0, 0.05),
+      0 40px 40px rgba(0, 0, 0, 0.15),
+      0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
 
   &__modal[data-form="meeting"] &__modal-head,
@@ -3185,15 +3188,15 @@
 
   &__modal[data-form="meeting"] &__modal-title,
   &__modal[data-form="invite-link"] &__modal-title {
-    @include drumee.typo($size: 24px, $line: 1.1, $color: var(--normal-fg-800));
+    @include drumee.typo($size: 18px, $line: 1.2, $color: var(--normal-fg-800));
     font-weight: 600;
   }
 
   &__modal[data-form="meeting"] &__modal-close,
   &__modal[data-form="invite-link"] &__modal-close {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
     color: var(--normal-fg-20);
   }
 
@@ -3213,7 +3216,7 @@
     }
   }
 
-  // One action across the card, 48px: 12px around a 24px line.
+  // One action across the card, 36px: 8px around a 20px line.
   &__modal[data-form="meeting"] &__modal-foot,
   &__modal[data-form="invite-link"] &__modal-foot {
     padding-top: 0;
@@ -3223,48 +3226,48 @@
   &__modal[data-form="meeting"] &__button,
   &__modal[data-form="invite-link"] &__button {
     flex: 1 1 auto;
-    height: 48px;
-    padding: 0 24px;
+    height: 36px;
+    padding: 0 16px;
     border-radius: 4px;
-    @include drumee.typo($size: 16px, $line: 24px, $color: var(--gray-white));
+    @include drumee.typo($size: 13px, $line: 20px, $color: var(--gray-white));
     font-weight: 600;
   }
 
   // ── body ───────────────────────────────────────────────────────────────────
   &__modal[data-form="meeting"] &__modal-body,
   &__modal[data-form="meeting"] &__modal-col {
-    gap: 16px;
+    gap: 10px;
     min-width: 0;
   }
 
   &__modal[data-form="meeting"] &__field {
-    gap: 8px;
+    gap: 5px;
   }
 
-  // The time fields put 12px between label and picker.
+  // The time fields put 6px between label and picker.
   &__modal[data-form="meeting"] &__time-row > &__field {
-    gap: 12px;
+    gap: 6px;
   }
 
   &__modal[data-form="meeting"] &__field-label {
-    @include drumee.typo($size: 16px, $line: 1.2, $color: var(--normal-fg-10));
+    @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg-10));
     font-weight: 400;
   }
 
-  // 40.8px: 11px + a 14px/1.2 line + 11px inside the 1px border the error
+  // 33.6px: 8px + a 13px/1.2 line + 8px inside the 1px border the error
   // state reddens.
   &__modal[data-form="meeting"] &__input input {
-    padding: 11px 12px;
-    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+    padding: 8px 10px;
+    @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg-10));
   }
 
-  // Date: a 49px filled row, 24px in, the calendar glyph at the end — the
-  // task modal's __date-box, at this frame's size.
+  // Date: a 34px filled row, 10px in, the calendar glyph at the end — the
+  // task modal's __date-box, at this card's size.
   &__modal[data-form="meeting"] &__date-box {
     align-items: center;
-    gap: 12px;
-    height: 49px;
-    padding: 0 24px;
+    gap: 8px;
+    height: 34px;
+    padding: 0 10px;
     box-sizing: border-box;
     border: 1px solid transparent;
     border-radius: 8px;
@@ -3289,14 +3292,14 @@
       border: 0;
       background: transparent;
       cursor: pointer;
-      @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-10));
+      @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg-10));
     }
   }
 
   &__modal[data-form="meeting"] &__date-ico {
-    flex: 0 0 17px;
-    width: 17px;
-    height: 17px;
+    flex: 0 0 15px;
+    width: 15px;
+    height: 15px;
     color: var(--normal-fg-20);
     pointer-events: none;
   }
@@ -3304,13 +3307,13 @@
   // Attachments (not in the frames): the drop zone at the Title field's
   // height and type, its dashed edge kept as the drop affordance.
   &__modal[data-form="meeting"] &__files {
-    padding: 11px 12px;
+    padding: 8px 10px;
     border-radius: 8px;
   }
 
   &__modal[data-form="meeting"] &__files-hint {
     opacity: 1;
-    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 13px, $line: 1.2, $color: var(--normal-fg-20));
   }
 
   // ── landscape (Figma 1693:166935) ──────────────────────────────────────────
@@ -3318,21 +3321,21 @@
   // holds it whole from a 726px window up — a 1440×900 laptop's Chrome
   // (≈788-813px inside) keeps the portrait frame. (0,3,0) selectors: the
   // body's Box.Y flow rule is (0,2,0).
-  @media (max-height: 725px) and (min-width: 910px) {
-    // The window is ≥ 910px here, so the cap only bites if the wrapper is
+  @media (max-height: 725px) and (min-width: 782px) {
+    // The window is ≥ 782px here, so the cap only bites if the wrapper is
     // ever narrower than the window (it is the full viewport today).
     &__modal[data-form="meeting"] {
-      width: min(878px, calc(100vw - 32px));
+      width: min(750px, calc(100vw - 32px));
     }
 
     &__modal[data-form="meeting"] &__modal-body--split {
       flex-direction: row;
       align-items: flex-start;
-      gap: 24px;
+      gap: 20px;
     }
 
     &__modal[data-form="meeting"] &__modal-col {
-      flex: 0 0 394px;
+      flex: 0 0 340px;
     }
   }
 }
