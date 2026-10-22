@@ -3287,5 +3287,7 @@
   "FORMAT_STRIKE": "Зачёркнутый (Ctrl+Shift+X)",
   "FORMAT_BULLET_LIST": "Маркированный список (Ctrl+Shift+8)",
   "FORMAT_NUMBERED_LIST": "Нумерованный список (Ctrl+Shift+7)",
-  "FORMAT_LINK": "Ссылка (Ctrl+K)"
+  "FORMAT_LINK": "Ссылка (Ctrl+K)",
+  "DMZ_MEETING_EMAIL_REQUIRED": "Организатор требует указать ваш email, прежде чем вы сможете присоединиться к этой встрече.",
+  "DMZ_MEETING_EMAIL_SHARED": "Ваш email будет передан владельцу встречи."
 }

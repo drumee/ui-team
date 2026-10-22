@@ -3511,5 +3511,7 @@
   "FORMAT_STRIKE": "Strikethrough (Ctrl+Shift+X)",
   "FORMAT_BULLET_LIST": "Bulleted list (Ctrl+Shift+8)",
   "FORMAT_NUMBERED_LIST": "Numbered list (Ctrl+Shift+7)",
-  "FORMAT_LINK": "Link (Ctrl+K)"
+  "FORMAT_LINK": "Link (Ctrl+K)",
+  "DMZ_MEETING_EMAIL_REQUIRED": "The organiser requires your email before you can join this meeting.",
+  "DMZ_MEETING_EMAIL_SHARED": "Your email will be shared with the meeting owner."
 }

@@ -3282,5 +3282,7 @@
   "FORMAT_STRIKE": "Tachado (Ctrl+Shift+X)",
   "FORMAT_BULLET_LIST": "Lista con viñetas (Ctrl+Shift+8)",
   "FORMAT_NUMBERED_LIST": "Lista numerada (Ctrl+Shift+7)",
-  "FORMAT_LINK": "Enlace (Ctrl+K)"
+  "FORMAT_LINK": "Enlace (Ctrl+K)",
+  "DMZ_MEETING_EMAIL_REQUIRED": "El organizador requiere tu correo electrónico antes de que puedas unirte a esta reunión.",
+  "DMZ_MEETING_EMAIL_SHARED": "Tu correo electrónico se compartirá con el propietario de la reunión."
 }
