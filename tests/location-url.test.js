@@ -390,7 +390,10 @@ test("wm.route: a real navigation holds the URL, and the tidy-up settles it on t
   const self = { openDesignationLink() {}, openFileLocation() {} };
   route.call(self);
   assert.equal(locationUrl.sync(), false); // held
-  await new Promise((r) => setTimeout(r, 30));
+  // Polled, not a fixed sleep: the whole suite runs files in parallel.
+  for (let i = 0; i < 200 && loc.hash !== "#/desk/wm/o/root1/hubA/folder"; i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
   assert.equal(loc.hash, "#/desk/wm/o/root1/hubA/folder");
   assert.equal(locationUrl.isMirrorEntry(), true);
   global.Visitor.timeout = (t) => t;
