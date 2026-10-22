@@ -558,6 +558,7 @@ class __window_meeting extends __room {
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
     clearTimeout(this._earlyWaitTimer);
+    this._unpinFeedbackOverlay();
     this._unwatchShareStrip();
     this._unwatchPinStage();
     this._teardownCallParking();
@@ -2272,7 +2273,50 @@ class __window_meeting extends __room {
         participantCount,
         ended,
       }));
+      requestAnimationFrame(() => this._pinFeedbackOverlay());
+      this._onFeedbackResize = () => this._pinFeedbackOverlay();
+      window.addEventListener("resize", this._onFeedbackResize);
     });
+  }
+
+  /**
+   * Fit the feedback backdrop to the desk's workspace column
+   * (.desk-module__right-side), so the sidebar and top bar stay clear and the
+   * card — flex-centred in the backdrop — lands in the middle of that column.
+   * The skin's `position: fixed; inset: 0` stays the fallback when the column
+   * is not there. Measured back and corrected, since an ancestor with a
+   * transform or backdrop-filter would make `fixed` resolve against itself
+   * instead of the viewport.
+   */
+  _pinFeedbackOverlay() {
+    const modal = this._feedbackModal;
+    const overlay =
+      modal && modal.el && modal.el.querySelector(`.${this.fig.family}__feedback-overlay`);
+    const side = document.querySelector(".desk-module__right-side");
+    if (!overlay || !side) return;
+    const want = side.getBoundingClientRect();
+    if (!want.width || !want.height) return;
+    Object.assign(overlay.style, {
+      inset: "auto",
+      left: `${want.left}px`,
+      top: `${want.top}px`,
+      width: `${want.width}px`,
+      height: `${want.height}px`,
+    });
+    const got = overlay.getBoundingClientRect();
+    const dx = got.left - want.left;
+    const dy = got.top - want.top;
+    if (dx || dy) {
+      overlay.style.left = `${want.left - dx}px`;
+      overlay.style.top = `${want.top - dy}px`;
+    }
+  }
+
+  _unpinFeedbackOverlay() {
+    if (this._onFeedbackResize) {
+      window.removeEventListener("resize", this._onFeedbackResize);
+      this._onFeedbackResize = null;
+    }
   }
 
   /** Visually highlight stars 1..N when a star is clicked. */
@@ -2316,6 +2360,7 @@ class __window_meeting extends __room {
         });
       } catch (e) { }
     }
+    this._unpinFeedbackOverlay();
     if (this._feedbackModal && this._feedbackModal.clear) {
       this._feedbackModal.clear();
       this._feedbackModal = null;

@@ -1516,10 +1516,20 @@
     z-index: 9999;
     align-items: center;
     justify-content: center;
-    background: rgba(11, 10, 33, 0.4);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    // Drumee 2.0 modal backdrop (Figma 1693:199570, "New personal meeting"):
+    // the page behind the card is drawn at 20% opacity on white, unblurred.
+    // One fixed layer can't fade what is under it, so wash it with 80% white
+    // instead — the same result over any content.
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     pointer-events: auto;
+    animation: window-meeting-feedback-fade-in 0.15s ease;
+  }
+
+  @keyframes window-meeting-feedback-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   &__feedback-card {
