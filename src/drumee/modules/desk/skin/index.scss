@@ -655,7 +655,12 @@ html {
 //        (0,1,0) + (0,1,0) + (0,1,0) = (0,3,0)
 //   now  .desk-module[data-desk-upload] .window-manager__ui
 //        (0,1,0) + (0,1,0) + (0,1,0) = (0,3,0)
-.desk-module[data-desk-upload] {
+// The chat / meeting card (`data-desk-toast`, same mirror) needs the same
+// escape: the section screens in settings-main-slot (1500) covered it, so a
+// message arriving on the home screen showed nothing. While a card is up the
+// desk stacks exactly as during an upload.
+.desk-module[data-desk-upload],
+.desk-module[data-desk-toast] {
   .window-manager__ui {
     isolation: auto;
     z-index: auto;
@@ -705,6 +710,7 @@ html {
 // clear of the global (0,1,0) and the focus lift (0,4,0). The attribute is
 // doubled on each so the two flags rank identically.
 .desk-module[data-desk-upload][data-desk-upload],
+.desk-module[data-desk-toast][data-desk-toast],
 .desk-module[data-desk-call][data-desk-call] {
   .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer):not(.call-layer) {
     z-index: 1300 !important;

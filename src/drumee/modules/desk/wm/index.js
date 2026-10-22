@@ -2665,6 +2665,17 @@ class __window_manager extends push {
     // tracks the window's PRESENCE. The topbar compensation in desk/skin keys
     // on the same condition, for the same reason.
     this._installDeskStateMirror("call-layer", "deskCall", ".window-connect");
+    // A chat or meeting card is up. The section screens (home overview,
+    // Calendar, Inbox, Settings…) sit in settings-main-slot at z 1500, OUTSIDE
+    // `.window-manager__ui`, whose isolation kept the card's layer under them:
+    // every card arriving on the home screen was mounted but never seen.
+    // desk/skin dissolves the isolation for this flag exactly as for an upload.
+    // The layer always holds a blank placeholder, hence the card classes.
+    this._installDeskStateMirror(
+      "meeting-toast-layer",
+      "deskToast",
+      ".panel-activity-toast, .desk-meeting-toast",
+    );
   }
 
   onPartReady(child, pn) {
