@@ -110,8 +110,11 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     overflow: hidden;
   }
 
-  // The whole page scrolls as one: cover, head and text.
+  // The whole page scrolls as one: cover, head and text. White on its own:
+  // inside the Open-File Switcher frame the window's main turns desk grey
+  // (the two cards are drawn by the frame), and the page must stay a page.
   &__body {
+    background-color: var(--default-bg);
     position: relative;
     width: 100%;
     flex: 1 1 auto;
