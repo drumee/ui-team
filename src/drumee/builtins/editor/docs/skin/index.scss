@@ -845,7 +845,8 @@
   }
 
   [data-testid="title-bar"] {
-    button[aria-haspopup="menu"] > svg {
+    // The Figma menu row has no carets.
+    button[aria-haspopup="menu"] svg {
       display: none !important;
     }
 
@@ -882,8 +883,14 @@
     // "Editing ▾" → the pencil alone, as the Figma draws it.
     button[aria-label^="Editing"] {
       @include ph.ph("pencil-simple");
-      font-size: 0;
+      font-size: 0 !important;
       gap: 2px;
+
+      > span,
+      > div {
+        font-size: 0 !important;
+        line-height: 0;
+      }
     }
 
     // Not in the Figma toolbar (all of them live in the Format menu).
