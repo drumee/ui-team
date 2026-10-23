@@ -642,3 +642,18 @@ test("an unreadable old note is not replaced by an empty one", () => {
   // ...but a genuinely empty file is fine to open as a new note.
   assert.match(src, /if \(!md\.trim\(\)\)/);
 });
+
+test("an old note that imports as a blank page opens READ-ONLY", () => {
+  // 2026-10-22: a README opening with `<!-- … -->` parsed to ONE empty
+  // paragraph. That passed the `!blocks.length` guard, mounted editable, and
+  // the first keystroke would have converted 7.7 KB of markdown into nothing.
+  const state = readNote("state.js");
+  assert.match(state, /tryParseMarkdownToBlocks\(md\.replace\(\/<!--\[\\s\\S\]\*\?-->\/g, ""\)\)/,
+    "HTML comments are dropped before parsing");
+  assert.match(state, /if \(!Array\.isArray\(blocks\) \|\| !blocks\.length \|\| isBlank\(blocks\)\) \{\s*this\._failLoad\("markdown-empty"\);/);
+  // and isBlank means "no text, no children", nothing looser
+  const fn = state.slice(state.indexOf("function isBlank"), state.indexOf("function isBlank") + 400);
+  assert.match(fn, /b\.type === "paragraph"/);
+  assert.match(fn, /b\.children && b\.children\.length/);
+  assert.match(fn, /\.trim\(\)/);
+});

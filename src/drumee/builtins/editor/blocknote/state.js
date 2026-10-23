@@ -50,6 +50,22 @@ function dictionary() {
 }
 
 /**
+ * Does an imported document hold nothing at all — only paragraphs without
+ * text or children?
+ * @param {Array} blocks
+ * @returns {Boolean}
+ */
+function isBlank(blocks) {
+  return blocks.every(
+    (b) =>
+      b &&
+      b.type === "paragraph" &&
+      !(b.children && b.children.length) &&
+      (!Array.isArray(b.content) || b.content.every((c) => !c || !`${c.text || ""}`.trim()))
+  );
+}
+
+/**
  * BlockNote's own blocks, plus the Callout the Figma's "/" menu offers.
  * Built once: a schema is a description, not per-editor state.
  */
@@ -173,13 +189,20 @@ class __blocknote_state extends DrumeeMFS {
     let blocks;
     try {
       const importer = BlockNoteEditor.create({});
-      blocks = await importer.tryParseMarkdownToBlocks(md);
+      // HTML comments render as nothing in markdown, but a file that OPENS
+      // with one (`<!-- draft … -->` above a README) made BlockNote's parser
+      // return a single empty paragraph for the whole 7.7 KB file — measured
+      // 2026-10-22 on a real note. Dropping them first imports the body.
+      blocks = await importer.tryParseMarkdownToBlocks(md.replace(/<!--[\s\S]*?-->/g, ""));
     } catch (e) {
       this.warn("blocknote_state: markdown import failed", e);
       this._failLoad("markdown-import");
       return;
     }
-    if (!Array.isArray(blocks) || !blocks.length) {
+    // "Empty" is judged by what came out, not by the array length: one blank
+    // paragraph from a file with bytes in it is a failed import, and mounting
+    // it editable would let the first keystroke convert the note into it.
+    if (!Array.isArray(blocks) || !blocks.length || isBlank(blocks)) {
       this._failLoad("markdown-empty");
       return;
     }
