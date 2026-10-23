@@ -168,18 +168,22 @@ test("calendar week card and month chip both carry the strip", () => {
   assert.doesNotMatch(CAL, /__cal-card-subcount/);
 });
 
-// A month chip with a strip is ~34px taller than the 52.4px chip MONTH_FIT is
-// measured against, so two of them no longer fit the cell and "+N" would
-// under-count what is out of sight.
-test("month cell fits one chip when a leading chip carries a strip", () => {
+// A month cell grows with its chips up to 2× its 190px floor (380px: a 326px
+// body), then scrolls; "+N" counts what that tallest cell cannot show. A chip
+// is 52.4px (80.4px with a Subtasks strip) on a 10px gap; with a "+N" the last
+// chip must end above its 18px pin (308px).
+test("month cell fit is measured against the 2× cell", () => {
   const { monthFit } = require(path.join(DIR, "skeleton/calendar.js"));
   const ui = {
     isSubtask: () => false,
     getSubtaskCount: (t) => ({ done: 0, total: t.n || 0 }),
   };
-  assert.equal(monthFit(ui, [{ n: 0 }, { n: 0 }, { n: 0 }]), 2);
-  assert.equal(monthFit(ui, [{ n: 0 }, { n: 3 }, { n: 0 }]), 1);
-  assert.equal(monthFit(ui, [{ n: 0 }, { n: 0 }, { n: 3 }]), 2);
+  const plain = (k) => Array.from({ length: k }, () => ({ n: 0 }));
+  const strip = (k) => Array.from({ length: k }, () => ({ n: 2 }));
+  assert.equal(monthFit(ui, plain(3)), 3); // 177px: all visible, no "+N"
+  assert.equal(monthFit(ui, plain(6)), 5); // 364px > 326: 5 end at 302 ≤ 308
+  assert.equal(monthFit(ui, strip(4)), 3); // 352px > 326: 3 end at 261, 4th at 352
+  assert.equal(monthFit(ui, [...strip(1), ...plain(5)]), 4); // 80+4×62 = 330 > 308
 });
 
 // ── Gantt child row + subtask detail breadcrumb ─────────────────────────────
@@ -248,4 +252,15 @@ test("gantt aside items use the compact scale", () => {
   assert.match(rule("&__gantt-work-label"), /\$size: 12px/);
   assert.match(rule("&__gantt-del-sel"), /\$size: 12px/);
   assert.match(rule("&__gantt-arow"), /padding: 0 12px;/);
+});
+
+test("month cell grows to 2× its floor, then scrolls with no visible scrollbar", () => {
+  assert.match(rule('&__calendar[data-mode="month"] &__cal-week-row'), /flex: 1 0 auto;/);
+  assert.match(rule('&__calendar[data-mode="month"] &__cal-week-row'), /max-height: calc\(2 \* var\(--tcal-cell-min\)\);/);
+  assert.match(rule('&__calendar[data-mode="month"] &__cal-day'), /max-height: calc\(2 \* var\(--tcal-cell-min\)\);/);
+  const body = rule("&__cal-day-body");
+  assert.match(body, /overflow-y: auto;/);
+  assert.match(body, /scrollbar-width: none;/);
+  assert.match(body, /&::-webkit-scrollbar \{\s*display: none;/);
+  assert.doesNotMatch(body, /scrollbar-color/);
 });

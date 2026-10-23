@@ -5727,13 +5727,12 @@ $theme-colors: (
     container-name: cal;
     animation: tasks-cal-fade 0.16s ease;
     // A month row's FLOOR (rows share the grid's height above it, as the Meet
-    // tab's do). skeleton/calendar.js MONTH_FIT = 2 is measured against it:
+    // tab's do); a row grows with its chips up to twice this, then its cells
+    // scroll. skeleton/calendar.js monthFit is measured against that 2× cell:
     // 24px of padding, the 20px date line and its 10px gap (54px) leave a
-    // 136px body; two 52.4px cards on the month body's 10px gap end at 114.8,
-    // 3px above the pinned 18px "+N" (118-136), and the third starts at 124.8
-    // under it, so "+N" counts exactly what is out of sight. 190px is close to
-    // the Figma cell (1697:48540, 196px). Change the cell padding, the date
-    // line, the card or the gap and this goes stale.
+    // 326px body, and "+N" pins 18px at its foot. 190px is close to the Figma
+    // cell (1697:48540, 196px). Change the cell padding, the date line, the
+    // card or the gap and monthFit goes stale.
     --tcal-cell-min: 190px;
   }
 
@@ -5803,13 +5802,21 @@ $theme-colors: (
   }
 
   // Each week shares the grid height in month mode; one tall row in week and
-  // day mode. The floor is the token MONTH_FIT is measured against.
+  // day mode. The floor is --tcal-cell-min; a month row may grow to twice it.
   &__cal-week-row {
     flex: 1 1 0;
     align-items: stretch;
     gap: 1px;
     min-height: var(--tcal-cell-min);
     background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+  }
+
+  // A busy week grows to show more of its chips instead of clipping them at
+  // the floor — up to 2× it; past that its cells scroll (__cal-day-body).
+  // __calendar scrolls when the taller weeks outgrow the window.
+  &__calendar[data-mode="month"] &__cal-week-row {
+    flex: 1 0 auto;
+    max-height: calc(2 * var(--tcal-cell-min));
   }
 
   &__calendar[data-mode="week"] &__cal-week-row,
@@ -5837,6 +5844,7 @@ $theme-colors: (
   &__calendar[data-mode="month"] &__cal-day {
     padding: 12px;
     gap: 10px;
+    max-height: calc(2 * var(--tcal-cell-min));
   }
 
   // The whole square adds a task (skeleton/calendar.js dayCell) — for a viewer
@@ -5985,18 +5993,18 @@ $theme-colors: (
     min-height: 0;
     gap: 4px;
 
-    // The month cell's 10px between cards (1697:48540); MONTH_FIT counts it.
+    // The month cell's 10px between cards (1697:48540); monthFit counts it.
     .tasks-panel__calendar[data-mode="month"] & {
       gap: 10px;
     }
+    // Scrolls (wheel, touch, keyboard) with no visible bar — the pinned "+N"
+    // is the cue that there is more.
     overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 
-    &:hover,
-    &[data-overflow="1"] {
-      scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
-        var(--scrollbar-track, transparent);
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 
@@ -6064,7 +6072,7 @@ $theme-colors: (
   // Month card (Figma 1697:48543; hover 1697:48544), the Personal Calendar's
   // month card: white, hairline border, r=12, 12px in, the priority dot over
   // the name 4px apart; Drop Shadow/300 and the × on hover. 52.4px tall
-  // (12 + 8 + 4 + 14.4 + 12 + 2px of border), the height MONTH_FIT assumes.
+  // (12 + 8 + 4 + 14.4 + 12 + 2px of border), the height monthFit assumes.
   // The frame's hairline is 0.5px of 20% black, drawn as the 1px token
   // border as the Personal Calendar does, so the card has one height on 1x
   // and 2x screens. It used to be a status-tinted one-line chip; Figma has
@@ -6131,7 +6139,7 @@ $theme-colors: (
   }
 
   // Buttons/Mini Button, 12/1.2 semibold, one line: a wrapped name would make
-  // the card's height depend on its data, and MONTH_FIT counts fixed cards.
+  // the card's height depend on its data, and monthFit counts fixed cards.
   &__cal-chip-title {
     min-width: 0;
     overflow: hidden;
@@ -6142,7 +6150,7 @@ $theme-colors: (
     // Room for stacked Vietnamese marks ("ế", "ặ" reach above and below a
     // 1.2 line): overflow clips at the padding box, so 4px of padding each
     // way widens the clip and the negative margin gives the line its height
-    // back — the card, and MONTH_FIT, do not move.
+    // back — the card, and monthFit, do not move.
     padding-block: 4px;
     margin-block: -4px;
 

@@ -37,24 +37,31 @@ const VIEWS = [
   { key: "day", label: "CAL_VIEW_DAY" },
 ];
 
-// How many month cards stand in a month cell at rest. It only LABELS the
-// "+N" — every task renders and the cell scrolls — so it has to agree with the
-// cell geometry in the skin: --tcal-cell-min (190px) is two 52.4px cards on
-// the month body's 10px gap plus the pinned 18px "+N", under the 12px padding
-// and the 20px date line with its 10px gap. The derivation is next to that
-// token.
-const MONTH_FIT = 2;
+// How many month chips a cell shows before its "+N". It only LABELS the "+N"
+// — every task renders and the cell body scrolls — so it has to agree with the
+// cell geometry in the skin. A month cell grows with its chips up to twice the
+// --tcal-cell-min floor (2 × 190px), then scrolls: under its 12px padding and
+// the 20px date line with its 10px gap that is a 326px body. Chips are 52.4px
+// on a 10px gap, 28px taller when they carry the Subtasks strip (6px gap + 6px
+// padding + 1px rule + 15px header). A cell whose chips fit the body needs no
+// "+N"; otherwise the last counted chip must end above the 18px pinned "+N".
+const MONTH_BODY_MAX = 326;
+const MONTH_MORE_H = 18;
+const CHIP_H = 52.4;
+const CHIP_STRIP_H = 28;
+const CHIP_GAP = 10;
 
-// A chip carrying the Subtasks strip is ~28px taller (6px gap + 6px padding +
-// 1px rule + 15px header) than the 52.4px chip MONTH_FIT is measured against:
-// one strip chip plus a plain one already needs 142.8px of the 136px body, so
-// with one in the first two, only one fits and "+N" must count from there.
-const monthFit = (ui, list) =>
-  list
-    .slice(0, MONTH_FIT)
-    .some((t) => !ui.isSubtask(t) && subtaskProgress(ui, t).total)
-    ? 1
-    : MONTH_FIT;
+const monthFit = (ui, list) => {
+  const ends = [];
+  let y = 0;
+  list.forEach((t, i) => {
+    const strip = !ui.isSubtask(t) && subtaskProgress(ui, t).total;
+    y += (i ? CHIP_GAP : 0) + CHIP_H + (strip ? CHIP_STRIP_H : 0);
+    ends.push(y);
+  });
+  if (!ends.length || ends[ends.length - 1] <= MONTH_BODY_MAX) return list.length;
+  return ends.filter((e) => e <= MONTH_BODY_MAX - MONTH_MORE_H).length;
+};
 
 /** The active view, validated — anything unknown falls back to the month. */
 const calMode = (ui) => {
@@ -309,10 +316,6 @@ module.exports = function (ui) {
       className: `${pfx}__cal-day-body`,
       // Inert: the space around the chips belongs to the square's click.
       active: 0,
-      // A scrolled cell with a transparent-at-rest bar looks exactly like a
-      // truncated one; the skeleton already knows which cells overflow (it is
-      // the "+N" comparison), so it says so and the skin inks the bar.
-      attrOpt: { "data-overflow": more > 0 ? "1" : "0" },
       kids,
     });
   };
