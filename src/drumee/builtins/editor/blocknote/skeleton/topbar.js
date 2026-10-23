@@ -83,7 +83,7 @@ function config(ui) {
   return {
     left: {
       fileTypeIcon: "raw-note-sticky",
-      title: filename || LOCALE.UNTITLED,
+      title: filename || LOCALE.NOTE_NEW_PAGE,
     },
     right: {
       before,

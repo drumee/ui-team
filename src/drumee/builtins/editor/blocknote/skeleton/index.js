@@ -1,3 +1,4 @@
+const withFileSwitcher = require("builtins/player/widget/file-switcher/frame");
 // ===========================================================
 //  Notion-style Note (BlockNote) window — header + the body
 //  the editor mounts into.
@@ -55,7 +56,7 @@ function __skl_editor_blocknote(_ui_) {
         sys_pn: "page-title",
         name: _a.filename,
         value: _ui_.mget(_a.filename) || "",
-        placeholder: LOCALE.UNTITLED,
+        placeholder: LOCALE.NOTE_NEW_PAGE,
         mode: "commit",
         service: "rename-note",
         uiHandler: [_ui_],
@@ -99,11 +100,18 @@ function __skl_editor_blocknote(_ui_) {
     name: "dialog",
   });
 
-  return Skeletons.Box.Y({
-    debug: __filename,
-    className: `${pfx}__main ${group}__main`,
-    radio: _a.parent,
-    kids: [header, tooltips, body, dialog],
-  });
+  // In the Open-File Switcher frame, like every other viewer and editor opened
+  // from a folder: the folder's recently viewed and other files, left of the
+  // note (Figma). The frame leaves the root as is where the panel has no
+  // meaning — mobile, a share page, a node with no folder.
+  return withFileSwitcher(
+    _ui_,
+    Skeletons.Box.Y({
+      debug: __filename,
+      className: `${pfx}__main ${group}__main`,
+      radio: _a.parent,
+      kids: [header, tooltips, body, dialog],
+    })
+  );
 }
 module.exports = __skl_editor_blocknote;

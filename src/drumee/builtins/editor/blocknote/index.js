@@ -52,8 +52,9 @@ class __editor_blocknote extends __player {
         privilege: _K.privilege.owner,
       });
       // No name is filled in for the user (Lexis, 2026-09-29): the title
-      // starts empty under its "Untitled" placeholder, and saveContent()
-      // falls back to "Untitled" until something is typed there.
+      // starts empty under its "New page" placeholder (Figma, 2026-10-23 —
+      // was "Untitled"), and saveContent() falls back to it until something
+      // is typed there.
     }
 
     // FULL-FRAME (Duy, 2026-09-16): the editor is DOCKED to the workspace, not
@@ -74,6 +75,14 @@ class __editor_blocknote extends __player {
     // Where a new note gets written. Captured now, because by save time this
     // window is itself the active one.
     this.lastActiveWindow = Wm.getActiveWindow();
+    // A new note lives where it will be saved — the folder it was created
+    // from. The Open-File Switcher lists that folder (it reads pid/hub_id),
+    // and Share names the right workspace; the home defaults above only stay
+    // when no folder window is open.
+    if (!this.media) {
+      const dest = this._saveTarget();
+      if (dest) this.mset({ pid: dest.pid, hub_id: dest.hub_id });
+    }
   }
 
   /**
@@ -404,9 +413,9 @@ class __editor_blocknote extends __player {
    * The note's name as it is saved.
    *
    * An untitled note reuses the name the server gave it on the first save.
-   * The server de-duplicates a NEW node ("Untitled(1)") but renames an
+   * The server de-duplicates a NEW node ("New page(1)") but renames an
    * existing one to exactly what it is sent — and media has a UNIQUE key on
-   * (parent_id, user_filename, extension), so re-sending "Untitled" for the
+   * (parent_id, user_filename, extension), so re-sending "New page" for the
    * second untitled note in a folder would make every later save fail.
    * @returns {String}
    */
@@ -415,7 +424,7 @@ class __editor_blocknote extends __player {
       this.mget(_a.filename) ||
       (this.media && this.media.mget(_a.filename)) ||
       this._assignedName ||
-      LOCALE.UNTITLED
+      LOCALE.NOTE_NEW_PAGE
     );
   }
 
@@ -531,6 +540,32 @@ class __editor_blocknote extends __player {
   }
 
   /**
+   * Save what is pending before the window goes away — the Open-File
+   * Switcher closes this editor to show the next file, and only once this
+   * resolves true. False (the save failed, or there is nowhere to save) keeps
+   * the user on the note, so nothing typed is lost to the switch.
+   * @returns {Promise<Boolean>}
+   */
+  saveBeforeClose() {
+    if (this._readOnly) return Promise.resolve(true);
+    if (!this._changed && !this._saving) return Promise.resolve(true);
+    return new Promise((resolve) => {
+      this._closeWaiters = [...(this._closeWaiters || []), resolve];
+      if (!this._saving) this.saveContent();
+    });
+  }
+
+  /**
+   * Answer every saveBeforeClose() waiting on the save that just ended.
+   * @param {Boolean} ok
+   */
+  _settleClose(ok) {
+    const waiters = this._closeWaiters || [];
+    this._closeWaiters = null;
+    waiters.forEach((resolve) => resolve(ok));
+  }
+
+  /**
    * Write the note back through media.save, the same text path the existing
    * note and markdown editors use.
    *
@@ -543,9 +578,9 @@ class __editor_blocknote extends __player {
       this._again = 1;
       return;
     }
-    if (!this._state) return;
+    if (!this._state) return this._settleClose(false);
     const content = this._state.getContent();
-    if (content == null) return;
+    if (content == null) return this._settleClose(false);
 
     if (this._timer) {
       clearTimeout(this._timer);
@@ -553,7 +588,7 @@ class __editor_blocknote extends __player {
     }
 
     const dest = this._saveTarget();
-    if (!dest) return;
+    if (!dest) return this._settleClose(false);
     const { target, pid, hub_id } = dest;
     const nid = this.mget(_a.nid);
     const filename = this._noteName();
@@ -580,6 +615,7 @@ class __editor_blocknote extends __player {
         if (!data || !data.nid) {
           this._setStatus("unsaved");
           this.warn("editor_blocknote: save returned no node", data);
+          this._settleClose(false);
           return;
         }
         // Adopt the node so every later save REPLACES this file instead of
@@ -605,6 +641,7 @@ class __editor_blocknote extends __player {
           this.saveContent();
           return;
         }
+        this._settleClose(true);
         if (close) this.goodbye();
       })
       .catch((e) => {
@@ -612,6 +649,7 @@ class __editor_blocknote extends __player {
         this._again = 0;
         this._afterSave = null;
         this._setStatus("unsaved");
+        this._settleClose(false);
         this.warn("editor_blocknote: save failed", e);
       });
   }

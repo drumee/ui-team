@@ -279,7 +279,7 @@ test("every language carries the new keys", () => {
   // menu row, which is exactly the kind of thing nobody notices until QA.
   for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
     const dict = JSON.parse(readFileSync(resolve(ROOT, `locale/${lang}.json`), "utf8"));
-    for (const key of ["NOTE_BETA", "UNTITLED", "ALL_CHANGES_SAVED", "UNSAVED_CHANGES", "NOTE_UNREADABLE", "NOTE_UPGRADES_ON_SAVE", "NOTE_PRESS_SLASH", "NOTE_ADD_ICON", "NOTE_ADD_COVER", "NOTE_ADD_COMMENT", "NOTE_CHANGE_COVER", "NOTE_ADD_A_COMMENT", "NOTE_CLOSE_MENU"]) {
+    for (const key of ["NOTE_BETA", "UNTITLED", "ALL_CHANGES_SAVED", "UNSAVED_CHANGES", "NOTE_UNREADABLE", "NOTE_UPGRADES_ON_SAVE", "NOTE_PRESS_SLASH", "NOTE_ADD_ICON", "NOTE_ADD_COVER", "NOTE_ADD_COMMENT", "NOTE_CHANGE_COVER", "NOTE_ADD_A_COMMENT", "NOTE_CLOSE_MENU", "NOTE_NEW_PAGE"]) {
       assert.ok(dict[key], `locale/${lang}.json is missing ${key}`);
     }
   }
@@ -656,4 +656,28 @@ test("an old note that imports as a blank page opens READ-ONLY", () => {
   assert.match(fn, /b\.type === "paragraph"/);
   assert.match(fn, /b\.children && b\.children\.length/);
   assert.match(fn, /\.trim\(\)/);
+});
+
+test("an untitled note is a \"New page\" (Figma), in the title, the header and the saved name", () => {
+  assert.match(readNote("skeleton/index.js"), /placeholder: LOCALE\.NOTE_NEW_PAGE/);
+  assert.match(readNote("skeleton/topbar.js"), /title: filename \|\| LOCALE\.NOTE_NEW_PAGE/);
+  assert.match(readNote("index.js"), /this\._assignedName \|\|\s*LOCALE\.NOTE_NEW_PAGE/);
+  assert.ok(!/LOCALE\.UNTITLED/.test(readNote("index.js") + readNote("skeleton/index.js") + readNote("skeleton/topbar.js")));
+});
+
+test("the note sits in the Open-File Switcher frame, and saves before a switch closes it", () => {
+  // Every other viewer/editor opened from a folder carries the panel; the
+  // note was the one left out.
+  const skl = readNote("skeleton/index.js");
+  assert.match(skl, /require\("builtins\/player\/widget\/file-switcher\/frame"\)/);
+  assert.match(skl, /return withFileSwitcher\(\s*_ui_,/);
+  // The switcher closes the editor only once saveBeforeClose() says so; a
+  // failed save must answer false, or the note is closed with edits lost.
+  const win = readNote("index.js");
+  assert.match(win, /saveBeforeClose\(\) \{/);
+  for (const site of ["if (!dest) return this._settleClose(false);", "if (content == null) return this._settleClose(false);"]) {
+    assert.ok(win.includes(site), `a save that cannot run must answer false: ${site}`);
+  }
+  assert.match(win, /this\._setStatus\("unsaved"\);\s*this\._settleClose\(false\);/);
+  assert.match(win, /this\._settleClose\(true\);\s*if \(close\) this\.goodbye\(\);/);
 });
