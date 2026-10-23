@@ -17,8 +17,6 @@ module.exports = function (ui, cover, editable) {
     Skeletons.Element({
       tagName: "img",
       className: `${pfx}__cover-image`,
-      sys_pn: "cover-image",
-      partHandler: ui,
       attribute: { src: coverUrl(cover), alt: "", draggable: "false" },
     }),
   ];

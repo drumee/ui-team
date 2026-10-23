@@ -377,12 +377,14 @@ function uploadCover(ui, file) {
 }
 
 /**
- * Where the cover image is read from. `slide` is the server's large rendition;
- * the img falls back to the original if it is not there (yet).
+ * Where the cover image is read from: the ORIGINAL. The server's largest
+ * rendition (`slide`) is 1024px wide, and the banner spans the window — it
+ * came out visibly soft. The popup asks for images wider than 1500px for the
+ * same reason.
  */
-function coverUrl(cover, format = "slide") {
+function coverUrl(cover) {
   const base = location.href.split("#")[0].replace(/\/+$/, "");
-  return `${base}/file/${format}/${cover.nid}/${cover.hub_id}`;
+  return `${base}/file/orig/${cover.nid}/${cover.hub_id}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -458,12 +460,21 @@ function postComment(ui) {
 /**
  * Attachments and mentions are the chat's own tools; the paperclip and the @
  * open the note's chat thread, where they live, rather than rebuilding them.
+ *
+ * The folder window scopes its chat to the file it is handed — so it is handed
+ * the NOTE's node (it reads the nid off it), not the button. That chat sits
+ * behind this docked editor, so the editor closes (saving, like any close) to
+ * show it; the thread's own "Open file" brings the note back.
  */
-function openThread(ui, cmd) {
+function openThread(ui) {
   ui._withNode(() => {
-    if (!ui._delegate(cmd, { service: _a.chat })) {
+    const media = ui.media;
+    if (!media || media.isDestroyed() || !_.isFunction(media.onUiEvent)) {
       Wm.alert(LOCALE.NOTE_COMMENT_FAILED);
+      return;
     }
+    media.onUiEvent(media, { service: _a.chat });
+    ui.goodbye();
   });
 }
 
@@ -530,24 +541,6 @@ function onPartReady(ui, child, pn) {
         renderEmojis(ui);
       });
       setTimeout(() => input.focus && input.focus(), 0);
-      return true;
-    }
-
-    case "cover-image": {
-      const img = child.el.tagName === "IMG" ? child.el : child.el.querySelector("img");
-      const cover = ui.page().cover;
-      if (img && cover) {
-        img.addEventListener(
-          "error",
-          () => {
-            if (!img.dataset.fallback) {
-              img.dataset.fallback = "1";
-              img.src = coverUrl(cover, "orig");
-            }
-          },
-          { once: false }
-        );
-      }
       return true;
     }
 
@@ -640,7 +633,7 @@ function onUiEvent(ui, cmd, service) {
 
     case "comment-attach":
     case "comment-mention":
-      openThread(ui, cmd);
+      openThread(ui);
       return true;
 
     default:
