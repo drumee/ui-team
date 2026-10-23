@@ -5,6 +5,7 @@
 @use 'mixins/drumee';
 @use '../../skin/topbar.scss';
 @use '../../skin/file-viewer';
+@use '../../skin/phosphor' as ph;
 
 .sheet {
   &__ui {
@@ -115,6 +116,8 @@
     .drumee-topbar__filetype-icon {
       width: 28px;
       height: 28px;
+      color: #54b684;
+      fill: currentColor;
     }
   }
   .drumee-topbar__identity {
@@ -442,13 +445,11 @@
   }
 }
 
-// Co-editing indicator: sheet_state stamps data-collab on the window el.
-.editor-sheet[data-collab="live"] .editor-sheet__save-status::before,
-.editor-sheet[data-collab="connected"] .editor-sheet__save-status::before {
-  content: "\25CF  Live";
-  color: #16a34a;
-  font-weight: 600;
-  margin-right: 14px;
+// The Figma header carries no "Live" / "All changes saved" text: the save
+// label only shows when a save FAILED (the one state the user must see);
+// the presence avatars stay as the co-editing indicator.
+.editor-sheet .editor-sheet__save-status:not([data-state="unsaved"]) {
+  display: none !important;
 }
 
 // Presence avatars (editor_sheet.setPeers) — stacked initials before Live.
@@ -737,5 +738,26 @@ body > div:has(> [class*="univer-popup"]) {
     background: #fff !important;
     color: #65656c;
     font-family: var(--font-main);
+  }
+}
+
+// ── Figma parity pass (user review 2026-10-23): Phosphor toolbar glyphs ─────
+.editor-sheet[data-theme="light"] .sheet-state [data-testid="casual-sheets-toolbar"] {
+  button[aria-label^="Undo"] { @include ph.ph("arrow-u-up-left"); }
+  button[aria-label^="Redo"] { @include ph.ph("arrow-u-up-right"); }
+  button[aria-label="Format Painter"] { @include ph.ph("paint-roller"); }
+  button[aria-label^="Bold"] { @include ph.ph("text-b"); }
+  button[aria-label^="Italic"] { @include ph.ph("text-italic"); }
+  button[aria-label^="Underline"] { @include ph.ph("text-underline"); }
+  button[aria-label="Strikethrough"] { @include ph.ph("text-strikethrough"); }
+  button[aria-label="Align left"] { @include ph.ph("text-align-left"); }
+  button[aria-label="Align center"] { @include ph.ph("text-align-center"); }
+  button[aria-label="Align right"] { @include ph.ph("text-align-right"); }
+  button[aria-label="Text color"] { @include ph.ph("text-a-underline"); }
+  button[aria-label="Fill color"] { @include ph.ph("paint-bucket"); }
+  button[aria-label="AutoSum"] { @include ph.ph("sigma"); }
+
+  button {
+    color: #0b0a21;
   }
 }

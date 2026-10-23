@@ -3,6 +3,7 @@
 #   TYPE : Component style — Casual Docs (DocxEditor) window
 # ===================================================================**/
 @use "../../skin/file-viewer";
+@use "../../skin/phosphor" as ph;
 
 // The Drumee player window sets user-select:none (drag chrome). That inherits
 // onto the ProseMirror editing surface and blocks typing — re-enable selection
@@ -827,5 +828,77 @@
     border-top: 1px solid rgba(0, 0, 0, 0.05);
     color: #65656c;
     font-family: var(--font-main);
+  }
+}
+
+// ── Figma parity pass (user review 2026-10-23) ─────────────────────────────
+// Blue doc glyph, no carets on the menu row, no "Live / Unsaved changes"
+// clutter beside the actions (the avatars stay), and the Figma's toolbar:
+// Phosphor glyphs, no strike / caps / super-sub / clear-format buttons.
+.editor-docs .docs-state {
+  .editor-docs__file-glyph {
+    color: #71a3f4;
+
+    svg {
+      fill: currentColor;
+    }
+  }
+
+  [data-testid="title-bar"] {
+    button[aria-haspopup="menu"] > svg {
+      display: none !important;
+    }
+
+    > :nth-child(3) {
+      // Casual's own "Unsaved changes" text and the Live pill.
+      span.text-xs {
+        display: none !important;
+      }
+
+      [data-testid="presence-cluster"] > :not(:first-child) {
+        display: none !important;
+      }
+    }
+  }
+
+  .ep-root [data-testid="formatting-bar"] {
+    [data-testid="toolbar-undo"] { @include ph.ph("arrow-u-up-left"); }
+    [data-testid="toolbar-redo"] { @include ph.ph("arrow-u-up-right"); }
+    [data-testid="toolbar-paint-format"] { @include ph.ph("paint-roller"); }
+    [data-testid="toolbar-bold"] { @include ph.ph("text-b"); }
+    [data-testid="toolbar-italic"] { @include ph.ph("text-italic"); }
+    [data-testid="toolbar-underline"] { @include ph.ph("text-underline"); }
+    button[title="Font Color"]:first-child { @include ph.ph("text-a-underline"); }
+    button[title="Text Highlight Color"]:first-child { @include ph.ph("highlighter"); }
+    [data-testid="toolbar-insert-link"] { @include ph.ph("link-simple-horizontal"); }
+    [data-testid="toolbar-image"] { @include ph.ph("image"); }
+    [data-testid="toolbar-add-comment"] { @include ph.ph("chat-text"); }
+    [data-testid="toolbar-alignment"] { @include ph.ph("text-align-left"); }
+    button[title^="Bullet List"] { @include ph.ph("list-bullets"); }
+    button[title^="Numbered List"] { @include ph.ph("list-numbers"); }
+    button[title^="Decrease Indent"] { @include ph.ph("text-outdent"); }
+    button[title^="Increase Indent"] { @include ph.ph("text-indent"); }
+
+    // "Editing ▾" → the pencil alone, as the Figma draws it.
+    button[aria-label^="Editing"] {
+      @include ph.ph("pencil-simple");
+      font-size: 0;
+      gap: 2px;
+    }
+
+    // Not in the Figma toolbar (all of them live in the Format menu).
+    [data-testid="toolbar-strikethrough"],
+    [data-testid="toolbar-small-caps"],
+    [data-testid="toolbar-all-caps"],
+    [data-testid="toolbar-superscript"],
+    [data-testid="toolbar-subscript"],
+    > div:has(> [data-testid="toolbar-superscript"]),
+    > [data-testid="toolbar-clear-formatting"] {
+      display: none !important;
+    }
+
+    button {
+      color: #0b0a21;
+    }
   }
 }
