@@ -284,6 +284,10 @@ class __widget_chat extends LetcBox {
       this.el.removeEventListener("pointerdown", this._onReadGesture, true);
       this._readGestureBound = false;
     }
+    if (this._composerReadBound && this.el) {
+      this.el.removeEventListener("pointerdown", this._onComposerPress, true);
+      this._composerReadBound = false;
+    }
     if (this._inlineGrowthBound && this.el) {
       this.el.removeEventListener("drumee:inline-media-grown", this._onInlineMediaGrown);
       this._inlineGrowthBound = false;
@@ -561,6 +565,39 @@ class __widget_chat extends LetcBox {
     this.postService(postData);
     this._clearUnreadRows();
     if (!inTopic) this._announceChatRead();
+    // This socket never hears its own *.acknowledge, so a host showing an
+    // unread badge for this conversation (the Inbox row) clears it on this.
+    this.trigger("conversation-read");
+  }
+
+  /**
+   * Mark read now, past the throttle — the user asked for this conversation
+   * (clicked its Inbox row again). Parked: held until it is shown.
+   */
+  readNow() {
+    if (this.isParked()) {
+      this._ackOnUnpark = true;
+      return;
+    }
+    this._lastReadAt = 0;
+    this.markConversationRead();
+  }
+
+  /**
+   * read_on_open chats (the Inbox): a press in the composer reads the
+   * conversation. Focus already does (input-focus), but clicking a composer
+   * that already has focus fires no focus event.
+   */
+  _bindComposerRead() {
+    if (!this.mget("read_on_open") || this._composerReadBound || !this.el) return;
+    this._onComposerPress = (e) => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (!t.closest(`.${this.fig.family}__messenger-wrapper`)) return;
+      this.markConversationRead();
+    };
+    this.el.addEventListener("pointerdown", this._onComposerPress, true);
+    this._composerReadBound = true;
   }
 
   /**
@@ -1049,6 +1086,11 @@ class __widget_chat extends LetcBox {
               if (!this._isInReadingView()) this._markUnreadRows();
               this.readIfInView();
             });
+          } else if (this.mget("read_on_open")) {
+            // Opened from its Inbox row: showing it is reading it. Without
+            // this the read cursor never moved and the row's unread badge
+            // came back on the next load.
+            this.readNow();
           }
           // Track whether the user is parked at the bottom. Content growth
           // (an attachment card loading inside an existing row) does NOT fire a
@@ -1219,6 +1261,7 @@ class __widget_chat extends LetcBox {
       this._bindMentionKeyboard();
       this._bindClipboardPaste();
       this._bindReadGesture();
+      this._bindComposerRead();
       if (!this._inlineGrowthBound && this.el) {
         this.el.addEventListener("drumee:inline-media-grown", this._onInlineMediaGrown);
         this._inlineGrowthBound = true;
