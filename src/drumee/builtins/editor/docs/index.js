@@ -68,6 +68,14 @@ class __editor_docs extends __player {
       }
     }
     this.target = opt.target || Wm.getActiveWindow();
+    // A NEW file lands in the folder window it was created from (the save
+    // target), not in the owner's home: the Open-File Switcher lists that
+    // folder, and the model must say so before the skeleton is built.
+    if (!opt.media && this.target && _.isFunction(this.target.getCurrentNid)) {
+      const pid = this.target.getCurrentNid();
+      const hub_id = this.target.mget(_a.hub_id);
+      if (pid && hub_id) this.mset({ pid, hub_id });
+    }
   }
 
   /**
@@ -104,7 +112,10 @@ class __editor_docs extends __player {
     // outright (collab.js answers at once when nothing changed since the
     // last save). Only "Unsaved changes" left on the header means it failed.
     if (st && st._collab) {
-      await this.saveContent();
+      // Casual's flush can stay pending (a brand-new room, a throttled tab):
+      // the autosave has been writing all along, so a flush that takes more
+      // than a few seconds must not keep the window from closing.
+      await capped(this.saveContent(), 8000);
       return this._saveState !== "unsaved";
     }
     if (!this._changed) return true;
@@ -638,6 +649,11 @@ class __editor_docs extends __player {
               ...data,
             };
             delete item.replace;
+            // The save reply names the node but not always its type: the tile
+            // must carry them, or a double-click on it resolves its player
+            // from the category ("text") and opens the stored JSON.
+            if (!item.ext) item.ext = "udoc";
+            if (!item.dataType) item.dataType = "doc.casual";
             b.insertMedia(item, 0);
           }
         }

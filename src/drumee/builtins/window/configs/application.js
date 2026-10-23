@@ -104,6 +104,21 @@ const __skl_window_application = function (filetype, opt = {}) {
 
   let { media } = opt;
   let r = a[filetype] || {};
+  // A Casual doc / sheet is "text" by category, so every path that resolves
+  // a player from the category alone (a desk link, a tile inserted by the
+  // editor's own first save, Recently viewed) would land in the text viewer
+  // and show the stored JSON. Route them by extension / dataType from the
+  // node itself, media view or not (the tile's media carries the same).
+  {
+    const node = media && media.model ? media.model.toJSON() : opt;
+    const name = String((node && node.filename) || "");
+    const ext = String(
+      (node && node.ext) || (name.includes(".") ? name.split(".").pop() : "")
+    ).toLowerCase();
+    const dataType = node && node.dataType;
+    if (ext === "usheet" || dataType === "sheet.univer") return { ...opt, kind: "editor_sheet" };
+    if (ext === "udoc" || dataType === "doc.casual") return { ...opt, kind: "editor_docs" };
+  }
   if (media && media.model) {
     let { mimetype, dataType, ext } = media.model.toJSON();
     // Univer/Casual sheets carry the dedicated `.usheet` extension (its mimetype

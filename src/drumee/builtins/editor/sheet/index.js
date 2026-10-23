@@ -38,6 +38,14 @@ class __editor_sheet extends __player {
     // Save target: the folder window the sheet is created in (markdown editor
     // does the same). Opened-from-file saves replace in place and ignore it.
     this.target = opt.target || Wm.getActiveWindow();
+    // A NEW file lands in the folder window it was created from (the save
+    // target), not in the owner's home: the Open-File Switcher lists that
+    // folder, and the model must say so before the skeleton is built.
+    if (!opt.media && this.target && _.isFunction(this.target.getCurrentNid)) {
+      const pid = this.target.getCurrentNid();
+      const hub_id = this.target.mget(_a.hub_id);
+      if (pid && hub_id) this.mset({ pid, hub_id });
+    }
   }
 
   /**
@@ -499,6 +507,11 @@ class __editor_sheet extends __player {
               ...data,
             };
             delete item.replace;
+            // The save reply names the node but not always its type: the tile
+            // must carry them, or a double-click on it resolves its player
+            // from the category ("text") and opens the stored JSON.
+            if (!item.ext) item.ext = "usheet";
+            if (!item.dataType) item.dataType = "sheet.univer";
             b.insertMedia(item, 0);
           }
         }
