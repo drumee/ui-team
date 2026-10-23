@@ -43,9 +43,18 @@ $ph: (
 /// Replace the button's own glyph with a Phosphor one.
 /// @param {String} $name  key of $ph
 /// @param {Number} $px    glyph size
-@mixin ph($name, $px: 20px) {
-  > svg:first-of-type {
-    display: none !important;
+/// @param {Bool}   $deep  hide every <svg> inside (Casual Sheets nests its
+///                        glyph in a span); false hides the first direct one
+///                        and keeps a trailing caret (Casual Docs)
+@mixin ph($name, $px: 20px, $deep: false) {
+  @if $deep {
+    svg {
+      display: none !important;
+    }
+  } @else {
+    > svg:first-of-type {
+      display: none !important;
+    }
   }
 
   &::before {
