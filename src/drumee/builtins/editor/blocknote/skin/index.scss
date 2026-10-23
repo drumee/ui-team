@@ -1,28 +1,34 @@
 /** ================================================================== *
 #   FILE : /src/drumee/builtins/editor/blocknote/skin
 #   TYPE : Component style — Notion-style Note (BlockNote) window
+#   Laid out to Lexis's Figma, "File viewer" page, the note frames
+#   (1406:25557 and its states), 2026-10-22.
 # ===================================================================**/
 
 @use "mixins/drumee";
-@use "../../skin/topbar.scss";
 
-// The page column. Notion measures its text at ~708px; 54px of gutter each
-// side is what BlockNote needs for the drag handle and "+". Named because
-// three different things now have to line up on it: the page title, the
-// editor, and the formatting band.
-$note-measure: 816px;
+// The page's side margin: the title, the actions and the comment bar sit
+// 120px in from the window edge (Figma, frame padding 60/120).
+$note-inset: 120px;
+// BlockNote pads its own editor by this much on each side — the room its
+// side menu (drag handle and "+") needs — so the surface sits that much
+// further OUT for the text to line up with the title.
 $note-gutter: 54px;
+$note-hairline: rgba(0, 0, 0, 0.05);
+$note-hover: rgba(0, 0, 0, 0.05);
+$note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
 
-// 🚨 The shared editor skin styles `.editor-topbar__control__icon .tooltips` —
-// a prefix nothing in THIS editor carries, since its family is
-// `editor-blocknote-topbar`. Every button here therefore has to restate the
-// rule, or its label inherits the page font, `position: static` (taking up
-// LAYOUT instead of floating) and wrapping onto two lines.
+// 🚨 Hiding or showing a Box is NOT `display` on its own class: Skeletons
+// sets the flex display for every Box through `.drumee-box`, one class with
+// the same specificity and loaded later. Pair the class with `.drumee-box`.
+
+// 🚨 The shared skins style tooltips under prefixes nothing in THIS editor
+// carries (`.editor-topbar__control__icon`, the document player's own), so a
+// button here that is not covered renders its label in the page font,
+// `position: static` (taking up layout) and wrapping. One rule, one place —
+// it has shipped broken twice when copied by hand.
 //
-// Written once because it is needed in more than one place, and it has already
-// shipped broken twice.
-//
-// @param $side  which way the label opens: "below", "left" or "right"
+// @param $side  which way the label opens: "below" or "above"
 @mixin note-tooltip($side: below) {
   position: relative;
   overflow: visible;
@@ -37,25 +43,14 @@ $note-gutter: 54px;
     background-color: var(--bg-tooltips);
     pointer-events: none;
     z-index: 2000;
-    @include drumee.typo(
-      $line: 16px,
-      $size: 12px,
-      $color: var(--default-text-color)
-    );
+    @include drumee.typo($line: 16px, $size: 12px, $color: var(--default-text-color));
+    // anchored on the RIGHT so a long label grows inwards, not off the window
+    right: 0;
 
     @if $side == below {
-      // anchored on the RIGHT so a long label grows inwards instead of off
-      // the window — these buttons sit in the top-right corner.
       top: calc(100% + 6px);
-      right: 0;
-    } @else if $side == left {
-      top: 50%;
-      right: calc(100% + 8px);
-      transform: translateY(-50%);
     } @else {
-      top: 50%;
-      left: calc(100% + 8px);
-      transform: translateY(-50%);
+      bottom: calc(100% + 6px);
     }
   }
 }
@@ -64,206 +59,413 @@ $note-gutter: 54px;
   &__ui {
     background-color: var(--default-bg);
     // Fallback only — the editor is docked to the WM container and the real
-    // geometry is written inline from _workspaceTarget() (see index.js), which
-    // wins over this.
+    // geometry is written inline from _workspaceTarget() (see index.js).
     width: 100%;
     height: 100%;
     top: 0;
     left: 0;
-    overflow: visible;
+    overflow: hidden;
     flex-direction: column;
     display: flex;
-    // No radius or drop shadow: this fills the workspace edge to edge, and
-    // rounding the corners would just show the desk through them.
-    border-radius: 0;
+    // The sheet card of the Figma: 8px corners and a hairline.
+    border-radius: 8px;
+    border: 1px solid $note-hairline;
+    box-sizing: border-box;
 
     &[data-device="mobile"] {
       width: 100vw;
       height: 100vh;
       left: 0;
       top: 0;
+      border-radius: 0;
+    }
+
+    // Expand: the note alone on the screen.
+    &:fullscreen {
+      border-radius: 0;
+      border: none;
     }
   }
 
-  // A writing surface wants the chrome out of the way, so this header is the
-  // slim neutral bar the editor/note one is not — but it keeps that window's
-  // structure (full width, own z-index, square-topped radius) so the shared
-  // window/skeleton/content/main layout behaves identically.
-  // Duy, 2026-09-18: white-on-white with a hairline read as unfinished space
-  // rather than a header. The NOTE stays pure white — that was the explicit
-  // constraint — so the separation is carried by the header instead: a barely
-  // tinted strip lifted off the page by a shadow. Depth, not a line.
   &__header {
     width: 100%;
-    height: 56px;
-    min-height: 56px;
+    height: 72px;
+    min-height: 72px;
     z-index: 200;
-    background-color: #fafafa;
-    box-shadow:
-      0 1px 2px rgb(16 24 40 / 6%),
-      0 1px 3px rgb(16 24 40 / 4%);
+    background-color: var(--default-bg);
+    border-radius: 8px 8px 0 0;
 
     &[data-header="0"] {
       display: none;
-    }
-
-    .menu-items {
-      background: var(--default-bg);
-      border-radius: var(--border-radius);
     }
   }
 
   &__main {
     width: 100%;
     height: 100%;
-    align-items: center;
     overflow: hidden;
   }
 
+  // The whole page scrolls as one: cover, head and text.
   &__body {
+    position: relative;
     width: 100%;
     flex: 1 1 auto;
     min-height: 0;
-    overflow: hidden;
-  }
-
-  // ---- The page column -------------------------------------------------
-  // Notion measures its text column at ~708px. Left at full width the lines
-  // ran ~1832px — about 220 characters — which is unreadable, and going
-  // full-frame made that worse rather than better. 816px = 708px of text plus
-  // the 54px gutters BlockNote needs on each side for the drag handle and "+".
-  // ---- The insert rail ---------------------------------------------------
-  // Duy, 2026-09-18: a vertical rail in the margin, the way the desk already
-  // uses one. It lives out of flow so it never moves the text, and the margin
-  // it floats in is ~500px of nothing on a wide window.
-  //
-  // WHICH SIDE is a one-line switch, not two implementations: the window
-  // carries data-rail-side and the rail reads it. The desk's own purple rail
-  // sits immediately left of this window, so "right" avoids two vertical bars
-  // touching — but left is a keystroke away if that reads better.
-  &__body {
-    position: relative;
-  }
-
-  &-rail__container {
-    position: absolute;
-    // Centred in the margin rather than pinned to the top edge: hung from the
-    // top it reads as something stuck there, not as a palette that belongs to
-    // the page (Duy, 2026-09-18 — "it looks unresponsive").
-    top: 50%;
-    transform: translateY(-50%);
-    // A short window must not let it run past the frame.
-    max-height: calc(100% - 24px);
+    overflow-x: hidden;
     overflow-y: auto;
-    z-index: 30;
-    gap: 2px;
-    padding: 6px;
-    width: max-content;
-    align-items: center;
-    border: 1px solid var(--neutral-300);
-    border-radius: 12px;
-    background-color: var(--default-bg);
-    box-shadow:
-      0 1px 2px rgb(16 24 40 / 6%),
-      0 4px 12px rgb(16 24 40 / 6%);
   }
 
-  // 🚨 Hiding a Box is NOT `display: none` on its own class.
-  //
-  // Skeletons sets the flex display for every Box through a global rule on
-  // `.drumee-box`. That is ONE class, and so is `…-rail__container`, so the two
-  // have equal specificity and ui-core's stylesheet — loaded later — won.
-  // Measured: the attribute flipped correctly and the rail stayed `display:
-  // flex` regardless, which read as a button that does nothing (Duy,
-  // 2026-09-18). Pairing the class with `.drumee-box` out-specifies it.
-  //
-  // Hidden by DEFAULT rather than on `[data-rail="0"]`, so the rail cannot
-  // flash open in the moment before the window has written the attribute.
-  &-rail__container.drumee-box {
+  // ---- Cover -------------------------------------------------------------
+  &__cover-row {
+    position: relative;
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+  &__cover {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+
+    &:hover .editor-blocknote__cover-controls.drumee-box {
+      display: flex;
+    }
+  }
+
+  &__cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    user-select: none;
+  }
+
+  &__cover-controls.drumee-box {
     display: none;
   }
 
-  // The toggle writes data-rail on the WINDOW, so one attribute drives both
-  // the rail and the pressed state of the button.
-  &[data-rail="1"] &-rail__container.drumee-box {
-    display: flex;
+  &__cover-controls {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    gap: 8px;
+    padding: 4px;
+    border-radius: 6px;
+    background-color: var(--default-bg);
   }
 
-  // Default side. The window may override with data-rail-side="left".
-  &-rail__container {
-    right: 16px;
-  }
-
-  &[data-rail-side="left"] &-rail__container {
-    right: auto;
-    left: 16px;
-  }
-
-  // Below the measure plus two margins there is nowhere for it to float
-  // without covering the text, so it steps aside rather than overlapping.
-  @media (max-width: 1100px) {
-    &-rail__container {
-      display: none !important;
-    }
-  }
-
-  &-rail__icon {
-    width: 32px;
-    height: 32px;
-    padding: 7px;
+  &__cover-button {
+    padding: 4px 6px;
+    border-radius: 6px;
     cursor: pointer;
-    position: relative;
-    overflow: visible;
-    border-radius: 8px;
-    align-items: center;
-    justify-content: center;
-    flex: 0 0 32px;
-    color: var(--normal-fg-10);
-    transition: background-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+    @include drumee.typo($line: 16.8px, $size: 14px, $color: var(--normal-fg-10));
 
     &:hover {
-      background-color: var(--default-bg-hover);
-      color: var(--neutral-900);
+      background-color: var(--normal-bg-90);
     }
-
-    svg {
-      width: 18px;
-      height: 18px;
-    }
-
-    @include note-tooltip(left);
   }
 
-  // On the left the labels have to open the other way or they run off-window.
-  &[data-rail-side="left"] &-rail__icon {
-    @include note-tooltip(right);
+  // The popup hangs off the cover's bottom-right corner (Figma 1406:64831);
+  // with no cover yet it opens under the "Add cover" button instead.
+  &__cover-popup-wrapper {
+    position: absolute;
+    z-index: 300;
+    right: 12px;
+    top: 152px;
   }
 
-  &-rail__separator {
-    width: 20px;
-    height: 1px;
-    margin: 4px 0;
-    flex: 0 0 1px;
-    background-color: var(--neutral-300);
+  &[data-cover="0"] &__cover-popup-wrapper {
+    right: auto;
+    left: $note-inset;
+    top: 91px;
   }
 
-  &__title-row,
-  &__surface .bn-editor {
-    max-width: $note-measure;
-    margin-inline: auto;
-    padding-inline: $note-gutter;
+  // ---- Popups (cover, emoji) ---------------------------------------------
+  &__popup {
+    background-color: var(--default-bg);
+    border-radius: 8px;
+    box-shadow: $note-shadow;
     box-sizing: border-box;
   }
 
+  &__popup-title {
+    @include drumee.typo($line: 16.8px, $size: 14px, $color: var(--normal-fg-20));
+  }
+
+  &__cover-popup {
+    width: 330px;
+    padding: 8px 8px 12px;
+    gap: 8px;
+  }
+
+  &__cover-upload {
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid $note-hairline;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--normal-bg-90);
+    }
+  }
+
+  &__cover-upload-icon {
+    width: 32px;
+    height: 32px;
+    color: var(--primary-purple-20);
+    pointer-events: none;
+
+    svg {
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  &__cover-upload-label {
+    pointer-events: none;
+    @include drumee.typo($line: 14.4px, $size: 12px, $color: var(--normal-fg-10));
+    font-weight: 600;
+  }
+
+  &__cover-file {
+    display: none !important;
+  }
+
+  &__cover-hints {
+    gap: 4px;
+    align-items: center;
+    text-align: center;
+  }
+
+  &__cover-hint {
+    @include drumee.typo($line: 16.8px, $size: 12px, $color: var(--normal-fg-20));
+
+    &.strong {
+      color: var(--normal-fg-10);
+    }
+  }
+
+  // ---- The page head -----------------------------------------------------
+  &__head {
+    width: 100%;
+    flex: 0 0 auto;
+    gap: 12px;
+    padding: 60px $note-inset 0;
+    box-sizing: border-box;
+  }
+
+  &[data-cover="1"] &__head {
+    padding-top: 24px;
+  }
+
+  &__actions[data-empty="1"].drumee-box,
+  &__comments-slot:empty.drumee-box,
+  &__icon-slot:empty.drumee-box {
+    display: none;
+  }
+
+  &__page-actions-row {
+    gap: 12px;
+    align-items: center;
+  }
+
+  &__page-action {
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+
+    &:hover {
+      background-color: $note-hover;
+    }
+  }
+
+  &__page-action-icon {
+    width: 19px;
+    height: 19px;
+    pointer-events: none;
+
+    svg {
+      width: 19px;
+      height: 19px;
+    }
+  }
+
+  &__page-action-label {
+    white-space: nowrap;
+    pointer-events: none;
+    @include drumee.typo($line: 19.2px, $size: 16px, $color: var(--normal-fg-20));
+  }
+
+  // The icon and its picker.
+  &__icon-row {
+    position: relative;
+    overflow: visible;
+  }
+
+  &__page-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 34px;
+    line-height: 40px;
+    text-align: center;
+    border-radius: 6px;
+    user-select: none;
+
+    &[data-editable="1"] {
+      cursor: pointer;
+
+      &:hover {
+        background-color: $note-hover;
+      }
+    }
+  }
+
+  &__icon-picker {
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    z-index: 300;
+  }
+
+  &[data-icon="0"] &__icon-picker {
+    top: 3px;
+  }
+
+  &__emoji-picker {
+    width: 263px;
+    padding-top: 8px;
+    gap: 4px;
+  }
+
+  &__emoji-head {
+    justify-content: space-between;
+    padding: 0 8px;
+  }
+
+  &__emoji-head-title,
+  &__emoji-head-remove {
+    @include drumee.typo($line: 16.8px, $size: 14px, $color: var(--normal-fg-20));
+  }
+
+  &__emoji-head-remove {
+    cursor: pointer;
+
+    &:hover {
+      color: var(--normal-fg-10);
+    }
+  }
+
+  &__emoji-body {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  &__emoji-tabs {
+    justify-content: space-between;
+  }
+
+  &__emoji-tab {
+    width: 27px;
+    height: 16px;
+    padding: 2px;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    box-sizing: border-box;
+
+    &[data-active="1"],
+    &:hover {
+      background-color: $note-hover;
+    }
+  }
+
+  &__emoji-tab-icon {
+    width: 12px;
+    height: 12px;
+    pointer-events: none;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  &__emoji-search {
+    height: 22px;
+    border-radius: 4px;
+    background-color: $note-hover;
+    padding: 4px 6px;
+    box-sizing: border-box;
+
+    input {
+      width: 100%;
+      height: 14px;
+      border: none;
+      outline: none;
+      padding: 0;
+      min-height: 0;
+      background: transparent;
+      @include drumee.typo($line: 14px, $size: 10px, $color: var(--normal-fg-10));
+
+      &::placeholder {
+        color: var(--normal-fg-50);
+      }
+    }
+  }
+
+  &__emoji-section {
+    @include drumee.typo($line: 14px, $size: 10px, $color: var(--normal-fg-20));
+  }
+
+  // 8 across, 25px cells (Figma 1406:27172), four rows visible.
+  &__emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 25px);
+    grid-auto-rows: 25px;
+    justify-content: space-between;
+    row-gap: 6px;
+    height: 120px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  &__emoji {
+    width: 25px;
+    height: 25px;
+    font-size: 20px;
+    line-height: 25px;
+    text-align: center;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      background-color: $note-hover;
+    }
+  }
+
+  &__emoji-empty {
+    grid-column: 1 / -1;
+    @include drumee.typo($line: 16px, $size: 12px, $color: var(--normal-fg-50));
+  }
+
+  // The page title, styled as the H1 it stands in for.
   &__title-row {
     width: 100%;
     flex: 0 0 auto;
-    padding-top: 32px;
-    padding-bottom: 4px;
   }
 
-  // The page title, styled as the H1 it stands in for — borderless until
-  // touched, the way Notion's is.
   &__title-input {
     width: 100%;
 
@@ -271,231 +473,275 @@ $note-gutter: 54px;
       width: 100%;
       border: none;
       outline: none;
-      background: rgba(0, 0, 0, 0);
+      background: transparent;
       padding: 0;
-      font-size: 40px;
-      font-weight: 700;
-      line-height: 1.2;
-      color: var(--normal-fg-10);
+      min-height: 0;
       font-family: inherit;
+      font-size: 40px;
+      font-weight: 600;
+      line-height: 44px;
+      color: var(--normal-fg-10);
 
       &::placeholder {
-        color: var(--normal-fg-20);
-        opacity: 0.45;
+        color: var(--placeholder-fg);
+        opacity: 1;
       }
     }
   }
 
+  // ---- Comments ----------------------------------------------------------
+  &__comments {
+    width: 100%;
+  }
+
+  &__comment-list {
+    gap: 12px;
+
+    &:not(:empty) {
+      padding-bottom: 12px;
+    }
+  }
+
+  &__comment {
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  &__comment-avatar {
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+    font-size: 10px;
+  }
+
+  &__comment-body {
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__comment-meta {
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  &__comment-name {
+    @include drumee.typo($line: 16.8px, $size: 12px, $color: var(--normal-fg-10));
+    font-weight: 600;
+  }
+
+  &__comment-time {
+    @include drumee.typo($line: 16.8px, $size: 12px, $color: var(--normal-fg-50));
+  }
+
+  &__comment-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    @include drumee.typo($line: 19.2px, $size: 14px, $color: var(--normal-fg-10));
+  }
+
+  &__comment-bar {
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid $note-hairline;
+
+    .editor-blocknote__comment-avatar {
+      margin-right: -4px;
+    }
+  }
+
+  &__comment-entry {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: none;
+      outline: none;
+      padding: 0;
+      min-height: 0;
+      background: transparent;
+      @include drumee.typo($line: 16.8px, $size: 12px, $color: var(--normal-fg-10));
+
+      &::placeholder {
+        color: var(--normal-fg-50);
+      }
+    }
+  }
+
+  &__comment-tools {
+    gap: 8px;
+    align-items: center;
+  }
+
+  &__comment-tool {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    @include note-tooltip(above);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      color: var(--normal-fg-20);
+    }
+  }
+
+  // ---- The editor --------------------------------------------------------
   &__surface {
     width: 100%;
-    flex: 1 1 auto;
-    min-height: 0;
+    flex: 0 0 auto;
+    padding: 12px ($note-inset - $note-gutter) 60px;
+    box-sizing: border-box;
   }
 
-  &-topbar {
-    &__container {
-      width: 100%;
-      height: 100%;
-      justify-content: space-between;
-      align-items: center;
-      // One gutter in from the frame, so the title is not jammed against the
-      // window edge.
-      //
-      // NOT aligned to the page column, and that is deliberate: measured, the
-      // column starts at ~642px on a wide window, which would strand this
-      // small title in the middle of an empty bar. A window's own title
-      // belongs at its left edge; the FORMATTING BAND is the thing that lines
-      // up with the text, because it acts on the text.
-      padding: 0 12px 0 $note-gutter;
-      gap: 8px;
-
-      // The window controls belong to the WINDOW, the buttons beside them
-      // belong to the NOTE. They read as one undifferentiated row of odds and
-      // ends, so a hairline separates the two jobs and the close button gets
-      // the same 32px box as everything else.
-      //
-      // Nested HERE and not one level up: `&-topbar` compiles to a class no
-      // element carries — the element is `…-topbar__container` — so a rule
-      // written beside `&__container` silently matches nothing. It did, and
-      // the close button stayed 20px next to two 32px ones.
-      .window-button__icon-button {
-        align-items: center;
-        margin-left: 8px;
-        padding-left: 10px;
-        border-left: 1px solid var(--neutral-300);
-
-        > * {
-          width: 32px;
-          height: 32px;
-          padding: 7px;
-          border-radius: 8px;
-          align-items: center;
-          justify-content: center;
-          transition: background-color 0.15s ease;
-
-          &:hover {
-            background-color: var(--default-bg-hover);
-          }
-
-          svg {
-            width: 18px;
-            height: 18px;
-          }
-        }
-      }
+  @media (max-width: 900px) {
+    &__head {
+      padding-left: 24px;
+      padding-right: 24px;
     }
 
-    // The title group absorbs the slack so the actions and the window controls
-    // stay together on the right. Without this, space-between spreads all three
-    // groups evenly and the save button ends up stranded mid-header — only
-    // visible once the window opens full-frame.
-    &__title {
-      align-items: center;
-      flex: 1 1 auto;
-      min-width: 0;
-      overflow: hidden;
-
-      .name {
-        font-size: 14px;
-        line-height: 20px;
-        color: var(--normal-fg-10);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 46ch;
-      }
+    &__surface {
+      padding-left: 0;
+      padding-right: 0;
     }
 
-    &__save-status {
-      align-self: center;
-      white-space: nowrap;
-      font-size: 12px;
-      line-height: 16px;
-      color: var(--normal-fg-20);
-      margin: 0 10px 0 12px;
-      transition: color 0.2s ease, opacity 0.2s ease;
-
-      &[data-state="saving"] {
-        opacity: 0.75;
-      }
-
-      &[data-state="unsaved"],
-      &[data-state="readonly"] {
-        color: var(--warning);
-      }
+    &[data-cover="0"] &__cover-popup-wrapper {
+      left: 24px;
     }
+  }
+}
 
-    &__action {
-      align-items: center;
-      height: 100%;
-      gap: 2px;
-    }
+// ---- The header (shared player topbar widget, sized to the Figma) ----------
+.editor-blocknote-topbar.drumee-topbar {
+  width: 100%;
+  height: 100%;
 
+  .drumee-topbar__bar.drumee-topbar__bar {
+    width: 100%;
+    height: 72px;
+    padding: 12px 20px;
+    background-color: var(--default-bg);
+    border-radius: 8px 8px 0 0;
+  }
 
-    // ONE size for everything in this header.
-    //
-    // It used to be a 46px filled circle sitting next to the 20px window close
-    // button — more than twice the size, different shape, different weight,
-    // touching each other. That mismatch is what read as unfinished. These are
-    // quiet 32px targets that only show a background on hover, so the chrome
-    // stays out of the way of the writing.
-    &__icon {
-      width: 32px;
-      height: 32px;
-      margin-left: 2px;
-      cursor: pointer;
-      z-index: 1000;
-      padding: 7px;
-      background-color: transparent;
-      color: var(--normal-fg-10);
+  .drumee-topbar__identity {
+    gap: 12px;
+    flex: 1 1 auto;
+  }
+
+  .drumee-topbar__filetype {
+    width: 36px;
+    height: 36px;
+    padding: 4px;
+    border-radius: 6px;
+    background-color: transparent;
+    box-sizing: border-box;
+  }
+
+  .drumee-topbar__filetype-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .drumee-topbar__title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    @include drumee.typo($line: 21.6px, $size: 18px, $color: var(--normal-fg-10));
+  }
+
+  .drumee-topbar__actions {
+    gap: 0;
+    height: 48px;
+
+    // Download, gear, Expand, Close: 48px targets, 24px glyphs (Figma).
+    .icon {
+      width: 48px;
+      height: 48px;
+      padding: 12px;
+      box-sizing: border-box;
+      color: var(--normal-fg-800);
       border-radius: 8px;
-      align-items: center;
-      justify-content: center;
-      flex: 0 0 32px;
-      transition: background-color 0.15s ease, color 0.15s ease;
-
-      &:hover {
-        background-color: var(--default-bg-hover);
-        color: var(--neutral-900);
-      }
-
-      // The toggle reports state, not just intent: while the toolbar is up the
-      // button stays lit, the way a pressed control should.
-      &.toolbar-toggle[data-state="1"] {
-        background-color: var(--default-bg-hover);
-        color: var(--neutral-900);
-      }
 
       @include note-tooltip(below);
 
       svg {
-        width: 18px;
-        height: 18px;
+        width: 24px;
+        height: 24px;
       }
-    }
-
-    // The Export menu opens under its button and is anchored on the RIGHT, for
-    // the same reason as the tooltips: the button sits in the top-right corner.
-    &__export {
-      position: relative;
-      overflow: visible;
-
-      // menu_topic positions its (absolute) wrapper from the LEFT of the
-      // trigger, which runs the list off the window here.
-      .menu-topic-items__wrapper {
-        right: 0;
-        left: auto;
-      }
-    }
-
-    &__export-items {
-      min-width: 220px;
-      padding: 6px;
-      margin-top: 6px;
-      background-color: var(--default-bg);
-      border: 1px solid var(--neutral-300);
-      border-radius: var(--border-radius);
-      box-shadow: var(--shadow-popup);
-      z-index: 2000;
-    }
-
-    &__export-item {
-      align-items: center;
-      gap: 10px;
-      height: 34px;
-      padding: 0 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--normal-fg-10);
 
       &:hover {
         background-color: var(--default-bg-hover);
-        color: var(--neutral-900);
+
+        svg {
+          color: var(--normal-fg-800);
+        }
       }
     }
+  }
 
-    &__export-icon {
-      width: 18px;
-      height: 18px;
-      flex: 0 0 18px;
-      pointer-events: none;
+  .drumee-topbar__menu {
+    width: 48px;
+    height: 48px;
+  }
+}
 
-      svg {
-        width: 18px;
-        height: 18px;
-      }
+.editor-blocknote-topbar {
+  &__share {
+    height: 40px;
+    padding: 0 20px;
+    gap: 8px;
+    margin-right: 16px;
+    align-items: center;
+    border-radius: 40px;
+    background-color: var(--primary-10);
+    cursor: pointer;
+
+    &:hover {
+      filter: brightness(0.97);
+    }
+  }
+
+  &__share-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-10);
+    pointer-events: none;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &__share-label {
+    pointer-events: none;
+    white-space: nowrap;
+    @include drumee.typo($line: 19.2px, $size: 16px, $color: var(--normal-fg-10));
+    font-weight: 600;
+  }
+
+  // Autosave is silent while all is well.
+  &__save-status {
+    align-self: center;
+    white-space: nowrap;
+    margin-right: 16px;
+    @include drumee.typo($line: 16px, $size: 12px, $color: var(--normal-fg-20));
+
+    &[data-state="saved"] {
+      display: none;
     }
 
-    &__export-name {
-      white-space: nowrap;
-      pointer-events: none;
-      @include drumee.typo($line: 16px, $size: 13px, $color: inherit);
-    }
-
-    &__export-separator {
-      height: 1px;
-      margin: 4px 6px;
-      background-color: var(--neutral-300);
+    &[data-state="unsaved"],
+    &[data-state="readonly"] {
+      color: var(--warning);
     }
   }
 }
@@ -507,12 +753,205 @@ $note-gutter: 54px;
   user-select: text;
   -webkit-user-select: text;
   width: 100%;
-  height: 100%;
-  overflow: auto;
+  overflow: visible;
 
   * {
     user-select: text;
     -webkit-user-select: text;
   }
 
+  // The empty-page hint, "Press '/' for commands" (Figma 16px, #84848c).
+  .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
+    color: var(--normal-fg-50);
+  }
+
+  // "/ Type to search": the decorated "/" grows a hint while nothing has been
+  // typed after it (the flag is set by the menu, ./slash-menu).
+  .bn-suggestion-decorator {
+    background-color: var(--normal-bg-90);
+    border-radius: 4px;
+    padding: 2px 0 2px 4px;
+  }
+
+  .bn-container[data-slash-empty="1"] .bn-suggestion-decorator::after {
+    content: var(--note-type-to-search);
+    color: var(--normal-fg-50);
+    padding: 0 4px 0 4px;
+  }
+}
+
+// ---- Callout block (./callout) ---------------------------------------------
+.note-callout {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background-color: var(--normal-bg-90);
+  box-sizing: border-box;
+
+  &__emoji {
+    flex: 0 0 auto;
+    user-select: none;
+  }
+
+  &__text {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+// ---- The "/" menu (./slash-menu; Figma 1406:95201) --------------------------
+// Rendered by BlockNote's floating layer, outside the window's tree.
+.note-slash {
+  display: flex;
+  flex-direction: column;
+  width: 302px;
+  max-height: 330px;
+  padding: 8px;
+  gap: 12px;
+  border-radius: 4px;
+  background-color: var(--default-bg, #fff);
+  box-shadow: $note-shadow;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 12px;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--primary-30);
+      border-radius: 28px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+  }
+
+  &__group {
+    @include drumee.typo($line: 14.4px, $size: 12px, $color: var(--normal-fg-20));
+    font-weight: 600;
+  }
+
+  &__separator {
+    height: 1px;
+    flex: 0 0 1px;
+    background-color: $note-hairline;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 25px;
+    flex: 0 0 25px;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    box-sizing: border-box;
+
+    &[data-selected="1"],
+    &:hover {
+      background-color: var(--normal-bg-90);
+    }
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: var(--normal-fg-10);
+    box-sizing: border-box;
+
+    &.boxed {
+      border: 1px solid var(--normal-fg-10);
+      border-radius: 4px;
+
+      .note-slash__svg {
+        width: 11px;
+        height: 11px;
+      }
+    }
+  }
+
+  &__svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+  }
+
+  &__glyph {
+    display: flex;
+    align-items: center;
+    width: 16px;
+    flex: 0 0 16px;
+    white-space: nowrap;
+    @include drumee.typo($line: 16.8px, $size: 12px, $color: var(--normal-fg-10));
+
+    &.toggle {
+      font-size: 10px;
+    }
+  }
+
+  // The "▸" of a toggle heading, drawn rather than typed.
+  &__toggle-mark {
+    width: 0;
+    height: 0;
+    margin-right: 1px;
+    border-top: 3px solid transparent;
+    border-bottom: 3px solid transparent;
+    border-left: 4px solid currentColor;
+  }
+
+  &__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    @include drumee.typo($line: 16.8px, $size: 14px, $color: var(--normal-fg-10));
+  }
+
+  &__badge {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    @include drumee.typo($line: 16.8px, $size: 12px, $color: var(--normal-fg-20));
+  }
+
+  &__empty {
+    padding: 4px;
+    @include drumee.typo($line: 16.8px, $size: 14px, $color: var(--normal-fg-50));
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 0 0 auto;
+    padding-top: 8px;
+    border-top: 1px solid $note-hairline;
+    cursor: pointer;
+  }
+
+  &__footer-label {
+    @include drumee.typo($line: 16.8px, $size: 14px, $color: var(--normal-fg-20));
+  }
+
+  &__footer-key {
+    @include drumee.typo($line: 16.8px, $size: 12px, $color: var(--normal-fg-20));
+  }
 }

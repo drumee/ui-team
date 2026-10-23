@@ -1,15 +1,8 @@
 const __player = require("player/interact");
 const { EXT, DATA_TYPE } = require("libs/blocknote-format");
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
-
-/**
- * Which margin the insert rail floats in.
- *
- * "right" by default: the desk's own purple rail sits immediately to the LEFT
- * of this window, and two vertical bars touching reads heavy. Flip this to
- * "left" to try the other side — the rail and its tooltips both follow.
- */
-const RAIL_SIDE = "right";
+const share = require("builtins/player/widget/share");
+const page = require("./page");
 
 // How long after the last keystroke an untouched note writes itself back.
 // BlockNote fires onChange per keystroke, so every edit MUST go through this
@@ -73,7 +66,9 @@ class __editor_blocknote extends __player {
     // ResizeObserver. `_zoomed` is what tells the tracker to keep re-fitting.
     this._zoomed = true;
 
-    this._railSide = RAIL_SIDE;
+    // The page decorations (icon, cover) — read from the file by
+    // blocknote_state, written back with it. See ./page.
+    this._page = { icon: "", cover: null };
     this._onBeforeUnload = this.checkUnsavedWork.bind(this);
     window.addEventListener("beforeunload", this._onBeforeUnload);
     // Where a new note gets written. Captured now, because by save time this
@@ -188,16 +183,11 @@ class __editor_blocknote extends __player {
         Kind.waitFor(kind).then(() => {
           child.feed({ kind, media: this.media, editor: this });
           this._state = child.children.last();
-          // The rail preference is remembered, so the button has to open
-          // already pressed when it is on — otherwise the toggle and what is
-          // on screen disagree from the first frame.
-          if (this._state && this._state.railShown) {
-            this._reflectRailState(this._state.railShown());
-          }
         });
         break;
       }
       default:
+        if (page.onPartReady(this, child, pn)) break;
         super.onPartReady(child, pn);
     }
   }
@@ -263,27 +253,83 @@ class __editor_blocknote extends __player {
   }
 
   /**
-   * Show the toggle as pressed while the rail is up, so the button says what
-   * state the editor is in rather than just what it does.
-   *
-   * The rail itself is shown by a data attribute on the window rather than by
-   * building and tearing down the widget: it is eleven buttons, and keeping
-   * them in the DOM means the toggle is instant and the tooltips do not have
-   * to be re-created every time.
-   *
-   * @param {Boolean} on
+   * The page decorations as they will be saved.
+   * @returns {{icon: String, cover: Object|null}}
    */
-  _reflectRailState(on) {
-    if (!this.ensurePart) return;
-    this.ensurePart("ref-rail-toggle")
-      .then((p) => {
-        if (!p || !p.el || p.isDestroyed()) return;
-        p.el.dataset.state = on ? "1" : "0";
-      })
-      .catch(() => { });
-    if (this.el) {
-      this.el.dataset.rail = on ? "1" : "0";
-      this.el.dataset.railSide = this._railSide;
+  page() {
+    return { icon: this._page.icon || "", cover: this._page.cover || null };
+  }
+
+  /**
+   * Called by blocknote_state with what the file holds.
+   * @param {{icon: String, cover: Object|null}} p
+   */
+  setPage(p = {}) {
+    this._page = { icon: p.icon || "", cover: p.cover || null };
+    page.paint(this);
+  }
+
+  /**
+   * Change one decoration as a user edit: repaint, then save like any edit.
+   * A note we could not read is never written, decorations included.
+   * @param {Object} change
+   */
+  updatePage(change) {
+    if (this._readOnly) return;
+    this._page = { ...this._page, ...change };
+    page.paint(this);
+    this.markDirty();
+  }
+
+  /**
+   * Whether this session may write the note. A brand-new note belongs to its
+   * author; an opened one follows the node's privilege.
+   * @returns {Boolean}
+   */
+  canEditNote() {
+    if (this._readOnly || Visitor.inDmz) return false;
+    if (!this.media) return true;
+    return _.isFunction(this.media.canUpload) ? !!this.media.canUpload() : true;
+  }
+
+  /**
+   * The source MFS view acts on the node — Share and the file's chat thread
+   * go to it, the same way the document player forwards them.
+   * @returns {Boolean} whether it took the event
+   */
+  _delegate(cmd, args) {
+    const media = this.media;
+    if (!media || media.isDestroyed() || !_.isFunction(media.onUiEvent)) {
+      return false;
+    }
+    media.onUiEvent(cmd, args);
+    return true;
+  }
+
+  /**
+   * Run `fn` once the note exists on the server. Share, cover and comments
+   * all need a node; a brand-new note gets one by saving first.
+   * @param {Function} fn
+   */
+  _withNode(fn) {
+    if (this.mget(_a.nid)) return fn();
+    if (this._readOnly) return;
+    this._afterSave = fn;
+    this.saveContent();
+  }
+
+  /**
+   * Expand: the note alone, full screen. Escape (the browser's own) or the
+   * same button brings it back.
+   */
+  _toggleFullscreen() {
+    const doc = document;
+    if (doc.fullscreenElement) {
+      if (doc.exitFullscreen) doc.exitFullscreen().catch(() => {});
+      return;
+    }
+    if (this.el && this.el.requestFullscreen) {
+      this.el.requestFullscreen().catch((e) => this.warn("editor_blocknote: fullscreen refused", e));
     }
   }
 
@@ -293,7 +339,7 @@ class __editor_blocknote extends __player {
    */
   _syncWindowTitle(name) {
     if (!this.ensurePart) return;
-    this.ensurePart("ref-window-name")
+    this.ensurePart("player-title")
       .then((p) => {
         if (p && p.el && !p.isDestroyed() && p.set) p.set({ content: name });
       })
@@ -548,6 +594,12 @@ class __editor_blocknote extends __player {
         this._changed = 0;
         this._setStatus("saved");
         this._reflectInTarget(target, data);
+        page.paint(this);
+        if (this._afterSave) {
+          const next = this._afterSave;
+          this._afterSave = null;
+          next();
+        }
         if (this._again) {
           this._again = 0;
           this.saveContent();
@@ -558,6 +610,7 @@ class __editor_blocknote extends __player {
       .catch((e) => {
         this._saving = 0;
         this._again = 0;
+        this._afterSave = null;
         this._setStatus("unsaved");
         this.warn("editor_blocknote: save failed", e);
       });
@@ -628,32 +681,37 @@ class __editor_blocknote extends __player {
         break;
       }
 
-      // The insert rail — see skeleton/rail.
-      case "toggle-rail": {
-        if (!this._state || !this._state.toggleRail) break;
-        this._reflectRailState(this._state.toggleRail());
+      // Header: Download is the PDF of the note; the gear menu has the rest.
+      case "download-note":
+        this.exportNote("pdf");
         break;
-      }
 
-      // The Export menu — see skeleton/topbar.
+      // The gear menu's Export rows — see skeleton/topbar.
       case "export-note": {
-        const format = cmd && cmd.mget && cmd.mget("format");
+        const format = cmd && cmd.mget && (cmd.mget("format") || cmd.mget(_a.value));
         if (format) this.exportNote(format);
         break;
       }
 
-      case "insert-block": {
-        if (!this._state || !this._state.applyBlock) break;
-        const block = cmd && cmd.mget && cmd.mget("block");
-        if (!block) break;
-        this._state.applyBlock(block);
+      // The gear menu's "Export" parent row: its submenu opens on hover.
+      case "export-menu":
         break;
-      }
+
+      // Share opens the secure-share panel, like every other file's.
+      case "secure-share":
+        this._withNode(() => share.click(this, cmd));
+        break;
+
+      case "note-fullscreen":
+        this._toggleFullscreen();
+        break;
 
       case _e.close:
         this.goodbye();
         break;
       default:
+        // The page head — icon, cover, comments (./page).
+        if (page.onUiEvent(this, cmd, service)) break;
         super.onUiEvent(cmd, args);
     }
   }
@@ -674,6 +732,7 @@ class __editor_blocknote extends __player {
       clearTimeout(this._timer);
       this._timer = null;
     }
+    page.destroy(this);
     // Last write wins: flush an unsaved note on close, the way editor_note does.
     if (this._changed && !this._readOnly && !this._saving) this.saveContent();
     if (super.onBeforeDestroy) super.onBeforeDestroy();

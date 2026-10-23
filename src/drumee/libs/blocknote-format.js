@@ -8,6 +8,15 @@
  * format change is detectable instead of being guessed at:
  *
  *   { "app": "drumee.blocknote", "version": 1, "blocks": [ … ] }
+ *
+ * Two OPTIONAL page decorations ride in the same envelope (Lexis's Figma,
+ * 2026-10-22) — they belong to the document, so they travel with it:
+ *
+ *   "icon":  "🚀"                          one emoji above the title
+ *   "cover": { "nid": "…", "hub_id": "…" } an image node shown as the banner
+ *
+ * Both are additive: a note without them is byte-for-byte what it was, and a
+ * reader that predates them ignores keys it does not know. No VERSION bump.
  */
 
 /** Extension carried by every file this editor writes. */
@@ -54,15 +63,42 @@ const DATA_TYPE = "drumee.blocknote";
 const VERSION = 1;
 
 /**
+ * @param {*} icon
+ * @returns {String} the icon if it is one, else ""
+ */
+function cleanIcon(icon) {
+  return typeof icon === "string" && icon.length && icon.length <= 16 ? icon : "";
+}
+
+/**
+ * @param {*} cover
+ * @returns {{nid: String, hub_id: String}|null} the cover if it names a node
+ */
+function cleanCover(cover) {
+  if (!cover || typeof cover !== "object") return null;
+  const { nid, hub_id } = cover;
+  if (typeof nid !== "string" || !nid || typeof hub_id !== "string" || !hub_id) {
+    return null;
+  }
+  return { nid, hub_id };
+}
+
+/**
  * @param {Array} blocks BlockNote document (`editor.document`)
+ * @param {Object} [page] the page decorations: { icon, cover }
  * @returns {String} the bytes to hand to media.save
  */
-function serialize(blocks) {
-  return JSON.stringify({
+function serialize(blocks, page = {}) {
+  const data = {
     app: DATA_TYPE,
     version: VERSION,
     blocks: Array.isArray(blocks) ? blocks : [],
-  });
+  };
+  const icon = cleanIcon(page && page.icon);
+  const cover = cleanCover(page && page.cover);
+  if (icon) data.icon = icon;
+  if (cover) data.cover = cover;
+  return JSON.stringify(data);
 }
 
 /**
@@ -74,12 +110,12 @@ function serialize(blocks) {
  * with a blank document.
  *
  * @param {String} content raw file bytes
- * @returns {{blocks: Array}|{error: String}}
+ * @returns {{blocks: Array, icon: String, cover: Object|null}|{error: String}}
  */
 function parse(content) {
   if (typeof content !== "string" || !content.trim()) {
     // A brand-new note legitimately has no bytes yet.
-    return { blocks: [] };
+    return { blocks: [], icon: "", cover: null };
   }
   let data;
   try {
@@ -90,7 +126,12 @@ function parse(content) {
   if (!data || data.app !== DATA_TYPE || !Array.isArray(data.blocks)) {
     return { error: "unrecognised" };
   }
-  return { blocks: data.blocks };
+  return {
+    blocks: data.blocks,
+    // A malformed decoration is dropped, never fatal: the text is what matters.
+    icon: cleanIcon(data.icon),
+    cover: cleanCover(data.cover),
+  };
 }
 
 module.exports = {

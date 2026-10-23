@@ -279,7 +279,7 @@ test("every language carries the new keys", () => {
   // menu row, which is exactly the kind of thing nobody notices until QA.
   for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
     const dict = JSON.parse(readFileSync(resolve(ROOT, `locale/${lang}.json`), "utf8"));
-    for (const key of ["NOTE_BETA", "UNTITLED", "ALL_CHANGES_SAVED", "UNSAVED_CHANGES", "NOTE_UNREADABLE", "NOTE_UPGRADES_ON_SAVE", "NOTE_BLOCKS", "NOTE_TOOLBAR"]) {
+    for (const key of ["NOTE_BETA", "UNTITLED", "ALL_CHANGES_SAVED", "UNSAVED_CHANGES", "NOTE_UNREADABLE", "NOTE_UPGRADES_ON_SAVE", "NOTE_PRESS_SLASH", "NOTE_ADD_ICON", "NOTE_ADD_COVER", "NOTE_ADD_COMMENT", "NOTE_CHANGE_COVER", "NOTE_ADD_A_COMMENT", "NOTE_CLOSE_MENU"]) {
       assert.ok(dict[key], `locale/${lang}.json is missing ${key}`);
     }
   }
@@ -363,91 +363,124 @@ test("the old editor is hidden, NOT removed", () => {
 });
 
 // ---------------------------------------------------------------------------
-// The header, and formatting on demand (Duy, 2026-09-18)
+// Lexis's Figma (File viewer page, the note frames), 2026-10-22
 // ---------------------------------------------------------------------------
 
-test("every button in the header is the same size", () => {
-  // What made it look unfinished was a 46px filled circle touching the 20px
-  // window close button. The sizes are pinned because "they look wrong
-  // together" is invisible in a diff and comes back the moment someone adds
-  // the next button.
-  const skin = readFileSync(
-    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skin/index.scss"), "utf8");
-  const icon = skin.slice(skin.indexOf("&__icon {"));
-  assert.match(icon, /width: 32px;/);
-  assert.match(icon, /height: 32px;/);
-  assert.ok(!/flex: 0 0 46px/.test(skin), "the 46px circle must be gone");
-  assert.ok(!/border-radius: 100%/.test(icon.slice(0, 400)), "and it is no longer a circle");
-  // the shared window control is brought to the same box, scoped to this header
-  assert.match(skin, /\.window-button__icon-button/);
+const NOTE_DIR = "src/drumee/builtins/editor/blocknote";
+const readNote = (f) => readFileSync(resolve(ROOT, NOTE_DIR, f), "utf8");
+
+test("the header is the shared player topbar, laid out to the Figma", () => {
+  // One header for every file viewer: the note reuses the widget the document
+  // player uses instead of hand-building a second one.
+  const topbar = readNote("skeleton/topbar.js");
+  assert.match(topbar, /require\("builtins\/player\/widget\/topbar"\)/);
+  // Share pill, Download, gear, Expand, Close — and nothing from the old bar
+  for (const service of ['"secure-share"', '"download-note"', '"note-fullscreen"', "_e.close"]) {
+    assert.ok(topbar.includes(`service: ${service}`) || topbar.includes(`(${service},`),
+      `the header lost ${service}`);
+  }
+  for (const gone of ["toggle-rail", "floppy", "ph-faders"]) {
+    assert.ok(!topbar.includes(gone), `${gone} belongs to the old header`);
+  }
+  // Export moved into the gear menu: every format is still reachable
+  for (const fmt of ["pdf", "docx", "html", "md", "csv", "print"]) {
+    assert.match(topbar, new RegExp(`row\\("${fmt}"`), `the gear menu lost ${fmt}`);
+  }
+  // and every header service is answered
+  const win = readNote("index.js");
+  for (const c of ['"secure-share"', '"download-note"', '"note-fullscreen"', '"export-note"', "_e.close"]) {
+    assert.ok(win.includes(`case ${c}:`), `index.js does not answer ${c}`);
+  }
+  assert.ok(!/case "toggle-rail"|case "insert-block"/.test(win), "the rail is gone");
+  assert.ok(!existsSync(resolve(ROOT, NOTE_DIR, "skeleton/rail.js")), "rail.js is gone");
 });
 
-test("the note stays white; only the header is tinted", () => {
-  // Duy was explicit: the page keeps its white. The separation is carried by
-  // the header alone.
-  const skin = readFileSync(
-    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skin/index.scss"), "utf8");
-  const header = skin.slice(skin.indexOf("&__header {"), skin.indexOf("&__main"));
-  assert.match(header, /background-color: #fafafa;/);
-  assert.match(header, /box-shadow:/, "separation is depth, not a hard rule");
-  assert.ok(
-    !/border-bottom: 1px solid var\(--neutral-300\)/.test(header),
-    "the hairline is replaced by the shadow"
-  );
-});
-
-test("the tooltip rule this editor does not inherit is defined ONCE", () => {
-  // Duy, 2026-09-18: hovering a header button showed a huge two-line label
-  // that shoved the header around. The shared editor skin styles
-  // `.editor-topbar__control__icon .tooltips` — a prefix nothing in THIS
-  // editor carries — so the label fell back to the page font at 16px,
-  // `position: static` (taking up layout instead of floating) and wrapping.
-  //
-  // It shipped broken twice, in the header and then in the rail, because the
-  // rule was hand-copied each time. It is now a mixin with a side argument: a
-  // third copy is how the third button gets forgotten.
-  const skin = readFileSync(
-    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skin/index.scss"), "utf8");
+test("labels in this editor carry the ONE tooltip rule", () => {
+  // The shared skins style tooltips under prefixes this editor does not
+  // carry; uncovered, a label renders static, in the page font, wrapping.
+  // It shipped broken twice when hand-copied — so it is one mixin.
+  const skin = readNote("skin/index.scss");
   assert.match(skin, /@mixin note-tooltip\(\$side: below\) \{/);
   const mixin = skin.slice(skin.indexOf("@mixin note-tooltip"));
-  assert.match(mixin.slice(0, 900), /position: absolute;/, "a static tooltip takes up layout");
-  assert.match(mixin.slice(0, 900), /white-space: nowrap;/, "or the label wraps");
-  assert.match(mixin.slice(0, 900), /\$size: 12px/, "and must not inherit the page font");
-  assert.match(mixin.slice(0, 900), /position: relative;/, "the button anchors it");
-
-  // every labelled button uses it, and nobody hand-rolls a copy
-  const uses = (skin.match(/@include note-tooltip\(/g) || []).length;
-  assert.ok(uses >= 3, `expected every labelled button to use it, found ${uses}`);
+  assert.match(mixin.slice(0, 1200), /position: absolute;/);
+  assert.match(mixin.slice(0, 1200), /white-space: nowrap;/);
+  assert.match(mixin.slice(0, 1200), /\$size: 12px/);
   const handRolled = (skin.match(/background-color: var\(--bg-tooltips\)/g) || []).length;
   assert.strictEqual(handRolled, 1, "the tooltip background belongs to the mixin alone");
+  assert.ok((skin.match(/@include note-tooltip\(/g) || []).length >= 2);
 });
 
-test("the insert rail is a toggle that is remembered", () => {
-  const state = readFileSync(
-    resolve(ROOT, "src/drumee/builtins/editor/blocknote/state.js"), "utf8");
-  assert.match(state, /toggleRail\(\)/);
-  assert.match(state, /localStorage/, "the choice has to survive a reload");
-  // a preference about how one person works must NOT ride on the document
-  assert.ok(
-    !/serialize\([^)]*rail/i.test(state),
-    "the rail state must never be written into the note"
-  );
-  const topbar = readFileSync(
-    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/topbar.js"), "utf8");
-  assert.match(topbar, /service: "toggle-rail"/);
-  // The icon, the label and the action have to agree. It has been wrong twice:
-  // three dots ("more options") labelled "Insert block", then a plus, which
-  // promises an insert and delivers a panel. It shows a panel, so it says so.
-  assert.match(topbar, /ico: "ph-faders"/);
-  for (const wrong of ["ph-dots-three", "ph-plus", "ph-sidebar-simple", "ph-toolbox"]) {
-    assert.ok(!new RegExp(`ico: "${wrong}"`).test(topbar), `${wrong} was rejected`);
+test("the page decorations ride in the file, and only when set", () => {
+  // A note with no icon and no cover must be byte-for-byte what it always
+  // was — nothing to migrate, nothing for an older reader to trip on.
+  const plain = JSON.parse(fmt.serialize([{ id: "a" }]));
+  assert.deepStrictEqual(Object.keys(plain).sort(), ["app", "blocks", "version"]);
+  assert.strictEqual(plain.version, 1, "additive keys are not a format change");
+
+  const both = fmt.parse(fmt.serialize([], { icon: "🚀", cover: { nid: "n1", hub_id: "h1" } }));
+  assert.strictEqual(both.icon, "🚀");
+  assert.deepStrictEqual(both.cover, { nid: "n1", hub_id: "h1" });
+
+  // a malformed decoration is dropped, never fatal: the text is what matters
+  const odd = fmt.parse(JSON.stringify({ app: fmt.DATA_TYPE, version: 1, blocks: [], icon: 5, cover: "x" }));
+  assert.ok(!odd.error);
+  assert.strictEqual(odd.icon, "");
+  assert.strictEqual(odd.cover, null);
+  const bad = JSON.parse(fmt.serialize([], { icon: "x".repeat(40), cover: { nid: "" } }));
+  assert.ok(!("icon" in bad) && !("cover" in bad), "junk is never written");
+});
+
+test("a decoration change is an edit, behind the same guard as any other", () => {
+  // An unreadable note is never written back — an icon must not sneak a
+  // write past that.
+  const win = readNote("index.js");
+  assert.match(win, /updatePage\(change\) \{\s*if \(this\._readOnly\) return;/);
+  assert.match(win, /updatePage\(change\) \{[\s\S]{0,200}this\.markDirty\(\);/);
+  const state = readNote("state.js");
+  assert.match(state, /serialize\(this\._editor\.document, page\)/);
+});
+
+test("the / menu offers only blocks this editor really has", () => {
+  // The Figma's menu is Notion's whole list. Rows BlockNote cannot back were
+  // left out on purpose (Duy, 2026-10-22); every row that IS here must name a
+  // real BlockNote item, or be one of ours with its own insert.
+  const menu = readNote("slash-menu.js");
+  const known = new Set([
+    "paragraph", "heading", "heading_2", "heading_3", "heading_4", "bullet_list",
+    "numbered_list", "check_list", "toggle_list", "quote", "code_block", "divider",
+    "table", "image", "video", "audio", "file", "emoji",
+    "toggle_heading", "toggle_heading_2", "toggle_heading_3",
+  ]);
+  const dict = JSON.parse(readFileSync(resolve(ROOT, "locale/en.json"), "utf8"));
+  const rows = [...menu.matchAll(/\{\s*key: "([a-z_0-9]+)",\s*title: LOCALE\.([A-Z_0-9]+)([^}]*)/g)];
+  assert.ok(rows.length >= 20, `expected the full menu, found ${rows.length}`);
+  for (const [, key, loc, rest] of rows) {
+    assert.ok(known.has(key) || /insert:/.test(rest) || /insert:/.test(menu.slice(menu.indexOf(`key: "${key}"`), menu.indexOf(`key: "${key}"`) + 400)),
+      `${key} is neither a BlockNote item nor one of ours`);
+    assert.ok(dict[loc], `locale/en.json is missing ${loc}`);
+    const ico = /ico: "([a-z0-9-]+)"/.exec(rest);
+    if (ico) {
+      assert.ok(existsSync(resolve(ROOT, `icons/src/normalized/${ico[1]}.svg`)), `${ico[1]}.svg is missing`);
+    }
   }
-  assert.match(topbar, /tooltips: LOCALE\.NOTE_TOOLBAR/);
-  assert.match(topbar, /uiHandler: \[ui\]/, "a service with no uiHandler never fires");
-  const win = readFileSync(
-    resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"), "utf8");
-  assert.match(win, /case "toggle-rail"/);
-  assert.match(win, /case "insert-block"/);
+  const code = menu.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+  for (const notHere of ["Table view", "Board view", "Synced block", "columns", "equation"]) {
+    assert.ok(!code.includes(notHere), `${notHere} has no block behind it`);
+  }
+  // and BlockNote's own menu is switched off, or both would open on "/"
+  assert.match(readNote("state.js"), /slashMenu: false/);
+});
+
+test("comments are the note's chat thread, written the way the chat writes", () => {
+  const page = readNote("page.js");
+  assert.match(page, /threadSvc\("post"\)/);
+  assert.match(page, /threadSvc\("messages"\)/);
+  // the chat composer stores < and > as entities; a comment must match it,
+  // or the chat thread would render it as markup
+  assert.match(page, /"<": "&#60;", ">": "&#62;"/);
+  // and what is read back is shown as TEXT
+  assert.match(page, /new DOMParser\(\)\.parseFromString/);
+  assert.match(readNote("skeleton/comments.js"), /_\.escape\(plainText\(m\.message\)\)/);
 });
 
 test("BlockNote's own UI is localised, from ITS dictionaries not ours", () => {
@@ -486,48 +519,6 @@ test("BlockNote's own UI is localised, from ITS dictionaries not ours", () => {
   );
 });
 
-test("the rail runs BlockNote's own menu actions, never a hand-built block", () => {
-  // A table built from a literal here would have to repeat BlockNote's default
-  // shape (2 rows of 3 cells) and would drift from it on the next upgrade.
-  // Naming the slash-menu key means the rail and typing "/" can never disagree
-  // — verified live: the rail produced exactly a 2x3 table.
-  const state = readFileSync(
-    resolve(ROOT, "src/drumee/builtins/editor/blocknote/state.js"), "utf8");
-  assert.match(state, /getDefaultSlashMenuItems/);
-  assert.match(state, /item\.onItemClick\(\)/);
-  const code = state.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-  assert.ok(
-    !/tableContent/.test(code),
-    "the rail must not construct block payloads itself"
-  );
-  // a rail click is a deliberate edit, so it has to arm the conversion guard
-  assert.match(state, /this\._userTouched = 1;[\s\S]{0,120}item\.onItemClick/);
-});
-
-test("every rail button names a real slash-menu key and a real icon", () => {
-  const rail = readFileSync(
-    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/rail.js"), "utf8");
-  // keys BlockNote actually ships (blocks-*.cjs): a typo here is a dead button
-  const known = new Set([
-    "paragraph", "heading", "heading_2", "heading_3", "bullet_list",
-    "numbered_list", "check_list", "toggle_list", "quote", "code_block",
-    "divider", "table", "image", "video", "audio", "file", "emoji",
-  ]);
-  // NOTE the digits in the locale name: NOTE_BLOCK_H1 does not match [A-Z_]+,
-  // and a too-narrow pattern here quietly checks only part of the rail.
-  const rows = [...rail.matchAll(/\["([a-z_0-9]+)", "([a-z0-9-]+)", LOCALE\.([A-Z_0-9]+)\]/g)];
-  assert.ok(rows.length >= 10, `expected the full rail, found ${rows.length}`);
-  const dict = JSON.parse(readFileSync(resolve(ROOT, "locale/en.json"), "utf8"));
-  for (const [, key, ico, loc] of rows) {
-    assert.ok(known.has(key), `${key} is not a BlockNote slash-menu key`);
-    assert.ok(
-      existsSync(resolve(ROOT, `icons/src/normalized/${ico}.svg`)),
-      `${ico}.svg is missing from the sprite source`
-    );
-    assert.ok(dict[loc], `locale/en.json is missing ${loc}`);
-  }
-});
-
 test("no icon is added to the sprite that nothing references", () => {
   // The sprite is injected at boot — it was ~900 KB of the 2.8 MB the app
   // loads before it shows anything — so an icon left behind after a design
@@ -541,9 +532,12 @@ test("no icon is added to the sprite that nothing references", () => {
     .join("\n");
   // only the icons this feature introduced; the rest of the sprite is not ours
   const mine = [
-    "ph-text-t", "ph-text-h-one", "ph-text-h-two", "ph-text-h-three",
-    "ph-list-bullets", "ph-list-numbers", "ph-check-square", "ph-quotes",
-    "ph-code", "ph-table", "ph-minus", "ph-faders",
+    "ph-text-t", "ph-list-bullets", "ph-list-numbers", "ph-list-checks", "ph-quotes",
+    "ph-line-vertical", "ph-image", "ph-video", "ph-speaker-high", "ph-code", "ph-paperclip",
+    "ph-table", "ph-smiley", "ph-chat-text", "ph-lock-key", "ph-download-simple", "ph-gear",
+    "ph-arrows-out-simple", "ph-cloud-arrow-up", "ph-at", "ph-arrow-circle-up",
+    "ph-magnifying-glass", "ph-leaf", "ph-hamburger", "ph-airplane-tilt", "ph-football",
+    "ph-lightbulb", "ph-peace", "ph-flag",
   ];
   for (const ico of mine) {
     assert.ok(
@@ -553,36 +547,9 @@ test("no icon is added to the sprite that nothing references", () => {
     assert.ok(src.includes(`"${ico}"`), `${ico}.svg is in the sprite but unused`);
   }
   // and the ones that were tried and rejected are gone again
-  for (const dead of ["ph-toolbox", "ph-sidebar-simple"]) {
+  for (const dead of ["ph-toolbox", "ph-sidebar-simple", "ph-faders", "ph-text-h-one", "ph-check-square"]) {
     assert.ok(!existsSync(resolve(dir, `${dead}.svg`)), `${dead}.svg was left behind`);
   }
-});
-
-test("the rail floats in the margin and its side is one switch", () => {
-  const skin = readFileSync(
-    resolve(ROOT, "src/drumee/builtins/editor/blocknote/skin/index.scss"), "utf8");
-  assert.match(skin, /&-rail__container \{[\s\S]{0,400}position: absolute;/,
-    "out of flow, so it never moves the text");
-  // centred in the margin — hung from the top it reads as stuck there
-  assert.match(skin, /&-rail__container \{[\s\S]{0,600}top: 50%;/);
-  assert.match(skin, /transform: translateY\(-50%\);/);
-  assert.match(skin, /max-height: calc\(100% - 24px\);/,
-    "a short window must not let it run past the frame");
-  // 🚨 Hiding a Box needs to out-specify the framework's own `.drumee-box`
-  // display rule — equal specificity meant ui-core won and the toggle looked
-  // dead. Pinned because the symptom is "the button does nothing", which
-  // points at the handler, not at CSS.
-  assert.match(skin, /&-rail__container\.drumee-box \{\s*display: none;/);
-  assert.match(skin, /&\[data-rail="1"\] &-rail__container\.drumee-box \{\s*display: flex;/);
-  assert.match(skin, /&\[data-rail-side="left"\] &-rail__container/,
-    "both sides have to be expressible");
-  // the labels must flip with the side or they run off-window
-  assert.match(skin, /&\[data-rail-side="left"\] &-rail__icon \{\s*@include note-tooltip\(right\);/);
-  // and it steps aside when there is no margin left to float in
-  assert.match(skin, /@media \(max-width: 1100px\)/);
-  const win = readFileSync(
-    resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"), "utf8");
-  assert.match(win, /const RAIL_SIDE = "(left|right)";/);
 });
 
 test("markdown is NEVER written back", () => {

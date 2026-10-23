@@ -1,23 +1,19 @@
 import { createElement } from "react";
 import { createRoot } from "react-dom/client";
-import { BlockNoteEditor, getDefaultSlashMenuItems } from "@blocknote/core";
+import { BlockNoteEditor, BlockNoteSchema, defaultBlockSpecs } from "@blocknote/core";
 // Named imports, NOT `import * as locales`: the barrel carries 23 languages
 // (~190 KB) and we ship six. Anything unreferenced has to tree-shake away —
 // measured after the change, not assumed.
 import { en, es, fr, ru, zh } from "@blocknote/core/locales";
 import { BlockNoteView } from "@blocknote/mantine";
+import { SuggestionMenuController } from "@blocknote/react";
 import "@blocknote/core/style.css";
 import "@blocknote/mantine/style.css";
+import Callout from "./callout";
+import { getNoteSlashItems, NoteSlashMenu } from "./slash-menu";
 
 const { xhRequest } = require("@drumee/ui-essentials");
 
-/**
- * Whether the insert rail stays open, remembered per browser.
- *
- * Deliberately NOT stored on the note: it is a preference about how one person
- * likes to work, not a property of the document, and putting it in the file
- * would push a rail onto everyone the note is shared with.
- */
 /**
  * BlockNote's own UI — the "/" menu, the drag handle menus, the selection
  * toolbar, the placeholder that teaches people "/" exists — is English out of
@@ -40,26 +36,31 @@ function dictionary() {
   } catch (e) {
     /** pre-bootstrap or a page without <html lang>: English, like api.js */
   }
-  return DICTIONARIES[lang] || DICTIONARIES.en;
+  const dict = DICTIONARIES[lang] || DICTIONARIES.en;
+  // The empty-page hint is the Figma's wording ("Press '/' for commands"), in
+  // the app's own six languages rather than BlockNote's.
+  return {
+    ...dict,
+    placeholders: {
+      ...dict.placeholders,
+      default: LOCALE.NOTE_PRESS_SLASH,
+      emptyDocument: LOCALE.NOTE_PRESS_SLASH,
+    },
+  };
 }
 
-const RAIL_KEY = "drumee.note.rail";
-
-function readRailPreference() {
-  try {
-    return localStorage.getItem(RAIL_KEY) === "1";
-  } catch (e) {
-    /** private mode, blocked storage — the rail simply starts closed */
-    return false;
+/**
+ * BlockNote's own blocks, plus the Callout the Figma's "/" menu offers.
+ * Built once: a schema is a description, not per-editor state.
+ */
+let schema;
+function noteSchema() {
+  if (!schema) {
+    schema = BlockNoteSchema.create({
+      blockSpecs: { ...defaultBlockSpecs, callout: Callout() },
+    });
   }
-}
-
-function writeRailPreference(on) {
-  try {
-    localStorage.setItem(RAIL_KEY, on ? "1" : "0");
-  } catch (e) {
-    /** nothing to do: the toggle still works for this session */
-  }
+  return schema;
 }
 const { parse, serialize, isLegacyNote } = require("libs/blocknote-format");
 const { resolveTheme } = require("router/theme");
@@ -78,7 +79,6 @@ class __blocknote_state extends DrumeeMFS {
     this.media = opt.media;
     this.editor = opt.editor;
     this.escapeContextmenu = true;
-    this._rail = readRailPreference();
     if (this.media) {
       const { nid, pid, hub_id } = this.media.actualNode();
       this.mset({ nid, pid, hub_id });
@@ -117,6 +117,10 @@ class __blocknote_state extends DrumeeMFS {
         if (r.error) {
           this._failLoad(r.error);
           return;
+        }
+        // The page decorations travel in the file; the window draws them.
+        if (this.editor && this.editor.setPage) {
+          this.editor.setPage({ icon: r.icon, cover: r.cover });
         }
         this.mount(r.blocks);
       })
@@ -260,14 +264,18 @@ class __blocknote_state extends DrumeeMFS {
     const initialContent = blocks && blocks.length ? blocks : undefined;
 
     try {
-      this._editor = BlockNoteEditor.create({ initialContent, dictionary: dictionary() });
+      this._editor = BlockNoteEditor.create({
+        schema: noteSchema(),
+        initialContent,
+        dictionary: dictionary(),
+      });
     } catch (e) {
       this.warn("blocknote_state: editor refused the stored content", e);
       this._loadFailed = 1;
       if (this.editor && this.editor.setReadOnly) {
         this.editor.setReadOnly("rejected");
       }
-      this._editor = BlockNoteEditor.create({ dictionary: dictionary() });
+      this._editor = BlockNoteEditor.create({ schema: noteSchema(), dictionary: dictionary() });
       opt.readOnly = true;
     }
 
@@ -292,86 +300,36 @@ class __blocknote_state extends DrumeeMFS {
   }
 
   /**
-   * Render the editor with BlockNote's own defaults — including the pop-up
-   * formatting toolbar, which appears at the selection where it belongs.
+   * Render the editor with BlockNote's own defaults — the pop-up formatting
+   * toolbar at the selection, the side menu — except the "/" menu, which is
+   * the Figma's list (./slash-menu) on BlockNote's own controller.
    *
-   * Nothing of ours renders in here. An earlier attempt hung a permanent
-   * formatting bar inside this tree and it landed below the text, because
-   * BlockNote renders children AFTER the editor; hosting it outside instead
-   * needs MantineProvider and two BlockNote contexts rebuilt by hand, which is
-   * a dependency on the library's insides. The insert rail avoids all of that
-   * by being an ordinary widget that only calls the editor's public API.
+   * BlockNote renders children AFTER the editor; the controller is a floating
+   * layer, so that order does not matter for it.
    */
   _paint() {
     if (!this._root) return;
     this._root.render(
-      createElement(BlockNoteView, {
-        editor: this._editor,
-        editable: this._editable,
-        // Ask the app rather than hardcoding a literal. Dark mode is disabled
-        // product-wide today (router/theme.js DARK_MODE_ENABLED = false), so
-        // this resolves to "light" and renders EXACTLY as before — the point
-        // is that if that switch is ever flipped, the editor follows instead
-        // of staying a white slab in a dark app.
-        theme: resolveTheme(),
-      })
+      createElement(
+        BlockNoteView,
+        {
+          editor: this._editor,
+          editable: this._editable,
+          slashMenu: false,
+          // Ask the app rather than hardcoding a literal. Dark mode is disabled
+          // product-wide today (router/theme.js DARK_MODE_ENABLED = false), so
+          // this resolves to "light" and renders EXACTLY as before — the point
+          // is that if that switch is ever flipped, the editor follows instead
+          // of staying a white slab in a dark app.
+          theme: resolveTheme(),
+        },
+        createElement(SuggestionMenuController, {
+          triggerCharacter: "/",
+          getItems: getNoteSlashItems(this._editor),
+          suggestionMenuComponent: NoteSlashMenu,
+        })
+      )
     );
-  }
-
-  /**
-   * @returns {Boolean} whether the insert rail is now showing
-   */
-  toggleRail() {
-    this._rail = !this._rail;
-    writeRailPreference(this._rail);
-    return this._rail;
-  }
-
-  /**
-   * @returns {Boolean}
-   */
-  railShown() {
-    return Boolean(this._rail);
-  }
-
-  /**
-   * Run one of BlockNote's own slash-menu actions.
-   *
-   * The rail names a menu KEY rather than a block payload on purpose. A table
-   * built from a literal here would have to repeat BlockNote's default shape
-   * and would drift from it silently on the next upgrade; `onItemClick` is the
-   * same code path typing "/" takes, so the two can never disagree.
-   *
-   * @param {String} key a default slash-menu item key, e.g. "table"
-   * @returns {Boolean} whether anything ran
-   */
-  applyBlock(key) {
-    if (this._loadFailed || !this._editor || !this._editable) return false;
-    let item;
-    try {
-      item = (getDefaultSlashMenuItems(this._editor) || []).find(
-        (i) => i && i.key === key
-      );
-    } catch (e) {
-      this.warn("blocknote_state: could not read the block menu", e);
-      return false;
-    }
-    if (!item || typeof item.onItemClick !== "function") {
-      // The schema does not offer this block; the rail should not have shown it
-      this.warn("blocknote_state: no such block", key);
-      return false;
-    }
-    // Clicking a rail button IS a deliberate edit, so it arms the guard that
-    // keeps a merely-opened markdown note from converting itself.
-    this._userTouched = 1;
-    try {
-      this._editor.focus();
-      item.onItemClick();
-    } catch (e) {
-      this.warn("blocknote_state: block insert failed", key, e);
-      return false;
-    }
-    return true;
   }
 
   /**
@@ -380,7 +338,8 @@ class __blocknote_state extends DrumeeMFS {
   getContent() {
     if (this._loadFailed || !this._editor) return null;
     try {
-      return serialize(this._editor.document);
+      const page = this.editor && this.editor.page ? this.editor.page() : {};
+      return serialize(this._editor.document, page);
     } catch (e) {
       this.warn("blocknote_state: could not serialize", e);
       return null;

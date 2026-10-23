@@ -29,10 +29,24 @@ function __skl_editor_blocknote(_ui_) {
     kids: [require("./topbar")(_ui_)],
   });
 
+  // The page head (Lexis's Figma, 2026-10-22), above the editor and never
+  // inside it: React owns the editor element (createRoot), so nothing of ours
+  // can live in there. Each slot is filled by ../page.
+  const slot = (sys_pn, className) =>
+    Skeletons.Box.Y({ className: `${pfx}__${className}`, sys_pn, partHandler: _ui_ });
+
+  // The icon and its picker share a row so the picker can hang at
+  // `top: 100%` under the icon, whatever the title below measures.
+  const iconRow = Skeletons.Box.Y({
+    className: `${pfx}__icon-row`,
+    kids: [
+      slot("page-icon", "icon-slot"),
+      Skeletons.Wrapper.Y({ className: `${pfx}__icon-picker`, name: "icon-picker" }),
+    ],
+  });
+
   // Notion's defining first interaction is typing the page title, so the note
-  // carries one in the page itself rather than only in the window chrome. It
-  // sits ABOVE the editor rather than inside it: React owns the editor element
-  // (createRoot), so nothing of ours can live in there.
+  // carries one in the page itself rather than only in the window chrome.
   const title = Skeletons.Box.X({
     className: `${pfx}__title-row`,
     kids: [
@@ -50,14 +64,24 @@ function __skl_editor_blocknote(_ui_) {
     ],
   });
 
-  // The insert rail lives in the margin beside the column. It is a child of
-  // the body and positioned out of flow, so it never moves the text — the
-  // margin is ~500px of nothing on a wide window.
+  const head = Skeletons.Box.Y({
+    className: `${pfx}__head`,
+    kids: [slot("page-actions", "actions"), iconRow, title, slot("page-comments", "comments-slot")],
+  });
+
+  // The whole page scrolls as one — cover, head and text — the way a page
+  // does; the editor surface grows with its content.
   const body = Skeletons.Box.Y({
     className: `${pfx}__body ${group}__body`,
     kids: [
-      require("./rail")(_ui_),
-      title,
+      Skeletons.Box.Y({
+        className: `${pfx}__cover-row`,
+        kids: [
+          slot("page-cover", "cover-slot"),
+          Skeletons.Wrapper.Y({ className: `${pfx}__cover-popup-wrapper`, name: "cover-popup" }),
+        ],
+      }),
+      head,
       Skeletons.Box.Y({
         className: `${pfx}__surface`,
         sys_pn: _a.content,

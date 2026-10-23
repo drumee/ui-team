@@ -1,126 +1,114 @@
 // ===========================================================
-//  Notion-style Note topbar — title, autosave status, save,
-//  then the shared window controls.
+//  Notion-style Note topbar — the shared player topbar widget, laid out
+//  to Lexis's Figma (1406:25557): note glyph + name, then Share, Download,
+//  the gear menu, Expand and Close.
 // ===========================================================
-/**
- * The Export menu. Every row runs `export-note` with its format; see
- * exportNote() in ../index.js for what each one does.
- * @param {Object} ui
- * @param {String} pfx
- */
-function exportMenu(ui, pfx) {
-  const row = (format, ico, content) =>
-    Skeletons.Box.X({
-      className: `${pfx}__export-item`,
-      service: "export-note",
-      format,
-      uiHandler: [ui],
-      kidsOpt: { active: 0 },
-      kids: [
-        Skeletons.Button.Svg({ ico, className: `${pfx}__export-icon` }),
-        Skeletons.Note({ className: `${pfx}__export-name`, content }),
-      ],
-    });
+const Topbar = require("builtins/player/widget/topbar");
 
-  return {
-    kind: KIND.menu.topic,
-    className: `${pfx}__export`,
-    flow: _a.y,
-    direction: _a.down,
-    axis: _a.y,
-    opening: _e.click,
-    persistence: _a.none,
-    trigger: Skeletons.Button.Svg({
-      ico: "ph-export",
-      className: `${pfx}__icon export`,
-      tooltips: LOCALE.NOTE_EXPORT,
-    }),
-    items: Skeletons.Box.Y({
-      className: `${pfx}__export-items`,
-      kids: [
+/**
+ * The gear menu. Export moved here from its own header button: the header
+ * Download is the PDF, every other format is one level down.
+ * @param {Object} ui
+ */
+function gearMenu(ui) {
+  const row = (value, icon, label) => ({ id: `export-${value}`, label, icon, service: "export-note", value });
+  return [
+    {
+      id: "export-menu",
+      label: LOCALE.NOTE_EXPORT,
+      icon: "ph-export",
+      service: "export-menu",
+      children: [
         row("pdf", "ph-file-pdf", LOCALE.EXPORT_AS_PDF),
         row("docx", "ph-file-doc", LOCALE.EXPORT_AS_DOCX),
         row("html", "ph-file-html", LOCALE.EXPORT_AS_HTML),
         row("md", "ph-file-md", LOCALE.EXPORT_AS_MARKDOWN),
         row("csv", "ph-file-csv", LOCALE.EXPORT_AS_CSV),
-        Skeletons.Box.X({ className: `${pfx}__export-separator` }),
-        row("print", "ph-printer", LOCALE.PRINT),
       ],
-    }),
-  };
+    },
+    row("print", "ph-printer", LOCALE.PRINT),
+  ];
 }
 
-module.exports = function (ui) {
-  const figname = "topbar";
-  const pfx = `${ui.fig.family}-${figname}`;
+/**
+ * The Share pill: a lock and the word, on the primary tint.
+ * @param {Object} ui
+ */
+function sharePill(ui) {
+  const pfx = `${ui.fig.family}-topbar`;
+  return Skeletons.Box.X({
+    className: `${pfx}__share`,
+    sys_pn: "note-share",
+    service: "secure-share",
+    uiHandler: [ui],
+    kidsOpt: { active: 0 },
+    kids: [
+      Skeletons.Button.Svg({ ico: "ph-lock-key", className: `${pfx}__share-icon` }),
+      Skeletons.Note({ className: `${pfx}__share-label`, content: LOCALE.SHARE }),
+    ],
+  });
+}
+
+function config(ui) {
+  const pfx = `${ui.fig.family}-topbar`;
+  const icon = (service, ico, tooltips, extra = {}) => ({
+    type: "button",
+    icon: ico,
+    service,
+    className: `icon ${pfx}__icon ${extra.className || ""}`.trim(),
+    tooltips,
+    ...extra,
+  });
 
   let filename = ui.mget(_a.filename);
   if (!filename && ui.media) filename = ui.media.mget(_a.filename);
 
-  return Skeletons.Box.X({
-    debug: __filename,
-    className: `${pfx}__container ${ui.mget(_a.area) || ""}`.trim(),
-    sys_pn: _a.topBar,
-    service: _e.raise,
-    kids: [
-      Skeletons.Box.X({
-        className: `${ui.fig.group}-${figname}__title ${pfx}__title`,
-        service: _e.raise,
-        kids: [
-          Skeletons.Note({
-            sys_pn: "ref-window-name",
-            uiHandler: ui,
-            partHandler: ui,
-            className: _a.name,
-            content: filename || LOCALE.UNTITLED,
-            active: 0,
-          }),
-          Skeletons.Note({
-            sys_pn: "save-status",
-            className: `${pfx}__save-status`,
-            content: LOCALE.ALL_CHANGES_SAVED,
-          }),
-        ],
+  const before = [
+    {
+      // Autosave says nothing while all is well; the line only appears when
+      // there is something to know (saving, unsaved, read-only, upgrading).
+      type: "custom",
+      component: Skeletons.Note({
+        sys_pn: "save-status",
+        className: `${pfx}__save-status`,
+        content: "",
+        active: 0,
+        dataset: { state: "saved" },
       }),
+    },
+  ];
+  if (ui.canEditNote()) before.push({ type: "custom", component: sharePill(ui) });
+  before.push(icon("download-note", "ph-download-simple", LOCALE.DOWNLOAD));
 
-      Skeletons.Box.X({
-        sys_pn: "container-action",
-        className: `${pfx}__action`,
-        service: _e.raise,
-        kids: [
-          // Inserting on demand. BlockNote's block menu only opens on "/",
-          // which leaves someone who has never used an editor like this with
-          // nothing to click. This raises a rail of the same blocks in the
-          // margin, and remembers the choice.
-          //
-          // The button SHOWS AND HIDES THE TOOLBAR, so the icon and the label
-          // both say "toolbar". Four goes to get here: three dots ("more
-          // options") beside a label reading "Insert block", a plus that
-          // promises an insert and delivers a panel, a sidebar glyph that
-          // describes where the thing appears rather than what it is, and a
-          // toolbox. Faders is Duy's pick (2026-09-18) — controls you adjust,
-          // which is what the rail is.
-          Skeletons.Button.Svg({
-            ico: "ph-faders",
-            service: "toggle-rail",
-            sys_pn: "ref-rail-toggle",
-            className: `${pfx}__icon rail-toggle`,
-            tooltips: LOCALE.NOTE_TOOLBAR,
-            uiHandler: [ui],
-          }),
-          exportMenu(ui, pfx),
-          Skeletons.Button.Svg({
-            ico: "floppy",
-            service: _e.save,
-            className: `${pfx}__icon save`,
-            tooltips: LOCALE.SAVE,
-            haptic: 1000,
-            uiHandler: [ui],
-          }),
-        ],
-      }),
+  return {
+    left: {
+      fileTypeIcon: "raw-ab_notes",
+      title: filename || LOCALE.UNTITLED,
+    },
+    right: {
+      before,
+      after: [
+        icon("note-fullscreen", "ph-arrows-out-simple", LOCALE.FULL_SCREEN, {
+          id: "note-fullscreen",
+          partHandler: ui,
+        }),
+        icon(_e.close, "ph-x", LOCALE.CLOSE),
+      ],
+    },
+    defaults: {
+      "folder-settings": {
+        menu: gearMenu(ui),
+        icon: "ph-gear",
+        className: `icon gear ${pfx}__icon`,
+      },
+      // Docked to the workspace: there is no layout to pick, only Expand.
+      "move-resize": { visible: false },
+      // The widget's close sits before `after`; ours is the last button.
+      close: { visible: false },
+    },
+  };
+}
 
-      require("window/skeleton/topbar/control")(ui, "c"),
-    ],
-  });
+module.exports = function (ui) {
+  return Topbar(ui, config(ui));
 };
