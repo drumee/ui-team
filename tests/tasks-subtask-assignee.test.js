@@ -108,9 +108,11 @@ test("the creator drafts start empty, and both commits carry the picks", () => {
   for (const sig of ["_openSubtaskDraft()", "_openCreateSubtaskDraft()"]) {
     assert.match(sliceFunction(SRC, sig), /assignees: \[\],/, sig);
   }
+  // The detail commit hands its picks to _postSubtask, which posts them.
+  assert.match(sliceFunction(SRC, "async _commitSubtask()"), /assignees: draft\.assignees,/);
   assert.match(
-    sliceFunction(SRC, "async _commitSubtask()"),
-    /assignee_uids: Array\.isArray\(draft\.assignees\) \? draft\.assignees : \[\]/,
+    sliceFunction(SRC, "async _postSubtask(parentId, fields)"),
+    /assignee_uids: Array\.isArray\(fields\.assignees\) \? fields\.assignees : \[\]/,
   );
   // Queued rows keep their own copy; _createQueuedSubtasks already posts them.
   assert.match(

@@ -14,6 +14,7 @@ const { restoreScroll } = require("./scroll-restore");
 const { titleTooLong, toggleUid } = require("./list-edit");
 const { stamp, reconcile } = require("./reconcile");
 const listInline = require("./list-inline");
+const listSubtask = require("./list-subtask");
 const completeParent = require("./complete-parent");
 const { killTaskToast } = require("./task-toast");
 const {
@@ -320,6 +321,8 @@ class __tasks_panel extends LetcBox {
     // List-view expand state: ids of the parents whose subtasks are showing.
     // Purely local — collapsed is the default on every open, matching Jira.
     this._subtasksOpen = new Set();
+    // List view inline subtask creator (list-subtask.js): { parentId } | null.
+    this._inlineSubtask = null;
     // Panel-wide commit mutex: gates commit-task / commit-detail so two
     // commits cannot overlap.
     this._submitting = false;
@@ -940,7 +943,8 @@ class __tasks_panel extends LetcBox {
     return new Set([
       "add-task", "commit-task", "cal-add", "add-board", "board-submit",
       "commit-detail", "remove-task", "toggle-complete",
-      "add-child-task", "create-subtask", "toggle-subtask-complete",
+      "add-child-task", "create-subtask",
+      "list-add-subtask", "list-subtask-commit", "toggle-subtask-complete",
       "set-subtask-row-priority", "set-subtask-row-status",
       "toggle-subtask-row-assignee", "gantt-toggle-select",
       "gantt-delete-selected", "col-menu", "col-rename-submit", "col-theme-set",
@@ -2061,6 +2065,16 @@ class __tasks_panel extends LetcBox {
         return this._openSubtaskDraft();
       }
 
+      // List view ＋ : inline "Enter subtask name..." row (list-subtask.js).
+      case "list-add-subtask":
+        return this._openInlineSubtask(trigger);
+
+      case "list-subtask-commit":
+        return this._commitInlineSubtask();
+
+      case "list-subtask-cancel":
+        return this._closeInlineSubtask();
+
       case "cancel-subtask":
         return this._closeSubtaskDraft();
 
@@ -2359,6 +2373,7 @@ class __tasks_panel extends LetcBox {
           this._view = v;
           // An inline list editor belongs to the list; it does not follow.
           this._listEdit = null;
+          this._inlineSubtask = null;
           // Deferred: paint the loading veil THIS frame so the click gets
           // instant feedback (Project Health links / viewbar tabs felt dead
           // while the synchronous full re-feed built the new view).
@@ -10423,6 +10438,7 @@ class __tasks_panel extends LetcBox {
           this._restoreViewScroll(savedScroll);
           // The list's floating editor follows its cell (list-inline.js).
           if (this._listEdit) this._afterListPaint();
+          if (this._inlineSubtask) this._wireInlineSubtask();
         },
         { enter: opt.enter !== false },
       );
@@ -11678,41 +11694,17 @@ class __tasks_panel extends LetcBox {
       );
     this._setControlBusy(submitBtn, true, { swapLabel: true });
     try {
-      const created = await this.postService({
-        service: SERVICE.task.create,
-        hub_id: this._hubId,
-        // nid is sent for parity with a normal create, but the server ignores
-        // it for a subtask and inherits the parent's folder instead.
-        nid: this._scopeNid,
-        parent_task_id: parentId,
+      const row = await this._postSubtask(parentId, {
         title,
-        priority: draft.priority || "medium",
-        status: draft.status || undefined,
-        due_date: draft.due_date || null,
-        assignee_uids: Array.isArray(draft.assignees) ? draft.assignees : [],
+        priority: draft.priority,
+        status: draft.status,
+        due_date: draft.due_date,
+        assignees: draft.assignees,
       });
-      const row = Array.isArray(created) ? created[0] : created;
-      if (!row || !row.id) {
-        // postService resolves falsy on failure rather than rejecting.
-        this._alertWriteFailed();
-        return;
-      }
-      this._mergeTask(row);
+      if (!row) return;
       // Done: the creator card closes and the new child shows in the list
       // above. The ＋ in the section header opens a fresh card for the next.
       this._subtaskDraft = null;
-      // Two targeted re-feeds rather than a full _render().
-      //
-      // The parent's count badge lives OUTSIDE this part — on the board card,
-      // list row, gantt row and calendar chip behind the modal — so the view
-      // does have to be rebuilt or those read as "the subtask was never
-      // created". But the view sits in its own "view-host" part, a SIBLING of
-      // the detail wrapper, so re-feeding it leaves this section alone.
-      // Both calls are therefore safe together:
-      // they touch disjoint subtrees, which was not true of the old
-      // _render()-then-ensurePart pairing.
-      this._syncSubtaskBadges(parentId);
-      this._refreshViewBody();
       // The card plays its exit first; the re-feed then drops it and shows the
       // new child row in one paint.
       this._leaveSubtaskCard("detail-panel").then(() =>
@@ -11727,6 +11719,42 @@ class __tasks_panel extends LetcBox {
       // spinning forever.
       this._setControlBusy(submitBtn, false, { swapLabel: true });
     }
+  }
+
+  /**
+   * task.create a child of `parentId`, merge it, and repaint the view — shared
+   * by the detail creator (_commitSubtask) and the List inline creator
+   * (list-subtask.js). Resolves the server row, or null (alerted) on failure.
+   */
+  async _postSubtask(parentId, fields) {
+    const created = await this.postService({
+      service: SERVICE.task.create,
+      hub_id: this._hubId,
+      // nid is sent for parity with a normal create, but the server ignores
+      // it for a subtask and inherits the parent's folder instead.
+      nid: this._scopeNid,
+      parent_task_id: parentId,
+      title: fields.title,
+      priority: fields.priority || "medium",
+      status: fields.status || undefined,
+      due_date: fields.due_date || null,
+      assignee_uids: Array.isArray(fields.assignees) ? fields.assignees : [],
+    });
+    const row = Array.isArray(created) ? created[0] : created;
+    if (!row || !row.id) {
+      // postService resolves falsy on failure rather than rejecting.
+      this._alertWriteFailed();
+      return null;
+    }
+    this._mergeTask(row);
+    // The parent's count lives OUTSIDE the detail panel — on the board card
+    // strip, list row, gantt row and calendar chip — so the view has to be
+    // rebuilt or those read as "the subtask was never created". The view sits
+    // in its own "view-host" part, a SIBLING of the detail wrapper, so
+    // re-feeding it leaves an open detail section alone.
+    this._syncSubtaskBadges(parentId);
+    this._refreshViewBody();
+    return row;
   }
 
   /**
@@ -12062,6 +12090,8 @@ class __tasks_panel extends LetcBox {
   const { LIST_SERVICES, ...methods } = listInline;
   Object.assign(__tasks_panel.prototype, methods);
 }
+// So does the List view's inline subtask creator.
+Object.assign(__tasks_panel.prototype, listSubtask);
 // Completing a parent with open subtasks asks first (complete-parent.js).
 Object.assign(__tasks_panel.prototype, completeParent);
 

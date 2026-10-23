@@ -2814,6 +2814,7 @@
   "ADD_SUBTASK": "Añadir tarea secundaria",
   "NO_SUBTASKS": "Aún no hay tareas secundarias",
   "SUBTASK_PLACEHOLDER": "Tarea",
+  "ENTER_SUBTASK_NAME": "Introduce el nombre de la subtarea...",
   "CALENDAR": "Calendario",
   "PERSONAL_CALENDAR": "Calendario personal",
   "BADGE_NEW": "NUEVO",

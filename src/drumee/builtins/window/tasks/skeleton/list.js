@@ -108,6 +108,10 @@ module.exports = function (ui) {
       attrOpt: { "data-checked": state, "data-disabled": canEdit ? "0" : "1" },
     });
 
+  // Stack glyph on a child row and the inline creator (Figma StackSimple).
+  const subIco = () =>
+    Skeletons.Image.Svg({ className: `${pfx}__list-subico`, ico: "ph-stack-simple", active: 0 });
+
   const header = Skeletons.Box.X({
     className: `${pfx}__list-head`,
     kids: [
@@ -194,7 +198,9 @@ module.exports = function (ui) {
             className: `${pfx}__list-row-act ${pfx}__list-row-add`,
             ico: "app-add",
             bubble: 0,
-            service: "add-child-task",
+            // Inline "Enter subtask name..." row under this one (873:238375),
+            // list-subtask.js — not the detail panel.
+            service: "list-add-subtask",
             uiHandler: [ui],
             taskId: t.id,
             tooltips: { content: LOCALE.CREATE_SUBTASK, className: `${pfx}__tip` },
@@ -207,6 +213,7 @@ module.exports = function (ui) {
       kids: [
         checkbox(ui.isListSelected(t.id) ? "1" : "0", "list-select", t.id),
         chevron,
+        sub ? subIco() : null,
         Skeletons.Box.X({
           className: `${pfx}__list-title-wrap`,
           bubble: 0,
@@ -415,14 +422,54 @@ module.exports = function (ui) {
     });
 
   // A parent followed by its children when expanded. Sub-rows use the same
-  // columns as the parent — ordinary task rows, just indented.
+  // columns as the parent — ordinary task rows, just indented. The inline
+  // creator, when this parent's ＋ opened it, comes after the last child.
   const rowGroup = (t) => {
     const kids = [row(t, false)];
     if (ui.isSubtasksOpen(t.id)) {
       ui.getSubtasks(t.id).forEach((s) => kids.push(row(s, true)));
     }
+    const inline = ui.getInlineSubtask();
+    if (canEdit && inline && inline.parentId === t.id) kids.push(subCreatorRow(t));
     return kids;
   };
+
+  // "Enter subtask name..." (Figma 873:238375): an indented row with the
+  // stack glyph, a title input and a ＋ that creates. The other columns are
+  // blank cells of the same widths so the row stays on the grid. Enter / Esc
+  // / blur are wired natively (list-subtask.js _wireInlineSubtask).
+  const blankCells = ["priority", "status", "start-date", "due-date", "description", "files", "assignees", "reporter"];
+  const subCreatorRow = (t) =>
+    Skeletons.Box.X({
+      className: `${pfx}__list-row ${pfx}__list-subcreate-row`,
+      attrOpt: { "data-sub": "1", "data-toolong": "0" },
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__list-cell ${pfx}__list-title-cell`,
+          attrOpt: { "data-sub": "1" },
+          kids: [
+            Skeletons.Note({ className: `${pfx}__list-check`, attrOpt: { "data-empty": "1" } }),
+            Skeletons.Note({ className: `${pfx}__list-chevron`, attrOpt: { "data-empty": "1" } }),
+            subIco(),
+            Skeletons.Entry({
+              className: `${pfx}__list-subcreate`,
+              name: "list-subcreate",
+              placeholder: LOCALE.ENTER_SUBTASK_NAME,
+            }),
+            Skeletons.Button.Svg({
+              className: `${pfx}__list-row-act ${pfx}__list-subcreate-add`,
+              ico: "app-add",
+              bubble: 0,
+              service: "list-subtask-commit",
+              uiHandler: [ui],
+              taskId: t.id,
+              tooltips: { content: LOCALE.CREATE_SUBTASK, className: `${pfx}__tip` },
+            }),
+          ],
+        }),
+        ...blankCells.map((f) => Skeletons.Box.X({ className: `${pfx}__list-cell ${pfx}__list-${f}-cell` })),
+      ],
+    });
 
   const footer = Skeletons.Box.X({
     className: `${pfx}__list-foot`,

@@ -7120,6 +7120,45 @@ $theme-colors: (
     }
   }
 
+  // Stack glyph on a child row and the inline creator (873:238375).
+  &__list-subico {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    color: #0b0a21;
+  }
+
+  // Inline "Enter subtask name..." creator: a bare input on the row, grey
+  // placeholder, with its ＋ always shown. Too long → red underline, which the
+  // first keystroke clears (list-subtask.js).
+  &__list-subcreate {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid transparent;
+      outline: none;
+      background: transparent;
+      padding: 0;
+      @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+
+      &::placeholder {
+        color: #65656c;
+      }
+    }
+  }
+  &__list-subcreate-row[data-toolong="1"] &__list-subcreate input {
+    border-bottom-color: #d74e49;
+  }
+  &__list-subcreate-row &__list-check[data-empty="1"] {
+    visibility: hidden;
+  }
+  &__list-subcreate-add {
+    opacity: 1;
+  }
+
   // Hover actions: "open" appears on hover, the ＋ (Create subtask) always
   // shows, per Figma.
   &__list-row-acts {

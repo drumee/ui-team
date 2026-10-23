@@ -2815,6 +2815,7 @@
   "ADD_SUBTASK": "添加子工作项",
   "NO_SUBTASKS": "暂无子任务项",
   "SUBTASK_PLACEHOLDER": "任务",
+  "ENTER_SUBTASK_NAME": "输入子任务名称...",
   "CALENDAR": "日历",
   "PERSONAL_CALENDAR": "个人日历",
   "BADGE_NEW": "新",
