@@ -6876,6 +6876,116 @@ $theme-colors: (
     font-weight: 500;
   }
 
+  // ── Subtasks strip (Board card, Calendar card + month chip) ────────────
+  // Figma `subtasks-desktop-board`: hairline top rule, header row, and when
+  // expanded a 4px progress rail + one 48px row per child.
+  &__substrip {
+    align-items: stretch;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    min-width: 0;
+  }
+  &__substrip-head {
+    align-items: center;
+    gap: 8px;
+    min-height: 17px;
+    cursor: pointer;
+  }
+  &__substrip-ico,
+  &__substrip-caret {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+  }
+  &__substrip-ico {
+    color: #0b0a21;
+  }
+  &__substrip-label {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+  }
+  &__substrip-count {
+    padding: 0 4px;
+    border-radius: 4px;
+    background: #f2f2f7;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+  }
+  &__substrip-caret {
+    margin-left: auto;
+    color: #65656c;
+    transition: transform 0.15s;
+  }
+  &__substrip[data-open="1"] &__substrip-caret {
+    transform: rotate(90deg);
+  }
+  &__substrip[data-complete="1"] &__substrip-count {
+    background: #dff5e7;
+    color: #1b8f52;
+  }
+  &__substrip-bar {
+    height: 4px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+  }
+  &__substrip-fill {
+    height: 4px;
+    border-radius: 18px;
+    background: #433cc5;
+  }
+  &__substrip-row {
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 8px;
+    border-radius: 8px;
+    background: #fff;
+    min-width: 0;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+  }
+  &__substrip-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+  }
+  &__substrip-status {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 2px 12px;
+    border-radius: 16px;
+    background: #f2f2f7;
+  }
+  &__substrip-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  &__substrip-status-label {
+    white-space: nowrap;
+    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+  }
+  &__substrip-avatar,
+  &__substrip-noassignee {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+  }
+  &__substrip-noassignee {
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #65656c;
+  }
+
   &__list-subcount {
     flex: 0 0 auto;
     padding: 0 6px;
@@ -9626,7 +9736,6 @@ html[data-theme="dark"] .tasks-panel {
 
   // Subtasks: the tokens carry themselves, but the three literals in the light
   // rules (the all-done green and the checkbox fill) burn out on a dark ground.
-  &__task-subcount,
   &__list-subcount,
   &__cal-card-subcount,
   &__gantt-subcount {
@@ -9638,6 +9747,29 @@ html[data-theme="dark"] .tasks-panel {
 
   &__list-row[data-sub="1"] {
     background: rgba(255, 255, 255, 0.04);
+  }
+
+  &__substrip {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+  &__substrip-ico,
+  &__substrip-label,
+  &__substrip-name,
+  &__substrip-status-label {
+    color: var(--normal-fg-90, #f2f2f7);
+  }
+  &__substrip-count,
+  &__substrip-status,
+  &__substrip-bar {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--normal-fg-90, #f2f2f7);
+  }
+  &__substrip[data-complete="1"] &__substrip-count {
+    background: rgba(34, 181, 115, 0.22);
+    color: #7cc79b;
+  }
+  &__substrip-row {
+    background: rgba(255, 255, 255, 0.03);
   }
 
   &__subtask-row {

@@ -137,3 +137,21 @@ test("complete stamp when every child is done", () => {
   const s2 = subtaskStrip(stubUi({ done: 1, total: 2 }), parent, { pfx, surface: "board" });
   assert.equal(s2.dataset.complete, "0");
 });
+
+// ── Wiring (source text: the view skeletons only load under webpack) ────────
+
+const SKEL = fs.readFileSync(path.join(DIR, "skeleton/index.js"), "utf8");
+const CAL = fs.readFileSync(path.join(DIR, "skeleton/calendar.js"), "utf8");
+// A closure const `const <name> = (...) => {` up to its closing `  };`.
+function arrowBody(src, name) {
+  const start = src.indexOf(`const ${name} = (`);
+  assert.ok(start >= 0, `${name} not found`);
+  const end = src.indexOf("\n  };\n", start);
+  return src.slice(start, end);
+}
+
+test("board card uses the strip, not the meta badge", () => {
+  const body = arrowBody(SKEL, "taskCard");
+  assert.match(body, /subtaskStrip\(ui, task, \{ pfx, surface: "board" \}\)/);
+  assert.doesNotMatch(body, /__task-subcount/);
+});
