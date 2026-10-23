@@ -979,9 +979,12 @@ class __widget_chat extends LetcBox {
       return;
     }
     if (c.mget(_a.ctime) > first.mget(_a.ctime)) {
-      if (list.scrollDir == _a.up && list.scrolledY() > last.$el.height()) {
-        this.__buttonScroll.setState(1);
-      } else {
+      // Scrolled away from the bottom: leave the user where they are reading;
+      // _noteNewMessage has put it on the "New messages" button. Not
+      // list.scrollDir — it only changes on a scroll event, so it went stale
+      // ("up") after the panel was hidden and shown, and every message after
+      // that raised the button.
+      if (this._pinnedToBottom !== false) {
         timer = setTimeout(scroll, 500);
       }
       return;
@@ -1098,11 +1101,7 @@ class __widget_chat extends LetcBox {
           // it only flips false when they actively scroll up to read history.
           // _restickBottomAfterGrowth() reads it to decide whether to re-pin.
           this._pinnedToBottom = true;
-          child.on(_e.scroll, () => {
-            const slack =
-              typeof child.scrolledY === "function" ? child.scrolledY() : 0;
-            this._pinnedToBottom = slack != null && slack <= 40;
-          });
+          child.on(_e.scroll, () => this._onListScrolled(child));
           // Render read-receipt avatars across every row once the list is fully
           // loaded. Items render incrementally, so an item mounted before its
           // newer sibling computes last-read placement against an incomplete
@@ -1434,11 +1433,8 @@ class __widget_chat extends LetcBox {
         return this.handleScroll(cmd);
 
       case "scroll-down":
-        this._newMsgCount = 0;
-        setTimeout(() => {
-          this.__buttonScroll.el.dataset.count = this._newMsgCount;
-          this.__list.scrollToBottom();
-        }, 50);
+        this._clearNewMessages();
+        setTimeout(() => this.__list.scrollToBottom(), 50);
         break;
 
       case "show-message-selector":
@@ -2992,6 +2988,45 @@ class __widget_chat extends LetcBox {
   }
 
   /**
+   * Count an inbound message on the "New messages" button — only when the
+   * user is scrolled away from the bottom, where it lands out of sight. At the
+   * bottom the list follows it (handleScroll), so it is read, not new. Used to
+   * count every message since mount, so an open chat showed a stale total.
+   * @param {Object} data the message row
+   */
+  _noteNewMessage(data) {
+    if (this._pinnedToBottom !== false) return;
+    if (data && data.author_id === Visitor.id) return;
+    this._newMsgCount++;
+    this.__buttonScroll.el.dataset.count = this._newMsgCount;
+    this.__buttonScroll.setState(1);
+  }
+
+  /**
+   * The user is back at the newest message: nothing below is unseen.
+   */
+  _clearNewMessages() {
+    this._newMsgCount = 0;
+    if (!this.__buttonScroll) return;
+    this.__buttonScroll.el.dataset.count = 0;
+    this.__buttonScroll.setState(0);
+  }
+
+  /**
+   * Message list scrolled. Tracks whether the user is parked at the bottom —
+   * content growth (an attachment card loading inside a row) fires no scroll
+   * event, so this keeps reflecting their last intent; it only flips false
+   * when they scroll up to read history. Reaching the bottom clears the
+   * "New messages" button.
+   * @param {View} list the message list
+   */
+  _onListScrolled(list) {
+    const slack = typeof list.scrolledY === "function" ? list.scrolledY() : 0;
+    this._pinnedToBottom = slack != null && slack <= 40;
+    if (this._pinnedToBottom && this._newMsgCount) this._clearNewMessages();
+  }
+
+  /**
    * Widget kind used to render each message row. Configurable via the `item_kind`
    * option so a host can swap in a variant (the DMZ share chat passes
    * "widget_chat_item_other" to render every message on the "other" side). Must
@@ -3035,8 +3070,7 @@ class __widget_chat extends LetcBox {
 
     messageArr = this.__list.getItemsByAttr("message_id", data.message_id)[0];
     if (!messageArr) {
-      this._newMsgCount++;
-      this.__buttonScroll.el.dataset.count = this._newMsgCount;
+      this._noteNewMessage(data);
       this.__list.append(data);
       // Genuinely new inbound message — own posts return above via the echoId /
       // message_id branches, so hosts can treat this as "someone else wrote".
