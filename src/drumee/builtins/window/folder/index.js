@@ -2590,9 +2590,23 @@ class __window_folder extends mfsInteract {
         const value =
           (cmd.mget && cmd.mget(_a.value)) ||
           (cmd.options && cmd.options.value);
+        // The tabs are a radio group, not toggles: ui-core's radiotoggle flips
+        // a lit tab OFF when clicked again, which left the bar with nothing
+        // selected over a still-filtered listing (or over All). A click on the
+        // tab already in force is a no-op — re-light it once the behavior's
+        // own click handler has run (listener order is not ours to rely on).
+        // During a search the click still has work to do (leave the search).
+        const picked = value && value !== "all" ? value : null;
+        if (picked === this._filterType) {
+          setTimeout(() => {
+            if (cmd.isDestroyed && cmd.isDestroyed()) return;
+            cmd.setState(1);
+          }, 0);
+          if (!FilesSearch.isSearching(this)) return;
+        }
         // A type tab is a FOLDER filter; picking one leaves the search.
         FilesSearch.exit(this, { reload: false, clearInput: true });
-        this._filterType = value && value !== "all" ? value : null;
+        this._filterType = picked;
         this._stampFileFilter();
         return this.loadContent();
       }
