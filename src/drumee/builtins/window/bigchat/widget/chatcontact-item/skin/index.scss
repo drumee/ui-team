@@ -58,6 +58,31 @@
     width: 100%;
   }
 
+  // Message preview + unread badge; the badge sits under the time.
+  &__info-bottom {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  }
+
+  &__badge {
+    @include drumee.typo($size: 10px, $line: 16px, $color: #fff);
+    font-weight: 600;
+    background-color: #847eff;
+    border-radius: 8px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    height: 16px;
+    min-width: 16px;
+    padding: 0 5px;
+    text-align: center;
+
+    &[data-state="closed"] {
+      display: none;
+    }
+  }
+
   // Same product mark the chat header shows, at the inbox row's 48px avatar
   // size — see libs/support.supportAvatar and the chat-p2p skin. No background
   // of its own: the asset carries one.
@@ -147,6 +172,7 @@
     &.message {
       padding: 0;
       width: 100%;
+      min-width: 0;
       user-select: text;
       @include drumee.typo(
         $size: 12px,
@@ -176,24 +202,6 @@
         $weight: 400,
         $color: var(--normal-fg-50)
       );
-    }
-  }
-
-  &__digit {
-    align-items: center;
-    background-color: #847eff;
-    border: 2px solid var(--normal-bg);
-    border-radius: 50%;
-    height: 12px;
-    justify-content: center;
-    position: absolute;
-    width: 12px;
-    z-index: 2 !important;
-    right: -4px;
-    top: -4px;
-
-    &[data-state="closed"] {
-      display: none;
     }
   }
 
