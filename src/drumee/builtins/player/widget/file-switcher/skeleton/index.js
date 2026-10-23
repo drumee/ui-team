@@ -14,6 +14,37 @@ const CREATE_OPTIONS = [
   { type: "presentation", name: "presentation.pptx", ico: "addmenu-presentation", label: "PRESENTATION" },
 ];
 
+/**
+ * A note (filetype note / markdown — both open in the Note editor) is drawn
+ * with the Note's own glyph, at the size the office glyphs use. The desk-grid
+ * note card (a lined page with a pin, 82×110) shrunk to 30px read as a smudge
+ * next to the Docs/Sheet icons (Duy, 2026-10-23).
+ */
+function isNote(node) {
+  return node.filetype === _a.note || node.filetype === "markdown";
+}
+
+function fileIcon(ui, node) {
+  const pfx = ui.fig.family;
+  if (isNote(node)) {
+    return Skeletons.Box.X({
+      className: `${pfx}__row-icon ${pfx}__row-icon--note ${node.area || ""}`,
+      kids: [Skeletons.Image.Svg({ ico: "raw-note-sticky", className: "preview-icon" })],
+    });
+  }
+  return Skeletons.Element({
+    className: `${pfx}__row-icon ${node.area || ""}`,
+    // data-ext lets the skin whiten the office icons' page body, as the
+    // chat attachment chip does.
+    dataset: { ext: String(node.ext || "").toLowerCase() },
+    content: nodeIconHtml(node, {
+      area: node.area,
+      prefix: "file-switcher-icon-",
+      thumbnail: true,
+    }),
+  });
+}
+
 function fileRow(ui, node, section, current) {
   const pfx = ui.fig.family;
   const name = node.ext ? `${node.filename}.${node.ext}` : node.filename;
@@ -27,17 +58,7 @@ function fileRow(ui, node, section, current) {
     filetype: node.filetype,
     section,
     kids: [
-      Skeletons.Element({
-        className: `${pfx}__row-icon ${node.area || ""}`,
-        // data-ext lets the skin whiten the office icons' page body, as the
-        // chat attachment chip does.
-        dataset: { ext: String(node.ext || "").toLowerCase() },
-        content: nodeIconHtml(node, {
-          area: node.area,
-          prefix: "file-switcher-icon-",
-          thumbnail: true,
-        }),
-      }),
+      fileIcon(ui, node),
       Skeletons.Note({ className: `${pfx}__row-name`, content: name }),
     ],
   });

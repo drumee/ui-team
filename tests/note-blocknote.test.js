@@ -681,3 +681,12 @@ test("the note sits in the Open-File Switcher frame, and saves before a switch c
   assert.match(win, /this\._setStatus\("unsaved"\);\s*this\._settleClose\(false\);/);
   assert.match(win, /this\._settleClose\(true\);\s*if \(close\) this\.goodbye\(\);/);
 });
+
+test("the Open-File Switcher draws a note with the Note's glyph, not the shrunk desk card", () => {
+  const sk = readFileSync(resolve(ROOT, "src/drumee/builtins/player/widget/file-switcher/skeleton/index.js"), "utf8");
+  assert.match(sk, /node\.filetype === _a\.note \|\| node\.filetype === "markdown"/);
+  assert.match(sk, /ico: "raw-note-sticky", className: "preview-icon"/);
+  assert.ok(existsSync(resolve(ROOT, "icons/src/raw/note-sticky.svg")));
+  // every other file keeps the shared node icon
+  assert.match(sk, /content: nodeIconHtml\(node, \{/);
+});
