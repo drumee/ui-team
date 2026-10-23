@@ -1290,21 +1290,27 @@ const make = function (ui) {
     const parentTask = ui.isSubtask(detail)
       ? ui.getTaskById(detail.parent_task_id)
       : null;
+    // "Parent / child" (Figma 944:107305): only the parent's name is a link
+    // back; the child's is where you already are.
     const parentCrumb = parentTask
       ? Skeletons.Box.X({
           className: `${pfx}__detail-parent`,
-          bubble: 0,
-          service: "open-detail",
-          uiHandler: [ui],
-          taskId: parentTask.id,
           kids: [
-            Skeletons.Image.Svg({
-              ico: "caret-left",
-              className: `${pfx}__detail-parent-ico`,
-            }),
             Skeletons.Note({
               className: `${pfx}__detail-parent-title`,
               content: parentTask.title || "",
+              bubble: 0,
+              service: "open-detail",
+              uiHandler: [ui],
+              taskId: parentTask.id,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__detail-parent-sep`,
+              content: "/",
+            }),
+            Skeletons.Note({
+              className: `${pfx}__detail-parent-current`,
+              content: detail.title || "",
             }),
           ],
         })

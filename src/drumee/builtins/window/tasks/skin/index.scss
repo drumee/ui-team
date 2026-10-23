@@ -2664,63 +2664,53 @@ $theme-colors: (
 
   // Breadcrumb shown only when the open task is a child: names the parent and
   // is the route back to it (the X walks back there too). First kid of the
-  // title column, so it sits right above the title in every layout.
+  // title column, so it sits right above the title in every layout. Plain
+  // "Parent / child" text (Figma 944:107305); only the parent's name links.
   &__detail-parent {
     align-items: center;
     align-self: flex-start;
     gap: 6px;
     max-width: 100%;
+    min-width: 0;
     // Lines the crumb's text up with the title's (the textarea pads 8px).
     margin-left: 2px;
-    padding: 3px 10px 3px 6px;
-    border-radius: 999px;
-    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.04));
-    cursor: pointer;
-    transition:
-      background 0.15s,
-      color 0.15s;
-
-    &:hover {
-      background: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
-
-      .tasks-panel__detail-parent-ico svg {
-        fill: var(--accent, #433cc5);
-      }
-
-      .tasks-panel__detail-parent-title {
-        color: var(--accent, #433cc5);
-      }
-    }
-  }
-
-  &__detail-parent-ico {
-    flex-shrink: 0;
-    width: 12px;
-    height: 12px;
-
-    svg {
-      display: block; // inline svg would sit on the baseline — see chip-ico
-      width: 12px;
-      height: 12px;
-      fill: var(--normal-fg-40, #6f6d87);
-      transition: fill 0.15s;
-    }
   }
 
   // The ellipsis needs overflow:hidden, which clips at the padding box — so
   // the line box must be tall enough for stacked Vietnamese marks (ế, ỗ, ậ
-  // carry two diacritics above the x-height). At 16px/12px the acute of "nếu"
-  // was cut off and it read "nêu". 20px line + 1px top pad clears them.
-  &__detail-parent-title {
+  // carry two diacritics above the x-height). 20px line + 1px top pad clears
+  // them.
+  &__detail-parent-title,
+  &__detail-parent-current {
     min-width: 0;
     padding-top: 1px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    transition: color 0.15s;
     @include drumee.typo(
-      $size: 12px,
-      $weight: 500,
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+  &__detail-parent-title {
+    flex: 0 1 auto;
+    cursor: pointer;
+    transition: color 0.15s;
+
+    &:hover {
+      color: var(--accent, #433cc5);
+      text-decoration: underline;
+    }
+  }
+  &__detail-parent-current {
+    flex: 0 1 auto;
+  }
+  &__detail-parent-sep {
+    flex: 0 0 auto;
+    @include drumee.typo(
+      $size: 14px,
       $line: 20px,
       $color: var(--normal-fg-40, #6f6d87)
     );
@@ -6473,6 +6463,22 @@ $theme-colors: (
       $size: 14px,
       $weight: 600,
       $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // Child rows (Figma 873:233238): stack glyph + 12px semibold title.
+  &__gantt-subico {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+  &__gantt-arow[data-child="1"] &__gantt-title {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }

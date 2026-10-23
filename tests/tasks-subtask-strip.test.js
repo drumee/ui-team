@@ -177,3 +177,22 @@ test("month cell fits one chip when a leading chip carries a strip", () => {
   assert.equal(monthFit(ui, [{ n: 0 }, { n: 3 }, { n: 0 }]), 1);
   assert.equal(monthFit(ui, [{ n: 0 }, { n: 0 }, { n: 3 }]), 2);
 });
+
+// ── Gantt child row + subtask detail breadcrumb ─────────────────────────────
+
+const GANTT = fs.readFileSync(path.join(DIR, "skeleton/gantt.js"), "utf8");
+
+test("gantt child row carries the stack glyph before its title", () => {
+  const start = GANTT.indexOf("className: `${pfx}__gantt-arow`");
+  const body = GANTT.slice(start, GANTT.indexOf("className: `${pfx}__gantt-title`", start));
+  assert.match(body, /child\s*\?\s*Skeletons\.Image\.Svg\(\{\s*className: `\$\{pfx\}__gantt-subico`,\s*ico: "ph-stack-simple"/);
+});
+
+test("subtask detail breadcrumb reads 'Parent / child', the parent is the link", () => {
+  const start = SKEL.indexOf("const parentCrumb = parentTask");
+  const body = SKEL.slice(start, SKEL.indexOf("const header = ", start));
+  assert.match(body, /__detail-parent-title`,[\s\S]*?service: "open-detail"[\s\S]*?taskId: parentTask\.id/);
+  assert.match(body, /__detail-parent-sep`,\s*content: "\/"/);
+  assert.match(body, /__detail-parent-current`,\s*content: detail\.title/);
+  assert.doesNotMatch(body, /caret-left/);
+});
