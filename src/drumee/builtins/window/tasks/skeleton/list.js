@@ -453,7 +453,10 @@ module.exports = function (ui) {
             subIco(),
             Skeletons.Entry({
               className: `${pfx}__list-subcreate`,
-              name: "list-subcreate",
+              // Keyed to the parent: reconcile matches rows by shape, and a
+              // shared name let another parent's ＋ inherit this input — its
+              // typed text and wiring — so Enter created under the wrong task.
+              name: `list-subcreate-${t.id}`,
               placeholder: LOCALE.ENTER_SUBTASK_NAME,
             }),
             Skeletons.Button.Svg({

@@ -10239,6 +10239,7 @@ class __tasks_panel extends LetcBox {
     if (viewChanged) this._scrollActiveViewTabIntoView();
     this._positionFilterPicker();
     if (this._listEdit) this._afterListPaint();
+    if (this._inlineSubtask) this._wireInlineSubtask();
     this._markPainted();
     // The board has drawn: the folder window's Task entrance keys on this
     // (window/folder/skin, data-view="task"), so it slides in WITH its columns.
@@ -11795,11 +11796,12 @@ class __tasks_panel extends LetcBox {
         if (row.parent) this._mergeTask(row.parent);
         this._refreshSubtaskSection();
         this._syncSubtaskBadges(task.parent_task_id);
-        // A parent that just auto-completed changes its own card/row/pill, so
-        // the underlying view does need rebuilding — but only the view: the
-        // open detail panel was already refreshed above, and a full _render()
-        // here would rebuild it a second time under the user's cursor.
-        if (row.parent) this._refreshViewBody();
+        // The view behind the panel shows this child too — the Board and
+        // Calendar Subtasks strips carry its status pill and the done/total
+        // bar, and an auto-completed parent changes its own card — so it is
+        // rebuilt. Only the view: the open detail panel was already refreshed
+        // above, and a full _render() would rebuild it under the cursor.
+        this._refreshViewBody();
       } else {
         task.status = originalStatus;
         this._refreshSubtaskSection();

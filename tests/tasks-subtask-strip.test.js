@@ -196,3 +196,30 @@ test("subtask detail breadcrumb reads 'Parent / child', the parent is the link",
   assert.match(body, /__detail-parent-current`,\s*content: detail\.title/);
   assert.doesNotMatch(body, /caret-left/);
 });
+
+// ── Final-review fixes (skin) ───────────────────────────────────────────────
+
+const SCSS = fs.readFileSync(path.join(DIR, "skin/index.scss"), "utf8");
+const rule = (sel) => {
+  const i = SCSS.indexOf(`${sel} {`);
+  assert.ok(i >= 0, `${sel} missing`);
+  return SCSS.slice(i, SCSS.indexOf("\n  }\n", i));
+};
+
+test("calendar strip pill can shrink and ellipsise ('In progress' in a 163px card)", () => {
+  const pill = rule('&__substrip[data-surface="cal"] &__substrip-status');
+  assert.match(pill, /flex: 0 1 auto;/);
+  assert.match(pill, /min-width: 0;/);
+  const label = rule('&__substrip[data-surface="cal"] &__substrip-status-label');
+  assert.match(label, /overflow: hidden;/);
+  assert.match(label, /text-overflow: ellipsis;/);
+  // The NAME gives way first (Figma "S…"), whatever its length; the dot never.
+  assert.match(rule('&__substrip[data-surface="cal"] &__substrip-name'), /flex: 1 1 0;/);
+  assert.match(rule("&__substrip-status-dot"), /flex: 0 0 8px;/);
+});
+
+test("list stack glyph and creator text follow the theme (no fixed near-black)", () => {
+  assert.doesNotMatch(rule("&__list-subico"), /#0b0a21;/);
+  assert.match(rule("&__list-subico"), /var\(--normal-fg-10, #0b0a21\)/);
+  assert.match(rule("&__list-subcreate"), /\$color: var\(--normal-fg-10, #0b0a21\)/);
+});

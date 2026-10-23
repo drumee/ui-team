@@ -6971,6 +6971,7 @@ $theme-colors: (
     background: #f2f2f7;
   }
   &__substrip-status-dot {
+    flex: 0 0 8px;
     width: 8px;
     height: 8px;
     border-radius: 50%;
@@ -6991,8 +6992,18 @@ $theme-colors: (
   &__substrip[data-surface="cal"] &__substrip-row {
     gap: 8px;
   }
+  &__substrip[data-surface="cal"] &__substrip-name {
+    flex: 1 1 0;
+  }
   &__substrip[data-surface="cal"] &__substrip-status {
+    flex: 0 1 auto;
+    min-width: 0;
     padding: 2px 8px;
+  }
+  &__substrip[data-surface="cal"] &__substrip-status-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   &__substrip-noassignee {
     box-sizing: border-box;
@@ -7131,7 +7142,7 @@ $theme-colors: (
     flex: 0 0 16px;
     width: 16px;
     height: 16px;
-    color: #0b0a21;
+    color: var(--normal-fg-10, #0b0a21);
   }
 
   // Inline "Enter subtask name..." creator: a bare input on the row, grey
@@ -7148,10 +7159,10 @@ $theme-colors: (
       outline: none;
       background: transparent;
       padding: 0;
-      @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+      @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: var(--normal-fg-10, #0b0a21));
 
       &::placeholder {
-        color: #65656c;
+        color: var(--normal-fg-40, #65656c);
       }
     }
   }

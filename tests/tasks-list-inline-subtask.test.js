@@ -176,3 +176,36 @@ test("the List ＋ opens the inline creator, only for editors, never on a child 
 test("the inline ＋ and Enter are gated as task writes", () => {
   assert.match(SRC, /"list-add-subtask", "list-subtask-commit"/);
 });
+
+// ── Final-review fixes ──────────────────────────────────────────────────────
+
+test("ticking a subtask done repaints the view, so Board/Calendar strips follow", async () => {
+  global.SERVICE.task.update_status = "task.update_status";
+  const toggle = new Function(`return ${sliceFunction(SRC, "async _toggleSubtaskComplete(trigger)")}`)();
+  const kid = { id: "c1", status: "todo", parent_task_id: "p1" };
+  let refreshed = 0;
+  const self = {
+    _tasks: [kid],
+    _hubId: "h1",
+    getColumns: () => [{ key: "todo" }, { key: "done", is_done: 1 }],
+    isDoneStatus: (s) => s === "done",
+    _refreshSubtaskSection() {},
+    // No `parent` on the row: the server does not roll up (task.js:848).
+    postService: async () => [{ id: "c1", status: "done", parent_task_id: "p1" }],
+    _mergeTask() {},
+    _syncSubtaskBadges() {},
+    _refreshViewBody() {
+      refreshed++;
+    },
+  };
+  await toggle.call(self, trig("c1"));
+  assert.equal(refreshed, 1);
+});
+
+test("a full _render rewires an open inline creator, like _refreshViewBody", () => {
+  assert.match(sliceFunction(SRC, "_render({ full = false } = {})"), /if \(this\._inlineSubtask\) this\._wireInlineSubtask\(\);/);
+});
+
+test("the creator's input is keyed to its parent, so another parent's ＋ never reuses it", () => {
+  assert.match(LIST, /name: `list-subcreate-\$\{t\.id\}`/);
+});
