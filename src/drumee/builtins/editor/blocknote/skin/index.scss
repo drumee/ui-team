@@ -774,8 +774,11 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   }
 
   // The empty-page hint, "Press '/' for commands" (Figma 16px, #84848c,
-  // upright). BlockNote draws it as the block's ::after.
-  .bn-editor .bn-block-content::after {
+  // upright). BlockNote draws it as the block's ::after, styled by
+  // `.bn-block-content:has(.ProseMirror-trailingBreak:only-child):after`
+  // (italic, side-menu grey) — this has to out-specify THAT, and on equal
+  // specificity BlockNote's stylesheet, loaded later, wins.
+  .bn-editor .bn-block-content:has(.ProseMirror-trailingBreak:only-child)::after {
     color: var(--normal-fg-50);
     font-style: normal;
   }
