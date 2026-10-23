@@ -5728,11 +5728,7 @@ $theme-colors: (
     animation: tasks-cal-fade 0.16s ease;
     // A month row's FLOOR (rows share the grid's height above it, as the Meet
     // tab's do); a row grows with its chips up to twice this, then its cells
-    // scroll. skeleton/calendar.js monthFit is measured against that 2× cell:
-    // 24px of padding, the 20px date line and its 10px gap (54px) leave a
-    // 326px body, and "+N" pins 18px at its foot. 190px is close to the Figma
-    // cell (1697:48540, 196px). Change the cell padding, the date line, the
-    // card or the gap and monthFit goes stale.
+    // scroll. 190px is close to the Figma cell (1697:48540, 196px).
     --tcal-cell-min: 190px;
   }
 
@@ -5982,23 +5978,20 @@ $theme-colors: (
   }
 
   // The cell's scroll container: every task renders, and a busy day is read
-  // by scrolling here or by following the "+N" into the Day view.
+  // by scrolling here (or in the Day view).
   //
-  // Scrollbar set here, not left to .drumee-box's global 5px orange bar. It
-  // is transparent at rest, and inked when the skeleton stamps the cell as
-  // overflowing — otherwise a cell with more below the fold looks exactly
-  // like one that simply ends.
+  // Scrollbar hidden here, not left to .drumee-box's global 5px orange bar:
+  // a non-auto scrollbar-width wins over any ::-webkit-scrollbar styling.
   &__cal-day-body {
     flex: 1 1 auto;
     min-height: 0;
     gap: 4px;
 
-    // The month cell's 10px between cards (1697:48540); monthFit counts it.
+    // The month cell's 10px between cards (1697:48540).
     .tasks-panel__calendar[data-mode="month"] & {
       gap: 10px;
     }
-    // Scrolls (wheel, touch, keyboard) with no visible bar — the pinned "+N"
-    // is the cue that there is more.
+    // Scrolls (wheel, touch, keyboard) with no visible bar.
     overflow-y: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -6072,7 +6065,7 @@ $theme-colors: (
   // Month card (Figma 1697:48543; hover 1697:48544), the Personal Calendar's
   // month card: white, hairline border, r=12, 12px in, the priority dot over
   // the name 4px apart; Drop Shadow/300 and the × on hover. 52.4px tall
-  // (12 + 8 + 4 + 14.4 + 12 + 2px of border), the height monthFit assumes.
+  // (12 + 8 + 4 + 14.4 + 12 + 2px of border).
   // The frame's hairline is 0.5px of 20% black, drawn as the 1px token
   // border as the Personal Calendar does, so the card has one height on 1x
   // and 2x screens. It used to be a status-tinted one-line chip; Figma has
@@ -6138,8 +6131,8 @@ $theme-colors: (
     border-radius: 50%;
   }
 
-  // Buttons/Mini Button, 12/1.2 semibold, one line: a wrapped name would make
-  // the card's height depend on its data, and monthFit counts fixed cards.
+  // Buttons/Mini Button, 12/1.2 semibold, one line, so every month card has
+  // the same height whatever its name.
   &__cal-chip-title {
     min-width: 0;
     overflow: hidden;
@@ -6150,7 +6143,7 @@ $theme-colors: (
     // Room for stacked Vietnamese marks ("ế", "ặ" reach above and below a
     // 1.2 line): overflow clips at the padding box, so 4px of padding each
     // way widens the clip and the negative margin gives the line its height
-    // back — the card, and monthFit, do not move.
+    // back — the card does not move.
     padding-block: 4px;
     margin-block: -4px;
 
@@ -6161,23 +6154,6 @@ $theme-colors: (
       padding-block: 4px;
       margin-block: -4px;
     }
-  }
-
-  // "+N" — pinned to the foot of the scrolling cell so the one way to the rest
-  // of a busy day can never scroll out of reach itself. The Personal
-  // Calendar's footer: 11px brand, painted on the cell's own ground so chips
-  // scroll UNDER it, never through it.
-  &__cal-day-more {
-    flex: 0 0 auto;
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-    margin-top: -2px;
-    padding: 2px 0 0 4px;
-    cursor: pointer;
-    background: var(--normal-bg-elevated, #fff);
-    @include drumee.typo($size: 11px, $line: 16px, $color: var(--primary-40));
-    font-weight: 600;
   }
 
 

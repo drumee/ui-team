@@ -22,7 +22,6 @@
 const {
   priorityMeta,
   statusMeta,
-  subtaskProgress,
   subtaskStrip,
   mayCreateTask,
 } = require("./helpers");
@@ -36,32 +35,6 @@ const VIEWS = [
   { key: "week", label: "CAL_VIEW_WEEK" },
   { key: "day", label: "CAL_VIEW_DAY" },
 ];
-
-// How many month chips a cell shows before its "+N". It only LABELS the "+N"
-// — every task renders and the cell body scrolls — so it has to agree with the
-// cell geometry in the skin. A month cell grows with its chips up to twice the
-// --tcal-cell-min floor (2 × 190px), then scrolls: under its 12px padding and
-// the 20px date line with its 10px gap that is a 326px body. Chips are 52.4px
-// on a 10px gap, 28px taller when they carry the Subtasks strip (6px gap + 6px
-// padding + 1px rule + 15px header). A cell whose chips fit the body needs no
-// "+N"; otherwise the last counted chip must end above the 18px pinned "+N".
-const MONTH_BODY_MAX = 326;
-const MONTH_MORE_H = 18;
-const CHIP_H = 52.4;
-const CHIP_STRIP_H = 28;
-const CHIP_GAP = 10;
-
-const monthFit = (ui, list) => {
-  const ends = [];
-  let y = 0;
-  list.forEach((t, i) => {
-    const strip = !ui.isSubtask(t) && subtaskProgress(ui, t).total;
-    y += (i ? CHIP_GAP : 0) + CHIP_H + (strip ? CHIP_STRIP_H : 0);
-    ends.push(y);
-  });
-  if (!ends.length || ends[ends.length - 1] <= MONTH_BODY_MAX) return list.length;
-  return ends.filter((e) => e <= MONTH_BODY_MAX - MONTH_MORE_H).length;
-};
 
 /** The active view, validated — anything unknown falls back to the month. */
 const calMode = (ui) => {
@@ -280,15 +253,14 @@ module.exports = function (ui) {
   // The month cell used to slice to three and DROP the rest, leaving a "+N"
   // whose only job was to send the user to another view to find out what the
   // cell was hiding — the truncation the Personal Calendar removed from its own
-  // month grid. Every task renders now and the cell body scrolls; the "+N" is
-  // pinned to the foot of the cell (sticky, in the skin) so it can never scroll
-  // out of reach itself, and it opens that DAY, as the Personal Calendar's does.
+  // month grid. Every task renders now: the cell grows to twice its floor and
+  // then its body scrolls, with no scrollbar and no "+N" counter.
   //
   // Bounded without a slice: a month only ever builds the tasks whose due date
   // falls in its six weeks, as ~5-node chips, which even for the largest
   // workspace is under the board's own windowed budget (CARD_WINDOW × columns ×
   // ~19 nodes a card).
-  const dayBody = (list, k) => {
+  const dayBody = (list) => {
     if (!list.length) return null;
     if (mode !== "month") {
       return Skeletons.Box.Y({
@@ -298,25 +270,11 @@ module.exports = function (ui) {
         kids: list.map(card),
       });
     }
-    const kids = list.map(compactChip);
-    const more = list.length - monthFit(ui, list);
-    if (more > 0) {
-      kids.push(
-        Skeletons.Note({
-          className: `${pfx}__cal-day-more`,
-          content: `+${more}`,
-          bubble: 0,
-          service: "cal-day-more",
-          uiHandler: [ui],
-          calDay: k,
-        }),
-      );
-    }
     return Skeletons.Box.Y({
       className: `${pfx}__cal-day-body`,
       // Inert: the space around the chips belongs to the square's click.
       active: 0,
-      kids,
+      kids: list.map(compactChip),
     });
   };
 
@@ -367,7 +325,7 @@ module.exports = function (ui) {
     // click on its own area and the square would never hear it. What DOES
     // something keeps its own service, and that same stopPropagation stops it
     // from also firing the square: a chip or card opens its task, a × deletes,
-    // "+N" opens the Day view, and the "+" adds exactly as the square does.
+    // and the "+" adds exactly as the square does.
     const addable = mayCreate
       ? { bubble: 0, service: "cal-add", uiHandler: [ui], calDay: k }
       : {};
@@ -400,7 +358,7 @@ module.exports = function (ui) {
               ].filter(Boolean),
             })
           : null,
-        dayBody(list, k),
+        dayBody(list),
       ].filter(Boolean),
     });
   };
@@ -709,4 +667,3 @@ module.exports.controls = function (ui) {
 
 module.exports.controlsKids = controlsKids;
 module.exports.VIEWS = VIEWS;
-module.exports.monthFit = monthFit;

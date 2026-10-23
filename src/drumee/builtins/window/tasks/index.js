@@ -2444,19 +2444,6 @@ class __tasks_panel extends LetcBox {
       case "cal-next":
         return this._calShift(1);
 
-      case "cal-day-more": {
-        // "+N" on a busy month cell → that DAY, where every task is a full
-        // card. It used to open the week, which is the Personal Calendar's
-        // "+N" going somewhere different from this one's.
-        const day = trigger.mget("calDay");
-        this._closeCalMenus();
-        if (day) {
-          this._calCursor = day;
-          this._calMode = "day";
-        }
-        return this._repaintCalendar();
-      }
-
       case "cal-add": {
         // "+" on a day cell → open the create modal pre-dated to that day.
         const day = trigger.mget("calDay") || "";
@@ -5174,9 +5161,9 @@ class __tasks_panel extends LetcBox {
    */
   _repaintCalendar() {
     // A different range (or view) is new content, so it opens at the top. The
-    // month's offset used to carry over: scroll to the last week, follow a
-    // "+N" into its day, and the Day view opened scrolled past that day's
-    // first tasks — or ‹ › landed mid-grid on the next month. A repaint of the
+    // month's offset used to carry over: scroll to the last week, switch to
+    // Day, and the Day view opened scrolled past that day's first tasks — or
+    // ‹ › landed mid-grid on the next month. A repaint of the
     // SAME range (a task edit, a filter) still goes through the plain
     // _refreshViewBody and keeps its place; this is the rule the Personal
     // Calendar keys on too (_placeHoursScroll).
