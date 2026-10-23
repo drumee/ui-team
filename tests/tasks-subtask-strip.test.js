@@ -96,15 +96,19 @@ test("expanded strip has the bar and one row per child", () => {
   assert.equal(byClass(rows[1], `${pfx}__substrip-status-label`)[0].content, "Complete");
 });
 
-test("a child row opens the PARENT's detail", () => {
+test("a child row opens that subtask's own detail", () => {
   const s = subtaskStrip(stubUi({ done: 0, total: 2, open: true, children: kids }), parent, {
     pfx,
     surface: "board",
   });
-  for (const row of byClass(s, `${pfx}__substrip-row`)) {
-    assert.equal(row.service, "open-detail");
-    assert.equal(row.taskId, "p1");
-  }
+  const rows = byClass(s, `${pfx}__substrip-row`);
+  assert.deepEqual(
+    rows.map((r) => [r.service, r.taskId]),
+    [
+      ["open-detail", "c1"],
+      ["open-detail", "c2"],
+    ],
+  );
 });
 
 test("child row shows the assignee avatar, or a placeholder when unassigned", () => {

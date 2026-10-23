@@ -129,9 +129,8 @@ function subtaskProgress(ui, t) {
  *
  * Collapsed: icon · "Subtasks" · done/total · caret. Expanded (the shared
  * _subtasksOpen set, so List / Gantt open the same parent): a progress bar and
- * one row per child — name, status pill, assignee. A row opens the PARENT's
- * detail ("click to subtask → view detail main task"); the child is one click
- * further, from the parent's Subtask section.
+ * one row per child — name, status pill, assignee. A row opens that
+ * subtask's own detail, whose breadcrumb leads back to the parent.
  *
  * Every control is bubble:0 — the card underneath is draggable and opens its
  * own detail on click, and either would fire as well.
@@ -171,7 +170,7 @@ function subtaskStrip(ui, t, { pfx, surface }) {
       bubble: 0,
       service: "open-detail",
       uiHandler: [ui],
-      taskId: t.id,
+      taskId: c.id,
       kids: [
         Skeletons.Note({ className: `${pfx}__substrip-name`, content: c.title || "", active: 0 }),
         Skeletons.Box.X({
