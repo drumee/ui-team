@@ -1,9 +1,40 @@
 const { trackDeskCanvas } = require("libs/desk-canvas");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { startP2PCall } = require("libs/p2p-call");
+const { linkedDrumateId } = require("./skeleton/avatar");
+const { areacodeDigits, formatAreacode } = require("./areacode");
 
 const idOf = (c) =>
   (c && (c.id || c.contact_id || c.drumate_id || c.entity_id || c.entity)) ||
   null;
+
+// Someone you have messaged or called but never saved
+// (my_contact_show_next branch 3). No contact row backs the entry, so only
+// Inbox / Call / Add contact apply to it.
+const isChatPartner = (c) => !!c && c.status === "nocontact";
+
+// An invitation not answered yet, either way: "sent" (we invited them),
+// "received" / "invitation" (they invited us). my_contact_show_next returns
+// "sent" and "invitation" rows in the active set too, so without this the
+// same person sat in All and in Pending at once. They belong to Pending only.
+const PENDING_STATUSES = ["sent", "received", "invitation"];
+const isPending = (c) => !!c && PENDING_STATUSES.includes(c.status);
+const isBlockedRow = (c) => c.is_blocked === 1 || c.status === "blocked";
+
+// A contact saved by EMAIL is tied to its account only by the server's
+// linkEmailContacts, after the proc ran — so the proc cannot tell that the
+// person you chat with is that saved contact, and lists them twice. Keep the
+// saved contact, drop the chat-partner duplicate.
+function dropSavedPartners(list) {
+  const saved = new Set();
+  for (const c of list) {
+    if (isChatPartner(c)) continue;
+    const id = linkedDrumateId(c);
+    if (id) saved.add(id);
+    if (c.drumate_id) saved.add(c.drumate_id);
+  }
+  return list.filter((c) => !isChatPartner(c) || !saved.has(c.entity));
+}
 
 // Backend may return c.tag as an array of objects, an array of strings,
 // a single object, a single string, or a comma-separated string. Normalize
@@ -54,6 +85,10 @@ class __address_book extends LetcBox {
     this._tags = [];
     this._selectedTagId = null;
     this._selectedKey = null;
+    // Someone showContact() was asked for who is not in the book:
+    // { uid, name, email }. Shown in the detail area while nothing is
+    // selected (skeleton/not-found-detail).
+    this._notFound = null;
     this._inviteDraft = { email: "", message: "" };
     this._inviteError = null;
     this._inviteSubmitting = false;
@@ -79,6 +114,62 @@ class __address_book extends LetcBox {
     this.unbindEvent(_a.live);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
     if (this._untrackCanvas) this._untrackCanvas();
+    clearTimeout(this._reloadTimer);
+  }
+
+  // The desk keeps this panel alive in its slot (chat-panel) and only hides
+  // it, so reopening Contacts used to show the list as it was when it was
+  // first opened — a conversation started in the Inbox meanwhile never showed
+  // up. Re-read it on every re-show (desk _showPanel).
+  onPanelShown() {
+    this._reloadContacts();
+  }
+
+  /**
+   * Re-read the book (current tab's contacts + both invitation lists) and
+   * repaint. Coalesced: a burst of messages costs one reload. Nothing changed
+   * → nothing repainted, so reopening Contacts keeps its scroll position. The
+   * detail pane is left alone while the edit form is open, so a refresh never
+   * wipes what the user is typing.
+   */
+  _reloadContacts(delay = 0) {
+    clearTimeout(this._reloadTimer);
+    this._reloadTimer = setTimeout(async () => {
+      this._reloadTimer = null;
+      if (this.isDestroyed()) return;
+      const before = this._bookSignature();
+      await Promise.all([
+        this._loadContacts(this._contactsOption || "active"),
+        this._loadInvitations(),
+        this._loadSentInvitations(),
+      ]);
+      if (this.isDestroyed()) return;
+      if (this._bookSignature() === before) return;
+      await this._refreshList();
+      this._updateSelectionDom();
+      if (!this._editing) this._refreshDetail();
+    }, delay);
+  }
+
+  _bookSignature() {
+    try {
+      return JSON.stringify([this._contacts, this._invitations, this._sentInvitations]);
+    } catch (e) {
+      return String(Math.random()); // unserialisable: treat as changed
+    }
+  }
+
+  // Is the other party of a p2p message / call log already in the book —
+  // listed, or pending either way? (A pending person is in the Pending tab,
+  // never a chat partner, so their messages must not re-read the list.)
+  _knowsPeer(uid) {
+    const match = (c) =>
+      c && (c.drumate_id === uid || c.entity === uid || c.uid === uid || linkedDrumateId(c) === uid);
+    return (
+      this._contacts.some(match) ||
+      (this._invitations || []).some(match) ||
+      (this._sentInvitations || []).some(match)
+    );
   }
 
   /**
@@ -124,6 +215,9 @@ class __address_book extends LetcBox {
     // here and have togglePanel read it as closed and reopen).
     const svc = source && source.mget && source.mget(_a.service);
     if (typeof svc === "string" && svc.startsWith("toggle-")) return;
+    // A Chat details member row opens a contact HERE (showContact): closing
+    // first would only make the panel flicker out and back in.
+    if (svc === "chat-details-member") return;
     // Opening the desk's mobile sidebar/drawer via a topbar button must not
     // dismiss the contact panel — the drawer overlays on top and the panel
     // stays open behind it. Bail on those clicks (they read as "outside").
@@ -170,6 +264,7 @@ class __address_book extends LetcBox {
 
       case "select-contact":
         this._selectedKey = trigger.mget("contactKey");
+        this._notFound = null;
         this._editing = false;
         this._updateSelectionDom();
         // Single-pane mobile/tablet: reveal the detail pane (inert ≥ 1024px).
@@ -183,6 +278,26 @@ class __address_book extends LetcBox {
 
       case "open-invite":
         this._inviteDraft = { email: "", message: "" };
+        this._inviteError = null;
+        return this._renderInviteModal();
+
+      // A chat partner's Add contact: the invite dialog, pre-filled with
+      // their account email.
+      case "add-partner-contact":
+        this._inviteDraft = {
+          email: trigger.mget("contactEmail") || "",
+          message: "",
+        };
+        this._inviteError = null;
+        return this._renderInviteModal();
+
+      // The not-found screen's Add contact: the invite dialog, with the
+      // person's email when the caller knew it.
+      case "add-not-found-contact":
+        this._inviteDraft = {
+          email: (this._notFound && this._notFound.email) || "",
+          message: "",
+        };
         this._inviteError = null;
         return this._renderInviteModal();
 
@@ -229,6 +344,11 @@ class __address_book extends LetcBox {
         return this._block(trigger);
       case "unblock-contact":
         return this._unblock(trigger);
+
+      case "contact-inbox":
+        return this._openContactChat();
+      case "contact-call":
+        return this._callContact();
 
       case "edit-contact":
         return this._beginEdit();
@@ -309,9 +429,6 @@ class __address_book extends LetcBox {
       case "delete-tag":
         return this._deleteTag(trigger);
 
-      case "close-panel":
-        return Desk.togglePanel("address_book", "chat-panel");
-
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);
     }
@@ -337,6 +454,20 @@ class __address_book extends LetcBox {
           this._refreshDetail();
         });
         return;
+      // A p2p message or a call log (conference writes it as chat.post) with
+      // someone the book does not list yet: they are a "chat partner" now
+      // (my_contact_show_next, status 'nocontact'), so re-read the list.
+      // Messages from people already listed change nothing here.
+      case SERVICE.chat.post: {
+        const peers = [data && data.peer_id, data && data.entity_id, data && data.author_id]
+          .filter((id) => typeof id === "string" && id && id !== Visitor.id);
+        // Hidden (parked) panels skip it: onPanelShown re-reads on reopen.
+        const visible = this.el && this.el.dataset.anim === "in";
+        if (visible && peers.some((id) => !this._knowsPeer(id))) {
+          this._reloadContacts(500);
+        }
+        return;
+      }
       case SERVICE.contact.load:
         // CSV/VCF import progress
         if (data && typeof data === "object") {
@@ -358,10 +489,11 @@ class __address_book extends LetcBox {
         hub_id: Visitor.id,
         option,
       });
-      this._contacts = (Array.isArray(rows) ? rows : []).map((c) => ({
+      const list = (Array.isArray(rows) ? rows : rows && rows.id ? [rows] : []).map((c) => ({
         ...c,
         tag: normalizeTags(c.tag),
       }));
+      this._contacts = dropSavedPartners(list);
       this._contactsOption = option;
     } catch (err) {
       this._contacts = [];
@@ -421,6 +553,7 @@ class __address_book extends LetcBox {
   async switchTab(tab) {
     this._tab = tab;
     this._selectedKey = null;
+    this._notFound = null;
     this._editing = false;
     // Back to the first window. Without this a deep scroll in one tab would
     // carry its grown window into the next, mounting hundreds of rows in one
@@ -440,6 +573,92 @@ class __address_book extends LetcBox {
     if (tasks.length) await Promise.all(tasks);
     this._refreshList();
     this._refreshDetail();
+  }
+
+  /**
+   * The tab that lists a person, unfiltered: All, Pending, Blocked or
+   * Archived — each person is in exactly one. Archived rows are not part of
+   * the active fetch, so they are asked for only when the others miss.
+   * Defaults to All when no tab has them.
+   */
+  async _tabHolding(match) {
+    if (this._contactsOption !== "active") await this._loadContacts("active");
+    for (const tab of ["all", "pending", "blocked"]) {
+      if (this._tabList(tab).some(match)) return tab;
+    }
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.contact.show_contact,
+        hub_id: Visitor.id,
+        option: "archived",
+      });
+      if (Array.isArray(rows) && rows.some(match)) return "archived";
+    } catch (err) {
+      // Not found is the fallback either way.
+    }
+    return "all";
+  }
+
+  /**
+   * Select the contact behind a drumate id and show its detail — what a
+   * Chat details member row opens (Desk.openContact). Waits for the first
+   * load. A contact the current tab, search or tag filter hides brings the
+   * view to the tab that lists them (an invitation is in Pending, a blocked
+   * or archived contact in their own tab), unfiltered, with its row built and
+   * scrolled into view. Only someone no tab lists gets the not-found screen
+   * in the detail area (named, and with Add contact pre-filled, from `who`
+   * when given) — showing it for a pending, blocked or archived contact made
+   * Add contact answer "already in your contact list".
+   *
+   * @param {String} uid drumate id
+   * @param {Object} [who] { name, email } as the caller knows the person
+   */
+  async showContact(uid, who = {}) {
+    if (!uid) return;
+    if (this.whenItemsReady) await this.whenItemsReady();
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const match = (c) =>
+      c &&
+      (c.drumate_id === uid || c.entity === uid || linkedDrumateId(c) === uid);
+    if (!this._listForView().some(match)) {
+      this._selectedTagId = null;
+      this._search = "";
+      const input = this.el && this.el.querySelector(`.${this.fig.family}__search-input input`);
+      if (input) input.value = "";
+      const tab = await this._tabHolding(match);
+      if (this.isDestroyed && this.isDestroyed()) return;
+      await this.switchTab(tab);
+    }
+    const list = this._listForView();
+    const idx = list.findIndex(match);
+    if (idx < 0) {
+      this._selectedKey = null;
+      this._editing = false;
+      this._notFound = { uid, name: who.name || "", email: who.email || "" };
+      // Single-pane mobile/tablet: the screen is in the detail pane.
+      this.el.dataset.mview = "detail";
+      this._updateSelectionDom();
+      return this._refreshDetail();
+    }
+    this._notFound = null;
+    // Build enough rows to include it (the list mounts a window of them).
+    if (idx >= this.contactWindow()) {
+      this._contactWin =
+        Math.ceil((idx + 1) / CONTACT_WINDOW_STEP) * CONTACT_WINDOW_STEP;
+    }
+    this._selectedKey = idOf(list[idx]);
+    this._editing = false;
+    // Single-pane mobile/tablet: reveal the detail pane (inert ≥ 1024px).
+    this.el.dataset.mview = "detail";
+    await this._refreshList();
+    this._updateSelectionDom();
+    const row =
+      this.el &&
+      this.el.querySelector(
+        `.${this.fig.family}__contact-item[data-contact-key="${this._selectedKey}"]`,
+      );
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+    return this._selectContact();
   }
 
   // ─── Mutations ──────────────────────────────────────────────────
@@ -656,6 +875,54 @@ class __address_book extends LetcBox {
     this._refreshDetail();
   }
 
+  // ─── Reach out (Inbox / Call) ───────────────────────────────────
+
+  // The selected contact as the peer chat_p2p.openPeer and window_connect
+  // expect, or null when it cannot be reached in Drumee: no linked account
+  // (saved by email only), blocked, or still an invitation. The detail tiles
+  // are already inert in those cases; this re-checks at click time.
+  _selectedPeer() {
+    const c = this.getSelectedContact();
+    if (!c) return null;
+    if (["received", "invitation", "sent"].includes(c.status)) return null;
+    if (c.is_blocked === 1 || c.status === "blocked") return null;
+    const entity_id = linkedDrumateId(c);
+    if (!entity_id) return null;
+    const firstname = (c.firstname || "").trim();
+    const lastname = (c.lastname || "").trim();
+    const display =
+      (firstname && lastname && firstname !== lastname
+        ? `${firstname} ${lastname}`
+        : firstname || lastname) ||
+      c.surname ||
+      c.email ||
+      entity_id;
+    return {
+      entity_id,
+      drumate_id: entity_id,
+      uid: entity_id,
+      firstname,
+      lastname,
+      display,
+      fullname: display,
+      online: c.online,
+    };
+  }
+
+  _openContactChat() {
+    const peer = this._selectedPeer();
+    const desk = window.Desk;
+    if (!peer || !desk || typeof desk.openPeerChat !== "function") return;
+    return desk.openPeerChat(peer);
+  }
+
+  // Voice call, same as the phone button in a chat header.
+  _callContact() {
+    const peer = this._selectedPeer();
+    if (!peer) return;
+    startP2PCall(peer, { video: 0 });
+  }
+
   // ─── Edit form ──────────────────────────────────────────────────
 
   // `show_contact` (used by `_loadContacts`) only returns scalar columns,
@@ -695,7 +962,7 @@ class __address_book extends LetcBox {
   async _selectContact() {
     this._refreshDetail();
     const sel = this.getSelectedContact();
-    if (!sel) return;
+    if (!sel || isChatPartner(sel)) return; // no contact row to hydrate
     const contactId = sel.id || sel.contact_id;
     const hydrated = await this._loadSelectedContactDetails(contactId);
     if (hydrated && this._selectedKey === idOf(sel)) {
@@ -705,7 +972,7 @@ class __address_book extends LetcBox {
 
   async _beginEdit() {
     const c = this.getSelectedContact();
-    if (!c) return;
+    if (!c || isChatPartner(c)) return;
     await this._loadSelectedContactDetails(c.id || c.contact_id);
     const full = this.getSelectedContact() || c;
     this._editing = true;
@@ -767,7 +1034,8 @@ class __address_book extends LetcBox {
     ).map((row) => {
       const inputs = row.querySelectorAll("input");
       return {
-        areacode: inputs[0]?.value?.trim() || "",
+        // The field holds digits only; the "+" is drawn beside it.
+        areacode: formatAreacode(inputs[0]?.value),
         phone: inputs[1]?.value?.trim() || "",
         category: row.dataset.category || "priv",
       };
@@ -1079,6 +1347,19 @@ class __address_book extends LetcBox {
     );
     const name = root?.value?.trim();
     if (!name) return;
+    // The edit form lists only the contact's own tags, so typing the name of
+    // one that already exists is how it gets assigned — reuse it rather than
+    // creating a duplicate.
+    const existing = this._editing
+      ? this._tags.find((t) => (t.name || "").toLowerCase() === name.toLowerCase())
+      : null;
+    if (existing) {
+      if (!this._editTags.includes(existing.tag_id)) {
+        this._editTags = [...this._editTags, existing.tag_id];
+      }
+      if (root) root.value = "";
+      return this._refreshDetail();
+    }
     try {
       const tag = await this.postService({
         service: SERVICE.tagcontact.add,
@@ -1270,11 +1551,15 @@ class __address_book extends LetcBox {
       // it): on mobile/tablet the detail pane would be left showing the empty
       // placeholder, so fall back to the list — same as chat-p2p's
       // _clearConversation. Inert ≥ 1024px.
-      if (!sel && this.el) this.el.dataset.mview = "sidebar";
+      // The not-found screen is a detail of its own and keeps the pane.
+      const notFound = !sel && this._notFound;
+      if (!sel && !notFound && this.el) this.el.dataset.mview = "sidebar";
       part.feed(
         sel
           ? require("./skeleton/contact-detail")(this, sel)
-          : require("./skeleton/empty-detail")(this),
+          : notFound
+            ? require("./skeleton/not-found-detail")(this, notFound)
+            : require("./skeleton/empty-detail")(this),
       );
     });
   }
@@ -1384,6 +1669,22 @@ class __address_book extends LetcBox {
       child.el.onchange = (e) => this._onImportFilePicked(e);
       return;
     }
+    if (pn === "ab-areacode") {
+      // Digits only: the "+" is fixed beside the field, so a typed or pasted
+      // "+84" / "84 " is reduced to "84" as it comes in.
+      const bind = () => {
+        const input = child.el.querySelector("input");
+        if (!input) return;
+        input.setAttribute("inputmode", "numeric");
+        input.addEventListener("input", () => {
+          const digits = areacodeDigits(input.value);
+          if (digits !== input.value) input.value = digits;
+        });
+      };
+      if (child.waitElement) child.waitElement(child.el, bind);
+      else bind();
+      return;
+    }
     if (pn === "ab-search") {
       const bind = () => {
         const input = child.el.querySelector("input");
@@ -1405,11 +1706,34 @@ class __address_book extends LetcBox {
 
   // ─── View accessors ─────────────────────────────────────────────
 
+  // The Pending tab: invitations received + sent. contact_notification_get
+  // also returns "informed" — the other side already accepted, and the row is
+  // listed in All — so it is left out here.
+  _pendingList() {
+    return [...(this._invitations || []), ...(this._sentInvitations || [])].filter(
+      (c) => c && c.status !== "informed",
+    );
+  }
+
+  // A tab's rows before search / tag filtering. All and Blocked read the
+  // active fetch, Archived the archived one (see switchTab).
+  // The book lists only people the user has added. my_contact_show_next also
+  // returns chat partners (status "nocontact": messaged or called, never
+  // added) — a contact deleted after a chat came straight back as one, so
+  // Delete looked like it did nothing. They are left out of every tab.
+  _tabList(tab) {
+    if (tab === "pending") return this._pendingList();
+    const list = this._contacts.filter((c) => !isPending(c) && !isChatPartner(c));
+    if (tab === "blocked") return list.filter(isBlockedRow);
+    // Server's my_contact_show_next returns blocked rows inside the active
+    // set; mirror the archived-tab isolation by excluding them from All.
+    if (tab === "all") return list.filter((c) => !isBlockedRow(c));
+    // Archived tab is already filtered server-side (option="archived").
+    return list;
+  }
+
   _listForView() {
-    let list =
-      this._tab === "pending"
-        ? [...this._invitations, ...this._sentInvitations]
-        : this._contacts;
+    let list = this._tabList(this._tab);
 
     if (this._search) {
       const term = this._search.toLowerCase();
@@ -1431,15 +1755,6 @@ class __address_book extends LetcBox {
 
     if (this._tab === "pending") return list;
 
-    const isBlocked = (c) => c.is_blocked === 1 || c.status === "blocked";
-    if (this._tab === "blocked") {
-      list = list.filter(isBlocked);
-    } else if (this._tab === "all") {
-      // Server's my_contact_show_next returns blocked rows inside the active
-      // set; mirror the archived-tab isolation by excluding them from All.
-      list = list.filter((c) => !isBlocked(c));
-    }
-    // Archived tab is already filtered server-side (option="archived").
     if (this._selectedTagId) {
       list = list.filter((c) =>
         (c.tag || []).some((t) => t.tag_id === this._selectedTagId),
@@ -1458,7 +1773,7 @@ class __address_book extends LetcBox {
     return this._selectedKey;
   }
   getInvitations() {
-    return [...(this._invitations || []), ...(this._sentInvitations || [])];
+    return this._pendingList();
   }
   getTags() {
     return this._tags || [];

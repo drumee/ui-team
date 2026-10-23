@@ -60,6 +60,8 @@ const __icon = function (_ui_) {
     // uses, so leaving reads the same wherever the app offers it. NOT the
     // trash can: this row does not delete anything.
     leaveWorkspace: "meeting-leave",
+    pinWorkspace: "ctxmenu-pin",
+    unpinWorkspace: "ctxmenu-unpin",
     unlock: "protected-unlock",
     // Archive box with the contents coming back out. Its own sprite rather
     // than a reuse of `app-archive`, which is the same glyph hard-filled
@@ -80,9 +82,10 @@ const __icon = function (_ui_) {
   if (_ui_ && _.isFunction(_ui_.mget) && [_a.share, _a.private, _a.personal].includes(_ui_.mget(_a.area) || _a.personal)) {
     a.lock = "app-prohibit";
   }
-  // Internal workspace (area `private`): "Designation link" draws the share
-  // glyph instead of the ctxmenu link icon.
-  if (_ui_ && _.isFunction(_ui_.mget) && _ui_.mget(_a.area) === _a.private) {
+  // Internal (`private`) and external (`share`) workspaces: "Internal Link"
+  // draws the share glyph instead of the ctxmenu link icon — the same glyph
+  // the player gear menus use for that row.
+  if (_ui_ && _.isFunction(_ui_.mget) && [_a.private, _a.share].includes(_ui_.mget(_a.area))) {
     a.designationLink = "app-share";
   }
   if (localStorage.getItem("showHidden")) {

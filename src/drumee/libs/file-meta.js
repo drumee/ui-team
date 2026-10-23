@@ -69,6 +69,10 @@ function humanFileSize(bytes) {
 function fileGlyph(node = {}) {
   const filetype = String(node.filetype || "").toLowerCase();
   const ext = String(node.ext || "").toLowerCase();
+  // Univer/Casual sheets are .json on disk but show the spreadsheet glyph.
+  const dataType = node.dataType || (node.metadata && node.metadata.dataType);
+  if (dataType === "sheet.univer" || ext === "usheet") return "app-xls-file";
+  if (dataType === "doc.casual" || ext === "udoc") return "app-doc-file";
 
   if (filetype === "audio") return "app-audio-file";
   if (filetype === "video" || filetype === "stream") return "app-video-file";

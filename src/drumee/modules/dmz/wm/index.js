@@ -1,6 +1,18 @@
 const winman = require('window/manager');
+const {
+  VIEW_STATES,
+  setGrouped,
+  clearGrouped,
+  groupViewState,
+  nextGroupViewState,
+} = require('builtins/window/skeleton/toolkit/file-group');
+const { reverseSortBy, modelComparator } = require("@drumee/ui-essentials");
 const WS_EVENT = "ws:event";
 const EOD = "end:of:data";
+// Item kinds of the share's file list per view mode (seeds: media = grid tile).
+const ROW_KIND = "media_row";
+const GRID_KIND = "media";
+const SORTABLE = [_a.filename, _a.mtime, _a.filesize, _a.ext];
 
 class __dmz_wm extends winman {
   constructor(...args) {
@@ -53,6 +65,102 @@ class __dmz_wm extends winman {
       home_id: opt.home_id,
       hub_id: opt.hub_id
     });
+    // Same default as the desk folder window (window/folder initialize): the
+    // secure-share grid opens in Group view, titled sections per file type.
+    // Window-local view mode — never the process-wide ViewMode default.
+    if (this.shareboxDesk()) {
+      setGrouped(this, true);
+      this.setViewMode(_a.icon, false);
+    }
+  }
+
+  /**
+   * The secure-share sharebox this grid belongs to, or null for any other DMZ
+   * use of this window manager (those keep the plain filter bar and flat grid).
+   */
+  shareboxDesk() {
+    const desk = this.mget('desk');
+    return desk && desk.fig && desk.fig.family === 'dmz-sharebox' ? desk : null;
+  }
+
+  /**
+   * Group | list | grid toggle of the share toolbar — the desk folder window's
+   * toggleFilesLayout, minus its content re-feed: here the list is restarted so
+   * tiles re-create with the new kind (media-row ↔ media-grid, _getKind) and the
+   * partition observer re-sections them.
+   * @param {LetcBox} cmd the pressed segment
+   */
+  _toggleFilesLayout(cmd) {
+    if (window.pointerDragged) return;
+    const viewMode = this.getViewMode && this.getViewMode();
+    const picked = cmd && cmd.mget && cmd.mget(_a.value);
+    const state = VIEW_STATES.includes(picked)
+      ? picked
+      : nextGroupViewState(this, viewMode);
+    if (state === groupViewState(this, viewMode)) return;
+    setGrouped(this, state === "group");
+    const mode = state === "list" ? _a.row : _a.icon;
+    this.setViewMode(mode, false);
+    // data-view-mode drives the single-column row layout (wm-main.scss).
+    for (const part of ["icons-scroll", "list-header"]) {
+      const el = this.el.querySelector(`.${this.fig.family}__${part}`);
+      if (el) el.dataset.viewMode = mode;
+    }
+    // The column header, in list mode only.
+    this.ensurePart("list-header").then((h) => {
+      if (h && !h.isDestroyed()) h.feed(require('./skeleton').listHeaderKids(this, mode));
+    });
+    // The active-segment CSS keys off data-state on the toggle BOX.
+    const toggleBox = cmd && cmd.el && cmd.el.closest &&
+      cmd.el.closest(`.${this.fig.family}-topbar__view-toggle`);
+    if (toggleBox) toggleBox.dataset.state = state;
+    this.ensurePart(_a.list).then((l) => {
+      if (!l) return;
+      // The kind is pinned in the list's itemsOpt (skeleton _icons_list), which
+      // is applied over each row, so a restart alone re-created GRID tiles in
+      // list mode — each stretched to the full width by the row layout, a
+      // giant grey square per file. Rows want the desk's media_row instead.
+      const { flow, ...opt } = l.mget(_a.itemsOpt) || {};
+      l.mset({
+        itemsOpt: mode === _a.row
+          ? { ...opt, kind: ROW_KIND, flow: _a.x }
+          : { ...opt, kind: GRID_KIND },
+      });
+      // A column sort belongs to the list view it was made in: the desk
+      // rebuilds its list on a layout switch, which drops it. Same here.
+      if (l.collection) l.collection.comparator = undefined;
+      if (l.restart) l.restart();
+    });
+  }
+
+  /**
+   * Column sort of the list view: order the loaded rows on the header column
+   * pressed, as the desk folder window's sortContent does (window/core),
+   * without its hand-arranged-folder rules — a share has none.
+   * @param {LetcBox} cmd the column button (name = field, state = direction)
+   */
+  _sortList(cmd) {
+    const name = cmd && cmd.mget && cmd.mget(_a.name);
+    if (!SORTABLE.includes(name)) return;
+    const order = cmd.mget(_a.state) ? "asc" : "desc";
+    this.ensurePart(_a.list).then((l) => {
+      if (!l || !l.collection) return;
+      const base = modelComparator(name);
+      const cmp = (model) => {
+        const v = model.get(name);
+        return v == null || v === "" ? "" : base(model);
+      };
+      l.collection.comparator = order === "desc" ? reverseSortBy(cmp) : cmp;
+      l.collection.sort();
+    });
+  }
+
+  /**
+   *
+   */
+  onBeforeDestroy(opt) {
+    clearGrouped(this);
+    if (super.onBeforeDestroy) super.onBeforeDestroy(opt);
   }
 
   /**
@@ -474,6 +582,12 @@ class __dmz_wm extends winman {
       case _e.download:
         return this.download();
 
+      case "toggle-files-layout":
+        return this._toggleFilesLayout(cmd);
+
+      case _e.sort:
+        return this._sortList(cmd);
+
       case _e.upload:
         return this.__fileselector.open(this._upload.bind(this));
 
@@ -488,6 +602,9 @@ class __dmz_wm extends winman {
           (cmd.mget && cmd.mget(_a.value)) ||
           (cmd.options && cmd.options.value) ||
           args.value;
+        // Kept like the desk folder window's: the Media tab then splits into
+        // Images / Videos / Audio sections (file-group sectionsFor).
+        this._filterType = value && value !== "all" ? value : null;
         this.ensurePart(_a.list).then((l) => {
           l.setApi(this.getCurrentApi(value));
           l.restart();

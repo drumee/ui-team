@@ -102,19 +102,6 @@
       z-index: 1;
     }
 
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--default-border-notification);
-      border-radius: 3px;
-    }
-
     .drumee-spinner {
       height: 35px;
       margin: auto;

@@ -1,5 +1,17 @@
+// The folder shape the desk draws everywhere it names a place.
+const folderArt = require("media/grid/template/folder");
+
+/**
+ * @param {Object} ui the widget the dialog's controls report to
+ * @param {Object} [opt]
+ * @param {String} [opt.prefix] BEM prefix — the migrate tour draws this card
+ *   with the folder window's own, so it takes that window's styles
+ * @param {String} [opt.area] the area the new folder belongs to, for its glyph;
+ *   read off `ui` when omitted, which only works when `ui` IS the window
+ */
 module.exports = function createFolderDialog(ui, opt = {}) {
   const pfx = opt.prefix || `${ui.fig.family}__create-folder`;
+  const area = opt.area || (ui.mget && ui.mget(_a.area)) || _a.personal;
 
   return Skeletons.Box.Y({
     className: `${pfx}-dialog`,
@@ -8,6 +20,19 @@ module.exports = function createFolderDialog(ui, opt = {}) {
       Skeletons.Box.X({
         className: `${pfx}-header`,
         kids: [
+          // What is being made, drawn as it will appear: a plain folder in
+          // this window's area colour.
+          Skeletons.Element({
+            className: `${pfx}-icon`,
+            content: folderArt({
+              area,
+              filetype: _a.folder,
+              role: "",
+              widgetId: _.uniqueId("create-folder-ico-"),
+              // No kebab: there is nothing here for a context menu to act on.
+              isAttachment: 1,
+            }),
+          }),
           Skeletons.Box.Y({
             className: `${pfx}-heading`,
             kids: [

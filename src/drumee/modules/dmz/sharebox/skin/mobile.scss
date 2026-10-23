@@ -1,0 +1,466 @@
+/* ---------------------------------------------------------------------- *
+ * Phone layout for the secure-share recipient page (Lexis 2026-10-13).
+ * Everything lives inside the max-width block, so desktop and tablet are
+ * untouched. Loaded LAST from index.scss so equal-specificity rules here win
+ * over the base ones by source order; most selectors also add one ancestor.
+ * ---------------------------------------------------------------------- */
+
+/* Tablet / small laptop (768–1023px): the landing and gate banners keep the
+   desktop layout but their nowrap headlines pushed the CTA off-screen; the
+   page title steps down between desktop (20px) and phone (16px). */
+@media (max-width: 1023px) {
+  .dmz-sharebox {
+    .dmz-sharebox-header__title-group,
+    .dmz-sharebox-header__title-block {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .dmz-sharebox-header__title-text {
+      min-width: 0;
+      font-size: 18px;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .dmz-sharebox-footer__left {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .dmz-sharebox-footer__headline {
+      min-width: 0;
+      white-space: normal;
+    }
+
+    .dmz-sharebox-footer__right {
+      flex-shrink: 0;
+    }
+
+    .dmz-sharebox-footer__right .dmz-sharebox-footer__subline {
+      display: none;
+    }
+
+    .dmz-sharebox-footer__gate-banner {
+      gap: 16px;
+    }
+
+    .dmz-sharebox-footer__gate-headline {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 22px;
+      line-height: 26px;
+      white-space: normal;
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  /* Top app bar — logo keeps its size (it shrank to 0px), the marketing links
+     drop out, and the account / Login + Join cluster stays on one line. */
+  .dmz-sharebox .dmz-sharebox-top-nav {
+    &__container {
+      gap: 12px;
+      padding: 12px 16px;
+    }
+
+    &__logo {
+      flex-shrink: 0;
+      width: 112px;
+      height: 24px;
+    }
+
+
+    &__actions {
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    &__login-label,
+    &__join-label {
+      white-space: nowrap;
+    }
+
+    &__join-btn {
+      padding: 6px 12px;
+    }
+
+    &__account {
+      min-width: 0;
+      gap: 8px;
+    }
+
+    &__account-avatar {
+      width: 28px;
+      height: 28px;
+    }
+
+    &__account-label {
+      min-width: 0;
+      overflow: hidden;
+
+      .note-content {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  // One class more than the framework's .drumee-box[data-flow] display rule.
+  .dmz-sharebox .dmz-sharebox-top-nav__container .dmz-sharebox-top-nav__links {
+    display: none;
+  }
+
+  /* Page header — the title wraps (2 lines max) instead of running off-screen;
+     the parent / current breadcrumb repeats the title and has no room. */
+  .dmz-sharebox {
+    .dmz-sharebox__page-header {
+      padding: 16px;
+    }
+
+    .dmz-sharebox-header__container {
+      min-width: 0;
+    }
+
+    .dmz-sharebox-header__title-group {
+      flex: 1 1 auto;
+      min-width: 0;
+      align-items: flex-start;
+    }
+
+    .dmz-sharebox-header__folder-icon {
+      width: 32px;
+      height: 32px;
+    }
+
+    .dmz-sharebox-header__title-block {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .dmz-sharebox-header__title-text {
+      max-width: 100%;
+      font-size: 16px;
+      line-height: 1.25;
+      white-space: normal;
+      overflow-wrap: anywhere;
+
+      .note-content {
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        overflow: hidden;
+      }
+    }
+
+    .dmz-sharebox-header__subline {
+      flex-wrap: wrap;
+      row-gap: 2px;
+    }
+
+    .dmz-sharebox-header__container .dmz-sharebox-header__breadcrumb {
+      display: none;
+    }
+  }
+
+  /* Content card — full-bleed on a phone; the WM area may not demand 360px. */
+  .dmz-sharebox__main.drive-popup {
+    border-radius: 0;
+  }
+
+  .dmz-sharebox__content.desk-content.dmz-wm__ui {
+    min-width: 0;
+  }
+
+  /* Card header — one line: the name ellipsizes, the SHARED badge keeps its
+     size. */
+  .dmz-sharebox__header.dmz__header {
+    padding: 0 12px;
+
+    .dmz-topbar__container,
+    .dmz-topbar__title {
+      min-width: 0;
+      gap: 8px;
+    }
+
+    .dmz-topbar-title__wrapper {
+      flex: 1 1 auto;
+      min-width: 0;
+      gap: 8px;
+
+      .name {
+        min-width: 0;
+        overflow: hidden;
+
+        .note-content {
+          display: block;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+    }
+
+    .dmz-sharebox__breadcrumb-path {
+      max-width: 40%;
+    }
+
+    .dmz-sharebox__badge,
+    .topbar-folder-icon {
+      flex-shrink: 0;
+    }
+  }
+
+  /* Tab bar */
+  .dmz-sharebox__main.drive-popup {
+    .dmz-sharebox__tab-bar-wrapper {
+      gap: 8px;
+      padding: 8px 12px;
+    }
+
+    .dmz-sharebox__tab-bar-tabs {
+      gap: 8px;
+    }
+
+    .dmz-sharebox__tab-bar-item {
+      min-width: 0;
+      padding: 8px 12px;
+    }
+  }
+
+  /* File toolbar (dmz/wm _toolbar) — filters on their own line, scrolling
+     sideways if a language makes them wider than the phone; the actions and
+     the view toggle on the line below, actions icon-only. */
+  .dmz__files-panel.dmz-sharebox__files-panel .dmz-wm__toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+
+    .dmz-wm__filter-track {
+      flex: 1 1 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .dmz-wm__filter-tab-main {
+      flex-shrink: 0;
+      padding: 0 12px;
+    }
+
+    .dmz-button__label-button {
+      padding: 0 10px;
+
+      .label {
+        display: none;
+      }
+    }
+  }
+
+  /* File grid — the scroll (24px) and each section (24px) both pad the sides,
+     which leaves one column on a 320–360px phone. Trim both and centre the
+     tracks so two tiles fit. Selector outranks wm-main.scss's (0,4,0) rule. */
+  .dmz__files-panel.dmz-sharebox__files-panel .dmz-wm__icons-scroll.smart-container {
+    padding: 12px;
+
+    .workspace-section,
+    .folder-section,
+    .file-section,
+    .group-section {
+      justify-content: center;
+      padding: 8px 0;
+    }
+  }
+
+  /* Files | conversation split — there is no room for two columns: the Files
+     tab shows the files only, the Chat tab (always offered when chat is on)
+     shows the conversation full width. */
+  .dmz-sharebox__split-body.dmz__split-body {
+    &[data-view="files"] .dmz__chat-panel {
+      display: none;
+    }
+
+    &[data-view="chat"] .dmz__chat-panel {
+      flex: 1 1 auto;
+      border-left: 0;
+    }
+  }
+
+  .dmz-sharebox__limited-access-banner {
+    flex-wrap: wrap;
+    padding: 10px 12px;
+  }
+
+  /* Sticky bottom banner — text wraps, the secondary line drops out and the
+     CTA stays visible (it sat off-screen at x≈900). */
+  .dmz-sharebox {
+    .dmz-sharebox__footer {
+      padding: 12px 16px;
+    }
+
+    .dmz-sharebox-footer__banner {
+      gap: 12px;
+      padding: 12px 14px;
+    }
+
+    .dmz-sharebox-footer__left {
+      flex: 1 1 auto;
+      min-width: 0;
+      gap: 10px;
+    }
+
+    .dmz-sharebox-footer__icon-tile {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+    }
+
+    // Fluid: 14px on a 390px phone, 13px floor on 320-360px.
+    .dmz-sharebox-footer__headline {
+      min-width: 0;
+      font-size: clamp(13px, 3.6vw, 14px);
+      line-height: 1.3;
+      white-space: normal;
+    }
+
+    .dmz-sharebox-footer__right {
+      flex-shrink: 0;
+    }
+
+    .dmz-sharebox-footer__right .dmz-sharebox-footer__subline {
+      display: none;
+    }
+
+    .dmz-sharebox-footer__signup-btn {
+      height: auto;
+      padding: 8px 12px;
+    }
+
+    .dmz-sharebox-footer__signup-label {
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    // Gate variant of the banner
+    // No headroom: the cloud sits inside the bar on a phone.
+    .dmz-sharebox-footer__gate-main {
+      padding-top: 0;
+    }
+
+    .dmz-sharebox-footer__gate-banner {
+      gap: 8px;
+      padding: 12px 12px 12px 58px;
+    }
+
+    // The cloud fills only x 38-137 / y 62-151 of the sprite's 230x184 box
+    // (the rest is drop-shadow room): an 80x64 box gives a ~34px cloud,
+    // vertically centred inside the bar like the landing banner's icon tile.
+    .dmz-sharebox-footer__gate-logo {
+      left: 0;
+      top: calc(50% - 37px);
+      bottom: auto;
+      width: 80px;
+      height: 64px;
+    }
+
+    // Fluid: 16px from 420px up, scaling to a 13px floor — two lines down
+    // to 360px, three at 320px.
+    .dmz-sharebox-footer__gate-headline {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: clamp(13px, 3.8vw, 16px);
+      line-height: 1.25;
+      letter-spacing: -0.2px;
+      white-space: normal;
+    }
+
+    .dmz-sharebox-footer__gate-signup-btn {
+      padding: 8px 12px;
+    }
+
+    .dmz-sharebox-footer__gate-signup-label {
+      font-size: 13px;
+      letter-spacing: 0;
+    }
+  }
+
+  /* Email / password gate — side gutters, tighter card, and the page scrolls
+     when the card plus the keyboard do not fit. */
+  .dmz-sharebox[data-gate="open"] .dmz-sharebox__content {
+    overflow-y: auto;
+  }
+
+  .dmz-sharebox-password {
+    &__gate-wrap {
+      justify-content: flex-start;
+      padding: 16px;
+    }
+
+    &__gate-backdrop-grid {
+      gap: 12px;
+      padding: 16px;
+    }
+
+    &__container {
+      gap: 20px;
+      margin-top: 0;
+      padding: 24px 20px;
+    }
+
+    &__card-folder-icon {
+      width: 56px;
+      height: 56px;
+    }
+
+    &__card-info {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  /* Overlays (sign-up required / request access / request sent) */
+  .dmz-sharebox-signup-required__panel {
+    gap: 20px;
+    max-width: calc(100vw - 32px);
+    padding: 28px 20px;
+  }
+
+  .dmz-sharebox-signup-required__header {
+    gap: 16px;
+  }
+
+  .dmz-sharebox-signup-required__title {
+    font-size: 24px;
+  }
+
+  .dmz-sharebox-request-access__panel,
+  .dmz-sharebox-request-sent__panel {
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    padding: 24px 20px;
+  }
+
+  .dmz-sharebox-request-sent__email {
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+}
+
+/* Narrow phones (320–400px): the guest Login + Join cluster needs a smaller
+   logo to keep its right gutter. */
+@media (max-width: 400px) {
+  .dmz-sharebox .dmz-sharebox-top-nav {
+    &__container,
+    &__actions {
+      gap: 8px;
+    }
+
+    &__logo {
+      width: 96px;
+      height: 20px;
+    }
+  }
+}

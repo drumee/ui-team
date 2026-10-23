@@ -1,4 +1,17 @@
 @use "mixins/drumee";
+@use "builtins/window/folder/skin/topic-surfaces";
+@use "builtins/window/folder/skin/chat-bubbles";
+
+// Chat details column (the ⋮ panel), shared by its open and closing states.
+@mixin chat-details-column {
+  display: flex !important;
+  width: clamp(320px, 28vw, 400px);
+  flex-shrink: 0;
+  height: 100%;
+  min-width: 0;
+  overflow: hidden;
+  // The card is widget_chat_details' own root; the slot draws nothing.
+}
 
 .chat-p2p {
   // FULL-CANVAS screen, per Figma 43:32209: the Inbox fills the whole centre
@@ -15,13 +28,12 @@
     position: relative;
     width: 100%;
     height: 100%;
-    background-color: var(--normal-bg);
     overflow: hidden;
-    // The section outline the frame draws around the whole inbox panel
-    // (stroke #000 @5%, r=8) — the same treatment the workspace and chat
-    // cards carry, which this was missing entirely.
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: 8px;
+    // No outline of its own: the sidebar, the chat area and Chat details are
+    // each a card (stroke #000 @5%, r=8 — the workspace cards' treatment) on
+    // the canvas, with a gutter between them (&__main).
+    border: none;
+    background-color: transparent;
     box-sizing: border-box;
 
     // data-anim is still the DESK'S show/hide switch for this slot
@@ -34,9 +46,11 @@
   }
 
   &__main {
-    background-color: inherit;
+    // White ground under the cards (and in their gutters).
+    background-color: var(--normal-bg-elevated, #fff);
     height: 100%;
     width: 100%;
+    gap: 8px;
   }
 
   // ── Left sidebar ────────────────────────────────────────────────
@@ -45,9 +59,10 @@
   // and carries the #F2F2F7 ground (43:32209).
   &__sidebar {
     background-color: var(--normal-bg-elevated, #fff);
-    // 43:32209 strokes both panes at 5% black; the list column's right edge is
-    // the seam between them.
-    border-right: 1px solid rgba(0, 0, 0, 0.05);
+    // A card (43:32209 strokes the panes at 5% black), apart from the chat.
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    box-sizing: border-box;
     flex-shrink: 0;
     height: 100%;
     overflow: hidden;
@@ -77,7 +92,8 @@
   }
 
   &__close-btn {
-    // Hidden at every width, like the chat-header __chat-close-btn.
+    // Sidebar close button is tablet/mobile only — the media query below
+    // reveals it. On desktop the X sits top-right in the chat header.
     display: none;
     color: var(--normal-fg-50);
     cursor: pointer;
@@ -270,6 +286,17 @@
     gap: 8px;
     cursor: pointer;
     user-select: none;
+    // A bigger hit area than the 20px-high switch, without moving anything:
+    // the padding is taken back by an equal negative margin.
+    padding: 8px;
+    margin: -8px;
+    border-radius: 8px;
+
+    // The kids are inert (skeleton); keep them out of hit-testing too, so the
+    // whole pill is one target.
+    > * {
+      pointer-events: none;
+    }
   }
 
   &__unread-label {
@@ -405,21 +432,8 @@
   .slimScrollBarY,
   &__contact-list,
   &__chat-panel {
-    scrollbar-color: rgba(0, 0, 0, 0.22) transparent;
-  }
-
-  &__contact-list,
-  &__chat-panel {
-    ::-webkit-scrollbar-thumb,
-    &::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.22) !important;
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-track,
-    &::-webkit-scrollbar-track {
-      background: transparent !important;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   // ...and reserve the width so text never runs UNDER the bar. The plugin
@@ -591,6 +605,80 @@
     }
   }
 
+  // One list per scope tab, both mounted (see _selectScope). The root's
+  // data-scope says which shows. !important: the list's own box rules set
+  // display through data-flow and would otherwise win.
+  &__ui:not([data-scope="workspace"]) &__contact-list--workspace,
+  &__ui[data-scope="workspace"] &__contact-list--direct {
+    display: none !important;
+  }
+
+  // ── Contacts under the Direct search results (see _syncPeople) ─────
+  // data-people: "0" hidden, "1" under the local matches, "only" on its own.
+  // !important for the same reason as the scope rule above: box rules set
+  // display through data-flow.
+  &__people {
+    display: none !important;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0 12px 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+
+    .smart-container {
+      height: 100%;
+    }
+
+    .no-contact {
+      align-items: center;
+      height: 100%;
+      justify-content: center;
+      @include drumee.typo($size: 13px, $color: var(--normal-fg-50));
+    }
+  }
+
+  &__people-title {
+    flex: 0 0 auto;
+    padding: 12px 4px 8px;
+    @include drumee.typo($size: 12px, $color: var(--normal-fg-50));
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__people-list {
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__ui:not([data-scope="workspace"])[data-people="1"] &__people,
+  &__ui:not([data-scope="workspace"])[data-people="only"] &__people {
+    display: flex !important;
+  }
+
+  // Both showing: the local matches take what they need (capped), Contacts
+  // gets the rest. The list's container is 100% tall by default, which would
+  // keep the full column height for a handful of visible rows.
+  &__ui:not([data-scope="workspace"])[data-people="1"] &__contact-list--direct {
+    flex: 0 1 auto;
+    max-height: 45%;
+
+    .smart-container {
+      height: auto;
+      max-height: 100%;
+    }
+  }
+
+  // No local match: the Direct list would only show its empty space.
+  &__ui:not([data-scope="workspace"])[data-people="only"] &__contact-list--direct {
+    display: none !important;
+  }
+
+  // Only its own title keeps the top border meaningful.
+  &__ui[data-people="only"] &__people {
+    border-top: 0;
+  }
+
   &__all-read-empty {
     display: none !important;
     align-items: center;
@@ -615,11 +703,97 @@
 
   &__chat-area {
     background-color: var(--normal-bg);
-    border-left: 1px solid var(--border-muted);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    box-sizing: border-box;
     flex: 1;
     height: 100%;
     min-width: 0;
     overflow: hidden;
+  }
+
+  // A little room between the column's left edge and the conversation.
+  &__chat-area .widget-chat__body {
+    padding-left: 6px;
+  }
+
+  // Workspace chat: the folder's topic strip + File threads bar above the
+  // conversation (../workspace-topics feeds them and stamps data-topics).
+  &__chat-area {
+    @include topic-surfaces.parts;
+  }
+
+  &__chat-area:not([data-topics="1"]) &__topic-row {
+    display: none;
+  }
+
+  // Strip and File threads bar on one row, half each: the scrolling tabs
+  // (their "+ Create topic" after them) on the left, the bar — slimmed to the chips'
+  // height — on the right.
+  &__chat-area &__topic-row {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+    min-width: 0;
+  }
+
+  &__chat-area &__topic-row .window__topic-strip {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  &__chat-area &__topic-row .window__ft-bar {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 6px 12px 6px 0;
+  }
+
+  &__chat-area &__topic-row .window__ft-bar-card {
+    height: 30px;
+    box-sizing: border-box;
+    padding: 0 10px;
+    gap: 8px;
+    border-radius: 8px;
+  }
+
+  &__chat-area &__topic-row .window__ft-bar-badge {
+    width: 20px;
+    height: 20px;
+    padding: 2px;
+  }
+
+  // The dropdown spans the bar.
+  &__chat-area &__topic-row .window__ft-list {
+    left: 0;
+    right: 12px;
+  }
+
+  // ── Chat details (widget_chat_details, ../chat-details-host) ─────
+  // A side column after the chat area, shown only while the header's ⋮
+  // has it open (data-details on __ui). The widget brings its own skin.
+  &__chat-details {
+    display: none !important;
+  }
+
+  // Open: slides in from the right. Closing (../chat-details-host close):
+  // stays laid out, click-through, while it slides back out; the host empties
+  // the slot after it.
+  &__ui[data-details="open"] &__chat-details {
+    @include chat-details-column;
+    animation: chat-p2p-details-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  &__ui[data-details="closing"] &__chat-details {
+    @include chat-details-column;
+    animation: chat-p2p-details-out 0.18s ease-in both;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__chat-details {
+      animation: none !important;
+    }
   }
 
   // ── Chat header ──────────────────────────────────────────────────
@@ -737,7 +911,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.4px;
-    font-family: var(--font-mono, var(--font-medium));
+    font-family: var(--font-main);
   }
 
   // Talking TO support: an expectation line replaces the presence dot, so it
@@ -813,13 +987,6 @@
     }
   }
 
-  // No close button at any width: the Inbox is a full-canvas screen left
-  // through the rail. Declared after __header-btn (same specificity) so it
-  // beats that rule's display:flex. The sidebar __close-btn is hidden too.
-  &__chat-close-btn {
-    display: none;
-  }
-
   // Back button is mobile/tablet only — the media query below reveals it.
   &__back-btn {
     display: none;
@@ -845,6 +1012,187 @@
     .media-grid__meta-sep {
       display: none;
     }
+  }
+
+  // ── In-Inbox image / video viewer (skeleton/lightbox) ─────────────
+  // Covers the whole Inbox (both columns) above the forward overlay. The
+  // Wrapper is hidden while empty, so nothing here applies until it opens.
+  &__lightbox {
+    background: rgba(0, 0, 0, 0.88);
+    inset: 0;
+    position: absolute;
+    z-index: 60001;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__lightbox-main {
+    animation: chat-p2p-lightbox-in 0.16s ease-out both;
+    height: 100%;
+    width: 100%;
+  }
+
+  // [prev] [picture] [next] — the stage takes what the buttons leave.
+  &__lightbox-body {
+    align-items: center;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  // Same Button.Svg anatomy as __lightbox-btn above.
+  &__lightbox-step {
+    align-items: center;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    display: flex !important;
+    flex: 0 0 auto;
+    height: 44px;
+    justify-content: center;
+    margin: 0 12px;
+    width: 44px;
+
+    svg {
+      display: block;
+      flex: 0 0 22px;
+      height: 22px;
+      width: 22px;
+    }
+
+    &:not(.idle) {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    &:not(.idle):hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    &.idle {
+      cursor: default;
+    }
+  }
+
+  &__lightbox-position {
+    flex: 0 0 auto;
+    margin-right: 8px;
+
+    .note-content {
+      @include drumee.typo($size: 13px, $line: 20px, $color: rgba(255, 255, 255, 0.72));
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__lightbox-bar {
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 8px;
+    height: 56px;
+    padding: 0 16px;
+  }
+
+  &__lightbox-name {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    .note-content {
+      @include drumee.typo($size: 14px, $line: 20px, $color: #fff);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // Button.Svg is NOT a layout box: it renders a plain block div
+  // (.svg-wrapper) holding an inline `<svg class="full">`. So the centring
+  // needs its own `display: flex`, and the svg pinned as a sized block —
+  // otherwise it sits at the top-left of the circle on the text baseline.
+  &__lightbox-btn {
+    align-items: center;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    display: flex !important;
+    flex: 0 0 auto;
+    height: 36px;
+    justify-content: center;
+    position: relative;
+    width: 36px;
+
+    svg {
+      display: block;
+      flex: 0 0 20px;
+      height: 20px;
+      width: 20px;
+    }
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.12);
+    }
+  }
+
+  &__lightbox-tip {
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 4px;
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 6px;
+    pointer-events: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    white-space: nowrap;
+  }
+
+  &__lightbox-stage {
+    align-items: center;
+    align-self: stretch;
+    cursor: zoom-out;
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 0;
+    min-width: 0;
+    padding: 0 0 24px;
+  }
+
+  &__lightbox-img,
+  &__lightbox-video {
+    animation: chat-p2p-lightbox-media-in 0.2s ease-out both;
+    border-radius: 6px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    cursor: default;
+    display: block;
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__lightbox-main,
+    &__lightbox-img,
+    &__lightbox-video {
+      animation: none;
+    }
+  }
+
+  // Narrow screens: the arrows shrink so the picture keeps the width.
+  @media (max-width: 640px) {
+    &__lightbox-step {
+      height: 36px;
+      margin: 0 4px;
+      width: 36px;
+
+      svg {
+        flex-basis: 18px;
+        height: 18px;
+        width: 18px;
+      }
+    }
+  }
+
+  &__lightbox-error .note-content {
+    @include drumee.typo($size: 13px, $color: rgba(255, 255, 255, 0.8));
   }
 
   &__overlay-wrapper[data-mode="open"] {
@@ -891,17 +1239,25 @@
     }
 
     &__sidebar {
-      border-right: none;
       width: 100%;
     }
 
     &__chat-area {
-      border-left: none;
       width: 100%;
     }
 
     &__back-btn {
       display: flex;
+    }
+
+    // One pane at a time here, so the X moves into the sidebar header:
+    // reveal the sidebar one, hide the chat-header one.
+    &__close-btn {
+      display: flex;
+    }
+
+    &__chat-close-btn {
+      display: none;
     }
 
     // Compose popup adapts to small screens: widen toward the available
@@ -927,6 +1283,39 @@
     &__ui[data-mview="chat"] &__sidebar {
       display: none;
     }
+
+    // Chat details takes the whole pane; its close returns to the chat.
+    &__ui[data-mview="details"] &__chat-area,
+    &__ui[data-mview="details"] &__sidebar {
+      display: none;
+    }
+
+    &__ui[data-details="open"] &__chat-details,
+    &__ui[data-details="closing"] &__chat-details {
+      width: 100%;
+    }
+  }
+}
+
+@keyframes chat-p2p-details-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes chat-p2p-details-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(24px);
   }
 }
 
@@ -950,11 +1339,37 @@ html[data-theme="dark"] .chat-p2p {
 
   .chat-p2p__contact-list,
   .chat-p2p__chat-panel {
-    scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
-
-    ::-webkit-scrollbar-thumb,
-    &::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.24) !important;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 }
+
+@keyframes chat-p2p-lightbox-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes chat-p2p-lightbox-media-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// Workspace chat: a workspace conversation's bubbles are the folder team
+// chat's — the own bubble a light tint of the workspace's area colour, the
+// others' an elevated card. ../workspace-topics stamps data-area on the chat
+// area for a workspace only; a Direct conversation keeps the Inbox's bubbles.
+// :where() keeps the scope's weight at one class, as the folder's.
+@include chat-bubbles.bubbles(
+  $panel: ".chat-p2p__chat-area:where([data-area])",
+  $scope: ".chat-p2p__chat-area:where([data-area])"
+);

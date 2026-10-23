@@ -1,8 +1,8 @@
 /* ==================================================================== *
  * desk_org_view skeleton — Figma 104:33055
  *
- * Header (org name / search / + New), then one section per department, then
- * the ungrouped workspaces in a bare row with no header of their own.
+ * Header (org name / search / + New), then the organisation's workspaces in
+ * one bare grid with no header of their own. Departments are not drawn here.
  * ==================================================================== */
 
 // The area-tinted workspace glyph. An HTML STRING from the legacy grid
@@ -10,6 +10,7 @@
 // Element + content. Passing markup as an icon NAME would build
 // `<use href="#<markup>">` and render nothing (the breadcrumb learned this).
 const folderArt = require("media/grid/template/folder");
+const { isDevDeployment } = require("builtins/window/skeleton/toolkit/new-menu-rows");
 
 /**
  * "12 [people]" — the count on a workspace card and in a section header.
@@ -60,18 +61,28 @@ function members(pfx, value, tip) {
  * the rows in a map and the card carries the key. Same shape as the topbar
  * switcher's rows (`cmd.mget("wsHubId")`).
  *
+ * A PERSONAL card carries `wsNid` instead: every personal workspace shares the
+ * user's own hub_id, so only the nid tells them apart. An OTHER card (a hub
+ * the overview does not list) keeps `wsHubId` and adds `wsOther`, which tells
+ * the widget which map to read it from. Neither draws a member count: a
+ * desk.home row carries none, and a personal workspace has no members.
+ *
  * @param {String} pfx
  * @param {Object} ui
- * @param {Object} ws an org_workspaces row
+ * @param {Object} ws an org_workspaces row, or a desk.home row
+ * @param {String} [kind] "personal" | "other"; omitted for the org's own
  */
-function card(pfx, ui, ws) {
+function card(pfx, ui, ws, kind) {
+  const personal = kind === "personal";
   return Skeletons.Box.Y({
     className: `${pfx}__card`,
     // attrOpt, not dataset: a skeleton's `dataset` is dropped at render unless
     // an `attribute`/`attrOpt` map is passed too, so the area tint would never
     // have reached the DOM.
     attrOpt: { "data-area": ws.area || "" },
-    wsHubId: ws.hub_id,
+    ...(personal
+      ? { wsNid: ws.nid || ws.id }
+      : { wsHubId: ws.hub_id || ws.id, ...(kind === "other" ? { wsOther: 1 } : {}) }),
     service: "open-workspace",
     uiHandler: [ui],
     // EVERY DESCENDANT IS active: 0, or the card only opens from its padding.
@@ -108,103 +119,77 @@ function card(pfx, ui, ws) {
         content: ws.filename || ws.name || "",
       }),
       // Inert on both counts — see members(), which is why it takes no tip here.
-      members(pfx, ws.members),
+      kind ? null : members(pfx, ws.members),
     ],
   });
 }
 
 /**
- * One department section: header, then its grid.
+ * "3 workspaces" — the count group in a section header.
  *
- * A department with no workspaces still renders its header and its
- * "+ New workspace" button — the frame draws exactly that for
- * "Department-name 3 / 0 workspace", and a section that hid itself when empty
- * would be one nobody could ever put anything into.
+ * @param {String} pfx
+ * @param {Number} count
+ */
+function countGroup(pfx, count) {
+  return Skeletons.Box.X({
+    className: `${pfx}__section-count-group`,
+    kids: [
+      Skeletons.Note({ className: `${pfx}__section-count`, content: String(count) }),
+      Skeletons.Note({
+        className: `${pfx}__section-count-label`,
+        content: count === 1 ? LOCALE.WORKSPACE : LOCALE.WORKSPACES,
+      }),
+    ],
+  });
+}
+
+/**
+ * One of the caller's own sections — "Other workspaces" or "Personal".
+ *
+ * A heading, a count and a grid, with nothing to manage: no rename, no
+ * delete, no "+ New workspace" (these are not the organisation's), and no
+ * member figure.
+ * "Personal" is the heading the workspace switcher files personal workspaces
+ * under (libs/workspace-groups); "Other workspaces" holds the hubs the
+ * overview does not list, another organisation's mostly.
  *
  * @param {String} pfx
  * @param {Object} ui
- * @param {Object} section {department, workspaces}
- * @param {Boolean} canManage
+ * @param {Array} rows desk.home rows, already filtered
+ * @param {String} kind "personal" | "other"
  */
-function departmentSection(pfx, ui, section, canManage) {
-  const { department: d, workspaces } = section;
-  const count = workspaces.length;
+function mineSection(pfx, ui, rows, kind) {
+  const count = rows.length;
   return Skeletons.Box.Y({
-    className: `${pfx}__section`,
+    className: `${pfx}__section ${pfx}__section--${kind}`,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__section-head`,
         kids: [
           Skeletons.Box.Y({
             className: `${pfx}__section-id`,
-            sys_pn: `dept-head:${d.id}`,
-            partHandler: ui,
             kids: [
               Skeletons.Box.X({
                 className: `${pfx}__section-name-row`,
                 kids: [
-                  Skeletons.Note({ className: `${pfx}__section-name`, content: d.name }),
-                  canManage
-                    ? Skeletons.Button.Svg({
-                        ico: "ph-pencil-simple-line",
-                        className: `${pfx}__section-rename`,
-                        service: "rename-department",
-                        deptId: d.id,
-                        tooltips: { content: LOCALE.RENAME_DEPARTMENT, className: `${pfx}__tip` },
-                        uiHandler: [ui],
-                      })
-                    : null,
-                  canManage
-                    ? Skeletons.Button.Svg({
-                        ico: "ph-trash",
-                        className: `${pfx}__section-delete`,
-                        service: "delete-department",
-                        deptId: d.id,
-                        tooltips: { content: LOCALE.DELETE_DEPARTMENT, className: `${pfx}__tip` },
-                        uiHandler: [ui],
-                      })
-                    : null,
+                  Skeletons.Note({
+                    className: `${pfx}__section-name`,
+                    content: kind === "personal" ? LOCALE.PERSONAL : LOCALE.OTHER_WORKSPACES,
+                  }),
                 ],
               }),
-              // Figma groups these: [count + "workspace"] at gap 4, then gap 12
-              // to the member count. Flattening all three into one 12px row
-              // pushed the number away from the word it belongs to.
               Skeletons.Box.X({
                 className: `${pfx}__section-meta`,
-                kids: [
-                  Skeletons.Box.X({
-                    className: `${pfx}__section-count-group`,
-                    kids: [
-                      Skeletons.Note({ className: `${pfx}__section-count`, content: String(count) }),
-                      Skeletons.Note({
-                        className: `${pfx}__section-count-label`,
-                        content: count === 1 ? LOCALE.WORKSPACE : LOCALE.WORKSPACES,
-                      }),
-                    ],
-                  }),
-                  // The server's per-department member figure is a SUM across
-                  // its workspaces, not a distinct head count — see the header
-                  // of org_departments.sql for why yp cannot answer distinct
-                  // here. The tooltip is what keeps the number honest.
-                  members(pfx, d.member_count, LOCALE.MEMBERS),
-                ],
+                kids: [countGroup(pfx, count)],
               }),
             ],
-          }),
-          Skeletons.Button.Label({
-            ico: "ph-plus",
-            className: `${pfx}__section-new`,
-            label: LOCALE.NEW_WORKSPACE,
-            service: "new-workspace-in-department",
-            deptId: d.id,
-            uiHandler: [ui],
           }),
         ],
       }),
       count
         ? Skeletons.Box.G({
             className: `${pfx}__grid`,
-            kids: workspaces.map((w) => card(pfx, ui, w)),
+            kids: rows.map((w) => card(pfx, ui, w, kind)),
           })
         : null,
     ],
@@ -212,75 +197,58 @@ function departmentSection(pfx, ui, section, canManage) {
 }
 
 /**
- * Everything below the header: the department sections, then the ungrouped
- * workspaces.
+ * Everything below the header: the organisation's workspaces, then the
+ * caller's other workspaces and personal ones.
  *
- * THE UNGROUPED ROW HAS NO HEADER in the frame, and it must not grow one: it
- * is not a department, it has no name to rename and nothing to delete. It is
- * simply where every workspace that predates departments already lives, which
- * is why this feature needed no backfill.
+ * NO DEPARTMENT SECTIONS. A workspace filed in a department is drawn in the
+ * same bare grid as the rest — departments first, in their order, then the
+ * ungrouped ones, which is the order the sections used to show them in — so
+ * nothing the organisation holds drops off this screen.
  *
  * @param {String} pfx
  * @param {Object} ui
- * @param {Object} grouped {sections, ungrouped}
- * @param {Boolean} canManage
+ * @param {Object} grouped {sections, ungrouped} from groupByDepartment
+ * @param {Boolean} canManage unused since departments left this screen
+ * @param {Array|null} [personal] null leaves the Personal section out
+ * @param {Array|null} [others] null leaves the Other workspaces section out
  */
-function sections(pfx, ui, grouped, canManage) {
+function sections(pfx, ui, grouped, canManage, personal, others) {
   const { sections: list, ungrouped } = grouped;
-  const kids = list.map((s) => departmentSection(pfx, ui, s, canManage));
+  const workspaces = [...list.flatMap((s) => s.workspaces), ...ungrouped];
+  const kids = [];
 
-  if (ungrouped.length) {
-    // A hint, ONLY when there is no department at all. The frame gives the
-    // ungrouped row no header — it is the remainder that sits below the named
-    // sections — but an organisation that has never made a department has
-    // nothing but that remainder, and a bare wall of tiles does not explain
-    // itself or hint that grouping exists. Once one department is created this
-    // disappears and the row goes back to being the silent remainder.
-    if (!list.length) {
-      kids.push(
-        Skeletons.Note({
-          className: `${pfx}__ungrouped-hint`,
-          content: LOCALE.NO_DEPARTMENTS_YET,
-        }),
-      );
-    }
+  if (workspaces.length) {
     kids.push(
       Skeletons.Box.G({
         className: `${pfx}__grid ${pfx}__grid--ungrouped`,
-        kids: ungrouped.map((w) => card(pfx, ui, w)),
+        kids: workspaces.map((w) => card(pfx, ui, w)),
       }),
     );
-  }
-
-  if (!kids.length) {
+  } else {
     kids.push(
       Skeletons.Note({
         className: `${pfx}__empty`,
-        content: LOCALE.NO_DEPARTMENTS_YET,
+        content: LOCALE.NO_WORKSPACES,
       }),
     );
   }
 
-  // Where the inline "New department" entry is fed. A row rather than a
-  // dialog: the topbar's menu item and this screen's "+ New" both arm the same
-  // entry, so there is one way to name a department however it was started.
-  kids.push(
-    Skeletons.Box.Y({
-      className: `${pfx}__new-dept`,
-      sys_pn: "new-dept",
-      partHandler: ui,
-    }),
-  );
+  // After the empty note, so an organisation with nothing in it still says
+  // so: neither section is the organisation's. Other before Personal, the
+  // switcher's order (hubs, then personal folders).
+  if (others) kids.push(mineSection(pfx, ui, others, "other"));
+  if (personal) kids.push(mineSection(pfx, ui, personal, "personal"));
 
   return kids;
 }
 
 /**
- * The "+ New" menu — the frame's three rows.
+ * The "+ New" menu — "New workspace" and "Migrate from Google Drive".
  *
- * "Migrate from Google Drive" and "New workspace" already exist as desk
- * services; only "New department" is new. They dispatch to the DESK, not here,
+ * Both already exist as desk services and dispatch to the DESK, not here,
  * because that is where both already live (topbar.js raises the same two).
+ * The frame's third row, "New department", is left out: departments are not
+ * drawn on this screen.
  */
 function newMenu(pfx, ui) {
   return Skeletons.Menu({
@@ -305,13 +273,6 @@ function newMenu(pfx, ui) {
     items: Skeletons.Box.Y({
       className: `${pfx}__new-menu-items`,
       kids: [
-        Skeletons.Button.Label({
-          ico: "ph-cube",
-          className: `${pfx}__new-menu-item`,
-          label: LOCALE.NEW_DEPARTMENT,
-          service: "new-department",
-          uiHandler: [ui],
-        }),
         Skeletons.Button.Label({
           ico: "app-folder",
           className: `${pfx}__new-menu-item`,
@@ -377,7 +338,11 @@ module.exports = function (ui) {
                   }),
                 ],
               }),
-              newMenu(pfx, ui),
+              // The "+ New" menu (workspace / migrate) is a dev
+              // platform affordance for now: departments are still being
+              // shaped, and this screen is the first one a production user
+              // lands on. Production and preview show the search alone.
+              ...(isDevDeployment() ? [newMenu(pfx, ui)] : []),
             ],
           }),
         ],

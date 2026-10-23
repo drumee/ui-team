@@ -1,6 +1,13 @@
 @use "mixins/drumee";
+@use "mixins/file-list";
+@use "./chat-bubbles";
 @use "./meeting-schedule";
 @use "./meeting-modal";
+@use "./chat-details";
+@use "./files-chat-topics";
+@use "./icons-skeleton";
+@use "./files-empty-state";
+@use "./chat-empty-state";
 
 // =====================================================================
 // Mobile presentation for the folder window's merged "+ New" control.
@@ -219,6 +226,12 @@
       width: 100% !important;
       height: 100% !important;
 
+      // Same 600px popup floor as the window manager's (desk/wm/skin): the
+      // pane fills the work area, so it may be as narrow as the work area is.
+      &:not([data-device="mobile"]) {
+        min-width: 0;
+      }
+
       // 43:23955's content frame carries 12px padding, and the toolbar and the
       // file grid share that left edge — the filter tabs and the "Folders"
       // heading both start 12px inside the card. The shared grid rule uses
@@ -348,7 +361,7 @@
     // Opacity (not a hardcoded rgba) so the muted shade follows
     // --normal-fg-10 when the dark theme inverts it.
     &__breadcrumb-crumb {
-      font-family: "Geist", sans-serif;
+      font-family: var(--font-main);
       font-weight: 500;
       font-size: 14px;
       line-height: 24px;
@@ -377,7 +390,7 @@
     }
 
     &__breadcrumb-sep {
-      font-family: "Geist", sans-serif;
+      font-family: var(--font-main);
       font-size: 14px;
       line-height: 24px;
       color: var(--normal-fg-10);
@@ -429,7 +442,7 @@
 
     &__title {
       // Buttons/Medium Button — Geist SemiBold 16/24, Primary/100 (#0B0A21)
-      font-family: "Geist", sans-serif;
+      font-family: var(--font-main);
       font-weight: 600;
       font-size: 16px;
       line-height: 24px;
@@ -463,8 +476,8 @@
     }
 
     &__badge-label {
-      // Mono Display/XXS — Geist Mono SemiBold 10 / 100% / +0.04em / UPPER
-      font-family: "Geist Mono", monospace;
+      // Mono Display/XXS — Geist Mono SemiBold 10 / 100% / +0.04em / UPPER — rendered in --font-main (Geist Mono is not loaded)
+      font-family: var(--font-main);
       font-weight: 600;
       font-size: 10px;
       line-height: 100%;
@@ -495,7 +508,13 @@
     &__file-controls {
       align-items: center;
       gap: 8px;
-      flex: 0 0 auto;
+      // Takes the rest of the row beside the tabs and right-aligns its items
+      // in it. The 0% basis is what keeps it on the tabs' row: the filter bar
+      // breaks lines on the hypothetical size, which the automatic minimum
+      // lifts to this group's min-content (the search at its min-width), so
+      // the search box shrinks before the group ever wraps under the tabs.
+      flex: 1 1 0%;
+      justify-content: flex-end;
       margin-left: auto;
     }
 
@@ -547,7 +566,7 @@
         border: 0;
         border-radius: 8px;
         box-shadow: none;
-        font-family: "Inter", sans-serif;
+        font-family: var(--font-main);
         font-weight: 500;
         font-size: 14px;
         line-height: 16px;
@@ -825,7 +844,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: "Inter", "Geist", system-ui, sans-serif;
+      font-family: var(--font-main);
       font-size: 18px;
       font-weight: 300;
       line-height: 1;
@@ -1117,7 +1136,7 @@
       padding: 8px 10px;
       border-radius: 6px;
       cursor: pointer;
-      font-family: "Geist", sans-serif;
+      font-family: var(--font-main);
       font-size: 13px;
       font-weight: 500;
       line-height: 1.2;
@@ -1320,6 +1339,11 @@
     display: none;
   }
 
+  // Split-body carousel footer — only the compact Files view shows it (below).
+  &__split-dots {
+    display: none;
+  }
+
   &__tab-bar-item {
     height: 32px;
     min-width: 84px;
@@ -1329,7 +1353,7 @@
     border-radius: 6px;
     box-sizing: border-box;
     color: var(--normal-fg-10);
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 12px;
     font-weight: 700;
     line-height: 1;
@@ -1430,7 +1454,7 @@
   }
 
   &__tab-filter-label {
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 12px;
     font-weight: 700;
     line-height: 1;
@@ -1473,6 +1497,11 @@
     // forever and outranks inline styles, so anything positioning this element
     // in JS afterwards would be silently overridden.
     animation: window-folder-dialog-in 0.18s ease-out backwards;
+
+    // Drawn at 85% like the create-workspace dialog (media/form/skin,
+    // `$card-scale`): `zoom` shrinks everything in the card by one factor, so
+    // the 460px design renders at 391px. Kept equal to that file by hand.
+    zoom: 0.85;
   }
 
   // Set by whoever closes the dialog, which then defers the teardown so the
@@ -1506,8 +1535,49 @@
     padding: 24px 24px 25px;
   }
 
+  &__create-folder-header {
+    gap: 12px;
+  }
+
+  // The folder being made, ahead of the title — media/grid/template/folder,
+  // sized and tinted the way the import dialog's destination card does it
+  // (migrate-gdrive-popup/skin `__dest-ico`): the art carries no size or area
+  // fill of its own outside the grid.
+  &__create-folder-icon {
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    .media-grid__folder-art {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      width: 34px;
+      height: 28px;
+    }
+
+    .folder-shape {
+      width: 34px;
+      height: 28px;
+      fill: var(--area-personal);
+
+      &.public { fill: var(--area-public); }
+      &.share,
+      &.dmz { fill: var(--area-share); }
+      &.private { fill: var(--area-private); }
+    }
+  }
+
   &__create-folder-heading {
     gap: 4px;
+    // Takes the room between the glyph and the close cross, which space-between
+    // would otherwise hand out evenly among three items.
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   &__create-folder-title,
@@ -2429,7 +2499,7 @@
     // once and never feeds the split body again), so each tab is revealed by
     // its data-view below rather than rebuilt. Hidden here by default.
     // The rail's Access members panel too (window/folder/access-column): it
-    // is mounted once and revealed by [data-view="access"] below.
+    // is mounted once and revealed by [data-access="1"] below.
     .tasks-panel__ui,
     .window-folder__meeting-schedule,
     .permission-restricted__ui,
@@ -2479,20 +2549,25 @@
   //
   // 🚨 ACCESS IS NO LONGER IN THIS BLOCK. It used to share the layout, with the
   // members panel standing in the chat panel's column on the right. Figma
-  // 85:36439 moves it to a fixed-width panel anchored to the LEFT, floating
-  // over the file grid instead of squeezing it into the remaining third — see
-  // the [data-view="access"] block below, which needs the plain one-column
-  // grid and no drag gutter. Leaving it listed here would hand it a
-  // three-column template and a visible splitter that its own rules would then
-  // have to fight with !important.
+  // 85:36439 moves it to a fixed-width panel floating over the file grid
+  // instead of squeezing it into the remaining third — see the
+  // [data-access="1"] blocks below. The members panel must not be listed here
+  // either: Access now overlays the Files view itself (data-view stays
+  // "files"), and the `width: auto !important` below would undo the overlay's
+  // 512px width.
   &__split-body[data-view="files"],
   &__split-body[data-view="secure-share"] {
-    grid-template-columns: var(--files-w, 66.667%) 12px minmax(0, 1fr);
+    // 400px floor on the files column, so its toolbar fits even in its
+    // last-resort wrapped form (__filter-bar). The wider wrapped row is the
+    // French controls (search at its 120px min, "Nouveau", the view toggle),
+    // 378px with the bar's padding; English needs 350. It only bites on a
+    // split body under 800px dragged toward 1:1: the handle stops there and
+    // the chat column keeps the rest.
+    grid-template-columns: max(var(--files-w, 66.667%), 400px) 12px minmax(0, 1fr);
 
     > .window-folder__files-panel,
     > .window__files-panel,
     > .window__chat-panel,
-    > .permission-restricted__ui,
     > .window-secure-share {
       margin: 0 !important;
       max-width: none !important;
@@ -2504,7 +2579,6 @@
       flex: 2 1 0 !important;
     }
     > .window__chat-panel,
-    > .permission-restricted__ui,
     > .window-secure-share {
       flex: 1 1 0 !important;
     }
@@ -2520,9 +2594,8 @@
     }
   }
 
-  // Access draws the members panel as a LEFT-ANCHORED OVERLAY over the file
-  // grid — Figma 85:36439, where the panel is an absolutely placed 512px card
-  // at x=80 (immediately right of the 64px rail) and the board is unchanged
+  // Access draws the members panel as an OVERLAY — Figma 85:36439, where the
+  // panel is an absolutely placed 512px card and the board is unchanged
   // underneath it.
   //
   // WHY AN OVERLAY AND NOT A COLUMN. As a column the panel took a third of the
@@ -2532,25 +2605,13 @@
   // grid exactly as the user left it and makes Access a thing you open and
   // close over your work, which is what the design draws.
   //
-  // The file grid keeps the whole body: the grid is back to ONE column here
-  // (the block above no longer lists access) and the drag gutter is hidden,
-  // since there is no second column left to drag against.
-  &__split-body[data-view="access"] {
-    grid-template-columns: minmax(0, 1fr);
+  // OVER WHATEVER TAB IS UP (Lexis, 2026-10-12). It used to be a view of its
+  // own (data-view="access"), which always put the file grid under it — from
+  // Task or Meet, Access jumped to Files. It is a stamp now, beside data-view
+  // (window/folder/access-column), so Chat, Task and Meet stay as they are
+  // underneath it.
+  &__split-body[data-access="1"] {
     position: relative;
-
-    .window__chat-panel,
-    .window__thread-rail,
-    .window__file-thread-panel {
-      display: none;
-    }
-
-    // !important to beat the shared Files/secure-share rule's own !important —
-    // that block sets the gutter to display:flex and this one has equal
-    // specificity, so the declaration has to win on weight rather than order.
-    > .window-folder__files-splitter {
-      display: none !important;
-    }
 
     > .permission-restricted__ui {
       display: flex;
@@ -2574,7 +2635,10 @@
       // the panel's centre returned the file list while the panel's own box
       // reported the right geometry and full opacity, which is the shape this
       // bug hides in — everything says visible and nothing is.
-      z-index: 120;
+      // 121, not 120: it now also opens over Meet, whose date picker and menu
+      // (meeting-schedule.scss) sit at 120 in the same stacking context and
+      // would win on DOM order when the schedule was mounted after the panel.
+      z-index: 121;
       border-radius: 8px;
       border: 1px solid rgba(0, 0, 0, 0.05);
       // Grey/white in the frame, and the same token the panel's own __main
@@ -2584,6 +2648,26 @@
       overflow: hidden;
       // It floats now, so it needs to read as lifted off the grid behind it.
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    }
+  }
+
+  // Over FILES it keeps the look it had as a view: the file grid takes the
+  // whole body — ONE column, the chat column steps aside and the drag gutter
+  // goes, since there is no second column left to drag against. Chat, Task
+  // and Meet are left exactly as they are under the card.
+  &__split-body[data-view="files"][data-access="1"] {
+    grid-template-columns: minmax(0, 1fr);
+
+    .window__chat-panel,
+    .window__thread-rail,
+    .window__file-thread-panel {
+      display: none;
+    }
+
+    // !important to beat the shared Files/secure-share rule's own !important,
+    // which sets the gutter to display:flex; this selector is the stronger one.
+    > .window-folder__files-splitter {
+      display: none !important;
     }
   }
 
@@ -2634,11 +2718,12 @@
     }
   }
 
-  // The members card enters on the switch, with its loading skeleton inside
-  // (permission/restricted skin); its rows fade in when they land.
-  // From the RIGHT, the edge it is anchored to — sliding in from the left
-  // would have it cross the file grid it sits over.
-  &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui {
+  // The members card enters every time it opens (display:none -> flex restarts
+  // the animation), with its loading skeleton inside (permission/restricted
+  // skin); its rows fade in when they land. From the RIGHT, the edge it is
+  // anchored to — sliding in from the left would have it cross the tab it
+  // sits over.
+  &__split-body[data-access="1"] > .permission-restricted__ui {
     animation: window-folder__column-in-from-right 0.2s ease-out backwards;
   }
 
@@ -2648,7 +2733,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    &__split-body[data-view="access"][data-from-view="files"] > .permission-restricted__ui,
+    &__split-body[data-access="1"] > .permission-restricted__ui,
     &__split-body[data-view="files"][data-from-view="access"] > .window__chat-panel,
     &__split-body[data-view="files"][data-from-view="secure-share"] > .window__chat-panel {
       animation: none;
@@ -2744,12 +2829,6 @@
     &[data-view="meeting"] .window-folder__meeting-schedule {
       animation: window-folder__column-in-from-right 0.2s ease-out backwards;
     }
-
-    // The members panel is anchored to the RIGHT edge, so it enters from that
-    // side like the switch animation does.
-    &[data-view="access"] > .permission-restricted__ui {
-      animation: window-folder__column-in-from-right 0.2s ease-out backwards;
-    }
   }
 
   // The SAME selectors as the entrance above, so reduced motion wins on
@@ -2773,8 +2852,7 @@
       }
 
       &[data-view="task"] .tasks-panel__ui[data-painted="1"],
-      &[data-view="meeting"] .window-folder__meeting-schedule,
-      &[data-view="access"] > .permission-restricted__ui {
+      &[data-view="meeting"] .window-folder__meeting-schedule {
         animation: none;
       }
     }
@@ -2874,6 +2952,7 @@
     border-radius: 8px;
     border: 1px solid rgba(0, 0, 0, 0.05);
     background: var(--normal-bg-90);
+    box-shadow: var(--drumee-shadow-box);
     overflow: hidden;
   }
 
@@ -2885,7 +2964,9 @@
   &-topbar__search-container {
     position: relative;
     flex: 0 1 245px;
-    min-width: 160px;
+    // The first thing to give way in a narrow Files column (see __filter-bar):
+    // at 120px it still shows the glyph and a few characters of the query.
+    min-width: 120px;
     max-width: 245px;
   }
 
@@ -2922,80 +3003,6 @@
     }
   }
 
-  // Suggestions hang below the field, over the file grid.
-  &-topbar__search-suggestions {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    right: 0;
-    z-index: 120;
-    max-height: 60vh;
-    overflow: auto;
-    padding: 6px;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    background: var(--normal-bg-elevated, #fff);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-
-    &[data-state="0"] {
-      display: none !important;
-    }
-  }
-
-  // The hit rows. workspace_item is a SIDEBAR row by default — 32px tall, with
-  // tree indentation and a 14px label — so as a search hit it gets the same
-  // compact treatment the desk's own dropdown gives it (desk/skin/topbar.scss
-  // __suggestions-list). Without this the dropdown reads as a nested sidebar.
-  &-topbar__search-results {
-    width: 100%;
-    gap: 2px;
-
-    .workspace-item {
-      padding: 4px 6px;
-      border-radius: 6px;
-      cursor: pointer;
-
-      &__row {
-        min-height: auto;
-        gap: 8px;
-        padding: 0;
-        font-size: 13px;
-
-        // Every hit is a flat result, never a level in a tree: kill the
-        // depth-indexed padding the sidebar rows carry.
-        &[data-level="0"],
-        &[data-radio="on"][data-level="0"] {
-          padding-left: 0;
-        }
-      }
-
-      // Icons keep the item skin's own sizing (22px box, folder art at its
-      // real 22x18 aspect, file glyphs at 18px) — overriding it here squashed
-      // the folder shape, which carries fixed SVG dimensions.
-      //
-      // A Note is a flex row, so the ellipsis has to go on the inner content
-      // element; `__name` itself only has to stop growing past the dropdown.
-      &__name {
-        min-width: 0;
-
-        .note-content {
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-      }
-
-      &:hover {
-        background: var(--hover-bg-40);
-      }
-    }
-  }
-
-  &-topbar__search-empty {
-    padding: 8px 6px;
-    color: var(--normal-fg-20);
-    font-size: 13px;
-  }
 
   // 43:23955: the workspace toolbar sits on the file card's own WHITE ground
   // with no divider — the filter tabs and the search/New group are the only
@@ -3013,6 +3020,21 @@
     padding: 12px;
     border-bottom: none;
     background: transparent;
+    // One row, and the view toggle is never cut off. This bar lives in the
+    // Files COLUMN, only a share of the window (2:1 by default, draggable to
+    // 1:1, see _wireFilesSplitter), while the compact rules further down only
+    // react to the WINDOW's width. So a narrow column in a wide window got the
+    // full desktop row (793px in English, 875px in French) and the row ran off
+    // the column's edge: dragging the chat to 1:1 on a 1512px screen cut away
+    // List and Grid, and a 1180px browser window lost Grid without any drag.
+    //
+    // As the column narrows the search box gives way first (__file-controls,
+    // down to its 120px min-width), then the tabs tighten (the files-col query
+    // after the tab rules). Only when even that cannot fit does the row wrap,
+    // as a last resort for small windows: wrap-REVERSE, so the controls land
+    // ABOVE the tabs, the order the compact layout draws.
+    flex-wrap: wrap-reverse;
+    row-gap: var(--spacer-4);
   }
 
   // The segmented control's ground — a grey pill holding the five tabs, with
@@ -3127,6 +3149,36 @@
           $weight: 500,
           $color: var(--white)
         );
+      }
+    }
+  }
+
+  // The Files column is a size container, so its toolbar answers to the
+  // COLUMN's width rather than the window's (see __filter-bar). Safe on this
+  // element: it is already position:relative + z-index:100 (a stacking
+  // context, and the containing block of its absolute children), holds no
+  // position:fixed descendant, the folder dialogs mount outside it in the
+  // window's wrapper-modal, and nothing inside sizes itself in cqw units. Its
+  // width comes from the split-body grid track, never from its content.
+  &__files-panel {
+    container-type: inline-size;
+    container-name: files-col;
+  }
+
+  // Narrow column in a desktop-width window: tighten the tabs (18 -> 10px a
+  // side) and the gap before the search, so the toolbar keeps one row. 800px
+  // is where French, the longer of the two shipped languages, needs it (its
+  // full row with the search at 120px is 795px). English then holds one row
+  // down to a 621px column, i.e. 1:1 on a 1366px screen. The compact layout
+  // (window <= 700px) keeps its own toolbar.
+  @container window-folder-w (width > 700px) {
+    @container files-col (max-width: 800px) {
+      &__filter-bar {
+        column-gap: 12px;
+      }
+
+      &__filter-track &__filter-tab-main {
+        padding: 0 10px;
       }
     }
   }
@@ -3279,109 +3331,8 @@
     }
   }
 
-  .window__filter__main,
-  .media-row__main {
-    min-width: 0;
-    grid-template-columns:
-      44px 44px minmax(140px, 1fr) minmax(120px, 150px)
-      76px 76px;
-  }
-
-  .window__filter__main {
-    height: 36px;
-    // Pin the column-title row so a scrolling file list can't squeeze it away.
-    flex-shrink: 0;
-    box-shadow: 0 1px 2px rgba(63, 79, 117, 0.16);
-    overflow: hidden;
-  }
-
-  .window__filter__column {
-    height: 36px;
-    min-width: 0;
-    // No left padding: the header cell and its media-row counterpart share the
-    // same grid track, but the data cells have no padding, so any inset here
-    // pushes the title off its own column. Right padding keeps adjacent titles
-    // from touching.
-    padding: 0 6px 0 0;
-    flex-wrap: nowrap;
-    // Visible, not hidden: the sort arrow hangs left of this box (see the svg
-    // rule below) and would otherwise be clipped away. Long titles still
-    // ellipsize — .label carries its own overflow — and .window__filter__main
-    // clips the row as a whole.
-    overflow: visible;
-    // Centre the sort arrow + label vertically in the 36px bar. Horizontal
-    // alignment stays leading so each title sits over its own data column
-    // (the media-row fields below are left-aligned).
-    align-items: center;
-    // Drumee brand indigo. NOT --primary-400: revamp.scss declares two
-    // --primary-* scales in the same :root, and the later (lilac) one wins, so
-    // that token resolved to #c781ff. --primary-purple-40 is the same value as
-    // the first scale's --primary-40 and has no duplicate overriding it.
-    @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
-      $weight: 700,
-      $color: var(--primary-purple-40)
-    );
-
-    // The sort arrow precedes the label in the DOM, so its box would shift the
-    // title right by its own width and leave every header 20px off its column.
-    // Hang it in the gutter (negative margin equal to width + gap) so the
-    // LABEL, not the icon, starts at the column edge — matching the data below.
-    svg {
-      width: 16px;
-      height: 16px;
-      padding: 2px;
-      margin-right: 4px;
-      margin-left: -20px;
-      flex-shrink: 0;
-    }
-
-    .label,
-    .note-content {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: normal;
-      line-height: 16px;
-    }
-
-    &.name,
-    &.date,
-    &.size,
-    &.type {
-      min-width: 0;
-    }
-  }
-
-  .media-row__ui {
-    height: 42px;
-  }
-
-  .media-row__main {
-    @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
-      $weight: 500,
-      $color: var(--normal-fg-10)
-    );
-  }
-
-  .media-row__field-filename,
-  .media-row__field-date,
-  .media-row__field-size,
-  .media-row__field-type {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
-      $weight: 500,
-      $color: var(--normal-fg-10)
-    );
-  }
+  // Column titles + file rows: shared with the secure-share recipient view.
+  @include file-list.columns-and-rows;
 
   .window__chat-label {
     align-items: center;
@@ -3391,7 +3342,7 @@
     padding: 8px 16px;
     box-sizing: border-box;
     border-bottom: 1px solid var(--border-muted);
-    font-family: "Geist Mono", monospace;
+    font-family: var(--font-main);
     @include drumee.typo(
       $size: 10px,
       $line: 1,
@@ -3479,7 +3430,13 @@
 
       .note-content {
         min-height: 16px;
-        padding: 0 8px;
+        // Vietnamese stacked marks rise above the 16.8px line box (Armin
+        // Grotesk 14px; ink measured on screen: Ấ/Ố/Ế 6px above it) and
+        // overflow-y clips at the padding edge, so "ấ" read as "â" while
+        // typing. 7px of vertical padding gives them room; the negative
+        // margin keeps the composer's height unchanged.
+        padding: 7px 8px;
+        margin: -7px 0;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
         word-break: break-word;
@@ -3557,222 +3514,8 @@
     padding: 2px;
   }
 
-  .widget-chatItem__conversation-content {
-    max-width: 320px;
-    padding: 12px;
-    @include drumee.typo(
-      $size: 13px,
-      $line: 1.4,
-      $weight: 400,
-      $color: var(--normal-fg-10)
-    );
-  }
-
-  // ── Own ("me") bubble — light area-tinted fill + pinned dark foreground ──────
-  // Every own bubble is a LIGHT tint of the folder AREA colour (--chat-bubble-*),
-  // fixed in both themes, so its text/links/mentions use theme-INDEPENDENT dark
-  // constants — the theme-aware --normal-fg-* / --white wash out on a fixed light
-  // fill in dark mode. Default fill = private (coral) tint; per-area fills below.
-  .widget-chatItem__conversation-content.me,
-  .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
-    background: var(--chat-bubble-private);
-    border-radius: 16px 0 16px 16px;
-    box-shadow: none;
-    color: var(--primary-purple-100);
-
-    .note-content,
-    .user-mention {
-      color: var(--primary-purple-100);
-    }
-
-    a {
-      color: var(--primary-purple-50);
-    }
-
-    .file-mention {
-      color: var(--primary-purple-100);
-      font-weight: 600;
-      text-decoration: underline;
-      // Underline tracks the (now fixed-dark) name colour via currentColor.
-      text-decoration-color: currentColor;
-    }
-  }
-
-  // Per-area own-bubble fill — light/fresh tint of each AREA colour (background
-  // only; the shared dark foreground above carries every area).
-  .window__chat-panel[data-area="personal"]
-    .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="personal"]
-    .widget-chatItem__conversation.me
-    .widget-chatItem__conversation-content {
-    background: var(--chat-bubble-personal);
-  }
-  .window__chat-panel[data-area="share"]
-    .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="share"]
-    .widget-chatItem__conversation.me
-    .widget-chatItem__conversation-content,
-  .window__chat-panel[data-area="dmz"]
-    .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="dmz"]
-    .widget-chatItem__conversation.me
-    .widget-chatItem__conversation-content {
-    background: var(--chat-bubble-share);
-  }
-  .window__chat-panel[data-area="public"]
-    .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="public"]
-    .widget-chatItem__conversation.me
-    .widget-chatItem__conversation-content {
-    background: var(--chat-bubble-public);
-  }
-
-  .widget-chatItem__conversation-content.other,
-  .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
-    background: var(--normal-bg-elevated);
-    border: 0;
-    border-radius: 0 16px 16px 16px;
-    box-shadow: none;
-    color: var(--normal-fg-10);
-
-    .file-mention,
-    .user-mention,
-    a {
-      color: #d65f59;
-    }
-  }
-
-  .window__chat-panel[data-area="personal"]
-    .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="personal"]
-    .widget-chatItem__conversation.other
-    .widget-chatItem__conversation-content {
-    .file-mention,
-    .user-mention,
-    a {
-      color: var(--area-personal);
-    }
-  }
-  .window__chat-panel[data-area="share"]
-    .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="share"]
-    .widget-chatItem__conversation.other
-    .widget-chatItem__conversation-content,
-  .window__chat-panel[data-area="dmz"]
-    .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="dmz"]
-    .widget-chatItem__conversation.other
-    .widget-chatItem__conversation-content {
-    .file-mention,
-    .user-mention,
-    a {
-      color: var(--area-share);
-    }
-  }
-  .window__chat-panel[data-area="public"]
-    .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="public"]
-    .widget-chatItem__conversation.other
-    .widget-chatItem__conversation-content {
-    .file-mention,
-    .user-mention,
-    a {
-      color: var(--area-public);
-    }
-  }
-
-  // ── Sender (me) bubble foreground ──────────────────────────────────────────
-  // Every own bubble is now a LIGHT area tint (--chat-bubble-*, set above),
-  // fixed in both themes, so ALL of its text / links / attachment card / reply
-  // quote must use theme-INDEPENDENT dark constants to stay legible — the
-  // chat-item / reply / card defaults use theme-aware --normal-fg-* / --white
-  // that turn light in dark mode and wash out on the fixed light fill.
-
-  // Keep the file card (direct child of the bubble) transparent so the bubble
-  // tint shows through instead of the dark --normal-bg-* media-grid panel (the
-  // "black file frame"). Scoped to the direct-child card so the reply-quote
-  // thumbnail tile keeps its own grey fill.
-  .window__chat-panel
-    .widget-chatItem__conversation-content.me
-    > .widget-chatItem__attachment-wrapper {
-    &,
-    .widget-chatItem__attachment-wrapper-list,
-    .smart-container,
-    .list-smart,
-    .list-smart__container,
-    .media-wrapper,
-    .media-wrapper__ui,
-    .media-grid,
-    .media-grid__ui,
-    .media-grid__container,
-    .media-grid__content {
-      background-color: transparent !important;
-    }
-  }
-
-  .window__chat-panel
-    .widget-chatItem__conversation-content.me {
-    color: var(--primary-purple-100);
-
-    // Links + mentions: dark indigo reads on the light bubble.
-    .file-mention,
-    .user-mention,
-    a {
-      color: var(--primary-purple-50);
-    }
-
-    // Attachment card: filename + "<size> · Show in folder".
-    .filename,
-    .media-grid__chatmeta,
-    .media-grid__filesize,
-    .media-grid__meta-sep {
-      color: var(--primary-purple-100) !important;
-    }
-    .media-grid__reveal {
-      color: var(--primary-purple-50) !important;
-    }
-
-    // Reply quote nested in the bubble: dark name + muted-dark preview. The Note
-    // renders its text in a child .note-content, so target that too — its global
-    // colour is theme-aware (light in dark mode) and won't inherit the parent.
-    .widget-chatItem-reply__note.name,
-    .widget-chatItem-reply__note.name .note-content {
-      color: var(--primary-purple-100);
-    }
-    .widget-chatItem-reply__note.conversation .note-content {
-      color: var(--tertiary-grey-80);
-    }
-  }
-
-  // Reply quote on a light "me" bubble (any area) — pin the quote text to
-  // dark constants regardless of whether the quote was moved INTO the bubble or
-  // left as a prepended sibling. Scoping to the quote root (not .conversation-
-  // content) makes this hold in both cases. The reply skin's theme-aware
-  // --normal-fg-* turn white in dark mode and wash out on the fixed light bubble;
-  // covers the new file name/extension lines the meta-row pins above miss.
-  // EVERY folder-window chat (the #General middle column AND the file-thread side
-  // panel) uses the same light "me" bubble, so the dark override must reach the
-  // nested quote in both — otherwise it falls back to the base chat-item
-  // white-on-indigo rule and renders white (see chat-item/skin#589). Scope to the
-  // folder-window root only (this whole file is already nested under .window-folder,
-  // so the bare selector compiles to `.window-folder .widget-chatItem-reply__main.me`):
-  // the panel's own wrapper classes (`__ft-panel-chat`, `__file-thread-panel`) do NOT
-  // end up as ancestors of the rendered quote, so scoping to them never matches —
-  // the folder-window root is the only reliable shared ancestor.
-  .widget-chatItem-reply__main.me {
-    .widget-chatItem-reply__note.name,
-    .widget-chatItem-reply__note.name .note-content,
-    .widget-chatItem-reply__note.filename,
-    .widget-chatItem-reply__note.filename .note-content {
-      color: var(--primary-purple-100) !important;
-    }
-
-    .widget-chatItem-reply__note.fileext,
-    .widget-chatItem-reply__note.fileext .note-content,
-    .widget-chatItem-reply__note.conversation .note-content {
-      color: var(--tertiary-grey-80) !important;
-    }
-  }
+  // Message bubbles (./chat-bubbles, shared with the Inbox's Workspace chat).
+  @include chat-bubbles.bubbles(".window__chat-panel");
 
   .widget-chatItem__name,
   .widget-chatItem__username-content,
@@ -3800,6 +3543,25 @@
       $weight: 400,
       $color: var(--normal-fg-50)
     );
+  }
+
+  // Chat tab: every column is its own card — the 43:23955 treatment the
+  // Files view already gives its two panels (r=8, 5%-black hairline) — with
+  // an 8px gutter between them: rail | chat | file thread | details. Both
+  // classes: beats the docked pane's 4px gutter ([data-headless] … (0,3,0)),
+  // which comes earlier in this file. The details card is widget_chat_details'
+  // own root, so its slot (chat-details.scss) draws none.
+  &__split-body.window__split-body[data-view="chat"] {
+    gap: 8px;
+
+    > .window__thread-rail,
+    > .window__chat-panel,
+    > .window__file-thread-panel {
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      // No overflow here: the rail must keep its own overflow-y:auto (a
+      // scrolling box clips to its radius anyway); the chat panel clips.
+    }
   }
 
   &__split-body[data-view="chat"] {
@@ -4259,6 +4021,39 @@
       transform: scale(1.15);
     }
 
+    // ── Split-body carousel footer ──────────────────────────────
+    // Under the two-page Files view (files, Team Chat). Not over Access, which
+    // takes the whole body as one column.
+    &__split-body[data-view="files"]:not([data-access="1"]) + &__split-dots {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 16px 0;
+    }
+
+    &__split-dot {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 6px;
+      border-radius: 50%;
+      background-color: var(--normal-fg-10);
+      opacity: 0.25;
+      cursor: pointer;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
+    }
+
+    &__split-dots[data-page="0"] &__split-dot:nth-child(1),
+    &__split-dots[data-page="1"] &__split-dot:nth-child(2) {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+
     // ── Filter bar (All / Docs / PDF / Images / Other) ──────────
     // Two rows on a narrow layout: the New + view-toggle controls on top, the
     // filter tabs beneath. This used to be one nowrap strip that scrolled
@@ -4322,6 +4117,36 @@
       margin-left: 0;
     }
 
+    // …except while the view toggle is hidden: an empty folder that is not
+    // loading or searched (files-empty-state.scss, same chain). The controls
+    // are then + New alone, and a whole row for one pill reads as a gap — so
+    // + New moves onto the filter bar's own row, after the tabs. The tabs give
+    // way to make the room: they shrink and scroll sideways (scrollbar hidden,
+    // as the tab-bar strip does) rather than wrap.
+    .window__files-panel:not([data-loading="1"]):not([data-search]):has(.window__icons-list .smart-container > .no-content) {
+      .window-folder__filter-bar {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+      }
+
+      .window-folder__filter-track {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-x: auto;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+      }
+
+      .window-folder-topbar__file-controls {
+        order: 0;
+        flex: 0 0 auto;
+        margin-left: 0;
+      }
+    }
+
     // The rendered tab class is `__filter-tab-main` (see topbar/filter
     // skeletons). The previous rule targeted `__filter-tab` and never
     // applied, so the tabs shrank and collided once the row had more
@@ -4349,6 +4174,60 @@
       // No room for the resize gutter in the single-column compact layout.
       .window-folder__files-splitter {
         display: none !important;
+      }
+
+      // Files tab keeps Team Chat beside the file grid instead of dropping
+      // it. Both columns hold a usable floor, and whatever no longer fits
+      // scrolls sideways inside the split body — scrollbar hidden, same
+      // recipe as __tab-bar-tabs above (trackpad / touch / shift+wheel still
+      // scroll it). No drag gutter here (hidden above), so the user's
+      // --files-w is not read; the plain 2:1 split takes over.
+      //
+      // `.window__split-body` is doubled in for (0,3,0): with !important that
+      // beats this block's `1fr !important` (0,1,0) AND the group body's
+      // ≤650px `.window .window__split-body` one (0,2,0) — a tie there would
+      // be settled by bundle order. Chat details still takes the chat's
+      // cell: chat-details.scss hides the chat panel with !important while
+      // [data-details="open"].
+      //
+      // A CAROUSEL of two full-width pages: page 1 the file grid, page 2 Team
+      // Chat (or Chat details while it is open — it takes the chat's cell).
+      // It used to be the two columns at their floors (360 + 12 + 300) in a
+      // free sideways scroll: on a phone the user stopped anywhere between
+      // them, never on either. Each page now fills the window and the scroll
+      // snaps a page at a time.
+      &.window__split-body[data-view="files"] {
+        grid-template-columns: 100% 100% !important;
+        column-gap: 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+
+        > .window__files-panel,
+        > .window__chat-panel,
+        > .window__chat-details {
+          min-width: 0;
+          scroll-snap-align: start;
+          scroll-snap-stop: always;
+        }
+
+        > .window__chat-panel {
+          display: flex;
+        }
+
+        // The generic gutter hide above is (0,2,0) and loses to the desktop
+        // Files rule's `[data-view="files"] > __files-splitter` (0,3,0)
+        // display:flex !important — the gutter then auto-places into the
+        // chat's column and pushes the chat onto a second row.
+        > .window-folder__files-splitter {
+          display: none !important;
+        }
       }
 
       &[data-view="chat"] {
@@ -4383,13 +4262,19 @@
         }
       }
 
-      &[data-view="access"] {
-        // Compact: no room for the file grid beside the members panel — it
-        // goes full width, as the chat does on the Chat tab.
+      // Doubled class for (0,4,0): Access now stamps data-access BESIDE the
+      // tab's data-view, and the Files rule above shows the chat panel at
+      // (0,4,0), the Task / Meet desktop rules show their panels at (0,3,0).
+      &.window__split-body[data-access="1"] {
+        // Compact: no room for anything beside the members panel — it goes
+        // full width over whichever tab is up, as the chat does on the Chat
+        // tab.
         .window__files-panel,
         .window__chat-panel,
         .window__meeting-panel,
         .window__tasks-panel,
+        .tasks-panel__ui,
+        .window-folder__meeting-schedule,
         .window__thread-rail,
         .window__file-thread-panel {
           display: none;
@@ -4475,6 +4360,14 @@
     .window__icons-scroll .file-section,
     .window__icons-scroll .group-section {
       grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+    }
+
+    // Fixed-width tracks leave the remainder (< one cell + gap) on the
+    // right; centre the tracks so the group's tiles sit balanced in a
+    // narrow window. The title spans 1 / -1, so it follows the tiles'
+    // left edge. No effect at ≤480px, where `1fr 1fr` fills the row.
+    .window__icons-scroll .group-section {
+      justify-content: center;
     }
 
     .window__icons-scroll .media-grid__ui {
@@ -4663,13 +4556,50 @@ html[data-theme="dark"] {
     white-space: nowrap;
     // Figma 2216-168072: "Team Chat" in Geist Regular 14px, normal case —
     // overrides the shared .window__chat-label mono/uppercase section-label style.
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 14px;
     font-weight: 400;
     line-height: 1.4;
     letter-spacing: 0;
     text-transform: none;
     color: var(--normal-fg-10, #0b0a21);
+  }
+
+  // Team-chat unread count beside the title (_paintChatUnread). Same red pill
+  // as the rail's badge (desk sidebar __badge), hidden at zero. While it shows,
+  // the title stops filling the row so the pill sits right after the text;
+  // margin-right:auto keeps the actions on the far right.
+  .window__chat-header-unread {
+    flex: 0 0 auto;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-right: auto;
+    border-radius: 9px;
+    background: #e53935;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    box-sizing: border-box;
+
+    &[data-count="0"],
+    &:empty {
+      display: none !important;
+    }
+  }
+
+  .window__chat-header:has(.window__chat-header-unread:not([data-count="0"]):not(:empty))
+    .window__chat-header-title {
+    flex: 0 1 auto;
+  }
+
+  // The card itself stands out while its conversation has unread messages —
+  // the Files side column is a glance, so it must be visible from there.
+  .window__chat-panel[data-unread="1"] {
+    border-color: var(--primary-40, #5950ff);
+    box-shadow: 0 0 0 1px var(--primary-40, #5950ff);
   }
 
   .window__chat-header-actions {
@@ -4736,6 +4666,74 @@ html[data-theme="dark"] {
   .window__chat-header[data-scope="search"] {
     justify-content: flex-start;
     gap: 8px;
+    overflow: hidden;
+
+    // Show / close: the field slides in from the right, where the magnifying
+    // glass sat, and back out before the normal header returns (folder
+    // _closeChatSearch sets data-closing and waits for this animation).
+    .window__chat-search-input {
+      animation: window-folder__chat-search-in 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .window__chat-header-back {
+      animation: window-folder__chat-search-fade 0.24s ease-out;
+    }
+
+    &[data-closing="1"] {
+      pointer-events: none;
+
+      .window__chat-search-input {
+        animation: window-folder__chat-search-out 0.18s ease-in forwards;
+      }
+
+      .window__chat-header-back {
+        animation: window-folder__chat-search-fade 0.18s ease-in reverse forwards;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .window__chat-search-input,
+      .window__chat-header-back,
+      &[data-closing="1"] .window__chat-search-input,
+      &[data-closing="1"] .window__chat-header-back {
+        animation: none;
+      }
+    }
+  }
+
+  @keyframes window-folder__chat-search-in {
+    from {
+      opacity: 0;
+      transform: translateX(48px);
+      clip-path: inset(0 0 0 100%);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+      clip-path: inset(0);
+    }
+  }
+
+  @keyframes window-folder__chat-search-out {
+    from {
+      opacity: 1;
+      transform: none;
+      clip-path: inset(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(48px);
+      clip-path: inset(0 0 0 100%);
+    }
+  }
+
+  @keyframes window-folder__chat-search-fade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   .window__chat-search-input {
@@ -4796,7 +4794,7 @@ html[data-theme="dark"] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 14px;
     font-weight: 400;
     line-height: 1.4;
@@ -4811,7 +4809,7 @@ html[data-theme="dark"] {
     padding: 2px 8px;
     border-radius: 12px;
     background: var(--hover-bg-40);
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 10px;
     font-weight: 400;
     line-height: 1.4;
@@ -4844,24 +4842,89 @@ html[data-theme="dark"] {
     }
   }
 
-  // Backend message-search results overlay (channel.search). Fills the chat
-  // panel below the header (same 44px anchor as the thread dropdown) and covers
-  // the conversation while a query is active. Toggled via data-open.
+  // Backend message-search results (channel.search): a card in the File threads bar's slot (toolkit chatPanel puts it right
+  // after the bar, which hides while it is open): under the topic strip, the
+  // bar's inset, the File threads dropdown's look. In flow, so the
+  // conversation shrinks below it instead of being covered. Capped and
+  // scrolling: up to 45 results.
   .window__search-results {
-    position: absolute;
-    top: 44px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 25;
-    gap: 8px;
-    padding: 10px 8px;
+    flex: 0 1 auto;
+    margin: 8px 12px;
+    gap: 6px;
+    padding: 8px;
+    max-height: min(360px, 50%);
+    min-height: 0;
     overflow-y: auto;
-    background: var(--normal-bg-90);
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    transform-origin: top center;
+
+    // Show / hide (./search-results-panel): "closing" plays the hide keyframes,
+    // then the panel module sets "0".
+    &[data-open="1"] {
+      animation: window-folder__search-results-in 0.18s ease-out;
+    }
+
+    &[data-open="closing"] {
+      animation: window-folder__search-results-out 0.14s ease-in forwards;
+      pointer-events: none;
+    }
 
     &[data-open="0"] {
       display: none;
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      &[data-open="1"],
+      &[data-open="closing"] {
+        animation: none;
+      }
+    }
+  }
+
+  @keyframes window-folder__search-results-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes window-folder__search-results-out {
+    from {
+      opacity: 1;
+      transform: none;
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+  }
+
+  // The card takes the File threads bar's place while it is open, and until
+  // its hide animation has finished (no bar popping in under a fading card).
+  .window__chat-panel:has(> .window__search-results:not([data-open="0"]))
+    .window__ft-bar {
+    display: none;
+  }
+
+  // Chat-header search hits (./chat-search-highlight) in message text and
+  // attachment filenames: white on the primary colour, readable on own
+  // (coloured) and peer bubbles alike; the message a result jumped to gets a
+  // darker primary.
+  mark.chat-search-hit {
+    background: var(--primary-40, #5950ff);
+    color: #fff;
+    border-radius: 3px;
+    padding: 0 1px;
+  }
+
+  [data-search-current="1"] mark.chat-search-hit {
+    background: var(--primary-60, #4642a9);
   }
 
   // "Need permission to chat" gate — shown over window__chat-panel for a
@@ -5001,7 +5064,7 @@ html[data-theme="dark"] {
   }
 
   .window__chat-gate-logo-text {
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 20px;
     font-weight: 700;
     color: var(--primary-50);
@@ -5084,6 +5147,98 @@ html[data-theme="dark"] {
     -webkit-box-orient: vertical;
   }
 
+  // Filename-only hit: which attachment matched (channel.search match_filename).
+  .window__search-result-file {
+    font-size: 12px;
+    color: var(--normal-fg-50);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Loading placeholders (toolkit/search-results searchResultsLoading) while
+  // channel.search is in flight: a result row's geometry (8px padding, name +
+  // time line, two preview lines) with a shimmer sweeping across the bars.
+  // The placeholders' wrapper is a Skeletons.Element, whose `wrapper` kind
+  // defaults to flow x: ui-styles makes it a ROW flexbox, the inner block
+  // shrinks to its content and every %-wide bar collapses to a dot. Stack it
+  // and stretch the rows. Three classes to beat `.drumee-widget[data-flow=x]`.
+  .window__search-results .window__search-results-loading {
+    display: flex;
+    flex-direction: column;
+
+    > div {
+      width: 100%;
+    }
+  }
+
+  .window__search-result-ph {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 10px 8px;
+    border-radius: 8px;
+    animation: window-folder__search-results-in 0.2s ease-out backwards;
+  }
+
+  .window__search-result-ph-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+
+  .window__search-result-ph-name,
+  .window__search-result-ph-time,
+  .window__search-result-ph-preview {
+    height: 8px;
+    border-radius: 999px;
+    background-color: var(--border-default, #e5e5ea);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    animation: window-folder__search-skeleton-shimmer 1.3s ease-in-out infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
+  }
+
+  .window__search-result-ph-name {
+    height: 10px;
+    width: 38%;
+  }
+
+  .window__search-result-ph-time {
+    width: 14%;
+    opacity: 0.7;
+  }
+
+  .window__search-result-ph-preview {
+    width: 92%;
+
+    & + .window__search-result-ph-preview {
+      width: 58%;
+    }
+  }
+
+  @keyframes window-folder__search-skeleton-shimmer {
+    from {
+      background-position: 150% 0;
+    }
+    to {
+      background-position: -50% 0;
+    }
+  }
+
   .window__thread-menu__card {
     gap: 8px;
     padding: 12px;
@@ -5096,13 +5251,43 @@ html[data-theme="dark"] {
     gap: 4px;
   }
 
+  // Section labels — "Topics", "File Threads" (Figma 867:185782: 14/1.2,
+  // Primary/100).
   .window__thread-menu__section-label {
     @include drumee.typo(
-      $size: 12px,
-      $line: 1.4,
+      $size: 14px,
+      $line: 1.2,
       $weight: 400,
-      $color: var(--normal-fg-50, #65656c)
+      $color: var(--normal-fg-10, #0b0a21)
     );
+  }
+
+  // "Topics" + its "+" (New Topic dialog).
+  .window__thread-menu__section-head {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .window__thread-menu__add {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    fill: var(--normal-fg-10, #0b0a21);
+    color: var(--normal-fg-10, #0b0a21);
+
+    &:hover {
+      background-color: var(--hover-bg-40);
+    }
+  }
+
+  // A topic's emoji, before its name.
+  .window__thread-menu__row-emoji {
+    flex: 0 0 auto;
+    font-size: 14px;
+    line-height: 1;
   }
 
   .window__thread-menu__divider {
@@ -5212,6 +5397,23 @@ html[data-theme="dark"] {
     border-radius: 0;
     background: transparent;
     box-shadow: none;
+  }
+
+  // Rail: Topics and File Threads split the height equally; each keeps its
+  // heading and scrolls its own rows (the rail itself no longer scrolls).
+  .window__thread-menu__card--rail > .window__thread-menu__section--topics,
+  .window__thread-menu__card--rail > .window__thread-menu__section--threads {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  .window__thread-menu__card--rail > .window__thread-menu__section--topics > .window__thread-menu__rows,
+  .window__thread-menu__card--rail > .window__thread-menu__section--threads > .window__thread-menu__rows {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
   }
 
   // Download Chat history sits at the very bottom of the rail (Figma).

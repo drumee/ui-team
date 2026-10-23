@@ -496,6 +496,8 @@ class __webrtc_room extends __interact {
       service: SERVICE.hub.get_members_by_type,
       type: "all",
       hub_id: this.mget(_a.hub_id),
+      // Profile names, matching the tiles (see window/meeting membersListApi).
+      names: "profile",
       timer: 500,
     };
   }
@@ -1381,7 +1383,8 @@ class __webrtc_room extends __interact {
    * @returns
    */
   async join(args) {
-    this.stateMachine("joining");
+    // A waiting-room re-check keeps its "starts at" message (window/meeting).
+    if (this.state !== "scheduledWait") this.stateMachine("joining");
     let opt = {
       socket_id: Visitor.get(_a.socket_id),
       nid: this.mget(_a.nid),
@@ -1390,6 +1393,10 @@ class __webrtc_room extends __interact {
       metadata: this.metadata(),
       type: this.service_class,
       room_type: this.service_class,
+      // Joined from one scheduled meeting: early, the server holds us in the
+      // waiting room until it starts (lib/meeting-early).
+      schedule_id: this.mget("schedule_id") || undefined,
+      schedule_at: this.mget("schedule_at") || undefined,
       ...args,
     };
 
@@ -1401,7 +1408,22 @@ class __webrtc_room extends __interact {
      * privilege sent users hunting for permissions they had all along.
      */
     if (!c) {
+      // A waiting-room re-check that did not get through (a blip, a service
+      // restart) keeps waiting: the window asks again at the next tick.
+      if (this.state === "scheduledWait") return null;
       this.stateMachine("unreachable");
+      return null;
+    }
+    // Early for a scheduled meeting (server lib/meeting-early): nothing was
+    // joined and nobody was told. Say when it starts; the meeting window
+    // retries the join (window/meeting _armEarlyWait).
+    this._earlyWait = null;
+    if (c.status === "waiting" && c.starts_at) {
+      this._earlyWait = c;
+      this.statusMessages.scheduledWait = LOCALE.MEETING_WAITING_ROOM.format(
+        Dayjs.unix(c.starts_at).format("h:mm A"),
+      );
+      this.stateMachine("scheduledWait");
       return null;
     }
     if (!c.user || !c.user.permission) {

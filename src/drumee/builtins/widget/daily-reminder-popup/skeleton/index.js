@@ -65,14 +65,21 @@ module.exports = function (ui) {
   // coerced value picks the plural form, so the word can never disagree with
   // the digit.
   //
-  // `active: 0` on EVERY node here. ui-core binds an onclick to any widget
-  // that does not say otherwise, and `active` does not cascade.
-  const stat = (kind, ico, base, value) => {
+  // The whole tile is one click target (Lexis, 2026-10-10): messages → the
+  // Inbox, tasks → the Personal Calendar on Task, meetings → the Personal
+  // Calendar's day view on Meeting (Lexis, 2026-10-20). Same pattern as the
+  // calendar row: the tile stays active (it owns the service) and `active: 0`
+  // on EVERY node inside it — ui-core binds an onclick to any widget that does
+  // not say otherwise, and `active` does not cascade — so a tap on the icon
+  // or the text reaches the tile.
+  const stat = (kind, ico, base, value, service) => {
     const n = coerceCount(value);
     const label = t(`${base}_${pluralCategory(n, lang)}`, `${base}_OTHER`);
     return Skeletons.Box.X({
       className: `${pfx}__stat ${pfx}__stat--${kind}`,
-      active: 0,
+      bubble: 0,
+      service,
+      uiHandler: [ui],
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__stat-tile`,
@@ -166,9 +173,9 @@ module.exports = function (ui) {
                 className: `${pfx}__stats`,
                 active: 0,
                 kids: [
-                  stat("chat", "rail-chat", "DAILY_REMINDER_MSG_LABEL", counts.unread_messages),
-                  stat("task", "rail-task", "DAILY_REMINDER_TASK_LABEL", counts.due_tasks),
-                  stat("meet", "rail-meet", "DAILY_REMINDER_MEET_LABEL", counts.meetings),
+                  stat("chat", "rail-chat", "DAILY_REMINDER_MSG_LABEL", counts.unread_messages, "daily-reminder-inbox"),
+                  stat("task", "rail-task", "DAILY_REMINDER_TASK_LABEL", counts.due_tasks, "daily-reminder-tasks"),
+                  stat("meet", "rail-meet", "DAILY_REMINDER_MEET_LABEL", counts.meetings, "daily-reminder-meetings"),
                 ],
               }),
           // The whole row is one click target, same service as the primary
@@ -200,7 +207,7 @@ module.exports = function (ui) {
                 service: "daily-reminder-discard",
                 uiHandler: [ui],
               }),
-              // Opens the Personal Calendar on today, in day view, via the
+              // Opens the Personal Calendar on this month, in month view, via the
               // desk's own `toggle-calendar` service — see the widget header.
               Skeletons.Note({
                 className: `${pfx}__btn ${pfx}__btn--primary`,

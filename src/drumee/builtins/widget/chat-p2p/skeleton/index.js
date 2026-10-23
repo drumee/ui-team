@@ -84,9 +84,14 @@ module.exports = function (ui) {
         className: `${fig}__unread-label`,
         content: LOCALE.UNREADS,
       }),
+      // `active: 0` on the track AND the thumb: kidsOpt reaches direct kids
+      // only, and a clickable thumb swallowed every click that landed on it —
+      // which is most clicks aimed at a switch — so the toggle only answered
+      // on its label and the track's edges.
       Skeletons.Box.X({
         className: `${fig}__toggle-track`,
-        kids: [Skeletons.Box.X({ className: `${fig}__toggle-thumb` })],
+        active: 0,
+        kids: [Skeletons.Box.X({ className: `${fig}__toggle-thumb`, active: 0 })],
       }),
     ],
   });
@@ -117,15 +122,16 @@ module.exports = function (ui) {
     _.isFunction(Desk.isSupportContact) &&
     Desk.isSupportContact();
 
-  // Direct Chat / Workspace chat (Figma 43:32209). Unlike the old
-  // All / Unread / Support row these are not a client-side show/hide over one
-  // list — they are two different QUERIES (chat.chat_rooms with flag=contact
-  // vs chat.share_rooms / group_chat_rooms), so picking one restarts the list.
-  // See getCurrentApi + _setRoomScope in ../index.js.
+  // Direct Chat / Workspace chat (Figma 43:32209). Two different QUERIES
+  // (chat.chat_rooms with flag=contact vs chat.share_rooms /
+  // group_chat_rooms), so each tab has its own list below; picking a tab
+  // shows its list and parks the other's conversation (_selectScope in
+  // ../index.js). `scope-tab-*` lets a scope chosen in code set the tabs.
   const scope = ui._roomScope || "direct";
   const scopeTab = ({ label, key, service, countPn }) =>
     Skeletons.Box.X({
       className: `${fig}__filter-btn`,
+      sys_pn: `scope-tab-${key}`,
       radio: filterRadio,
       state: key === scope ? 1 : 0,
       service,
@@ -179,20 +185,72 @@ module.exports = function (ui) {
     ].filter(Boolean),
   });
 
-  const contactList = Skeletons.List.Smart({
-    className: `${fig}__contact-list`,
-    sys_pn: "contact-list",
-    spinner: true,
-    spinnerWait: 300,
-    vendorOpt: Preset.List.Orange_e,
-    placeholder: Skeletons.Note(LOCALE.NO_CONTACT, "no-contact"),
-    itemsOpt: {
-      kind: "chat_contact_item",
-      service: "load-conversation",
-      radio: ui._radioId,
-      uiHandler: [ui],
-    },
-    api: ui.getCurrentApi,
+  // One list per source, both kept mounted; the root's data-scope shows one
+  // (skin). Each is bound to its OWN api — see getDirectApi in ../index.js.
+  // Separate radio channels, so selecting a row in one list does not clear
+  // the other tab's selection.
+  const roomList = ({ pn, mod, api, radio }) =>
+    Skeletons.List.Smart({
+      className: `${fig}__contact-list ${fig}__contact-list--${mod}`,
+      sys_pn: pn,
+      spinner: true,
+      spinnerWait: 300,
+      vendorOpt: Preset.List.Orange_e,
+      placeholder: Skeletons.Note(LOCALE.NO_CONTACT, "no-contact"),
+      itemsOpt: {
+        kind: "chat_contact_item",
+        service: "load-conversation",
+        radio,
+        uiHandler: [ui],
+      },
+      api,
+    });
+
+  const contactList = roomList({
+    pn: "contact-list",
+    mod: "direct",
+    api: ui.getDirectApi,
+    radio: ui._radioId,
+  });
+
+  // "Contacts" under the Direct results while a search is typed. The list
+  // above only holds the pages already fetched (20 rows, newest message
+  // first), so anyone you have never messaged sorts past them and a local
+  // filter cannot reach them. This one asks the server with the term — see
+  // getPeopleApi / _syncPeople in ../index.js. Shown through the root's
+  // data-people (skin).
+  const peopleSection = Skeletons.Box.Y({
+    className: `${fig}__people`,
+    kids: [
+      Skeletons.Note({
+        className: `${fig}__people-title`,
+        content: LOCALE.CONTACTS,
+      }),
+      Skeletons.List.Smart({
+        className: `${fig}__people-list`,
+        sys_pn: "people-list",
+        partHandler: ui,
+        spinner: true,
+        spinnerWait: 300,
+        vendorOpt: Preset.List.Orange_e,
+        placeholder: Skeletons.Note(LOCALE.NO_CONTACT_FOUND, "no-contact"),
+        itemsOpt: {
+          kind: "chat_contact_item",
+          service: "people-pick",
+          uiHandler: [ui],
+        },
+        api: ui.getPeopleApi,
+      }),
+    ],
+  });
+
+  // Starts with an empty api and is restarted on the tab's first visit
+  // (getWorkspaceApi / _loadWorkspaceList): its query is the costly one.
+  const workspaceList = roomList({
+    pn: "contact-list-ws",
+    mod: "workspace",
+    api: ui.getWorkspaceApi,
+    radio: `${ui._radioId}-ws`,
   });
 
   const allReadEmpty = Skeletons.Note({
@@ -234,7 +292,7 @@ module.exports = function (ui) {
 
   const sidebar = Skeletons.Box.Y({
     className: `${fig}__sidebar`,
-    kids: [sidebarHeader, filters, searchBar, contactList, allReadEmpty],
+    kids: [sidebarHeader, filters, searchBar, contactList, peopleSection, workspaceList, allReadEmpty],
   });
 
   // ── Right panel: chat area ───────────────────────────────────────
@@ -257,9 +315,42 @@ module.exports = function (ui) {
     // ]
   });
 
+  // Workspace chat: the folder's topic strip and File threads bar
+  // (window/folder/skeleton/topic-strip + file-threads-bar, same window__
+  // classes and styles), fed by ../workspace-topics. Hidden by the skin
+  // unless the area is stamped data-topics="1" (a workspace conversation).
+  const topicStrip = Skeletons.Box.X({
+    className: "window__topic-strip",
+    sys_pn: "topic-strip",
+    partHandler: ui,
+  });
+  const ftBar = Skeletons.Box.Y({
+    className: "window__ft-bar",
+    sys_pn: "ft-bar",
+    partHandler: ui,
+    dataset: { open: "0" },
+  });
+  // Both on one row under the header: the strip takes the room, the bar
+  // its own width at the end.
+  const topicRow = Skeletons.Box.X({
+    className: `${fig}__topic-row`,
+    kids: [topicStrip, ftBar],
+  });
+
   const chatArea = Skeletons.Box.Y({
     className: `${fig}__chat-area`,
-    kids: [chatHeader, chatPanel],
+    sys_pn: "chat-area",
+    partHandler: ui,
+    dataset: { topics: "0" },
+    kids: [chatHeader, topicRow, chatPanel],
+  });
+
+  // New Topic dialog (widget_topic_create): always-present, empty-until-open
+  // backdrop, as the folder window's (window/folder/topics.js slot).
+  const topicDialog = Skeletons.Wrapper.Y({
+    className: "widget-topic-create__viewport-backdrop",
+    name: "topic-dialog",
+    partHandler: ui,
   });
 
   // Forward overlay — mirrors window_bigchat overlay structure so that
@@ -275,9 +366,24 @@ module.exports = function (ui) {
     ],
   });
 
+  // In-Inbox image / video viewer (./lightbox, chat_p2p.previewMedia).
+  // Empty — and therefore hidden — until an attachment is opened.
+  const lightbox = Skeletons.Wrapper.Y({
+    className: `${fig}__lightbox`,
+    name: "lightbox",
+  });
+
+  // Chat details (widget_chat_details) for the open conversation, fed by
+  // ./chat-details-host when the header's ⋮ is pressed. Hidden until then.
+  const chatDetails = Skeletons.Box.Y({
+    className: `${fig}__chat-details`,
+    sys_pn: "chat-details",
+    partHandler: ui,
+  });
+
   return Skeletons.Box.X({
     className: `${fig}__main`,
     debug: __filename,
-    kids: [sidebar, chatArea, overlayWrapper],
+    kids: [sidebar, chatArea, chatDetails, overlayWrapper, lightbox, topicDialog],
   });
 };

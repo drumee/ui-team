@@ -250,7 +250,9 @@
       min-height: 0;
       height: 22px;
       line-height: 20px;
-      padding: 0 6px;
+      // 2px top and bottom around the typo() mixin's 18px line fills the 22px
+      // box exactly, so the name sits in the vertical middle, not on the top.
+      padding: 2px 10px;
       resize: none;
       overflow: hidden;
       white-space: nowrap;
@@ -339,17 +341,20 @@
     }
   }
 
-  // A DEEPER PATH HAS NO SWITCHER. Once the address holds more than the
-  // workspace crumb (Workspace › Folder › …) the caret and its dropdown are
-  // taken out of the chip. Asked of the DOM, like the loading rules below:
-  // a second child in the crumb track is the whole condition.
-  //
+  // THE CARET IS ALWAYS SHOWN — on a deeper path (Workspace › Folder › …), on
+  // a section screen and while the address loads. Only the inline rename above
+  // takes it out of the row, and the org view hides the whole chip (below).
+  // _crumbClickOpensSwitcher (desk/index.js) always opens on the caret itself,
+  // so the glyph is never drawn without a dropdown behind it.
+
+  // FOLDER MODE — the address is deeper than the workspace, so the switcher
+  // lists the open folder's siblings (desk._prepareSwitcherMode stamps
+  // data-ws-mode on this chip each time it opens). The header stays and names
+  // the open folder (desk._feedFolderHead), as it names the open workspace;
+  // "New workspaces" belongs to the workspace list and goes with it.
   // !important: Box children are forced display:flex inline by the framework.
-  // _crumbClickOpensSwitcher (desk/index.js) refuses the click on the same
-  // condition, so the chip cannot open a dropdown that is not there.
-  &__crumb-group:has(.desk-breadcrumb__content > :nth-child(2)) {
-    .desk-module-topbar__ws-wrapper,
-    .desk-module-topbar__ws-menu {
+  &__crumb-group[data-ws-mode="folders"] {
+    .desk-module-topbar__ws-new {
       display: none !important;
     }
   }
@@ -376,24 +381,6 @@
       flex: 0 1 auto;
       min-width: 0;
       overflow: hidden;
-    }
-
-    // The switcher's caret belongs to the WORKSPACE crumb: it reads as one
-    // chip with the crumb's glyph and name (see workspaceSwitcher). While the
-    // bar is showing a section label instead — Settings, Get help, Plan,
-    // Calendar, Inbox, Contacts, Trash, Admin console — there is no workspace
-    // in the bar to hang it off, so a caret there offered a workspace dropdown
-    // attached to the word "Get help".
-    //
-    // `+`, because the switcher is authored as the breadcrumb's next sibling
-    // in this cluster (desk/skeleton/topbar.js), and the section flag is
-    // stamped on the breadcrumb's own root (desk_breadcrumb._setSectionMode) —
-    // the only handle it has on the caret from there.
-    //
-    // !important: Box children are forced display:flex inline by the
-    // framework, the same reason __actions-cluster[data-state="0"] needs it.
-    .desk-breadcrumb__ui[data-section="1"] + .desk-module-topbar__ws-wrapper {
-      display: none !important;
     }
 
   }
@@ -427,15 +414,6 @@
   // only the `:has()` rule reveals it. Should `:has()` ever not apply, the
   // selector is dropped and the caret stays hidden — never the other way.
   &__crumb-group {
-    // Hidden until proven otherwise. visibility, not display: the caret keeps
-    // its 22px box, so the address does not shift sideways at the moment it
-    // lands — which is exactly when the user is looking at it. And not on
-    // __ws-wrapper: the open panel lives inside that, so hiding it would yank
-    // a dropdown out from under the pointer when a workspace row is clicked.
-    .desk-module-topbar__ws-btn {
-      visibility: hidden;
-    }
-
     // The spinner, for the same "no complete crumb" condition. Drawn on a
     // pseudo-element rather than a fed widget: ui-core's own `view.spinner(1)`
     // injects `.drumee-loading-wrapper` markup whose base rules do not exist
@@ -496,9 +474,6 @@
   // a sibling of it. And it still asks for the name — a section crumb with no
   // label yet is as unfinished as a glyph with no name, and stays hidden.
   //
-  // The caret does not come back with the track: __left-cluster above hides
-  // the whole __ws-wrapper next to a `[data-section="1"]` breadcrumb, so there
-  // is no workspace dropdown hanging off the word "Organization".
   // THE ADDRESS IS ALREADY IN THE BAR — the organisation screen, and only it.
   // The org chip sits two elements to the left in this same cluster and reads
   // the organisation's name; an address chip beside it printing the same words
@@ -518,12 +493,20 @@
     display: none !important;
   }
 
+  // A UTILITY SCREEN — Notifications, Personal Calendar, Inbox, Contacts,
+  // Trash, Admin console — keeps its label but has no switcher: the caret goes,
+  // and desk._crumbClickOpensSwitcher refuses the chip on the same flag
+  // (`noSwitcher` on breadcrumb:context, stamped by
+  // desk_breadcrumb._setSectionMode). `!important`: the framework forces a
+  // widget's display inline.
+  &__crumb-group:has(> .desk-breadcrumb__ui[data-no-switcher="1"]) {
+    .desk-module-topbar__ws-btn {
+      display: none !important;
+    }
+  }
+
   &__crumb-group:has(.breadcrumb-item__icon):has(.breadcrumb-item__filename),
   &__crumb-group:has(.breadcrumb-item__main--section .breadcrumb-item__filename) {
-    .desk-module-topbar__ws-btn {
-      visibility: visible;
-    }
-
     .desk-breadcrumb__main {
       display: flex;
     }
@@ -549,9 +532,6 @@
     flex: 0 1 auto;
     min-width: 0;
     overflow: auto;
-    &::-webkit-scrollbar { width: 4px; } ;
-    &::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); } ;
-    &::-webkit-scrollbar-thumb { background: var(--primary-40); border-radius: 4px; };
   }
 
   &__folder-tab {
@@ -565,7 +545,7 @@
     border: 1px solid var(--border-muted, rgba(0, 0, 0, 0.08));
     border-bottom: none;
     cursor: pointer;
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 13px;
     font-weight: 500;
     color: var(--normal-fg-10);
@@ -802,7 +782,7 @@
     cursor: pointer;
     flex-shrink: 0;
     box-sizing: border-box;
-    font-family: "Inter", sans-serif;
+    font-family: var(--font-main);
     transition:
       background-color 0.15s ease,
       color 0.15s ease;
@@ -919,7 +899,7 @@
       cursor: pointer;
       white-space: nowrap;
       width: 100%;
-      font-family: "Geist", sans-serif;
+      font-family: var(--font-main);
       font-size: 13px;
       font-weight: 500;
       color: var(--normal-fg-10);
@@ -960,7 +940,7 @@
       flex: 0 0 20px;
       align-items: center;
       justify-content: center;
-      font-family: "Inter", sans-serif;
+      font-family: var(--font-main);
       font-size: 25px;
       font-weight: 400;
       line-height: 20px;
@@ -1268,7 +1248,7 @@
     display: flex;
     background-color: var(--normal-bg-90);
     color: var(--primary-50);
-    font-family: "Geist Mono", monospace;
+    font-family: var(--font-main);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -1280,108 +1260,7 @@
     line-height: 1;
   }
 
-  // Tablet "more" menu — collapses Add / Upload / Invite into a single
-  // icon-only dropdown at 1024px and below (see media query at the
-  // bottom of this block).
-  &__more-wrapper {
-    display: none;
-    position: relative;
-    flex-shrink: 0;
-
-    .menu-topic-items {
-      background: var(--normal-bg);
-      border-radius: 4px;
-      padding: 8px;
-      gap: 4px;
-      min-width: 160px;
-      border: 1px solid var(--border-default);
-    }
-
-    .menu-topic-items__wrapper {
-      box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
-      border-radius: 4px;
-      right: 0;
-      min-width: 160px;
-      z-index: 99999;
-
-      &[data-direction="down"] {
-        top: calc(100% + 4px);
-      }
-    }
-
-    &:not([data-state="1"]) .menu-topic-items__wrapper {
-      visibility: hidden;
-    }
-  }
-
-  &__more-btn {
-    width: 28px;
-    height: 28px;
-    padding: 6px;
-    background-color: var(--white);
-    border-radius: 4px;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-
-    svg {
-      width: 16px;
-      height: 16px;
-      fill: var(--normal-fg-10);
-      color: var(--normal-fg-10);
-    }
-
-    &:hover {
-      background-color: var(--normal-bg-80);
-    }
-  }
-
-  &__more-menu-item {
-    display: flex !important;
-    flex-direction: row !important;
-    padding: 6px 8px;
-    gap: 8px;
-    border-radius: 4px;
-    align-items: center !important;
-    cursor: pointer;
-    white-space: nowrap;
-    width: 100%;
-    box-sizing: border-box;
-
-    > * {
-      display: inline-flex;
-      align-items: center;
-    }
-
-    .svg-wrapper,
-    .drumee-svg,
-    svg {
-      width: 14px;
-      height: 14px;
-      flex-shrink: 0;
-      color: var(--normal-fg-10);
-      fill: currentColor;
-    }
-
-    span.label,
-    section.label {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--normal-fg);
-      white-space: nowrap;
-      line-height: 1;
-      display: inline-flex;
-      align-items: center;
-    }
-
-    &:hover {
-      background: rgba(89, 80, 255, 0.1);
-    }
-  }
-
-  // Tablet & narrower (≤ 1024px): swap the three primary actions for the
-  // consolidated menu. This covers narrow desktop-browser widths below 768px
+  // Tablet & narrower (≤ 1024px): hide the three primary actions. This covers narrow desktop-browser widths below 768px
   // too — there `data-device` is not "mobile" so the desktop topbar stays
   // mounted and the inline Add / Upload / Invite buttons would otherwise
   // reappear and overflow.
@@ -1391,18 +1270,6 @@
     &__add-wrapper,
     &__upload-btn,
     &__invite-btn {
-      display: none !important;
-    }
-
-    &__more-wrapper {
-      display: flex !important;
-    }
-  }
-
-  // Desktop: never show the consolidated "more" button — the three primary
-  // actions are displayed inline above 1024px.
-  @media (min-width: 1025px) {
-    &__more-btn {
       display: none !important;
     }
   }
@@ -1581,7 +1448,11 @@
       // the panel clears the whole chip rather than just the caret, and 0 is
       // the chip's left edge.
       top: calc(100% + 6px);
-      left: 0;
+      // Under the CURRENT crumb, not the chip's left edge: on a folder path the
+      // panel lists that folder's level (desk _placeSwitcherPanel sets this on
+      // __crumb-group, pulled back when it would run off the window). 0 on
+      // the workspace itself, as before.
+      left: var(--ws-panel-left, 0px);
       right: auto;
       width: max-content;
       min-width: 260px;
@@ -1704,8 +1575,14 @@
   // Group heading — "Workspaces" / "Personal". Small, uppercase and muted so
   // it labels the list without competing with the rows it introduces.
   &__ws-section {
+    // Sticks to the top of the scrolling list, so a long list keeps saying
+    // what it lists; the panel's own ground hides the rows passing under it.
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--normal-bg-elevated, #fff);
     padding: 10px 10px 4px;
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -1756,13 +1633,82 @@
   &__ws-item-name {
     flex: 1 1 auto;
     min-width: 0;
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 13px;
     font-weight: 500;
     color: var(--normal-fg-10);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  // ── PINNED section (desk _groupWorkspaces / _pinnedWorkspaceRow) ──────────
+  // A heading with its pin glyph, then rows that end in the pin (press =
+  // unpin) and a drag grip. Pin red as in Lexis' mock.
+  &__ws-section--pinned {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__ws-section-pin {
+    width: 12px;
+    height: 12px;
+    color: var(--error);
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  &__ws-item-unpin {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: var(--error);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  &__ws-item-grip {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 auto;
+    color: var(--normal-fg-50);
+    cursor: grab;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  // While a pinned row is dragged: the row itself fades, and the row under
+  // the pointer shows a line on the side it will land.
+  &__ws-item--pinned {
+    &[data-pin-dragging="1"] {
+      opacity: 0.4;
+    }
+
+    &[data-pin-drop="before"] {
+      box-shadow: inset 0 2px 0 var(--primary-40);
+    }
+
+    &[data-pin-drop="after"] {
+      box-shadow: inset 0 -2px 0 var(--primary-40);
+    }
   }
 
   &__ws-empty {
@@ -1785,10 +1731,12 @@
     width: 100%;
     box-sizing: border-box;
     gap: 12px;
-    max-height: 300px;
+    // Room for a long folder or workspace list on a tall window, never past
+    // the bottom of a short one (the panel opens ~50px down).
+    max-height: min(360px, calc(100vh - 120px));
     // Load-bearing. A flex item's default `min-height` is `auto`, i.e. its
     // content height, so __ws-list would refuse to shrink, this column would
-    // grow past 300px, and the max-height would quietly do nothing.
+    // grow past its max-height, and that limit would quietly do nothing.
     min-height: 0;
   }
 
@@ -1841,7 +1789,7 @@
 
   &__ws-head-name-text {
     min-width: 0;
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 12px;
     font-weight: 400;
     line-height: 1.4;
@@ -1949,27 +1897,11 @@
     // A VISIBLE bar — this used to be the hide-the-scrollbar idiom
     // (`scrollbar-width: none` + `-ms-overflow-style` + a `display: none`
     // pseudo), so a capped list gave no sign there was more below it.
-    //
-    // Same shape the sidebar nav and the folder-tab strip already use: 4px,
-    // faint track, rounded thumb. `scrollbar-color` is the addition — those two
-    // set only `scrollbar-width: thin`, which leaves Firefox drawing its
-    // DEFAULT grey while Chrome gets the brand colour. Both halves are needed
-    // for the thumb to be --primary-70 in both engines.
+    // The app's one bar (router/skin/index.scss), written out because the
+    // hide idiom it replaced lived here.
     scrollbar-width: thin;
-    scrollbar-color: var(--primary-70) rgba(0, 0, 0, 0.05);
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.05);
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--primary-70);
-      border-radius: 4px;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   // Footer action. Separated by a rule and given the full menu width so it
@@ -1998,7 +1930,7 @@
     padding: 8px 24px;
     border-radius: 8px;
     cursor: pointer;
-    font-family: "Geist", sans-serif;
+    font-family: var(--font-main);
     font-size: 14px;
     font-weight: 600;
     line-height: 20px;
@@ -2305,9 +2237,9 @@
     //
     // Nothing escapes: `.desk-module__topbar` is its own stacking context, so
     // every number in this file — the tip, and the 99999 on `__add-wrapper`,
-    // `__more-wrapper`, `__ws-wrapper`, `__account-wrapper` and
-    // `__search-suggestions` — is only ever compared with its siblings here.
-    // This is deliberately above all five, since any of them can overlap a
+    // `__ws-wrapper`, `__account-wrapper` and `__search-suggestions` — is
+    // only ever compared with its siblings here.
+    // This is deliberately above all four, since any of them can overlap a
     // bubble depending on how the row lays out, and a tooltip is
     // `pointer-events: none` (below) — it can cover a menu visually for the
     // moment it is shown, but it can never swallow a click meant for one.
@@ -2422,40 +2354,6 @@ html[data-theme="dark"] {
       }
     }
 
-    &__more-btn {
-      background-color: var(--normal-bg-elevated);
-
-      svg {
-        fill: var(--normal-fg);
-        color: var(--normal-fg);
-      }
-
-      &:hover {
-        background-color: var(--normal-bg-40);
-      }
-    }
-
-    &__more-wrapper .menu-topic-items {
-      background-color: var(--normal-bg-elevated);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-    }
-
-    &__more-menu-item {
-      svg {
-        color: var(--normal-fg);
-        fill: var(--normal-fg);
-      }
-
-      span.label,
-      section.label {
-        color: var(--normal-fg);
-      }
-
-      &:hover {
-        background: rgba(89, 80, 255, 0.2);
-      }
-    }
-
     &__search-bar {
       background-color: var(--normal-bg-elevated);
     }
@@ -2523,3 +2421,4 @@ html[data-theme="dark"] {
     }
   }
 }
+

@@ -128,10 +128,12 @@ class __media_core extends DrumeeMFS {
    */
   onBeforeDestroy() {
     // this.unbindEvent(_a.live);
-    RADIO_BROADCAST.off(
-      "notification:details",
-      this.updateNotificationCount.bind(this)
-    );
+    // Same reference as bindActivityHandlerEvent's `on` — a fresh .bind()
+    // here matched nothing, so every hub tile ever rendered stayed subscribed.
+    if (this._onNotificationDetails) {
+      RADIO_BROADCAST.off("notification:details", this._onNotificationDetails);
+      this._onNotificationDetails = null;
+    }
     //RADIO_BROADCAST.off("moved:away", this._onPeerMovedAway.bind(this));
     if (this._setIconType) {
       return RADIO_MEDIA.off(SET_ICON_TYPE, this._setIconType);
@@ -164,6 +166,12 @@ class __media_core extends DrumeeMFS {
     if (Visitor.inDmz && this.canDownload()) {
       return [_a.download];
     }
+
+    // Several items selected, this one among them (media/row onToggle keeps
+    // the selection on a right-click on a ticked row): only the rows that act
+    // on the whole selection.
+    const selection = this._menuSelection();
+    if (selection.length > 1) return this.contextmenuItemsForSelection(selection);
 
     const fileType = this.mget(_a.filetype);
     // `share_qrcode` predates the sectioned menus (added unconditionally
@@ -288,13 +296,73 @@ class __media_core extends DrumeeMFS {
     }
   }
 
+  /**
+   * The selection a right-click on this item acts on: every selected item
+   * when this one is among them, else none. Never in the trash panel, whose
+   * rows restore or delete for good.
+   * @returns {Array} media items
+   */
+  _menuSelection() {
+    if (this.mget(_a.status) == _a.deleted) return [];
+    const wm = window.Wm;
+    if (!wm || !_.isFunction(wm.getGlobalSelection)) return [];
+    const selected = wm.getGlobalSelection() || [];
+    return selected.includes(this) ? selected : [];
+  }
+
+  /**
+   * The menu of a multi-selection: Download · Make a copy, Organize, Move to
+   * trash — each the handler of the whole selection (_downloadFromMenu,
+   * _duplicateFromMenu, move, Wm.removeMediaSelection). A row is offered only
+   * when every selected item allows it, so the action never half-runs.
+   * @param {Array} selection media items, this one among them
+   * @returns {Array} keys of builtins/contextmenu/skeleton/items
+   */
+  contextmenuItemsForSelection(selection) {
+    const every = (fn) => selection.every((m) => {
+      try {
+        return !!fn(m);
+      } catch (e) {
+        return false;
+      }
+    });
+    const editable = (m) => m.canOrganize() || m.isMediaOwner();
+    const sections = [];
+    const files = [];
+    if (every((m) => editable(m) || m.canDownload())) files.push(_a.download);
+    if (every(editable)) files.push('makeACopy');
+    if (files.length) sections.push(files);
+    if (every(editable)) sections.push(['organize']);
+    if (every((m) => editable(m) || m.canRemove())) sections.push([_a.trash]);
+    const items = [];
+    sections.forEach((s, i) => {
+      if (i) items.push(_a.separator);
+      items.push(...s);
+    });
+    return items;
+  }
+
+  /**
+   * Whether this node may be renamed by the viewer as far as the WORKSPACE
+   * rule goes. Renaming a workspace is an admin act (Duy, 2026-10-07): an
+   * admin's rename reaches every member, and a member below admin renaming it
+   * for themselves only made the same workspace go by different names. Files
+   * and folders are untouched (true). Tested on filetype, not `isHub`, which
+   * is also true for a folder that merely contains workspaces.
+   */
+  _workspaceRenameAllowed() {
+    if (this.mget(_a.filetype) !== _a.hub) return true;
+    return !!this.canAdmin();
+  }
+
   contextmenuItemsForHub() {
     let fileItems = [];
     // Over-limit: upload + invite are paused — omit them from the kebab so
     // the menu doesn't offer actions the REST clamp will refuse.
     const locked = require("libs/over-limit").isLocked();
     if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems = ['openInWindow', _a.separator, _a.rename];
+      fileItems = ['openInWindow', _a.separator];
+      if (this._workspaceRenameAllowed()) fileItems.push(_a.rename);
       if (!locked) fileItems.push(_a.upload);
       fileItems.push(_a.download, _a.separator, _a.info);
       if (!locked && this._canInviteToHub()) {
@@ -361,8 +429,21 @@ class __media_core extends DrumeeMFS {
       // if (this.canShare()) sections.push([_a.share]);
       /** 4 — details: members + roles via the folder settings panel */
       sections.push([_a.info]);
-      /** 5 — outside-world share link (share area only) */
-      if (this.mget(_a.area) === _a.share) sections.push(['secureShare']);
+      /** 5 — the area's link, split the same way the file menu splits it:
+       *  external workspace (`share`) → outside-world share link; internal
+       *  workspace (`private`) → Designation link, which a fellow member opens
+       *  in their own desk (Lexis 2026-10-05: folders too, not only files).
+       *  Never on a WORKSPACE: the desk switcher's ⋯ menu is built from this
+       *  same builder (see 6), and a workspace is not "a folder in" one.
+       *  An external workspace also offers the member-facing link (shown as
+       *  "Internal Link") next to Share (Lexis 2026-10-21). */
+      if (this.mget(_a.area) === _a.share) {
+        const links = ['secureShare'];
+        if (!this._isWorkspace() && !Visitor.inDmz) links.push('designationLink');
+        sections.push(links);
+      } else if (this.mget(_a.area) === _a.private && !this._isWorkspace()) {
+        sections.push(['designationLink']);
+      }
       /** 6 — trash last. On a WORKSPACE this row may be "Leave workspace"
        *  instead: the desk switcher's ⋯ menu is built from this same builder
        *  (modules/desk/index.js _resolveWorkspaceActions), so the workspace
@@ -464,6 +545,11 @@ class __media_core extends DrumeeMFS {
     const extra = [];
     if (editable) {
       switch (this.isRegularFile() && this.mget(_a.area)) {
+        case _a.share:
+          /** External workspace: the member-facing link sits beside Share
+           * (Lexis 2026-10-21). Never for a DMZ guest — it is for members. */
+          if (!Visitor.inDmz) extra.push('designationLink');
+          break;
         case _a.private:
           extra.push('designationLink'); /** Open a file from the link with the user environment */
           break;
@@ -524,10 +610,11 @@ class __media_core extends DrumeeMFS {
    *
    */
   bindActivityHandlerEvent() {
-    RADIO_BROADCAST.on(
-      "notification:details",
-      this.updateNotificationCount.bind(this)
-    );
+    if (this._onNotificationDetails) {
+      RADIO_BROADCAST.off("notification:details", this._onNotificationDetails);
+    }
+    this._onNotificationDetails = this.updateNotificationCount.bind(this);
+    RADIO_BROADCAST.on("notification:details", this._onNotificationDetails);
   }
 
   /**
@@ -1618,6 +1705,9 @@ class __media_core extends DrumeeMFS {
   select(opt, hide) {
     this.setState(1);
     this.el.dataset.selected = this.mget(_a.state);
+    // Its checkbox too, as unselect() and tick() repaint it: a row picked by
+    // the marquee (window/selection) or by select-all showed no tick.
+    this._changeState("checkbox", "selected", this.mget(_a.state));
     return this.mset(opt);
   }
 
@@ -1776,6 +1866,7 @@ class __media_core extends DrumeeMFS {
     if (!this.isGranted(_K.permission.delete) && !this.isHub) {
       return;
     }
+    if (!this._workspaceRenameAllowed()) return;
     if (pointerDragged) {
       return;
     }
@@ -2309,6 +2400,8 @@ class __media_core extends DrumeeMFS {
     if (_.isEmpty(value)) {
       return;
     }
+    // Every rename path ends here (grid, switcher chip, dialog).
+    if (!this._workspaceRenameAllowed()) return;
     if (value === this.mget(_a.filename)) {
       try {
         this.entry.softDestroy();

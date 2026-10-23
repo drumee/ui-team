@@ -113,6 +113,15 @@ function meetingTime(stime) {
   return `${day}, ${d.format('h:mm A')}`;
 }
 
+// "Report" + "docx" -> "Report.docx": node filenames are stored without their
+// extension, and the owner should recognise the file at a glance.
+function fileLabel(filename, ext) {
+  const f = String(filename || '');
+  const e = String(ext || '');
+  if (!e || f.toLowerCase().endsWith(`.${e.toLowerCase()}`)) return f;
+  return `${f}.${e}`;
+}
+
 function getActivityMeta(ui, data) {
   const name = ui.getItemName();
   const cnt = parseInt(data.cnt, 10) || 0;
@@ -415,6 +424,25 @@ function getActivityMeta(ui, data) {
   }
 
   switch (ui.mget(_a.category)) {
+    // "<actor> edited / commented on <your file>" — addressed to the file's
+    // owner (server-team lib/file-owner-notify). A comment brings its own text,
+    // shown under the sentence so the owner can read it before opening.
+    case 'file_edited':
+    case 'file_commented': {
+      const commented = ui.mget(_a.category) === 'file_commented';
+      return {
+        before: commented ? LOCALE.TASK_COMMENTED_ACTION : LOCALE.FILE_EDITED_ACTION,
+        label: fileLabel(data.filename || name, data.ext),
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+        ico: commented ? 'noti-chat-teardrop-dots' : 'noti-shooting-star',
+        tone: BADGE.brand,
+        folder: data.folder_name,
+        quote: commented ? (data.comment || '') : '',
+      };
+    }
+
     case 'hub_invite':
       // Never fall back to `name` for hub_invite — that resolver chains
       // through surname/sender fields and ends up showing the inviter's
@@ -436,8 +464,12 @@ function getActivityMeta(ui, data) {
     case 'contact': {
       // status === 'informed' marks the post-accept handshake half.
       const status = data.status || data.contact_status;
+      // `invite_accepted` is the raw yp.contact_activity row the accepter's
+      // side logs (contact.js); it carries no status, so without it the row
+      // read "<X> wants to connect".
       const accepted = status === 'informed'
         || data.event === 'contact.accept_informed'
+        || data.event === 'invite_accepted'
         || data.event_subtype === 'accepted';
       return {
         before: accepted
@@ -1023,6 +1055,10 @@ module.exports = function (ui) {
     uiHandler: ui,
     kids: [
       Skeletons.Note({ className: `${pfx}__text`, content: text }),
+      // The comment a file_commented row is about, quoted on one line.
+      meta.quote
+        ? Skeletons.Note({ className: `${pfx}__quote`, content: escapeHtml(`“${meta.quote}”`) })
+        : null,
       metaLine,
       answer,
     ].filter(Boolean),
@@ -1047,19 +1083,31 @@ module.exports = function (ui) {
       }),
     ]
     : [
-      Skeletons.Button.Svg({
-        className: `${pfx}__bookmark`,
-        ico: 'notification_favorite',
-        service: 'toggle-favorite',
-        uiHandler: ui,
-      }),
+      // Only rows activity.get_feed decorated can be saved: the button needs
+      // the server's `bookmark_key`, and `is_saved` is what draws it lit again
+      // after the panel re-renders. A row without the key (the pinned pending
+      // access request, built from activity.list) gets no button rather than
+      // one that lights up and saves nothing.
+      data.bookmark_key
+        ? Skeletons.Button.Svg({
+          className: `${pfx}__bookmark`,
+          ico: 'notification_favorite',
+          service: 'toggle-favorite',
+          uiHandler: ui,
+          // dataset, NOT `state`: a `state` prop attaches ui-core's toggle
+          // behavior, which flips data-state on click on top of the row's own
+          // flip in _dispatchService — two flips, no change, and the request
+          // sent was the opposite of what was pressed.
+          dataset: { state: parseInt(data.is_saved, 10) === 1 ? '1' : '0' },
+        })
+        : null,
       Skeletons.Button.Svg({
         className: `${pfx}__trash`,
         ico: 'notification_trash',
         service: 'dismiss-activity',
         uiHandler: ui,
       }),
-    ];
+    ].filter(Boolean);
   const actions = Skeletons.Box.X({
     className: `${pfx}__actions`,
     kids: actionKids,
@@ -1092,3 +1140,5 @@ module.exports = function (ui) {
     ].filter(Boolean),
   });
 };
+
+module.exports.timeAgo = timeAgo;

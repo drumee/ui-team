@@ -16,31 +16,31 @@
   }
 
   @else if $weight ==300 {
-    font-family: var(--font-light);
+    font-family: var(--font-main);
   }
 
   @else if $weight ==500 {
-    font-family: var(--font-medium);
+    font-family: var(--font-main);
   }
 
   @else if $weight ==700 {
-    font-family: var(--font-bold);
+    font-family: var(--font-main);
   }
 
   @else if $weight ==300italic {
-    font-family: var(--font-lightitalic);
+    font-family: var(--font-main);
   }
 
   @else if $weight ==4001 {
-    font-family: var(--font-italic);
+    font-family: var(--font-main);
   }
 
   @else if $weight ==500italic {
-    font-family: var(--font-mediumitalic);
+    font-family: var(--font-main);
   }
 
   @else if $weight ==700italic {
-    font-family: var(--font-bolditalic);
+    font-family: var(--font-main);
   }
 }
 

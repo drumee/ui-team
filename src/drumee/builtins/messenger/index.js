@@ -68,9 +68,43 @@ class __lib_messenger extends LetcBox {
     // the host so it can mark messages as read (read receipts).
     this._onInputFocus = () => this.triggerHandlers({ service: 'input-focus' });
     this.el.addEventListener('focusin', this._onInputFocus);
+    // Same moment ui-core's editable used (it waited for the field, then this
+    // delay); see _autofocus for why the messenger does it now.
+    if (this.mget('autofocus')) {
+      this._autofocusTimer = _.delay(() => this._autofocus(), Visitor.timeout(1000));
+    }
+  }
+
+  /**
+   * Put the caret in the composer WITHOUT scrolling anything.
+   *
+   * ui-core's editable autofocus did a plain focus(), and the browser scrolls
+   * every scrollable ancestor to reveal a focused element. The folder window's
+   * Files view on a phone is a sideways two-page carousel (files, Team Chat),
+   * so a reload slid it from the files to the chat page once the composer
+   * mounted. preventScroll keeps the caret and leaves the page where it is.
+   * The caret goes to the end of a restored draft, as before.
+   */
+  _autofocus(tries = 0) {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const el = this.__content && this.__content.content;
+    if (!el || !el.isConnected) {
+      // The editable creates its field asynchronously (waitElement).
+      if (tries < 20) this._autofocusTimer = setTimeout(() => this._autofocus(tries + 1), 50);
+      return;
+    }
+    el.focus({ preventScroll: true });
+    if (!el.textContent) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = document.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
   }
 
   onBeforeDestroy() {
+    clearTimeout(this._autofocusTimer);
     if (this._trackSelection) {
       document.removeEventListener('selectionchange', this._trackSelection);
     }
@@ -123,17 +157,28 @@ class __lib_messenger extends LetcBox {
    * @returns 
    */
   resetMessage() {
-    this.__content.reset();
+    const editor = this.__content;
+    if (editor.content) {
+      // Empty the live contenteditable in place. The editable's reset()
+      // re-renders it, which drops the focus the user is typing with: it only
+      // came back on the editor's delayed autofocus (~1 s), and every key
+      // pressed right after Enter was lost. sync() keeps the model and the
+      // placeholder in step.
+      editor.content.innerHTML = "";
+      editor.sync();
+    } else {
+      editor.reset();
+      // The editable template renders whitespace ("\n    \n  ") inside the
+      // contenteditable when content is empty, which the browser briefly lays
+      // out as 3 lines (~72px). Strip it so the input stays at its single-line
+      // height during reset.
+      const inner = editor.el && editor.el.querySelector(".note-content");
+      if (inner && !inner.textContent.trim()) {
+        inner.innerHTML = "";
+      }
+    }
     this.__submit.el.dataset.state = _a.idle;
     this.__wrapperPopup.clear();
-    // The editable template renders whitespace ("\n    \n  ") inside the
-    // contenteditable when content is empty, which the browser briefly lays
-    // out as 3 lines (~72px). Strip it so the input stays at its single-line
-    // height during reset.
-    const inner = this.__content && this.__content.el && this.__content.el.querySelector(".note-content");
-    if (inner && !inner.textContent.trim()) {
-      inner.innerHTML = "";
-    }
   }
 
   /**
@@ -301,6 +346,12 @@ class __lib_messenger extends LetcBox {
         return;
 
       case _e.attach:
+        // A host that attaches from the device only (the Inbox): with one
+        // option left there is nothing to choose, so skip the menu.
+        if (this.mget('no_workspace_attach')) {
+          this._closeAttachMenu();
+          return this.__fileselector.open(this._upload.bind(this));
+        }
         return this._showAttachMenu();
 
       case 'attach-from-device':

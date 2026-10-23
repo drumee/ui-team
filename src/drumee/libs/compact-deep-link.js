@@ -137,7 +137,27 @@ function toCompactUrl(url) {
   if (!derived || derived !== kind) return url;
 
   const head = url.slice(0, at);
-  return `${head}${_K.module.desk}/wm/${COMPACT_SEGMENT}/${nid}/${hub_id}/${filetype}`;
+  return `${head}${compactHash({ nid, hub_id, filetype })}`;
+}
+
+/**
+ * The compact desk hash for one node — "#/desk/wm/o/<nid>/<hub_id>/<filetype>",
+ * the hash part of an Internal Link — built straight from its fields.
+ *
+ * libs/location-url writes it into the address bar, so the URL a visitor
+ * copies from there opens exactly what the Internal Link row would have handed
+ * them. Same checks as parseCompactPath: anything it could not read back is
+ * refused here rather than written.
+ *
+ * @param {Object} node { nid, hub_id, filetype }
+ * @returns {String|null} the hash, or null when the node has no compact form
+ */
+function compactHash({ nid, hub_id, filetype } = {}) {
+  if (!SAFE_SEGMENT.test(`${nid || ''}`)) return null;
+  if (!SAFE_SEGMENT.test(`${hub_id || ''}`)) return null;
+  if (!SAFE_SEGMENT.test(`${filetype || ''}`)) return null;
+  if (!kindForFiletype(filetype)) return null;
+  return `${_K.module.desk}/wm/${COMPACT_SEGMENT}/${nid}/${hub_id}/${filetype}`;
 }
 
 /**
@@ -164,4 +184,4 @@ function parseCompactPath(path) {
   return { nid, hub_id, filetype, kind };
 }
 
-module.exports = { COMPACT_SEGMENT, toCompactUrl, parseCompactPath };
+module.exports = { COMPACT_SEGMENT, toCompactUrl, parseCompactPath, compactHash };

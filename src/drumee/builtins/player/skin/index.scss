@@ -29,6 +29,19 @@
       }
     }
 
+    // Tiled left over its workspace while that workspace is the active
+    // window: its file panel, kept over the pane so using the chat or the
+    // splitter beside it does not bury it (window/folder _syncFilePanels).
+    // Part of the workspace then, not a window left behind, so its header is
+    // not faded either (after the state rule above, which it overrides).
+    &[data-file-panel="1"] {
+      z-index: 10001 !important;
+
+      .player__header {
+        opacity: 1;
+      }
+    }
+
     &[data-minimize="1"],
     &[data-ready="0"] {
       display: none;

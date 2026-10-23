@@ -1,6 +1,7 @@
 
 const { captureUtm } = require('libs/campaign');
-const { arm: armHubDeepLink } = require('libs/hub-deep-link');
+const { arm: armHubDeepLink, clear: clearHubDeepLink } = require('libs/hub-deep-link');
+const contactInviteLink = require('libs/contact-invite-link');
 
 /**
  * Class representing the Welcome module.
@@ -37,6 +38,39 @@ class __welcome_router extends LetcBox {
       });
     }
     const path = Visitor.parseModule() || [];
+    // "Join Drumee" contact invitation (contact._joinLink). Kept until somebody
+    // is signed in, then the desk redeems it — whether they sign up, sign in,
+    // or were already signed in and are being forwarded to their own host.
+    // Emails sent before the link carried `contact_invite` put the token in the
+    // path instead (#/welcome/signup/<token>); those are still out there.
+    // parseModule also splits on ?/&, so a query arg (`email=…`, `ref=…`) can
+    // sit at path[2] — arm() refuses anything that is not token-shaped.
+    const _contactInvite = args.contact_invite
+      || (path[1] === 'signup' && path[2] ? String(path[2]) : '');
+    if (_contactInvite) contactInviteLink.arm(_contactInvite);
+    // "Open my desktop" contact invitation to an existing account
+    // (contact._acceptLink): answered by the desk, and only by the account it
+    // was sent to. Signed in as somebody else, that session is signed out first
+    // — once; markForced() keeps a later wrong-account sign-in from being
+    // thrown out again — and the sign-in page follows (Butler.logout restarts
+    // on the main domain; the intent itself waits on its shelf).
+    if (_contactInvite || args.contact_accept) {
+      if (args.contact_accept) contactInviteLink.armAccept(args.contact_accept, args.for);
+      // Armed ONCE per click: the invitation leaves the URL now. Left there,
+      // the same route mounting again after sign-in re-armed an intent the desk
+      // had just answered, and it then accepted the next invitation between
+      // the same two people at a later sign-in, with no click.
+      this._stripContactInviteArgs();
+    }
+    if (args.contact_accept) {
+      const _accept = contactInviteLink.peekAccept();
+      if (_accept && Visitor.isOnline() && Visitor.id !== _accept.for
+        && !_accept.forced && window.Butler && Butler.logout) {
+        contactInviteLink.markForced();
+        Butler.logout();
+        return;
+      }
+    }
     // Secure-share recipients who click Login / Sign up arrive with
     // ?return_to=<their share link>. Validate it (open-redirect guard) and, because
     // login here triggers a FULL PAGE RELOAD that wipes any in-memory state, PERSIST
@@ -71,9 +105,39 @@ class __welcome_router extends LetcBox {
       } catch (e) {
         _hubName = args.name || '';
       }
-      armHubDeepLink(args.hub_id, _hubName);
+      // The invitation token rides along (see libs/hub-deep-link): the login
+      // reload drops `this._inviteToken`, and without the token the desk would
+      // open a workspace the person was never added to.
+      armHubDeepLink(args.hub_id, _hubName, {
+        invite: args.invite || '',
+        action: args.invite_action || '',
+      });
     }
     this.route();
+  }
+
+  /**
+   * Drop the contact-invitation arguments from the current URL without a
+   * navigation (replaceState fires no hashchange, so nothing re-routes).
+   * `email` stays: it only prefills the sign-up form.
+   */
+  _stripContactInviteArgs() {
+    try {
+      const h = location.hash || '';
+      const qi = h.indexOf('?');
+      let route = qi < 0 ? h : h.slice(0, qi);
+      // Older Join Drumee emails: #/welcome/signup/<token>
+      route = route.replace(/^(#\/welcome\/signup)\/[^/?&]+$/, '$1');
+      const keep = (qi < 0 ? '' : h.slice(qi + 1)).split('&')
+        // `for` belongs to contact_accept here; other routes use it too
+        // (billing deep links), so it only goes together with it.
+        .filter((kv) => kv && !/^(contact_accept|contact_invite)=/.test(kv)
+          && !(/^for=/.test(kv) && /(^|[?&])contact_accept=/.test(h)));
+      const next = route + (keep.length ? `?${keep.join('&')}` : '');
+      if (next !== h) history.replaceState(history.state, '', location.pathname + location.search + next);
+    } catch (e) {
+      /* the intent is armed either way; a re-arm is also time-limited */
+    }
   }
 
   /**
@@ -357,21 +421,30 @@ class __welcome_router extends LetcBox {
    */
   async _redeemInviteThenEnter() {
     if (this._inviteToken) {
+      const token = this._inviteToken;
+      this._inviteToken = null;
+      let res = null;
       try {
-        const res = await this.postService('hub.accept_invite', {
-          token: this._inviteToken,
-        });
-        this._inviteToken = null;
-        if (res && res.hub_id) {
-          RADIO_BROADCAST.trigger("workspace:refresh");
-          location.hash = `${_K.module.desk}/wm/hub/?hub_id=${res.hub_id}`;
-          return;
-        }
+        res = await this.postService('hub.accept_invite', { token });
       } catch (e) {
-        this._inviteToken = null;
-        if (window.Wm && Wm.alert) {
-          Wm.alert(LOCALE.INVITE_LINK_INVALID);
-        }
+        res = null;
+      }
+      // Answered here: the desk must not answer it again from storage.
+      clearHubDeepLink();
+      const status = (res && res.status) || '';
+      if (res && res.hub_id && !status) {
+        RADIO_BROADCAST.trigger("workspace:refresh");
+        // The reveal route is what the desk itself uses to open a workspace
+        // (guest-join-open-workspace); `wm/hub/` was never a route.
+        location.hash =
+          `#/desk/wm/reveal/?hub_id=${res.hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
+        return;
+      }
+      if (window.Wm && Wm.alert) {
+        let msg = LOCALE.INVITE_LINK_INVALID;
+        if (status === 'SEAT_LIMIT_REACHED') msg = LOCALE.INVITE_SEAT_LIMIT_INVITEE || msg;
+        if (status === 'OVER_LIMIT') msg = LOCALE.OL_TOAST_INVITE || msg;
+        Wm.alert(msg);
       }
     }
     location.hash = _K.module.desk;

@@ -126,13 +126,6 @@ textarea {
   border-style: inset;
   outline: none;
 
-  &::-webkit-scrollbar {
-    height: 100%;
-    width: 3px;
-    max-height: 3px;
-    cursor: pointer;
-  }
-
   &:focus {
     border-color: var(--eblue);
     border-width: 1px;
@@ -234,12 +227,12 @@ textarea {
 
   &--thiner {
     &::placeholder {
-      font-family: var(--main-typo-light)
+      font-family: var(--font-main)
     }
 
     input {
       border-bottom: 2px solid #F1F1F6;
-      font-family: var(--main-typo-light)
+      font-family: var(--font-main)
     }
   }
 }

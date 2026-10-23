@@ -27,6 +27,20 @@ module.exports = function (ui) {
             sys_pn: 'priority',
             partHandler: ui,
           }),
+          // Bookmarked rows, pinned above the feed (newest first). Their copy
+          // in the feed below is hidden while they are pinned and comes back in
+          // place when they are unsaved. Filled by the panel's _renderPinned.
+          Skeletons.Box.Y({
+            className: `${pfx}__saved`,
+            sys_pn: 'saved',
+            partHandler: ui,
+          }),
+          // Bookmarked filter with nothing saved: the feed (and its own empty
+          // line) is hidden there, so this one speaks. Shown by the skin only.
+          Skeletons.Note({
+            className: `${pfx}__saved-empty`,
+            content: LOCALE.NO_BOOKMARKED_NOTIFICATIONS,
+          }),
           Skeletons.List.Smart({
             className: `${pfx}__list`,
             sys_pn: _a.list,

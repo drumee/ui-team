@@ -82,34 +82,11 @@
         // and each appearance grew the wrapper and shortened __body. It now
         // appears only when there are genuinely more files than fit.
         //
-        // The bar ws-list draws, which in Chrome is the ENGINE's scrollbar
-        // tinted by `scrollbar-color` — arrow buttons and all — not the
-        // ::-webkit- bar. Since Chrome 121 setting either standard property
-        // switches the element to the standard scrollbar and ignores the
-        // ::-webkit- block entirely, so these two lines are what is actually
-        // seen here; the ::-webkit- rules below are Safari's and Chrome <121's
-        // copy of the same colours.
-        //
-        // ui-core's `.list-smart__container` already sets `scrollbar-width` and
-        // a grey `scrollbar-color`; both are restated here so the strip takes
-        // the brand pair rather than that default.
+        // The app's one bar (router/skin/index.scss), restated because
+        // ui-core's horizontal smart list sets its own.
         scrollbar-width: thin;
-        scrollbar-color: var(--primary-70) var(--primary-10);
-
-        &::-webkit-scrollbar {
-          height: 10px;
-          // ui-core caps a horizontal smart list's bar at `max-height: 3px`.
-          max-height: none;
-        }
-
-        &::-webkit-scrollbar-track {
-          background: var(--primary-10);
-        }
-
-        &::-webkit-scrollbar-thumb {
-          background: var(--primary-70);
-          border-radius: 6px;
-        }
+        scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+          var(--scrollbar-track, transparent);
       }
     }
 
@@ -504,25 +481,6 @@ html[data-theme="dark"] {
     // the inner list area doesn't flash white during/after upload.
     .media-wrapper__ui {
       background-color: transparent !important;
-    }
-
-    // --primary-10 is defined once, as a light lavender, so the light-mode
-    // track would sit on the dark strip as a bright band. A translucent white
-    // gives the same "rail belongs to the thumb" reading against --normal-bg-90,
-    // and the thumb lifts to a step that is actually visible on it.
-    .smart-container {
-      // Unconditional, unlike the light-mode note's ::-webkit- rules: this is
-      // the property Chrome actually renders, so gating it on anything would
-      // leave the light lavender rail sitting on the dark strip.
-      scrollbar-color: var(--primary-30, #847eff) rgba(255, 255, 255, 0.12);
-
-      &::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.12);
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background: var(--primary-30, #847eff);
-      }
     }
 
     .media-grid {

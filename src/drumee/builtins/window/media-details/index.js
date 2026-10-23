@@ -3,7 +3,7 @@ const mfsInteract = require('../interact');
 
 /**
  * "Get info" details window for a regular file (spec 2026-06-10) — name,
- * type, size, dates, owner, location. Opened from the media context menu
+ * type, size, dates, who modified it last, location. Opened from the media context menu
  * (media/interact.js openDetailsWindow), singleton per node.
  */
 // This panel's own geometry. `height` is only the opening guess — the real
@@ -34,17 +34,27 @@ class __window_media_details extends mfsInteract {
   /**
    * Centre on the viewport, never off the top-left edge.
    *
-   * Skipped once an opener has placed this card itself — the document
-   * player parks it under its header (`_placeDetails`) and sets the flag.
-   * Without this, the re-centre at the end of `_fitToContent` would run on
-   * a later frame and drag the card back to the middle of the screen.
+   * Written to the element as well as the style model: the preset's
+   * `style` (the opener's geometry) is applied during render, and after
+   * that a `style.set` alone no longer moves the element — the card stayed
+   * wherever the window that opened it was.
+   *
+   * Centred on the size the card actually renders at, not on `this.size`:
+   * any CSS floor that wins over the inline size would otherwise shift it
+   * by half the difference. And `left`/`top` are relative to the windows
+   * layer, which sits below the desk top bar, so its offset is taken off.
    */
   _center() {
-    if (this._anchored) return;
-    this.style.set({
-      left: Math.max(0, Math.round((window.innerWidth - this.size.width) / 2)),
-      top: Math.max(0, Math.round((window.innerHeight - this.size.height) / 2)),
-    });
+    const el = this.el;
+    const rect = el && el.isConnected ? el.getBoundingClientRect() : null;
+    const width = (rect && rect.width) || this.size.width;
+    const height = (rect && rect.height) || this.size.height;
+    const parent = el && el.offsetParent;
+    const origin = parent ? parent.getBoundingClientRect() : { left: 0, top: 0 };
+    const left = Math.round(Math.max(0, (window.innerWidth - width) / 2) - origin.left);
+    const top = Math.round(Math.max(0, (window.innerHeight - height) / 2) - origin.top);
+    this.style.set({ left, top });
+    if (this.$el) this.$el.css({ left, top });
   }
 
   /**
@@ -102,23 +112,58 @@ class __window_media_details extends mfsInteract {
   }
 
   async onDomRefresh() {
-    // Refresh node attributes so size/dates are current; the preset copied
-    // from the grid item may be stale. Render from the local model on failure.
+    await this.refresh();
+    this.raise();
+    this.setupInteract();
+  }
+
+  /**
+   * Fetch the node again and redraw. Also called when Get info is asked for
+   * while this card is still up (media/interact.js openDetailsWindow): the WM
+   * only raises a singleton, so the card kept the dates of its first open and
+   * an edit made since did not show in Modified.
+   */
+  async refresh() {
+    // The preset copied from the grid item may be stale. Render from the
+    // local model on failure.
     try {
       const data = await this.fetchService(SERVICE.media.get_node_attr, {
         nid: this.mget(_a.nid),
         hub_id: this.mget(_a.hub_id),
+        modifier: 1,
       });
       if (data && !data.error) this.mset(data);
     } catch (e) {
       this.warn('media-details: get_node_attr failed', e);
     }
+    if (this.isDestroyed()) return;
     this.feed(require('./skeleton')(this));
     // One frame, so the rows the feed just queued are laid out and
     // `scrollHeight` reports the real content height rather than 0.
     requestAnimationFrame(() => this._fitToContent());
-    this.raise();
-    this.setupInteract();
+  }
+
+  /**
+   * Redraw when the server reports a new version of this file. An office save
+   * lands a few seconds after the editor closes (the document server waits for
+   * the last user to leave), so a card opened in between kept the old Modified
+   * until it was opened again.
+   */
+  handleWsEvent(args = {}) {
+    const { data, options = {} } = args || {};
+    const changes = [
+      SERVICE.media.replace,
+      SERVICE.media.save,
+      SERVICE.media.rotate,
+      SERVICE.media.rename,
+      'media.update',
+    ];
+    if (options.service && changes.includes(options.service)) {
+      const nid = `${this.mget(_a.nid)}`;
+      const rows = _.isArray(data) ? data : [data];
+      if (rows.some((r) => r && `${r.nid || r.id}` === nid)) this.refresh();
+    }
+    if (super.handleWsEvent) return super.handleWsEvent(args);
   }
 
   onUiEvent(cmd, args = {}) {

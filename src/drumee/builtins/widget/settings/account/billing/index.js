@@ -1,15 +1,20 @@
 const {
   canUpgradePlan, billingAvailable, planRank, planKey,
-  PROMO_YEARLY_PCT, promoYearlyEndsAt, promoYearlySecondsLeft, promoYearlyCountdown,
+  PROMO_YEARLY_PCT,
 } = require("libs/billing");
+const { copyToClipboard } = require("@drumee/ui-essentials");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
 const TAB_CHECKOUT = 2;
 
-// The September 2026 campaign's window, percentage and countdown all live in
-// libs/billing.js: this page and the promo_yearly modal both count the same
-// campaign down and must never disagree about it.
+// The campaign's advertised percentage lives in libs/billing.js, beside the
+// September window and countdown that only the promo_yearly modal still uses.
+
+// The campaign modal is OFF (Lexis, 2026-10-10: the 50%-off-yearly campaign
+// runs again with no end date, banners only, no popup). The modal and its
+// once-a-day throttle are kept intact so it can be switched back on here.
+const PROMO_YEARLY_MODAL = false;
 
 // Where the campaign modal records that it has been shown today.
 //
@@ -105,7 +110,6 @@ class settings_billing extends LetcBox {
     this.unbindEvent(_a.live);
     clearTimeout(this._motionTimer);
     clearTimeout(this._orgIdentTimer);
-    this._stopPromoCountdown();
     if (this._onVisibility) {
       document.removeEventListener("visibilitychange", this._onVisibility);
       this._onVisibility = null;
@@ -436,6 +440,14 @@ class settings_billing extends LetcBox {
     // implication local instead of resting on a check thirty lines away.
     if (!mirrorPlan) return;
     const lost = planKey(mirrorPlan);
+    // A disowned mirror is only a LOST plan when the entitlement now sits
+    // BELOW it. One superseded by a higher tier -- a hand-granted Business
+    // over an old Pro receipt, live on prod 2026-10-12 (Lexis) -- lost
+    // nothing, and offering the old tier back is a downgrade nobody asked
+    // for: every "Plan" click opened Checkout on Pro. That caller gets the
+    // plans grid, like anyone else with nothing to win back.
+    const held = String((this._subscription || {}).entitlement_plan || "");
+    if (planRank(held) >= planRank(lost)) return;
     // Neither end of the ladder is a purchase: free has no checkout, and
     // sovereign is sales-led.
     if (!/^(pro|team|business)$/.test(lost)) return;
@@ -1093,13 +1105,6 @@ class settings_billing extends LetcBox {
       case `${this.fig.family}__redeem-code-input`:
         this.__redeemCodeInput = child;
         break;
-      case `${this.fig.family}__promo-countdown`:
-        // Re-point at the freshly rendered chip (the old one's node is gone)
-        // and make sure exactly one interval is running — _startPromoCountdown
-        // is a no-op when it already is.
-        this.__promoCountdown = child;
-        this._startPromoCountdown();
-        break;
         // case `${this.fig.family}__checkout-storage-input`:
         //   this._setupInputChangeListener(child, "storage");
         //   this._restoreInputFocus(child, "storage");
@@ -1460,15 +1465,17 @@ class settings_billing extends LetcBox {
   }
 
   /**
-   * Is the September 50%-off-yearly campaign both LIVE and actually honoured?
+   * Is the 50%-off-yearly campaign actually honoured by the catalog?
    *
-   * Two independent gates, and the catalog one is the important half: the
-   * banner claims a specific number ("50% OFF YEARLY PLAN", and the ticket
-   * artwork has "50%" baked into it), so it may only appear once Stripe is
-   * really giving at least that much. Before the prices are changed the page
-   * simply shows no banner instead of a false one; after they are restored it
-   * disappears on its own. The date is the backstop that retires the campaign
-   * even if the prices are left in place.
+   * The banner claims a specific number ("50% OFF YEARLY PLAN", and the ticket
+   * artwork has "50%" baked into it), so it may only appear while Stripe is
+   * really giving at least that much. Without the discounted prices the page
+   * simply shows no banner instead of a false one; once they are restored it
+   * disappears on its own.
+   *
+   * No date gate any more. It ran for September 2026 only; Lexis (2026-10-10)
+   * brought it back as an open-ended campaign, so the catalog is now the ONE
+   * switch — the campaign ends when the yearly prices go back up.
    *
    * Until the catalog lands, _catPrice() answers from its offline fallback map
    * (the standing 10x prices), which scores 16% — so the first paint of a
@@ -1477,26 +1484,7 @@ class settings_billing extends LetcBox {
    * @returns {boolean}
    */
   _promoYearlyActive() {
-    if (Math.floor(Date.now() / 1000) >= promoYearlyEndsAt()) return false;
     return this._yearlySavingPct() >= PROMO_YEARLY_PCT;
-  }
-
-  /**
-   * Whole seconds left in the campaign, floored at 0.
-   * @returns {number}
-   */
-  _promoSecondsLeft() {
-    return promoYearlySecondsLeft();
-  }
-
-  /**
-   * The countdown chip's text — "21 DAYS 06:48:00" (Figma 692-128029).
-   * Drops the day count entirely on the last day rather than printing
-   * "0 DAYS", which reads as an expired offer.
-   * @returns {string}
-   */
-  _promoCountdownText() {
-    return promoYearlyCountdown();
   }
 
   /**
@@ -1553,6 +1541,7 @@ class settings_billing extends LetcBox {
    *    hold, which is the one thing it is not.
    */
   async _maybeShowPromoYearly() {
+    if (!PROMO_YEARLY_MODAL) return;
     if (this.isDestroyed()) return;
     if (!this._promoYearlyActive()) return;
     if (!this._mayCheckout()) return;
@@ -1591,51 +1580,6 @@ class settings_billing extends LetcBox {
     this.tab = TAB_YEARLY;
     this._armMotion();
     this.renderContent();
-  }
-
-  /**
-   * Drive the countdown chip once a second.
-   *
-   * ONE interval for the whole widget lifetime, never one per render: every
-   * surface on this page is rebuilt by a full feed() (the catalog landing, a
-   * WS plan_updated, a tab switch), so the chip is destroyed and recreated
-   * constantly and starting a timer per part would stack them silently.
-   * onPartReady just re-points _promoCountdown at the live part.
-   */
-  _startPromoCountdown() {
-    if (this._promoTimer) return;
-    this._promoTimer = setInterval(() => this._tickPromoCountdown(), 1000);
-  }
-
-  _stopPromoCountdown() {
-    clearInterval(this._promoTimer);
-    this._promoTimer = null;
-  }
-
-  /**
-   * One tick. Stops itself whenever the chip is no longer on screen (the
-   * Checkout tab, or any render that dropped the banner) so a hidden page
-   * costs nothing; onPartReady starts it again when the chip comes back.
-   */
-  _tickPromoCountdown() {
-    const part = this.__promoCountdown;
-    // isConnected, not a stored flag: the part object outlives its DOM node
-    // across a re-render, and the node is the only thing that knows.
-    if (this.isDestroyed() || !part?.el?.isConnected) {
-      this._stopPromoCountdown();
-      return;
-    }
-    // The campaign ran out while the page sat open. Re-render once so the
-    // banner and the tab badge go with it, rather than freezing on 00:00:00.
-    if (!this._promoYearlyActive()) {
-      this._stopPromoCountdown();
-      this.__promoCountdown = null;
-      this.fetchPlanData();
-      return;
-    }
-    const { promoCountdownNote } = require("./skeleton");
-    if (typeof part.softClear === "function") part.softClear();
-    part.feed(promoCountdownNote(this));
   }
 
   /**
@@ -1787,45 +1731,101 @@ class settings_billing extends LetcBox {
 
   // Map an org-ident validation status to its user-facing message.
   /**
-   * Open the user's mail client addressed to sales.
+   * Hand a sales-led enquiry over to the user's mail, whichever one it is.
    *
    * The sales-led plans have no checkout to enter, so their CTA has to hand
-   * the conversation over. It used to show the address in an alert, which left
-   * the user to copy it out by hand to do the very thing the button offered.
-   * The subject carries the plan so the enquiry arrives already identified.
+   * the conversation over. The subject carries the plan so the enquiry
+   * arrives already identified.
    *
-   * mailto is opened via location.assign rather than window.open: a popup
-   * blocker silently swallows the latter when the click has already been
-   * through a confirm dialog, and the user is left thinking nothing happened.
+   * It used to fire a bare mailto, which could dead-end with no way to tell:
+   * on Windows the OS app picker offers Chrome and Edge next to Outlook, and
+   * either browser opens an empty window unless a web mail is registered as
+   * its mailto handler (reported 2026-10-06). The window still lost focus,
+   * so the no-mail-client fallback believed the hand-off had worked. Offer
+   * the routes instead — Gmail and Outlook.com by their own compose URLs, the
+   * mail app by mailto, and the address to copy — see skeleton/sales-mail.
    */
   _openSalesMail(plan) {
     const to = LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org";
     const planName = String(plan || "").replace(/^./, (c) => c.toUpperCase());
     const subject = (LOCALE.MAIL_SALES_SUBJECT || "Drumee {0} plan enquiry")
       .format(planName);
-    // mailto: NEVER throws — a machine with no mail client just does
-    // nothing, silently (reported 2026-07-29: "click ... không mở email").
-    // The only observable difference is focus: a mail app taking over blurs
-    // this window. Fire the mailto, and if we still own the focus a moment
-    // later, show the address instead so the path is never a dead end.
-    let handed_off = false;
-    const onBlur = () => { handed_off = true; };
-    try { window.addEventListener("blur", onBlur, { once: true }); } catch (e) { /* old UA */ }
-    try {
-      window.location.assign(
-        `mailto:${to}?subject=${encodeURIComponent(subject)}`
-      );
-    } catch (e) { /* fall through to the address fallback */ }
-    setTimeout(() => {
-      try { window.removeEventListener("blur", onBlur); } catch (e) { /* noop */ }
-      if (handed_off || document.visibilityState === "hidden") return;
-      if (Wm && Wm.alert) {
-        Wm.alert(
-          (LOCALE.CONTACT_SALES_VIA || "Please contact our sales team via {0}")
-            .format(to)
-        );
-      }
-    }, 1200);
+    this._salesMail = { to, subject };
+    if (!Wm || !Wm.alert) return this._salesMailAction("sales-mail-app");
+    const { salesMailBody } = require("./skeleton/sales-mail");
+    // `kind` set so alert feeds the object verbatim (variant + actions)
+    // instead of wrapping it as a plain body.
+    Wm.alert({
+      kind: "window_info",
+      variant: "notice",
+      message: salesMailBody(this, this._salesMail),
+      actions: [
+        { label: LOCALE.CLOSE, priority: "secondary", service: _e.close },
+      ],
+    }).then((card) => this._blurBehindSalesMail(card));
+  }
+
+  /**
+   * Frost the page behind the Contact sales card, the same glass the
+   * request-access and create-folder modals use.
+   *
+   * Wm.alert takes no backdrop, so the host's `data-overlay` is set here —
+   * and taken off again when the card goes, whichever way it goes (Close, a
+   * web mail picked, replaced by another modal). The host is SHARED: a value
+   * left behind would frost the desk behind the next card, which never asked
+   * for it. Stamped with the same `overlaySeq` owner counter Wm.confirm uses,
+   * so a card that has already been replaced clears nothing.
+   */
+  _blurBehindSalesMail(card) {
+    if (!card || !card.fig || card.fig.family !== "window-info") return;
+    if (!_.isFunction(Wm.ensurePart)) return;
+    Wm.ensurePart("wrapper-modal").then((host) => {
+      if (!host || !host.el || card.isDestroyed()) return;
+      const seq = String(~~host.el.dataset.overlaySeq + 1);
+      host.el.dataset.state = "open";
+      host.el.dataset.overlay = "blur";
+      host.el.dataset.overlaySeq = seq;
+      card.once("destroy", () => {
+        if (host.el && host.el.dataset.overlaySeq === seq) {
+          host.el.dataset.overlay = "";
+          delete host.el.dataset.overlaySeq;
+        }
+      });
+    });
+  }
+
+  /**
+   * One of the "Contact sales" dialog's options. The web mails open in a new
+   * tab and close the dialog. The mail app leaves it up: if that hand-off is
+   * the one that dead-ends, the other routes are still on screen.
+   *
+   * window.open / location.assign run inside the click, so a popup blocker
+   * lets them through.
+   */
+  _salesMailAction(service, cmd) {
+    const mail = this._salesMail;
+    if (!mail) return;
+    const to = encodeURIComponent(mail.to);
+    const subject = encodeURIComponent(mail.subject);
+    const openTab = (url) => {
+      window.open(url, "_blank", "noopener,noreferrer");
+      if (Wm && Wm.alert) Wm.alert(null);
+    };
+    switch (service) {
+      case "sales-mail-gmail":
+        return openTab(`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}`);
+      case "sales-mail-outlook":
+        return openTab(`https://outlook.live.com/mail/0/deeplink/compose?to=${to}&subject=${subject}`);
+      case "sales-mail-app":
+        try {
+          window.location.assign(`mailto:${mail.to}?subject=${subject}`);
+        } catch (e) { /* the address stays on screen */ }
+        return;
+      case "sales-mail-copy":
+        copyToClipboard(mail.to);
+        if (cmd && cmd.set) cmd.set(_a.content, LOCALE.COPIED || "Copied");
+        return;
+    }
   }
 
   // `data` is the whole checkout response, optional — only
@@ -2682,6 +2682,13 @@ class settings_billing extends LetcBox {
       // address in an alert) is the same one the Sovereign CTA already has.
       case "contact-sales":
         this._openSalesMail(LOCALE.ENTERPRISE || "enterprise");
+        return false;
+
+      case "sales-mail-gmail":
+      case "sales-mail-outlook":
+      case "sales-mail-app":
+      case "sales-mail-copy":
+        this._salesMailAction(service, cmd);
         return false;
 
       case "manage-billing":

@@ -14,7 +14,53 @@ const FILTER_TABS = [
   { label: LOCALE.OTHER, value: "other" },
 ];
 
+// The secure-share recipient grid (sharebox desk-content) gets the desk folder
+// window's toolbar: a pill track holding the five filters, then the share's own
+// "+ Add new" / Upload / Download and the group | list | grid toggle on the same
+// row (toolkit fileFilterControls, minus the hub-wide search a recipient must not
+// reach). Any other DMZ use of this window manager keeps the plain bar below.
+function _toolbar(_ui_, sharebox) {
+  const fam = _ui_.fig.family;
+  const { fileViewToggle } = require("../../../../builtins/window/skeleton/toolkit/index");
+  const { dmzFileActions } = require("../../sharebox/skeleton/desk-content");
+  const current = _ui_._filterType || "all";
+  return Skeletons.Box.X({
+    className: `${fam}__filter-bar ${fam}__toolbar`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${fam}__filter-track`,
+        kids: FILTER_TABS.map((tab) =>
+          button(_ui_, {
+            label: tab.label,
+            className: `${fam}__filter-tab`,
+            service: "filter-by-type",
+            state: tab.value === current ? 1 : 0,
+            radiotoggle: `media-filter-${_ui_.cid}`,
+            value: tab.value,
+          }),
+        ),
+      }),
+      Skeletons.Box.X({
+        className: `${fam}-topbar__file-controls`,
+        kids: [
+          dmzFileActions(sharebox),
+          fileViewToggle(_ui_, {
+            namedState: true,
+            modes: [
+              { mode: "group", ico: "app-tree-view" },
+              { mode: "list", ico: "view-list" },
+              { mode: "grid", ico: "view-grid" },
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 function _filter_bar(_ui_) {
+  const sharebox = _ui_.shareboxDesk && _ui_.shareboxDesk();
+  if (sharebox) return _toolbar(_ui_, sharebox);
   const cnFilter = "window-filter";
   return Skeletons.Box.X({
     className: `${cnFilter}__bar ${_ui_.fig.family}__filter-bar`,
@@ -29,6 +75,31 @@ function _filter_bar(_ui_) {
         value: tab.value,
       }),
     ),
+  });
+}
+
+/**
+ * What the list header part holds for a view mode: the desk folder window's
+ * column header (window/skeleton/content/row) in list mode, with the desk's
+ * class root so its styles apply; nothing otherwise. Fed again by dmz/wm
+ * _toggleFilesLayout — a Box sets its display inline, so CSS cannot hide it.
+ */
+export function listHeaderKids(_ui_, mode) {
+  if (mode !== _a.row) return [];
+  const { listHeader } = require("../../../../builtins/window/skeleton/content/row");
+  return [listHeader(_ui_, { group: "window", selectAll: false, uiHandler: [_ui_] })];
+}
+
+// List view's column header part. Secure-share recipient view only, the one
+// with the group | list | grid toggle.
+function _list_header(_ui_) {
+  if (!(_ui_.shareboxDesk && _ui_.shareboxDesk())) return null;
+  const mode = (_ui_.getViewMode && _ui_.getViewMode()) || _a.icon;
+  return Skeletons.Box.Y({
+    className: `${_ui_.fig.family}__list-header`,
+    sys_pn: "list-header",
+    dataset: { viewMode: mode },
+    kids: listHeaderKids(_ui_, mode),
   });
 }
 
@@ -94,6 +165,7 @@ function _desk_content(_ui_) {
     },
     kids: [
       _filter_bar(_ui_),
+      _list_header(_ui_),
       _icons_list(_ui_),
       { kind: "selection", sys_pn: "ref-selection" },
 
@@ -115,7 +187,7 @@ function _desk_content(_ui_) {
         className: `${_ui_.fig.family}__wrapper-modal`,
         name: "modal",
       }),
-    ],
+    ].filter(Boolean),
   });
 }
 

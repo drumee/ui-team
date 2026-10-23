@@ -25,9 +25,13 @@ const DELEGATED_SERVICES = [
 const { loadPdfDocument, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const { openSelectionDocument } = require('./selection')
 const { applyLivePrivilege, hasWriteBit } = require('window/live-privilege');
+const pendingFocus = require('builtins/editor/pending-focus');
 const WS_EVENT = "ws:event";
 const EDITOR_READY_FALLBACK_MS = 2500;
 const EDITOR_READY_EVENTS = new Set(['onDocumentReady', 'onAppReady', 'docEditorReady']);
+// Longest a closing editor window waits on its save request (see goodbye). The
+// service holds its reply up to 4 s for the save to land.
+const FLUSH_WAIT_MS = 5000;
 
 // hub.set_privilege is supplied by the backend service map (Platform.get
 // ('services')), not by the local lex/services.json placeholder — see
@@ -39,6 +43,8 @@ const SVC_SET_PRIVILEGE =
 
 // How long the "your role changed" notice stays up before it dismisses itself.
 const ROLE_NOTICE_MS = 5000;
+/** How long the "could not save" notice stays up after a close. */
+const SAVE_NOTICE_MS = 15000;
 // A user can have the same document open in several windows, and every one of
 // them hears the privilege push. The notice is about the account, not the
 // document, so it is shown once per change — module scope, not instance.
@@ -110,8 +116,10 @@ class __player_document extends PlayerInteract {
    */
   onBeforeDestroy() {
     // The Details card is a separate WM window, so closing the player would
-    // otherwise leave it orphaned over the desk.
-    details.close(this);
+    // otherwise leave it orphaned over the desk. A window that closed through
+    // goodbye already did this when it was closed: by now the user may have
+    // opened the same file's card again from the folder.
+    if (!this._closing) details.close(this);
     if (this.loader && _.isFunction(this.loader.isDestroyed)) {
       this.loader.destroy();
       this.loader = null;
@@ -869,13 +877,24 @@ class __player_document extends PlayerInteract {
       const _ot = this.mget('owner_edit_token');
       if (_ot) url += `&otoken=${encodeURIComponent(_ot)}`;
     }
+    // Opened from a "<A> commented on <file>" notification: the editor opens
+    // ON that comment (its editorConfig.actionLink). Any other open carries no
+    // comment, so its URL is byte-identical.
+    const focus = pendingFocus.take(nid) || pendingFocus.take(this.mget(_a.nid));
+    if (focus && focus.comment_guid) url += `&comment=${encodeURIComponent(focus.comment_guid)}`;
 
     this._editorOrigin = new URL(url).origin;
     this._editorReady = false;
     this._onEditorMessage = (e) => {
-      if (this._editorReady) return;
       if (this._editorOrigin && e.origin !== this._editorOrigin) return;
       const data = e.data;
+      // The editor page names its document-server session key as it loads;
+      // goodbye() hands it to the flush so the save is addressed for sure.
+      if (data && data.type === 'drumee-editor-key' && data.key) {
+        this._editorKey = String(data.key);
+        return;
+      }
+      if (this._editorReady) return;
       const ev = (data && (data.event || data.type)) || data;
       if (EDITOR_READY_EVENTS.has(ev)) {
         this._hideEditorProgress();
@@ -964,6 +983,59 @@ class __player_document extends PlayerInteract {
     } catch (e) {
       if (this.warn) this.warn('[document] read-only reload failed', e && e.message);
     }
+  }
+
+  /**
+   * Close, asking the editor to save first. Otherwise the document server hands
+   * the file back 5 s after the last user leaves (its savetimeoutdelay), so Get
+   * info opened right after closing showed the old version. The window goes at
+   * once, but its editor stays connected until the save has landed (the service
+   * replies then): the document server drops a save whose session has emptied.
+   */
+  goodbye(...args) {
+    if (this._closing) return;
+    const svc = this._flushService();
+    if (!svc) return super.goodbye(...args);
+    this._closing = true;
+    details.close(this);
+    this.el.style.visibility = 'hidden';
+    const { nid, hub_id } = this.actualNode();
+    const payload = { nid, hub_id };
+    if (this._editorKey) payload.key = this._editorKey;
+    const waited = new Promise((r) => setTimeout(r, FLUSH_WAIT_MS));
+    Promise.race([this.postService(svc, payload).catch(() => null), waited])
+      .then((reply) => {
+        // No reply (network, or the wait ran out): the document server still
+        // saves on its own delay. An explicit "not saved" is the one answer to
+        // pass on, so the user reopens and presses Save instead of trusting it.
+        if (reply && reply.saved === false) this._showSaveFailedNotice();
+        if (!this.isDestroyed()) super.goodbye(...args);
+      });
+  }
+
+  /** The close-save did not reach the file: say so, once, after the window went. */
+  _showSaveFailedNotice() {
+    Wm.info({
+      message: LOCALE.DOC_SAVE_FAILED,
+      variant: 'notice',
+      dismiss_after: SAVE_NOTICE_MS,
+      actions: [
+        {
+          label: LOCALE.CLOSE,
+          priority: 'primary',
+          // No uiHandler: the toast window closes itself.
+          service: _e.close,
+        },
+      ],
+    });
+  }
+
+  /** The editor's flush service, while this window edits a desk document. */
+  _flushService() {
+    if (this.mget(_a.mode) !== _a.edit || Visitor.inDmz) return null;
+    const editor = Platform.get('doc_editor');
+    const ns = editor && SERVICE[editor];
+    return (ns && ns.flush) || null;
   }
 
   _cleanupEditorListeners() {

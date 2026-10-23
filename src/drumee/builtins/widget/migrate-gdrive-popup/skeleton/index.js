@@ -12,6 +12,7 @@
 // renders nothing. Same note as modules/desk/breadcrumb/item/skeleton, which
 // is the block this one is modelled on.
 const folderArt = require('media/grid/template/folder');
+const { errorText, progressOf, summaryOf } = require('libs/gdrive-sa-import');
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -328,13 +329,6 @@ module.exports = function (ui) {
     const saF = ui.getSaFolder && ui.getSaFolder();
     const saErr = ui.getSaError && ui.getSaError();
     const checking = !!(ui.isSaChecking && ui.isSaChecking());
-    const ERR_TEXT = {
-      SA_NOT_SHARED: LOCALE.GDRIVE_SA_NOT_SHARED,
-      SA_NOT_OWNER: LOCALE.GDRIVE_SA_NOT_OWNER,
-      SA_NEEDS_GOOGLE: LOCALE.GDRIVE_SA_NEEDS_GOOGLE,
-      SA_BAD_LINK: LOCALE.GDRIVE_SA_BAD_LINK,
-      SA_NOT_A_FOLDER: LOCALE.GDRIVE_SA_NOT_A_FOLDER,
-    };
     // Two steps, each one label over its control.
     //
     // THE NUMBER IS IN THE LABEL, not in a disc beside it. This screen used
@@ -407,6 +401,7 @@ module.exports = function (ui) {
               placeholder: LOCALE.GDRIVE_SA_LINK_PLACEHOLDER,
               mode: 'commit',
               service: 'gdrive-sa-verify',
+              value: (saF && saF.raw) || '',
               uiHandler: [ui],
               // Right-click must give the browser's own Cut/Copy/Paste menu:
               // without this the handler walks up to the desk/home manager,
@@ -428,7 +423,7 @@ module.exports = function (ui) {
         (saErr && !checking) ? Skeletons.Note({
           className: `${pfx}__sa-status`,
           dataset: { kind: 'error' },
-          content: ERR_TEXT[saErr] || LOCALE.GDRIVE_SA_NOT_SHARED,
+          content: errorText(saErr),
         }) : null,
         ]),
         // SA-only: this is the popup's main screen, so there's no "Back"
@@ -507,21 +502,7 @@ module.exports = function (ui) {
     // Figma 1640:83630 — "Migrating files…": keep-open note, progress bar,
     // "X of Y files" + %, rolling per-file list with status chips, and a
     // full-width primary Cancel.
-    const total = snap.total_files || 0;
-    const done = snap.processed_files || 0;
-    // Byte-weighted when the worker reports sizes: the bar then moves while a
-    // big file is still downloading instead of jumping only when it lands.
-    // Held under 100 until every file is counted done.
-    const bytesTotal = snap.bytes_total || 0;
-    const bytesSeen = Math.min(bytesTotal, (snap.bytes_done || 0) + (snap.bytes_in_flight || 0));
-    let pct;
-    if (total > 0 && done >= total) {
-      pct = 100;
-    } else if (bytesTotal > 0) {
-      pct = Math.min(99, Math.round((bytesSeen / bytesTotal) * 100));
-    } else {
-      pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
-    }
+    const { pct, done, total, bytesSeen, bytesTotal } = progressOf(snap);
     const { filesize } = require('@drumee/ui-essentials');
     const countLabel = (LOCALE.MIGRATION_PROGRESS_X_OF_Y || '{0} of {1} files')
       .replace('{0}', done).replace('{1}', total || '?')
@@ -608,18 +589,23 @@ module.exports = function (ui) {
     const accessRevoked = isFailed && snap.failed_reason === 'ACCESS_REVOKED';
     // Summary per Figma 1645:86388/86966: base sentence + errors fragment,
     // the fragment turning red when > 0.
+    const { skipped, failures, processed, existing } = summaryOf(snap);
+    // Files left alone because the destination already had them are not
+    // "imported" — counted as such, a re-run of the same file said "Imported
+    // 1 files" while nothing new appeared in the folder.
+    const summaryExisting = existing
+      ? (LOCALE.MIGRATE_GDRIVE_SUMMARY_EXISTING || '{0} already existed, skipped.').replace('{0}', existing)
+      : '';
     const summaryBase = (LOCALE.MIGRATE_GDRIVE_SUMMARY_BASE || 'Imported {0} files in {1} folders.')
-      .replace('{0}', snap.processed_files || 0)
-      .replace('{1}', snap.total_folders || 0);
+      .replace('{0}', processed)
+      .replace('{1}', snap.total_folders || 0)
+      + (summaryExisting ? ` ${summaryExisting}` : '');
     // Not every entry in `errors` is a failure. The importer reports skipped
     // items through the same channel — a Drive SHORTCUT is deliberately not
     // followed, and a real run of a shared folder produced 30 of them against
     // 140 imported files. Counting those as "30 errors" told the user their
     // migration was broken when nothing was lost, so the two are separated and
     // only genuine failures are coloured as errors.
-    const SKIP_CODES = ['SHORTCUT_SKIPPED'];
-    const skipped = errors.filter((e) => SKIP_CODES.includes(e.code));
-    const failures = errors.filter((e) => !SKIP_CODES.includes(e.code));
     const summaryErr = failures.length
       ? (LOCALE.MIGRATE_GDRIVE_SUMMARY_ERRORS || '{0} errors.').replace('{0}', failures.length)
       : (skipped.length
@@ -663,7 +649,7 @@ module.exports = function (ui) {
       const g = groups.find((x) => x.reason === reason);
       const name = e.file || e.folder || '?';
       if (g) g.items.push(name);
-      else groups.push({ reason, items: [name], isFailure: !SKIP_CODES.includes(e.code) });
+      else groups.push({ reason, items: [name], isFailure: !skipped.includes(e) });
     });
 
     const errorList = groups.length ? Skeletons.Box.Y({
@@ -694,9 +680,19 @@ module.exports = function (ui) {
       body = Skeletons.Box.Y({
         className: `${pfx}__body ${pfx}__body--result ${pfx}__body--done`,
         kids: [
+          // "Your files have been imported" is false when nothing new landed
+          // (all already there, or all failed); the summary below says why.
           hero('apps-check-circle', `${pfx}__hero--success`,
             LOCALE.MIGRATION_DONE_TITLE || 'Migration complete!',
-            LOCALE.MIGRATE_GDRIVE_DONE_HINT),
+            processed
+              ? LOCALE.MIGRATE_GDRIVE_DONE_HINT
+              : (LOCALE.MIGRATE_GDRIVE_DONE_HINT_NONE || 'No new files were imported.')),
+          // Cancel was pressed, but the job had already finished.
+          ui._cancelLate ? Skeletons.Note({
+            className: `${pfx}__summary ${pfx}__cancel-late`,
+            content: LOCALE.MIGRATE_GDRIVE_CANCEL_TOO_LATE
+              || 'The migration had already finished before it could be cancelled.',
+          }) : null,
           Skeletons.Box.Y({
             className: `${pfx}__dest-block`,
             kids: [

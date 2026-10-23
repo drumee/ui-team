@@ -113,17 +113,26 @@
   &__body[data-phase="precall"],
   &__body[data-phase="ended"] {
     background-color: #ffffff;
-    padding: 0;
+    padding: var(--spacer-6) 0;
     gap: 0;
     min-height: 0;
+    // Identity, status line and actions read as ONE group, centred
+    // vertically in the panel (the stage used to grow and pin the footer to
+    // the bottom, leaving a gap between the name and "Incoming call").
+    justify-content: center;
   }
 
   // ── Identity panel (pre-call + terminal) ────────────────────────────────
   &__precall-stage {
-    flex: 1;
+    // Sized by its content (may still shrink in a short window), not by the
+    // free space.
+    flex: 0 1 auto;
     min-height: 0;
     box-sizing: border-box;
-    padding: var(--spacer-8) 0;
+    // Room for the 16px ringing pulse (drumee-call-pulse): the stage clips
+    // (overflow: hidden below), so without it the ring is cut flat at the top.
+    // Symmetric, so the group stays centred.
+    padding: var(--spacer-5) 0;
     align-items: center;
     justify-content: center;
   }
@@ -235,8 +244,8 @@
     flex-shrink: 0;
     box-sizing: border-box;
     width: 100%;
-    padding: var(--spacer-5) var(--spacer-6) var(--spacer-9);
-    justify-content: flex-end;
+    padding: var(--spacer-6) var(--spacer-6) var(--spacer-5);
+    justify-content: flex-start;
     align-items: center;
     gap: var(--spacer-7);
   }
@@ -550,28 +559,30 @@
     height: 99px;
     max-height: none;
     margin: -115px var(--spacer-5) var(--spacer-5) 0;
+
+    // 99px tall: a 72px avatar plus the ~24px name pill cannot both fit, and
+    // the pill sat on top of a clipped circle. Cap the avatar at 44% of the
+    // tile and lift it clear of the pill.
+    .participants-manager__ui .user-profile__ui {
+      width: min(44cqh, 44px) !important;
+      height: min(44cqh, 44px) !important;
+      margin-bottom: 28px !important;
+    }
   }
 
   .participants-manager__ui {
     background-color: #ffffff;
 
-    .endpoint-local,
-    .remote-user {
-      border-radius: var(--corner-radius-5);
-    }
-
     // Figma "meeting frame": the two participants sit SIDE BY SIDE — two
-    // columns, one row. The shared meeting shell stacks a two-person call
-    // vertically (`[data-remote="2"]` → 1 column / 2 rows), which is the team
-    // meeting's intent but not the 1:1 call's.
+    // columns, one row, whatever the window's shape.
     //
-    // Safe to do in plain CSS: participants/index.js CLEARS its inline
-    // gridTemplate* whenever there are <= 2 tiles (the `items <= 2` branch of
-    // responsive()), so nothing inline outranks this. Only 3+ participants get
-    // an inline grid, and a 1:1 call never has them.
+    // participants/index.js responsive() writes an inline grid-template for
+    // every tile count (area per tile → roughly square cells), which in a tall
+    // window stacks two tiles. The 1:1 call always wants them side by side,
+    // hence !important to beat the inline style.
     &[data-mode="normal"][data-remote="2"] {
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr;
+      grid-template-columns: 1fr 1fr !important;
+      grid-template-rows: 1fr !important;
     }
   }
 
@@ -678,7 +689,7 @@
     }
 
     .window-connect__precall-footer {
-      padding: var(--spacer-4) var(--spacer-5) var(--spacer-7);
+      padding: var(--spacer-4) var(--spacer-5) var(--spacer-5);
       gap: var(--spacer-6);
     }
 
@@ -723,25 +734,28 @@
   // fitting between header and footer. Shrink the avatar and tighten the
   // vertical rhythm rather than letting the footer get pushed out of view.
   &__ui[data-short="1"] {
-    .window-connect__precall-stage {
-      padding: var(--spacer-5) 0;
-    }
-
+    // 24px, not 16: the 16px pulse ring would otherwise reach the name.
     .window-connect__identity {
-      gap: var(--spacer-5);
+      gap: var(--spacer-6);
     }
 
     .window-connect__precall-footer {
-      padding: var(--spacer-4) var(--spacer-6) var(--spacer-6);
+      padding: var(--spacer-4) var(--spacer-6) var(--spacer-5);
       gap: var(--spacer-5);
     }
 
+    // The ROOT shrinks with the circle: sizing only the children left an 88px
+    // circle in the top-left corner of the 120px box — off the name's centre
+    // line, with a gap below it.
     .window-connect__avatar.user-profile {
+      width: 88px;
+      height: 88px;
+
       .user-profile__icon,
       .user-profile__main,
       .user-profile__initiales {
-        width: 88px;
-        height: 88px;
+        width: 100%;
+        height: 100%;
       }
 
       .user-profile__initiales .note-content {

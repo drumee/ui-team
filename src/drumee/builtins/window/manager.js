@@ -777,11 +777,22 @@ class __window_manager extends mfsInteract {
       return;
     }
 
-    this.getWindowsPool().append({
+    // Load the kind BEFORE appending, as launch()'s explicit path does. Appended
+    // cold, window_downloader mounts ui-core's lazy placeholder, which swaps
+    // itself out with View.renew(): collection.remove() then add(). On a layer
+    // with sortWithCollection:false a remove-only update re-appends EVERY
+    // child (Marionette: `_addedViews = changes.added.length && …` is 0, so
+    // `_renderChildren` falls back to all views) — and while a workspace is
+    // open that layer holds the docked pane, so its split body was detached
+    // and re-inserted: entrance animations replayed, scroll reset. Only on the
+    // first download of a session; afterwards the kind is cached.
+    const item = {
       kind: "window_downloader",
       token: this.mget(_a.token),
       nodes: s,
-    });
+    };
+    const append = () => this.getWindowsPool().append(item);
+    Promise.resolve(Kind.waitFor(item.kind)).then(append, append);
   }
 
   /**
@@ -1451,6 +1462,19 @@ class __window_manager extends mfsInteract {
           return;
         }
 
+        // One viewer per picture: clicking an image whose viewer is already
+        // ON SCREEN (or minimised to the dock) raises it instead of cascading
+        // a second copy. Only a visible one counts — a viewer docked into a
+        // folder's Files column is hidden while that folder shows another tab
+        // (window/frame.js), and raising it would be a click that shows
+        // nothing, so that case opens a fresh viewer exactly as before.
+        if (fType === _a.image && this._imageViewerShown(media)) {
+          if (this.checkAlreadyOpened(media)) {
+            if (_.isFunction(media.wait)) media.wait(0);
+            return;
+          }
+        }
+
         if (fType == _a.audio) {
           let w = this.getItemByKind("audio_player");
           if (w) {
@@ -1500,6 +1524,20 @@ class __window_manager extends mfsInteract {
    * @param {*} media
    * @returns
    */
+  /**
+   * An image viewer for this file is open AND visible (or parked in the dock,
+   * which checkAlreadyOpened wakes).
+   */
+  _imageViewerShown(media) {
+    const pool = this.getWindowsPool();
+    if (!pool || !pool.children) return false;
+    const w = pool.children.find((r) => r.mget(_a.nid) == media.mget(_a.nid));
+    if (!w || (w.isDestroyed && w.isDestroyed()) || !w.el) return false;
+    if (w.mget(_a.kind) === "window_folder") return false;
+    if (w.mget(_a.minimize)) return true;
+    return w.el.getClientRects().length > 0;
+  }
+
   checkAlreadyOpened(media) {
     let w = this.getWindowsPool().children.find(
       (r) => r.mget(_a.nid) == media.mget(_a.nid),
@@ -2021,10 +2059,41 @@ class __window_manager extends mfsInteract {
   }
 
   /**
+   * Is anything the user is looking at living outside windowsLayer?
+   *
+   * newVersion used to read an empty windowsLayer as "nothing open" and reload
+   * on the spot. Since the docked workspace, files open into headlessLayer
+   * (getWindowsPool) and calls into the call layer, so windowsLayer stays empty
+   * while a document is on screen: a new build announced by sys.hello (after a
+   * deploy, on the WebSocket reconnect) reloaded the page under it, and the
+   * file seemed to close by itself a second or two after opening.
+   *
+   * The workspace pane itself (`headless`) is the desk, not a window: a reload
+   * reopens it, so it alone does not count.
+   *
+   * @returns {Boolean}
+   */
+  _hasDeskWindows() {
+    for (const pool of [this.headlessLayer, this.callLayer]) {
+      if (!pool || !pool.children) continue;
+      if (pool.isDestroyed && pool.isDestroyed()) continue;
+      const open = pool.children.find(
+        (c) => c && !(c.isDestroyed && c.isDestroyed()) && !c.mget(_a.headless),
+      );
+      if (open) return true;
+    }
+    return false;
+  }
+
+  /**
    *
    */
   newVersion() {
-    if (this.__windowsLayer && this.__windowsLayer.isEmpty()) {
+    if (
+      this.__windowsLayer &&
+      this.__windowsLayer.isEmpty() &&
+      !this._hasDeskWindows()
+    ) {
       location.reload();
     } else {
       this.confirm({

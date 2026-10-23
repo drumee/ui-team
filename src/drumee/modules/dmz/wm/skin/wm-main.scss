@@ -5,8 +5,12 @@
 #          builtins/window/skin/group/body/main.scss adapted for `.dmz-wm`
 # ===================================================================**/
 @use "mixins/drumee.scss";
+@use "mixins/file-list";
 
 .dmz-wm {
+  // List view: the desk folder window's column titles and file rows.
+  @include file-list.columns-and-rows;
+
   &__ui {
     background: transparent;
     // Fill the flex cell (.dmz__files-panel), NOT the viewport. The old
@@ -101,6 +105,20 @@
     &-container {
       width: 100%;
       height: 100%;
+    }
+  }
+
+  // List view column header (the desk's, dmz/wm skeleton _list_header; empty
+  // outside list mode). Lined up with the rows the scroll pads by 24px. Not
+  // below the app's mobile width: the desk header is at least 810px wide, and
+  // a Box sets its display inline, hence !important.
+  &__list-header {
+    &[data-view-mode="row"] {
+      padding: 12px 24px 0;
+    }
+
+    @media (max-width: 800px) {
+      display: none !important;
     }
   }
 
@@ -230,18 +248,23 @@
     }
 
     // List (row) view — toggled by the topbar view control (data-view-mode set
-    // in sharebox _toggleFilesLayout). In row mode the media items re-render as
+    // in dmz/wm _toggleFilesLayout). In row mode the media items re-render as
     // full-width media-row items (table rows), so the scroll becomes a single
     // column that stacks them (mirrors window-folder's row layout).
     &[data-view-mode="row"] {
       grid-template-columns: 1fr;
       grid-auto-rows: min-content;
+      // Rows sit flush under the column header, without the tiles' gap.
+      gap: 0;
+      padding-top: 0;
 
       .workspace-section,
       .folder-section,
       .file-section {
         grid-template-columns: 1fr;
         grid-auto-rows: min-content;
+        // No inset of their own: the rows' columns line up with the header's.
+        padding: 0;
       }
 
       .media-row__ui,
@@ -477,3 +500,216 @@
   }
 }
 
+
+/* ---------------------------------------------------------------------- *
+ * Secure-share toolbar + Group view — the desk folder window's look
+ * (window/folder/skin: __filter-bar / __filter-track / -topbar__view-toggle /
+ * .group-section). Only the sharebox grid renders `.dmz-wm__toolbar` (see
+ * dmz/wm skeleton _toolbar) and Group view, so other DMZ uses are untouched.
+ * ---------------------------------------------------------------------- */
+.dmz-wm {
+  // Wraps when the files panel is narrower than filters + actions (a tablet
+  // with the chat column open): the actions drop to a second line, still
+  // right-aligned by __file-controls' margin-left:auto.
+  &__toolbar {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 24px;
+    padding: 12px;
+    border-bottom: none;
+    background: transparent;
+    flex-shrink: 0;
+  }
+
+  // Grey pill holding the five filters; the active one is filled brand purple.
+  // Hugs its tabs and never shrinks (the toolbar wraps instead).
+  &__filter-track {
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 12px;
+    background-color: var(--normal-bg-90);
+    box-sizing: border-box;
+  }
+
+  &__filter-track &__filter-tab-main {
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+
+    .dmz-wm__filter-tab,
+    .note-content {
+      border: 0;
+      font-family: var(--font-main);
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--normal-fg-10);
+      cursor: pointer;
+    }
+
+    &:hover:not([data-state="1"]):not([data-radiotoggle="on"]) {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+
+    &[data-state="1"],
+    &[data-radiotoggle="on"] {
+      background-color: var(--primary-40, #5950ff);
+
+      .dmz-wm__filter-tab,
+      .note-content {
+        font-weight: 600;
+        color: var(--white);
+      }
+    }
+  }
+}
+
+.dmz-wm-topbar {
+  &__file-controls {
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    margin-left: auto;
+
+    // "+ Add new" / Upload / Download — the desk "+ New" pill geometry.
+    .dmz-button__buttons-wrapper {
+      gap: 8px;
+    }
+
+    .dmz-button__label-button {
+      height: 30px;
+      min-height: 30px;
+      padding: 0 14px;
+      border-radius: 8px;
+      font-family: var(--font-main);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 16px;
+      white-space: nowrap;
+      gap: 6px;
+      box-sizing: border-box;
+
+      svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+      }
+
+      &.secondary {
+        background-color: var(--primary-40);
+        color: var(--white);
+
+        &:hover {
+          filter: none;
+          background-color: var(--primary-50);
+        }
+      }
+    }
+
+    .dmz-button__icon-button {
+      width: 30px;
+      height: 30px;
+    }
+  }
+
+  // Group | list | grid — white pill with three 36px squares (Figma 85:36284).
+  &__view-toggle {
+    display: inline-flex;
+    align-items: stretch;
+    width: 108px;
+    flex: 0 0 108px;
+    border: 1px solid var(--border-muted);
+    border-radius: 12px;
+    background-color: #fff;
+    overflow: hidden;
+    cursor: pointer;
+    box-sizing: border-box;
+  }
+
+  &__view-toggle-seg {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 5.833px;
+    padding: 0;
+    background-color: #fff;
+    color: #65656c;
+    box-sizing: border-box;
+    transition:
+      background-color 0.15s ease,
+      color 0.15s ease;
+
+    &:hover {
+      background-color: #ecebfe;
+    }
+
+    svg {
+      fill: currentColor;
+    }
+  }
+
+  &__view-toggle-glyph {
+    width: 17.5px;
+    height: 17.5px;
+    flex-shrink: 0;
+  }
+
+  &__view-toggle-check {
+    display: none;
+  }
+
+  &__view-toggle[data-state="group"] &__view-toggle-seg--group,
+  &__view-toggle[data-state="list"] &__view-toggle-seg--list,
+  &__view-toggle[data-state="grid"] &__view-toggle-seg--grid {
+    background-color: var(--primary-40);
+    color: var(--white);
+    border-radius: 12px;
+  }
+}
+
+/* Group view sections (window/utils _doGroupPartition), titled per file type. */
+.dmz-wm__icons-scroll {
+  .group-section {
+    display: grid;
+    align-content: start;
+    align-items: start;
+    justify-items: start;
+    grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+    grid-template-rows: auto;
+    grid-auto-rows: var(--grid-cell-h-file);
+    gap: var(--grid-gap);
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 24px;
+    flex: 0 0 auto !important;
+    overflow: visible;
+  }
+
+  .group-section[data-group="folder"] {
+    grid-auto-rows: var(--grid-cell-h-folder);
+  }
+
+  .group-section-title {
+    grid-column: 1 / -1;
+    min-width: 0;
+    padding-bottom: 2px;
+    color: var(--tertiary-grey-80);
+    font-family: var(--font-main);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+  }
+}

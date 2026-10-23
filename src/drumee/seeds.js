@@ -202,11 +202,31 @@ module.exports = {
   blocknote_state: function () {
     return import("./builtins/editor/blocknote/state");
   },
+  // webpackPrefetch: the Casual editors weigh several MB (Univer, the .docx
+  // layout engine); fetched lazily on first use they left a first-time
+  // visitor staring at an empty window for as long as the download took.
+  // Prefetch hints let the browser pull them at idle after the desk is up,
+  // so the first open reads from cache.
+  editor_sheet: function () {
+    return import(/* webpackPrefetch: true */ "./builtins/editor/sheet");
+  },
+  sheet_state: function () {
+    return import(/* webpackPrefetch: true */ "./builtins/editor/sheet/state");
+  },
+  editor_docs: function () {
+    return import(/* webpackPrefetch: true */ "./builtins/editor/docs");
+  },
+  docs_state: function () {
+    return import(/* webpackPrefetch: true */ "./builtins/editor/docs/state");
+  },
   email_input_item: function () {
     return import("./builtins/widget/email-input-item/index");
   },
   image_viewer: function () {
     return import("./builtins/player/image");
+  },
+  player_file_switcher: function () {
+    return import("./builtins/player/widget/file-switcher");
   },
   locale_language: function () {
     return import("./modules/devel/locale/language");
@@ -313,6 +333,9 @@ module.exports = {
   module_sandbox: function () {
     return import("./modules/sandbox");
   },
+  module_sheet: function () {
+    return import("./modules/sheet");
+  },
   module_welcome: function () {
     return import("./modules/welcome");
   },
@@ -381,6 +404,9 @@ module.exports = {
   },
   settings_change_email: function () {
     return import("widget/settings/change-email");
+  },
+  settings_leave_confirm: function () {
+    return import("widget/settings/leave-confirm");
   },
   // apps_main (the admin console) migrated to the @drumee/admin-console plugin —
   // loaded on demand via Kind.loadPlugin (see modules/desk onUiEvent "toggle-apps").
@@ -462,6 +488,12 @@ module.exports = {
   },
   widget_chat_export: function () {
     return import("./builtins/widget/chat-export");
+  },
+  widget_topic_create: function () {
+    return import("./builtins/widget/topic-create");
+  },
+  widget_chat_details: function () {
+    return import("./builtins/widget/chat-details");
   },
   widget_meeting: function () {
     return import("./builtins/widget/meeting");

@@ -17,6 +17,8 @@ module.exports = function (ui) {
       Skeletons.Box.X({ active: 0,
         className: `${fig}__body`,
         kids: [
+          // Hidden at the mobile tier (skin), which is the phone layout's width:
+          // the phone step draws its own chrome.
           require('./sidebar')(ui),
           // The step slot starts EMPTY. The host feeds _widgetAt(0) once this
           // shell has mounted, so the first screen comes from the registry

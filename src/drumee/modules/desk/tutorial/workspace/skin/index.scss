@@ -1,6 +1,11 @@
 @use "mixins/drumee";
 @use "../../skin/spinner";
 
+// Drawn at 85%, like the real create-workspace dialog it teaches
+// (media/form/skin, `$card-scale`) — the same number in both files, so the
+// drawing and the dialog the user then gets stay the same size.
+$card-scale: 0.85;
+
 // The Create-new-workspace dialog, as the `workspace` tour draws it.
 // Figma 176:40762 (component 85:42209): 460px card, 32px insets, 24px radius,
 // 1px hairline over a heavy ambient shadow.
@@ -25,6 +30,7 @@
   }
 
   &__wsd-dialog {
+    zoom: $card-scale;
     width: 460px;
     box-sizing: border-box;
     padding: 32px;
@@ -45,15 +51,6 @@
     @include drumee.typo($size: 24px, $line: 1.2);
     font-weight: 600;
     color: var(--normal-fg);
-  }
-
-  &__wsd-close {
-    width: 20px;
-    height: 20px;
-    cursor: default;
-
-    svg { width: 100%; height: 100%; }
-    color: var(--normal-fg-20);
   }
 
   // ── Name ──────────────────────────────────────────────────────────────────
@@ -283,5 +280,445 @@
 
       &::after { @include spinner.pending-spinner(16px); }
     }
+  }
+}
+
+// PHONE (workspace/skeleton/phone.js) — Figma "org home -> create wp":
+// 380:54433 home · 380:54800 / 385:938 / 385:1090 / 385:1226 the sheet ·
+// 385:1364 invite · 385:54554 personal modal. Values are the frames'.
+.tutorial-workspace__phone[data-view="home"] .tutorial-phone__body {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 24px 72px;
+}
+
+.tutorial-workspace__phone[data-view="home"] .tutorial-phone__hero {
+  flex: 1;
+  min-height: 0;
+  padding-top: 0;
+}
+
+.tutorial-wsp {
+  // ── home: the gradient card and the phone in it ────────────────────────────
+  &__card {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 20px;
+    border: 1px solid rgba(89, 80, 255, 0.1);
+    border-top: 0;
+    background: linear-gradient(180deg, rgba(93, 84, 255, 0.05) 0%, #5950ff 100.03%);
+  }
+
+  // The device sits 8.76% down, 20.45%/20.37% in from the sides, and runs
+  // 30.58% past the card's bottom edge (380:54550).
+  &__mockup {
+    position: absolute;
+    top: 8.76%;
+    left: 20.45%;
+    width: 59.18%;
+    height: auto;
+    box-sizing: border-box;
+    border: 5px solid #1d1f2b;
+    border-radius: 32px;
+    background: #1d1f2b;
+    box-shadow: -2px 2px 6px rgba(68, 0, 255, 0.1), -9px 7px 11px rgba(68, 0, 255, 0.09);
+  }
+
+  // ── the "Create new workspace" sheet ───────────────────────────────────────
+  &__sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 17px 17px 41px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
+
+  // Tinted only while a screen is teaching (the frames' 20% over the sheet);
+  // the real create step has no data-lit and stays white.
+  &__sheet[data-lit] {
+    background: linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), #fff;
+  }
+
+  &__heading {
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #34343a;
+  }
+
+  &__org {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 16px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+  }
+
+  &__org-name {
+    font-size: 16px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__org-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__org-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__org-count {
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #5950ff;
+  }
+
+  &__org-label {
+    font-size: 12px;
+    line-height: 1.4;
+    color: #65656c;
+  }
+
+  &__org-ico {
+    width: 16px;
+    height: 16px;
+  }
+
+  &__dept {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__toggle {
+    position: relative;
+    width: 40px;
+    height: 20px;
+    border-radius: 12px;
+    background: #d1d1d6;
+  }
+
+  &__toggle-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  &__label {
+    font-size: 16px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__name,
+  &__type {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__input {
+    display: flex;
+    align-items: center;
+    padding: 12.5px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    background: #fff;
+    font-size: 14px;
+    line-height: 1.2;
+    color: #65656c;
+
+    input {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font: inherit;
+      color: #0b0a21;
+
+      &::placeholder { color: #65656c; }
+    }
+  }
+
+  &__value {
+    color: #0b0a21;
+  }
+
+  &__error {
+    font-size: 12px;
+    line-height: 1.4;
+    color: #d74e49;
+
+    &:empty,
+    &:not([data-state="1"]) { display: none; }
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+  }
+
+  &__row[data-type] {
+    cursor: pointer;
+  }
+
+  &__row-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__row-ico {
+    width: 34px;
+    height: 34px;
+    display: block;
+    object-fit: cover;
+  }
+
+  &__row-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__row-title {
+    font-size: 14px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__row-desc {
+    font-size: 12px;
+    line-height: 1.4;
+    color: #65656c;
+  }
+
+  &__radio {
+    width: 17px;
+    height: 17px;
+    display: block;
+    flex: none;
+  }
+
+  &__create {
+    padding: 12px 24px;
+    border-radius: 12px;
+    background: #433cc5;
+    color: #fff;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    text-align: center;
+
+    &[data-pending="1"] { opacity: 0.6; }
+  }
+
+  // What each screen is about stays at full strength; the rest is faded to
+  // the frames' 20% (40% for the name once it is behind you).
+  &__sheet[data-lit] {
+    .tutorial-wsp__head,
+    .tutorial-wsp__org,
+    .tutorial-wsp__dept { opacity: 0.2; }
+  }
+
+  &__sheet[data-lit="name"] {
+    .tutorial-wsp__type,
+    .tutorial-wsp__create { opacity: 0.2; }
+  }
+
+  &__sheet[data-lit]:not([data-lit="name"]) {
+    .tutorial-wsp__name { opacity: 0.4; }
+    .tutorial-wsp__row { background: #fff; }
+  }
+
+  &__sheet[data-lit="internal"],
+  &__sheet[data-lit="external"] {
+    .tutorial-wsp__create { opacity: 0.2; }
+  }
+
+  &__sheet[data-lit="internal"] .tutorial-wsp__row:not([data-key="internal"]),
+  &__sheet[data-lit="external"] .tutorial-wsp__row:not([data-key="external"]) {
+    opacity: 0.2;
+  }
+
+  // Every button here is a Note: its label is an inner .note-content, and
+  // ui-core may lay the Note out as a flex row — text-align on the button
+  // alone then leaves the label hugging the left. Centre both ways.
+  &__create,
+  &__send,
+  &__skip,
+  &__modal-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .note-content {
+      width: 100%;
+      text-align: center;
+    }
+  }
+
+  // ── 385:1364 invite ────────────────────────────────────────────────────────
+  &__invite {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 17px 17px 41px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 32px 32px 0 0;
+    background: #fff;
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
+
+  &__invite-head {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  &__invite-title {
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__invite-desc {
+    font-size: 16px;
+    line-height: 1.2;
+    color: #65656c;
+  }
+
+  &__invite-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__invite-input {
+    padding: 8px 0 4px;
+    border-bottom: 1px solid #84848c;
+    font-size: 14px;
+    line-height: 1.4;
+
+    input {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font: inherit;
+      color: #0b0a21;
+
+      &::placeholder { color: #65656c; }
+    }
+  }
+
+  &__invite-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__send,
+  &__skip {
+    padding: 12px 24px;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  &__send {
+    border-radius: 12px;
+    background: #433cc5;
+    color: #fff;
+
+    &[data-pending="1"] { opacity: 0.6; }
+  }
+
+  &__skip {
+    height: 48px;
+    border-radius: 8px;
+    color: #65656c;
+  }
+
+  // ── 385:54554 personal modal ───────────────────────────────────────────────
+  &__modal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 360px;
+    max-width: calc(100% - 34px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    padding: 33px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 7px 10px rgba(0, 0, 0, 0.05), 0 40px 80px rgba(0, 0, 0, 0.15);
+  }
+
+  &__modal-mark {
+    width: 52px;
+    height: 43px;
+  }
+
+  &__modal-title {
+    width: 100%;
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
+    text-align: center;
+  }
+
+  &__modal-btn {
+    width: 100%;
+    padding: 8px 24px;
+    border-radius: 8px;
+    background: #433cc5;
+    color: #fff;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
   }
 }

@@ -1,4 +1,5 @@
 @use "mixins/drumee";
+@use "mixins/list-check";
 
 .window {
   &__filter {
@@ -45,6 +46,19 @@
       &.type {
         min-width: 62px;
       }
+    }
+
+    // Select-all (core _toggleRowSelectAll). The tasks list's checkbox
+    // (mixins/list-check); same 24px inset as the rows' own checkbox
+    // (media/row/skin/checkbox.scss) so the two line up.
+    &__select-cell {
+      height: 100%;
+      align-items: center;
+    }
+
+    &__select-all {
+      @include list-check.list-check;
+      margin-left: 24px;
     }
   }
 }

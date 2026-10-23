@@ -3,6 +3,18 @@ const _file_icon = require('./map');
 
 const __icon_name = function (m) {
   let chartId, ext;
+  // Casual Docs / Casual Sheets files: black Word/Excel-family glyphs whatever
+  // filetype the listing reports (document vs app-data), never the generic
+  // extension badge.
+  const lext = String(m.ext || "").toLowerCase();
+  if (lext === "udoc" || m.dataType === "doc.casual") {
+    m.imgCapable = false;
+    return { chartId: "raw-documents_udoc", ext: undefined };
+  }
+  if (lext === "usheet" || m.dataType === "sheet.univer") {
+    m.imgCapable = false;
+    return { chartId: "raw-documents_usheet", ext: undefined };
+  }
   switch (m.filetype) {
     case _a.image:
       chartId = "desktop_picture";

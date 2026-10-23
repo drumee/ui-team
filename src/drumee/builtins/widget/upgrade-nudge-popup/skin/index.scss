@@ -18,8 +18,9 @@
     align-items: center;
     justify-content: center;
     padding: var(--spacer-6);
-    background: var(--overlay-bg);
-    backdrop-filter: blur(2px);
+    // Figma 2.0: the desk behind the card sits at 20% opacity on the page
+    // ground — a light wash, not the dark overlay-bg the other popups use.
+    background: color-mix(in srgb, var(--normal-bg-elevated) 80%, transparent);
   }
 
   &__card {
@@ -28,19 +29,21 @@
     max-height: 100%;
     overflow-y: auto;
     background: var(--normal-bg-elevated);
-    border: 1px solid var(--normal-bg-80);
+    border: 1px solid color-mix(in srgb, var(--normal-fg-800) 5%, transparent); // Figma overlay light mode
     border-radius: var(--corner-radius-4); // Figma 12px
     padding: 32px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    // Figma "drop shadow" on the card + the Overlay+Shadow layer under it.
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.15), 0 7px 10px rgba(0, 0, 0, 0.05), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     align-items: stretch;
   }
 
+  // Figma: 24px box, 20px glyph, flush with the header block's top-right.
   &__close {
     position: absolute;
-    top: 28px;
-    right: 28px;
-    width: 28px;
-    height: 28px;
+    top: 32px;
+    right: 34px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -88,7 +91,7 @@
   // the span itself hugs its text, so the row needs justify-content too.
   &__title {
     font-size: 16px;
-    line-height: 24px;
+    line-height: 1.2; // Figma Buttons/Medium Button
     font-weight: 600;
     color: var(--normal-fg-800);
     justify-content: center;
@@ -96,16 +99,31 @@
   }
 
   &__lead {
-    margin-top: 8px;
+    margin-top: 12px; // Figma Heading 4 gap
     align-items: center;
   }
 
+  // One row per lead line; a `**run**` from the LOCALE string is its own
+  // bold Note (Figma 2.0: "You're using **70 GB of 100 GB.**").
   &__lead-line {
-    font-size: 14px;
-    line-height: 1.4;
-    color: var(--normal-fg-20);
     justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  &__lead-text {
+    font-size: 14px;
+    line-height: 1.2; // Figma Body/Small Body
+    color: var(--normal-fg-20);
     text-align: center;
+
+    // Segments are trimmed in the skeleton; the word gap comes back here.
+    &--gap {
+      margin-left: 0.28em;
+    }
+  }
+
+  &__lead-strong {
+    font-weight: 700;
   }
 
   // "Used ......... 70 GB / 100 GB" + track
@@ -127,7 +145,7 @@
 
   &__meter-right {
     font-size: 12px;
-    line-height: 1.4;
+    line-height: 1.2; // Figma Buttons/Mini Button
     font-weight: 600;
     color: var(--normal-fg-20);
   }
@@ -161,7 +179,7 @@
 
   &__benefits-title {
     font-size: 12px;
-    line-height: 1.4;
+    line-height: 1.2;
     font-weight: 600;
     color: var(--normal-fg-800);
   }
@@ -187,7 +205,7 @@
 
   &__benefit-title {
     font-size: 12px;
-    line-height: 1.4;
+    line-height: 1.2;
     font-weight: 600;
     color: var(--normal-fg-800);
   }

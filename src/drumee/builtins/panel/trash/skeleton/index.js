@@ -21,14 +21,6 @@ module.exports = function (ui) {
         api: ui.getCurrentApi,
         placeholder: require("./placeholder")(ui),
       }),
-      Skeletons.Box.X({
-        className: `${pfx}__footer`,
-        kids: [
-          Skeletons.Note({
-            content: LOCALE.TRASH_FOOTER,
-          }),
-        ],
-      }),
       Skeletons.Wrapper.Y({
         className: `${pfx}__overlay`,
         sys_pn: "overlay"

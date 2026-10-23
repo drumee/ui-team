@@ -594,7 +594,12 @@
       overflow: visible;
 
       .note-content {
-        padding: 0;
+        // Vietnamese stacked marks rise above the line box (14px, line-height
+        // 1.4: Ấ/Ố/Ế ink 4px above it) and overflow-y clips at the padding edge, so a
+        // capital "Ấ" read as "Â" while typing. 5px of vertical padding gives
+        // them room; the negative margin keeps the composer's height.
+        padding: 5px 0;
+        margin: -5px 0;
         min-height: 28px;
         max-height: 96px;
         overflow-y: auto;
@@ -617,17 +622,6 @@
 
         &::before {
           color: var(--normal-fg-50);
-        }
-
-        &::-webkit-scrollbar {
-          width: 3px;
-        }
-        &::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        &::-webkit-scrollbar-thumb {
-          background: var(--border-strong);
-          border-radius: 3px;
         }
       }
     }
@@ -1184,17 +1178,6 @@
     z-index: 1000;
     box-shadow: var(--shadow-top-tiny);
 
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: var(--border-strong);
-      border-radius: 4px;
-    }
-
     &[data-state="open"] {
       display: flex;
       flex-direction: column;
@@ -1392,20 +1375,8 @@
     padding: 16px;
     gap: 16px;
     scrollbar-width: thin;
-    scrollbar-color: var(--normal-bg-100) transparent;
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--normal-bg-100);
-      border-radius: 4px;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   .widget-chatItem__ui {

@@ -6,6 +6,8 @@
 const { lookupContacts, suggestionRows } = require("libs/contact-lookup");
 const { isSeatLimitReply, showSeatLimitReached } = require("libs/billing");
 const { orgOverview, inOrganization } = require("libs/org-overview");
+const { showToast, clearToast } = require("libs/toast");
+const { copyToClipboard } = require("@drumee/ui-essentials");
 const T = require("./tree");
 const treeRows = require("./skeleton/tree").rows;
 const skeletonModule = require("./skeleton");
@@ -76,7 +78,10 @@ class __invite_popup extends LetcBox {
 
 
   onDomRefresh() {
-    this.feed(skeletonModule(this));
+    // The toast slot is a SIBLING of __container, not inside it: __container
+    // caps its height and its tree scrolls, and a fixed child of a filtered
+    // card (__ui has a backdrop-filter) is clipped by those ancestors.
+    this.feed([skeletonModule(this), skeletonModule.toastSlot(this, this.fig.family)]);
     this.el.dataset.tab = this._tab;
     this.el.dataset.state = 1;
     if (this.parent && this.parent.el) {
@@ -209,6 +214,7 @@ class __invite_popup extends LetcBox {
   }
 
   onBeforeDestroy() {
+    clearToast(this);
     if (this._wrapperEl) {
       this._wrapperEl.dataset.state = "closed";
       delete this._wrapperEl.dataset.overlay;
@@ -372,6 +378,8 @@ class __invite_popup extends LetcBox {
       this._linkPanel = child;
     } else if (pn === "tabs") {
       this._tabsBox = child;
+    } else if (pn === "toast") {
+      this._toastSlot = child;
     } else if (pn.startsWith("role-label:")) {
       this._partRefs.roleLabels[pn.slice(11)] = child;
     } else if (pn.startsWith("role-options:")) {
@@ -756,26 +764,37 @@ class __invite_popup extends LetcBox {
     this._renderTree();
   }
 
-  _toggleRoleDropdown(hub_id) {
-    const opt = this._partRefs.roleOptions[hub_id];
+  /**
+   * @param {String} key  the pill's part key — the hub_id for a tree row,
+   *   "ws-email" / "ws-link" for the workspace-scope pills (skeleton rolePill)
+   */
+  _toggleRoleDropdown(key) {
+    const opt = this._partRefs.roleOptions[key];
     if (!opt) return;
     const open = opt.el.dataset.state === "1";
     Object.values(this._partRefs.roleOptions).forEach((o) => (o.el.dataset.state = 0));
     opt.el.dataset.state = open ? 0 : 1;
   }
 
+  /**
+   * One role per workspace, however many pills show it: workspace scope draws
+   * one per tab, so every menu and label stamped with this hub_id follows the
+   * pick — switching tabs never shows a stale role.
+   */
   _pickRole(hub_id, roleId) {
     if (!ROLES.find((r) => r.id === roleId)) return;
-    this._roles.set(String(hub_id), roleId);
-    const opts = this._partRefs.roleOptions[hub_id];
-    if (opts) {
+    hub_id = String(hub_id);
+    this._roles.set(hub_id, roleId);
+    const mine = (part) => part && part.el && part.el.dataset.hub_id === hub_id;
+    Object.values(this._partRefs.roleOptions).filter(mine).forEach((opts) => {
       opts.el
         .querySelectorAll(".invite-popup__role-option")
         .forEach((n) => (n.dataset.checked = n.dataset.id === roleId ? 1 : 0));
       opts.el.dataset.state = 0;
-    }
-    const label = this._partRefs.roleLabels[hub_id];
-    if (label) label.set({ content: summarizeRoles([roleId]) });
+    });
+    Object.values(this._partRefs.roleLabels).filter(mine).forEach((label) => {
+      label.set({ content: summarizeRoles([roleId]) });
+    });
   }
 
   /* ── Tabs + public link (UI only) ─────────────────────────── */
@@ -828,11 +847,18 @@ class __invite_popup extends LetcBox {
     this._renderLinkPanel();
   }
 
+  /**
+   * Copy, then Settings' toast (the referral Copy's, libs/toast) in the
+   * popup's own slot — the one confirmation the app's Copy buttons share,
+   * rather than Wm.acknowledge's older ack box appended to the window manager.
+   */
   _copyLink() {
-    if (!this._link.url || typeof navigator === "undefined" || !navigator.clipboard) return;
-    navigator.clipboard.writeText(this._link.url);
-    // Transient toast, the same copy-link acknowledgement permission/share uses.
-    if (Wm.acknowledge) Wm.acknowledge();
+    if (!this._link.url) return;
+    copyToClipboard(this._link.url);
+    showToast(this, {
+      part: this._toastSlot,
+      message: LOCALE.LINK_COPIED_CLIPBOARD || "Link copied to clipboard",
+    });
   }
 
   async _sendInvitation() {
@@ -862,7 +888,7 @@ class __invite_popup extends LetcBox {
     ];
     const assignments = [...this._checked].map((hub_id) => ({
       hub_id,
-      permission: computePrivilege([this._roles.get(hub_id) || DEFAULT_ROLE_IDS[0]]),
+      privilege: computePrivilege([this._roles.get(hub_id) || DEFAULT_ROLE_IDS[0]]),
     }));
     if (!assignments.length) {
       this._setWorkspaceError(
@@ -876,10 +902,13 @@ class __invite_popup extends LetcBox {
     if (this._sendBtn) this._sendBtn.el.dataset.loading = 1;
 
     const promises = assignments.map((a) =>
+      // `privilege`, the name hub.invite reads (acl/hub.json). It used to be
+      // sent as `permission`, which the server ignores — every invitee got the
+      // workspace's default_privilege whatever role was picked here.
       this.postService(SERVICE.hub.invite, {
         hub_id: a.hub_id,
         invitees: emails,
-        permission: a.permission,
+        privilege: a.privilege,
       }),
     );
 
@@ -916,12 +945,29 @@ class __invite_popup extends LetcBox {
           results: flat,
         });
         if (failed.length) {
-          Wm.alert(
-            LOCALE.INVITE_PARTIAL_FAILED.format(
-              flat.length - failed.length,
-              failed.length,
-            ),
+          // The counts, then WHY — one line per distinct server reason. The
+          // counts alone ("Sent 0 invitation(s), 1 failed") read as "nothing
+          // happened", yet a mail the relay refused still leaves the invitation
+          // recorded and the notification delivered; hub.js
+          // _inviteFailureReason spells out which, per address. Deduped: one
+          // address failing in several workspaces yields one reason each, and
+          // an identical line twice says nothing new.
+          const reasons = [
+            ...new Set(failed.map((r) => r.reason).filter(Boolean)),
+          ];
+          const summary = LOCALE.INVITE_PARTIAL_FAILED.format(
+            flat.length - failed.length,
+            failed.length,
           );
+          Wm.alert({
+            kind: "window_info",
+            // window_info's own message class, as a plain Wm.alert(string)
+            // gets (info/skeleton/message.js) — each line styled and spaced
+            // like one.
+            message: [summary, ...reasons].map((line) =>
+              Skeletons.Note(line, "window-info__message inner"),
+            ),
+          });
         } else {
           // Branded "notice" toast (the drumee-logo card with a primary Close),
           // matching the permission panel's invite-sent confirmation. `kind` is
@@ -948,6 +994,13 @@ class __invite_popup extends LetcBox {
       .catch((err) => {
         this.warn("[invite-popup] hub.invite failed", err);
         if (this._sendBtn) delete this._sendBtn.el.dataset.loading;
+        // Say so: clearing the spinner alone left the user with no idea
+        // whether anything went out. The popup has no onServerComplain, so
+        // ui-essentials' doRequest THROWS here for a network failure, a non-200
+        // and a 200 carrying `error` (an ACL refusal) alike — the last one has
+        // a reason worth showing, same as the errored branch above. The popup
+        // stays open, chips and ticks intact, for a retry.
+        Wm.alert((err && (err.reason || err.error)) || LOCALE.TRY_AGAIN);
       });
   }
 
@@ -1012,7 +1065,7 @@ class __invite_popup extends LetcBox {
       }
 
       case "toggle-role":
-        return this._toggleRoleDropdown(this._get(cmd, "hub_id"));
+        return this._toggleRoleDropdown(this._get(cmd, "key") || this._get(cmd, "hub_id"));
 
       case "pick-role":
         return this._pickRole(this._get(cmd, "hub_id"), this._get(cmd, "id"));

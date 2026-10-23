@@ -1,6 +1,6 @@
 // Gantt view — a sticky task-list (checkbox · chevron · priority dot · title ·
 // + · ×) beside a horizontally-scrolling timeline. Each task gets a bar spanning
-// its planned window (created → due, since the schema has no start_date) with a
+// its planned window (start_date → due, or created → due without one) with a
 // gradient fill, plus a pink overdue tail + ⚠ when it's past due and unfinished.
 // A purple "today" line and a shaded current-period band sit behind the bars.
 //   Figma: 2057-32279 (weeks), 2065-90472 (months), 2365-137835 (body detail).
@@ -40,7 +40,7 @@ module.exports = function (ui) {
   }
 
   // Resolve each task's [start, end] window. end = due_date (required); start =
-  // the task's start_date (Duration toggle) when set, else its created time as
+  // the task's start_date when set, else its created time as
   // a fallback. Clamped to ≤ end. Tasks with no due_date are dropped.
   const rows = [];
   (ui.getTopLevelTasks() || []).forEach((t) => {

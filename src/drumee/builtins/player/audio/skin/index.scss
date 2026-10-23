@@ -32,6 +32,14 @@
     min-width: 360px;
     width: 100%;
 
+    // In the Open-File Switcher frame (desk) the player fills the viewer
+    // area like every other file; the compact caps are for the share page.
+    &:has(.file-switcher__frame) {
+      max-height: none;
+      max-width: none;
+      min-width: 0;
+    }
+
     &[data-device="mobile"] {
       left: 50% !important;
       max-width: calc(100vw - 32px);
@@ -52,6 +60,12 @@
 
   &__content {
     background-color: var(--audio-player-bg);
+  }
+
+  // Framed, the cover and the controls sit in the middle of the stage
+  // rather than hugging its top edge.
+  .file-switcher__stage &__content {
+    justify-content: center;
   }
 
   &__wrapper {

@@ -136,6 +136,14 @@ class __window_team extends __hub {
       Wm.getItemByKind("window_meeting") || Wm.getItemByKind("window_connect");
     if (existing && !existing.isDestroyed()) {
       if (typeof existing.raise === "function") existing.raise();
+      // Same as window/folder _launchMeetingStandalone: this workspace's own
+      // meeting is not "another call".
+      if (
+        typeof existing.joinNow === "function" &&
+        existing.mget(_a.hub_id) == this.mget(_a.hub_id)
+      ) {
+        return existing.joinNow();
+      }
       return Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
     }
     const room_id = this.mget(_a.nid) || this.mget(_a.actual_home_id);

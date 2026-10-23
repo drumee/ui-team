@@ -1,3 +1,11 @@
+// The page is drawn at 85% of the design's size, the same compact scale as the
+// dialogs (media/form, folder create-folder, migrate-gdrive: `zoom: 0.85`).
+// `zoom` goes on the CONTENT — the header row and each card row — never on
+// __ui: __ui also holds the fixed __overlay backdrop and the __toast-slot, and
+// a zoomed ancestor would shrink the backdrop and shift every dialog. __ui's
+// own padding and gap are scaled by hand to match.
+$page-scale: 0.85;
+
 .settings-main {
   // Color tokens used throughout
   $purple-deep: #433cc5; // Save Profile button + Edit-avatar pencil bg
@@ -19,12 +27,12 @@
     height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: var(--spacer-6);
+    padding: calc(var(--spacer-6) * #{$page-scale});
     background: var(--white);
     display: flex;
     flex-direction: column;
-    gap: var(--spacer-6);
-    font-family: "Geist", system-ui, sans-serif;
+    gap: calc(var(--spacer-6) * #{$page-scale});
+    font-family: var(--font-main);
     scrollbar-width: none;
     -ms-overflow-style: none;
 
@@ -61,76 +69,15 @@
       font-weight: 400;
       color: $ink-600;
     }
-
-    &-save {
-      &-main {
-        height: 48px;
-        padding: 0 var(--spacer-6);
-        background: $purple-deep;
-        border-radius: 4px;
-        cursor: pointer;
-        align-items: center;
-        justify-content: center;
-        min-width: 140px;
-        flex-shrink: 0;
-
-        &:hover {
-          background: var(--primary-purple-60);
-        }
-
-        .btn {
-          color: var(--white);
-          font-size: 16px;
-          line-height: 24px;
-          font-weight: 600;
-        }
-      }
-    }
-
-    // Right-side action cluster. `position: relative` anchors the floating
-    // confirmation pill; the pill is absolutely positioned so showing it
-    // never shifts the Save button (or reserves empty space when hidden).
-    &-actions {
-      position: relative;
-      align-items: center;
-      gap: var(--spacer-4);
-      flex-shrink: 0;
-    }
-
-    // Save confirmation pill — floats just below the Save button and is
-    // hidden (opacity 0) until saveProfile() flips data-state to "1".
-    &-saved {
-      position: absolute;
-      top: calc(100% + var(--spacer-3));
-      right: 0;
-      z-index: 2;
-      display: flex;
-      align-items: center;
-      height: 36px;
-      padding: 0 16px;
-      border-radius: 4px;
-      background: $success-bg;
-      color: $success-fg;
-      font-size: 14px;
-      line-height: 19.6px;
-      font-weight: 600;
-      white-space: nowrap;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease;
-
-      &[data-state="1"] {
-        opacity: 1;
-      }
-
-      &[data-variant="error"] {
-        background: rgba(214, 78, 73, 0.12);
-        color: $danger-fg;
-      }
-    }
   }
 
   // ── Row layout (two flex rows, asymmetric) ────────────────
+  // Content rows carry the page scale (see $page-scale at the top).
+  &__header-row,
+  &__row {
+    zoom: $page-scale;
+  }
+
   &__row {
     width: 100%;
     gap: var(--spacer-6);
@@ -159,16 +106,10 @@
     }
   }
 
+  // Referral/invite (not in the Figma frame) + Linked accounts, equal halves.
   &__row-3 {
+    .settings-main__referral-card,
     .settings-main__linked-card {
-      flex: 1 1 0;
-      min-width: 0;
-    }
-  }
-
-  // Referral/invite isn't part of the Figma frame — its own full-width row.
-  &__row-referral {
-    .settings-main__referral-card {
       flex: 1 1 0;
       min-width: 0;
     }
@@ -383,6 +324,73 @@
       > * {
         flex: 1 1 0;
         min-width: 0;
+      }
+    }
+
+    &-save {
+      &-main {
+        height: 48px;
+        padding: 0 var(--spacer-6);
+        background: $purple-deep;
+        border-radius: 4px;
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
+        min-width: 140px;
+        flex-shrink: 0;
+
+        &:hover {
+          background: var(--primary-purple-60);
+        }
+
+        .btn {
+          color: var(--white);
+          font-size: 16px;
+          line-height: 24px;
+          font-weight: 600;
+        }
+      }
+    }
+
+    // Save cluster at the foot of the fields, right-aligned. `position:
+    // relative` anchors the confirmation pill, which floats to the LEFT of
+    // the button so showing it never shifts the button or grows the card.
+    &-actions {
+      position: relative;
+      align-self: flex-end;
+      align-items: center;
+    }
+
+    // Save confirmation pill — hidden (opacity 0) until saveProfile() flips
+    // data-state to "1".
+    &-saved {
+      position: absolute;
+      top: 50%;
+      right: calc(100% + var(--spacer-4));
+      transform: translateY(-50%);
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 4px;
+      background: $success-bg;
+      color: $success-fg;
+      font-size: 14px;
+      line-height: 19.6px;
+      font-weight: 600;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+
+      &[data-state="1"] {
+        opacity: 1;
+      }
+
+      &[data-variant="error"] {
+        background: rgba(214, 78, 73, 0.12);
+        color: $danger-fg;
       }
     }
 
@@ -755,19 +763,6 @@
     flex-shrink: 0;
   }
 
-  // Subscription status line under the Current-Plan row (billing card):
-  // "Your subscription renews on …" / "… will be canceled on …". Sits inside
-  // &__billing-list's own 24px padding now — no extra padding of its own.
-  &__billing-status {
-    font-size: 12px;
-    line-height: 16.8px;
-    color: $ink-600;
-
-    &:empty {
-      display: none;
-    }
-  }
-
   // ── Ghost (light-purple) buttons used inside cards ────────
   // Shared "normal button" style for the settings cards — same light-purple
   // tint as the "Coming soon" pill. Used by manage / action / export / migrate.
@@ -817,16 +812,101 @@
     padding: 0 var(--spacer-5);
   }
 
-  // ── Billing card CTA (solid, Figma 2769-213367) ───────────
+  // ── Billing & subscription card ───────────────────────────
+  // One white panel, one row: the plan (crown tile + eyebrow + name) on the
+  // left, the Manage subscription CTA on the right. When the card is too
+  // narrow for both, the CTA wraps under the plan and takes the full width
+  // (flex-grow: the summary's 999 soaks up a shared line's spare space; a
+  // CTA alone on its line grows to fill it).
+  &__billing-card &__card-subtitle {
+    color: $ink-600; // Grey/80 #65656c
+  }
+
+  &__billing-list {
+    width: 100%;
+    flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    align-content: center;
+    justify-content: space-between;
+    gap: var(--spacer-5) var(--spacer-6);
+    padding: var(--spacer-6);
+    border-radius: 12px;
+    border: 1px solid rgba(89, 80, 255, 0.12);
+    // A faint wash of the plan colour from the top-left corner.
+    background:
+      radial-gradient(120% 90% at 0% 0%, rgba(89, 80, 255, 0.09), rgba(89, 80, 255, 0) 60%),
+      $row-bg;
+  }
+
+  &__billing-summary {
+    flex: 999 1 auto;
+    min-width: 0;
+  }
+
+  &__billing-plan {
+    align-items: center;
+    gap: var(--spacer-5);
+    min-width: 0;
+  }
+
+  &__billing-plan-ico-wrap {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 12px;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, $purple-base 0%, $purple-deep 100%);
+    box-shadow: 0 6px 16px rgba(67, 60, 197, 0.28);
+  }
+
+  &__billing-plan-ico {
+    width: 24px;
+    height: 24px;
+
+    svg {
+      width: 24px;
+      height: 24px;
+      fill: var(--white);
+      color: var(--white);
+    }
+  }
+
+  &__billing-plan-text {
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__billing-plan-label {
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: $ink-500;
+  }
+
+  &__billing-plan-name {
+    font-size: 24px;
+    line-height: 30px;
+    font-weight: 700;
+    color: $ink-900;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   &__billing-action-main {
-    width: auto;
-    padding: 6px 24px;
-    border-radius: 4px;
+    flex: 1 0 auto;
+    height: 44px;
+    padding: 0 var(--spacer-6);
+    border-radius: 8px;
     background: $purple-deep; // #433cc5
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
+    transition: background 0.15s ease, box-shadow 0.15s ease;
 
     .btn {
       color: var(--white);
@@ -836,54 +916,9 @@
     }
 
     &:hover {
-      opacity: 0.9;
+      background: var(--primary-purple-60, #3730a3);
+      box-shadow: 0 4px 12px rgba(67, 60, 197, 0.25);
     }
-  }
-
-  // ── Billing card: white panel wrapping plan-row + status,
-  // matching Figma's single unified card surface (not per-row boxes) ──
-  &__billing-list {
-    width: 100%;
-    background: $row-bg;
-    border-radius: 8px;
-    padding: var(--spacer-6);
-    flex: 1;
-    justify-content: space-between;
-    gap: var(--spacer-6);
-  }
-
-  // The plan-row already carries the generic &__inner white/padded box —
-  // reset it here so it doesn't nest a second white box inside the panel
-  // above (Figma's title+button sit flush on the panel's own padding).
-  &__billing-row.settings-main__inner {
-    background: transparent;
-    padding: 0;
-    border-radius: 0;
-  }
-
-  &__billing-card &__card-subtitle {
-    color: $ink-600; // Grey/80 #65656c
-  }
-
-  &__billing-row &__inner-title {
-    font-size: 18px;
-    line-height: 24px;
-    font-weight: 600;
-  }
-
-  // "Pro" + status line, paired tightly (Figma "Frame 1618872891", gap 4px) —
-  // a separate block below the title row, NOT the title row's own
-  // description (that put "Pro" 4px from "Current Plan" and the status line
-  // a mismatched 24px further down instead of right under "Pro").
-  &__billing-plan-block {
-    gap: 4px;
-  }
-
-  &__billing-plan-name {
-    font-size: 18px;
-    line-height: 24px;
-    font-weight: 600;
-    color: $purple-base; // Primary/40 #5950ff
   }
 
   &__danger-export-btn-main {
@@ -912,6 +947,43 @@
     &:hover {
       background: #c33d38;
     }
+  }
+
+  // Loading while the Export / Delete dialog opens (_withButtonLoading).
+  // The label and icon keep their space (visibility, not display) so the
+  // button does not change width; a ring spins in the middle.
+  &__danger-export-btn-main,
+  &__danger-delete-btn-main {
+    &[data-loading="1"] {
+      position: relative;
+      pointer-events: none;
+
+      > * {
+        visibility: hidden;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 14px;
+        height: 14px;
+        margin: -7px 0 0 -7px;
+        border-radius: 50%;
+        animation: settings-main-spinner 0.6s linear infinite;
+      }
+    }
+  }
+
+  &__danger-export-btn-main[data-loading="1"]::after {
+    border: 2px solid rgba(132, 125, 255, 0.3);
+    border-top-color: $purple-text;
+  }
+
+  &__danger-delete-btn-main[data-loading="1"]::after {
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    border-top-color: var(--white);
   }
 
   // ── Overlay slot for sub-modals ───────────────────────────
@@ -1003,7 +1075,7 @@
   // widths (≤ 1024). Stack rows; keep header on one line and avatar/
   // fields side-by-side since there's still enough horizontal room.
   &__ui[data-device="tablet"] {
-    padding: var(--spacer-5);
+    padding: calc(var(--spacer-5) * #{$page-scale});
   }
 
   &__row[data-device="tablet"] {
@@ -1013,6 +1085,7 @@
     .settings-main__preferences-card,
     .settings-main__credentials-card,
     .settings-main__danger-card,
+    .settings-main__referral-card,
     .settings-main__linked-card {
       flex: 1 1 auto;
     }
@@ -1024,8 +1097,8 @@
   // whether the data-device attribute is set.
   @media (max-width: 1024px) {
     &__ui {
-      padding: var(--spacer-5);
-      gap: var(--spacer-5);
+      padding: calc(var(--spacer-5) * #{$page-scale});
+      gap: calc(var(--spacer-5) * #{$page-scale});
     }
 
     &__row {
@@ -1035,6 +1108,7 @@
       .settings-main__preferences-card,
       .settings-main__credentials-card,
       .settings-main__danger-card,
+      .settings-main__referral-card,
       .settings-main__linked-card {
         flex: 1 1 auto;
       }
@@ -1046,9 +1120,20 @@
       gap: var(--spacer-5);
     }
 
-    &__header-save-main {
+    &__profile-actions {
+      align-self: stretch;
+    }
+
+    &__profile-save-main {
       width: 100%;
       min-width: 0;
+    }
+
+    &__profile-saved {
+      top: auto;
+      bottom: calc(100% + var(--spacer-3));
+      right: 0;
+      transform: none;
     }
 
     &__header-title {
@@ -1091,9 +1176,20 @@
     gap: var(--spacer-5);
   }
 
-  &__header-save-main[data-device="mobile"] {
+  &__profile-actions[data-device="mobile"] {
+    align-self: stretch;
+  }
+
+  &__profile-save-main[data-device="mobile"] {
     width: 100%;
     min-width: 0;
+  }
+
+  &__profile-saved[data-device="mobile"] {
+    top: auto;
+    bottom: calc(100% + var(--spacer-3));
+    right: 0;
+    transform: none;
   }
 
   &__header-title[data-device="mobile"] {

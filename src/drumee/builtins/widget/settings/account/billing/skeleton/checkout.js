@@ -88,7 +88,7 @@ function orgIdentMsgNote(ui) {
  * @param {Object} ui - UI instance
  * @returns {Object} Skeletons component
  */
-function checkout(ui) {
+function checkout(ui, opt = {}) {
   const fig = `${ui.fig.family}__checkout`;
   const pfx = fig;
 
@@ -183,9 +183,14 @@ function checkout(ui) {
         ],
       })
     : null;
+  // Figma 734-59617: the column opens with the subscription banner and closes
+  // with the Enterprise card (Contact sales / Manage billing). Both used to
+  // live outside Checkout — the banner above the tabs' content, the card in
+  // the plans footer, which this tab never rendered.
   const leftPanel = Skeletons.Box.Y({
     className: `${pfx}-left`,
     kids: [
+      opt.banner || null,
       Skeletons.Box.Y({
         className: `${pfx}-section`,
         kids: [
@@ -197,8 +202,14 @@ function checkout(ui) {
             { content: LOCALE.FREE, state: selectedPlan === "free" ? 1 : 0, service: "select-checkout-plan", value: "free", radio: `checkout-plan-${ui._id}` },
             { content: LOCALE.PRO, state: selectedPlan === "pro" ? 1 : 0, service: "select-checkout-plan", value: "pro", radio: `checkout-plan-${ui._id}` },
             { content: LOCALE.TEAM, state: selectedPlan === "team" ? 1 : 0, service: "select-checkout-plan", value: "team", radio: `checkout-plan-${ui._id}` },
-            { content: LOCALE.BUSINESS, state: selectedPlan === "business" ? 1 : 0, service: "select-checkout-plan", value: "business", radio: `checkout-plan-${ui._id}` },
-          ]),
+            // Business is not offered here (the design's bar is Free / Pro /
+            // Team). Kept only when it is ALREADY the selection — a Business
+            // subscriber, or a #/desk/billing link preselecting it — since a
+            // bar with nothing lit would hide what is being checked out.
+            selectedPlan === "business"
+              ? { content: LOCALE.BUSINESS, state: 1, service: "select-checkout-plan", value: "business", radio: `checkout-plan-${ui._id}` }
+              : null,
+          ].filter(Boolean)),
         ],
       }),
 
@@ -226,7 +237,8 @@ function checkout(ui) {
         ],
       }),
 
-    ],
+      require("./footer").enterpriseCard(ui),
+    ].filter(Boolean),
   });
 
   // Single source of truth for the summary column. This used to be a second,
@@ -347,7 +359,14 @@ function rightPanelContent(ui) {
     ? Math.max(1, Math.floor(discountMonths / 12))
     : Math.max(1, discountMonths);
 
+  // A 1px rule between the summary's groups (Figma: two 456px vector lines,
+  // stroke black @ 20%). Drawn as a border — it is a line, not artwork.
+  const divider = () => Skeletons.Box.X({ className: `${pfx}-divider` });
+
   return [
+    Skeletons.Box.Y({
+      className: `${pfx}-total`,
+      kids: [
       Skeletons.Note({
         className: `${pfx}-total-label`,
         content: LOCALE.TOTAL_OUTCOME,
@@ -404,6 +423,9 @@ function rightPanelContent(ui) {
               ),
           })
         : null,
+      ].filter(Boolean),
+    }),
+      divider(),
       Skeletons.Box.Y({
         className: `${pfx}-breakdown`,
         kids: [
@@ -451,48 +473,47 @@ function rightPanelContent(ui) {
               }),
             ],
           }),
-          Skeletons.Box.X({
-            className: `${pfx}-breakdown-item ${pfx}-breakdown-total-storage`,
-            kids: [
-              Skeletons.Button.Icon({
-                className: `${pfx}-breakdown-icon`,
-                ico: "raw-hard-drive-green",
-              }),
-              Skeletons.Note({
-                className: `${pfx}-breakdown-total-storage-label`,
-                content: LOCALE.TOTAL_STORAGE,
-              }),
-              Skeletons.Note({
-                className: `${pfx}-breakdown-total-storage-value`,
-                content: summary.totalStorage,
-              }),
-            ],
-          }),
-          // Dropped for unlimited-member plans — see the left panel.
-          summary.effectivePricePerSeat ? Skeletons.Box.X({
-            className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat`,
-            kids: [
-              Skeletons.Button.Icon({
-                className: `${pfx}-breakdown-icon`,
-                ico: "raw-trending-up",
-              }),
-              Skeletons.Box.Y({
-                className: `${pfx}-breakdown-label-container`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${pfx}-breakdown-label`,
-                    content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
-                  }),
-                  Skeletons.Note({
-                    className: `${pfx}-breakdown-value-effective-price-per-seat`,
-                    content: summary.effectivePricePerSeat,
-                  }),
-                ],
-              }),
-            ],
-          }) : null,
         ].filter(Boolean),
       }),
+      divider(),
+      // Tinted highlight rows (Figma 737:29600 / 737:29605): icon + label on
+      // the left, value on the right. Phosphor HardDrives / TrendUp, the same
+      // glyphs the design draws.
+      Skeletons.Box.X({
+        className: `${pfx}-highlight ${pfx}-breakdown-total-storage`,
+        kids: [
+          Skeletons.Image.Svg({
+            className: `${pfx}-highlight-icon`,
+            ico: "ph-hard-drives",
+          }),
+          Skeletons.Note({
+            className: `${pfx}-highlight-label`,
+            content: LOCALE.TOTAL_STORAGE,
+          }),
+          Skeletons.Note({
+            className: `${pfx}-highlight-value`,
+            content: summary.totalStorage,
+          }),
+        ],
+      }),
+      // Dropped for unlimited-member plans — see the left panel.
+      summary.effectivePricePerSeat ? Skeletons.Box.X({
+        className: `${pfx}-highlight ${pfx}-breakdown-effective-price-per-seat`,
+        kids: [
+          Skeletons.Image.Svg({
+            className: `${pfx}-highlight-icon`,
+            ico: "ph-trend-up",
+          }),
+          Skeletons.Note({
+            className: `${pfx}-highlight-label`,
+            content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
+          }),
+          Skeletons.Note({
+            className: `${pfx}-highlight-value`,
+            content: summary.effectivePricePerSeat,
+          }),
+        ],
+      }) : null,
       promoCodeSection(ui),
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,

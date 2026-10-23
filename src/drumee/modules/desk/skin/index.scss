@@ -18,6 +18,7 @@ html {
 @include meta.load-css("dialog");
 @include meta.load-css("sidebar");
 @include meta.load-css("meeting-toast");
+@include meta.load-css("desk-toast");
 
 .desk-module {
   // Where the padded canvas actually begins, published once so every
@@ -603,9 +604,14 @@ html {
     // the backdrops removes the class of bug, this instance included. A
     // dropdown asks for no backdrop and has no business raising the screen over
     // the top bar either way.
-    &:has(.settings-main__overlay[data-state="open"]),
-    &:has(.calendar-main__modal-wrapper[data-state="open"]),
-    &:has(.chat-p2p__overlay-wrapper[data-mode="open"]) {
+    //
+    // Only the VISIBLE screen's backdrop counts. Several section screens can
+    // be parked in this slot at once now (index.js _switchMainSlot); a modal
+    // left open in a parked Settings must not lift the Calendar shown over it
+    // above the sidebar.
+    &:has(> :not([data-anim="out"]) .settings-main__overlay[data-state="open"]),
+    &:has(> :not([data-anim="out"]) .calendar-main__modal-wrapper[data-state="open"]),
+    &:has(> :not([data-anim="out"]) .chat-p2p__overlay-wrapper[data-mode="open"]) {
       z-index: 20001;
     }
   }
@@ -649,7 +655,12 @@ html {
 //        (0,1,0) + (0,1,0) + (0,1,0) = (0,3,0)
 //   now  .desk-module[data-desk-upload] .window-manager__ui
 //        (0,1,0) + (0,1,0) + (0,1,0) = (0,3,0)
-.desk-module[data-desk-upload] {
+// The chat / meeting card (`data-desk-toast`, same mirror) needs the same
+// escape: the section screens in settings-main-slot (1500) covered it, so a
+// message arriving on the home screen showed nothing. While a card is up the
+// desk stacks exactly as during an upload.
+.desk-module[data-desk-upload],
+.desk-module[data-desk-toast] {
   .window-manager__ui {
     isolation: auto;
     z-index: auto;
@@ -699,6 +710,7 @@ html {
 // clear of the global (0,1,0) and the focus lift (0,4,0). The attribute is
 // doubled on each so the two flags rank identically.
 .desk-module[data-desk-upload][data-desk-upload],
+.desk-module[data-desk-toast][data-desk-toast],
 .desk-module[data-desk-call][data-desk-call] {
   .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer):not(.call-layer) {
     z-index: 1300 !important;
@@ -850,16 +862,25 @@ html {
 // Specificity is unchanged: `:where()` still contributes ZERO, so the most
 // specific `:has()` argument is `.window-upload-progress` (0,1,0) as before and
 // the selector stays at (0,7,0).
-.desk-module:not([data-window-tour="1"]):has(
-    .window-upload-progress,
-    :where(.window-connect)
-  ):has(
-    .desk-module__topbar .menu-topic[data-state="1"],
-    .desk-module__topbar .desk-module-topbar__utility-btn:hover
-  ) {
-  .desk-module__topbar {
-    z-index: var(--z-index-upload-progress, 50002);
-  }
+//
+// NO ROOT `:has()` ANY MORE (2026-09-26). Both conditions used `.desk-module`
+// itself as the `:has()` subject, so every data-state flip and every hover
+// change ANYWHERE in the app re-evaluated the application root — i.e. every
+// tab/workspace switch paid for it. They now read the flags the desk already
+// stamps on the root from JS instead:
+//   upload / call present  → [data-desk-upload] / [data-desk-call]
+//                            (wm/index.js _installDeskStateMirrors)
+//   a topbar dropdown open → [data-desk-topmenu]
+//                            (desk/index.js _installWsMenuMirror)
+//   a utility button hover → `:has()` on `.desk-module__topbar`, a handful of
+//                            nodes, instead of the root.
+// Specificity held at (0,7,0) with repeated attribute/class selectors, the
+// idiom used elsewhere in this file — see the note above for why it matters.
+.desk-module:not([data-window-tour="1"]):is([data-desk-upload], [data-desk-call])[data-desk-topmenu][data-desk-topmenu][data-desk-topmenu]
+  .desk-module__topbar,
+.desk-module:not([data-window-tour="1"]):is([data-desk-upload], [data-desk-call])
+  .desk-module__topbar.desk-module__topbar:has(.desk-module-topbar__utility-btn:hover) {
+  z-index: var(--z-index-upload-progress, 50002);
 }
 
 // While a window-connect (call popup) is open, the call must float above the
@@ -1001,8 +1022,21 @@ html {
 //
 // Specificity (0,7,0), nested (0,8,0): clears the focus lift (0,4,0) and the
 // global lift (0,1,0), both !important.
+//
+// The full-page Billing screen is the same case and gets the same pin: any
+// Wm.alert / Wm.confirm raised from it (Contact sales on the Sovereign card,
+// cancel/switch-plan confirms) painted over the workspace pane instead of the
+// page the user clicked from. settings_billing is not in
+// KEEP_ALIVE_MAIN_KINDS either, so present means showing here too.
+//
+// And the Organisation screen (desk_org_view): its "+ New → New department"
+// Create dialog, the delete-department confirm and its alerts all opened over
+// the workspace pane (the Files tab) instead of the org screen the user was
+// on. Not in KEEP_ALIVE_MAIN_KINDS either.
 .desk-module[data-wm-modal="open"]:has(
-    .desk-module__settings-main-slot > [data-kind="apps_main"]:not([data-anim="out"])
+    .desk-module__settings-main-slot > [data-kind="apps_main"]:not([data-anim="out"]),
+    .desk-module__settings-main-slot > [data-kind="settings_billing"]:not([data-anim="out"]),
+    .desk-module__settings-main-slot > [data-kind="desk_org_view"]:not([data-anim="out"])
   ) {
   .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer) {
     z-index: 1300 !important;
@@ -1184,16 +1218,13 @@ html {
 // that looks pressable and does nothing is worse than one that is not drawn.
 //
 //   __open       the org dropdown's "Open" pill, which leads to THIS screen.
-//   __nav-main   the workspace rail (Files / Chat / Task / Meet / Access).
-//                Every item drives the ACTIVE WORKSPACE WINDOW
+//   sidebar      the whole desk sidebar (rail + __main): logo row, the
+//                workspace rail (Files / Chat / Task / Meet / Access) and the
+//                footer. Every rail item drives the ACTIVE WORKSPACE WINDOW
 //                (Wm.getActiveWindow at click time), and the org screen is not
-//                a workspace.
-//
-// __nav-main, NOT its parent __nav. __nav also holds the logo row — the
-// wordmark, the organisation's name and the collapse/pin toggle — which is
-// chrome the screen has no quarrel with: the sidebar keeps its identity and its
-// pin control, and only the five rail items go. Hiding __nav took the logo with
-// them and left the column empty above the footer.
+//                a workspace — so the screen gets the full width instead.
+//                (Previously only __nav-main went and the logo row and footer
+//                stayed.)
 //
 // ONE RULE, TWO SUBJECTS, and one home for the condition. Both were about to
 // key off the same `:has()` in two different skins — this file already reaches
@@ -1239,9 +1270,19 @@ html {
 //   now  .desk-module[data-desk-orgview][data-desk-orgview][data-desk-orgview] .desk-org-tab__open
 //        (0,1,0) + (0,1,0)x3        + (0,1,0) = (0,5,0)
 .desk-module[data-desk-orgview][data-desk-orgview][data-desk-orgview] {
-  .desk-org-tab__open,
-  .desk-module-sidebar__nav-main {
+  .desk-org-tab__open {
     display: none;
+  }
+
+  // The whole sidebar goes while the org screen is up. The __rail with it, not
+  // just __main: the rail is the in-flow column that reserves the sidebar's
+  // 64/231px (sidebar.scss __rail), so hiding __main alone would leave an empty
+  // strip where it was. `!important` because the ≤650px block in sidebar.scss
+  // forces `__main { display: flex !important }`. The mobile drawer has no
+  // rail, so __main is listed for it.
+  .desk-module-sidebar__rail,
+  .desk-module-sidebar__main {
+    display: none !important;
   }
 }
 
@@ -1344,7 +1385,12 @@ html {
 // `visibility`, since a descendant can set `visibility: visible` back and no
 // descendant can undo an ancestor's opacity. The headless layer is already a
 // stacking context (z-index), so opacity changes nothing about its stacking.
-.desk-module[data-boot-tour-hold="1"] .window-manager__layer.headless {
+//
+// `data-landing-hold` does the same for a FIRST OPEN that will land on the
+// organisation screen (desk _holdLandingPane): the default workspace still
+// opens underneath, but is not shown before the screen that covers it.
+.desk-module[data-boot-tour-hold="1"] .window-manager__layer.headless,
+.desk-module[data-landing-hold="1"] .window-manager__layer.headless {
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
@@ -1617,5 +1663,20 @@ html {
   .desk-module-topbar__actions-cluster {
     opacity: 0.4;
     pointer-events: none;
+  }
+}
+
+// A TOUR ON THE MOBILE DESK. Both tour hosts mount in the overlay, whose
+// open state pins it to a 50000 stacking context — so the tour's own 100001
+// counts only inside it, and the mobile topbar (99999), its action row and the
+// bottom rail would paint over the tour and take its taps (the Skip pill sits
+// exactly where the topbar's buttons are). The phone tour draws its own
+// chrome, so the real one stands down for the tour's life.
+.desk-module[data-desk-tour="1"],
+.desk-module[data-window-tour="1"] {
+  .desk-module__mobile-topbar,
+  .desk-module__mobile-actions,
+  .desk-module__mrail {
+    display: none;
   }
 }

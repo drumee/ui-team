@@ -19,7 +19,7 @@
   padding: 32px;
   gap: 32px;
   align-items: center;
-  font-family: "Geist", system-ui, sans-serif;
+  font-family: var(--font-main);
   pointer-events: auto;
 
   // Close button: 32×32 hit target with 16×16 icon, top-right corner.
@@ -79,7 +79,7 @@
   // Heading — dtk_otp renders the title via its `header()` helper.
   .dtk-otp__title,
   .dtk-otp__main .header {
-    font-family: "Geist", system-ui, sans-serif;
+    font-family: var(--font-main);
     font-weight: 600;
     font-size: 20px;
     line-height: 1.1;
@@ -90,7 +90,7 @@
   // Body / "sent to" message.
   .dtk-otp__message,
   .dtk-otp__message-text {
-    font-family: "Geist", system-ui, sans-serif;
+    font-family: var(--font-main);
     font-weight: 400;
     font-size: 14px;
     line-height: 1.4;
@@ -115,7 +115,7 @@
     transition: border-color 120ms ease, background-color 120ms ease;
 
     input {
-      font-family: "Geist", system-ui, sans-serif;
+      font-family: var(--font-main);
       font-size: 20px;
       font-weight: 600;
       line-height: 1;
@@ -146,7 +146,7 @@
 
   // Resend link styled to match the small-body palette.
   .dtk-otp__resend-text {
-    font-family: "Geist", system-ui, sans-serif;
+    font-family: var(--font-main);
     font-size: 14px;
     line-height: 1.4;
     color: #65656c;

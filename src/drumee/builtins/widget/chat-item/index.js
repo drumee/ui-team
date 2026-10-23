@@ -1,5 +1,8 @@
 const { toggleState, colorFromName, copyToClipboard } = require("@drumee/ui-essentials");
 const { isSupportEntity, supportMarkup } = require("libs/support");
+// How long "Show in folder" keeps the file lit (ms) before Wm._applyReveal
+// unlights it.
+const REVEAL_TTL = 5000;
 require("./skin");
 class ___widget_chatItem extends LetcBox {
   /**
@@ -55,6 +58,37 @@ class ___widget_chatItem extends LetcBox {
     return this._isMeeting() || this._isFileThreadCard();
   }
 
+  /**
+   * The hub this conversation belongs to. The chat-item model has no hub_id
+   * of its own — without it a request goes out as hub_id=undefined and the
+   * server answers 403. uiHandler may be a single widget OR an array ([ui]);
+   * the containing folder window carries the authoritative hub_id; Host is
+   * the last resort.
+   */
+  _chatHubId() {
+    let uh = this.mget(_a.uiHandler);
+    if (_.isArray(uh)) uh = uh[0];
+    const folderWin =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    return (
+      this.mget(_a.hub_id) ||
+      (folderWin && folderWin.mget && folderWin.mget(_a.hub_id)) ||
+      (uh && uh.hubId) ||
+      (typeof Host !== "undefined" && Host.get && Host.get(_a.id)) ||
+      ""
+    );
+  }
+
+  /**
+   * A one-to-one conversation: its attachments belong to no workspace, so
+   * there is no folder for "Show in folder" to open.
+   */
+  _isPeerChat() {
+    let uh = this.mget(_a.uiHandler);
+    if (_.isArray(uh)) uh = uh[0];
+    return !!(uh && uh.peerId);
+  }
+
   // Hydrate the file-thread card with the CURRENT filename + availability from
   // file_thread_info (rename/delete/move are reflected live, not from a stored
   // snapshot). Best-effort: a failed fetch just leaves the card as rendered.
@@ -80,21 +114,7 @@ class ___widget_chatItem extends LetcBox {
         md._file_thread_last_filename,
       );
     }
-    // The chat-item model has no hub_id of its own — without it the request
-    // goes out as hub_id=undefined and the server answers 403. Resolve it
-    // robustly: uiHandler may be a single widget OR an array ([ui]); the
-    // containing folder window carries the authoritative hub_id; Host is the
-    // last resort.
-    let uh = this.mget(_a.uiHandler);
-    if (_.isArray(uh)) uh = uh[0];
-    const folderWin =
-      this.getParentByKind && this.getParentByKind("window_folder");
-    const hubId =
-      this.mget(_a.hub_id) ||
-      (folderWin && folderWin.mget && folderWin.mget(_a.hub_id)) ||
-      (uh && uh.hubId) ||
-      (typeof Host !== "undefined" && Host.get && Host.get(_a.id)) ||
-      "";
+    const hubId = this._chatHubId();
     let info;
     try {
       const svc =
@@ -255,7 +275,12 @@ class ___widget_chatItem extends LetcBox {
                 itemsOpt: {
                   kind: "media_grid",
                   isAttachment: 1,
+                  // Images and videos render IN the message (a picture, a
+                  // playable video) instead of as a 44px file card. Opt-in
+                  // here, so every other media_grid is untouched.
+                  inlineMedia: 1,
                   origin: _a.chat,
+                  noReveal: this._isPeerChat() ? 1 : 0,
                   uiHandler: Wm,
                   logicalParent: Wm,
                 },
@@ -266,6 +291,14 @@ class ___widget_chatItem extends LetcBox {
           }),
         );
         this._armAttachmentSkeletonCeiling();
+        // Tiles that turn into inline pictures / videos announce it (media
+        // grid INLINE_MEDIA_READY) — lay the message out around them.
+        if (!this._inlineLayoutBound && this.el) {
+          this._inlineLayoutBound = true;
+          this.el.addEventListener("drumee:inline-media-ready", () =>
+            this._stampInlineLayout(),
+          );
+        }
       }
 
       if (showBubble) {
@@ -327,24 +360,28 @@ class ___widget_chatItem extends LetcBox {
           if (bubble && card && card.parentNode !== bubble) {
             bubble.appendChild(card);
           }
-          // "Show in folder" → reveal the file in the folder window's Files tab.
-          // Capture phase so it beats the card's open-on-click + Wm anchor click.
-          if (!this._revealBound) {
-            this._revealBound = true;
-            el.addEventListener(
-              "click",
-              (ev) => {
-                const t =
-                  ev.target.closest &&
-                  ev.target.closest('[data-service="show-in-folder"]');
-                if (!t) return;
-                ev.preventDefault();
-                ev.stopPropagation();
-                this._showInFolder();
-              },
-              true,
-            );
-          }
+          // Tiles may have rendered before the card moved into the bubble.
+          this._stampInlineLayout();
+        }
+        // "Show in folder" → open the file's folder and highlight the file.
+        // Capture phase so it beats the card's open-on-click + Wm anchor click.
+        // Bound for every message, not only those with attachments: a reply
+        // quote (attachmentReponse) shows the quoted message's cards too.
+        if (!this._revealBound) {
+          this._revealBound = true;
+          el.addEventListener(
+            "click",
+            (ev) => {
+              const t =
+                ev.target.closest &&
+                ev.target.closest('[data-service="show-in-folder"]');
+              if (!t) return;
+              ev.preventDefault();
+              ev.stopPropagation();
+              this._showInFolder(t);
+            },
+            true,
+          );
         }
         // Open the action bar only while hovering the message bubble (the
         // conversation content), mirroring the time reveal — not the whole row.
@@ -367,6 +404,40 @@ class ___widget_chatItem extends LetcBox {
         this._renderReactions();
       });
     }, 0);
+  }
+
+  /**
+   * Lay a message out around its inline pictures / videos (media_grid
+   * inlineMedia). Two stamps, both read by skin/attachment.scss:
+   *
+   *  - bubble `data-media-only="1"`: no text, no reply quote, and EVERY
+   *    attachment is inline media — the picture is the message, so the
+   *    coloured bubble frame (padding, fill, shadow) goes.
+   *  - attachment wrapper `data-album="1"`: two or more pictures, all images —
+   *    tiled as a grid of square thumbnails instead of a tall stack.
+   *
+   * Recomputed whenever a tile reports in, since they render one by one; a
+   * tile that fell back to the file card reports too, and undoes both.
+   */
+  _stampInlineLayout() {
+    const fig = this.fig.family;
+    const el = this.el;
+    if (!el) return;
+    const bubble = el.querySelector(`.${fig}__conversation-content`);
+    const wrapper = el.querySelector(`.${fig}__attachment-wrapper`);
+    const list = el.querySelector(`.${fig}__attachment-wrapper-list`);
+    if (!wrapper || !list) return;
+    const tiles = list.querySelectorAll(".media-grid__content");
+    const inline = list.querySelectorAll(".media-grid__content.inline-media");
+    const images = list.querySelectorAll(".media-grid__content.inline-media.image");
+    const allInline = tiles.length > 0 && inline.length === tiles.length;
+    const hasText = !_.isEmpty((this.mget("message") || "").trim());
+    const hasQuote = !!(bubble && bubble.querySelector(`.${fig}-reply__main`));
+    wrapper.dataset.album =
+      allInline && images.length > 1 && images.length === tiles.length ? "1" : "0";
+    if (bubble) {
+      bubble.dataset.mediaOnly = allInline && !hasText && !hasQuote ? "1" : "0";
+    }
   }
 
   /**
@@ -485,7 +556,7 @@ class ___widget_chatItem extends LetcBox {
         child.onAddKid = () => {
           // The real card is in the DOM — the placeholder has done its job.
           this._clearAttachmentSkeleton();
-          this.triggerHandlers({ service: "attachment-grown" });
+          this._tellChat({ service: "attachment-grown" });
         };
         // A just-sent message draws its cards from the staged nodes right
         // away; the list's own fetch is disabled until the echo (see
@@ -498,9 +569,36 @@ class ___widget_chatItem extends LetcBox {
           // placeholder cannot be found yet — flag it for the ceiling call
           // that runs right after the append.
           this._previewFed = true;
-          this.triggerHandlers({ service: "attachment-grown" });
+          this._tellChat({ service: "attachment-grown" });
         }
         break;
+    }
+  }
+
+  /**
+   * Tell the chat about something this row did on its own (a card arrived),
+   * without the bubble triggerHandlers sends up the tree after it.
+   *
+   * That bubble reaches the window holding the chat, and window/core answers
+   * any bubble by raising the window — right for a click, wrong here. In a
+   * workspace pane the cards load after the pane mounts, so a file opened over
+   * the pane (a Designation link) was pushed behind it a second or two later,
+   * once per card: it flashed, then looked closed.
+   *
+   * `bubble: 0` is ui-core's own switch for "do not bubble"; it is put back
+   * at once, so clicks on this row still raise its window.
+   *
+   * @param {Object} args the service payload, as for triggerHandlers
+   */
+  _tellChat(args) {
+    const had = this.model.has(_a.bubble);
+    const bubble = this.model.get(_a.bubble);
+    this.model.set(_a.bubble, 0, { silent: true });
+    try {
+      this.triggerHandlers(args);
+    } finally {
+      if (had) this.model.set(_a.bubble, bubble, { silent: true });
+      else this.model.unset(_a.bubble, { silent: true });
     }
   }
 
@@ -2095,42 +2193,77 @@ class ___widget_chatItem extends LetcBox {
   }
 
   /**
-   * "Show in folder" on a chat file card → reveal the file's location. Prefer
-   * switching the folder window the user is already in to its Files tab; fall
-   * back to opening (or focusing) a folder window for the file's hub.
+   * "Show in folder" on a chat file card → open the folder the file lives in,
+   * on the Files tab, and scroll to + flash that file.
+   *
+   * The card is never the workspace file: a message holds its own copy in a
+   * hidden /__chat__/ sandbox, and a "From workspace" pick was already a copy
+   * before that. channel.attachment_location finds the file it stands for
+   * (promoted folder file, else the hub file with the same content) and
+   * checks the caller can still read it, wherever it sits NOW.
+   *
+   * @param {HTMLElement} trigger the clicked link
    */
-  _showInFolder() {
-    const ownFolder =
-      this.getParentByKind && this.getParentByKind("window_folder");
-    if (ownFolder && ownFolder.showFolderTab) {
-      ownFolder.showFolderTab("files");
-      if (ownFolder.raise) ownFolder.raise();
-      return;
-    }
-
-    const hub_id =
-      this.mget(_a.hub_id) ||
-      (this.mget(_a.uiHandler) && this.mget(_a.uiHandler).hubId);
-    if (!hub_id || !Wm.launch) return;
-    const existing = (
-      (Wm.getItemsByKind && Wm.getItemsByKind("window_folder")) ||
-      []
-    ).find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
-    if (existing && existing.showFolderTab) {
-      existing.showFolderTab("files");
-      if (existing.raise) existing.raise();
-      return;
-    }
-    Wm.launch(
-      {
-        kind: "window_folder",
-        hub_id,
-        activeTab: "files",
-        wm_unique_id: `window_folder-${hub_id}`,
-      },
-      { explicit: 1, singleton: 1 },
+  async _showInFolder(trigger) {
+    const card = (this.getItemsByKind("media_grid") || []).find(
+      (c) => c && c.el && c.el.contains(trigger),
     );
+    if (!card || !card.model) return;
+    const hub_id = this._chatHubId();
+    if (!hub_id) return;
+    let md = this.mget("metadata") || {};
+    if (_.isString(md)) {
+      try {
+        md = JSON.parse(md);
+      } catch (e) {
+        md = {};
+      }
+    }
+    const svc =
+      (SERVICE.channel && SERVICE.channel.attachment_location) ||
+      "channel.attachment_location";
+    let node = null;
+    try {
+      node = await this.fetchService(svc, {
+        hub_id,
+        attachment_nid: card.mget(_a.nid) || "",
+        attachment_hub_id: card.mget(_a.hub_id) || "",
+        folder_nid: card.mget("folder_nid") || "",
+        scope_nid: (md && md._scope_nid) || "",
+        // GETs are HTTP-cached: a file moved since the last click would
+        // otherwise be shown where it used to be.
+        _ts: Date.now(),
+      });
+    } catch (e) {
+      this.warn("[chat-item] show-in-folder: cannot resolve", e);
+    }
+    if (!node || !node.nid) {
+      Wm.alert(LOCALE.FILE_NOT_FOUND);
+      return;
+    }
+    const args = {
+      hub_id: node.hub_id || hub_id,
+      nid: node.nid,
+      pid: node.pid || node.parent_id,
+      filetype: node.filetype || node.ftype,
+      activeTab: "files",
+      highlight: 1,
+      // Lit for REVEAL_TTL, then cleared — a pointer, not a lasting mark.
+      revealTtl: REVEAL_TTL,
+    };
+    // One file at a time: the file a previous "Show in folder" lit stays lit
+    // otherwise, and the grid ends up pointing at several.
+    if (_.isFunction(Wm.clearReveal)) Wm.clearReveal();
+    // Desk: land in the docked workspace pane. Other Wm hosts have no pane
+    // and keep the floating-window reveal.
+    if (_.isFunction(Wm.openNotificationLocation)) {
+      return Wm.openNotificationLocation(args);
+    }
+    if (_.isFunction(Wm.openFileLocation)) {
+      return Wm.openFileLocation(args);
+    }
   }
+
 
   /**
    * Render the quoted file list — one card per attached file (Figma 2306-36705:
@@ -2168,6 +2301,7 @@ class ___widget_chatItem extends LetcBox {
                 className: `${this.fig.family}__attachment-wrapper`,
                 isAttachment: 1,
                 origin: _a.chat,
+                noReveal: this._isPeerChat() ? 1 : 0,
                 uiHandler: Wm,
                 logicalParent: Wm,
                 filetype: f.ftype || f.filetype,
@@ -2182,7 +2316,7 @@ class ___widget_chatItem extends LetcBox {
     await this.ensurePart("attachment-files");
     this.__attachmentFiles.feed(cards);
 
-    this.triggerHandlers({ service: "attachment-reponse" });
+    this._tellChat({ service: "attachment-reponse" });
   }
 
   /**

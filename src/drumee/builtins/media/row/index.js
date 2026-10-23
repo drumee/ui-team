@@ -1,7 +1,10 @@
 
 const { TweenLite } = require("@drumee/ui-core/vendor");
+const { toggleState } = require("@drumee/ui-essentials");
 
-const MEDIA_TOGGLE = "madia-toggle";
+// The row last right-clicked — the "current row" highlight (data-current).
+// One for the whole app, as the old radio channel was.
+let currentRow = null;
 class __media_row extends DrumeeMediaInteract {
   constructor(...args) {
     super(...args);
@@ -15,9 +18,18 @@ class __media_row extends DrumeeMediaInteract {
 
   static initClass() {
     this.prototype.isRow = 1;
-    this.prototype.behaviorSet = {
-      bhv_radio: 1
-    };
+    // NO bhv_radio. ui-core's radio behaviour (letc/addons/backbone/view/
+    // behavior/radio.js) answers a right-click — letc.js runs
+    // triggerMethod("toggle") before building the contextmenu — by
+    // broadcasting on the row channel, and every other row's _on_message then
+    // calls setState(0). setState writes `_a.state`, which IS the selection
+    // (getLocalSelection / Wm.getGlobalSelection read it), but not
+    // data-selected or the checkbox: the ticked rows stayed ticked on screen
+    // while the model had dropped them, so every contextmenu action
+    // (removeMediaSelection, move, link to task…) ran on the right-clicked
+    // row alone. Grid tiles never had the behaviour, which is why only the
+    // list view broke. The highlight it gave is kept below (onToggle), as a
+    // DOM flag that never touches `state`.
   }
 
   /**
@@ -29,7 +41,6 @@ class __media_row extends DrumeeMediaInteract {
     super.initialize(opt);
     this.mset({
       flow: _a.x,
-      radio: MEDIA_TOGGLE
     });
     this.innerContent = require('./template');
     this.cursorPosition = { left: 35, top: 35 };
@@ -38,6 +49,52 @@ class __media_row extends DrumeeMediaInteract {
       height: 32
     }
     this.initContainer()
+  }
+
+  /**
+   * The paint the radio behaviour used to do on render: a row born selected
+   * (a pasted item arrives with state 1) shows it.
+   */
+  onRender() {
+    if (super.onRender) super.onRender();
+    this.setState(toggleState(this.mget(_a.state)));
+  }
+
+  /**
+   * Right-click, ahead of the contextmenu (ui-core letc.js
+   * triggerMethod("toggle")).
+   *
+   * On a SELECTED row the selection is left alone, so the menu acts on all of
+   * it. On any other row the menu must act on that row only — removeMediaSelection
+   * would otherwise add it to whatever is still ticked — so the selection is
+   * cleared first, through unselect(), which repaints the checkboxes too.
+   * Wm.unselect covers the floating windows; the row's own window is cleared
+   * as well because the docked workspace pane lives in headlessLayer, which
+   * Wm.unselect does not walk.
+   */
+  onToggle() {
+    if (!toggleState(this.mget(_a.state))) {
+      if (window.Wm && _.isFunction(Wm.unselect)) Wm.unselect(2);
+      const win = this.getLogicalParent && this.getLogicalParent();
+      if (win && win !== window.Wm && _.isFunction(win.unselect)) win.unselect(0);
+    }
+    this._markCurrent();
+  }
+
+  /**
+   * The "current row" highlight, on this row only.
+   */
+  _markCurrent() {
+    if (currentRow && currentRow !== this && !currentRow.isDestroyed() && currentRow.el) {
+      currentRow.el.dataset.current = "0";
+    }
+    currentRow = this;
+    this.el.dataset.current = "1";
+  }
+
+  onDestroy() {
+    if (super.onDestroy) super.onDestroy();
+    if (currentRow === this) currentRow = null;
   }
 
   /**
@@ -72,6 +129,41 @@ class __media_row extends DrumeeMediaInteract {
  */
   rowsCount(value) {
     return 1;
+  }
+
+  /**
+   * Inline rename (pencil icon) in list mode.
+   *
+   * The shared editor (interact.js) is appended as the row's LAST child and
+   * the row skin parks it with a fixed `left: 119px; top: 12%`. The Files tab
+   * redefines the row's columns (44px checkbox + 44px icon, then a flexible
+   * name column), so the box landed away from the name and at a width
+   * unrelated to it. Lay it over the real filename cell instead, centred in
+   * the row — right after the file icon, whatever the column template is.
+   * (Focus + name preselection is interact.js _readyRenameField.)
+   */
+  async _createInput(value, opt) {
+    await super._createInput(value, opt);
+    const entry = this.children.last();
+    if (!entry || entry.isDestroyed() || !entry.el) return;
+    this._alignRenameInput(entry);
+  }
+
+  _alignRenameInput(entry) {
+    const name = document.getElementById(`${this._id}-filename`);
+    const cell =
+      (name && name.closest(`.${this.fig.family}__field-filename`)) || name;
+    const host = entry.el.offsetParent;
+    if (!cell || !host) return;
+    const h = host.getBoundingClientRect();
+    const c = cell.getBoundingClientRect();
+    if (!c.width) return;
+    const st = entry.el.style;
+    st.left = `${Math.round(c.left - h.left)}px`;
+    st.width = `${Math.round(c.width)}px`;
+    st.top = `${Math.round(c.top - h.top + c.height / 2)}px`;
+    st.height = "auto";
+    st.transform = "translateY(-50%)";
   }
 
   /**

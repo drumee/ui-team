@@ -1,5 +1,7 @@
 module.exports = function (ui) {
   const pfx = ui.fig.family;
+  // "Nothing in trash" is wrong when only the Expiring soon filter is empty.
+  const expiring = ui._filter === "expiring";
 
   const iconCard = Skeletons.Box.Y({
     className: `${pfx}__placeholder-card`,
@@ -21,11 +23,11 @@ module.exports = function (ui) {
       iconCard,
       Skeletons.Note({
         className: `${pfx}__placeholder-title`,
-        content: LOCALE.NOTHING_IN_TRASH,
+        content: expiring ? LOCALE.TRASH_EXPIRING_EMPTY_TITLE : LOCALE.NOTHING_IN_TRASH,
       }),
       Skeletons.Note({
         className: `${pfx}__placeholder-hint`,
-        content: LOCALE.TRASH_EMPTY_HINT,
+        content: expiring ? LOCALE.TRASH_EXPIRING_EMPTY_HINT : LOCALE.TRASH_EMPTY_HINT,
       }),
       Skeletons.Button.Label({
         className: `${pfx}__placeholder-refresh-btn`,

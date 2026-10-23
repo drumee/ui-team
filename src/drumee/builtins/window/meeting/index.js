@@ -1,5 +1,7 @@
 const __room = require("builtins/webrtc/room/jitsi");
+const { planShareStrip } = require("builtins/webrtc/share-strip");
 const { canUpgradePlan } = require("libs/billing");
+const { MemberCalls, inviteRang } = require("./member-call");
 const {
   mediaDeviceLabel,
   isMediaPermissionError,
@@ -14,6 +16,9 @@ const PARTY_TOAST_MS = 4000;
 // enough to finish a thought and say goodbye, short enough that it is not
 // hanging over the whole call. Only armed when the server sends a deadline.
 const MEETING_LIMIT_WARN_MS = 5 * 60 * 1000;
+// Waiting room re-check for an invitee early to a scheduled meeting
+// (_armEarlyWait): how soon the organizer starting it early is noticed.
+const EARLY_WAIT_POLL_MS = 30 * 1000;
 // Below this window width the 420px side panel and the video stage can no
 // longer share the row, so the panel auto-collapses (see _applyChatAutoClose)
 // and switches to full-bleed overlay mode when opened by hand
@@ -204,6 +209,8 @@ class __window_meeting extends __room {
       // sliver. Superset of data-narrow, which keeps its own job (dropping the
       // secondary topbar controls).
       this.el.dataset.panelOverlay = w < CHAT_AUTO_CLOSE_W ? "1" : "0";
+      if (this._floatDocked()) this._layoutShareStrip();
+      else this._layoutPinStage();
     }
     this._applyChatAutoClose(w);
   }
@@ -274,7 +281,10 @@ class __window_meeting extends __room {
    *
    */
   async onDomRefresh() {
-    this.raise();
+    // A waiting-room re-check (_armEarlyWait) re-enters QUIETLY: no raise, no
+    // re-render, the "starts at" message stays up until the join goes through.
+    const recheck = this.state === "scheduledWait";
+    if (!recheck) this.raise();
     this._initIdleControls();
     this._bindResizeObserver();
     // "standalone" now means "this is the desk's full-frame call screen" —
@@ -288,7 +298,7 @@ class __window_meeting extends __room {
     // the launch geometry and the drag/resize affordances the window base class
     // installs, here and again from setupInteract below.
     this._lockGeometry();
-    if (this.el) this.el.dataset.ready = "0";
+    if (this.el && !recheck) this.el.dataset.ready = "0";
     // Lock the in-topbar controls for the whole pre-join phase: while the
     // startup state messages ("Connection in progress", "Waiting for camera &
     // microphone", "Waiting to join the conference") are showing, the meeting
@@ -300,8 +310,10 @@ class __window_meeting extends __room {
     // clear and the conference goes live. The Leave button is exempted in CSS
     // so the user always has an escape hatch. Mirrors the data-denied pattern.
     if (this.el) this.el.dataset.startingUp = "1";
-    this.feed(require("./skeleton/init")(this));
-    this.stateMachine("initializing");
+    if (!recheck) {
+      this.feed(require("./skeleton/init")(this));
+      this.stateMachine("initializing");
+    }
     // Any rejection from join() / prepareConference() (privilege denial that
     // surfaces as a thrown error, device permission denial, network/socket
     // failure, conference bind failure) must still flip data-ready to "1" —
@@ -311,6 +323,8 @@ class __window_meeting extends __room {
     try {
       room = await this.join();
       if (!room || !room.user) {
+        // Early for a scheduled meeting: join() showed when it starts.
+        if (this.state === "scheduledWait") return this._armEarlyWait();
         /**
          * join() has already reported the accurate reason: "unreachable" when
          * the request never came back, "permissionDenied" when the server
@@ -322,6 +336,17 @@ class __window_meeting extends __room {
         }
         return;
       }
+      // Out of the waiting room: the call takes over, behind the same spinner
+      // a first join shows (data-ready), with the waiting screen gone. Left
+      // stamped, data-waiting would hide the call's header and cover it.
+      if (this.el) {
+        this.el.dataset.waiting = "0";
+        if (recheck) this.el.dataset.ready = "0";
+      }
+      // join() left the state alone on a re-check. Leave scheduledWait now,
+      // as a first join would be "joining" here: joinNow() and the waiting
+      // guards key off it.
+      if (recheck) this.stateMachine("joining");
       // sendRoomInfo doesn't forward the host record to non-host clients;
       // the host self-announces via HOST_HELLO below.
       this._isHost = !!(room.user && room.user.role === "host");
@@ -367,6 +392,57 @@ class __window_meeting extends __room {
     } finally {
       if (this.el) this.el.dataset.ready = "1";
     }
+  }
+
+  /**
+   * Waiting room for an invitee early to a scheduled meeting (server
+   * lib/meeting-early). Ask again every EARLY_WAIT_POLL_MS, sooner if the
+   * room opens first: the host starting it, or its start time, lets the
+   * next join through. A re-join is the startup itself, as for Retry.
+   */
+  _armEarlyWait() {
+    clearTimeout(this._earlyWaitTimer);
+    const wait = this._earlyWait || {};
+    const untilOpen = (Number(wait.opens_at) || 0) * 1000 - Date.now();
+    // joinNow() came while a re-check was out: that answer may predate the
+    // host's start, so ask again right away instead of at the next poll.
+    const soon = this._earlyWaitSoon;
+    this._earlyWaitSoon = 0;
+    const delay = soon ? 1000 : Math.max(1000, Math.min(EARLY_WAIT_POLL_MS, untilOpen));
+    this._earlyWaitTimer = setTimeout(() => {
+      this._earlyWaitTimer = null;
+      this._recheckEarlyWait();
+    }, delay);
+  }
+
+  // One re-check at a time. The poll and joinNow() can land together, and two
+  // joins in flight would put this socket in the room twice.
+  async _recheckEarlyWait() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this._earlyChecking) {
+      this._earlyWaitSoon = 1;
+      return;
+    }
+    clearTimeout(this._earlyWaitTimer);
+    this._earlyWaitTimer = null;
+    this._earlyChecking = 1;
+    try {
+      await this.onDomRefresh();
+    } finally {
+      this._earlyChecking = 0;
+    }
+  }
+
+  /**
+   * The host has just started the meeting this window waits for: the desk got
+   * its conference.start, the room rang us, or Join was clicked elsewhere. Go
+   * in now rather than at the next re-check (the server still decides). Does
+   * nothing outside the waiting room.
+   */
+  joinNow() {
+    if (this.state !== "scheduledWait") return;
+    if (this.raise) this.raise();
+    return this._recheckEarlyWait();
   }
 
   // CONFERENCE_JOINED — the local user is now actually in the conference, so
@@ -481,12 +557,18 @@ class __window_meeting extends __room {
 
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
+    clearTimeout(this._earlyWaitTimer);
+    this._unpinFeedbackOverlay();
+    this._unwatchShareStrip();
+    this._unwatchPinStage();
     this._teardownCallParking();
     // Duration-cap timers. Left armed they would fire against a destroyed
     // window minutes after the meeting was over — and the cutoff one would
     // raise the upsell card at someone who has already left.
     this._clearMeetingDeadline();
     this._unbindResizeObserver();
+    // Roster ring / outcome timers (member-call.js).
+    if (this._memberCalls) this._memberCalls.dispose();
     // Cancel any pending hand-raise auto-clear timers so they can't fire after
     // teardown.
     if (this._handTimers) {
@@ -953,6 +1035,9 @@ class __window_meeting extends __room {
   }
 
   async onRemoteDrumateJoined(data) {
+    // Rung from the room while still waiting for it: the meeting is on, so go
+    // in. What follows is call bookkeeping that needs a joined conference.
+    if (this.state === "scheduledWait") return this.joinNow();
     if (super.onRemoteDrumateJoined) await super.onRemoteDrumateJoined(data);
     // Re-announce so late joiners learn who hosts.
     if (this._isHost) this._announceHostIfNeeded();
@@ -961,7 +1046,8 @@ class __window_meeting extends __room {
   }
 
   _markMemberJoined(drumate_id) {
-    if (!this._memberCallStates) this._memberCallStates = new Map();
+    // Joined ends any ring for them — stop its no-answer timer first.
+    this._calls().clear(drumate_id);
     this._memberCallStates.set(String(drumate_id), "joined");
     this._refreshMember(drumate_id);
   }
@@ -1000,6 +1086,7 @@ class __window_meeting extends __room {
     // No tile for them (joined without media, or already torn down) — the
     // roster entry can still be stale, so clear it on its own.
     if (this._memberCallStates && this._memberCallStates.has(key)) {
+      this._calls().clear(key);
       this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
@@ -1040,6 +1127,7 @@ class __window_meeting extends __room {
     if (super.onUserLeft) super.onUserLeft(id);
     if (uid != null) {
       const key = String(uid);
+      this._calls().clear(key);
       if (this._memberCallStates) this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
@@ -1114,6 +1202,13 @@ class __window_meeting extends __room {
         this.setCallTile(0);
         break;
 
+      // Leave from the waiting room (_showWaitingRoom). No call took place,
+      // so straight out: no feedback popup, and no re-check left behind.
+      case "leave-waiting-room":
+        clearTimeout(this._earlyWaitTimer);
+        this._earlyWaitTimer = null;
+        return this.goodbye();
+
       // Main half of the split button, and the menu's own "Leave meeting":
       // leave only. Re-assert the default so a cancelled "End meeting" can
       // never leak its intent into a later plain leave.
@@ -1180,7 +1275,9 @@ class __window_meeting extends __room {
         // One screen at a time: block starting a share while a remote is
         // presenting (belt-and-suspenders with the disabled button). The
         // active local presenter is never locked, so they can still stop.
-        if (this._shareLocked && !this._presentingLocally) return;
+        if (this._shareLocked && !this._presentingLocally) {
+          return this._explainShareLocked(cmd);
+        }
         super.onUiEvent(cmd, args);
         break;
 
@@ -1236,6 +1333,10 @@ class __window_meeting extends __room {
     if (!panel) return;
     if (!opts.auto) this._chatAutoClosed = 0;
     panel.dataset.open = open ? "1" : "0";
+    // The share strip (and the pin strip) turn from a right-hand column into a
+    // bottom row.
+    if (this._floatDocked()) this._layoutShareStrip();
+    else this._layoutPinStage();
     // Opening the panel only clears the pane you actually land on — a chat
     // message shouldn't be marked seen because you opened Participants.
     if (open) this._clearUnreadForTab(panel.dataset.tab);
@@ -1501,6 +1602,11 @@ class __window_meeting extends __room {
   // Priority: raised hand > dominant speaker > local self-view.
   _updateFloatFocus() {
     if (!this._floatDocked()) return;
+    this._layoutShareStrip();
+    // The user's own pin outranks every automatic choice: while a screen owns
+    // the stage, the pinned person takes the strip's first slot.
+    const pinned = this._pinnedTileEl();
+    if (pinned) return this._applyFloatFocus(pinned);
     const raisedUid = this._activeRaisedUid();
     if (raisedUid != null) return this._focusByUid(raisedUid);
     // While a REMOTE peer is presenting, spotlight THEIR camera tile — the float
@@ -1557,15 +1663,122 @@ class __window_meeting extends __room {
       .querySelectorAll('[data-focused="1"]')
       .forEach((n) => { n.dataset.focused = "0"; });
     el.dataset.focused = "1";
+    // The spotlighted tile takes the strip's first slot.
+    this._layoutShareStrip();
   }
 
   _clearFloatFocus() {
     if (!this.el) return;
+    // Undocked: the tiles go back to the grid, so the strip goes too.
+    this._clearShareStrip();
     const float = this.el.querySelector(`.${this.fig.family}__float-tiles`);
     if (!float) return;
     float
       .querySelectorAll('[data-focused="1"]')
       .forEach((n) => { n.dataset.focused = "0"; });
+  }
+
+  // ── Screen-share strip (Figma "Meeting — Avatar on Share", 775:152829) ──
+  // While a screen is shared, the docked tiles stop being a single floating
+  // thumbnail and become a strip of up to four tiles beside the shared screen:
+  // a column on the right, or a row under it when the side panel is open (or
+  // the window is narrow). More than four people → three tiles plus a "+N"
+  // tile, so at least three faces always stay visible. The parked call tile
+  // keeps the old single-thumbnail look (Figma "minimize"); the skin keys
+  // that off data-call-tile, so nothing here needs to know about parking.
+  //
+  // Everything is attributes on the live elements — tiles keep their tracks.
+  _stripTiles(mgr) {
+    return Array.from(mgr.children).filter(
+      (c) => c.dataset && /^webrtc_(local|remote)_user$/.test(c.dataset.kind || ""),
+    );
+  }
+
+  _layoutShareStrip() {
+    if (!this.el) return;
+    const participants = this.__participants;
+    const mgr = participants && !participants.isDestroyed() && participants.el;
+    if (!mgr || !this._floatDocked()) return this._clearShareStrip();
+    const panel = this._chatPanelEl();
+    const panelBeside =
+      !!panel && panel.dataset.open === "1" && this.el.dataset.panelOverlay !== "1";
+    const mode = panelBeside || this.el.dataset.narrow === "1" ? "row" : "column";
+    if (this.el.dataset.shareStrip !== mode) this.el.dataset.shareStrip = mode;
+    const tiles = this._stripTiles(mgr);
+    const plan = planShareStrip(tiles.map((el) => ({ focused: el.dataset.focused === "1" })));
+    // Runs on every speaker change: write only what moved, so a steady strip
+    // costs no style recalc.
+    tiles.forEach((el, i) => {
+      const order = String(plan.rank[i]);
+      const hidden = plan.visible[i] ? "0" : "1";
+      if (el.style.order !== order) el.style.order = order;
+      if (el.dataset.stripHidden !== hidden) el.dataset.stripHidden = hidden;
+    });
+    // The "+N" tile is the manager's ::after (skin); empty = no such tile.
+    const more = plan.more ? `+${plan.more}` : "";
+    if (mgr.dataset.more !== more) mgr.dataset.more = more;
+    this._watchShareStrip(mgr);
+  }
+
+  _clearShareStrip() {
+    if (!this.el) return;
+    delete this.el.dataset.shareStrip;
+    const mgr = this._stripWatched;
+    this._unwatchShareStrip();
+    if (!mgr) return;
+    delete mgr.dataset.more;
+    this._stripTiles(mgr).forEach((el) => {
+      el.style.order = "";
+      delete el.dataset.stripHidden;
+    });
+  }
+
+  // Someone joins or leaves mid-share: re-plan the slots. Only childList is
+  // observed, so the attributes written above cannot re-trigger it.
+  _watchShareStrip(mgr) {
+    if (this._stripWatched === mgr) return;
+    this._unwatchShareStrip();
+    this._stripWatched = mgr;
+    if (typeof MutationObserver === "function") {
+      this._stripObserver = new MutationObserver(() => {
+        if (this._stripRaf) return;
+        this._stripRaf = requestAnimationFrame(() => {
+          this._stripRaf = 0;
+          if (!this.isDestroyed()) this._layoutShareStrip();
+        });
+      });
+      this._stripObserver.observe(mgr, { childList: true });
+    }
+    // The "+N" tile opens the full list. It is a pseudo-element, so the click
+    // lands on the manager itself, never on a tile.
+    this._onStripMoreClick = (e) => {
+      if (e.target !== mgr || !mgr.dataset.more) return;
+      // Only past the last visible tile, where the "+N" sits — not in the
+      // gaps between tiles, which also land on the manager.
+      const row = this.el.dataset.shareStrip === "row";
+      const edge = this._stripTiles(mgr)
+        .filter((t) => t.dataset.stripHidden !== "1")
+        .reduce((m, t) => {
+          const r = t.getBoundingClientRect();
+          return Math.max(m, row ? r.right : r.bottom);
+        }, -Infinity);
+      if ((row ? e.clientX : e.clientY) <= edge) return;
+      e.stopPropagation();
+      this._switchPanelTab("participants");
+    };
+    mgr.addEventListener("click", this._onStripMoreClick, true);
+  }
+
+  _unwatchShareStrip() {
+    if (this._stripObserver) this._stripObserver.disconnect();
+    this._stripObserver = null;
+    if (this._stripRaf) cancelAnimationFrame(this._stripRaf);
+    this._stripRaf = 0;
+    if (this._stripWatched && this._onStripMoreClick) {
+      this._stripWatched.removeEventListener("click", this._onStripMoreClick, true);
+    }
+    this._stripWatched = null;
+    this._onStripMoreClick = null;
   }
 
   // ── Control-pill loading state ───────────────────────────────────────────
@@ -1619,60 +1832,202 @@ class __window_meeting extends __room {
     }
   }
 
-  // Toggle pin on a participant's tile. Only one pinned tile at a time —
-  // clicking pin on a different participant moves the spotlight; clicking
-  // again on the same one un-pins. The visible effect is driven by
-  // CSS rules keyed on data-pinned (on the tile root) and data-pinned-mode
-  // (on the meeting window root), which scale the pinned tile up and
-  // switch __endpoints into presenter mode so __participants becomes a
-  // sidebar — even when no one is sharing screen.
+  // ── Pin a participant to the main stage ─────────────────────────────────
+  // Only one pinned tile at a time: pinning someone else moves the spotlight,
+  // pinning the same tile again un-pins. With no screen shared, the pinned
+  // camera fills the stage and everyone else sits in a strip beside it (a
+  // column on the right, or a row under it when the side panel is open or the
+  // window is narrow), using the same 4-slot "+N" plan as the share strip.
+  // While a screen IS shared, the screen keeps the stage and the pinned person
+  // takes the share strip's first slot (_updateFloatFocus).
+  //
+  // Like the share strip, it is all attributes on the live elements: the tiles
+  // never move, so their tracks keep playing.
+  //   root  data-pin-stage = column | row | solo   (skin: window/meeting/skin)
+  //   tile  data-pinned = 1, style.order, data-strip-hidden
+  //   mgr   data-more = "+N"
+  //
+  // NB: `dataset["pinned-mode"]` THROWS (a dash before a lowercase letter is
+  // not a valid dataset name). The old code did exactly that, so a pin never
+  // got past its first line of layout. Use camelCase.
   _togglePinnedTile(args) {
-    const pid = args && args.participant_id;
+    const isLocal = !!(args && args.isLocal);
+    // The local tile has no `this.room`, so its pin arrives without an id —
+    // fall back to ours. The local tile is found by kind, so any stable key works.
+    const pid = (args && args.participant_id) ||
+      (isLocal ? this._myParticipantId() || "local" : null);
     if (!pid) return;
-    const wasSame = this._pinnedParticipantId === pid;
-    // Clear previous pin (if any) before setting the new one.
-    if (this._pinnedParticipantId) {
-      const prev = this._tileForPin(this._pinnedParticipantId, this._pinnedIsLocal);
-      if (prev && prev.el) prev.el.dataset.pinned = 0;
+    // Our own tile is one tile whatever key it was pinned under ("local"
+    // before the join, the jitsi id after).
+    const wasSame = isLocal
+      ? !!this._pinnedParticipantId && this._pinnedIsLocal
+      : this._pinnedParticipantId === pid && !this._pinnedIsLocal;
+    this._unpinTile();
+    if (!wasSame) {
+      this._pinnedParticipantId = pid;
+      this._pinnedIsLocal = isLocal;
     }
-    if (wasSame) {
-      this._pinnedParticipantId = null;
-      this._pinnedIsLocal = false;
-      if (this.el) this.el.dataset["pinned-mode"] = 0;
-      return;
-    }
-    this._pinnedParticipantId = pid;
-    this._pinnedIsLocal = !!(args && args.isLocal);
-    const tile = this._tileForPin(pid, this._pinnedIsLocal);
-    if (tile && tile.el) tile.el.dataset.pinned = 1;
-    if (this.el) this.el.dataset["pinned-mode"] = 1;
-    // NOTE: do NOT call responsive("presenter") here. Forcing presenter
-    // mode when no one is actually sharing leaves the __presenter slot
-    // visible but empty — rendering as a huge black rectangle. The pin
-    // is now purely a visual highlight on the existing grid; participants
-    // sizing follows the natural mode (normal / presenter on real share).
+    this._refreshPin();
   }
 
-  // Resolve a tile widget for the pin highlight. Local tile lives in
-  // __participants alongside remote tiles; remote tiles are indexed by
-  // participant_id in `this.endpoints`. Local has no entry there so we
-  // walk the children to find the endpoint_local kind.
+  _unpinTile() {
+    const prev = this._pinnedTileEl();
+    if (prev) prev.dataset.pinned = "0";
+    this._pinnedParticipantId = null;
+    this._pinnedIsLocal = false;
+  }
+
+  // Re-apply the pin everywhere it shows: the stage layout when nothing is
+  // shared, the strip's first slot when something is.
+  _refreshPin() {
+    if (this.el) this.el.dataset.pinnedMode = this._pinnedParticipantId ? "1" : "0";
+    if (this._floatDocked()) {
+      const pinned = this._pinnedTileEl();
+      if (pinned) pinned.dataset.pinned = "1";
+      this._updateFloatFocus();
+    } else {
+      this._layoutPinStage();
+    }
+  }
+
+  // The participants manager element, wherever it currently lives (the stage,
+  // or the float dock during a share).
+  _participantsMgrEl() {
+    const p = this.__participants;
+    return p && !(p.isDestroyed && p.isDestroyed()) ? p.el : null;
+  }
+
+  // Element of the pinned tile, or null. Resolved from the live DOM each time:
+  // a remote tile can be re-created under the same participant_id (reconnect).
+  _pinnedTileEl() {
+    const pid = this._pinnedParticipantId;
+    if (!pid) return null;
+    const tile = this._tileForPin(pid, this._pinnedIsLocal);
+    return (tile && tile.el) || null;
+  }
+
+  // Resolve a tile widget for the pin. Remote tiles are indexed by
+  // participant_id in `this.endpoints`; the local tile has no entry there, so
+  // walk the manager's children for the webrtc_local_user kind. (This used to
+  // compare against "endpoint_local", a kind that does not exist, so pinning
+  // yourself never marked any tile.)
   _tileForPin(pid, isLocal) {
     if (!isLocal && this.endpoints && this.endpoints[pid]) {
       const ep = this.endpoints[pid];
       if (ep && !ep.isDestroyed()) return ep;
     }
-    if (this.__participants && this.__participants.children) {
-      const list = this.__participants.children.toArray
-        ? this.__participants.children.toArray()
-        : [];
-      for (const c of list) {
-        if (c.isDestroyed && c.isDestroyed()) continue;
-        if (isLocal && c.kind === "endpoint_local") return c;
-        if (!isLocal && c.mget && c.mget("participant_id") === pid) return c;
+    const p = this.__participants;
+    if (p && !p.isDestroyed() && p.children && p.children.toArray) {
+      for (const c of p.children.toArray()) {
+        if (!c || (c.isDestroyed && c.isDestroyed()) || !c.el) continue;
+        const kind = c.el.dataset.kind || (c.mget && c.mget(_a.kind));
+        if (isLocal && kind === "webrtc_local_user") return c;
+        if (!isLocal && kind === "webrtc_remote_user" &&
+          c.mget && c.mget("participant_id") === pid) return c;
       }
     }
     return null;
+  }
+
+  _layoutPinStage() {
+    if (!this.el) return;
+    const mgr = this._participantsMgrEl();
+    if (!mgr || !this._pinnedParticipantId || this._floatDocked()) {
+      return this._clearPinStage();
+    }
+    const pinned = this._pinnedTileEl();
+    if (!pinned || !mgr.contains(pinned)) {
+      // The pinned person left the call: drop the pin, back to the grid.
+      this._unpinTile();
+      this.el.dataset.pinnedMode = "0";
+      return this._clearPinStage();
+    }
+    if (pinned.dataset.pinned !== "1") pinned.dataset.pinned = "1";
+    const others = this._stripTiles(mgr).filter((el) => el !== pinned);
+    let mode = "solo";
+    if (others.length) {
+      const panel = this._chatPanelEl();
+      const panelBeside =
+        !!panel && panel.dataset.open === "1" && this.el.dataset.panelOverlay !== "1";
+      mode = panelBeside || this.el.dataset.narrow === "1" ? "row" : "column";
+    }
+    if (this.el.dataset.pinStage !== mode) this.el.dataset.pinStage = mode;
+    if (pinned.style.order !== "0") pinned.style.order = "0";
+    if (pinned.dataset.stripHidden !== "0") pinned.dataset.stripHidden = "0";
+    const plan = planShareStrip(others);
+    others.forEach((el, i) => {
+      const order = String(plan.rank[i] + 1);
+      const hidden = plan.visible[i] ? "0" : "1";
+      if (el.style.order !== order) el.style.order = order;
+      if (el.dataset.stripHidden !== hidden) el.dataset.stripHidden = hidden;
+    });
+    const more = plan.more ? `+${plan.more}` : "";
+    if (mgr.dataset.more !== more) mgr.dataset.more = more;
+    this._watchPinStage(mgr);
+  }
+
+  _clearPinStage() {
+    if (!this.el) return;
+    const had = this.el.dataset.pinStage != null;
+    delete this.el.dataset.pinStage;
+    const mgr = this._pinWatched;
+    this._unwatchPinStage();
+    // Only scrub tiles this layout wrote to. The share strip writes the same
+    // attributes while docked and must not be wiped from here.
+    if (!mgr || !had || this._floatDocked()) return;
+    delete mgr.dataset.more;
+    this._stripTiles(mgr).forEach((el) => {
+      el.style.order = "";
+      delete el.dataset.stripHidden;
+    });
+  }
+
+  // Join / leave while pinned: re-plan the strip, and notice the pinned person
+  // leaving. Only childList is observed, so our own attribute writes cannot
+  // re-trigger it.
+  _watchPinStage(mgr) {
+    if (this._pinWatched === mgr) return;
+    this._unwatchPinStage();
+    this._pinWatched = mgr;
+    if (typeof MutationObserver === "function") {
+      this._pinObserver = new MutationObserver(() => {
+        if (this._pinRaf) return;
+        this._pinRaf = requestAnimationFrame(() => {
+          this._pinRaf = 0;
+          if (!this.isDestroyed()) this._layoutPinStage();
+        });
+      });
+      this._pinObserver.observe(mgr, { childList: true });
+    }
+    // "+N" is the manager's ::after, so its click lands on the manager itself.
+    // Only past the last visible strip tile counts — gaps also hit the manager.
+    this._onPinMoreClick = (e) => {
+      if (e.target !== mgr || !mgr.dataset.more) return;
+      const row = this.el.dataset.pinStage === "row";
+      const pinned = this._pinnedTileEl();
+      const edge = this._stripTiles(mgr)
+        .filter((t) => t !== pinned && t.dataset.stripHidden !== "1")
+        .reduce((m, t) => {
+          const r = t.getBoundingClientRect();
+          return Math.max(m, row ? r.right : r.bottom);
+        }, -Infinity);
+      if ((row ? e.clientX : e.clientY) <= edge) return;
+      e.stopPropagation();
+      this._switchPanelTab("participants");
+    };
+    mgr.addEventListener("click", this._onPinMoreClick, true);
+  }
+
+  _unwatchPinStage() {
+    if (this._pinObserver) this._pinObserver.disconnect();
+    this._pinObserver = null;
+    if (this._pinRaf) cancelAnimationFrame(this._pinRaf);
+    this._pinRaf = 0;
+    if (this._pinWatched && this._onPinMoreClick) {
+      this._pinWatched.removeEventListener("click", this._onPinMoreClick, true);
+    }
+    this._pinWatched = null;
+    this._onPinMoreClick = null;
   }
 
   _applyRemoteHandRaise(data) {
@@ -1775,23 +2130,47 @@ class __window_meeting extends __room {
       .catch(() => {});
   }
 
+  // The roster's ring state machine (member-call.js), bound to the Map the
+  // member skeleton reads. Rebuilt if that Map is ever replaced.
+  _calls() {
+    if (!this._memberCallStates) this._memberCallStates = new Map();
+    if (!this._memberCalls || this._memberCalls.states !== this._memberCallStates) {
+      if (this._memberCalls) this._memberCalls.dispose();
+      this._memberCalls = new MemberCalls(this._memberCallStates, {
+        refresh: (key) => {
+          if (!this.isDestroyed()) this._refreshMember(key);
+        },
+      });
+    }
+    return this._memberCalls;
+  }
+
+  // Ring a member from the roster. The row shows "Call in progress" until they
+  // join, decline (onInviteDeclined), or the ring times out — and an invite
+  // that reached none of their sessions says so at once instead of ringing
+  // nobody. Any outcome but "joined" leaves the row callable again.
   async _inviteToRoom(callee) {
     if (!callee) return;
     const guest_id = callee.drumate_id || callee.entity_id || callee.uid || callee.id;
     if (!guest_id) return;
-    const key = String(guest_id);
-    const state = this._memberCallStates && this._memberCallStates.get(key);
-    if (state === "calling" || state === "joined") return;
-    if (!this._memberCallStates) this._memberCallStates = new Map();
-    this._memberCallStates.set(key, "calling");
-    this._refreshMember(guest_id);
+    const calls = this._calls();
+    if (!calls.start(guest_id)) return;
+    let result;
     try {
-      await this.sendRoomSignaling(SERVICE.conference.invite, { guest_id });
+      result = await this.sendRoomSignaling(SERVICE.conference.invite, { guest_id });
     } catch (e) {
-      this._memberCallStates.delete(key);
-      this._refreshMember(guest_id);
       if (this.warn) this.warn("conference.invite failed", e);
+      if (!this.isDestroyed()) calls.fail(guest_id);
+      return;
     }
+    if (this.isDestroyed()) return;
+    if (!inviteRang(result)) calls.end(guest_id, "offline");
+  }
+
+  // conference.decline from a member we rang (push.js dispatchSignaling).
+  onInviteDeclined(uid) {
+    if (uid == null || this.isDestroyed()) return;
+    this._calls().end(uid, "declined");
   }
 
   // Re-render only the affected member row so call-state / hand-raise /
@@ -1894,7 +2273,50 @@ class __window_meeting extends __room {
         participantCount,
         ended,
       }));
+      requestAnimationFrame(() => this._pinFeedbackOverlay());
+      this._onFeedbackResize = () => this._pinFeedbackOverlay();
+      window.addEventListener("resize", this._onFeedbackResize);
     });
+  }
+
+  /**
+   * Fit the feedback backdrop to the desk's workspace column
+   * (.desk-module__right-side), so the sidebar and top bar stay clear and the
+   * card — flex-centred in the backdrop — lands in the middle of that column.
+   * The skin's `position: fixed; inset: 0` stays the fallback when the column
+   * is not there. Measured back and corrected, since an ancestor with a
+   * transform or backdrop-filter would make `fixed` resolve against itself
+   * instead of the viewport.
+   */
+  _pinFeedbackOverlay() {
+    const modal = this._feedbackModal;
+    const overlay =
+      modal && modal.el && modal.el.querySelector(`.${this.fig.family}__feedback-overlay`);
+    const side = document.querySelector(".desk-module__right-side");
+    if (!overlay || !side) return;
+    const want = side.getBoundingClientRect();
+    if (!want.width || !want.height) return;
+    Object.assign(overlay.style, {
+      inset: "auto",
+      left: `${want.left}px`,
+      top: `${want.top}px`,
+      width: `${want.width}px`,
+      height: `${want.height}px`,
+    });
+    const got = overlay.getBoundingClientRect();
+    const dx = got.left - want.left;
+    const dy = got.top - want.top;
+    if (dx || dy) {
+      overlay.style.left = `${want.left - dx}px`;
+      overlay.style.top = `${want.top - dy}px`;
+    }
+  }
+
+  _unpinFeedbackOverlay() {
+    if (this._onFeedbackResize) {
+      window.removeEventListener("resize", this._onFeedbackResize);
+      this._onFeedbackResize = null;
+    }
   }
 
   /** Visually highlight stars 1..N when a star is clicked. */
@@ -1938,6 +2360,7 @@ class __window_meeting extends __room {
         });
       } catch (e) { }
     }
+    this._unpinFeedbackOverlay();
     if (this._feedbackModal && this._feedbackModal.clear) {
       this._feedbackModal.clear();
       this._feedbackModal = null;
@@ -1948,7 +2371,77 @@ class __window_meeting extends __room {
     this.goodbye();
   }
 
+  /**
+   * THE WAITING ROOM: early for a scheduled meeting (server lib/meeting-early,
+   * webrtc/room join keeps the answer in _earlyWait). A screen of its own over
+   * the window, like the denied one, rather than the call's pre-join chrome:
+   * which meeting, when it starts and how long that is, that nothing needs
+   * doing, and a way out. Re-fed on each re-check (_armEarlyWait), which keeps
+   * the minutes current.
+   */
+  _showWaitingRoom() {
+    const wait = this._earlyWait || {};
+    const starts = Number(wait.starts_at) || 0;
+    const minutes = Math.max(1, Math.ceil((starts * 1000 - Date.now()) / 60000));
+    // A meeting's own Join holds however far off it is, so the wait can run
+    // into another day: say which, and count in hours past the first one.
+    const at = Dayjs.unix(starts);
+    const when = at.isSame(Dayjs(), "day") ? at.format("h:mm A") : at.format("ddd, MMM D, h:mm A");
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    let countdown = null;
+    if (!hours) countdown = LOCALE.MEETING_STARTS_IN_MIN.format(minutes);
+    else if (hours < 24) {
+      countdown = rest
+        ? LOCALE.MEETING_STARTS_IN_HOURS_MIN.format(hours, rest)
+        : LOCALE.MEETING_STARTS_IN_HOURS.format(hours);
+    }
+    const pfx = `${this.fig.family}__waiting`;
+    this.ensurePart("message-container").then((c) => {
+      c.feed([
+        Skeletons.Box.Y({
+          className: `${pfx}-card`,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}-icon`,
+              kids: [Skeletons.Image.Svg({ ico: "calendar", className: `${pfx}-glyph` })],
+            }),
+            wait.title
+              ? Skeletons.Note({ className: `${pfx}-title`, content: wait.title })
+              : null,
+            Skeletons.Note({
+              className: `${pfx}-time`,
+              content: LOCALE.MEETING_START_AT.format(when),
+            }),
+            // Past a day the date above says it.
+            countdown
+              ? Skeletons.Note({ className: `${pfx}-countdown`, content: countdown })
+              : null,
+            Skeletons.Note({
+              className: `${pfx}-text`,
+              content: LOCALE.MEETING_WAITING_AUTO_JOIN,
+            }),
+            Skeletons.Note({
+              className: `${pfx}-leave`,
+              content: LOCALE.LEAVE,
+              service: "leave-waiting-room",
+              uiHandler: [this],
+            }),
+          ].filter(Boolean),
+        }),
+      ]);
+    });
+  }
+
   stateMessage(s, timeout) {
+    // While waiting, only a change of state may take the waiting room down
+    // (stateMachine sets this.state before it calls here). A passing notice,
+    // like "X is connecting" from a ring, used to replace it.
+    if (this.state === "scheduledWait" && s !== "scheduledWait") return;
+    // Every state says whether the waiting room is up; only scheduledWait
+    // sets it (skin: data-waiting takes the window over, as data-denied does).
+    if (this.el) this.el.dataset.waiting = s === "scheduledWait" ? "1" : "0";
+    if (s === "scheduledWait") return this._showWaitingRoom();
     // No "Waiting for attendees" toast (Figma: a solo call just shows your own
     // tile). The base stateMessage would fall back to the raw state string
     // ("waiting"), so clear the message container and swallow the state.
@@ -2039,6 +2532,9 @@ class __window_meeting extends __room {
       service: SERVICE.hub.get_members_by_type,
       type: "all",
       hub_id: this.mget(_a.hub_id),
+      // Each member's own profile name, not the viewer's contact-book copy —
+      // the video tile shows the profile name, so the roster must match it.
+      names: "profile",
       timer: 500,
     };
   }

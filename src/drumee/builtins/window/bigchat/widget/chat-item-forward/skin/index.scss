@@ -62,16 +62,6 @@
     overflow: hidden;
     padding: 12px 0 16px;
     position: relative;
-
-    & *::-webkit-scrollbar {
-      height: 100%;
-      width: 3px;
-    }
-
-    & *::-webkit-scrollbar-thumb {
-      background-color: var(--default-scrollbar-color);
-      cursor: pointer;
-    }
   }
 
   &__footer {

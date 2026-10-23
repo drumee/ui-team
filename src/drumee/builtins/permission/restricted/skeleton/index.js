@@ -190,7 +190,33 @@ function viewerIsAdmin(list) {
 function viewerCanLeave(list) {
   const self = list.find((m) => m.isSelf);
   if (!self) return false;
-  return !(self.privilege & _K.permission.owner);
+  return !holdsOwnerBit(self);
+}
+
+/**
+ * Is this the workspace OWNER's row? Read off the raw mask (mapMember), since
+ * the role label reads "Admin" for an owner and an admin alike.
+ *
+ * Gates two things: the viewer's Leave button above, and whether an admin may
+ * edit the row in memberRows. An owner's role is not one of the four roles the
+ * pill offers — picking any of them rewrote 63 into 31/15/7 and left the
+ * workspace without an owner (server hub.set_privilege now refuses it too).
+ */
+function holdsOwnerBit(member) {
+  return !!(member.privilege & _K.permission.owner);
+}
+
+/**
+ * May this viewer delete this workspace from the panel — the owner's
+ * counterpart of viewerCanLeave, and drawn in the same place. Same FAIL
+ * CLOSED rule: only when the self row is found AND carries the owner bit. A
+ * personal workspace renders no member rows, so it never gets the button;
+ * it is deleted from Folder Settings, which knows how to trash a folder.
+ */
+function viewerCanDelete(list) {
+  const self = list.find((m) => m.isSelf);
+  if (!self) return false;
+  return holdsOwnerBit(self);
 }
 
 function memberRows(list, ui, pfx, isAdmin) {
@@ -206,10 +232,11 @@ function memberRows(list, ui, pfx, isAdmin) {
   }
   return list.map((member, index) => {
     // Self row: read-only label — the server rejects self-mutation anyway.
+    // Owner row: read-only label — ownership only moves by change_owner.
     // Others, admin viewer: editable role + remove.
     // Others, non-admin viewer: read-only label, no remove.
     const actions =
-      member.isSelf || !isAdmin
+      member.isSelf || !isAdmin || holdsOwnerBit(member)
         ? [
           Skeletons.Note({
             className: `${pfx}__role-label ${pfx}__role-readonly`,
@@ -293,9 +320,13 @@ function memberRows(list, ui, pfx, isAdmin) {
  * null in that case and UserProfile draws its initials-on-colour placeholder
  * from whatever name it is given.
  */
-function invitationRows(list, pfx) {
+function invitationRows(list, pfx, ui) {
+  const selecting = !!ui._invitationSelecting;
+  const selected = ui._invitationSelected || new Set();
+  const busy = ui._invitationBusy || new Set();
   return list.map((row, index) => {
     const email = String(row.email || "");
+    const key = email.trim().toLowerCase();
     const name = String(row.invitee_fullname || "").trim() || email;
     const inviter = String(row.inviter_fullname || "").trim();
     const when = row.ctime ? Dayjs.unix(Number(row.ctime)).fromNow() : "";
@@ -313,10 +344,28 @@ function invitationRows(list, pfx) {
       ? LOCALE.INVITED_AGO_BY.format(when, inviter)
       : "";
     const declined = row.status === "declined";
+    const checked = selecting && selected.has(key);
     return Skeletons.Box.X({
       className: `${pfx}__invitation-row`,
-      dataset: { index, status: row.status || "pending" },
+      dataset: {
+        index,
+        status: row.status || "pending",
+        selecting: selecting ? "1" : "0",
+        checked: checked ? "1" : "0",
+      },
+      // Select mode: the whole row is the checkbox's hit area, the way a
+      // mail client's list is — aiming at a 20px box on each line is the
+      // tedious part of selecting several.
+      ...(selecting ? { service: "toggle-invitation", uiHandler: [ui] } : {}),
       kids: [
+        selecting
+          // Drawn only: the ROW carries the service. A service here as well
+          // would toggle twice on one click (box, then the row it sits in).
+          ? Skeletons.Image.Svg({
+            className: `${pfx}__invitation-check`,
+            ico: checked ? "ph-check-square-fill" : "ph-square",
+          })
+          : null,
         Skeletons.Box.X({
           className: `${pfx}__invitation-info`,
           kids: [
@@ -352,10 +401,13 @@ function invitationRows(list, pfx) {
           kids: [
             Skeletons.Image.Svg({
               className: `${pfx}__invitation-badge-ico`,
-              // Phosphor Clock / XCircle, as in Figma. NOT `clock`: that is
-              // a solid Illustrator dial whose fills the sprite strips, so it
-              // drew as a filled blob rather than an outlined clock.
-              ico: declined ? "noti-x-circle" : "apps-clock",
+              // Phosphor Clock / XCircle, as in Figma, from the 256 set like
+              // the row's X and arrow. NOT `clock` (a solid Illustrator dial
+              // the sprite strips to a blob), and no longer `apps-clock` /
+              // `noti-x-circle`: their paths sit off-centre in their viewBox
+              // (apps-clock's ink is the top-left 11 of 21 units), so the
+              // glyph drew small and high beside the word.
+              ico: declined ? "ph-x-circle" : "ph-clock",
             }),
             Skeletons.Note({
               className: `${pfx}__invitation-badge-text`,
@@ -363,8 +415,101 @@ function invitationRows(list, pfx) {
             }),
           ],
         }),
-      ],
+        // Cancel and Resend (Figma pd1): a red-washed X and a grey
+        // counter-clockwise arrow beside the badge. Hidden while selecting —
+        // the selection has its own Cancel in the section head, and two ways
+        // to cancel on one line invite the wrong one.
+        //
+        // Tooltips through attrOpt `title`, NOT ui-core `tooltips`: that one
+        // is a CHILD node of the button and draws inside the row (the pin
+        // feature's tooltip widened its row into a scrollbar).
+        //
+        // data-pending while this address has a request in flight: the
+        // spinner, and the handlers refuse a second press on the same row.
+        selecting
+          ? null
+          : Skeletons.Button.Svg({
+            className: `${pfx}__invitation-action ${pfx}__invitation-cancel`,
+            ico: "ph-x",
+            service: "cancel-invitation",
+            dataset: busy.has(key) ? { index, pending: "1" } : { index },
+            attrOpt: {
+              title: LOCALE.CANCEL_INVITATION,
+              "aria-label": LOCALE.CANCEL_INVITATION,
+            },
+            uiHandler: [ui],
+          }),
+        selecting
+          ? null
+          : Skeletons.Button.Svg({
+            className: `${pfx}__invitation-action ${pfx}__invitation-resend`,
+            ico: "ph-arrow-counter-clockwise",
+            service: "resend-invitation",
+            dataset: busy.has(key) ? { index, pending: "1" } : { index },
+            attrOpt: {
+              title: LOCALE.RESEND_INVITATION,
+              "aria-label": LOCALE.RESEND_INVITATION,
+            },
+            uiHandler: [ui],
+          }),
+      ].filter(Boolean),
     });
+  });
+}
+
+/**
+ * The Pending Invitations heading, with the selection controls beside it.
+ *
+ * "Select" appears only when there are at least two rows — selecting one of
+ * one is what the row's own X is for. In select mode the head offers
+ * "Cancel (n)" for the ticked rows, disabled at zero, and "Done" to leave.
+ */
+function invitationsHead(ui, pfx, invitations) {
+  const selecting = !!ui._invitationSelecting;
+  const count = (ui._invitationSelected || new Set()).size;
+  const controls = [];
+  if (selecting) {
+    controls.push(
+      Skeletons.Note({
+        className: `${pfx}__invitations-bulk-cancel`,
+        content: LOCALE.CANCEL_SELECTED_INVITATIONS.format(count),
+        service: "cancel-selected-invitations",
+        dataset: ui._invitationBulkBusy
+          ? { disabled: count ? "0" : "1", pending: "1" }
+          : { disabled: count ? "0" : "1" },
+        uiHandler: [ui],
+      }),
+      Skeletons.Note({
+        className: `${pfx}__invitations-select`,
+        content: LOCALE.DONE,
+        service: "toggle-invitation-select",
+        uiHandler: [ui],
+      }),
+    );
+  } else if (invitations.length > 1) {
+    controls.push(
+      Skeletons.Note({
+        className: `${pfx}__invitations-select`,
+        content: LOCALE.SELECT,
+        service: "toggle-invitation-select",
+        uiHandler: [ui],
+      }),
+    );
+  }
+  return Skeletons.Box.X({
+    className: `${pfx}__invitations-head`,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__section-title`,
+        content: `${LOCALE.PENDING_INVITATIONS} (${invitations.length})`,
+      }),
+      controls.length
+        ? Skeletons.Box.X({
+          className: `${pfx}__invitations-controls`,
+          kids: controls,
+        })
+        : null,
+    ].filter(Boolean),
   });
 }
 
@@ -474,6 +619,46 @@ function membersList(ui, pfx = ui.fig.family, members, isAdmin) {
 }
 
 /**
+ * The section at the foot of the panel through which the viewer exits the
+ * workspace: Leave for a member, Delete for the owner. One shape for both so
+ * they cannot drift apart.
+ *
+ * THE WARNING COMES FIRST, then the button: what is lost is the part the
+ * viewer has to weigh. A row of glyph + label (lw1.jpg); the service sits on
+ * the row and its kids are inactive, so a click anywhere on it fires once, and
+ * sys_pn stays on the row for the handler's data-pending stamp. The button
+ * itself never acts — the handler opens a confirm card first.
+ */
+function exitSection(ui, pfx, { service, warning, label, ico }) {
+  return Skeletons.Box.Y({
+    className: `${pfx}__leave-section`,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__leave-warning`,
+        content: warning,
+      }),
+      Skeletons.Box.X({
+        className: `${pfx}__leave-button`,
+        sys_pn: service,
+        service,
+        uiHandler: [ui],
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Image.Svg({
+            className: `${pfx}__leave-icon`,
+            ico,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__leave-label`,
+            content: label,
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
  * Permission management panel skeleton
  * @param {*} ui
  * @returns
@@ -490,6 +675,7 @@ module.exports = function (ui) {
     .map(mapMember);
   const isAdmin = viewerIsAdmin(members);
   const canLeave = viewerCanLeave(members);
+  const canDelete = viewerCanDelete(members);
   // Published back to the widget so _loadInvitations can ask the SAME question
   // this render answered, instead of re-deriving it from a privilege bit.
   //
@@ -903,15 +1089,12 @@ function workspaceCard(ui, pfx, memberCount) {
     ? Skeletons.Box.Y({
       className: `${pfx}__invitations-section`,
       kids: [
-        Skeletons.Note({
-          className: `${pfx}__section-title`,
-          content: `${LOCALE.PENDING_INVITATIONS} (${invitations.length})`,
-        }),
+        invitationsHead(ui, pfx, invitations),
         Skeletons.Note({
           className: `${pfx}__section-hint`,
           content: LOCALE.PENDING_INVITATIONS_HINT,
         }),
-        ...invitationRows(invitations, pfx),
+        ...invitationRows(invitations, pfx, ui),
       ],
     })
     : null;
@@ -950,37 +1133,26 @@ function workspaceCard(ui, pfx, memberCount) {
   // viewer has to weigh, and a red button on its own only says "careful". The
   // click still opens a confirm card naming the workspace (index.js
   // _leaveWorkspace) — the button itself never leaves anything.
+  //
+  // The OWNER gets the same section with Delete in it (Duy, 2026-10-05): an
+  // owner may not leave (the workspace would have no owner), so their way out
+  // is to delete it. The button opens Wm.confirmRemoveWorkspace — the same
+  // confirm card and the same hub.delete_hub as Folder Settings' Delete row.
   const leaveSection = canLeave
-    ? Skeletons.Box.Y({
-      className: `${pfx}__leave-section`,
-      kids: [
-        Skeletons.Note({
-          className: `${pfx}__leave-warning`,
-          content: LOCALE.LEAVE_WORKSPACE_WARNING,
-        }),
-        // A row of glyph + label (lw1.jpg). The service sits on the row and
-        // its kids are inactive, so a click anywhere on it fires once;
-        // sys_pn stays on the row for _leaveWorkspace's data-pending stamp.
-        Skeletons.Box.X({
-          className: `${pfx}__leave-button`,
-          sys_pn: "leave-workspace",
-          service: "leave-workspace",
-          uiHandler: [ui],
-          kidsOpt: { active: 0 },
-          kids: [
-            Skeletons.Image.Svg({
-              className: `${pfx}__leave-icon`,
-              ico: "sidebar_signout",
-            }),
-            Skeletons.Note({
-              className: `${pfx}__leave-label`,
-              content: LOCALE.LEAVE_WORKSPACE,
-            }),
-          ],
-        }),
-      ],
+    ? exitSection(ui, pfx, {
+      service: "leave-workspace",
+      warning: LOCALE.LEAVE_WORKSPACE_WARNING,
+      label: LOCALE.LEAVE_WORKSPACE,
+      ico: "sidebar_signout",
     })
-    : null;
+    : canDelete
+      ? exitSection(ui, pfx, {
+        service: "delete-workspace",
+        warning: LOCALE.DELETE_WORKSPACE_WARNING,
+        label: LOCALE.DELETE_WORKSPACE,
+        ico: "ph-trash",
+      })
+      : null;
 
   // Pinned header + scrolling body, after the base panel's -header / -scroll.
   //
@@ -1010,4 +1182,5 @@ function workspaceCard(ui, pfx, memberCount) {
 };
 
 module.exports.membersList = membersList;
+module.exports.holdsOwnerBit = holdsOwnerBit;
 module.exports.roleFilterItem = roleFilterItem;

@@ -101,6 +101,55 @@ class __bundle_job extends LetcBox {
     // and folders mid-recursion are "creating"/"uploading". Walk the whole tree
     // and settle them, or the popup keeps promising work that will never run.
     this._markCanceled(this._entries);
+    // ...except that abort() does NOT always reach onAbort. Once the request
+    // body is fully sent (a small file, a server slow to answer), xhr.upload
+    // fires no abort event, and the readystatechange net in _uploadOneFile
+    // ignores the status-0 a cancelled XHR ends on. The file's promise then
+    // never settles: start() never reaches "done", the manager's only job slot
+    // stays taken, and every caller gated on the batch — the chat composer's
+    // upload lock — stays locked for good. Settle it here; onAbort no-ops when
+    // the abort event already did.
+    this.onAbort();
+  }
+
+  /**
+   * Drop ONE entry from this bundle without stopping the rest.
+   *
+   * For a caller that owns individual files inside a batch — the task form's
+   * "Create without this file" — where cancel() would take every other file
+   * down with it. A finished entry is refused: it really is on the server, and
+   * the caller decides what to do with it (keep and link, typically).
+   *
+   * @param {object} entry a BundleEntry of this job
+   * @returns {boolean} true when the entry was unfinished and is now canceled
+   */
+  cancelEntry(entry) {
+    if (!entry) return false;
+    if (["done", "skipped", "error", "canceled"].includes(entry.status)) return false;
+    entry.status = "canceled";
+    entry.cancelReason = "dropped";
+    this.filesTotal = Math.max(0, this.filesTotal - 1);
+    this.bytesTotal = Math.max(0, this.bytesTotal - (entry.size || 0));
+    if (this._current && this._current.entry === entry) {
+      // Its bytes were counted as they went; they will never complete now.
+      this.bytesDone = Math.max(0, this.bytesDone - (this._current.loaded || 0));
+      this._clearWatchdog();
+      // onAbort settles _current and resolves the file's promise, so the loop
+      // moves on to the next entry.
+      const xhr = this._currentXhr;
+      if (xhr && xhr.abort) xhr.abort();
+      // A plain XHR whose body is fully sent fires no abort event (see
+      // cancel()), so this file would hold the job — and the manager's only
+      // slot — forever: settle it here. abort() dispatches synchronously, so
+      // nothing arrives later. NOT for a chunked handle: it settles its own
+      // pending chunks and reports onAbort asynchronously, and the bundle moves
+      // on after a dropped file — settling here would let that late onAbort
+      // land on the NEXT file. A no-op when the event already settled it; the
+      // entry keeps its "canceled" verdict.
+      if (!(xhr && xhr.chunked)) this.onAbort();
+    }
+    this.trigger("progress", { job: this, entry });
+    return true;
   }
 
   /** Depth-first: mark every non-terminal entry as cancelled. */
@@ -127,7 +176,7 @@ class __bundle_job extends LetcBox {
   }
 
   async _uploadEntry(entry, destNid) {
-    if (this._canceled) return;
+    if (this._canceled || entry.status === "canceled") return;
     entry._parentNid = destNid;
     if (entry.kind === "file") {
       if (this._resolution.skip.has(entry.relpath)) {
@@ -179,7 +228,7 @@ class __bundle_job extends LetcBox {
     // The governor gate can hold a file for a while, so the job may have been
     // cancelled meanwhile. _markCanceled has already given this entry its
     // verdict — don't overwrite it with the softer "skipped".
-    if (this._canceled) return;
+    if (this._canceled || entry.status === "canceled") return;
     return new Promise((resolve) => {
       entry.status = "uploading";
       const opt = {
@@ -286,7 +335,7 @@ class __bundle_job extends LetcBox {
     // differently: cancel() aborts the live XHR, so a cancelled job lands here
     // a tick after _markCanceled already settled this entry — leave that verdict
     // alone. Any other abort (the idle watchdog) is a plain skip.
-    if (!this._canceled) entry.status = "skipped";
+    if (!this._canceled && entry.status !== "canceled") entry.status = "skipped";
     this._current = null; this._currentXhr = null;
     resolve();
   }

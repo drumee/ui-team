@@ -237,7 +237,77 @@ class __dmz_meeting extends LetcBox {
       case "reload":
         location.reload();
         break;
+
+      case "dmz-submit-password":
+        return this._submitPassword();
+
+      case "dmz-open-attachment": {
+        const b = (typeof bootstrap === "function" && bootstrap()) || {};
+        const url = require("./skeleton/attachments").fileUrl(cmd.mget("fileNid"), cmd.mget("fileHub"), b);
+        window.open(url, "_blank", "noopener");
+        break;
+      }
     }
+  }
+
+  /**
+   * The password gate's Continue (or Enter in the field). A wrong password says
+   * so under the field; the right one goes on to the lobby.
+   */
+  async _submitPassword() {
+    if (this._passwordBusy) return;
+    const entry = await this.ensurePart("ref-password");
+    const error = await this.ensurePart("password-error");
+    // As typed: the calendar stores the password untrimmed.
+    const password = String((entry && entry.getData && entry.getData().value) || "");
+    if (!password) return;
+    this._passwordBusy = true;
+    let res;
+    try {
+      res = await this.postService(SERVICE.dmz.login, {
+        token: this.mget(_a.token),
+        socker_id: Visitor.get(_a.socker_id),
+        hub_id: "",
+        password,
+      });
+    } catch (e) {
+      res = null;
+    } finally {
+      this._passwordBusy = false;
+    }
+    if (res && res.is_verified) return this.loadWindowManager();
+    // Only a refused password says "wrong password"; any other failure (a
+    // link served from the wrong area, say) must not tell the guest a right
+    // password was wrong.
+    let content = LOCALE.SOMETHING_WENT_WRONG;
+    if (!res) {
+      content = LOCALE.ERROR_NETWORK;
+    } else if (res.status === "TOO_MANY_ATTEMPTS") {
+      const s = Math.max(1, ~~res.retry_after);
+      content = LOCALE.TOO_MANY_ATTEMPTS.format(`${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`);
+    } else if (res.error === "INVALID_CREDENTIAL" || res.status === "WRONG_PASSWORD") {
+      content = LOCALE.SECURE_SHARE_WRONG_PASSWORD;
+    }
+    error.set({ content });
+  }
+
+  /**
+   * The meeting's attachments, under the Join button. Best effort: a link
+   * with nothing attached, an old server, or a refused password draws nothing.
+   */
+  async _loadAttachments() {
+    const token = this.mget(_a.token);
+    const svc = (SERVICE.dmz && SERVICE.dmz.meeting_files) || "dmz.meeting_files";
+    let data;
+    try {
+      data = await this.postService(svc, { token });
+    } catch (e) {
+      return;
+    }
+    if (!data || data.status !== "TICKET_OK" || !data.items || !data.items.length) return;
+    const slot = await this.ensurePart("meeting-attachments");
+    const tree = require("./skeleton/attachments")(this, data.items, data.hub_id);
+    if (slot && tree) slot.feed(tree);
   }
 
   /**
@@ -347,8 +417,13 @@ class __dmz_meeting extends LetcBox {
       user.firstname = user.firstname || firstname;
       user.lastname = user.lastname || lastname;
       user.username = user.username || guest_name;
+      // The room is the workspace's meeting room (server conference.join), and
+      // its details describe that room. The meeting this link names stays the
+      // node: the guest holds nothing else, and every later join and signal is
+      // checked against it.
+      const { nid: _roomNid, filename: _roomName, ...details } = room.details || {};
       this.mset({
-        ...room.details,
+        ...details,
         room_id: room.user.room_id,
         uid: room.uid,
         username: user.username,
@@ -536,8 +611,17 @@ class __dmz_meeting extends LetcBox {
 
     const lobby = await this.ensurePart("lobby-container");
 
+    // A dead link says so, password or not: asking for it would only loop.
     if (data.validity != 'TICKET_OK') {
       lobby.feed(this.infoSkeleton(this, LOCALE.LINK_EXPIRES));
+      return;
+    }
+
+    // A password-protected link: the gate first. Once dmz.login accepts the
+    // password this session holds the link, and this method runs again for
+    // the lobby.
+    if (data.status === "REQUIRED_PASSWORD") {
+      lobby.feed(require("./skeleton/password")(this, data));
       return;
     }
 
@@ -545,6 +629,7 @@ class __dmz_meeting extends LetcBox {
     setTimeout(() => {
       lobby.feed(require("./skeleton/lobby")(this, data));
       lobby.anim([1, { scale: 1, alpha: 1.0 }]);
+      this._loadAttachments();
     }, 1000);
     this.state = "before-start";
     this.sessionData = data;

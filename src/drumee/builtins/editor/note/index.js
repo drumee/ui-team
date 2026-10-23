@@ -74,6 +74,18 @@ class ___editor_note extends __player {
   }
 
   /**
+   * Save the note before the window goes away (the Open-File Switcher closes
+   * this editor to show the next file) and only then let it close: the save
+   * onBeforeDestroy fires is not waited for. Resolves true once nothing is
+   * left to save, false when the save did not go through.
+   */
+  async saveBeforeClose() {
+    if (!this.__textContent || !this.__textContent.hasBeenChanged()) return true;
+    await this.saveContent();
+    return !this.__textContent.hasBeenChanged();
+  }
+
+  /**
    * 
    * @param {View} child
    * @param {String} pn
@@ -216,7 +228,7 @@ class ___editor_note extends __player {
       // },
       content: this.__textContent.getHTML()
     }
-    this.postService(opt, { async: 1 }).then((data) => {
+    return this.postService(opt, { async: 1 }).then((data) => {
       let [file] = target.getItemsByAttr(_a.nid, data.nid);
       this.__textContent.hasBeenChanged(0);
       if (close) {
@@ -351,7 +363,7 @@ class ___editor_note extends __player {
         reader.readAsDataURL(args.file);
         break;
       case _e.close:
-        this.goodbye();
+        return this.closeAfterSave();
       default:
         super.onUiEvent(cmd, args)
     }

@@ -1,0 +1,602 @@
+// The phone mock (skeleton/toolkit/phone.js) — Drumee Mobile frames, Figma
+// WtPX8Cj8PO9sjD6TRLeOQL section 380:53148. Tokens are the frames' own; safe
+// areas come from env() rather than the iOS 48/32px drawn in the frames.
+@use "mixins/drumee";
+
+// The root is a Box, and skin/lib/container.scss's `.box { position:
+// relative }` ties a single class — whichever sheet is injected last would
+// win. Its own rule, NOT in the list below: `&__x` would expand to
+// `.tutorial-phone.box__x` as well.
+.tutorial-phone.box {
+  position: absolute;
+}
+
+.tutorial-phone {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  overflow: hidden;
+
+  &__status {
+    height: env(safe-area-inset-top, 0px);
+    flex: none;
+  }
+
+  // folder-top-navigation: 16 all round, 12 between, top-aligned.
+  &__top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    flex: none;
+  }
+
+  // The app's own phone bar (topBar) — desk-module__mobile-topbar's values
+  // (modules/desk/skin/mobile-topbar.scss): 52px, 8/12 insets, a hairline;
+  // the grey workspace pill, the go-to chip, the ringed avatar.
+  &__top--app {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: 52px;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    background-color: var(--normal-bg, #fff);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  &__ws {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    border-radius: 8px;
+    box-sizing: border-box;
+    background-color: var(--normal-bg-90, #f2f2f7);
+  }
+
+  // The area-tinted folder shape, at the real pill's 20x16.
+  &__ws-ico {
+    width: 20px;
+    height: 20px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+
+    .media-grid__folder-art {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 16px;
+    }
+
+    .folder-shape {
+      width: 20px;
+      height: 16px;
+      fill: #885eff;
+
+      &.personal,
+      &.inner-folder { fill: var(--area-personal); }
+      &.public       { fill: var(--area-public); }
+      &.share,
+      &.dmz          { fill: var(--area-share); }
+      &.private      { fill: var(--area-private); }
+    }
+
+    .badge {
+      position: absolute;
+      bottom: -2px;
+      left: -2px;
+      width: 13px !important;
+      height: 13px !important;
+      color: var(--grid-color-folder-badge);
+    }
+  }
+
+  &__ws-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--normal-fg-10, #0b0a21);
+
+    .note-content {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__ws-caret {
+    width: 12px;
+    height: 12px;
+    flex: none;
+    color: var(--normal-fg-20, #65656c);
+  }
+
+  &__top-actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__top-chip {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  &__top-chip-ico {
+    width: 18px;
+    height: 18px;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  &__top--app &__avatar {
+    width: 30px;
+    height: 30px;
+    margin-left: 3px;
+    border: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 0 0 2px var(--normal-bg, #fff), 0 0 0 3px var(--border-default, rgba(0, 0, 0, 0.1));
+  }
+
+  // A page's own bar (titleBar): the title centred on the full width, the
+  // back circle laid over its left end.
+  &__top--page {
+    position: relative;
+    align-items: center;
+  }
+
+  &__top--page > &__circle {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  &__page-title {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 56px;
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
+    text-align: center;
+  }
+
+  // Figma's tour frames fade the top bar to 40% behind the overlay.
+  &[data-overlay="1"] &__top {
+    opacity: 0.4;
+  }
+
+  &__circle,
+  &__avatar {
+    width: 44px;
+    height: 44px;
+    flex: none;
+    border-radius: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
+
+  // 12px inside a 44px circle (206:5529): a 22px glyph.
+  &__circle-ico {
+    width: 22px;
+    height: 22px;
+  }
+
+  // The workspace's own folder icon in the title pill (206:5726): the pill's
+  // inner height, round.
+  &__title-art {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 65px;
+    overflow: hidden;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__avatar {
+    border: 0;
+    box-shadow: none;
+    overflow: hidden;
+    background: transparent;
+  }
+
+  &__avatar-img {
+    width: 44px;
+    height: 44px;
+  }
+
+  &__title {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 17px 7px 13px;
+    border-radius: 40px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    font-size: 14px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__title-ico,
+  &__title-caret {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+
+  &__title-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 24px 24px;
+  }
+
+  // The navigation: a white fade, the bottom row, the home-indicator band
+  // (32 in the frames — the safe area where a device has one). The FAB rides
+  // on it: Figma pins it 54 above the row's top, 16 from the right.
+  &__nav {
+    position: relative;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 100%);
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 32px);
+  }
+
+  &__bottom {
+    flex: none;
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+    padding: 12px 16px 0;
+  }
+
+
+  // The 20% black overlay of the tour frames (385:937), over everything but
+  // the sheet or modal drawn after it.
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  &__tabs,
+  &__search {
+    flex: 1;
+    min-height: 54px;
+    border-radius: 40px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 8px;
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
+
+  // The workspace tab pill (206:5446): 4px inside, four equal 44px tabs.
+  &__tabs {
+    padding: 4px;
+    border-radius: 1000px;
+    justify-content: stretch;
+  }
+
+  // The pre-workspace Search pill (225:30747): 13/17 insets, a 26px glass.
+  &__search {
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 13px 17px;
+    color: #65656c;
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  &__search-ico {
+    width: 26px;
+    height: 26px;
+  }
+
+  &__tab-ico {
+    width: 20px;
+    height: 20px;
+    display: block;
+    flex: none;
+    color: #0b0a21;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &__tab-label {
+    max-width: 100%;
+    overflow: hidden;
+    justify-content: center;
+
+    .note-content {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  // desk-module__mrail-item's values: five fit across a phone.
+  &__tab {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 6px;
+    box-sizing: border-box;
+    border-radius: 40px;
+    font-size: 12px;
+    line-height: 1.2;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__tab[data-active="1"] {
+    background: rgba(89, 80, 255, 0.1);
+  }
+
+  &__fab {
+    position: absolute;
+    right: 16px;
+    top: -54px;
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: #5950ff;
+    border: 1.182px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 7px 5px rgba(0, 0, 0, 0.05), 0 40px 40px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+
+  &__fab-ico {
+    width: 24px;
+    height: 24px;
+    color: #fff;
+  }
+
+  // The composer (component 212:31308): 12 above, 16 at the sides. The
+  // home-indicator band under it is the nav's own padding.
+  &__composer-row {
+    flex: none;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px 0;
+  }
+
+  &__composer-row > &__composer-plus {
+    box-shadow: none;
+  }
+
+  &__composer-plus-ico {
+    width: 18px;
+    height: 18px;
+    display: block;
+  }
+
+  &__composer {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 13px 17px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 40px;
+    background: #fff;
+  }
+
+  &__composer-ph {
+    flex: 1;
+    min-width: 0;
+    font-size: 16px;
+    line-height: 1.2;
+    color: #65656c;
+    white-space: nowrap;
+  }
+
+  &__composer-smiley {
+    width: 19.2px;
+    height: 19.2px;
+    flex: none;
+  }
+
+  &__composer-send {
+    width: 19px;
+    height: 16px;
+    flex: none;
+    margin-left: -4px;
+  }
+
+  &__sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 17px 17px calc(env(safe-area-inset-bottom, 0px) + 41px);
+    background: #fff;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -2px 18px rgba(0, 0, 0, 0.12);
+  }
+
+  &__sheet-title {
+    font-size: 20px;
+    line-height: 1.1;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding-top: 24px;
+    text-align: center;
+  }
+
+  &__hero-title {
+    font-size: 32px;
+    line-height: 1.1;
+    font-weight: 600;
+    color: #34343a;
+  }
+
+  &__hero-desc {
+    font-size: 18px;
+    line-height: 1.2;
+    color: #34343a;
+  }
+
+  &__hero-cta {
+    height: 48px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    background: #433cc5;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    cursor: pointer;
+  }
+
+  // With a glyph (386:58055): 8 between it and the label, the glyph in a
+  // 24px slot (the label's line height).
+  &__hero-cta--ico {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+  }
+
+  &__hero-cta-ico {
+    width: 24px;
+    height: 24px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    img { display: block; }
+  }
+
+  &__hero-cta-label {
+    white-space: nowrap;
+  }
+
+  &__deck-wrap {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  &__deck {
+    display: flex;
+    gap: 32px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    touch-action: pan-x pan-y;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__card {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(93, 84, 255, 0.05), #5950ff);
+    border: 1px solid rgba(89, 80, 255, 0.1);
+  }
+
+  &__dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.2);
+  }
+
+  &__dot[data-active="1"] {
+    width: 24px;
+    background: #5950ff;
+  }
+}

@@ -1,5 +1,5 @@
 // PMF rating-survey popup — Figma 2144-128133 / 2144-173302 / 2144-173408.
-// Centered white card (radius 12, pad 32, gap 32), purple stars, gray
+// Centered white card (radius 12, pad 24, gap 20; downsized from Figma's 542/32/32), purple stars, gray
 // "Take the survey" bar, equal Cancel/Confirm footer. All colors via theme
 // tokens whose LIGHT values match the design palette exactly:
 //   card #fff = --normal-bg-100 · gray btn #f2f2f7 = --normal-bg-90
@@ -12,7 +12,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: min(542px, calc(100vw - 32px));
+    width: min(440px, calc(100vw - 32px));
     max-height: calc(100vh - 48px);
     overflow-y: auto;
     background: var(--normal-bg-100, #ffffff);
@@ -20,49 +20,47 @@
     border-radius: var(--corner-radius-4); // 12px
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 1px 5.5px rgba(0, 0, 0, 0.13);
     z-index: 99998;
-    // The popup is portaled to <body>, outside the app's font scope — without
-    // this, children (and textarea font-family: inherit) resolve to Times.
-    font-family: var(--font-main, sans-serif);
+    font-family: var(--font-main);
   }
 
   &__container {
-    padding: var(--spacer-7, 2rem); // 32px
-    gap: var(--spacer-7, 2rem);
+    padding: 24px;
+    gap: 20px;
     align-items: center;
   }
 
   &__body {
     width: 100%;
     align-items: center;
-    gap: var(--spacer-7, 2rem);
+    gap: 20px;
   }
 
   // ── rating ──
   &__rating-title {
     justify-content: center;
     text-align: center;
-    font-size: 24px;
-    line-height: 1.1;
+    font-size: 20px;
+    line-height: 1.2;
     font-weight: 600;
     color: var(--normal-fg-800, #34343a);
   }
 
   &__stars {
     justify-content: center;
-    gap: var(--spacer-3, 0.5rem);
+    gap: 6px;
   }
 
   &__star {
-    width: 40px;
-    height: 40px;
+    width: 34px;
+    height: 34px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     color: #e5e5ea; // design Grey/30 — unpicked star
 
     svg {
-      width: 34px;
-      height: 34px;
+      width: 28px;
+      height: 28px;
     }
 
     &[data-on="1"] {
@@ -77,14 +75,14 @@
   &__star-msg {
     width: 100%;
     align-items: center;
-    gap: var(--spacer-3, 0.5rem);
+    gap: 6px;
   }
 
   &__star-msg-head {
     justify-content: center;
     text-align: center;
-    font-size: 18px;
-    line-height: 24px;
+    font-size: 16px;
+    line-height: 22px;
     font-weight: 600;
     color: var(--normal-fg-10, #0b0a21);
   }
@@ -107,20 +105,20 @@
     justify-content: center;
     align-items: center;
     gap: var(--spacer-3, 0.5rem);
-    padding: var(--spacer-5, 1rem) var(--spacer-6, 1.5rem);
+    padding: 10px 16px;
     background: var(--normal-bg-90, #f2f2f7);
     border-radius: var(--corner-radius-1); // 4px
     cursor: pointer;
     color: var(--normal-fg-10, #0b0a21);
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       flex: 0 0 auto;
     }
 
     .label {
-      font-size: 14px;
+      font-size: 13px;
       line-height: 20px;
       font-weight: 600;
       color: var(--normal-fg-10, #0b0a21);
@@ -264,15 +262,15 @@
     justify-content: center;
 
     svg {
-      width: 56px;
-      height: 56px;
+      width: 46px;
+      height: 46px;
     }
   }
 
   &__thanks-title {
     justify-content: center;
-    font-size: 18px;
-    line-height: 24px;
+    font-size: 16px;
+    line-height: 22px;
     font-weight: 600;
     color: var(--normal-fg-10, #0b0a21);
   }
@@ -290,7 +288,7 @@
     width: 100%;
     justify-content: space-between;
     align-items: stretch;
-    gap: var(--spacer-4, 0.75rem); // 12px
+    gap: 10px;
 
     &--center {
       justify-content: center;
@@ -306,11 +304,11 @@
     flex: 1;
     justify-content: center;
     align-items: center;
-    padding: var(--spacer-5, 1rem) var(--spacer-6, 1.5rem);
+    padding: 10px 16px;
     border-radius: var(--corner-radius-1); // 4px
     cursor: pointer;
-    font-size: 16px;
-    line-height: 24px;
+    font-size: 14px;
+    line-height: 20px;
     font-weight: 600;
   }
 

@@ -8,6 +8,15 @@
 // two-decimal, which turns "1.2 MB" into "1.26 MB" and "1.5 KB" into "1.54 kB".
 const { humanFileSize, chipGlyph } = require('libs/file-meta');
 
+// "Show in folder" on a chat attachment card. The card is the message's own
+// copy, so where it leads is resolved on click (widget/chat-item
+// _showInFolder → channel.attachment_location). `noReveal`: a conversation
+// with no workspace to look in (p2p) — chat-item sets it.
+function revealLink(m) {
+  if (Visitor.inDmz || m.noReveal) return '';
+  return `<a class="media-grid__reveal" data-service="show-in-folder">${LOCALE.SHOW_IN_FOLDER}</a>`;
+}
+
 /**
  *
  * @param {*} ui
@@ -75,6 +84,37 @@ const __media_tpl_grid = function (ui) {
 
   const filenameHtml = require('./filename')(m);
 
+  // A chat message's image / video, shown as itself (chat-item sets
+  // inlineMedia). Never for a composer chip (iconOnly) — that stays a name.
+  // `slide` is the large rendition the image player shows; a fresh upload may
+  // not have one yet, and media_grid _wireInlineMedia falls back to the
+  // original when it 404s. Video plays the original natively, and loads
+  // NOTHING until played (preload="none": "metadata" can pull most of a file
+  // whose index sits at its end, for every video in the conversation). A codec
+  // the browser cannot play falls back to the card (see _wireInlineMedia).
+  const inline =
+    m.inlineMedia && m.isAttachment && !m.iconOnly && !isFolder &&
+    (m.filetype === _a.image || m.filetype === _a.video);
+  if (inline) {
+    const slide = ui.actualNode(_a.slide).url;
+    const orig = ui.actualNode(_a.orig).url;
+    const media = m.filetype === _a.image
+      ? `<img class="media-grid__inline-img" src="${slide}" data-orig="${orig}" alt="" loading="lazy" draggable="false">`
+      : `<video class="media-grid__inline-video" src="${orig}" poster="${slide}" controls preload="none" playsinline></video>`;
+    const size = humanFileSize(m.filesize);
+    const sizeHtml = size ? `<span class="media-grid__filesize">${size}</span>` : '';
+    const reveal = revealLink(m);
+    const sep = size && reveal ? `<span class="media-grid__meta-sep"> · </span>` : '';
+    html =
+      `<div class="media-grid__background media-grid__inline ${m.filetype}">${media}${require('../../template/command')(m)}</div>` +
+      `<div class="media-grid__meta-row">` +
+        `<div class="media-grid__meta-row-top">${filenameHtml}</div>` +
+        `<span class="media-grid__chatmeta">${sizeHtml}${sep}${reveal}</span>` +
+      `</div>`;
+    if (!Visitor.inDmz) html = html + require('../../template/notify')(m);
+    return `<div class="full media-grid__content inline-media ${m.filetype}">${html}</div>`;
+  }
+
   if (isFolder) {
     // Folder/hub items keep flat layout (SVG folder shape + absolute-positioned filename).
     html = preview + filenameHtml;
@@ -102,12 +142,9 @@ const __media_tpl_grid = function (ui) {
     if (m.isAttachment) {
       const size = humanFileSize(m.filesize);
       const sizeHtml = size ? `<span class="media-grid__filesize">${size}</span>` : '';
-      const sep = size ? `<span class="media-grid__meta-sep"> · </span>` : '';
-      secondLine =
-        `<span class="media-grid__chatmeta">` +
-          `${sizeHtml}${sep}` +
-          `<a class="media-grid__reveal" data-service="show-in-folder">${LOCALE.SHOW_IN_FOLDER}</a>` +
-        `</span>`;
+      const reveal = revealLink(m);
+      const sep = size && reveal ? `<span class="media-grid__meta-sep"> · </span>` : '';
+      secondLine = `<span class="media-grid__chatmeta">${sizeHtml}${sep}${reveal}</span>`;
       removeBtn = require('../../template/command')(m);
 
       // Filename uses the default single-line render (metaTop = filenameHtml);

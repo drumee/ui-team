@@ -78,6 +78,15 @@ function current() {
  */
 function setCurrent(next) {
   _initialized = true;
+  // An endpoint with enforcement off never locks, whatever reaches it. UAT
+  // and PROD share one DB and one Redis live-update channel, so a push fanned
+  // out by an endpoint that HAS enforcement lands on sockets of one that
+  // doesn't — without this gate it would lock that UI client-side while its
+  // server clamp stays off. Same gate current() applies to the boot block.
+  if (!enforcementOn()) {
+    _current = null;
+    return;
+  }
   if (!next || !next.state || next.state === "ok") {
     const had = !!_current;
     _current = null;
@@ -145,6 +154,33 @@ function daysLeft() {
   if (!c || !c.grace_deadline) return 0;
   const s = c.grace_deadline - Math.floor(Date.now() / 1000);
   return Math.max(0, Math.ceil(s / 86400));
+}
+
+/**
+ * Where "Resolve now" sends an Owner/Admin — shared by the top banner and the
+ * popup so the two buttons can never disagree.
+ *
+ * Storage over → the Admin Console's Storage tab: it breaks usage down per
+ * workspace and per user, which is the fastest way to find what to delete.
+ * Seats only → the console's default Member tab, where Remove access lives.
+ * Both flags → Storage first; the banner stays up for the seat half.
+ *
+ * Free/Pro have no console (libs/billing.needsAdminConsoleUpgrade) and
+ * toggle-apps would answer with the upsell, so for them this returns null and
+ * the caller falls back to its own non-console path.
+ *
+ * @returns {{event:String, arg?:Object}|null} a RADIO_BROADCAST to raise
+ */
+function resolveTarget() {
+  const c = current();
+  if (!c) return null;
+  const { needsAdminConsoleUpgrade } = require("libs/billing");
+  if (needsAdminConsoleUpgrade()) return null;
+  if (c.flags?.storage) {
+    return { event: "desk:open-admin-console", arg: { tab: "storage" } };
+  }
+  if (c.flags?.seats) return { event: "desk:open-admin-console" };
+  return null;
 }
 
 /** The message a refused write should carry, by what the user attempted. */
@@ -250,6 +286,7 @@ module.exports = {
   isAdmin,
   snoozedForMe,
   daysLeft,
+  resolveTarget,
   refresh,
   blockedMessage,
   notifyBlocked,

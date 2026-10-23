@@ -1,0 +1,76 @@
+// The desk's small confirmation toast (libs/toast, slot `desk-toast` in
+// skeleton/index.js) — first used by the account menu's Mute / Unmute.
+//
+// Same card, glyph colours and entrance as Settings' and the invite popup's
+// toasts (settings_main / invite-popup skin __toast*), so the app has one look
+// for "done". Surface and ink come from the theme tokens, with the light values
+// those toasts hardcode as the fallback, so it follows dark mode.
+//
+// z-index one step above the meeting toast's layer (50004): a confirmation the
+// user just asked for must never land under a window layer.
+@keyframes desk-module-toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.desk-module {
+  &__toast-slot {
+    position: fixed;
+    top: 56px;
+    right: 16px;
+    z-index: 50005;
+    pointer-events: none;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__toast {
+    align-items: center;
+    gap: 10px;
+    max-width: 360px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: var(--normal-bg, #fff);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    pointer-events: auto;
+    animation: desk-module-toast-in 160ms ease-out;
+  }
+
+  &__toast-ico {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &__toast-text {
+    font: 600 13px/18px var(--font-main);
+    color: var(--normal-fg-10, #0b0a21);
+    white-space: nowrap;
+  }
+
+  &__toast--success &__toast-ico svg {
+    fill: #54b684;
+
+    .icon-fill-blue,
+    .icon-fill-grey {
+      fill: #54b684;
+    }
+  }
+
+  &__toast--error &__toast-ico svg {
+    fill: #d64e49;
+
+    .icon-fill-blue,
+    .icon-fill-grey {
+      fill: #d64e49;
+    }
+  }
+}

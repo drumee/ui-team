@@ -18,8 +18,10 @@
 //                 both workspace-level, so one pill names one thing.
 //   title         display title
 //   description   agenda / note, may be empty
-//   due_date      'YYYY-MM-DD' — tasks only. Tasks are all-day items.
-//   start_date    'YYYY-MM-DD' — tasks only, set when the task has a duration
+//   due_date      DATE — tasks only. Tasks are all-day items. The server sends
+//                 it as UTC midnight ('YYYY-MM-DDT00:00:00.000Z'); normalizeRow
+//                 keeps the 'YYYY-MM-DD' part (dateOnly below)
+//   start_date    DATE, same shape — tasks only, set when the task has a duration
 //   stime/etime   UNIX-EPOCH SECONDS — meetings only. The server names these the
 //                 canonical meeting time (room.js); `date` is a human display
 //                 string kept for back-compat and must NOT be parsed.
@@ -85,6 +87,14 @@ const FILTERS = [
   { key: "meeting", label: "CAL_FILTER_MEETING" },
 ];
 
+// Personal | Team, an axis of its own beside the kind filter: Team is every row
+// calendar.list sends (personal and workspace), Personal only the rows whose
+// `scope` is "personal". Same order as the toggle draws them.
+const AUDIENCES = [
+  { key: "personal", label: "CAL_AUDIENCE_PERSONAL" },
+  { key: "team", label: "CAL_AUDIENCE_TEAM" },
+];
+
 // The week/day grids draw all 24 hours (skeleton/hours.js), the same frame the
 // workspace Meet tab's schedule uses, so these no longer bound the ruler.
 // DAY_START_HOUR is now the hour the widget scrolls an EMPTY day onto — the
@@ -93,6 +103,18 @@ const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 21;
 
 const ymd = (d) => d.format("YYYY-MM-DD");
+
+// A task DATE as 'YYYY-MM-DD', or null. The server answers a stored DATE as UTC
+// midnight (…T00:00:00.000Z): its date part is the stored day everywhere, while
+// Dayjs(instant) is the day before for any viewer west of UTC — the task would
+// sit a cell early and every save would send that earlier day back. The board
+// (window/tasks/list-edit.js) and mobile (taskDateFromWire) read it the same
+// way. Task dates only: meeting times are epochs, cursors are local days.
+const DATE_PART = /^(\d{4}-\d{2}-\d{2})/;
+function dateOnly(value) {
+  const m = value == null ? null : DATE_PART.exec(String(value));
+  return m ? m[1] : null;
+}
 
 /** Dayjs for a value, or null — never throws, never returns an invalid Dayjs. */
 function day(value) {
@@ -226,8 +248,8 @@ function normalizeRow(raw, fallbackKind) {
     row.etime = Number(content.etime) || 0;
     row.all_day = !row.stime;
   } else {
-    row.due_date = content.due_date || null;
-    row.start_date = content.start_date || null;
+    row.due_date = dateOnly(content.due_date);
+    row.start_date = dateOnly(content.start_date);
     row.all_day = true;
   }
   return row;
@@ -252,7 +274,11 @@ function rowEnd(row) {
   return day(row.due_date);
 }
 
-/** 'HH:mm A' start label for a meeting chip; '' for an all-day task. */
+/** 'h:mm A' start label for a meeting chip; '' for an all-day task. */
+// "1:30 PM" — the 12-hour form of the frame's month chip (1697:48542), which
+// the workspace Meet tab's month cards write too (meeting-schedule.js
+// monthCard: `h:mm A title`). Worded in the UI language through the global
+// Dayjs locale, set where the string table is.
 function startLabel(row) {
   const s = row && row.kind === "meeting" ? fromEpoch(row.stime) : null;
   return s ? s.format("h:mm A") : "";
@@ -339,20 +365,24 @@ function viewRange(view, cursor) {
   return { from: gridStart, to: gridStart.add(6 * 7 - 1, "day").endOf("day") };
 }
 
-/** The range label above the grid: "June 2026" / "Jun 7 – 13, 2026" / a date. */
+// The range the toolbar names:
+//   month  "September, 2026" — the design's own wording, comma included
+//   week   "September 20-26, 2026"  /  "Sep 28 - Oct 04, 2026" across months
+//   day    "September 25, 2026"
+// Week and day keep the workspace Meet tab's schedule wording
+// (window/folder/skeleton/meeting-schedule.js rangeLabel), two-digit days and
+// all; only the month label differs from it.
 function rangeLabel(view, cursor) {
   const anchor = day(cursor) || Dayjs();
-  if (view === "day") return anchor.format("dddd, MMMM D, YYYY");
+  if (view === "day") return anchor.format("MMMM DD, YYYY");
   if (view === "week") {
     const s = anchor.startOf("week");
-    const e = anchor.endOf("week");
+    const e = s.add(6, "day");
     if (s.month() === e.month()) {
-      return `${s.format("MMMM D")} – ${e.format("D")}, ${e.format("YYYY")}`;
+      return `${s.format("MMMM DD")}-${e.format("DD")}, ${e.format("YYYY")}`;
     }
-    return `${s.format("MMM D")} – ${e.format("MMM D")}, ${e.format("YYYY")}`;
+    return `${s.format("MMM DD")} - ${e.format("MMM DD")}, ${e.format("YYYY")}`;
   }
-  // Month mode names the month — never a week range, which is what the older
-  // 58222:* frames showed by mistake. 43:31159 sets the comma ("June, 2026").
   return anchor.format("MMMM, YYYY");
 }
 
@@ -361,10 +391,12 @@ module.exports = {
   PRIORITIES,
   VIEWS,
   FILTERS,
+  AUDIENCES,
   DAY_START_HOUR,
   DAY_END_HOUR,
   ymd,
   day,
+  dateOnly,
   fromEpoch,
   statusMeta,
   priorityMeta,

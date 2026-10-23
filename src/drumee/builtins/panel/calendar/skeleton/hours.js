@@ -1,5 +1,7 @@
 // The hour-ruled canvas behind both Week (7 columns) and Day (1 column).
-// Figma 58222:171611 (week) and 58222:172317 (day).
+// Figma 1693:187899 (week) and 1693:189056 (day). A timed meeting is the
+// frame's weekly schedule card (43:31735) and an all-day task the month cell's
+// task card, both drawn by skeleton/chip.js.
 //
 // There is no precedent for this layout in the codebase — the board calendar is
 // day-cells only — so the geometry lives here once and both views configure it.
@@ -154,8 +156,9 @@ module.exports = function (ui, days, view) {
       });
     });
 
-    // The hour row IS the click target: clicking the band between 1 and 2
-    // schedules 1–2, which is how the Meet tab's cells read.
+    // The hour row IS the click target — like a Meet tab cell — and opens
+    // the create-TASK popup due that day (index.js "cal-slot-add"; the hour
+    // itself is not used, since a task has no time).
     //
     // The service sits on the row itself and the row has NO kids. That is the
     // point, not an accident — ui-core binds a click to every widget left at
@@ -189,18 +192,23 @@ module.exports = function (ui, days, view) {
   const headCell = (d) => {
     const k = ymd(d);
     const items = allDay[k] || [];
+    // The whole header cell is the day's add target — its padding and the
+    // gaps around the all-day chips too, not just the date — so the column
+    // adds a task from top to bottom. Its containers are inert (`active: 0`)
+    // for the reason the hour rows have no kids: an active one would take the
+    // click on its own area. The chips keep their own service.
     return Skeletons.Box.Y({
       className: `${pfx}__hours-head-cell`,
+      bubble: 0,
+      service: "cal-day-add",
+      uiHandler: [ui],
+      calDay: k,
       attrOpt: { "data-today": k === todayKey ? "1" : "0" },
       kids: [
         // Stacked num-over-name, matching the Meet tab's schedule header.
         Skeletons.Box.Y({
           className: `${pfx}__hours-head-date`,
-          bubble: 0,
-          service: "cal-day-add",
-          uiHandler: [ui],
-          calDay: k,
-          // active:0 or a child eats the click before triggerHandlers runs.
+          active: 0,
           kidsOpt: { active: 0 },
           kids: [
             Skeletons.Note({
@@ -209,14 +217,17 @@ module.exports = function (ui, days, view) {
             }),
             Skeletons.Note({
               className: `${pfx}__hours-head-name`,
-              content: d.format(view === "day" ? "dddd" : "ddd"),
+              // "Monday", in week view too — the Meet tab's weekly header.
+              content: d.format("dddd"),
             }),
           ],
         }),
-        // All-day strip: tasks, and any meeting whose start time was cleared.
+        // All-day strip: the day's tasks. A meeting always has a start here —
+        // rowStart drops one without, above, before it reaches a column.
         items.length
           ? Skeletons.Box.Y({
               className: `${pfx}__allday`,
+              active: 0,
               kids: items.map((row) => chip(ui, row, { compact: 1 })),
             })
           : null,

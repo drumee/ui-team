@@ -15,6 +15,15 @@
 // intrinsic size, so every icon needs an explicit `svg { width; height }` or
 // it expands to fill its container. Button.Label also carries an inline
 // display that only `!important` overrides (same as topbar's __ws-new).
+@keyframes desk-org-view-dialog-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-org-view__dept-dialog { animation: none; }
+}
+
 .desk-org-view {
 
   // The widget ROOT (`{family}__ui`). It lives in the desk's
@@ -589,15 +598,146 @@
     text-align: center;
   }
 
-  &__new-dept-entry {
-    max-width: 320px;
+  // ── The user's own sections (Other workspaces, Personal) ──────────────
+  //
+  // NOT FRAMED like a department. They are not the organisation's, and in a
+  // frame their cards sat 25px in (padding + border) and 8px narrower than
+  // the bare ungrouped grid right above them, so the columns did not line up.
+  // Unframed, the grid is the same width as that one and the cards share its
+  // columns; the heading keeps the department's typography. The extra top
+  // margin makes the gap ABOVE the heading (16 + 16) larger than the one
+  // below it (16), so it reads as the title of the grid under it.
+  &__section--other,
+  &__section--personal {
+    gap: 16px;
+    margin-top: 16px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  // ── "Create department" dialog ────────────────────────────────────────
+  //
+  // Rendered in the desk's modal host (Wm.__wrapperModal), NOT under this
+  // widget — which is why every rule here is a flat `__dept-dialog-*` class
+  // and none depends on being inside `.desk-org-view__ui`. The host centres
+  // it and draws the scrim.
+  //
+  // The create-folder card's ramp (window/folder/skin `__create-folder-*`):
+  // creating a department is the same act — name a new container — so it
+  // reads as the same object. Copied, not shared: a widget's stylesheet is
+  // only injected when that widget loads.
+  &__dept-dialog {
+    position: relative;
+    width: 420px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    gap: 24px;
+    padding: 28px;
+    border-radius: 20px;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    box-shadow:
+      0 40px 80px rgba(0, 0, 0, 0.15),
+      0 7px 10px rgba(0, 0, 0, 0.05);
+    animation: desk-org-view-dialog-in 0.18s ease-out backwards;
+  }
+
+  &__dept-dialog-header {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__dept-dialog-title {
+    @include drumee.typo($size: 18px, $line: 24px, $color: var(--normal-fg-10));
+    font-weight: 600;
+  }
+
+  &__dept-dialog-close {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    flex: 0 0 auto;
+    cursor: pointer;
+    color: var(--normal-fg-20);
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    &:hover {
+      color: var(--normal-fg);
+    }
+  }
+
+  &__dept-dialog-content {
+    gap: 8px;
+  }
+
+  &__dept-dialog-label {
+    @include drumee.typo($size: 12px, $line: 14px, $color: var(--normal-fg-10));
+    font-weight: 600;
+  }
+
+  &__dept-dialog-entry {
+    width: 100%;
 
     input {
       width: 100%;
-      padding: 8px 12px;
-      border-radius: var(--corner-radius-3);
+      box-sizing: border-box;
+      min-height: 44px;
+      padding: 0 14px;
       border: 1px solid var(--border-default);
-      background-color: var(--normal-bg-elevated);
+      border-radius: 10px;
+      background: var(--normal-bg-elevated);
+      @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10));
+    }
+  }
+
+  &__dept-dialog-error-text {
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--default-text-error));
+  }
+
+  &__dept-dialog-footer {
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  &__dept-dialog-button {
+    align-items: center;
+    justify-content: center;
+    min-width: 88px;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    @include drumee.typo($size: 14px, $line: 20px);
+    font-weight: 600;
+
+    // Note is a flex row; the label sits in .note-content.
+    .note-content {
+      width: 100%;
+      justify-content: center;
+      text-align: center;
+    }
+
+    &.primary {
+      background-color: var(--primary-40);
+      color: var(--white);
+
+      &:hover { background-color: var(--primary-50); }
+    }
+
+    &.secondary {
+      background: transparent;
+      border: 1px solid var(--border-default);
+      color: var(--normal-fg-10);
+
+      &:hover {
+        background: var(--normal-bg-90);
+      }
     }
   }
 

@@ -118,7 +118,80 @@ function subtaskBadge(ui, t, cls) {
   });
 }
 
+// ── Filter dimensions ──────────────────────────────────────────
+// One table for the popover's pages, their value rows and the applied-filter
+// chips, so the three can never disagree about what a dimension is called or
+// what its values read as. `keyword` is the search box, not a page.
+const FILTER_DIMS = [
+  { dim: "priority", ico: "apps-warning", label: "PRIORITY" },
+  { dim: "status", ico: "checked-circle", label: "STATUS" },
+  { dim: "due", ico: "calendar", label: "DUE_DATE" },
+  { dim: "files", ico: "app-attachment", label: "LINKED_FILES" },
+  { dim: "assignee", ico: "two-users", label: "ASSIGNEE" },
+];
+
+// Fixed value sets, as [value, LOCALE key] — resolved at render time, since
+// LOCALE is injected after this module loads.
+const FILTER_DUE = [
+  ["overdue", "OVERDUE"],
+  ["today", "TODAY"],
+  ["week", "THIS_WEEK"],
+  ["month", "THIS_MONTH"],
+  ["none", "NO_DATE"],
+];
+const FILTER_FILES = [
+  ["has", "WITH_FILES"],
+  ["none", "WITHOUT_FILES"],
+];
+
+function filterDimLabel(dim) {
+  const d = FILTER_DIMS.find((x) => x.dim === dim);
+  return d ? LOCALE[d.label] : "";
+}
+
+/**
+ * What a dimension is currently filtering on, as display strings in pick
+ * order. Empty when the dimension is off. Drives the summary on each row of
+ * the popover's root page and the applied-filter chips.
+ */
+function filterLabels(ui, dim) {
+  const f = (ui.getFilters && ui.getFilters()) || {};
+  const pick = (table, v) => {
+    const row = table.find(([k]) => k === v);
+    return row ? LOCALE[row[1]] : v;
+  };
+  switch (dim) {
+    case "keyword":
+      return f.keyword ? [f.keyword] : [];
+    case "priority":
+      return (f.priority || []).map((k) => {
+        const p = priorityMeta(ui, k);
+        return LOCALE[p.label] || k;
+      });
+    case "status":
+      return (f.status || []).map((k) => {
+        const c = (ui.getColumns() || []).find((x) => x.key === k);
+        return (c && (c.name || LOCALE[c.label])) || k;
+      });
+    case "due":
+      return f.due ? [pick(FILTER_DUE, f.due)] : [];
+    case "files":
+      return f.files ? [pick(FILTER_FILES, f.files)] : [];
+    case "assignee":
+      return (ui.getFilterUids() || [])
+        .map((uid) => fullName(ui.getMember(uid)))
+        .filter(Boolean);
+    default:
+      return [];
+  }
+}
+
 module.exports = {
+  FILTER_DIMS,
+  FILTER_DUE,
+  FILTER_FILES,
+  filterDimLabel,
+  filterLabels,
   mayCreateTask,
   subtaskBadge,
   PRIORITY_RANK,

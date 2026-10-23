@@ -38,6 +38,43 @@ class ___window_switchcall extends mfsInteract {
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
     this.setupInteract();
+    // Centre once the card has laid out (its height follows the title), and
+    // again whenever the viewport changes size.
+    requestAnimationFrame(() => this._center());
+    this._onViewportResize = () => this._center();
+    window.addEventListener('resize', this._onViewportResize);
+  }
+
+  /**
+   *
+   */
+  onDestroy() {
+    if (this._onViewportResize) {
+      window.removeEventListener('resize', this._onViewportResize);
+    }
+    if (super.onDestroy) super.onDestroy();
+  }
+
+  /**
+   * Centre the card on the screen. The skin's calc(50vw - …) is relative to
+   * the windows layer, which starts right of the side bar and below the top
+   * bar, so the card landed off-centre by that offset. Measured on the card
+   * as rendered; phones are left to the skin's full-width rule.
+   */
+  _center() {
+    const el = this.el;
+    if (!el || !el.isConnected || this.isDestroyed()) return;
+    if (window.innerWidth <= 500) {
+      if (this.$el) this.$el.css({ left: '', top: '' });
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    const parent = el.offsetParent;
+    const origin = parent ? parent.getBoundingClientRect() : { left: 0, top: 0 };
+    const left = Math.round(Math.max(0, (window.innerWidth - rect.width) / 2) - origin.left);
+    const top = Math.round(Math.max(0, (window.innerHeight - rect.height) / 2) - origin.top);
+    this.style.set({ left, top });
+    if (this.$el) this.$el.css({ left, top });
   }
 
   /**
@@ -115,6 +152,7 @@ class ___window_switchcall extends mfsInteract {
   /**
    */
   async decline(cmd) {
+    this._declineMeetingInvite();
     if (!this.currentRoom || this.peerData.room_type != _e.connect) {
       return;
     }
@@ -125,6 +163,34 @@ class ___window_switchcall extends mfsInteract {
     this.$el.hide();
     this.goodbye();
 }
+
+  /**
+   * Someone in a meeting rang us from its roster (conference.invite → push.js
+   * dispatchRoom) and we dismissed the prompt: tell them, so their "Call in
+   * progress" turns into "Declined" instead of waiting out the ring. A prompt
+   * raised by anything else (conference.join "first participant arrived")
+   * carries no caller socket and is left alone. Sent once, through the
+   * meeting's workspace — the callee is a member there, which is what the
+   * decline's user_permission check needs.
+   */
+  _declineMeetingInvite() {
+    const p = this.peerData;
+    if (this._declined || !p || p.room_type != _a.meeting) return;
+    if (p.type && p.type != SERVICE.conference.invite) return;
+    if (!p.caller_id || !p.hub_id) return;
+    this._declined = 1;
+    this.postService(SERVICE.conference.decline, {
+      hub_id: p.hub_id,
+      nid: p.room_id,
+      metadata: { type: _a.meeting },
+      caller: {
+        caller_id: p.caller_id,
+        uid: p.uid,
+        hub_id: p.hub_id,
+        room_id: p.room_id,
+      },
+    }).catch((e) => this.warn && this.warn("conference.decline failed", e));
+  }
 
   /**
    * User Interaction Evant Handler

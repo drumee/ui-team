@@ -93,9 +93,19 @@ class __over_limit_banner extends LetcBox {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
     switch (service) {
-      case "over-limit-banner-resolve":
+      case "over-limit-banner-resolve": {
+        // Straight to the screen that fixes it (Storage tab for a storage
+        // overage) instead of re-opening the popup the admin already saw.
+        // Plans without a console get the popup: its Home / Empty trash
+        // shortcuts are their only cleanup path.
+        const target = OverLimit.resolveTarget();
+        if (target) {
+          RADIO_BROADCAST.trigger(target.event, target.arg);
+          return;
+        }
         RADIO_BROADCAST.trigger("desk:open-over-limit-popup");
         return;
+      }
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);
     }

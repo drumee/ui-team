@@ -1,3 +1,5 @@
+const withFileSwitcher = require("builtins/player/widget/file-switcher/frame");
+
 module.exports = function (ui) {
   const menu = Skeletons.Box.X({
     debug: __filename,
@@ -9,5 +11,5 @@ module.exports = function (ui) {
     },
     kids: [require("./topbar")(ui)],
   });
-  return require("window/skeleton/content/main")(ui, menu);
+  return withFileSwitcher(ui, require("window/skeleton/content/main")(ui, menu));
 }

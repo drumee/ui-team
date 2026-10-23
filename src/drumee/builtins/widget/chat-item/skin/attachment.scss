@@ -219,6 +219,214 @@
     }
   }
 
+  // ── Inline image / video (media_grid inlineMedia) ────────────────────
+  // An image or video attachment shows AS ITSELF in the message — the picture
+  // at its own proportions, or a playable video — instead of the 44px file
+  // card. Declared after the card rules and one class deeper (`.inline-media`)
+  // so it outranks them, `!important` included, without touching any other
+  // attachment. Layout stamps come from chat-item _stampInlineLayout.
+  // The media's size cap, on the MEDIA, and a length — never a percentage.
+  // The bubble sizes to its content, and a percentage cap is ignored while
+  // the browser measures that content: a landscape photo then measured at
+  // its full natural width, stretched the bubble across the row and dragged
+  // its hover caption with it. The frame around the media takes the
+  // percentage instead (`max-width: 100%`), and the media is a shrinkable
+  // flex item inside it, so a column narrower than the cap (the folder
+  // window's side chat) scales the picture down rather than cropping it.
+  $inline-max: min(320px, 72vw);
+
+  &__attachment-wrapper-list .media-grid__content.inline-media {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    position: relative;
+    row-gap: 4px;
+    // Hug the media, not the bubble: the hover caption below is laid over
+    // the picture, so this box must be exactly as wide as the picture.
+    width: fit-content !important;
+    max-width: 100%;
+
+    .media-grid__background.media-grid__inline {
+      // The file grid's card is a square (`aspect-ratio: 1 / 1`, media grid
+      // container.scss) — here that boxed a landscape photo with a blank band
+      // under it and cropped a portrait one. The media sets the shape.
+      aspect-ratio: auto !important;
+      align-items: flex-start;
+      background: var(--normal-bg-90) !important;
+      border-radius: 12px;
+      display: flex !important;
+      height: auto !important;
+      max-height: none;
+      max-width: 100%;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+      position: relative;
+      width: auto !important;
+
+      // Holds a sensible box — and a soft pulse — until the picture arrives,
+      // instead of a sliver that jumps open.
+      &:not([data-loaded="1"]) {
+        animation: widget-chatItem-media-pulse 1.4s ease-in-out infinite;
+        min-height: 160px;
+        min-width: 220px;
+      }
+
+      &[data-loaded="1"] {
+        background: transparent !important;
+      }
+    }
+
+    .media-grid__inline-img,
+    .media-grid__inline-video {
+      border-radius: 12px;
+      display: block;
+      flex: 0 1 auto;
+      height: auto;
+      max-height: 320px;
+      max-width: $inline-max;
+      min-width: 0;
+      width: auto;
+    }
+
+    // A picture opens its viewer; a soft darken says so on hover.
+    &.image .media-grid__background.media-grid__inline {
+      cursor: zoom-in;
+
+      &::after {
+        background: rgba(0, 0, 0, 0);
+        content: "";
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
+        transition: background-color 0.15s ease;
+      }
+
+      &:hover::after {
+        background: rgba(0, 0, 0, 0.08);
+      }
+    }
+
+    // A video box has no size until played (preload="none"): 16:9 until then.
+    .media-grid__inline-video {
+      aspect-ratio: 16 / 9;
+      background-color: #000;
+      object-fit: contain;
+      width: $inline-max;
+    }
+
+    // Video keeps a compact caption UNDER it (its controls own the bottom
+    // edge): one line, name · size.
+    &.video .media-grid__meta-row {
+      max-width: 100%;
+      min-height: 0;
+      padding: 0 2px;
+      width: 100%;
+    }
+
+    // Picture: the caption is an overlay that fades in on hover — the photo
+    // reads clean, and the name, size and "Show in folder" are one move away.
+    // Specificity (0,5,0) + !important so the bubbles' own caption colours
+    // (white on indigo, dark on the folder chat's tint) don't apply here.
+    &.image .media-grid__meta-row {
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+      border-radius: 0 0 12px 12px;
+      bottom: 0;
+      left: 0;
+      min-height: 0;
+      opacity: 0;
+      padding: 24px 10px 8px;
+      // Not clickable while invisible: its "Show in folder" link would
+      // otherwise catch a click meant for the picture's bottom-left corner.
+      pointer-events: none;
+      position: absolute;
+      right: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    &.image:hover .media-grid__meta-row {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    &.image .media-grid__meta-row .filename,
+    &.image .media-grid__meta-row .media-grid__chatmeta,
+    &.image .media-grid__meta-row .media-grid__filesize,
+    &.image .media-grid__meta-row .media-grid__meta-sep,
+    &.image .media-grid__meta-row .media-grid__reveal {
+      color: #fff !important;
+    }
+
+    // Touch has no hover: the caption would be unreachable noise, so it stays
+    // hidden and the picture opens the viewer on tap.
+    @media (hover: none) {
+      &.image .media-grid__meta-row {
+        display: none;
+      }
+    }
+  }
+
+  // Several pictures in one message: a grid of square thumbnails (two per
+  // row, a last odd one spanning both) instead of a tall stack. The tile
+  // rules sit under the SAME chain as the inline rules above plus the album
+  // stamp, so they outrank them — at equal `!important` the deeper selector
+  // wins, and the inline block's `aspect-ratio: auto` must lose here.
+  &__attachment-wrapper[data-album="1"] {
+    // A fixed width, not a percentage: the bubble sizes to its content
+    // (fit-content), so a percentage here is circular and stretched the
+    // bubble across the row — a sender's album sat off its right edge.
+    max-width: 100%;
+    min-width: 0;
+    width: $inline-max;
+
+    .smart-container {
+      display: grid !important;
+      gap: 4px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .media-grid__ui {
+      margin-top: 0 !important;
+      min-width: 0;
+    }
+
+    .media-grid__ui:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+
+    .widget-chatItem__attachment-wrapper-list .media-grid__content.inline-media {
+      width: 100% !important;
+
+      .media-grid__background.media-grid__inline {
+        aspect-ratio: 1 / 1 !important;
+        border-radius: 8px;
+        max-width: none;
+        min-height: 0 !important;
+        min-width: 0 !important;
+        width: 100% !important;
+      }
+
+      .media-grid__inline-img {
+        border-radius: 8px;
+        height: 100%;
+        max-height: none;
+        max-width: none;
+        object-fit: cover;
+        width: 100%;
+      }
+
+      // Thumbnails are too small for a caption; the viewer names each one.
+      .media-grid__meta-row {
+        display: none !important;
+      }
+    }
+
+    // A last odd picture spans the row, as a 2:1 band. (0,8,0) — above the
+    // square rule's (0,7,0).
+    .media-grid__ui:last-child:nth-child(odd) .media-grid__background.media-grid__inline.image {
+      aspect-ratio: 2 / 1 !important;
+    }
+  }
+
   // Placeholder rows shown while the cards are fetched (see
   // template/attachment-skeleton.js). Laid out to the SAME geometry as the
   // real card above — 44px tile, 9px column gap, 6px between rows — so the
@@ -325,5 +533,58 @@ html[data-theme="dark"] {
     .media-grid__ui {
       background-color: transparent;
     }
+  }
+}
+
+// A message that is only pictures / videos (chat-item _stampInlineLayout):
+// the media is the message, so the bubble's frame goes — fill, padding,
+// shadow. `!important` because every surface (Inbox indigo, folder area
+// tints, bigchat) paints its own bubble, none of them important.
+.widget-chatItem__conversation-content[data-media-only="1"] {
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+
+  > .widget-chatItem__attachment-wrapper {
+    margin-top: 0;
+  }
+
+  // With no fill behind it, a video's caption line must use the page's text
+  // colour — the bubbles force theirs (white on the Inbox's indigo, dark on
+  // the folder chat's tint) for a fill that is no longer there. (0,6,0) +
+  // !important, above both.
+  .media-grid__content.inline-media.video .filename,
+  .media-grid__content.inline-media.video .media-grid__chatmeta,
+  .media-grid__content.inline-media.video .media-grid__filesize,
+  .media-grid__content.inline-media.video .media-grid__meta-sep {
+    color: var(--normal-fg-10) !important;
+  }
+
+  .media-grid__content.inline-media.video .media-grid__chatmeta,
+  .media-grid__content.inline-media.video .media-grid__filesize,
+  .media-grid__content.inline-media.video .media-grid__meta-sep {
+    color: var(--normal-fg-50) !important;
+  }
+
+  .media-grid__content.inline-media.video .media-grid__reveal {
+    color: var(--primary-purple-40, #5950ff) !important;
+  }
+}
+
+@keyframes widget-chatItem-media-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .widget-chatItem__attachment-wrapper-list
+    .media-grid__content.inline-media
+    .media-grid__background.media-grid__inline {
+    animation: none;
   }
 }

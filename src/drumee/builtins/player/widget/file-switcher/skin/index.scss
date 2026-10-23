@@ -1,0 +1,498 @@
+@use "mixins/drumee";
+
+// Open-File Switcher — Figma "Drumee 2.0" 828:87909 (expanded, 240px) and
+// 873:221431 (collapsed, icons only).
+
+// Figma 828:94211: the panel and the viewer are two white cards, 8px apart,
+// on the desk grey — so a player hosting the panel drops its own frame and
+// lets the two cards draw it.
+// `.editor__*` too: the markdown and note editors are players by class
+// (editor/markdow extends player/interact) but carry the editor group.
+.player__ui:has(.file-switcher__frame),
+.editor__ui:has(.file-switcher__frame) {
+  background-color: var(--normal-bg-90);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.player__main:has(.file-switcher__frame),
+.editor__main:has(.file-switcher__frame) {
+  background-color: var(--normal-bg-90);
+  box-shadow: none;
+}
+
+.file-switcher {
+  // Host layout: the panel, then the player's own column.
+  &__frame {
+    gap: 8px;
+    height: 100%;
+    min-height: 0;
+    width: 100%;
+  }
+
+  &__stage {
+    border: 1px solid var(--overlay-bg-05);
+    border-radius: 8px;
+    flex: 1;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+    position: relative;
+
+    .player__header {
+      background-color: var(--normal-bg-elevated);
+    }
+  }
+
+  &__ui {
+    background-color: var(--normal-bg-elevated);
+    border: 1px solid var(--overlay-bg-05);
+    border-radius: 8px;
+    flex-shrink: 0;
+    height: 100%;
+    padding: 12px;
+    width: 240px;
+    // Collapse / expand slides between the two widths. Clipped so the labels,
+    // shown as soon as data-collapsed flips, don't spill out while it grows.
+    overflow: hidden;
+    transition: width 220ms ease;
+
+    &[data-collapsed="1"] {
+      width: 60px;
+    }
+
+    // Kept on one line so a half-open panel clips them instead of wrapping.
+    .file-switcher__title,
+    .file-switcher__create-label,
+    .file-switcher__section-title {
+      white-space: nowrap;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+
+    &[data-busy="1"] .file-switcher__scroll,
+    &[data-busy="1"] .file-switcher__create {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  }
+
+  &__main {
+    gap: 20px;
+    height: 100%;
+    min-height: 0;
+  }
+
+  &__head {
+    align-items: center;
+    flex-shrink: 0;
+    height: 32px;
+    justify-content: space-between;
+  }
+
+  &__title {
+    @include drumee.typo($size: 18px, $line: 1.2, $color: var(--normal-fg));
+    font-weight: 600;
+  }
+
+  &__toggle {
+    color: var(--normal-fg);
+    cursor: pointer;
+    height: 20px;
+    width: 20px;
+  }
+
+  &__actions {
+    flex-shrink: 0;
+    gap: 8px;
+  }
+
+  &__search {
+    align-items: center;
+    background-color: var(--overlay-bg-05);
+    border-radius: 12px;
+    gap: 8px;
+    height: 36px;
+    padding: 8px 12px;
+
+    &-ico {
+      color: var(--tertiary-grey-70);
+      flex-shrink: 0;
+      height: 16px;
+      width: 16px;
+    }
+
+    &-input {
+      flex: 1;
+      min-width: 0;
+
+      input {
+        @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg));
+        background: transparent;
+        border: none;
+        outline: none;
+        padding: 0;
+        width: 100%;
+
+        &::placeholder {
+          color: var(--tertiary-grey-70);
+        }
+      }
+    }
+  }
+
+  // Decoration must never be the click target: every LETC view binds its own
+  // onclick and stops propagation, so a click on the label / icon would be
+  // swallowed before reaching the box that carries the service.
+  &__create > *,
+  &__row > *,
+  &__search-ico {
+    pointer-events: none;
+  }
+
+  &__create {
+    align-items: center;
+    background-color: var(--primary-purple-50);
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    gap: 8px;
+    justify-content: center;
+    min-height: 36px;
+    padding: 8px 24px;
+
+    &:hover {
+      background-color: var(--primary-purple-40);
+    }
+
+    &-ico {
+      display: none;
+      height: 16px;
+      width: 16px;
+    }
+
+    &-label {
+      @include drumee.typo($size: 14px, $line: 20px, $color: #fff);
+      font-weight: 600;
+    }
+  }
+
+  // Document / Spreadsheet / Presentation, under the button while open.
+  &__create-menu {
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+    box-shadow: var(--shadow-main);
+    display: none !important;
+    gap: 2px;
+    padding: 4px;
+  }
+
+  &__ui[data-create-menu="1"]:not([data-collapsed="1"]) &__create-menu {
+    display: flex !important;
+  }
+
+  &__create-option {
+    align-items: center;
+    border-radius: 8px;
+    cursor: pointer;
+    gap: 8px;
+    padding: 6px 8px;
+
+    &:hover {
+      background-color: var(--overlay-bg-05);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+
+    &-ico {
+      flex-shrink: 0;
+      height: 20px;
+      width: 20px;
+    }
+
+    &-label {
+      @include drumee.typo($size: 13px, $line: 1.4, $color: var(--normal-fg));
+    }
+
+    // Same tints as the desk "+ New" menu (mixins/drumee new-menu-icon-tints).
+    &--document svg {
+      color: var(--primary-30);
+      fill: var(--primary-30);
+    }
+
+    &--spreadsheet svg {
+      color: #54b684;
+      fill: #54b684;
+    }
+
+    &--presentation svg {
+      color: #ffa8dc;
+      fill: #ffa8dc;
+    }
+  }
+
+  &__scroll {
+    flex: 1;
+    gap: 12px;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  &__section {
+    flex-shrink: 0;
+    gap: 12px;
+
+    &-head {
+      align-items: center;
+      gap: 8px;
+      min-height: 20px;
+    }
+
+    &-ico {
+      color: var(--normal-fg);
+      flex-shrink: 0;
+      height: 20px;
+      width: 20px;
+    }
+
+    &-title {
+      @include drumee.typo($size: 14px, $line: 1.4, $color: var(--normal-fg));
+    }
+  }
+
+  &__divider {
+    background-color: var(--border-default);
+    flex-shrink: 0;
+    height: 1px;
+    width: 100%;
+  }
+
+  &__list {
+    gap: 8px;
+  }
+
+  // A type group's title inside "Other files" (../groups).
+  &__group {
+    @include drumee.typo($size: 11px, $line: 1.4, $color: var(--tertiary-grey-70));
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    &:not(:first-child) {
+      margin-top: 8px;
+    }
+  }
+
+  &__row {
+    align-items: center;
+    border-radius: 4px;
+    cursor: pointer;
+    gap: 8px;
+    min-width: 0;
+
+    &:hover {
+      background-color: var(--overlay-bg-05);
+    }
+
+    // The open file: already shown, so not a link.
+    &--current,
+    &--current:hover {
+      background-color: var(--primary-50);
+      cursor: default;
+
+      .file-switcher__row-name {
+        color: var(--white, #ffffff);
+        font-weight: 600;
+      }
+
+      // Single-colour glyphs turn white on the brand fill; the office icons
+      // keep their coloured detail (their page body is white already).
+      .file-switcher__row-icon .preview-icon {
+        color: var(--white, #ffffff);
+        fill: var(--white, #ffffff);
+      }
+    }
+
+    &-icon {
+      align-items: center;
+      border-radius: 6px;
+      display: flex;
+      flex-shrink: 0;
+      height: 30px;
+      justify-content: center;
+      overflow: hidden;
+      width: 30px;
+
+      .preview-container,
+      .preview-content {
+        align-items: center;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+        border-radius: 6px;
+        display: flex;
+        height: 30px;
+        justify-content: center;
+        position: static;
+        width: 30px;
+      }
+
+      // Paint the glyph the row's text colour: `lib/svg.scss` only sets
+      // `fill: currentcolor` for .svg-wrapper / .drumee-picto, so a
+      // .preview-icon left alone takes the SVG default of black — wrong in
+      // dark mode (same fix as widget/chat/skin/attachment.scss).
+      .preview-icon {
+        color: var(--normal-fg-10, #0b0a21);
+        fill: currentColor;
+        flex-shrink: 0;
+        height: 22px;
+        width: 22px;
+      }
+
+      // Office glyphs come from the raw sprite, where every detail path
+      // carries its own colour EXCEPT the page body, which has no fill and
+      // would default to black behind the blue/green/orange detail.
+      &[data-ext="doc"],
+      &[data-ext="docx"],
+      &[data-ext="xls"],
+      &[data-ext="xlsx"],
+      &[data-ext="ppt"],
+      &[data-ext="pptx"] {
+        .preview-icon {
+          color: var(--white, #ffffff);
+          fill: var(--white, #ffffff);
+        }
+      }
+    }
+
+    &-name {
+      @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg));
+      @include drumee.overflow-text;
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &__empty {
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--tertiary-grey-70));
+  }
+
+  // "Other files" while its listing loads (skeleton loadingRows): same
+  // geometry as &__row, so the real rows replace it without a jump.
+  &__row-skeletons {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  &__row-skeleton {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    height: 30px;
+
+    &-icon {
+      flex: 0 0 30px;
+      height: 30px;
+      border-radius: 6px;
+    }
+
+    &-line {
+      flex: 0 1 70%;
+      height: 10px;
+      border-radius: 5px;
+    }
+
+    &:nth-child(even) &-line {
+      flex-basis: 50%;
+    }
+
+    &-icon,
+    &-line {
+      animation: file-switcher-skeleton-pulse 1.4s ease-in-out infinite;
+      background: var(--overlay-bg-05);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &-icon,
+      &-line {
+        animation: none;
+      }
+    }
+  }
+
+  // Collapsed: one 36px column of icons; the split-panel toggle takes the
+  // "Files" title's place on top and expands it back (toggle-panel).
+  &__ui[data-collapsed="1"] {
+    // The 36px icon column has no room for a scrollbar: hide it, keep the
+    // wheel / touch / keyboard scroll (overflow-y stays auto).
+    .file-switcher__scroll {
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    .file-switcher__head {
+      justify-content: center;
+    }
+
+    .file-switcher__title,
+    .file-switcher__search-input,
+    .file-switcher__create-label,
+    .file-switcher__section-title,
+    .file-switcher__group,
+    .file-switcher__row-name,
+    .file-switcher__empty {
+      display: none;
+    }
+
+    .file-switcher__search {
+      cursor: pointer;
+      justify-content: center;
+      padding: 0;
+      width: 36px;
+    }
+
+    .file-switcher__create {
+      padding: 0;
+      width: 36px;
+
+      &-ico {
+        display: block;
+      }
+    }
+
+    .file-switcher__section-head,
+    .file-switcher__row,
+    .file-switcher__row-skeleton {
+      justify-content: center;
+    }
+
+    .file-switcher__row-skeleton-line {
+      display: none;
+    }
+  }
+}
+
+// Namespaced: @keyframes is global.
+@keyframes file-switcher-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}

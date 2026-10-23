@@ -7,6 +7,7 @@
 @use "./media.scss";
 @use "./invite.scss";
 @use "./spinner.scss";
+@use "./phone.scss";
 
 // BEM root: .tutorial-main — Drumee 2.0 shell (Figma canvas 129:13815).
 // Prefix shorthands used in the skeletons:
@@ -456,3 +457,21 @@ $rail-width: 64px;
 // bottom sheet with the controls in it (skin/tooltip.scss). The panes that
 // matter most on a phone — the empty states — reflow instead of scaling.
 .tutorial-main[data-size="mobile"] { --pane-fit: 0.52; }
+
+// PHONE (host-kit layoutFor): the tour owns the viewport, above the real mobile
+// topbar (≈99999) and bottom rail (10000). The overlay that hosts it is
+// opacity:0 / pointer-events:none on mobile unless open, so the host restores
+// both. --pane-fit 1: a phone step draws a phone-sized mock, not a shrunk desk.
+.tutorial-main[data-layout="phone"] {
+  position: fixed !important;
+  inset: 0;
+  z-index: 100001;
+  opacity: 1;
+  pointer-events: auto;
+  --pane-fit: 1;
+
+  // Edge to edge: the phone mock IS the screen, so none of the desk canvas's
+  // gutters or rounded content corners (the mobile tier above) apply.
+  .tutorial-main__body { padding: 0; gap: 0; }
+  .tutorial-main__content { border-radius: 0; }
+}

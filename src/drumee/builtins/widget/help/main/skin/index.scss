@@ -26,7 +26,7 @@
     height: 100%;
     overflow: hidden;
     background: var(--white);
-    font-family: "Geist", system-ui, sans-serif;
+    font-family: var(--font-main);
   }
 
   &__main {
@@ -40,22 +40,8 @@
   // responsive block below needs the scrollbar on a different element.
   @mixin thin-scroll {
     scrollbar-width: thin;
-    scrollbar-color: $purple-deep $hairline;
-
-    &::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: $hairline;
-      border-radius: 45px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: $purple-deep;
-      border-radius: 45px;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   // Shared focus ring — keyboard users get a visible target on every

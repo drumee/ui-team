@@ -459,6 +459,8 @@ class __window_interact_player extends __utils {
    */
   _dragStart(e, ui) {
     this.selector(0);
+    // Moved by hand: no longer tiled, so no longer a workspace's file panel.
+    snap.markTiled(this, null);
     this.triggerMethod(CHANGE_RADIO);
   }
 
@@ -497,6 +499,7 @@ class __window_interact_player extends __utils {
    */
   _resizeStart(e, ui) {
     this.selector(0);
+    snap.markTiled(this, null);
     this._sizeCtrl && this._sizeCtrl.changeState(0);
     this._addResizeShield();
     super._resizeStart(e, ui);
@@ -668,7 +671,7 @@ class __window_interact_player extends __utils {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
       case _e.close:
-        return this.goodbye();
+        return this.closeAfterSave();
 
       // Ok on the "file was deleted" overlay: the node is gone, so a window
       // showing its ghost has nothing left to offer — close it outright.
@@ -844,7 +847,11 @@ class __window_interact_player extends __utils {
    */
   _opensFullFrame() {
     if (Visitor.isMobile()) return false;
-    if (this.mget(_a.kind) === "audio_player") return false;
+    // Audio keeps its compact Music player where there is no panel to sit
+    // beside (share page); on the desk it fills the frame as the others do.
+    if (this.mget(_a.kind) === "audio_player") {
+      return require("builtins/player/widget/file-switcher/frame").enabled(this);
+    }
     return true;
   }
 
@@ -912,6 +919,32 @@ class __window_interact_player extends __utils {
    */
   goodbye() {
     return super.goodbye({ now: true });
+  }
+
+  /**
+   * The X button: an editor saves what was typed first (saveBeforeClose,
+   * defined by the editors) and closes once the server has it; a viewer has
+   * nothing to save and closes at once. When the save does not go through
+   * the editor has said why, and the user decides whether to close anyway
+   * (UNSAVED_CLOSE_ANYWAY) instead of losing the edits in silence.
+   */
+  async closeAfterSave() {
+    if (typeof this.saveBeforeClose !== "function") return this.goodbye();
+    let ok;
+    try {
+      ok = await this.saveBeforeClose();
+    } catch (e) {
+      this.warn("closeAfterSave: save failed", e);
+      ok = false;
+    }
+    if (this.isDestroyed()) return;
+    if (ok !== false) return this.goodbye();
+    try {
+      const r = await Wm.confirm(LOCALE.UNSAVED_CLOSE_ANYWAY);
+      if (r && r.response == "confirm" && !this.isDestroyed()) this.goodbye();
+    } catch (e) {
+      /** kept open */
+    }
   }
 
   /**

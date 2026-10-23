@@ -4,6 +4,8 @@
 //   TYPE : Skeleton
 // ===================================================================**/
 
+const withFileSwitcher = require("builtins/player/widget/file-switcher/frame");
+
 function __skl_player_audio(_ui_) {
   const audioFig = `${_ui_.fig.family}`;
   const audioGroup = `${_ui_.fig.group}`;
@@ -115,7 +117,10 @@ function __skl_player_audio(_ui_) {
     ]
   })
 
-  const a = Skeletons.Box.Y({
+  // In the Open-File Switcher frame like every other viewer: from the panel,
+  // an mp3 used to close the viewer and leave a small Music player behind.
+  // Without the frame (share page, mobile) it keeps its compact box.
+  return withFileSwitcher(_ui_, Skeletons.Box.Y({
     debug      : __filename,
     className  : `${audioFig}__main ${audioGroup}__main audio-player`,
     uiHandler  : _ui_,
@@ -124,9 +129,7 @@ function __skl_player_audio(_ui_) {
       body,
       footer
     ]
-  });
-
-  return a;
+  }));
 };
 
 export default __skl_player_audio;

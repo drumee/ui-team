@@ -15,6 +15,34 @@
 // how these rows are built had to change. "#/desk/wm/open/" itself is untouched
 // and still serves mail, chat, share and compact deep links.
 const { isMeetingRollup, meetingDeepLink } = require('./meeting-link');
+const { timeAgo } = require('./skeleton');
+
+// What bookmark_add stores as a saved row's snapshot: the row as the server
+// sent it, minus what the list and the panel attach to the model (views and
+// handlers, which cannot be serialised) and minus per-render/per-state fields
+// the server recomputes when it serves the snapshot back (bookmark_rows).
+const SNAPSHOT_SKIP = new Set([
+  'kind', 'uiHandler', 'logicalParent', 'partHandler', 'widgetId',
+  'day_header', 'is_saved', 'is_read', 'pinned_view', 'pinned_source', 'bookmark_key',
+]);
+function snapshotRow(attrs) {
+  const out = {};
+  for (const k of Object.keys(attrs || {})) {
+    if (SNAPSHOT_SKIP.has(k)) continue;
+    const v = attrs[k];
+    if (_.isFunction(v)) continue;
+    // Only plain data: a Backbone view or model here would be circular.
+    if (v && typeof v === 'object' && !Array.isArray(v)
+      && Object.getPrototypeOf(v) !== Object.prototype) continue;
+    out[k] = v;
+  }
+  try {
+    JSON.stringify(out);
+  } catch (e) {
+    return null;
+  }
+  return out;
+}
 
 function parseJson(value, fallback) {
   if (!value) return fallback;
@@ -56,6 +84,92 @@ function getCategory(data) {
 // and then did nothing at all when clicked.
 function isFileCategory(category) {
   return category === _a.media || category === _a.mfs;
+}
+
+// "<A> edited <file>" / "<A> commented on <file>", addressed to the file's
+// owner (server-team lib/file-owner-notify).
+function isFileOwnerCategory(category) {
+  return category === 'file_edited' || category === 'file_commented';
+}
+
+/**
+ * Click on a file-owner row: land on the file in its folder (the docked
+ * workspace, scrolled to, selected and flashed — the reveal every file
+ * notification uses), then
+ *   - a comment in the file's chat thread (message_id): open that thread and
+ *     scroll to the comment, highlighted;
+ *   - anything else (an edit, a comment inside a document): open the file in
+ *     its player. openMedia, not Wm.openFileLocation: the latter launches a
+ *     floating folder window for a type with no player while the docked pane
+ *     is still loading.
+ * Waits for the landing, like openShareOpenAccess: launched earlier, the thread
+ * or the player would be wiped or buried when the workspace pane mounts.
+ * Best-effort: without Wm the reveal hash alone still lands on the file.
+ */
+function openFileOwnerActivity({ hub_id, nid, filetype, ext, pid, filename, message_id, focus, ts }, { fetchService, openMedia } = {}) {
+  const wm = window.Wm;
+  const reveal = { hub_id, nid, filetype, pid: `${pid || "0"}`, highlight: "1", ts: `${ts}` };
+  if (!wm || !_.isFunction(wm.openNotificationLocation)) {
+    location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${nid}&filetype=${filetype}&pid=${reveal.pid}&highlight=1&ts=${ts}`;
+    return;
+  }
+  Promise.resolve(wm.openNotificationLocation(reveal))
+    .then((pane) => {
+      if (!pane) return;
+      if (message_id && _.isFunction(pane.scopeChatToFile)) {
+        return openThreadComment(pane, { nid, filename, message_id });
+      }
+      // A comment INSIDE the document: the editor that opens this nid takes
+      // it and opens the file on that comment (builtins/editor/pending-focus).
+      if (focus && typeof focus === "object") require("builtins/editor/pending-focus").set(nid, focus);
+      return openRevealedFile(wm, { hub_id, nid, filetype, ext, filename }, { fetchService, openMedia });
+    })
+    .catch((e) => console.warn("[activity] file-owner notification open failed", e));
+}
+
+// Open the file the reveal just landed on the way a double-click on its tile
+// does ("open-node"), so every type reaches its own player or editor — a
+// Casual doc or sheet included, which the tile's media model routes by
+// extension. The tile renders a moment after the landing, hence the wait;
+// without it, openMedia from the node's attributes.
+const TILE_WAIT_MS = 4000;
+const TILE_POLL_MS = 200;
+function openRevealedFile(wm, data, { fetchService, openMedia } = {}) {
+  const canFind = _.isFunction(wm._findMediaByNid);
+  return new Promise((resolve) => {
+    let waited = canFind ? 0 : TILE_WAIT_MS;
+    const tick = () => {
+      const tile = canFind ? wm._findMediaByNid(data.nid) : null;
+      if (tile && _.isFunction(tile.triggerHandlers)) {
+        tile.triggerHandlers({ service: "open-node" });
+        return resolve(tile);
+      }
+      if (waited >= TILE_WAIT_MS) {
+        const open = openMedia || require("libs/open-media").openMedia;
+        return resolve(open(data, { fetchService }));
+      }
+      waited += TILE_POLL_MS;
+      setTimeout(tick, TILE_POLL_MS);
+    };
+    tick();
+  });
+}
+
+// Scope the pane's chat to the file's thread, then scroll to the comment. On
+// the wide Chat tab the thread lives in the side panel (file-thread-chat);
+// elsewhere the folder chat itself is scoped in place (folder-chat). ensurePart,
+// not getPart: a part map keeps a destroyed widget once the panel is re-fed.
+function openThreadComment(pane, { nid, filename, message_id }) {
+  const wide = pane.activeTab === _a.chat
+    && !(_.isFunction(pane._isCompactChat) && pane._isCompactChat());
+  return Promise.resolve(pane.scopeChatToFile(nid, filename))
+    .then(() => (_.isFunction(pane.ensurePart)
+      ? pane.ensurePart(wide ? "file-thread-chat" : "folder-chat")
+      : null))
+    .then((chat) => {
+      if (!chat || (_.isFunction(chat.isDestroyed) && chat.isDestroyed())) return;
+      if (_.isFunction(chat.scrollToMessage)) chat.scrollToMessage(message_id);
+    });
 }
 
 /**
@@ -192,6 +306,10 @@ class __activity_item extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
+    // Taken before anything below reshapes the model: bookmarking sends this
+    // so the server can pin the row, and the server only keeps it if it still
+    // hashes to the row's bookmark_key.
+    this._rawRow = snapshotRow(this.model.toJSON());
     if (opt.event === 'media.workspace_move' || opt.event === 'media.copy') {
       const source = parseJson(opt.src, {});
       const destination = parseJson(opt.dest, {});
@@ -267,6 +385,10 @@ class __activity_item extends LetcBox {
     // persists via dismissed_at instead of falling back to the mfs path.
     const item_type = opt.event === 'media.workspace_move'
       ? 'mfs'
+      // "<A> edited / commented on <your file>": a yp.contact_activity row that
+      // the server stamps with its own category; read and removed by its id
+      // like every other contact_activity row.
+      : isFileOwnerCategory(opt.category) ? 'contact_invite'
       : opt.category
       || (opt.event === 'hub.invite_received' ? 'hub_invite'
         : opt.event === 'task_assigned' ? 'contact_invite'
@@ -277,6 +399,10 @@ class __activity_item extends LetcBox {
         // would dismiss a changelog id that does not exist, so the row would
         // reappear on the next reload.
         : opt.event === 'meeting_notice' ? 'contact_invite'
+        // Every other yp.contact_activity row (invite_accepted, invite_received,
+        // invite_refused, …) for the same reason: as 'mfs' a read dismissed a
+        // changelog id that does not exist and came back unread on reload.
+        : opt.event_type === 'contact' ? 'contact_invite'
         : 'mfs');
     const item_key = `${item_type}:${opt.id || opt.hub_id || opt.drumate_id || opt.key_id || ''}`;
     this.mset({ category, sender, autho_id, item_type, item_key })
@@ -313,6 +439,22 @@ class __activity_item extends LetcBox {
     // whole panel (repro: Shares → All activity closed it). The panel now
     // closes only via the explicit close button / sidebar toggle.
     this.feed(require('./skeleton')(this));
+    // A saved row is shown pinned on top by the panel, so its copy in the feed
+    // stays out of sight until it is unsaved (panel _pinFromRow / _unpinKey).
+    if (parseInt(this.mget('is_saved'), 10) === 1 && !this.mget('pinned_view')) {
+      this.el.dataset.twin = '1';
+    }
+  }
+
+  /**
+   * The time line is relative ("5 minutes ago") and printed once, when the row
+   * is built. The panel calls this when it keeps its rows across a refresh.
+   */
+  refreshTime() {
+    const node = this.el && this.el.querySelector(`.${this.fig.family}__time`);
+    if (!node) return;
+    const text = node.querySelector('.note-content') || node;
+    text.textContent = timeAgo(this.mget('timestamp') || this.mget('ctime'));
   }
 
   /**
@@ -337,6 +479,10 @@ class __activity_item extends LetcBox {
     switch (service) {
       case 'toggle-favorite':
         if (!cmd || !cmd.el) return;
+        // One request at a time per row: a second press while the first is in
+        // flight could land out of order and leave the store opposite to the
+        // button.
+        if (this._bookmarkPending) return;
         const next = cmd.el.dataset.state === '1' ? '0' : '1';
         cmd.el.dataset.state = next;
         if (cmd.mset) cmd.mset(_a.state, parseInt(next));
@@ -348,12 +494,12 @@ class __activity_item extends LetcBox {
             service: 'toggle-favorite',
             favorited: next === '1' ? 1 : 0,
             item_key: this.mget('item_key'),
-            message_id: this.mget('message_id')
-              || this.mget('key_id')
-              || this.mget(_a.id)
-              || this.mget('id')
-              || this.mget(_a.drumate_id),
-            hub_id: this.mget(_a.hub_id),
+            // Server-computed identity from activity.get_feed; the same key
+            // comes back on every refresh, which is what makes the saved state
+            // survive closing the panel or switching tabs.
+            bookmark_key: this.mget('bookmark_key'),
+            row: this._rawRow,
+            button: cmd,
           });
         }
         return;
@@ -383,6 +529,8 @@ class __activity_item extends LetcBox {
             return
 
           case 'contact_refused':
+          case 'file_edited':
+          case 'file_commented':
             this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
             return
 
@@ -616,6 +764,22 @@ class __activity_item extends LetcBox {
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;
     }
+    if (isFileOwnerCategory(category)) {
+      openFileOwnerActivity({
+        hub_id,
+        nid,
+        filetype,
+        pid: this.mget('pid') || parent_id,
+        filename: this.mget('filename'),
+        message_id: this.mget('message_id'),
+        focus: this.mget('focus'),
+        ext: this.mget('ext'),
+        ts,
+      }, { fetchService: this.fetchService && this.fetchService.bind(this) });
+      this.triggerHandlers({ service: 'read-activity', hub_id, nid, item_type, item_key, changelog_id });
+      this.triggerHandlers({ service: 'close-activity-panel' });
+      return;
+    }
     if (this.mget('event') === 'media.workspace_move') {
       const sourceHubId = this.mget('source_hub_id') || hub_id;
       location.hash = `#/desk/wm/reveal/?hub_id=${sourceHubId}&nid=0&filetype=folder&pid=0&ts=${ts}`;
@@ -689,6 +853,10 @@ class __activity_item extends LetcBox {
         if (folder_nid) {
           hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${folder_nid}&filetype=folder&pid=${parent_id}&activeTab=${_a.chat}`;
           if (message_id) hash = hash + `&message_id=${message_id}`;
+          // The topic the latest message is in (server: _stampChatTopics), so
+          // the chat does not open on # General without it.
+          const topic_id = this.mget('topic_id');
+          if (topic_id) hash = hash + `&topic_id=${encodeURIComponent(topic_id)}`;
           location.hash = hash + `&ts=${ts}`;
           this.triggerHandlers({ service: 'read-activity', hub_id, nid: folder_nid, item_type, changelog_id })
           break;

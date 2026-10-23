@@ -103,6 +103,19 @@ class __editor_markdown extends __player {
   }
 
   /**
+   * Save what was typed before the window goes away (the Open-File Switcher
+   * closes this editor to show the next file); a markdown file is otherwise
+   * only saved on the floppy icon. Resolves true once nothing is left to
+   * save, false when the save did not go through (denied, or waiting on the
+   * "save to your Deck?" prompt) so the caller keeps the window open.
+   */
+  async saveBeforeClose() {
+    if (!this._changed) return true;
+    await this.saveContent();
+    return !this._changed;
+  }
+
+  /**
    * 
    */
   display() {
@@ -315,7 +328,7 @@ class __editor_markdown extends __player {
    * 
    */
   _saveContent(opt, target) {
-    this.postService(opt, { async: 1 }).then((data) => {
+    const saving = this.postService(opt, { async: 1 }).then((data) => {
       // A denied/failed save resolves without a saved node — guard before reading
       // it so a server error (e.g. a 403) degrades to a warning instead of an
       // uncaught `data.file_path` TypeError / unhandled rejection.
@@ -354,6 +367,8 @@ class __editor_markdown extends __player {
       // unhandledrejection alert). The server-error path already notifies the user.
       this.warn("__editor_markdown: save failed", e);
     });
+    this._savePromise = saving;
+    return saving;
   }
 
   /**
@@ -496,7 +511,7 @@ class __editor_markdown extends __player {
           }
         }).catch((e) => { })
       } else {
-        this._saveContent(opt, this.target)
+        return this._saveContent(opt, this.target)
       }
     }
 
@@ -625,8 +640,7 @@ class __editor_markdown extends __player {
         }, 3000);
         break;
       case _e.close:
-        this.goodbye();
-        return
+        return this.closeAfterSave();
       default:
         super.onUiEvent(cmd, args);
     }

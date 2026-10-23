@@ -11,13 +11,14 @@ module.exports = function (ui) {
   const staging = require('./staging')(ui);
   const content = require('./content')(ui);
   const footer = require('./footer')(ui);
+  const warning = require('./warning')(ui);
 
   // Main container
   return Skeletons.Box.Y({
     className: `${pfx}__container`,
     debug: __filename,
     dataset: {
-      expanded: "1",
+      expanded: ui._isExpanded === false ? "0" : "1",
       phase: ui._phase || "progress"
     },
     kids: [
@@ -25,6 +26,7 @@ module.exports = function (ui) {
       staging,
       content,
       footer,
+      warning,
     ]
   });
 }

@@ -33,16 +33,6 @@
       @include drumee.typo($line: 24px, $size: 11px);
       width: 100%;
 
-      &::-webkit-scrollbar {
-        height: 100%;
-        width: 3px;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        background-color: var(--default-scrollbar-color);
-        cursor: pointer;
-      }
-
       &::before {
         text-transform: capitalize;
         @include drumee.typo(

@@ -1,0 +1,43 @@
+.dmz-meeting {
+  &__attachments {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 16px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  &__attachments-title {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  &__attachment {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 6px;
+    min-width: 0;
+  }
+
+  &__attachment:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &__attachment-ico {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+
+  &__attachment-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

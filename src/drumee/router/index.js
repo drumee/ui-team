@@ -21,6 +21,7 @@ require("./skin");
 const { getModule, moduleName } = require('./modules');
 const { captureCampaignArrival } = require('libs/campaign');
 const billingDeepLink = require('libs/billing-deep-link');
+const fileDeepLink = require('libs/file-deep-link');
 const windowTutorialIntent = require('libs/window-tutorial-intent');
 
 class drumee_router extends LetcBox {
@@ -338,6 +339,20 @@ class drumee_router extends LetcBox {
       return false;
     }
     if (this.isDmz()) return false;
+    // A Designation link opened signed out is armed in THIS origin's
+    // sessionStorage (libs/file-deep-link), and the sign-in that follows lands
+    // here with "#/welcome/signin" or "#/desk" on the URL — so the switch to
+    // the organisation's host left the link behind, and the visitor arrived
+    // with no file and no word (Duy, 2026-10-14). Carry it on the URL instead:
+    // that is the shape a signed-in visitor's link already travels in, and the
+    // new host opens it through wm.route() like any other arrival. This
+    // origin's copy is dropped — the URL carries it from here.
+    const fileHash = fileDeepLink.urlWantsFile() ? null : fileDeepLink.peek();
+    if (fileHash && fileHash.charAt(0) === "#") {
+      fileDeepLink.clear();
+      location.href = `${location.protocol}//${host}${location.pathname}${location.search}${fileHash}`;
+      return true;
+    }
     location.host = host;
     return true;
   }

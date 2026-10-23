@@ -54,6 +54,9 @@ module.exports = function (ui, screen = {}, state = {}) {
             // Set only on the screen where the card ARRIVES — see _transition
             // and the `enter` note in ../index.js.
             enter: state.enter,
+            // The workspace the tour is laid over (the in-window host passes
+            // it); absent on the desk-level run, which keeps the example.
+            dest: ui.mget('import_dest') || undefined,
           })],
           })
         : null,

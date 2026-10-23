@@ -1,5 +1,7 @@
 const { colorFromName, copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
 const nodeIconHtml = require("./node-icon");
+const { chatEmptyState } = require("./skeleton/empty-state");
+const { fileListSkip, isScheduleNode } = require("window/skeleton/toolkit/list-skip");
 require("./skin");
 
 /**
@@ -17,6 +19,26 @@ require("./skin");
  * call), not a top-level constant.
  */
 const isHubScopedChat = (scope) => scope === _a.folder || scope === "workspace";
+
+/**
+ * media.search_names failures that drop a file mention to the bounded
+ * show_node_by listing (still permission-checked server side) instead of
+ * closing the dropdown. Any other readable failure stays fail-closed.
+ *
+ * - SEARCH_NAMES_UNSUPPORTED_CONTEXT: secure-share/DMZ keeps its
+ *   token-authoritative list behavior.
+ * - SEARCH_NAMES_PROJECTION_NOT_READY: the database has no READY name
+ *   projection yet (an existing workspace that was never rebuilt).
+ * - SEARCH_NAMES_UNAVAILABLE: the server answered non-200. ui-essentials
+ *   consumes that body before handing the Response to onServerComplain, so
+ *   fetchService resolves nothing and the server's reason is unreadable here.
+ */
+const SEARCH_NAMES_UNAVAILABLE = "SEARCH_NAMES_UNAVAILABLE";
+const MENTION_LISTING_FALLBACK = new Set([
+  "SEARCH_NAMES_UNSUPPORTED_CONTEXT",
+  "SEARCH_NAMES_PROJECTION_NOT_READY",
+  SEARCH_NAMES_UNAVAILABLE,
+]);
 
 const cleanMentionText = (value) =>
   value == null ? "" : String(value).trim();
@@ -169,6 +191,8 @@ class __widget_chat extends LetcBox {
         ? `${this.mget("scoped_file_nid")}`
         : "";
       this.scopedFileLabel = this.mget("scoped_file_label") || "";
+      // Folder chat topic scope at mount (the folder window passes "general").
+      this.scopedTopicId = this._initialTopic();
       this.fileThreadId = "";
       this.fileThreadInfoLoaded = false;
       // storage_key override keeps a coexisting second instance's messenger
@@ -213,6 +237,19 @@ class __widget_chat extends LetcBox {
     this._onReadContext = this._onReadContext.bind(this);
     RADIO_BROADCAST.on("chat:read", this._onReadContext);
 
+    // A workspace TEAM chat (window_folder's chatPanel) is read only when the
+    // user actually reads it — its Chat tab open and on screen, a click / tap
+    // in it, or a reply. It used to be marked read by merely being mounted: the
+    // Files tab shows it as a side column, so opening a workspace, raising it,
+    // walking into a folder, or a message arriving while the user was on Task
+    // all stamped them as having read the whole conversation — which is what
+    // their teammates' read receipts then showed. See _isInReadingView.
+    this._readOnInteraction = !!this.mget("read_on_interaction");
+    this._onReadGesture = this._onReadGesture.bind(this);
+    // An inline image in a message (media_grid inlineMedia) finished loading
+    // and grew its row: re-pin to the bottom like any attachment growth.
+    this._onInlineMediaGrown = () => this._restickBottomAfterGrowth();
+
     // Sync own posts to sibling chat widgets on the same channel in this client
     // (the server doesn't WS-echo your own posts, so e.g. the team chat would
     // stay stale while you type in the meeting chat). See _onPeerChatPosted.
@@ -243,6 +280,14 @@ class __widget_chat extends LetcBox {
     this.unbindEvent(_a.live);
     RADIO_BROADCAST.off("chat:read", this._onReadContext);
     RADIO_BROADCAST.off("chat:posted", this._onPeerChatPosted);
+    if (this._readGestureBound && this.el) {
+      this.el.removeEventListener("pointerdown", this._onReadGesture, true);
+      this._readGestureBound = false;
+    }
+    if (this._inlineGrowthBound && this.el) {
+      this.el.removeEventListener("drumee:inline-media-grown", this._onInlineMediaGrown);
+      this._inlineGrowthBound = false;
+    }
     clearTimeout(this._folderContentSyncTimer);
     clearTimeout(this._initStickTimer);
     this._cleanupUnsentAttachments();
@@ -399,7 +444,70 @@ class __widget_chat extends LetcBox {
   _onReadContext(ctx = {}) {
     if (!ctx || ctx.hub_id == null) return;
     if (`${ctx.hub_id}` !== `${this.hubId}`) return;
+    // A team chat is not read because its WORKSPACE was clicked — only if the
+    // chat itself is what is on screen. Measured a frame later: the raise
+    // that fires this is still re-laying the window out.
+    if (this._readOnInteraction) {
+      requestAnimationFrame(() => this.readIfInView());
+      return;
+    }
     this.markConversationRead();
+  }
+
+  /**
+   * Is the user looking at this conversation right now? Only asked for a
+   * team chat (read_on_interaction).
+   *
+   * All of: the page is visible; the chat is on its own Chat tab — the Files
+   * tab's side column is a glance, not a read; it has a box (a parked
+   * workspace pane or a hidden tab has none); and nothing covers it (a
+   * section screen, a modal) — its centre hits the chat itself.
+   */
+  _isInReadingView() {
+    if (typeof document === "undefined") return false;
+    if (document.visibilityState && document.visibilityState !== "visible") return false;
+    const el = this.el;
+    if (!el || !el.isConnected) return false;
+    const body = el.closest(".window__split-body");
+    if (!body || body.dataset.view !== _a.chat) return false;
+    const r = el.getBoundingClientRect();
+    if (!r.width || !r.height) return false;
+    const hit = _.isFunction(document.elementFromPoint)
+      ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+      : null;
+    return !hit || el.contains(hit);
+  }
+
+  /**
+   * Mark read if the user is looking at it. For team chats this — the Chat
+   * tab on screen — is the only AUTOMATIC way a message becomes read; the
+   * others are the user's own gestures: a click / tap in the chat, the
+   * composer included (_onReadGesture), or a reply (sendMessage).
+   */
+  readIfInView() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!this._readOnInteraction) return this.markConversationRead();
+    if (this._isInReadingView()) this.markConversationRead();
+  }
+
+  /**
+   * The user clicked / tapped anywhere in a team chat — the Files side column
+   * included, composer and all (Duy 2026-09-27) — or replied from it: they
+   * are reading it. Pays what arrived unread, once — nothing is sent when
+   * nothing is owed. A pointerdown, so only a REAL user gesture: the
+   * composer's autofocus and the browser's re-focus on window return are
+   * focus events, which do not read (see "input-focus").
+   */
+  _onReadGesture() {
+    if (!this._readDebt) return;
+    this._lastReadAt = 0;
+    this.markConversationRead();
+  }
+
+  _bindReadGesture() {
+    if (!this._readOnInteraction || this._readGestureBound || !this.el) return;
+    this.el.addEventListener("pointerdown", this._onReadGesture, true);
+    this._readGestureBound = true;
   }
 
   /**
@@ -411,6 +519,9 @@ class __widget_chat extends LetcBox {
    * Throttled so repeated focus events don't spam the server.
    */
   markConversationRead() {
+    // Parked by chat_p2p (the other scope's conversation, kept mounted but
+    // hidden): nobody is reading it. unpark() catches up once it is shown.
+    if (this.isParked()) return;
     const now = Date.now();
     if (this._lastReadAt && now - this._lastReadAt < 2000) return;
     if (!this.__list || !this.__list.children) return;
@@ -440,8 +551,119 @@ class __widget_chat extends LetcBox {
       postData.message_id = data.message_id;
       if (area === _a.ticket) postData.ticket_id = data.ticket_id;
     }
+    // Inside a folder chat topic: the server moves only that topic's cursor,
+    // so the workspace chat is not read — do not announce it (rail pill).
+    const topic = this.scopedTopicId || "all";
+    const inTopic = !isPrivate && topic !== "all" && topic !== "general";
+    if (inTopic) postData.topic_id = topic;
     this._lastReadAt = now;
+    this._readDebt = false;
     this.postService(postData);
+    this._clearUnreadRows();
+    if (!inTopic) this._announceChatRead();
+  }
+
+  /**
+   * Tell the desk this workspace's team chat was just read here, so the rail's
+   * Chat pill clears now (panel_activity drops the hub's teamchat rollups).
+   * This socket never hears its own channel.acknowledge. Hub channels only —
+   * a DM has no rail pill.
+   */
+  _announceChatRead() {
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    if (area !== _a.share || this.hubId == null) return;
+    if (typeof RADIO_BROADCAST === "undefined") return;
+    RADIO_BROADCAST.trigger("workspace-chat-read", { hub_id: this.hubId });
+  }
+
+  /**
+   * Is this message unread for me? Someone else's, and my uid is not in its
+   * `_seen_` map (the same test notification_center_next uses).
+   */
+  _isUnreadMessage(data) {
+    if (!data || !data.author_id || data.author_id === Visitor.id) return false;
+    let md = data.metadata;
+    if (typeof md === "string") {
+      try {
+        md = JSON.parse(md);
+      } catch (e) {
+        md = null;
+      }
+    }
+    const seen = md && md._seen_;
+    return !(seen && seen[Visitor.id] != null);
+  }
+
+  /**
+   * Light the rows a team chat still owes a read (data-unread="1", styled in
+   * chat-item's skin) — so a conversation glanced at in the Files side column
+   * shows what is new, like any chat app, until the user reads it. Team chats
+   * only (read_on_interaction); every other chat acks on arrival.
+   * @param {Object} [only] light this one message instead of scanning
+   */
+  _markUnreadRows(only) {
+    if (!this._readOnInteraction || !this.__list || !this.__list.children) return;
+    const light = (child) => {
+      if (!child || !child.el || !child.model) return;
+      if (this._isUnreadMessage(child.model.toJSON())) child.el.dataset.unread = "1";
+    };
+    if (only) {
+      const hit = this.__list.getItemsByAttr
+        ? this.__list.getItemsByAttr("message_id", only.message_id)[0]
+        : null;
+      return light(hit);
+    }
+    this.__list.children.each(light);
+  }
+
+  _clearUnreadRows() {
+    if (!this._readOnInteraction || !this.el) return;
+    if (!_.isFunction(this.el.querySelectorAll)) return;
+    this.el.querySelectorAll('.widget-chatItem[data-unread="1"]').forEach((el) => {
+      delete el.dataset.unread;
+    });
+  }
+
+  /**
+   * chat_p2p keeps one conversation per scope tab (Direct / Workspace) mounted
+   * and hides the one whose tab is not showing, so a switch back is instant
+   * instead of a remount. A hidden conversation still receives its messages —
+   * it must stay current — but it must NOT acknowledge them: that is the
+   * server marking read something nobody has seen. So it notes the debt and
+   * pays it on unpark(), where the user is looking at it again.
+   */
+  isParked() {
+    return !!(this.el && this.el.dataset && this.el.dataset.parked === "1");
+  }
+
+  park() {
+    if (!this.el || this.isParked()) return;
+    const c = this.__list && this.__list.__container;
+    // display:none drops the scroll offset; remember it for unpark().
+    this._parkedScrollTop = c ? c.scrollTop : null;
+    this.el.dataset.parked = "1";
+    this.el.style.display = "none";
+  }
+
+  unpark() {
+    if (!this.el || !this.isParked()) return;
+    this.el.dataset.parked = "0";
+    this.el.style.display = "";
+    const list = this.__list;
+    if (list) {
+      if (this._pinnedToBottom !== false) {
+        // Messages that arrived while hidden were laid out at zero height.
+        this.scrollMessagesToBottom(list);
+      } else if (list.__container && this._parkedScrollTop != null) {
+        list.__container.scrollTop = this._parkedScrollTop;
+      }
+    }
+    this._parkedScrollTop = null;
+    if (this._ackOnUnpark) {
+      this._ackOnUnpark = false;
+      this._lastReadAt = 0;
+      this.markConversationRead();
+    }
   }
 
   /**
@@ -816,6 +1038,18 @@ class __widget_chat extends LetcBox {
           // this widget is a lazy kind and fetches media.home before it even
           // builds this list.
           if (this.el && this.el.dataset) this.el.dataset.painted = "1";
+          // A team chat loads without marking read (mark_read: 0), so what it
+          // just showed may be unread: owed until the user reads it. Read
+          // straight away only when this IS the chat they opened.
+          if (this._readOnInteraction) {
+            this._readDebt = true;
+            // What is still unread is lit only when the chat is NOT what the
+            // user is reading (measured a frame later, like readIfInView).
+            requestAnimationFrame(() => {
+              if (!this._isInReadingView()) this._markUnreadRows();
+              this.readIfInView();
+            });
+          }
           // Track whether the user is parked at the bottom. Content growth
           // (an attachment card loading inside an existing row) does NOT fire a
           // scroll event, so this flag keeps reflecting the user's last intent —
@@ -956,10 +1190,21 @@ class __widget_chat extends LetcBox {
       const el = this.el;
       if (el && el.dataset && el.dataset.painted !== "1") el.dataset.painted = "1";
     }, 4000);
-    this.fetchService({
-      service: SERVICE.media.home,
-      hub_id: this.hubId,
-    }).then((data) => {
+    // `prefetched_home` is the media.home answer for THIS hubId, already in
+    // hand: chat_p2p fetches it to build this very descriptor. Refetching it
+    // was a second serial round trip before anything could render. Only an
+    // explicit prefetch is trusted — `home` alone is a looser prop other
+    // callers pass in other shapes.
+    const prefetched = this.mget("prefetched_home");
+    // Otherwise through libs/hub-home: Wm.loadWorkspace starts this very
+    // request in parallel with media.attributes, so on a workspace switch it
+    // is usually already in flight (or answered) by the time the pane mounts
+    // this widget — and a workspace switched back to has it remembered.
+    const homeReq =
+      prefetched && typeof prefetched === "object"
+        ? Promise.resolve(prefetched)
+        : require("libs/hub-home").get(this, this.hubId);
+    homeReq.then((data) => {
       // media.home can come back empty for a viewer with no chat home (e.g. a
       // secure-share recipient who is not a hub member) — guard so reading
       // chat_upload_id off undefined doesn't throw an unhandled rejection.
@@ -973,6 +1218,11 @@ class __widget_chat extends LetcBox {
       this.feed(require("./skeleton")(this));
       this._bindMentionKeyboard();
       this._bindClipboardPaste();
+      this._bindReadGesture();
+      if (!this._inlineGrowthBound && this.el) {
+        this.el.addEventListener("drumee:inline-media-grown", this._onInlineMediaGrown);
+        this._inlineGrowthBound = true;
+      }
       this._installMediaDroppable();
     });
   }
@@ -1084,6 +1334,14 @@ class __widget_chat extends LetcBox {
         return this.onInputChange(args);
 
       case "input-focus":
+        // A team chat's composer takes focus WITHOUT the user asking: the
+        // Files-tab side column mounts it with autofocus, and the browser
+        // re-focuses it (focusin again) whenever the window comes back to the
+        // front. Acking on that marked the whole conversation read while the
+        // user was looking at their files. Focus reads only when the chat is
+        // actually on screen (Chat tab); a real click in the composer is a
+        // pointerdown, which _onReadGesture pays.
+        if (this._readOnInteraction) return this.readIfInView();
         return this.markConversationRead();
 
       case "mention-filter":
@@ -1463,6 +1721,10 @@ class __widget_chat extends LetcBox {
             sys_pn: "desk-picker-list",
             partHandler: this,
             api,
+            // Same rows as the workspace grid: no meeting `schedule` nodes
+            // (no bytes — sending one hangs at 0%), dotfiles only under
+            // showHidden. See window/skeleton/toolkit/list-skip.
+            skip: fileListSkip(),
             // List.Smart merges the function's result into each item before
             // the row is built, so every row is a full skeleton of its own.
             itemsOpt: (list, item) => this._deskPickerRow(item, current),
@@ -2030,10 +2292,75 @@ class __widget_chat extends LetcBox {
       hub_id: this.hubId,
       order: "desc",
     };
+    // Loading the history is not reading it: without this the server stamps
+    // the viewer into _seen_ on every message up to the newest, the moment a
+    // Files tab mounts the side column. An older server ignores the flag.
+    if (this._readOnInteraction) api.mark_read = 0;
     if (this.getScopedNid()) {
       api.nid = this.getScopedNid();
     }
+    // Folder chat topic: "general" = without topic messages, an id = that
+    // topic; "all" (default) = the whole folder chat, as before topics.
+    const topic = this.scopedTopicId || "all";
+    if (topic !== "all") api.topic_id = topic;
+    // A topic belongs to one folder; the workspace team chat reads the whole
+    // hub (no scopedNid), so name the folder the topic lives in — the post
+    // folder — or the server cannot check the topic and answers [].
+    if (topic !== "all" && topic !== "general" && !api.nid && this.getPostNid()) {
+      api.nid = this.getPostNid();
+    }
     return api;
+  }
+
+  /**
+   * Scope the folder chat to a topic: "all" (null), "general", or a topic id
+   * (window/folder/topics.js). Restarts the list; remembers each scope's
+   * scroll position like setScopedFileNid.
+   */
+  setScopedTopic(topicId) {
+    const next = topicId ? `${topicId}` : "all";
+    const prev = this.scopedTopicId || "all";
+    if (prev === next) return;
+    this._topicScroll = this._topicScroll || {};
+    if (this.__list && this.__list.__container) {
+      this._topicScroll[prev] = this.__list.__container.scrollTop;
+    }
+    this.scopedTopicId = next;
+    this.ensurePart(_a.list).then((list) => {
+      if (!list || !_.isFunction(list.restart)) return;
+      list.restart();
+      const targetScroll = this._topicScroll && this._topicScroll[next];
+      if (typeof targetScroll === "number" && _.isFunction(list.once)) {
+        list.once(_e.ready, () => {
+          if (list.__container) list.__container.scrollTop = targetScroll;
+        });
+      }
+    });
+  }
+
+  /** Topic scope at mount: the descriptor's scoped_topic, else "all". */
+  _initialTopic() {
+    return (this.mget && this.mget("scoped_topic")) || "all";
+  }
+
+  /** channel.post payload + the topic, when the scope is a topic id. */
+  _withTopic(api) {
+    const topic = this.scopedTopicId || "all";
+    if (topic !== "all" && topic !== "general") api.topic_id = topic;
+    return api;
+  }
+
+  /** The topic a message belongs to (metadata._topic_id), "" when none. */
+  _messageTopicId(data = {}) {
+    let meta = data.metadata;
+    if (typeof meta === "string") {
+      try {
+        meta = JSON.parse(meta);
+      } catch (e) {
+        meta = {};
+      }
+    }
+    return `${(meta && meta._topic_id) || data._topic_id || ""}`;
   }
 
   // Un-freeze once the user navigates away from the SCOPE_GONE scope (e.g.
@@ -2112,6 +2439,10 @@ class __widget_chat extends LetcBox {
     }
     this.ensurePart(_a.list).then((list) => {
       if (!list || !_.isFunction(list.restart)) return;
+      // The empty state depends on the scope: an empty FILE thread is not an
+      // empty team chat (skeleton/empty-state.js). ui-core re-reads the
+      // placeholder on every empty answer, so swap it before the restart.
+      list.mset(_a.placeholder, chatEmptyState(this));
       const prevSpinner = list.mget(_a.spinner);
       if (prevSpinner) list.mset(_a.spinner, false);
       list.restart();
@@ -2353,6 +2684,17 @@ class __widget_chat extends LetcBox {
    */
   matchesScopedChannel(data = {}) {
     if (_.isArray(data)) data = data[0] || {};
+    if (!this._matchesScopedChannelBase(data)) return false;
+    // File-thread mode is its own conversation: topics do not apply.
+    if (this.scopedFileNid) return true;
+    const topic = this.scopedTopicId || "all";
+    if (topic === "all") return true;
+    const own = this._messageTopicId(data);
+    return topic === "general" ? !own : own === topic;
+  }
+
+  // The folder / file-thread rule, before topics (matchesScopedChannel).
+  _matchesScopedChannelBase(data = {}) {
     if (this.scopedFileNid) {
       // File-thread mode: a message belongs here only if it targets THIS thread.
       // The folder-visible root card (message_type file.thread) is broadcast on
@@ -2537,6 +2879,9 @@ class __widget_chat extends LetcBox {
             attachment: attachments,
             hub_id: this.hubId,
           };
+          // A thread belongs to the topic it is started from (the server
+          // reads it on the first message only).
+          this._withTopic(api);
           break;
         }
         api = {
@@ -2551,6 +2896,8 @@ class __widget_chat extends LetcBox {
         if (this.getPostNid()) {
           api.nid = this.getPostNid();
         }
+        // …and topic_id to a folder chat topic (metadata._topic_id).
+        this._withTopic(api);
         break;
 
       case _a.privateRoom:
@@ -2583,6 +2930,11 @@ class __widget_chat extends LetcBox {
       }
     }
 
+    // Replying is reading. The server already marks what came before as seen
+    // for the author (channel_post_message); pay the read here too so the
+    // unread rows and the rail pill clear, also for an Enter with no click.
+    // Before the post: the optimistic row it appends has no message_id yet.
+    if (this._readOnInteraction) this._onReadGesture();
     this.echoId = _.uniqueId();
     // Capture the composer text + scope BEFORE clearMessageBlock (postMessageAPI
     // :~2093) wipes the live editor. SCOPE_GONE needs the exact text back to
@@ -3361,6 +3713,25 @@ class __widget_chat extends LetcBox {
         try {
           if (this.getHandlers(_a.ui)[0].isHidden()) return;
         } catch (e) {}
+        // A team chat that is not in front of the user (Files side column,
+        // another tab, a covered or background window) owes the ack until
+        // they click in it, reply, or open its Chat tab.
+        if (this._readOnInteraction && !this._isInReadingView()) {
+          if ((hubMatch && inScope) || privateMach || ticketMach) {
+            if (Visitor.id !== data.author_id) {
+              this._readDebt = true;
+              this._markUnreadRows(data);
+            }
+          }
+          return;
+        }
+        // Parked (see isParked): hold the ack until the user can see it.
+        if (this.isParked()) {
+          if ((hubMatch && inScope) || privateMach || ticketMach) {
+            if (Visitor.id !== data.author_id) this._ackOnUnpark = true;
+          }
+          return;
+        }
         // Acknowledge only IN-SCOPE messages (the folder/thread currently in view) —
         // same predicate handleReceivedMsg uses above. Hub-wide acking marked
         // sibling-folder messages _seen_ on receipt, which suppressed their
@@ -3393,7 +3764,13 @@ class __widget_chat extends LetcBox {
                 postData.ticket_id = data.ticket_id;
               }
             }
-            this.postService(postData);
+            // Read on arrival (the chat is on screen): once the server has it,
+            // clear the rail pill too — the panel's own refresh may have run
+            // before the ack landed.
+            Promise.resolve(this.postService(postData)).then(
+              () => this._announceChatRead(),
+              () => {},
+            );
           }
         }
         break;
@@ -3875,7 +4252,9 @@ class __widget_chat extends LetcBox {
     });
     if (!this._isFileMentionRequestCurrent(requestToken)) return [];
 
-    const errorCode = this._mentionErrorCode(response);
+    // A real empty result is []; nothing at all means the server refused.
+    const errorCode = response == null ?
+      SEARCH_NAMES_UNAVAILABLE : this._mentionErrorCode(response);
     if (errorCode) {
       const error = new Error(errorCode);
       error.code = errorCode;
@@ -3890,6 +4269,32 @@ class __widget_chat extends LetcBox {
       throw error;
     }
     return { rows: rows.slice(0, 6), canonical: true };
+  }
+
+  /**
+   * One settled non-blank filter: the scoped server search, or the bounded
+   * listing when the search cannot answer (MENTION_LISTING_FALLBACK).
+   */
+  async _searchOrListMentionFiles(folderHubId, folderNid, filter, requestToken) {
+    try {
+      return await this._searchMentionFiles(
+        folderHubId,
+        folderNid,
+        filter,
+        requestToken,
+      );
+    } catch (error) {
+      if (!MENTION_LISTING_FALLBACK.has(this._mentionErrorCode(error))) {
+        throw error;
+      }
+      return this._fetchMentionFiles(
+        folderHubId,
+        folderNid,
+        filter,
+        requestToken,
+        { boundedFallback: true },
+      );
+    }
   }
 
   async _fetchDirectMentionFiles(folderHubId, folderNid, requestToken) {
@@ -3924,7 +4329,13 @@ class __widget_chat extends LetcBox {
         if (!item) continue;
         const nid = item.nid || item.id;
         const filetype = item.filetype || item.ftype;
-        if (!nid || filetype === _a.hub || filetype === "root" || seen.has(`${nid}`)) {
+        if (
+          !nid ||
+          filetype === _a.hub ||
+          filetype === "root" ||
+          isScheduleNode(item) ||
+          seen.has(`${nid}`)
+        ) {
           continue;
         }
         seen.add(`${nid}`);
@@ -4037,7 +4448,7 @@ class __widget_chat extends LetcBox {
         pageFingerprints.add(fingerprint);
 
         for (const item of pageRows) {
-          if (!item || item.filetype === _a.hub) continue;
+          if (!item || item.filetype === _a.hub || isScheduleNode(item)) continue;
           const filename = item.filename || item.user_filename || "";
           const mentionPath = folder.path
             ? `${folder.path}/${filename}`
@@ -4167,31 +4578,13 @@ class __widget_chat extends LetcBox {
               return;
             }
             try {
-              const result = await this._searchMentionFiles(
+              resolve(await this._searchOrListMentionFiles(
                 fileScope.hubId,
                 fileScope.nid,
                 searchFilter,
                 requestToken,
-              );
-              resolve(result);
+              ));
             } catch (error) {
-              // Secure-share/DMZ keeps its existing token-authoritative list
-              // behavior.  Every other search failure stays fail-closed.
-              if (this._mentionErrorCode(error) ===
-                "SEARCH_NAMES_UNSUPPORTED_CONTEXT") {
-                try {
-                  resolve(await this._fetchMentionFiles(
-                    fileScope.hubId,
-                    fileScope.nid,
-                    searchFilter,
-                    requestToken,
-                    { boundedFallback: true },
-                  ));
-                } catch (fallbackError) {
-                  reject(fallbackError);
-                }
-                return;
-              }
               reject(error);
             }
           }, 120);
@@ -4292,7 +4685,7 @@ class __widget_chat extends LetcBox {
           rows: contacts.map(mentionMemberDebugRow),
         });
 
-        files = files.filter((f) => f.filetype !== _a.hub);
+        files = files.filter((f) => f.filetype !== _a.hub && !isScheduleNode(f));
 
         // One row per person. contact_rooms answers one row per CONTACT
         // record, and a person can be in the address book twice (imported and

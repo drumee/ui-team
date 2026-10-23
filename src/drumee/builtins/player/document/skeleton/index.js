@@ -1,3 +1,5 @@
+const withFileSwitcher = require("../../widget/file-switcher/frame");
+
 
 function buildProgress(ui, msg, spinner) {
   const state = msg ? 1 : 0;
@@ -43,12 +45,12 @@ const __document_player = function (ui, msg, opt = {}) {
     kids: [wrapper, list]
   });
 
-  return Skeletons.Box.Y({
+  return withFileSwitcher(ui, Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.group}__main`,
     partHandler: ui,
     kids: [topbar, main, buildProgress(ui, msg, spinner)]
-  });
+  }));
 };
 
 __document_player.edit = function (ui, msg) {
@@ -57,12 +59,12 @@ __document_player.edit = function (ui, msg) {
     className: `${ui.fig.group}__container`,
     sys_pn: _a.content
   });
-  return Skeletons.Box.Y({
+  return withFileSwitcher(ui, Skeletons.Box.Y({
     debug: __filename,
     className: `${ui.fig.group}__main`,
     partHandler: ui,
     kids: [topbar, main, buildProgress(ui, msg, true)]
-  });
+  }));
 };
 
 module.exports = __document_player;

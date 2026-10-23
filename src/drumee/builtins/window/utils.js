@@ -15,11 +15,7 @@ const {
 // window_sharebox / window_website. openFileLocation does not attach a media
 // node for these: those windows source their own `media`, and the fix below is
 // only about giving a file VIEWER the node it reads its content through.
-const CONTAINER_FILETYPES = [
-  _a.hub, _a.folder, "personal", "private", "share", "public",
-  // Not a file either — application maps it to window_contact.
-  _a.contact,
-];
+const { launchPlayer } = require("libs/open-media");
 
 const ViewMode = new Map();
 const DEFAULT = "default";
@@ -30,6 +26,35 @@ const SECTION_CLASSES = [
   "file-section",
   "group-section",
 ];
+// A MutationRecord that can affect partitioning (see _setupPartitionObserver):
+// any data-filetype attribute change, or a childList change whose target is
+// NOT inside a tile (i.e. the list, its container or a section wrapper).
+// "Inside a tile" is bounded to the list: an ANCESTOR of the list that happens
+// to carry data-filetype (a window root) must not make every record look like
+// a tile-internal one, or partitioning would silently stop.
+const isPartitionRecord = (r, listEl) => {
+  if (!r || r.type === "attributes") return true;
+  const t = r.target && (r.target.nodeType === 1 ? r.target : r.target.parentElement);
+  if (!t || !t.closest) return true;
+  const tile = t.closest("[data-filetype]");
+  if (!tile) return true;
+  if (!listEl || !listEl.contains(tile) || tile === listEl) return true;
+  return false;
+};
+
+// The container's settled layout. Written only when it differs: this runs on
+// every partition pass, and each redundant style write is a style
+// invalidation on the element that holds the whole grid.
+const setPartitionedStyle = (scrollEl) => {
+  const st = scrollEl.style;
+  if (st.display !== "flex") st.display = "flex";
+  if (st.flexDirection !== "column") st.flexDirection = "column";
+  if (st.alignItems !== "stretch") st.alignItems = "stretch";
+  if (st.justifyContent !== "flex-start") st.justifyContent = "flex-start";
+  if (st.visibility !== "visible") st.visibility = "visible";
+  if (scrollEl.dataset.partitioning !== "0") scrollEl.dataset.partitioning = 0;
+};
+
 const isSectionElement = (el) =>
   SECTION_CLASSES.some((className) => el.classList.contains(className));
 
@@ -469,11 +494,20 @@ class __window_mfs extends DrumeeMFS {
     this._setupPartitionObserver(listPart);
     this._partitionFoldersAndFiles(listPart);
 
+    // Runs on EVERY in-place navigation (loadContent), and the handler only
+    // removes itself once a document shows up — so in folders without one a
+    // new copy piled onto the same collection per click. Keep exactly one.
+    const prev = this._prewarmListener;
+    if (prev && prev.collection && prev.handler) {
+      prev.collection.off(_e.add, prev.handler);
+    }
+    this._prewarmListener = null;
     const f = (e) => {
       preloadEditors(e, listPart.collection, f)
     }
     if (!editorPrewarmed) {
       listPart.collection.on(_e.add, f)
+      this._prewarmListener = { collection: listPart.collection, handler: f };
     }
 
     listPart.once(EOD, () => {
@@ -497,7 +531,20 @@ class __window_mfs extends DrumeeMFS {
     if (this._partitionDebounce) {
       cancelAnimationFrame(this._partitionDebounce);
     }
-    this._partitionObserver = new MutationObserver(() => {
+    this._partitionObserver = new MutationObserver((records) => {
+      // Only mutations that can change WHICH SECTION a tile sits in matter:
+      // a tile added/removed/moved at the container or section level, or a
+      // tile's data-filetype flipping. The subtree option also reports every
+      // change INSIDE a tile — a thumbnail landing, a badge, a notify count,
+      // a rename — and each one used to schedule a full partition pass over
+      // every loaded tile. Those records are dropped here.
+      if (
+        records &&
+        records.length &&
+        !records.some((r) => isPartitionRecord(r, listPart.el))
+      ) {
+        return;
+      }
       const scrollEl = listPart.el.querySelector(".smart-container");
       if (scrollEl?.querySelector(":scope > .media-grid__ui")) {
         scrollEl.dataset.partitioning = 1;
@@ -621,7 +668,9 @@ class __window_mfs extends DrumeeMFS {
         if (!view || !view.el || !view.model) return;
         const index = collection.indexOf(view.model);
         if (index >= 0) rankOf.set(view.el, index);
-        groupOfEl.set(view.el, sections.groupOf(view.model.toJSON()));
+        // attributes, not toJSON(): groupOf only reads fields, and toJSON
+        // cloned every tile's model on every pass.
+        groupOfEl.set(view.el, sections.groupOf(view.model.attributes));
         if (view.el.dataset?.filetype && scrollEl.contains(view.el)) {
           items.add(view.el);
         }
@@ -661,6 +710,13 @@ class __window_mfs extends DrumeeMFS {
       existing.set(child.dataset.group, child);
     }
 
+    // MOVE ONLY WHAT IS OUT OF PLACE. This pass runs again on every relevant
+    // mutation (each upload, each page of a paged listing), and it used to
+    // re-append every tile and every section each time — O(loaded tiles) DOM
+    // moves per pass, each one detaching a tile and invalidating its layout.
+    // A section whose tiles are already in order is left untouched, and the
+    // sections themselves are only re-appended when their order is wrong.
+    const wanted = [];
     for (const key of sections.order) {
       const groupedItems = byGroup.get(key).sort((a, b) => rank(a) - rank(b));
       let wrap = existing.get(key);
@@ -679,10 +735,23 @@ class __window_mfs extends DrumeeMFS {
         title.className = "group-section-title";
         wrap.prepend(title);
       }
-      title.textContent = LOCALE[sections.label[key]];
-      groupedItems.forEach((item) => wrap.appendChild(item));
-      scrollEl.appendChild(wrap);
+      const label = LOCALE[sections.label[key]];
+      if (title.textContent !== label) title.textContent = label;
+      const current = [...wrap.children].filter((el) => el !== title);
+      const inOrder =
+        current.length === groupedItems.length &&
+        current.every((el, i) => el === groupedItems[i]);
+      if (!inOrder) groupedItems.forEach((item) => wrap.appendChild(item));
+      wanted.push(wrap);
     }
+    // Sections must sit, in order, at the END of the container (anything else
+    // left in it — legacy wrappers, stray nodes — is removed or precedes them).
+    const tail = [...scrollEl.children].slice(-wanted.length);
+    const placed =
+      wanted.length > 0 &&
+      tail.length === wanted.length &&
+      tail.every((el, i) => el === wanted[i]);
+    if (!placed) wanted.forEach((wrap) => scrollEl.appendChild(wrap));
 
     // Moving every media view above empties any legacy three-tier wrappers.
     // Remove them only after the move so a mode transition cannot discard a view.
@@ -703,14 +772,11 @@ class __window_mfs extends DrumeeMFS {
       }
     }
 
-    scrollEl.style.display = "flex";
-    scrollEl.style.flexDirection = "column";
-    scrollEl.style.alignItems = "stretch";
-    scrollEl.style.justifyContent = "flex-start";
-    scrollEl.style.visibility = "visible";
-    scrollEl.dataset.partitioning = 0;
+    setPartitionedStyle(scrollEl);
     this._partitionListPart = null;
     listPart.el.style.visibility = "visible";
+    // The container too — see the same line at the end of _doPartition.
+    scrollEl.style.visibility = "visible";
     return true;
   }
 
@@ -749,6 +815,17 @@ class __window_mfs extends DrumeeMFS {
 
     if (!items.length) {
       if (workspaceWrap || folderWrap || fileWrap) {
+        scrollEl.style.visibility = "visible";
+        scrollEl.dataset.partitioning = 0;
+        listPart.el.style.visibility = "visible";
+        return true;
+      }
+      // The listing came back empty: ui-core's emptyView (`.no-content`) is
+      // all there is, and it has no data-filetype, so it never counts as an
+      // item. Waiting for one hid it through every retry — the skeleton had
+      // already gone (icons-loading ends on eod), so the pane sat blank for
+      // ~3s before the empty state appeared. Nothing to sort: show it.
+      if (scrollEl.querySelector(":scope > .no-content")) {
         scrollEl.style.visibility = "visible";
         scrollEl.dataset.partitioning = 0;
         listPart.el.style.visibility = "visible";
@@ -810,15 +887,18 @@ class __window_mfs extends DrumeeMFS {
       wrap.insertBefore(item, before);
     });
 
-    scrollEl.style.display = "flex";
-    scrollEl.style.flexDirection = "column";
-    scrollEl.style.alignItems = "stretch";
-    scrollEl.style.justifyContent = "flex-start";
-    scrollEl.style.visibility = "visible";
-    scrollEl.dataset.partitioning = 0;
+    setPartitionedStyle(scrollEl);
 
     this._partitionListPart = null;
     listPart.el.style.visibility = "visible";
+    // AND the scroll container, now — not at _schedulePartitionCleanup. That
+    // timer is 500ms and re-armed by every tile mutation, while the loading
+    // skeleton has already gone (icons-loading ends on the first `data`), so
+    // the pane sat blank in between. Safe to show early: a tile that lands
+    // unpartitioned later stays hidden by the skin's structural guard
+    // (`:not([data-partitioning="0"]) > [data-filetype]`) until the observer
+    // moves it into its section, which the cleanup still settles.
+    scrollEl.style.visibility = "visible";
     return true;
   }
 
@@ -1531,9 +1611,14 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
-   *
+   * @param {Object} source a media widget, or { nid, hub_id, filetype, … }
+   * @param {Object} [known]
+   * @param {Object} [known.node] media.attributes the caller already resolved
+   *   for this nid (a Designation link probes it first) — the player is then
+   *   launched from it instead of asking the server again. Ignored unless its
+   *   nid is the one being opened.
    */
-  async openFileLocation(source) {
+  async openFileLocation(source, { node: knownNode = null } = {}) {
     let data;
     let media;
     let cid;
@@ -1604,7 +1689,7 @@ class __window_mfs extends DrumeeMFS {
       // Already rendered in an open window: a reveal just scrolls/flashes/
       // highlights in place; a normal open triggers the node's open action.
       if (highlight) {
-        this._revealFromNotification(nid, filetype, pid);
+        this._revealFromNotification(nid, filetype, pid, { ttl: data.revealTtl });
         return;
       }
       found.triggerHandlers({ service: "open-node" });
@@ -1614,42 +1699,16 @@ class __window_mfs extends DrumeeMFS {
     /** Open the player if applicable. A reveal (highlight) skips the player and
      *  falls through to open the parent folder, where the file is highlighted. */
     if (opt.kind && !node && !highlight) {
-      node = await this.fetchService(
-        {
-          service: SERVICE.media.attributes,
-          nid,
-          hub_id,
-        },
-        { async: 1 },
+      // Fetch the node, give the player a media to read its content through,
+      // launch — shared with openers that are not windows (libs/open-media).
+      const known =
+        knownNode && knownNode.nid && `${knownNode.nid}` === `${nid}`
+          ? knownNode
+          : node;
+      return launchPlayer(
+        { opt, node: known, nid, hub_id, media },
+        { fetchService: this.fetchService, warn: this.warn && this.warn.bind(this) },
       );
-      if (!node || !node.nid) {
-        return Wm.alert(LOCALE.FILE_NOT_FOUND);
-      }
-      // Hand the window the media node it will read its CONTENT through.
-      //
-      // editor/note, editor/markdow and player/text all load their body with
-      // `if (this.media) url = this.media.actualNode().url` — no media, no url,
-      // no fetch, and the file opens BLANK. They normally get it by finding the
-      // grid tile (Wm.getItemsByAttr in their initialize), which only works when
-      // the containing folder happens to be on screen. Arriving from a deep link
-      // it is not, so this branch — the one that opens a file whose tile is not
-      // rendered — has always launched them empty.
-      //
-      // Built exactly the way wm's fetchMediaAttributes already builds it for the
-      // audio/video/image/document players, from the attributes just fetched.
-      // Containers are excluded: a folder / workspace window takes its own
-      // `media` and must keep behaving as it does today.
-      if (!opt.media && !CONTAINER_FILETYPES.includes(node.filetype)) {
-        try {
-          const k = await Kind.waitFor(_a.media);
-          opt.media = media || new k({ model: new Backbone.Model(node) });
-        } catch (e) {
-          // Never let this cost the open itself: without media the file still
-          // opens, just as blank as it did before.
-          if (this.warn) this.warn("[openFileLocation] could not build media", e);
-        }
-      }
-      return Wm.launch({ ...opt, ...node }, { explicit: 1 });
     }
 
     /** Open the parent folder if not player found */
@@ -1668,7 +1727,9 @@ class __window_mfs extends DrumeeMFS {
       { ...opt, ...parent, kind: "window_folder" },
       { explicit: 1 },
     );
-    if (highlight) this._revealFromNotification(nid, filetype, pid);
+    if (highlight) {
+      this._revealFromNotification(nid, filetype, pid, { ttl: data.revealTtl });
+    }
     return opened;
   }
 
@@ -1679,7 +1740,7 @@ class __window_mfs extends DrumeeMFS {
    *    contains (the files the notification is about). The opened window's nid
    *    matches the container itself, so there is no single file cell to reveal.
    */
-  _revealFromNotification(nid, filetype, pid) {
+  _revealFromNotification(nid, filetype, pid, opt = {}) {
     // The reveal always opens the PARENT folder (pid). When the notification
     // target is a distinct child of that parent (nid !== pid) — a created file
     // OR a created sub-folder — it is a single grid cell inside the opened
@@ -1694,9 +1755,9 @@ class __window_mfs extends DrumeeMFS {
     const targetIsChildCell = nid && pid
       && `${nid}` !== '0' && `${pid}` !== '0' && `${nid}` !== `${pid}`;
     if (isContainer && !targetIsChildCell) {
-      this._highlightFolderNewFiles(nid);
+      this._highlightFolderNewFiles(nid, 24, opt);
     } else {
-      this._highlightNode(nid);
+      this._highlightNode(nid, 24, opt);
     }
   }
 
@@ -1704,11 +1765,11 @@ class __window_mfs extends DrumeeMFS {
    * Soft-highlight (and scroll the eye to) a single file cell once it renders.
    * The grid renders asynchronously after Wm.launch, so poll briefly by nid.
    */
-  _highlightNode(nid, tries = 24) {
+  _highlightNode(nid, tries = 24, opt = {}) {
     if (!nid || `${nid}` === "0") return;
     const seek = (n) => {
       const item = this._findMediaCellByNid(nid);
-      if (item) return this._applyReveal([item], true);
+      if (item) return this._applyReveal([item], true, opt);
       if (n <= 0) {
         // Give up loudly enough to be diagnosable. Silence here is what made
         // the unzip reveal take four wrong theories to find: no highlight, no
@@ -1759,6 +1820,10 @@ class __window_mfs extends DrumeeMFS {
         (c) =>
           c &&
           _.isFunction(c._setNotifyHighlight) &&
+          // A chat attachment card (media_grid, isAttachment) can carry the
+          // same nid and sits visible beside the grid in the Files view's
+          // chat column; a reveal is never about that card.
+          !(c.mget && c.mget("isAttachment")) &&
           c.el &&
           // offsetWidth/Height are 0 for anything under display:none, which is
           // exactly how the inactive view mode is parked.
@@ -1773,7 +1838,7 @@ class __window_mfs extends DrumeeMFS {
    * Highlight every NEW (unseen-badge) file inside an opened folder/hub window,
    * and scroll the first into view. Polls until the grid cells render.
    */
-  _highlightFolderNewFiles(nid, tries = 24) {
+  _highlightFolderNewFiles(nid, tries = 24, opt = {}) {
     if (!nid || `${nid}` === "0") return;
     const isFile = (c) => {
       const ft = c.mget(_a.filetype);
@@ -1789,7 +1854,7 @@ class __window_mfs extends DrumeeMFS {
           isFile(c) &&
           (parseInt(c.mget("new_file")) || 0) > 0,
       );
-      if (fresh.length) return this._applyReveal(fresh, true);
+      if (fresh.length) return this._applyReveal(fresh, true, opt);
       if (n <= 0) return;
       setTimeout(() => seek(n - 1), 150);
     };
@@ -1797,11 +1862,34 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
+   * Drop every soft highlight a previous reveal left behind, so the next one
+   * points at one file only. The highlight is DOM-only (media/core
+   * _setNotifyHighlight), so this clears the attribute wherever it sits —
+   * both view-mode twins included.
+   */
+  clearReveal() {
+    clearTimeout(this._revealTimer);
+    this._revealTimer = null;
+    for (const el of document.querySelectorAll("[data-ui-highlight]")) {
+      el.classList.remove("media-highlight");
+      el.removeAttribute("data-ui-highlight");
+    }
+  }
+
+  /**
    * Apply the persistent soft highlight to each cell, and (for the first) scroll
    * it into view with a one-off flash. The highlight is cleared when the file is
    * opened or its window closes (media/core.js).
+   *
+   * With `opt.ttl` (ms) the highlight is timed instead ("Show in folder"): the
+   * cell is just lit, with no flash or other animation, and unlit when the ttl
+   * ends. Only the latest timed reveal owns the timer — a newer one, or
+   * clearReveal(), cancels it, so an old timer never un-lights the file that
+   * is lit now.
    */
-  _applyReveal(cells, scrollFirst) {
+  _applyReveal(cells, scrollFirst, opt = {}) {
+    const ttl = Number(opt.ttl) || 0;
+    if (ttl > 0) clearTimeout(this._revealTimer);
     cells.forEach((item, i) => {
       if (!item || !item.el) return;
       try {
@@ -1809,16 +1897,28 @@ class __window_mfs extends DrumeeMFS {
           if (item.el.scrollIntoView) {
             item.el.scrollIntoView({ behavior: "smooth", block: "center" });
           }
-          item.el.classList.add("media-highlight");
-          setTimeout(() => {
-            if (item.el) item.el.classList.remove("media-highlight");
-          }, 2400);
+          // The ring flash is for the persistent (notification) highlight
+          // only; a timed reveal is a plain highlight.
+          if (!(ttl > 0)) {
+            item.el.classList.add("media-highlight");
+            setTimeout(() => {
+              if (item.el) item.el.classList.remove("media-highlight");
+            }, 1200);
+          }
         }
         if (item._setNotifyHighlight) item._setNotifyHighlight(true);
       } catch (e) {
         if (this.warn) this.warn("[openFileLocation] highlight failed", e);
       }
     });
+    if (ttl > 0) {
+      this._revealTimer = setTimeout(() => {
+        this._revealTimer = null;
+        for (const item of cells) {
+          if (item && item.el) item.el.removeAttribute("data-ui-highlight");
+        }
+      }, ttl);
+    }
   }
 
   /**

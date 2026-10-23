@@ -101,7 +101,7 @@ module.exports = {
     RADIO_BROADCAST.off("call:minimize", this._onCallMinimize);
     RADIO_BROADCAST.off("call:restore", this._onCallRestore);
     try {
-      RADIO_BROADCAST.trigger("call:ended");
+      RADIO_BROADCAST.trigger("call:ended", { kind: this.mget(_a.kind) });
     } catch (e) { /* non-fatal */ }
   },
 
@@ -238,7 +238,7 @@ module.exports = {
     // full-size window lives back inside the window manager where that screen
     // covers it — so ask the desk to take the screen down.
     try {
-      RADIO_BROADCAST.trigger("call:returned");
+      RADIO_BROADCAST.trigger("call:returned", { kind: this.mget(_a.kind) });
     } catch (e) { /* non-fatal */ }
   },
 
@@ -608,11 +608,18 @@ module.exports = {
    * Re-issue play() on the window's media elements after a DOM move. Moving an
    * attached node keeps playback in Chrome and Firefox; Safari has historically
    * paused it, and a paused self-view in a docked call looks like a dead call.
+   *
+   * Live call media ONLY, i.e. elements fed a MediaStream (`srcObject`, which
+   * is what Jitsi's track.attach sets). The window also mounts the team chat
+   * (window/meeting skeleton `meeting-chat`), whose video attachments render
+   * inline as `<video src=… preload="none">` (media/grid template) and sit
+   * paused until the user presses play. Matching on `src` too started every
+   * one of them — out of sight, with sound — each time the call was parked.
    */
   _resumeCallVideos() {
     if (!this.el) return;
     for (const v of this.el.querySelectorAll("video, audio")) {
-      if (v.paused && (v.srcObject || v.src)) {
+      if (v.paused && v.srcObject) {
         const r = v.play();
         if (r && r.catch) r.catch(() => { });
       }

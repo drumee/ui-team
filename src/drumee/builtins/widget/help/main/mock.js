@@ -63,7 +63,7 @@ function pageVideo(page) {
  */
 const BUNDLED_VIDEOS = {
   PRODUCT_TOUR: {
-    src: require("./assets/product-tour-v1.mp4"),
+    src: require("./assets/tutorial.mp4"),
     poster: require("./assets/product-tour-v1-poster-v2.webp"),
   },
   SELF_HOSTING: {

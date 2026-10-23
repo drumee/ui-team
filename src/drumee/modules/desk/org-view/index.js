@@ -14,6 +14,17 @@ const { orgOverview, groupByDepartment, EMPTY } = require("libs/org-overview");
  */
 const PENDING_DEPT_TTL = 120000;
 
+/**
+ * Does a workspace's name match the search box? One rule for the
+ * organisation's workspaces and the personal ones.
+ *
+ * @param {Object} w a workspace row
+ * @param {String} q the lowercased query
+ */
+function matchesQuery(w, q) {
+  return String(w.filename || w.name || "").toLowerCase().includes(q);
+}
+
 class __desk_org_view extends LetcBox {
 
   /**
@@ -27,6 +38,15 @@ class __desk_org_view extends LetcBox {
     // server row onto a skeleton collides with the props the renderer reads
     // (name / id / area / filetype all mean something to Skeletons).
     this._rows = new Map();
+    // The caller's PERSONAL workspaces, nid -> the desk.home row. Keyed by
+    // nid, not hub_id: every personal workspace carries the user's own hub_id
+    // (see Desk._workspaceKey).
+    this._personal = [];
+    this._personalRows = new Map();
+    // The caller's OTHER workspaces — hubs in the switcher that the overview
+    // does not list (another organisation's, mostly), hub_id -> desk.home row.
+    this._others = [];
+    this._otherRows = new Map();
     this._filter = "";
     // Arriving with the intent already set means the desk mounted this screen
     // FOR the topbar's "New department" row. Read here rather than at paint
@@ -43,6 +63,9 @@ class __desk_org_view extends LetcBox {
    *
    */
   onBeforeDestroy() {
+    // The dialog lives in the desk's modal host, not under this view, so it
+    // would outlive the screen that answers its buttons.
+    this._closeDeptDialog();
     RADIO_BROADCAST.off("workspace:refresh", this._reload, this);
     RADIO_BROADCAST.off("org:new-department", this.armNewDepartment, this);
   }
@@ -110,11 +133,27 @@ class __desk_org_view extends LetcBox {
    */
   _render(force) {
     return this.ensurePart("sections").then((part) =>
-      orgOverview(this, force).then((data) => {
+      Promise.all([orgOverview(this, force), this._myWorkspaces(force)]).then(([data, mine]) => {
         if (!part || (part.isDestroyed && part.isDestroyed())) return;
         this._data = data;
         this._rows.clear();
         for (const w of data.workspaces) this._rows.set(String(w.hub_id), w);
+        this._personal = mine.filter((r) => r.filetype === _a.folder);
+        this._personalRows.clear();
+        for (const w of this._personal) this._personalRows.set(String(w.nid || w.id), w);
+        // Every hub the switcher offers and the overview does not — so each
+        // workspace the user can open is on this screen somewhere. The key is
+        // the desk's own (_workspaceKey: hub_id, else id). Only against an
+        // overview that ANSWERED: a failed one resolves EMPTY (no
+        // organisation, no workspaces), and every hub — the organisation's
+        // own included — would be filed under "Other".
+        this._others = data.organisation
+          ? mine.filter(
+            (r) => r.filetype === _a.hub && !this._rows.has(String(r.hub_id || r.id)),
+          )
+          : [];
+        this._otherRows.clear();
+        for (const w of this._others) this._otherRows.set(String(w.hub_id || w.id), w);
         this._paint(part);
         // Only after the first paint: the entry is fed into a part that
         // _paint creates, so arming before it exists would resolve against
@@ -125,6 +164,41 @@ class __desk_org_view extends LetcBox {
         }
       }),
     );
+  }
+
+  /**
+   * The caller's own workspaces — the switcher's list.
+   *
+   * Two kinds are NOT IN THE OVERVIEW, which lists only the hubs of this
+   * organisation's domain (yp org_workspaces, `h.domain_id = _domain_id`):
+   *
+   *   personal  a home-root folder, not a hub, so it has no row in yp.hub at
+   *             all (see _reload);
+   *   other     a hub of ANOTHER domain the user is a member of. Without it a
+   *             member of three organisations saw one organisation's
+   *             workspaces here and had to go to the switcher for the rest.
+   *
+   * The desk's own list already holds both, so they come from there rather
+   * than from a second desk.home read — and the switcher and this screen
+   * cannot disagree about what the user has.
+   *
+   * Never rejects: an unreachable list leaves the sections out, it does not
+   * take the organisation's workspaces down with it.
+   *
+   * @param {Boolean} [force] refetch instead of the cached list
+   * @returns {Promise<Array>} desk.home rows (folders and hubs)
+   */
+  _myWorkspaces(force) {
+    const desk = window.Desk;
+    if (!desk || !_.isFunction(desk._fetchWorkspaces)) return Promise.resolve([]);
+    // A failed fetch answers [] and leaves the desk's cache untouched, so an
+    // empty answer falls back to that cache rather than dropping the section.
+    const cached = () => desk._workspaces || [];
+    return Promise.resolve()
+      .then(() => desk._fetchWorkspaces(force))
+      .then((rows) => (rows && rows.length ? rows : cached()))
+      .catch(cached)
+      .then((rows) => rows.filter(Boolean));
   }
 
   /**
@@ -160,8 +234,25 @@ class __desk_org_view extends LetcBox {
         this,
         groupByDepartment(data),
         !!data.can_manage,
+        // null, not [], when the user has none at all: the section is then
+        // left out rather than drawn empty. A search that matches none of them
+        // keeps the header, like a department's.
+        this._personal.length ? this._filteredMine(this._personal) : null,
+        this._others.length ? this._filteredMine(this._others) : null,
       ),
     );
+  }
+
+  /**
+   * The user's own rows (personal / other), narrowed to the search box like
+   * the rest.
+   *
+   * @param {Array} rows
+   */
+  _filteredMine(rows) {
+    const q = this._filter.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((w) => matchesQuery(w, q));
   }
 
   /**
@@ -181,51 +272,109 @@ class __desk_org_view extends LetcBox {
     if (!q || !this._data) return this._data || { ...EMPTY };
     return {
       ...this._data,
-      workspaces: this._data.workspaces.filter((w) =>
-        String(w.filename || w.name || "").toLowerCase().includes(q),
-      ),
+      workspaces: this._data.workspaces.filter((w) => matchesQuery(w, q)),
     };
   }
 
   /**
-   * Arm the inline "New department" entry and focus it.
+   * Open the "Create department" dialog, centred over the desk.
    *
-   * Inline rather than a modal so the topbar's "New department" row and this
-   * screen's "+ New" both land in the same place — one way to name a
-   * department however the user started.
+   * A modal, not the inline entry this used to feed at the foot of the
+   * sections: below every workspace, that entry sat off-screen on any
+   * organisation with more than a screenful of them, so "New department"
+   * appeared to do nothing until the user scrolled to find it. The topbar's
+   * "New department" row and this screen's "+ New" both land here.
+   *
+   * Hosted by Wm.__wrapperModal, the desk's shared centring host — the same
+   * one Wm.confirm and the create-workspace form use — so it is centred on the
+   * viewport whatever this screen's scroll position.
    */
   armNewDepartment() {
-    const pfx = this.fig.family;
     // An ordinary member can REACH this — the topbar's "New department" row is
     // gated on orgFeature(), which cannot know can_manage because the answer
     // needs a round trip the topbar renders before. So the gate lands here,
-    // where the overview has resolved. Without it the row armed an entry that
+    // where the overview has resolved. Without it the row opened a form that
     // the server refused on submit: an action offered and then withdrawn.
     //
-    // Says why, rather than no-op'ing. An input that simply refuses to appear
+    // Says why, rather than no-op'ing. A dialog that simply refuses to appear
     // reads as a broken button.
     if (this._data && !this._data.can_manage) {
       if (Wm && Wm.alert) Wm.alert(LOCALE.NOT_ENOUGH_PRIVILEGE);
       return Promise.resolve();
     }
-    return this.ensurePart("new-dept").then((part) => {
-      if (!part) return;
+    const host = Wm && Wm.__wrapperModal;
+    if (!host || !_.isFunction(host.feed)) return Promise.resolve();
+    this._deptHost = host;
+    host.feed(require("./skeleton/dept-dialog")(this));
+    // The host is only SIZED and centring while [data-state="open"]; feed()
+    // alone does not set it (see Wm.confirm). The wrapper clears it again
+    // when it empties. data-overlay it does NOT clear — _closeDeptDialog does,
+    // because the host is shared and a scrim left behind would dim the next
+    // dialog that never asked for one.
+    if (host.el) {
+      host.el.dataset.state = _a.open;
+      host.el.dataset.overlay = "scrim";
+    }
+    this._armDeptEscape();
+    return this.ensurePart("dept-dialog-name").then((entry) =>
+      // Deferred: ensurePart resolves when the Entry mounts, before its native
+      // <input> can take focus — the create-folder dialog's same delay.
+      _.delay(() => {
+        const input = entry && entry.el && entry.el.querySelector("input");
+        if (input) input.focus();
+      }, 60),
+    );
+  }
+
+  /**
+   * Escape closes the dialog wherever focus is. The Entry reports its own
+   * Escape (__inputStatus "cancel"), but only while the input has focus; a
+   * click on the card's padding takes it away.
+   */
+  _armDeptEscape() {
+    this._dropDeptEscape();
+    this._deptEscape = (e) => {
+      if (e.key === "Escape") this._closeDeptDialog();
+    };
+    document.addEventListener("keyup", this._deptEscape);
+  }
+
+  _dropDeptEscape() {
+    if (!this._deptEscape) return;
+    document.removeEventListener("keyup", this._deptEscape);
+    this._deptEscape = null;
+  }
+
+  /**
+   * Empty the modal host — but only if it still holds OUR card. Another
+   * dialog may have replaced it in the meantime (a confirm, the invite
+   * popup), and clearing then would close someone else's.
+   */
+  _closeDeptDialog() {
+    this._dropDeptEscape();
+    const host = this._deptHost;
+    this._deptHost = null;
+    if (!host || !host.el || (host.isDestroyed && host.isDestroyed())) return;
+    if (!host.el.querySelector(`.${this.fig.family}__dept-dialog`)) return;
+    host.el.dataset.overlay = "";
+    host.clear();
+  }
+
+  /**
+   * Show a refusal inside the dialog, under the field.
+   *
+   * @param {String} [text] nothing clears it
+   */
+  _deptDialogError(text) {
+    return this.ensurePart("dept-dialog-error").then((part) => {
+      if (!part || (part.isDestroyed && part.isDestroyed())) return;
       part.feed(
-        Skeletons.Entry({
-          className: `${pfx}__new-dept-entry`,
-          sys_pn: "new-dept-entry",
-          placeholder: LOCALE.DEPARTMENT_NAME,
-          mode: _a.commit,
-          service: "commit-new-department",
-          require: "any",
-          // preselect, not autofocus — Entry has no `autofocus` prop at all
-          // (Messenger does, which is where the name comes from). preselect
-          // calls select() on the input once it is ready, which focuses it;
-          // on an empty field that is exactly a focus.
-          preselect: 1,
-          removeOnEscape: true,
-          uiHandler: [this],
-        }),
+        text
+          ? Skeletons.Note({
+              className: `${this.fig.family}__dept-dialog-error-text`,
+              content: text,
+            })
+          : [],
       );
     });
   }
@@ -288,16 +437,40 @@ class __desk_org_view extends LetcBox {
   }
 
   /**
-   * @param {View} cmd the committing entry
+   * Submit the dialog — from Enter in its field or from its Create button.
+   *
+   * Read from the field either way: the button carries no value of its own.
    */
-  async _createDepartment(cmd) {
-    const name = String((cmd && cmd.getValue && cmd.getValue()) || "").trim();
-    if (!name) return this._render();
-    const res = await this.postService(SERVICE.organization.department_add, {
-      hub_id: Visitor.id,
-      name,
-    }).catch(() => null);
-    if (this._complained(res)) return this._render();
+  async _createDepartment() {
+    const entry = this.getPart("dept-dialog-name");
+    const name = String((entry && entry.getValue && entry.getValue()) || "").trim();
+    if (!name) {
+      this._deptDialogError(LOCALE.DEPARTMENT_NAME_REQUIRED);
+      return;
+    }
+    // One request at a time. Entry re-arms on every keyup, so a second Enter
+    // (or Enter then a click on Create) while the first is still in flight is
+    // a second department_add — which lands after the first has inserted and
+    // answers DEPARTMENT_EXISTS for a department that was in fact created.
+    if (this._addingDept) return;
+    this._addingDept = true;
+    let res;
+    try {
+      res = await this.postService(SERVICE.organization.department_add, {
+        hub_id: Visitor.id,
+        name,
+      }).catch(() => null);
+    } finally {
+      this._addingDept = false;
+    }
+    // A refusal keeps the dialog open with the name still typed, so the user
+    // can correct it rather than start over.
+    if (!res || res.status) {
+      const key = res && res.status;
+      this._deptDialogError((key && LOCALE[key]) || LOCALE.SOMETHING_WENT_WRONG);
+      return;
+    }
+    this._closeDeptDialog();
     return this._reload();
   }
 
@@ -403,7 +576,15 @@ class __desk_org_view extends LetcBox {
    * @param {View} cmd
    */
   _openWorkspace(cmd) {
-    const row = this._rows.get(String(cmd.mget("wsHubId")));
+    // A personal card carries its nid instead — see _personalRows — and an
+    // "other" card says so, its hub_id keying _otherRows.
+    const nid = cmd.mget("wsNid");
+    const hubId = String(cmd.mget("wsHubId"));
+    const row = nid != null
+      ? this._personalRows.get(String(nid))
+      : cmd.mget("wsOther")
+        ? this._otherRows.get(hubId)
+        : this._rows.get(hubId);
     if (!row) return;
     return this.triggerHandlers({ service: "switch-workspace-row", row });
   }
@@ -426,13 +607,40 @@ class __desk_org_view extends LetcBox {
       case "new-department":
         return this.armNewDepartment();
 
+      // ONLY an Enter commits. ui-core's Entry raises its `service` on three
+      // more gestures: Escape (__inputStatus "cancel"), and the click that
+      // focuses the input (letc's el.onclick — no __inputStatus at all). With
+      // no guard, a click into the field after typing POSTed the name, and
+      // the Enter that followed POSTed it again: the department was created
+      // and then reported as "already exists". Escape created it too.
       case "commit-new-department":
-        return this._createDepartment(cmd);
+        // _e.cancel / _a.commit: the exact constants the Entry stamps. The
+        // truthiness check matters — a click carries NO status, and must never
+        // read as a cancel.
+        if (args.__inputStatus && args.__inputStatus === _e.cancel) {
+          return this._closeDeptDialog();
+        }
+        if (args.__inputStatus !== _a.commit) return;
+        return this._createDepartment();
+
+      case "submit-new-department":
+        return this._createDepartment();
+
+      case "close-department-dialog":
+        return this._closeDeptDialog();
 
       case "rename-department":
         return this._renameDepartment(cmd.mget("deptId"));
 
       case "commit-department-name":
+        // Escape: the entry removes itself (removeOnEscape), which would leave
+        // the section without a title — repaint it from the cached overview.
+        // It used to fall through to a rename with the unchanged name, whose
+        // _reload is what repainted.
+        if (args.__inputStatus && args.__inputStatus === _e.cancel) {
+          return this._render();
+        }
+        if (args.__inputStatus !== _a.commit) return;
         return this._commitDepartmentName(cmd);
 
       case "delete-department":

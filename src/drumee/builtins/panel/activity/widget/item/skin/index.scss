@@ -10,6 +10,18 @@
 //  * Overlay/brand is rgba(89, 80, 255, .1) — the 10% brand wash used by both
 //    the file-type chip and the folder-name chip.
 .activity-item {
+  // The feed copy of a row that is pinned on top (bookmarked). The card goes;
+  // a day caption it carries stays, so the rest of that day still sits under
+  // its heading. Without a caption the whole item goes, or its empty box would
+  // still take a gap in the list.
+  &[data-twin="1"] &__row {
+    display: none;
+  }
+
+  &[data-twin="1"]:not(:has(.activity-item__day)) {
+    display: none;
+  }
+
   &__group {
     width: 100%;
     // In Figma the day caption and the cards are siblings in one 8px-gap
@@ -273,6 +285,20 @@
     }
   }
 
+  // The comment quoted under a "<A> commented on <file>" row: one line, the
+  // timestamp's grey, cut with an ellipsis.
+  &__quote {
+    @include drumee.typo($size: 13px, $weight: 400, $line: 1.4em, $color: var(--tertiary-grey-80));
+    max-width: 100%;
+    overflow: hidden;
+
+    .note-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   // The two answers on a workspace-invitation row. A third line inside the text
   // block, not part of __actions — that column is the fixed 20px
   // bookmark/trash pair at the card's right edge and two labelled buttons do
@@ -362,12 +388,20 @@ html[data-theme="dark"] {
 
     &__day,
     &__time,
+    &__quote,
     &__answer-status {
       color: var(--normal-fg-50);
     }
 
     &__bookmark {
       color: var(--normal-fg-50);
+
+      // This selector outranks the light rule's [data-state="1"], so without
+      // restating it a saved row looked unsaved in dark mode.
+      &:hover,
+      &[data-state="1"] {
+        color: #fa8540;
+      }
     }
 
     // Accept keeps its brand fill in both themes, like the badge fills above.

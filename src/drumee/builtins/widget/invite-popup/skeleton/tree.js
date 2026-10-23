@@ -41,26 +41,36 @@ const caret = (pfx) =>
  * The grey "Admin ⌄" pill and its menu. The menu keeps the class names the
  * controller's capture-phase mousedown resolves (`__role-option` + data-id)
  * and the ones reward-flow's spotlight unions (`__role-options`).
+ *
+ * `opt.key` names the pill's parts (`role-label:<key>`, `role-options:<key>`)
+ * and defaults to the hub_id. The workspace-scope popup draws TWO pills for
+ * the one workspace — one per tab (Figma 1344:184456 / 785:75492) — so each
+ * gets its own key, while the role they pick is still stored per hub_id
+ * (data-hub_id on the label and the menu lets _pickRole sync both).
+ * `opt.size: "lg"` is that design's larger pill.
  */
-function rolePill(ui, ws, roleId) {
+function rolePill(ui, ws, roleId, opt = {}) {
   const pfx = ui.fig.family;
+  const key = opt.key || ws.hub_id;
   const role =
     roleItems.find((r) => r.value === roleId) ||
     roleItems.find((r) => r.value === DEFAULT_ROLE);
   return Skeletons.Box.Y({
     className: `${pfx}__role-cell`,
+    dataset: opt.size ? { size: opt.size } : undefined,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__role-select`,
         service: "toggle-role",
         uiHandler: [ui],
-        dataset: { hub_id: ws.hub_id },
+        dataset: { hub_id: ws.hub_id, key },
         kidsOpt: { active: 0 },
         kids: [
           Skeletons.Note({
             className: `${pfx}__role-select-label`,
-            sys_pn: `role-label:${ws.hub_id}`,
+            sys_pn: `role-label:${key}`,
             partHandler: ui,
+            dataset: { hub_id: ws.hub_id },
             content: role.label,
           }),
           caret(pfx),
@@ -68,7 +78,7 @@ function rolePill(ui, ws, roleId) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__role-options`,
-        sys_pn: `role-options:${ws.hub_id}`,
+        sys_pn: `role-options:${key}`,
         partHandler: ui,
         dataset: { hub_id: ws.hub_id, state: 0 },
         kids: roleItems.map((r) =>
@@ -198,4 +208,4 @@ function rows(ui, tree, state) {
   ];
 }
 
-module.exports = { rows, check, DEFAULT_ROLE };
+module.exports = { rows, check, rolePill, DEFAULT_ROLE };

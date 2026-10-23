@@ -21,7 +21,8 @@
   --default-background-error: #ea4d44;
   --default-background-caution: #ea4d44;
   --default-background-inactive: #89929e;
-  --default-scrollbar-color: rgba(250, 133, 64, 0.6);
+  --default-scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22));
+  --default-scrollbar-white: var(--scrollbar-track, transparent);
   --default-transparent-bg: hsla(0, 0%, 78.4%, 0.5);
   --background-tooltips: #e8e8e8;
   --default-background-alert: #fd635b;
@@ -114,9 +115,10 @@
   --checkbox-checked-reverse: #ffffff;
   --checkbox-checked-border-reverse: #ffffff;
 
-  --default-radio-active: rgb(64 64 255 / 70%) --desk-scrollbar-color: rgba(250, 133, 64, 0.6);
-  --default-scrollbar-color: rgba(250, 133, 64, 0.6);
-  --desk-scrollbar-color: --default-scrollbar-color;
+  --default-radio-active: rgb(64 64 255 / 70%);
+  --default-scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22));
+  --default-scrollbar-white: var(--scrollbar-track, transparent);
+  --desk-scrollbar-color: var(--default-scrollbar-color);
 
   --x-small-width: 361px;
   --small-width: 650px;

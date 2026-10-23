@@ -97,6 +97,34 @@ class __media_interact extends media_core {
     this._dragStop = this._dragStop.bind(this);
   }
 
+  // ── Lazy tile geometry ─────────────────────────────────────────────────────
+  //
+  // `bbox` is read ONLY by drag-and-drop (seek_insertion, overlap tests,
+  // Wm.capture) and marquee selection. It used to be measured eagerly: once per
+  // tile on mount — `$el.draggable()` (a class write) then `$el.offset()` (a
+  // read), i.e. one forced style+layout flush PER TILE, back to back — and again
+  // for every tile on every scroll event of the list. On a large workspace that
+  // was the bulk of the main-thread cost of opening/switching to a folder.
+  //
+  // Now mount and scroll only mark the box stale; the first read re-measures.
+  // Readers that walk many tiles call `refreshStaleBounds()` first so every
+  // stale tile is measured in ONE read pass (one layout), before any write.
+  get bbox() {
+    if (this._bboxDirty) {
+      this._bboxDirty = 0;
+      this.initBounds();
+    }
+    return this._bbox;
+  }
+
+  set bbox(v) {
+    this._bbox = v;
+  }
+
+  invalidateBounds() {
+    this._bboxDirty = 1;
+  }
+
   /**
    *
    * @param {*} reason
@@ -191,6 +219,9 @@ class __media_interact extends media_core {
       return;
     }
     window.pointerDragged = true;
+    // Measure every stale sibling in one read pass BEFORE the drag starts
+    // writing (drag stamp, helper, insertion shifts) — see `get bbox`.
+    __media_interact.refreshStaleBounds(this.parent && this.parent.children);
     this.el.dataset.drag = _a.on;
     this.initBounds();
     this.initHelper(ui);
@@ -333,8 +364,13 @@ class __media_interact extends media_core {
     //
     // Production trace 2026-09-15: initBounds sat behind 134 forced recalcs
     // costing 6,838ms, second only to GSAP.
+    //
+    // Scrolling only marks the box stale now — it is re-measured when a drag or
+    // a marquee selection actually needs it (see `get bbox`).
     if (!this._onParentScroll) {
-      this._onParentScroll = () => this.initBounds();
+      this._onParentScroll = () => {
+        this._bboxDirty = 1;
+      };
     }
     this.parent.off(_e.scroll, this._onParentScroll);
     this.parent.on(_e.scroll, this._onParentScroll);
@@ -511,7 +547,9 @@ class __media_interact extends media_core {
     };
     const k = () => {
       this.$el.draggable(opt);
-      this.initBounds();
+      // No measurement here: reading $el.offset() right after draggable()'s
+      // class write forced one layout per tile at mount. See `get bbox`.
+      this._bboxDirty = 1;
     };
     this.waitElement(this.el, k);
 
@@ -574,6 +612,20 @@ class __media_interact extends media_core {
     // uploaded video is exactly that case: its vignette does not exist yet.
     // Render now from the glyph the template already draws.
     if (this.mget("iconOnly")) {
+      this.content.el.innerHTML = this.innerContent(this);
+      this._setupInteract();
+      this.trigger("content-ready");
+      return;
+    }
+    // A chat message's image / video shown as itself (inlineMedia, see
+    // grid/template): it loads its own large rendition, so it has no use for
+    // the vignette either — render now rather than wait on a fetch whose
+    // failure paths leave the card empty.
+    if (
+      this.mget("inlineMedia") &&
+      this.mget("isAttachment") &&
+      (filetype === _a.image || filetype === _a.video)
+    ) {
       this.content.el.innerHTML = this.innerContent(this);
       this._setupInteract();
       this.trigger("content-ready");
@@ -703,6 +755,9 @@ class __media_interact extends media_core {
   select(opt, hide) {
     this.setState(1);
     this.el.dataset.selected = this.mget(_a.state);
+    // Its checkbox too, as unselect() and tick() repaint it: a row picked by
+    // the marquee (window/selection) or by select-all showed no tick.
+    this._changeState("checkbox", "selected", this.mget(_a.state));
     return this.mset(opt);
   }
 
@@ -760,8 +815,34 @@ class __media_interact extends media_core {
     c.once(_e.destroy, (a) => {
       return (this._filename.style.visibility = _a.visible);
     });
+    this._readyRenameField(c, value);
 
     RADIO_CLICK.trigger(_e.click);
+  }
+
+  /**
+   * Once the inline editor's field exists: no spellcheck (a file name is not
+   * prose, and the red squiggle under it read as an error), and — when the
+   * caller asked for `preselect` — focus it with the name selected so typing
+   * replaces it. ui-core's own preselect did not survive in every layout
+   * (list rows lost it), so it is redone here after the value is seeded.
+   */
+  _readyRenameField(entry, value) {
+    const run = () =>
+      requestAnimationFrame(() => {
+        if (!entry || entry.isDestroyed() || !entry.el) return;
+        const field = entry.el.querySelector("textarea, input");
+        if (!field) return;
+        field.spellcheck = false;
+        field.setAttribute("autocomplete", "off");
+        if (!field.value && value) field.value = value;
+        if (entry.mget("preselect")) {
+          field.focus();
+          field.select();
+        }
+      });
+    if (_.isFunction(entry.isReaddy) && entry.isReaddy()) run();
+    else entry.once("input:ready", run);
   }
 
   /**
@@ -916,6 +997,49 @@ class __media_interact extends media_core {
   }
 
   /**
+   * The contextmenu "Make a copy" row: of the whole selection when this item
+   * is among several selected (media/core contextmenuItemsForSelection), else
+   * of this item. One after the other — each copy ends by clearing the
+   * selection (duplicateInPlace), so it is read once, first.
+   */
+  async _duplicateFromMenu() {
+    const wm = window.Wm;
+    const selected =
+      (wm && _.isFunction(wm.getGlobalSelection) && wm.getGlobalSelection()) || [];
+    if (!(selected.length > 1 && selected.includes(this))) {
+      return this.duplicateInPlace();
+    }
+    for (const m of selected.slice()) {
+      if (!m || !_.isFunction(m.duplicateInPlace)) continue;
+      if (_.isFunction(m.isDestroyed) && m.isDestroyed()) continue;
+      await m.duplicateInPlace();
+    }
+  }
+
+  /**
+   * The desk "open" link behind the Internal Link row (service
+   * `designation-link`). Internal workspace: viewerLink(), exactly as before.
+   * External workspace (area `share`, Lexis 2026-10-21): viewerLink() answers
+   * the GUEST share-room link there (hub.get_external_room_attr) — the Share
+   * row's business, not this one's — so the same desk link viewerLink() builds
+   * for every other area is built here, from the same fields.
+   * @returns {Promise<String>}
+   */
+  _internalLinkUrl() {
+    if (this.mget(_a.area) !== _a.share) return this.viewerLink();
+    const node = this.actualNode();
+    const filetype = this.mget(_a.filetype);
+    const data = new URLSearchParams({
+      nid: node.nid || this.mget(_a.nid),
+      hub_id: node.hub_id || this.mget(_a.hub_id),
+      kind: require("window/configs/application")(filetype, "").kind,
+      filetype,
+    }).toString();
+    const { endpoint } = bootstrap();
+    return Promise.resolve(`${endpoint}${_K.module.desk}/wm/open/${data}`.replace(/\/+/g, '/'));
+  }
+
+  /**
    * @param {Letc} cmd
    * @param {Object} args
    */
@@ -986,7 +1110,7 @@ class __media_interact extends media_core {
         return this.linkToTaskTracker();
 
       case _a.duplicate:
-        return this.duplicateInPlace();
+        return this._duplicateFromMenu();
 
       case "unzip":
         return this.openArchive();
@@ -995,7 +1119,7 @@ class __media_interact extends media_core {
         return this.postService(SERVICE.media.set_homepage, ({ nid, hub_id }));
 
       case _e.download:
-        return this.download();
+        return this._downloadFromMenu();
 
       case 'open-in-window': {
         // Force-open a workspace (hub) as a window_folder, regardless of its
@@ -1138,10 +1262,13 @@ class __media_interact extends media_core {
           mtime: this.mget(_a.mtime),
           area: this.mget(_a.area),
         };
-        const _raised = args._tourDone ? false : require("libs/tutorial-tours").fire("share", this, {
+        // ON A PHONE TOO: the media menu's Share is a phone's way into this
+        // tour, so it passes the mobile switch (phoneGate).
+        const _Tours = require("libs/tutorial-tours");
+        const _raised = args._tourDone ? false : _Tours.fire("share", this, {
           subject: _subject,
           subject_data: _subjectData,
-        });
+        }, _Tours.phoneGate());
         // THE PANEL WAITS FOR THE TOUR. It used to open underneath it: this
         // tour teaches the secure-share panel, and the panel was opening while
         // the walkthrough about it was still on screen — visible only once the
@@ -1175,6 +1302,9 @@ class __media_interact extends media_core {
             //               click must still do what it was for; swallowing it
             //               would make Share a dead control.
             if (!Tours.isSeen("share", this) && Tours.appeared("share")) return;
+            // ON A PHONE the tour's own Done opened "Who has access" (window
+            // tutorial _handOffMembers), so the link builder stays shut.
+            if (Visitor.isMobile() && Tours.appeared("share")) return;
             this.onUiEvent(cmd, { ...args, _tourDone: 1 });
           });
         }
@@ -1230,7 +1360,7 @@ class __media_interact extends media_core {
         return;
       }
       case "designation-link":
-        this.viewerLink().then((url) => {
+        this._internalLinkUrl().then((url) => {
           setTimeout(async () => {
             // Shortened for the human who pastes it (Lexis, 2026-08-18): ~103
             // chars down to ~62. Applied HERE and not inside viewerLink(),
@@ -1512,6 +1642,9 @@ class __media_interact extends media_core {
     const item = Wm.getWindowPreset(this);
     item.kind = "window_media_details";
     item.wm_unique_id = `window_media_details-${item.nid}`;
+    // Already up: the WM only raises a singleton, so refetch the dates here.
+    const card = Wm.getItemsByAttr("wm_unique_id", item.wm_unique_id)[0];
+    if (card && !card.isDestroyed() && _.isFunction(card.refresh)) card.refresh();
     return Wm.launch(item, { explicit: 1, singleton: 1 });
   }
 
@@ -1727,6 +1860,7 @@ class __media_interact extends media_core {
    * still answers .value, and the ui event above keeps a copy either way.
    */
   async _renameWorkspacePrompt() {
+    if (!this._workspaceRenameAllowed()) return;
     const current = this.mget(_a.filename) || "";
     this.__wsRenameValue = current;
 
@@ -2004,6 +2138,41 @@ class __media_interact extends media_core {
   }
 
   /**
+   * The contextmenu "Download" row.
+   *
+   * On an item that is part of a MULTI-selection, download the selection, as
+   * Move and Link to task tracker act on it: Wm.download() (window/manager)
+   * takes getGlobalSelection() and zips it through window_downloader, or
+   * fetches the files one by one when any was hand-picked. This row used to
+   * call this.download() — ui-core mfs.js, which fetches its own node and
+   * nothing else — so a selection only ever downloaded the right-clicked item.
+   *
+   * Only a multi-selection that INCLUDES this item: a right-click outside the
+   * selection is about that item alone (media/row onToggle clears the rest).
+   * A lone item keeps the single path, with its Casual Docs export.
+   */
+  _downloadFromMenu() {
+    const wm = window.Wm;
+    const selected =
+      (wm && _.isFunction(wm.getGlobalSelection) && wm.getGlobalSelection()) || [];
+    if (selected.length > 1 && selected.includes(this) && _.isFunction(wm.download)) {
+      return wm.download();
+    }
+    // Casual Docs / Sheets files are stored as JSON (.udoc / .usheet);
+    // hand the user a real .docx / .xlsx instead of the raw payload
+    // (builtins/editor/export). Any conversion failure falls back to the
+    // plain download so the click is never dead.
+    const { isCasualFile, downloadAsOffice } = require("builtins/editor/export");
+    if (isCasualFile(this)) {
+      return downloadAsOffice(this).catch((e) => {
+        this.warn("media: office export failed, raw download", e);
+        return this.download();
+      });
+    }
+    return this.download();
+  }
+
+  /**
    * Open move popup, execute move, then refresh grid
    */
   move() {
@@ -2128,6 +2297,25 @@ class __media_interact extends media_core {
     });
   }
 }
+/**
+ * Re-measure every stale tile in `views` in one read-only pass, so a caller
+ * about to walk their `bbox`es (and write in between) pays a single layout.
+ * Accepts a Backbone/Marionette children container or an array.
+ */
+__media_interact.refreshStaleBounds = function (views) {
+  if (!views) return;
+  const each = (c) => {
+    if (c && c._bboxDirty && typeof c.initBounds === "function") {
+      c._bboxDirty = 0;
+      try {
+        c.initBounds();
+      } catch (e) { }
+    }
+  };
+  if (Array.isArray(views)) views.forEach(each);
+  else if (typeof views.each === "function") views.each(each);
+};
+
 __media_interact.initClass();
 
 module.exports = __media_interact;

@@ -1,6 +1,13 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const { isGrouped } = require("./file-group");
 const { menuRow, createRows } = require("./new-menu-rows");
+const { iconsSkeleton, searchStatus } = require("./icons-skeleton");
+const { filesEmptyState, kindEmptyView } = require("./files-empty-state");
+const {
+  chatDetailsPanel,
+  headerMenuService,
+  generalHeaderMenu,
+} = require("../../../widget/chat-details/skeleton");
 
 const AREA_LABELS = {
   // Personal workspaces are personal-area folders at the home root.
@@ -64,7 +71,7 @@ export function breadcrumbs(ui, opt) {
   });
 }
 
-function fileViewToggle(ui, opt = {}) {
+export function fileViewToggle(ui, opt = {}) {
   const cnTopbar = `${ui.fig.family}-topbar`;
   const modes = opt.modes || [
     { mode: "list", ico: "view-list" },
@@ -186,22 +193,23 @@ function fileNewControl(ui) {
 // the files of THAT workspace.
 //
 // So the box belongs to the window now:
-//   - the window answers the keystrokes (onUiEvent "ws-search-typed") and runs
-//     `media.search_all`, a scope=hub service: filenames, extensions and indexed
-//     content under this window's own hub_id, so nothing outside the workspace
-//     can match;
+//   - the window answers the keystrokes (onUiEvent "ws-search-typed" →
+//     folder/files-search.js) and shows the hits IN the Files list, not in a
+//     dropdown. It runs `media.search_all`, a scope=hub service: filenames,
+//     extensions and indexed content under this window's own hub_id, so
+//     nothing outside the workspace can match;
 //   - the part names are the window's own (`ws-search-*`). That also ends a
 //     latent collision: the desk claimed "search-box" / "search-suggestions" /
 //     "suggestions-list" for whichever copy mounted LAST, so with two workspace
-//     windows open, typing in one drove the other one's dropdown.
+//     windows open, typing in one drove the other one's results.
 //
 // Keystrokes arrive through the Entry's `watch` hook, which fires
 // onUiEvent("ws-search-typed", { value }) once the field is ready — the <input>
 // is built asynchronously (waitElement), so a listener wired at part-ready time
 // would run before it exists. Same hook the chat search bar above uses.
 //
-// The classes are unchanged (`…-topbar__search-*`), so the folder skin's pill +
-// dropdown (skin/index.scss, "Workspace toolbar search") still dresses it.
+// The classes are unchanged (`…-topbar__search-*`), so the folder skin's pill
+// (skin/index.scss, "Workspace toolbar search") still dresses it.
 function workspaceSearchBox(ui, pfx) {
   return Skeletons.Box.Y({
     className: `${pfx}__search-container`,
@@ -230,30 +238,15 @@ function workspaceSearchBox(ui, pfx) {
             interactive: 1,
             bubble: 0,
             watch: "ws-search-typed",
+            // A view switch rebuilds this toolbar mid-search; carry the query
+            // so the field still says what the list is showing.
+            value: ui._wsQuery || "",
             // Kept from the box this replaces: the Entry template interpolates
             // both straight into the tag, so unset they render
             // type="undefined" and autocomplete="undefined" — and the browser's
-            // autofill list then covers the result dropdown.
+            // autofill list then covers the Files list below.
             type: _a.text,
             autocomplete: _a.off,
-          }),
-        ],
-      }),
-      // Result dropdown. Hidden at data-state 0 by the skin; the window flips it
-      // through setState() as answers arrive. Rows are fed by the window rather
-      // than fetched by a List.Smart: the result set is one short page, and the
-      // window has to normalize the response first (a single hit comes back as a
-      // bare object, which list/index.js drops as "not an array").
-      Skeletons.Box.Y({
-        className: `${pfx}__search-suggestions`,
-        sys_pn: "ws-search-suggestions",
-        partHandler: ui,
-        state: 0,
-        kids: [
-          Skeletons.Box.Y({
-            className: `${pfx}__search-results`,
-            sys_pn: "ws-search-results",
-            partHandler: ui,
           }),
         ],
       }),
@@ -441,13 +434,6 @@ export function tabBar(ui, opt = {}) {
   // folder window's toggle-task-filter / task-filter-state handlers remain but
   // are simply no longer wired to a button here.
 
-  // The folder's New + layout controls now live in its file filter row. Keep
-  // the shared DMZ layout toggle here because DMZ does not render that row.
-  const splitBtn =
-    !isFolder && ui.fig.family === "dmz-sharebox"
-      ? fileViewToggle(ui)
-      : "";
-
   // The strip is the scroller for the mobile carousel (folder skin's
   // @container block pages it two tabs at a time), so it needs to be reachable
   // from JS — the scroll listener that tracks the current page lives in
@@ -496,7 +482,9 @@ export function tabBar(ui, opt = {}) {
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     dataset: isFolder ? { area: ui.mget(_a.area) } : {},
-    kids: [tabStrip, splitBtn, tabDots],
+    // The folder's New + layout controls live in its file filter row, and the
+    // DMZ share builds the same row (dmz/wm skeleton) — no toggle here.
+    kids: [tabStrip, tabDots],
   });
 }
 
@@ -515,14 +503,8 @@ export function gridFilesBrowser(ui) {
   if (ui.mget(_a.itemsOpt)) {
     opt = { ...opt, ...ui.mget(_a.itemsOpt) };
   }
-  // A scheduled meeting is stored as an MFS node (room.book → category
-  // 'schedule') in the workspace home dir, so it lands in this listing with no
-  // content and no viewer — rows that can't be opened. Never list them, not
-  // even under showHidden, which is about dotfiles.
-  // mfs_show_node_by aliases the column as `m.category AS ftype`; other list
-  // sources pass it through unaliased, so both keys are checked.
-  const skip = { ftype: "schedule", category: "schedule" };
-  if (!localStorage.getItem("showHidden")) skip.filename = /^\./;
+  // Schedules never listed, dotfiles only under showHidden — see list-skip.
+  const skip = require("./list-skip").fileListSkip();
   const list = Skeletons.List.Smart({
     className: `${pfx}__icons-list`,
     innerClass: `${pfx}__icons-scroll`,
@@ -559,20 +541,29 @@ export function gridFilesBrowser(ui) {
     // Shown whenever the LISTING comes back empty — an empty folder, or a
     // file-type filter that matched nothing. Without it the pane goes blank.
     //
+    // The folder window gets the 2.0 onboarding empty state (Figma 920:123317,
+    // ./files-empty-state.js), which falls back to the plain note under a
+    // file-type filter; every other window keeps the plain note.
+    //
     // Its OWN key, not the FILES_NOT_FOUND the search window renders
     // (window/search/index.js): this reads as the folder's resting state
     // ("nothing here yet"), whereas search is reporting a query that missed.
     // Sharing one string means a copy edit for either surface silently
     // rewrites the other.
     //
-    // ui-core builds this as the `KIND.blank` empty view (collection-view.js
-    // emptyViewOptions), so the text lands inside the widget-blank placeholder
-    // that `.no-content` styles.
-    evArgs: Skeletons.Note(LOCALE.NO_FOLDERS_OR_FILES_YET, "no-content"),
+    // ui-core mounts this as the list's emptyView (collection-view.js
+    // emptyViewOptions); both shapes carry `.no-content`, the class the
+    // centring and the in-list search hiding key on.
+    evArgs: ui.fig.family === "window-folder" ? filesEmptyState(ui) : Skeletons.Note(LOCALE.NO_FOLDERS_OR_FILES_YET, "no-content"),
     api: function (x) {
-      return ui.getCurrentApi();
+      // getListApi when the window has one (the folder: search mode).
+      return ui.getListApi ? ui.getListApi() : ui.getCurrentApi();
     },
   });
+  // The hero is a Box: without this ui-core mounts evArgs through LetcBlank,
+  // which renders only `content`, and the pane came up blank
+  // (./files-empty-state.js kindEmptyView).
+  if (ui.fig.family === "window-folder") list.emptyView = kindEmptyView;
 
   return list;
 }
@@ -672,13 +663,10 @@ export function dropdownMenuButton(ui, opt = {}) {
 }
 
 function getChatLabel(ui) {
-  if (ui.fig.family === "window-folder") {
-    return LOCALE.FOLDER_SCOPED_CHAT || LOCALE.CHAT;
-  }
-  // DMZ recipient view: the docked panel is labelled "CONVERSATION" (Figma 3.1),
+  // The DMZ recipient view reads like the desk folder window's ("Team Chat"),
   // not "<file> - Chat".
-  if (ui.fig.family === "dmz-sharebox") {
-    return LOCALE.SECURE_SHARE_CONVERSATION || LOCALE.CHAT;
+  if (ui.fig.family === "window-folder" || ui.fig.family === "dmz-sharebox") {
+    return LOCALE.FOLDER_SCOPED_CHAT || LOCALE.CHAT;
   }
   const name = ui.mget(_a.filename) || ui.mget(_a.name) || "";
   return name ? `${name} - ${LOCALE.CHAT}` : LOCALE.CHAT;
@@ -715,11 +703,13 @@ export function chatHeaderBar(ui, opt = {}) {
   const actions = Skeletons.Box.X({
     className: `${grp}__chat-header-actions`,
     kids: [
-      // 3-dot (Figma DotsThreeVertical) FIRST — opens the thread menu.
+      // 3-dot (Figma DotsThreeVertical) FIRST. On a workspace folder window it
+      // opens Chat details (Figma 775:131699), which carries the thread list
+      // and Download itself; elsewhere (share-token windows) the thread menu.
       Skeletons.Button.Svg({
         className: `${grp}__chat-header-btn`,
         ico: "apps-dots-vertical",
-        service: "open-thread-menu",
+        service: headerMenuService(ui),
         uiHandler: [ui],
         partHandler: ui,
       }),
@@ -727,17 +717,30 @@ export function chatHeaderBar(ui, opt = {}) {
     ],
   });
 
-  // Full Chat-tab middle header (Figma 2331-46821): the docked rail already is
-  // the thread switcher, so the 3-dot is dropped and the title reads "# General".
+  // Full Chat-tab middle header (Figma 2331-46821): the title reads "# General".
+  // The docked rail is the thread switcher, so the ⋮ is here only where it
+  // opens Chat details (generalHeaderMenu) — same button as the Files tab's.
   if (opt.general) {
     return [
       Skeletons.Note({
         className: `${grp}__chat-header-title`,
-        content: `# ${LOCALE.GENERAL || "General"}`,
+        // opt.title: the folder chat topic scope (window/folder/topics).
+        content: opt.title || `# ${LOCALE.GENERAL || "General"}`,
       }),
       Skeletons.Box.X({
         className: `${grp}__chat-header-actions`,
-        kids: [searchBtn],
+        kids: [
+          generalHeaderMenu(ui)
+            ? Skeletons.Button.Svg({
+                className: `${grp}__chat-header-btn`,
+                ico: "apps-dots-vertical",
+                service: "open-chat-details",
+                uiHandler: [ui],
+                partHandler: ui,
+              })
+            : null,
+          searchBtn,
+        ].filter(Boolean),
       }),
     ];
   }
@@ -783,7 +786,17 @@ export function chatHeaderBar(ui, opt = {}) {
   return [
     Skeletons.Note({
       className: `${grp}__chat-header-title`,
-      content: getChatLabel(ui),
+      content: opt.title || getChatLabel(ui),
+    }),
+    // Unread count of the workspace team chat, next to its title. Filled by
+    // the folder window (_paintChatUnread) from the same per-workspace counts
+    // as the rail's Chat pill; blank and hidden at zero.
+    Skeletons.Note({
+      className: `${grp}__chat-header-unread`,
+      sys_pn: "chat-header-unread",
+      partHandler: ui,
+      content: "",
+      dataset: { count: 0 },
     }),
     actions,
   ];
@@ -847,6 +860,14 @@ export function chatPanel(ui) {
     send_icon: "raw-send-chat",
     attach_icon: "chat-link-simple",
     sys_pn: "folder-chat",
+    // Read only when actually read — its Chat tab on screen, a click / tap in
+    // it, or a reply — never by being mounted (or autofocused) beside the
+    // file grid.
+    read_on_interaction: 1,
+    // Topics: the folder window's chat opens on # General (no All tab or row;
+    // window/folder/topics). Only it has topics — shares, team / website
+    // windows and the DMZ sharebox keep the whole chat ("all").
+    ...(ui.fig.family === "window-folder" ? { scoped_topic: "general" } : {}),
   };
 
   // Two scopes, and the difference is who is reading.
@@ -937,6 +958,12 @@ export function chatPanel(ui) {
     isFolderChat && !(Number(ui.mget(_a.privilege)) & _K.permission.download)
       ? 1
       : 0;
+  // Files-tab topic UI (Figma 869:189953): the topic strip under the header
+  // and the File threads bar. Workspace folder window only (a share token
+  // window and the other surfaces have no topics); fed by window/folder/
+  // topics.js (paintStrip) and ./file-threads-bar.js; hidden by SCSS where
+  // the Chat-tab rail already shows both.
+  const topicSurfaces = isFolderChat && !ui.mget(_a.token);
   return Skeletons.Box.Y({
     className: `${grp}__chat-panel`,
     sys_pn: "chat-panel",
@@ -946,6 +973,24 @@ export function chatPanel(ui) {
         : {},
     kids: [
       header,
+      topicSurfaces
+        ? Skeletons.Box.X({ className: `${grp}__topic-strip`, sys_pn: "topic-strip", partHandler: ui })
+        : null,
+      topicSurfaces
+        ? Skeletons.Box.Y({ className: `${grp}__ft-bar`, sys_pn: "ft-bar", partHandler: ui, dataset: { open: "0" } })
+        : null,
+      // Backend message-search results (channel.search): a card in the File
+      // threads bar's slot, which hides while it is open (skin :has). Fed by
+      // the folder window (_runChatSearch), toggled via data-open; hidden
+      // until data-open="1". Folder team chat only.
+      isFolderChat
+        ? Skeletons.Box.Y({
+            className: `${grp}__search-results`,
+            sys_pn: "search-results",
+            partHandler: ui,
+            dataset: { open: 0 },
+          })
+        : null,
       // File-thread info card slot (Figma 2216-165656) — the in-place (Files
       // tab) file-thread view pins the same card the side panel shows. Empty +
       // hidden until the folder window feeds it on file scope; stays empty for
@@ -959,18 +1004,6 @@ export function chatPanel(ui) {
           })
         : null,
       chat,
-      // Backend message-search results overlay (channel.search). Covers the
-      // message list while the header search bar is open and has a query; the
-      // folder window feeds it matching previews (_runChatSearch) and toggles
-      // data-open. Hidden by SCSS until data-open="1". Folder team chat only.
-      isFolderChat
-        ? Skeletons.Box.Y({
-            className: `${grp}__search-results`,
-            sys_pn: "search-results",
-            partHandler: ui,
-            dataset: { open: 0 },
-          })
-        : null,
       // Thread-switch dropdown overlay — populated on open (see folder
       // _toggleThreadMenu); absolute-positioned under the header, hidden until
       // data-open="1".
@@ -1014,93 +1047,6 @@ export function chatPanel(ui) {
         : null,
     ].filter(Boolean),
   });
-}
-
-/**
- * Content for the chat-header search-results overlay (channel.search). Renders
- * a "Search results" label + one row per matching message (avatar, author,
- * relative time, 150-char preview), or a "No results" note. Each row jumps to
- * the message (search-result-jump) on click. Newest-first (server order).
- * @param {*} ui folder window
- * @param {Array} rows channel.search result rows
- */
-export function searchResults(ui, rows) {
-  const grp = ui.fig.group;
-  const list = Array.isArray(rows) ? rows : [];
-  if (!list.length) {
-    return [
-      Skeletons.Note({
-        className: `${grp}__search-results-empty`,
-        content: LOCALE.NO_RESULTS || "No results",
-      }),
-    ];
-  }
-  const row = (r) => {
-    const name = r.fullname || `${r.firstname || ""} ${r.lastname || ""}`.trim();
-    let when = "";
-    const ts = Number(r.ctime || 0);
-    if (ts) {
-      try {
-        when = Dayjs.unix(ts).fromNow();
-      } catch (e) {
-        when = "";
-      }
-    }
-    return Skeletons.Box.X({
-      className: `${grp}__search-result`,
-      service: "search-result-jump",
-      message_id: `${r.message_id || r.id || ""}`,
-      uiHandler: [ui],
-      kidsOpt: { active: 0 },
-      kids: [
-        // No avatar: the proc returns no avatar URL, so a generated placeholder
-        // (color-from-name) was misleading. Show name + time + preview only.
-        // active:0 is propagated at EVERY nesting level (kidsOpt per container):
-        // each view wires its own onclick that stopPropagation()s and trips the
-        // 300ms global click throttle, so a click landing on a nested non-active
-        // descendant would be swallowed before it bubbles to the row's service
-        // (needing several taps). active:0 leaves them handler-less → the click
-        // bubbles straight to the row.
-        Skeletons.Box.Y({
-          className: `${grp}__search-result-body`,
-          kidsOpt: { active: 0 },
-          kids: [
-            Skeletons.Box.X({
-              className: `${grp}__search-result-top`,
-              kidsOpt: { active: 0 },
-              kids: [
-                Skeletons.Note({
-                  className: `${grp}__search-result-name`,
-                  active: 0,
-                  content: name,
-                }),
-                Skeletons.Note({
-                  className: `${grp}__search-result-time`,
-                  active: 0,
-                  content: when,
-                }),
-              ],
-            }),
-            Skeletons.Note({
-              className: `${grp}__search-result-preview`,
-              active: 0,
-              content: r.preview || "",
-            }),
-          ],
-        }),
-      ],
-    });
-  };
-  return [
-    Skeletons.Note({
-      className: `${grp}__search-results-label`,
-      content: LOCALE.SEARCH_RESULTS || "Search results",
-    }),
-    Skeletons.Box.Y({
-      className: `${grp}__search-results-list`,
-      kids: list.map(row),
-    }),
-  ];
 }
 
 /**
@@ -1187,6 +1133,8 @@ export function filesContainer(ui) {
     opt.kids = [
       fileTypeFilterBar(ui),
       gridFilesBrowser(ui),
+      iconsSkeleton(ui, "grid"),
+      searchStatus(ui),
     ];
   }
   return Skeletons.Box.Y(opt);
@@ -1203,7 +1151,9 @@ export function folderFilesRowContainer(ui) {
     // and loadContent() re-fetches via getCurrentApi(), which the row list's
     // `() => ui.getCurrentApi()` api already honors. content/row supplies the
     // column-title header + list below the bar.
-    kids: [fileTypeFilterBar(ui), require("../content/row")(ui)],
+    // The row skeleton lives inside content/row's __content-main, under the
+    // column header; only the search status sits here.
+    kids: [fileTypeFilterBar(ui), require("../content/row")(ui), searchStatus(ui)],
   });
 }
 
@@ -1461,6 +1411,34 @@ export function filesSplitter(ui) {
   });
 }
 
+/**
+ * Carousel footer for the split body: one dot per page. On a narrow folder
+ * window the Files view is two full-width pages — files, then Team Chat
+ * (folder skin, the compact `[data-view="files"]` rule) — and this says which
+ * one is showing. `page` is its only state: the folder window writes it from
+ * the split body's scroll, and the skin maps it to the active dot. Hidden by
+ * the skin everywhere but that layout.
+ *
+ * A share without chat has a single page, so it gets no footer at all.
+ */
+export function splitDots(ui) {
+  if (_dmzShareWithoutChat(ui)) return "";
+  return Skeletons.Box.X({
+    className: `${ui.fig.family}__split-dots ${ui.fig.group}__split-dots`,
+    sys_pn: "split-dots",
+    partHandler: ui,
+    dataset: { page: 0 },
+    kids: [0, 1].map((i) =>
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__split-dot ${ui.fig.group}__split-dot`,
+        service: "split-page",
+        dataset: { page: i },
+        uiHandler: [ui],
+      }),
+    ),
+  });
+}
+
 export function folderFilesView(ui) {
   const files =
     ui.getViewMode && ui.getViewMode() === _a.row
@@ -1479,6 +1457,9 @@ export function folderFilesView(ui) {
     filesSplitter(ui),
     threadRail(ui),
     chatPanel(ui),
+    // Chat details (Figma 775:131699): takes the chat panel's cell while the
+    // split body carries data-details="open" (folder/skin/chat-details.scss).
+    chatDetailsPanel(ui),
     fileThreadPanel(ui),
   ].filter(Boolean);
 }

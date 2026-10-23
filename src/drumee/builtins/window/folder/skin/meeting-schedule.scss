@@ -400,10 +400,20 @@
   &__meeting-sched-days {
     flex-shrink: 0;
     flex-wrap: nowrap !important;
+  }
 
-    &--month {
-      border-left: 1px solid rgba(0, 0, 0, 0.05);
-    }
+  // Month header (Figma 1697:48528): short day names centred over their
+  // column, 14/1.2 grey, 12px above the grid and no column rules — the
+  // month body draws the grid's top rule instead. The week header keeps its
+  // ruled cells.
+  &__meeting-sched-days--month &__meeting-sched-day {
+    padding: 0 4px 12px;
+    align-items: center;
+    border: 0;
+  }
+
+  &__meeting-sched-days--month &__meeting-sched-day-name {
+    line-height: 1.2;
   }
 
   &__meeting-sched-corner {
@@ -426,6 +436,18 @@
     }
   }
 
+  // Day view, at every width: its one header cell reads "14 Wednesday" on a
+  // single line. The week layout (date stacked over the weekday, 72px tall)
+  // suits seven narrow columns; stretched across a single wide column it left
+  // a small block stranded in the corner of an empty strip (Lexis,
+  // 2026-10-14). !important: ui-core's Box.Y sets column at 0,2,0.
+  &__meeting-sched-days--day &__meeting-sched-day {
+    flex-direction: row !important;
+    align-items: baseline;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
   &__meeting-sched-day-num {
     @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: #0b0a21);
   }
@@ -444,6 +466,7 @@
 
     &--month {
       overflow: hidden;
+      border-top: 1px solid var(--overlay-bg-05);
     }
   }
 
@@ -504,38 +527,83 @@
     min-width: 0;
     min-height: 0;
     overflow-y: auto;
-    padding: 8px 10px;
+    // Figma 1697:48545: 12px padding; the date line's own margin makes the
+    // 10px down to the first card (see __meeting-sched-mhead).
+    padding: 12px;
     gap: 2px;
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-top: none;
     border-left: none;
     background: #ffffff;
 
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      border-radius: 2px;
-      background: rgba(0, 0, 0, 0.18);
-    }
-
     &:first-child {
       border-left: 1px solid rgba(0, 0, 0, 0.05);
     }
 
-    &[data-off="1"] .window-folder__meeting-sched-mnum {
-      color: #d1d1d6;
-    }
-
+    // Today is the date in brand ink; neighbouring months dim their date,
+    // and the dim wins when today falls in a neighbouring month's row (the
+    // later rule) — the same two cues, in the same order, as the Personal and
+    // Task calendars' month grids.
     &[data-today="1"] .window-folder__meeting-sched-mnum {
       color: var(--primary-40, #5950ff);
     }
+
+    &[data-off="1"] .window-folder__meeting-sched-mnum {
+      color: var(--border-strong);
+    }
+
+    &:hover .window-folder__meeting-sched-madd {
+      opacity: 1;
+    }
   }
 
-  &__meeting-sched-mnum {
+  // A month square schedules a meeting that day (skeleton monthlyGrid) — for
+  // a viewer who may schedule; data-add is "0" otherwise. Pointer only, no
+  // hover wash: the cards sit inside the square, so a wash would light up
+  // under a hovered card that opens its meeting instead.
+  &__meeting-sched-mcell[data-add="1"] {
+    cursor: pointer;
+  }
+
+  // The date line (Figma 1693:180986): 20px, packed right — the hover "+",
+  // 10px, then the date. Its margin plus the cell's 2px gap and the card's
+  // 2px margin-top make the 10px down to the first card.
+  &__meeting-sched-mhead {
     flex-shrink: 0; // stays put when the day cell scrolls
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #0b0a21);
+    height: 20px;
+    margin-bottom: 6px;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  // Top-right, 14/1.2 regular in grey ink — "7", or "Jun 1" on the first.
+  &__meeting-sched-mnum {
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  // Figma 1693:180987: a 20px circle on the 5% wash, revealed on the hovered
+  // square. Its 12px plus icon is an 18px "+" glyph here (about the same 9px
+  // cross), since the sprite cannot be recoloured. Never shrinks: it is a hit
+  // target.
+  &__meeting-sched-madd {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--overlay-bg-05);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s ease-out;
+  }
+
+  &__meeting-sched-madd-ico {
+    @include drumee.typo($size: 18px, $line: 20px, $color: var(--normal-fg));
+    user-select: none;
   }
 
   // ── Scheduled-meeting cards (Figma "schedule card") ──────────────────────
@@ -654,23 +722,61 @@
     }
   }
 
-  // Monthly: a compact line per meeting inside the day cell.
+  // Monthly: one schedule card per meeting inside the day cell (Figma
+  // 1697:48542, the Personal Calendar's month chip): the 10% brand wash, a 4px
+  // brand bar with the left corners squared off, 4px 12px in, ~25px tall.
   &__meeting-sched-mcard {
     flex-shrink: 0; // don't squash the line list when the day cell scrolls
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
     margin-top: 2px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: rgba(89, 80, 255, 0.08);
-    border-left: 3px solid var(--primary-40, #5950ff);
+    padding: 4px 12px;
+    border-radius: 0 8px 8px 0;
+    background: var(--brand-tint);
+    border-left: 4px solid var(--primary-40, #5950ff);
     cursor: pointer;
-    @include drumee.typo($size: 12px, $line: 15px, $color: #0b0a21);
+    overflow: hidden;
+
+    &:hover {
+      background: rgba(89, 80, 255, 0.16);
+    }
+  }
+
+  // Body/Mini Body 12/1.4 for the time, Buttons/Mini Button 12/1.2 for the
+  // title, which is the part that gives way.
+  // Primary/100 as a literal, not --normal-fg: the day cell is pinned white
+  // in both themes, and the token turns near-white in the dark one.
+  &__meeting-sched-mcard-time {
+    flex: 0 0 auto;
+    @include drumee.typo($size: 12px, $line: 1.4, $color: #0b0a21);
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  &__meeting-sched-mcard-title {
+    flex: 0 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 12px, $line: 1.2, $color: #0b0a21);
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    // Room for stacked Vietnamese marks ("ế", "ặ" reach above and below a
+    // 1.2 line): overflow clips at the padding box, so 4px of padding each
+    // way widens the clip and the negative margin gives the line its height
+    // back — the chip does not grow.
+    padding-block: 4px;
+    margin-block: -4px;
 
-    &:hover {
-      background: rgba(89, 80, 255, 0.16);
+    // The text sits in the Note's inner block; that is what has to ellipsize.
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-block: 4px;
+      margin-block: -4px;
     }
   }
 
@@ -680,86 +786,123 @@
   // narrow window on a wide screen (see [[windowed-panel-responsive]]). The
   // 700px breakpoint matches the folder skin's own compact threshold.
   @container window-folder-w (max-width: 700px) {
+    // Two even rows, edge to edge (Lexis, 2026-10-14):
+    //
+    //   [ ‹  October 14, 2026  › ][ Day ▾ ]
+    //   [  Start a Meeting  ][  Schedule   ]
+    //
+    // The desktop row is [nav group] … [view picker, Start, Schedule], and no
+    // amount of wrapping those two groups lines anything up: every earlier
+    // attempt stacked 2–3 centred rows of different widths (picker floating
+    // on its own line, CTAs of unequal size). The view picker belongs next to
+    // the date it scopes, and the two CTAs belong together.
+    //
+    // So both groups dissolve (`display: contents`) and their four children
+    // are laid out by the toolbar itself: `order` puts the picker after the
+    // pill, and the zero-height `::after` with a 100% basis is a forced line
+    // break between the two rows. Row gap is 0 because that break counts as a
+    // line of its own — the 8px between the rows is the CTAs' margin-top.
     &__meeting-sched-toolbar {
+      // Anchors the mini-calendar now that -toolbar-left no longer makes a
+      // box (see -sched-picker below).
+      position: relative;
       flex-wrap: wrap !important;
-      gap: 12px 8px;
+      justify-content: flex-start;
+      gap: 0 8px;
       padding: 12px;
-      // The base rule pins the two groups apart with `space-between`, which is
-      // right for one wide row and wrong for every other case: on a wrapped
-      // line holding a single group it degrades to flex-start. Measured at
-      // 390px — the nav group sat at centre x=143 against a bar centre of 196,
-      // i.e. 53px off, hugging the left edge with dead space to its right.
-      //
-      // `center` is applied per LINE, which is all this needs: the two groups
-      // stack across effectively the whole compact range, and a lone group on
-      // its own line is exactly what `center` centres.
-      //
-      // Nothing here forces `flex: 1 1 100%`, because nothing has to — the
-      // groups already wrap on their own. Measured: they need 693px of inner
-      // width to share a line (nav 261 + gap 8 + controls 424), so they only
-      // ever would between 693 and 700px, a 7px slice of the range. Adding the
-      // basis would buy nothing and would stack them by decree instead of by
-      // fit, which is worse the day one of the groups gets shorter.
-      justify-content: center;
+
+      &::after {
+        content: "";
+        order: 2;
+        flex: 0 0 100%;
+        height: 0;
+      }
     }
 
+    // !important: ui-core's `.drumee-box[data-flow="x"]` sets display:flex at
+    // 0,2,0, which outranks a single class.
     &__meeting-sched-toolbar-left,
     &__meeting-sched-toolbar-right {
-      flex-wrap: wrap !important;
-      gap: 8px 12px;
-      // Same reasoning one level in: these groups wrap internally too (the
-      // right one carries the view picker plus both CTAs), and their own children
-      // were left-aligned inside a row that spans the bar.
-      //
-      // Safe for the mini-calendar dropdown, which is `position: absolute;
-      // left: 0` against `-toolbar-left` (`position: relative`): centring moves
-      // the anchor box but the popup stays pinned to its left edge, and at
-      // 264px wide it still clears a 390px window from wherever that lands.
+      display: contents !important;
+    }
+
+    // Basis 0, so the pill never pushes the picker off the row: it takes
+    // whatever the picker leaves, and the label centres between the arrows.
+    &__meeting-sched-nav {
+      order: 1;
+      flex: 1 1 0;
+      min-width: 0;
+      height: 36px;
+      box-sizing: border-box;
+      justify-content: space-between;
+    }
+
+    &__meeting-sched-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &__meeting-sched-view-picker {
+      order: 1;
+    }
+
+    // Same 36px as the CTAs and the pill, so the rows read as one block.
+    &__meeting-sched-view-button {
+      height: 36px;
+      box-sizing: border-box;
+    }
+
+    // Equal halves. `max-content` as the floor: on the narrowest phones the
+    // pair wraps rather than clipping a label.
+    &__meeting-sched-schedule-btn,
+    &__meeting-sched-start-btn {
+      order: 3;
+      flex: 1 1 0;
+      min-width: max-content;
+      margin-top: 8px;
+      padding: 0 12px;
       justify-content: center;
     }
 
-    // Give the view picker its own line so the two CTAs pair up on the next
-    // one.
-    //
-    // Without this the right group wrapped wherever it happened to run out of
-    // room, which split the pair at exactly the widths that matter most —
-    // measured: 390px and 430px both produced [picker, "Start a Meeting"] on
-    // one line and "Schedule" stranded alone below it. (320px already paired
-    // them, purely because the picker did not fit beside Start there — the
-    // right result by accident, which is what made this look fine on the
-    // narrowest phone and wrong on the common one.)
-    //
-    // The pair costs 235px together (Start 137 + gap 12 + Schedule 86), so it
-    // clears even the 296px of inner width a 320px window leaves. Nothing
-    // needs a media query below this one.
-    &__meeting-sched-view-picker {
-      flex: 1 1 100%;
-      // Centre the trigger INSIDE the box rather than stretching it: a
-      // full-width button would read as a third CTA.
-      align-items: center;
-    }
-
-    // The picker box now spans the whole line, so `right: 0` would pin the
-    // dropdown to the toolbar's right edge while the trigger sits centred.
-    // Re-anchor it on the trigger.
-    &__meeting-sched-view-picker &__meeting-sched-menu {
-      right: auto;
-      left: 50%;
-      transform: translateX(-50%);
-    }
-
-    &__meeting-sched-schedule-btn,
-    &__meeting-sched-start-btn {
-      padding: 0 14px;
-      // Never let the pair be broken up by shrinking instead of wrapping.
-      flex: 0 0 auto;
+    // Opens right under the pill (12px padding + 36px row + 6px gap),
+    // aligned with its left edge.
+    &__meeting-sched-picker {
+      top: 54px;
+      left: 12px;
     }
 
     // The 8-column week grid can't fit a phone — let it scroll sideways rather
     // than crush the columns. Header + rows share one min-width so they track.
+    //
+    // The side padding lines the grid up with the toolbar's edges. The
+    // `min-width: 0` on the grid and its panel is what makes the scroll happen
+    // at all: as flex items they defaulted to their min-content width, so the
+    // week's 620px floor widened the whole panel instead — measured 638px in a
+    // 468px window, toolbar pushed off the right edge with it.
+    &__meeting-schedule,
     &__meeting-sched-grid {
-      padding: 0 0 12px;
+      min-width: 0;
+    }
+
+    &__meeting-sched-grid {
+      padding: 0 12px 12px;
       overflow-x: auto;
+    }
+
+    // A narrower hour gutter: "12 AM" needs ~40px, and every pixel saved here
+    // goes to the day column.
+    &__meeting-sched-corner,
+    &__meeting-sched-hour {
+      width: 64px;
+    }
+
+    // Month view: the short day names stay centred over a seventh of a
+    // narrow window, 8px above the grid instead of 12px — the Task tab's
+    // narrow month header.
+    &__meeting-sched-days--month &__meeting-sched-day {
+      padding: 0 4px 8px;
+      align-items: center;
     }
 
     &__meeting-sched-days,
@@ -788,7 +931,7 @@
     }
 
     // Tighten the day cells so seven of them fit without the date colliding
-    // with its chips: the desktop 8/10px padding alone eats 140px of a 390px
+    // with its chips: the desktop 12px padding alone eats 168px of a 390px
     // window across the row.
     &__meeting-sched-mcell {
       padding: 4px 3px;
@@ -800,14 +943,54 @@
       line-height: 16px;
     }
 
+    // The date line follows the 12px date: 16px tall, no extra margin, so the
+    // first chip sits where it did before the line carried a "+". The "+"
+    // takes no room until its square is hovered — a seventh of a 390px panel
+    // is ~46px, and "Oct 1" beside the desktop's 20px circle and 10px gap
+    // needed ~60px, spilling past the cell's left edge. Touch has no hover,
+    // and the whole square schedules anyway.
+    &__meeting-sched-mhead {
+      height: 16px;
+      margin-bottom: 0;
+      gap: 2px;
+    }
+
+    // Three classes deep: ui-core's `.drumee-box[data-flow="x"]` sets the
+    // Box.X display at 0,2,0, and a lighter `display: none` loses to it.
+    &__meeting-sched-mcell &__meeting-sched-mhead &__meeting-sched-madd {
+      display: none;
+      width: 16px;
+      height: 16px;
+    }
+
+    &__meeting-sched-mcell:hover &__meeting-sched-mhead &__meeting-sched-madd {
+      display: flex;
+    }
+
+    &__meeting-sched-madd-ico {
+      font-size: 14px;
+      line-height: 16px;
+    }
+
     // The chip keeps its left rule as the only colour cue and drops the
     // horizontal padding — at a 7th of a phone width, padding is most of the
     // cell and the title is what has to survive.
     &__meeting-sched-mcard {
+      gap: 3px;
       padding: 1px 3px;
       border-left-width: 2px;
+    }
+
+    &__meeting-sched-mcard-title {
       font-size: 11px;
       line-height: 14px;
+    }
+
+    // No room for both: the start time alone would fill the chip. It stays
+    // in the chip's title attribute. !important over ui-core's
+    // `.drumee-widget[data-flow]` display:flex, which this Note carries.
+    &__meeting-sched-mcard &__meeting-sched-mcard-time {
+      display: none !important;
     }
 
     // Week rows get shorter with their contents, so a month does not need a

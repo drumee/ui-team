@@ -3,7 +3,7 @@
 // "set date" calendar card. Tokens come from revamp.scss with literal
 // fallbacks so the skin is correct even outside that compilation scope.
 
-$font: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+$font: var(--font-main);
 
 $brand: var(--primary-40, #5950ff); // ring / Done button
 $brand-deep: var(--primary-50, #433cc5); // month label, selected text
@@ -59,6 +59,14 @@ $cell: 36px;
 
   &:not(.inline) {
     width: 280px;
+  }
+
+  // Opened ABOVE its field (flatpickr tags that `arrowBottom`): flatpickr
+  // places the card at -(height) using the SUM OF ITS CHILDREN's heights, which
+  // leaves out this card's 6px+6px padding and the footer's 6px margin-top — so
+  // the card sat 18px down over the field it belongs to. Pull it back up.
+  &.arrowBottom:not(.inline) {
+    margin-top: -18px;
   }
 
   // No popup pointer in the design
@@ -276,6 +284,17 @@ $cell: 36px;
       box-shadow: none;
     }
 
+    // Days of the previous / next month: muted text only. Declared BEFORE the
+    // hover and selection rules (same specificity) so those still apply — a
+    // leading/trailing day must light up on hover and show a pick like any
+    // other day (clicking it jumps to that month and selects it).
+    &.prevMonthDay,
+    &.nextMonthDay {
+      color: $grey-muted;
+    }
+
+    // Hover: soft circle; the number keeps its own colour, so an adjacent-month
+    // day stays muted under the circle.
     &:hover::before {
       background: $brand-hover;
     }
@@ -284,38 +303,51 @@ $cell: 36px;
     // mistaken for an auto-selected start date. (The element-background reset
     // above also strips flatpickr's default today border.)
 
-    // In-between range days + single/multiple select: soft filled circle.
-    &.selected::before,
+    // In-between range days: soft filled circle.
     &.inRange::before {
       background: $brand-soft;
       border-color: transparent;
     }
 
-    // Range endpoints (and single-select): soft fill + ring.
+    &.inRange {
+      color: $brand-deep;
+    }
+
+    // Picked dates — single, every date in multiple mode, and both range
+    // endpoints: solid brand circle with a white number. Adjacent picks touch,
+    // so a run of consecutive dates reads as a chain of circles.
     &.selected::before,
     &.startRange::before,
     &.endRange::before {
-      background: $brand-soft;
+      background: $brand;
       border-color: $brand;
     }
 
     &.selected,
     &.startRange,
-    &.endRange,
-    &.inRange {
-      color: $brand-deep;
+    &.endRange {
+      color: $white;
+      font-weight: 500;
     }
 
-    &.flatpickr-disabled,
-    &.prevMonthDay,
-    &.nextMonthDay {
+    // Unpickable days (minDate/maxDate): muted, no hover circle.
+    &.flatpickr-disabled {
       color: $grey-muted;
+      cursor: not-allowed;
 
       &::before {
         background: transparent;
         border-color: transparent;
       }
     }
+  }
+
+  // flatpickr bridges range days with a coloured box-shadow bar (e.g.
+  // `.selected.startRange + .endRange:not(:nth-child(7n+1))`, specificity
+  // 0,5,0), which the element reset above can't outrank. The circles are the
+  // only marker, so repeat the class to win at 0,6,0.
+  .dayContainer .flatpickr-day.flatpickr-day.flatpickr-day {
+    box-shadow: none;
   }
 
   // ---- Time (only when a consumer enables it, e.g. secure-share) ----------

@@ -1,20 +1,15 @@
 @use "mixins/drumee";
 
-// The phone's workspace navigation — the Drumee 2.0 rail as a bottom bar.
+// The phone's workspace navigation — the Drumee Mobile bottom bar (Figma
+// 206:5444), the same bar the tours draw (desk/tutorial/skin/phone.scss
+// `__tabs`, `__tab`): one pill holding all five destinations.
+//
+//   band     a fade from clear to white, 12px over the row, the home strip under
+//   pill     white, 1000px radius, 4px inside, a hairline and a 5.5px shadow
+//   tab      44px, 40px radius, glyph over a 12/1.2 SemiBold label; the active
+//            one on rgba(89, 80, 255, 0.1)
 //
 // Rendered on mobile only (skeleton/index.js), so every rule here assumes it.
-//
-// This is the desktop rail translated, not a new invention. It keeps the
-// rail's own treatment from 43:23955 and sidebar.scss:
-//
-//   ground        --primary-70, the navy the desktop rail column wears (#3C3989)
-//   tile          40x40, r=8, transparent until active, then --primary-40
-//   glyph         28px on desktop; 24px here, where the row is shorter
-//   label         600 weight, --tertiary-grey-40 idle / --gray-white active
-//
-// What changes is the AXIS and nothing else: five tiles across instead of
-// down, because a phone reads its primary navigation along the bottom edge
-// where a thumb reaches.
 .desk-module {
   &__mrail {
     position: fixed;
@@ -22,78 +17,106 @@
     right: 0;
     bottom: 0;
     z-index: 10000;
+    display: flex;
     align-items: stretch;
-    justify-content: space-around;
-    background-color: var(--primary-70);
-    // The home-indicator strip on a notched phone. Without this the last row
-    // of tiles sits under the system gesture bar.
-    padding: 6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    gap: 12px;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
-    // Hairline in the rail's own idle ink rather than a black rule, so it
-    // reads as part of the navy rather than a border drawn on top of it.
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 100%);
+    // Only the pill takes taps; the fade above it is see-through.
+    pointer-events: none;
+
+    > * { pointer-events: auto; }
+  }
+
+  &__mrail-pill {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    padding: 4px;
+    border-radius: 1000px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    box-sizing: border-box;
   }
 
   &__mrail-item {
-    align-items: center;
-    justify-content: flex-start;
-    gap: 3px;
     flex: 1 1 0;
     min-width: 0;
-    padding: 2px 0;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 6px;
+    border-radius: 40px;
+    box-sizing: border-box;
     cursor: pointer;
-    color: var(--tertiary-grey-40);
+    color: #0b0a21;
     background-color: transparent;
-    // The whole item is the target, so the 44px minimum is met by the row
-    // rather than by the 32px tile inside it.
-    min-height: 46px;
+    transition: background-color 0.12s ease;
 
     &[data-radio="on"],
     &[data-state="1"] {
-      color: var(--gray-white);
-
-      .desk-module__mrail-tile {
-        background-color: var(--primary-40);
-      }
+      background-color: rgba(89, 80, 255, 0.1);
     }
   }
 
   &__mrail-tile {
+    position: relative;
+    flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 32px;
-    flex: 0 0 auto;
-    border-radius: 8px;
-    color: currentColor;
-    transition: background-color 0.12s ease;
+    pointer-events: none;
   }
 
   &__mrail-glyph {
-    width: 24px;
-    height: 24px;
+    display: block;
+    width: 20px;
+    height: 20px;
     pointer-events: none;
+    color: #0b0a21;
 
     svg {
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  // Unread pill on the glyph's corner — the desktop rail's red pill
+  // (sidebar.scss __badge), hidden at zero.
+  &__mrail-badge {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: #e53935;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+    box-sizing: border-box;
+    pointer-events: none;
+
+    &[data-count="0"],
+    &:empty {
+      display: none !important;
     }
   }
 
   &__mrail-label {
-    @include drumee.typo($size: 11px, $line: 13px, $color: currentColor);
-    // drumee.typo() emits no font-weight at all, so it is written out — the
-    // rail's labels are 600 and these must match.
+    @include drumee.typo($size: 12px, $line: 1.2, $color: currentColor);
     font-weight: 600;
     width: 100%;
     max-width: 100%;
     pointer-events: none;
-    // A Note is a FLEX ROW (its model defaults flow "wrap" → data-flow →
-    // lib/container.scss makes it flex-direction: row), so text-align on this
-    // wrapper never moves the inner .note-content — it sat packed LEFT, which
-    // put "Files" beside-left of its glyph instead of under it. Centre the
-    // flex child, then centre + truncate the text inside it. Same fix the
-    // desktop rail labels needed (sidebar.scss __item-text).
+    // A Note is a flex ROW, so centre the inner .note-content rather than
+    // trusting text-align on the wrapper (see sidebar.scss __item-text).
     justify-content: center;
 
     .note-content {
@@ -106,9 +129,18 @@
   }
 
   // The bar is fixed, so it covers content unless the scroll box reserves the
-  // space. __body owns the scrolling area on mobile.
+  // space: 12 + the 54px row + 12, and the home strip.
   &__body[data-device="mobile"] {
-    padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
+  }
+
+  // The folder window's carousel dots (window-folder__split-dots) belong to
+  // the Files screen: shown only while the bar's Files is the open tab. The
+  // desk stamps that tab as data-mtab (_railHighlight); no stamp yet is the
+  // first paint, which is Files. !important over the folder skin's own
+  // mobile display:flex rule.
+  &__ui[data-mtab]:not([data-mtab="files"]) .window-folder__split-dots {
+    display: none !important;
   }
 }

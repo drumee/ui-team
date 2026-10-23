@@ -162,21 +162,14 @@
         }
       }
 
-      .panel-activity__unread-label {
+      .panel-activity__vf-label {
         font-size: 14px;
         line-height: 20px;
       }
 
-      // Toggle scaled 40×20 → 48×28 (thumb 16 → 24); travel stays 20px
-      // so the shared [data-state="1"] transform still lands correctly.
-      .panel-activity__toggle-track {
-        width: 48px;
-        height: 28px;
-      }
-
-      .panel-activity__toggle-thumb {
-        width: 24px;
-        height: 24px;
+      .panel-activity__vf-button {
+        height: 36px;
+        padding: 0 12px;
       }
 
       // Six segmented pills instead of three underline tabs. `justify-content:
@@ -369,39 +362,195 @@
     font-weight: 600;
   }
 
-  &__unread-toggle {
+  // ── Header Filter (skeleton/view-filter.js, mock ftn1) ──────────
+  // The anchor for the popup, which drops below the button, right-aligned.
+  &__vf {
+    position: relative;
     align-items: center;
-    gap: 8px;
+  }
+
+  &__vf-button {
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    border: 1px solid #d1d1d6;
+    border-radius: 8px;
+    background-color: #ffffff;
+    color: #65656c;
     cursor: pointer;
     user-select: none;
+    white-space: nowrap;
+
+    &:hover {
+      border-color: #5950ff;
+    }
+
+    // A filter is in force: the button names it, in the accent colour.
+    &[data-active="1"] {
+      border-color: #5950ff;
+      background-color: rgba(89, 80, 255, 0.08);
+      color: #5950ff;
+
+      .panel-activity__vf-label {
+        color: #5950ff;
+      }
+    }
   }
 
-  &__toggle-track {
-    width: 40px;
-    height: 20px;
-    border-radius: 12px;
-    background-color: #d1d1d6;
-    padding: 2px;
-    position: relative;
-    transition: background-color 0.2s ease;
-    flex-shrink: 0;
-  }
-
-  &__toggle-thumb {
+  &__vf-icon {
     width: 16px;
     height: 16px;
-    border-radius: 50%;
-    background: #fff;
-    transition: transform 0.2s ease;
-    transform: translateX(0);
+    flex-shrink: 0;
+    fill: currentColor;
+    color: inherit;
   }
 
-  &__unread-toggle[data-state="1"] {
-    .panel-activity__toggle-track {
-      background-color: #fa8540;
+  &__vf-caret {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    fill: currentColor;
+    color: inherit;
+  }
+
+  &__vf-label {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 17px,
+      $color: #0b0a21
+    );
+  }
+
+  &__vf-popup {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 20;
+    width: 240px;
+    max-width: calc(100vw - 32px);
+    gap: 12px;
+    padding: 16px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    background-color: #ffffff;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    cursor: default;
+
+    &[data-open="0"] {
+      display: none;
     }
-    .panel-activity__toggle-thumb {
-      transform: translateX(20px);
+  }
+
+  &__vf-header {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__vf-title {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 24px,
+      $color: #0b0a21
+    );
+    font-weight: 600;
+  }
+
+  &__vf-close {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    color: #65656c;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
+
+    &:hover {
+      color: #0b0a21;
+    }
+  }
+
+  &__vf-options {
+    gap: 4px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  &__vf-option {
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    cursor: pointer;
+  }
+
+  &__vf-radio {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border: 1.5px solid #c7c7cc;
+    border-radius: 50%;
+    background-color: #ffffff;
+  }
+
+  &__vf-option-label {
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: #0b0a21
+    );
+  }
+
+  // The pending choice (popup data-pick) is the lit radio.
+  @each $f in all, unread, bookmarked {
+    &__vf-popup[data-pick="#{$f}"] &__vf-option--#{$f} &__vf-radio {
+      border-color: #5950ff;
+      background-color: #5950ff;
+      box-shadow: inset 0 0 0 3.5px #ffffff;
+    }
+  }
+
+  &__vf-footer {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__vf-clear {
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: #65656c
+    );
+    cursor: pointer;
+
+    &:hover {
+      color: #0b0a21;
+    }
+  }
+
+  &__vf-apply {
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: #ffffff
+    );
+    font-weight: 600;
+    padding: 8px 32px;
+    border-radius: 8px;
+    background-color: #5950ff;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #433cc5;
     }
   }
 
@@ -445,15 +594,6 @@
         color: #5950ff;
       }
     }
-  }
-
-  &__unread-label {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 17px,
-      $color: #0b0a21
-    );
   }
 
   &__toggle-btn {
@@ -512,10 +652,43 @@
        the bar stays one row and the feed keeps its position. */
     overflow-x: auto;
     scrollbar-width: none;
+    // Anchor of the loading line below.
+    position: relative;
 
     &::-webkit-scrollbar {
       display: none;
     }
+
+    // Loading line under the pills while a tab / filter switch waits for its
+    // rows (data-feed-loading, set by the panel at the click). Out of flow, so
+    // nothing moves when it shows; under the bar, not in the feed, because the
+    // first card covers the feed's top edge on mobile (padding-top 0).
+    &::after {
+      content: "";
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 0;
+      height: 2px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #5950ff, #5950ff) no-repeat, rgba(89, 80, 255, 0.12);
+      background-size: 30% 100%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+    }
+  }
+
+  &__ui[data-feed-loading="1"] &__tabbar::after {
+    opacity: 1;
+    animation: panel-activity-feed-loading 1s ease-in-out infinite;
+  }
+
+  // The rows still shown belong to the tab just left: dimmed while the new ones
+  // load. The fade is on the way in only — the new rows land at full opacity.
+  &__ui[data-feed-loading="1"] &__list .smart-container {
+    opacity: 0.55;
+    transition: opacity 0.15s;
   }
 
   &__tab {
@@ -609,6 +782,12 @@
     gap: 8px;
   }
 
+  // Bookmarked rows pinned on top: same cards, same separation.
+  &__saved {
+    width: 100%;
+    gap: 8px;
+  }
+
   &__list {
     flex: none;
     overflow-y: visible;
@@ -637,6 +816,33 @@
 
   &__ui[data-has-priority="1"] &__empty {
     display: none;
+  }
+
+  &__ui[data-has-saved="1"] &__empty {
+    display: none;
+  }
+
+  // Bookmarked filter: the pinned block alone. The feed still loads its first
+  // page (its saved rows refresh the snapshots) but is not shown, and neither
+  // are the priority rows.
+  &__ui[data-view-filter="bookmarked"] &__list,
+  &__ui[data-view-filter="bookmarked"] &__priority {
+    display: none !important;
+  }
+
+  &__saved-empty {
+    @include drumee.typo($color: #65656c, $size: 12px, $line: 17px);
+    // !important: a Note carries ui-core's `.drumee-widget[data-flow="wrap"]`
+    // display:flex, which outranks a single class.
+    display: none !important;
+    padding: 40px 16px;
+    text-align: center;
+    width: 100%;
+  }
+
+  // Only once the pinned rows for this view are in, so it never flashes.
+  &__ui[data-view-filter="bookmarked"][data-saved-ready="1"]:not([data-has-saved="1"]) &__saved-empty {
+    display: block !important;
   }
 
   // ── Responsive: fill the workspace on tablet (≤ 1024px) ──────────
@@ -678,8 +884,45 @@ html[data-theme="dark"] {
       color: var(--normal-fg-10);
     }
 
-    &__unread-label {
+    &__vf-button {
+      border-color: var(--border-muted);
+      background-color: transparent;
+      color: var(--normal-fg-50);
+
+      &[data-active="1"] {
+        border-color: #5950ff;
+        background-color: rgba(89, 80, 255, 0.16);
+        color: #b1adff;
+
+        .panel-activity__vf-label {
+          color: #b1adff;
+        }
+      }
+    }
+
+    &__vf-label,
+    &__vf-title,
+    &__vf-option-label {
       color: var(--normal-fg-10);
+    }
+
+    &__vf-popup {
+      background-color: var(--normal-bg-80);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    &__vf-radio {
+      border-color: var(--normal-fg-50);
+      background-color: transparent;
+    }
+
+    &__vf-close,
+    &__vf-clear {
+      color: var(--normal-fg-50);
+    }
+
+    &__saved-empty {
+      color: var(--normal-fg-50);
     }
 
     &__toggle-btn[data-state="0"] {
@@ -953,10 +1196,15 @@ html[data-theme="dark"] {
     height: 40px;
   }
 
+  // The chat, contact and task toasts draw a UserProfile here: the photo, or
+  // the initials, clipped by overflow. cover/center keep a photo filling the
+  // box if it is painted as a background.
   &__avatar {
+    flex-shrink: 0;
     width: 40px;
     height: 40px;
     border-radius: 12px;
+    overflow: hidden;
     background-size: cover;
     background-position: center;
   }
@@ -1222,6 +1470,22 @@ html[data-theme="dark"] {
     &__actions { flex-wrap: wrap; }
     &__scope { flex-basis: 100%; }
     &__result { gap: 16px; }
+  }
+}
+
+@keyframes panel-activity-feed-loading {
+  from {
+    background-position: -45% 0;
+  }
+  to {
+    background-position: 145% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-activity__ui[data-feed-loading="1"] .panel-activity__tabbar::after {
+    animation: none;
+    background-size: 100% 100%;
   }
 }
 
