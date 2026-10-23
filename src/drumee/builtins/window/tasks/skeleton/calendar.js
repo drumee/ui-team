@@ -19,7 +19,13 @@
 // due_date is a calendar DATE with no time, so an hour grid would be 24 empty
 // rows; week and day stay columns of full cards, which is also how the Personal
 // Calendar treats tasks (its all-day strip, never an hour).
-const { priorityMeta, statusMeta, subtaskBadge, mayCreateTask } = require("./helpers");
+const {
+  priorityMeta,
+  statusMeta,
+  subtaskProgress,
+  subtaskStrip,
+  mayCreateTask,
+} = require("./helpers");
 const { stripMarkers } = require("../mention-markers");
 
 const ymd = (d) => d.format("YYYY-MM-DD");
@@ -38,6 +44,17 @@ const VIEWS = [
 // and the 20px date line with its 10px gap. The derivation is next to that
 // token.
 const MONTH_FIT = 2;
+
+// A chip carrying the Subtasks strip is ~34px taller (8px gap + 8px padding +
+// 1px rule + 17px header) than the 52.4px chip MONTH_FIT is measured against,
+// so two of them overrun the cell; with one in the first two, only one fits and
+// "+N" must count from there.
+const monthFit = (ui, list) =>
+  list
+    .slice(0, MONTH_FIT)
+    .some((t) => !ui.isSubtask(t) && subtaskProgress(ui, t).total)
+    ? 1
+    : MONTH_FIT;
 
 /** The active view, validated — anything unknown falls back to the month. */
 const calMode = (ui) => {
@@ -162,6 +179,7 @@ module.exports = function (ui) {
           content: t.title || "",
           active: 0,
         }),
+        subtaskStrip(ui, t, { pfx, surface: "cal" }),
         // Hover delete; bubble:0 so it doesn't also open the detail panel.
         Skeletons.Button.Svg({
           className: `${pfx}__cal-chip-remove`,
@@ -171,7 +189,7 @@ module.exports = function (ui) {
           uiHandler: [ui],
           taskId: t.id,
         }),
-      ],
+      ].filter(Boolean),
     });
   };
 
@@ -243,10 +261,9 @@ module.exports = function (ui) {
               className: `${pfx}__cal-card-status-label`,
               content: sm.name || LOCALE[sm.label] || sm.key,
             }),
-            // Week-mode card carries the same count as the month chip.
-            subtaskBadge(ui, t, `${pfx}__cal-card-subcount`),
-          ].filter(Boolean),
+          ],
         }),
+        subtaskStrip(ui, t, { pfx, surface: "cal" }),
       ].filter(Boolean),
     });
   };
@@ -275,7 +292,7 @@ module.exports = function (ui) {
       });
     }
     const kids = list.map(compactChip);
-    const more = list.length - MONTH_FIT;
+    const more = list.length - monthFit(ui, list);
     if (more > 0) {
       kids.push(
         Skeletons.Note({
@@ -689,3 +706,4 @@ module.exports.controls = function (ui) {
 
 module.exports.controlsKids = controlsKids;
 module.exports.VIEWS = VIEWS;
+module.exports.monthFit = monthFit;

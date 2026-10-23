@@ -6980,7 +6980,16 @@ $theme-colors: (
     height: 32px;
     border-radius: 50%;
   }
+  // Calendar cards are 163px wide: the row keeps the status pill and avatar
+  // whole and lets the name ellipsise down to nothing (873:231660 "S…").
+  &__substrip[data-surface="cal"] &__substrip-row {
+    gap: 8px;
+  }
+  &__substrip[data-surface="cal"] &__substrip-status {
+    padding: 2px 8px;
+  }
   &__substrip-noassignee {
+    box-sizing: border-box;
     padding: 8px;
     background: rgba(0, 0, 0, 0.05);
     color: #65656c;
@@ -9737,7 +9746,6 @@ html[data-theme="dark"] .tasks-panel {
   // Subtasks: the tokens carry themselves, but the three literals in the light
   // rules (the all-done green and the checkbox fill) burn out on a dark ground.
   &__list-subcount,
-  &__cal-card-subcount,
   &__gantt-subcount {
     &[data-complete="1"] {
       background: rgba(34, 181, 115, 0.22);

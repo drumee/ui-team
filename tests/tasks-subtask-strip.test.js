@@ -155,3 +155,25 @@ test("board card uses the strip, not the meta badge", () => {
   assert.match(body, /subtaskStrip\(ui, task, \{ pfx, surface: "board" \}\)/);
   assert.doesNotMatch(body, /__task-subcount/);
 });
+
+test("calendar week card and month chip both carry the strip", () => {
+  for (const name of ["compactChip", "card"]) {
+    const body = arrowBody(CAL, name);
+    assert.match(body, /subtaskStrip\(ui, t, \{ pfx, surface: "cal" \}\)/, name);
+  }
+  assert.doesNotMatch(CAL, /__cal-card-subcount/);
+});
+
+// A month chip with a strip is ~34px taller than the 52.4px chip MONTH_FIT is
+// measured against, so two of them no longer fit the cell and "+N" would
+// under-count what is out of sight.
+test("month cell fits one chip when a leading chip carries a strip", () => {
+  const { monthFit } = require(path.join(DIR, "skeleton/calendar.js"));
+  const ui = {
+    isSubtask: () => false,
+    getSubtaskCount: (t) => ({ done: 0, total: t.n || 0 }),
+  };
+  assert.equal(monthFit(ui, [{ n: 0 }, { n: 0 }, { n: 0 }]), 2);
+  assert.equal(monthFit(ui, [{ n: 0 }, { n: 3 }, { n: 0 }]), 1);
+  assert.equal(monthFit(ui, [{ n: 0 }, { n: 0 }, { n: 3 }]), 2);
+});
