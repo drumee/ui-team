@@ -66,17 +66,31 @@
     width: 100%;
   }
 
+  // Primary/40 — the Inbox's active filter colour. Not --primary-500: revamp.scss
+  // declares that token twice and the later (lilac) value wins.
   &__badge {
-    @include drumee.typo($size: 10px, $line: 16px, $color: #fff);
+    @include drumee.typo($size: 10px, $line: 1, $color: #fff);
     font-weight: 600;
-    background-color: #847eff;
+    align-items: center;
+    background-color: var(--primary-40);
     border-radius: 8px;
     box-sizing: border-box;
+    display: flex;
     flex-shrink: 0;
     height: 16px;
+    justify-content: center;
     min-width: 16px;
-    padding: 0 5px;
-    text-align: center;
+    // 2px on top moves the centred content down 1px. Armin Grotesk's line box
+    // is lopsided (ascent 1em, descent 0.5em), so a centred line box leaves
+    // the digits' ink 1px above the pill's centre (measured headless).
+    padding: 2px 5px 0;
+
+    // The Note's inner wrapper would otherwise carry its own line box.
+    & > * {
+      line-height: 1;
+      margin: 0;
+      padding: 0;
+    }
 
     &[data-state="closed"] {
       display: none;
@@ -207,7 +221,7 @@
 
   .user-profile__ui[data-online="1"]:before,
   .user-profile__ui[data-online="2"]:before {
-    background-color: #847eff;
+    background-color: var(--primary-40);
     border-radius: 50%;
     box-shadow: 0 0 0 2px var(--normal-bg);
     content: " ";
