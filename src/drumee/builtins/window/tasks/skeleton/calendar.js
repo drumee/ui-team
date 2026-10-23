@@ -45,10 +45,10 @@ const VIEWS = [
 // token.
 const MONTH_FIT = 2;
 
-// A chip carrying the Subtasks strip is ~34px taller (8px gap + 8px padding +
-// 1px rule + 17px header) than the 52.4px chip MONTH_FIT is measured against,
-// so two of them overrun the cell; with one in the first two, only one fits and
-// "+N" must count from there.
+// A chip carrying the Subtasks strip is ~28px taller (6px gap + 6px padding +
+// 1px rule + 15px header) than the 52.4px chip MONTH_FIT is measured against:
+// one strip chip plus a plain one already needs 142.8px of the 136px body, so
+// with one in the first two, only one fits and "+N" must count from there.
 const monthFit = (ui, list) =>
   list
     .slice(0, MONTH_FIT)

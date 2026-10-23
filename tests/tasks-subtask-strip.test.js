@@ -219,11 +219,20 @@ test("calendar strip pill can shrink and ellipsise ('In progress' in a 163px car
   assert.match(label, /text-overflow: ellipsis;/);
   // The NAME gives way first (Figma "S…"), whatever its length; the dot never.
   assert.match(rule('&__substrip[data-surface="cal"] &__substrip-name'), /flex: 1 1 0;/);
-  assert.match(rule("&__substrip-status-dot"), /flex: 0 0 8px;/);
+  assert.match(rule("&__substrip-status-dot"), /flex: 0 0 6px;/);
 });
 
 test("list stack glyph and creator text follow the theme (no fixed near-black)", () => {
   assert.doesNotMatch(rule("&__list-subico"), /#0b0a21;/);
   assert.match(rule("&__list-subico"), /var\(--normal-fg-10, #0b0a21\)/);
   assert.match(rule("&__list-subcreate"), /\$color: var\(--normal-fg-10, #0b0a21\)/);
+});
+
+test("strip items use the compact scale (32px rows, 22px pill, 20px avatar)", () => {
+  assert.match(rule("&__substrip-row"), /min-height: 32px;/);
+  assert.match(rule("&__substrip-name"), /\$size: 12px/);
+  assert.match(rule("&__substrip-status"), /height: 22px;/);
+  assert.match(rule("&__substrip-status-label"), /\$size: 11px/);
+  assert.match(SCSS, /&__substrip-avatar,\n  &__substrip-noassignee \{\n    flex: 0 0 auto;\n    width: 20px;\n    height: 20px;/);
+  assert.match(SCSS, /&__substrip-ico,\n  &__substrip-caret \{\n    flex: 0 0 auto;\n    width: 14px;\n    height: 14px;/);
 });

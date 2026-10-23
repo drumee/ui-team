@@ -6883,38 +6883,39 @@ $theme-colors: (
   }
 
   // ── Subtasks strip (Board card, Calendar card + month chip) ────────────
-  // Figma `subtasks-desktop-board`: hairline top rule, header row, and when
-  // expanded a 4px progress rail + one 48px row per child.
+  // Figma `subtasks-desktop-board` layout, at a compact scale: hairline top
+  // rule, header row, and when expanded a 3px progress rail + one 32px row
+  // per child.
   &__substrip {
     align-items: stretch;
-    gap: 8px;
-    padding-top: 8px;
+    gap: 6px;
+    padding-top: 6px;
     border-top: 1px solid rgba(0, 0, 0, 0.05);
     min-width: 0;
   }
   &__substrip-head {
     align-items: center;
-    gap: 8px;
-    min-height: 17px;
+    gap: 6px;
+    min-height: 15px;
     cursor: pointer;
   }
   &__substrip-ico,
   &__substrip-caret {
     flex: 0 0 auto;
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
   }
   &__substrip-ico {
     color: #0b0a21;
   }
   &__substrip-label {
-    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 11px, $weight: 400, $line: 15px, $color: #0b0a21);
   }
   &__substrip-count {
     padding: 0 4px;
     border-radius: 4px;
     background: #f2f2f7;
-    @include drumee.typo($size: 12px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 11px, $weight: 400, $line: 15px, $color: #0b0a21);
   }
   &__substrip-caret {
     margin-left: auto;
@@ -6929,22 +6930,22 @@ $theme-colors: (
     color: #1b8f52;
   }
   &__substrip-bar {
-    height: 4px;
+    height: 3px;
     border-radius: 14px;
     background: rgba(0, 0, 0, 0.05);
     overflow: hidden;
   }
   &__substrip-fill {
-    height: 4px;
+    height: 3px;
     border-radius: 18px;
     background: #433cc5;
   }
   &__substrip-row {
     align-items: center;
-    gap: 12px;
-    min-height: 48px;
-    padding: 8px;
-    border-radius: 8px;
+    gap: 8px;
+    min-height: 32px;
+    padding: 4px 6px;
+    border-radius: 6px;
     background: #fff;
     min-width: 0;
     cursor: pointer;
@@ -6959,38 +6960,40 @@ $theme-colors: (
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
   }
   &__substrip-status {
     flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
-    height: 32px;
-    padding: 2px 12px;
-    border-radius: 16px;
+    gap: 6px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 11px;
     background: #f2f2f7;
   }
   &__substrip-status-dot {
-    flex: 0 0 8px;
-    width: 8px;
-    height: 8px;
+    flex: 0 0 6px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
   }
   &__substrip-status-label {
     white-space: nowrap;
-    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #0b0a21);
+    @include drumee.typo($size: 11px, $weight: 400, $line: 15px, $color: #0b0a21);
   }
   &__substrip-avatar,
   &__substrip-noassignee {
     flex: 0 0 auto;
-    width: 32px;
-    height: 32px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
+    overflow: hidden;
+    font-size: 9px;
   }
   // Calendar cards are 163px wide: the row keeps the status pill and avatar
   // whole and lets the name ellipsise down to nothing (873:231660 "S…").
   &__substrip[data-surface="cal"] &__substrip-row {
-    gap: 8px;
+    gap: 6px;
   }
   &__substrip[data-surface="cal"] &__substrip-name {
     flex: 1 1 0;
@@ -6998,7 +7001,7 @@ $theme-colors: (
   &__substrip[data-surface="cal"] &__substrip-status {
     flex: 0 1 auto;
     min-width: 0;
-    padding: 2px 8px;
+    padding: 0 6px;
   }
   &__substrip[data-surface="cal"] &__substrip-status-label {
     min-width: 0;
@@ -7007,7 +7010,7 @@ $theme-colors: (
   }
   &__substrip-noassignee {
     box-sizing: border-box;
-    padding: 8px;
+    padding: 4px;
     background: rgba(0, 0, 0, 0.05);
     color: #65656c;
   }
