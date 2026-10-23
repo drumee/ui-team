@@ -190,10 +190,22 @@ function handleService(ui, cmd, args = {}) {
       markPreset(ui, "center");
       return true;
 
-    // Share opens the secure-share panel, in every area (widget/share).
-    case "secure-share":
+    // Share opens the secure-share panel as a floating window (widget/share
+    // launch, from this window's own attributes). A window opened from a
+    // tile only adopted nid / hub_id / pid: the rest of the node (filetype,
+    // area, ext, name) is copied in first so the panel knows the file.
+    case "secure-share": {
+      const node = nodeOf(ui);
+      if (node) {
+        const fill = {};
+        for (const k of [_a.filetype, _a.area, _a.ext, _a.filename, _a.nid, _a.hub_id]) {
+          if (ui.mget(k) == null && node.mget(k) != null) fill[k] = node.mget(k);
+        }
+        if (Object.keys(fill).length) ui.mset(fill);
+      }
       share.click(ui, cmd);
       return true;
+    }
 
     // The base player's _showInfo() needs a `wrapper-info` part the editor
     // skeletons do not have; the document player's details card instead.
