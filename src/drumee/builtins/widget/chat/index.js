@@ -3401,7 +3401,20 @@ class __widget_chat extends LetcBox {
     }
 
     replyWrapper.feed(require("./skeleton/reply-message")(this, cmd));
-    return (replyWrapper.el.dataset.mode = _a.open);
+    replyWrapper.el.dataset.mode = _a.open;
+    this._focusComposer();
+  }
+
+  /**
+   * Put the caret in the composer so a reply can be typed straight away.
+   * The messenger's own autofocus: no scroll, caret at the end of a draft,
+   * and it waits for the field if it is not mounted yet. No-op for chats
+   * without a composer (read-only / guest).
+   */
+  _focusComposer() {
+    const messenger = this.__message;
+    if (!messenger || (messenger.isDestroyed && messenger.isDestroyed())) return;
+    if (_.isFunction(messenger._autofocus)) messenger._autofocus();
   }
 
   /**
@@ -3446,7 +3459,8 @@ class __widget_chat extends LetcBox {
       mget: (k) => snap[k],
     };
     replyWrapper.feed(require("./skeleton/reply-message")(this, msgLike));
-    return (replyWrapper.el.dataset.mode = _a.open);
+    replyWrapper.el.dataset.mode = _a.open;
+    this._focusComposer();
   }
 
   /**
