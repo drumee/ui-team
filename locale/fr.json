@@ -2822,6 +2822,7 @@
   "ADD_SUBTASK": "Ajouter une tâche enfant",
   "NO_SUBTASKS": "Aucune tâche enfant",
   "SUBTASK_PLACEHOLDER": "Tâche",
+  "ENTER_SUBTASK_NAME": "Saisir le nom de la sous-tâche...",
   "CALENDAR": "Calendrier",
   "PERSONAL_CALENDAR": "Calendrier personnel",
   "BADGE_NEW": "NOUVEAU",

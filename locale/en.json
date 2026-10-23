@@ -3040,6 +3040,7 @@
   "ADD_SUBTASK": "Add child work item",
   "NO_SUBTASKS": "No subtasks yet",
   "SUBTASK_PLACEHOLDER": "Task",
+  "ENTER_SUBTASK_NAME": "Enter subtask name...",
   "CALENDAR": "Calendar",
   "PERSONAL_CALENDAR": "Personal Calendar",
   "BADGE_NEW": "NEW",

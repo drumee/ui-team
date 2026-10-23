@@ -2815,6 +2815,7 @@
   "ADD_SUBTASK": "Добавить дочернюю задачу",
   "NO_SUBTASKS": "Дочерних задач пока нет",
   "SUBTASK_PLACEHOLDER": "Задача",
+  "ENTER_SUBTASK_NAME": "Введите название подзадачи...",
   "CALENDAR": "Календарь",
   "PERSONAL_CALENDAR": "Личный календарь",
   "BADGE_NEW": "НОВОЕ",
