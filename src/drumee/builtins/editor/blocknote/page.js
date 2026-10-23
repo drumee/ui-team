@@ -200,9 +200,22 @@ function toggleIconPicker(ui) {
   ui._emojiTab = "search";
   ui._emojiQuery = "";
   feedPart(ui, "wrapper-icon-picker", require("./skeleton/emoji-picker")(ui, CATEGORIES)).then(
-    () => {
+    (p) => {
+      // Typing in the search field, caught where it bubbles to: the field is an
+      // Entry, which builds its input after it reports itself ready.
+      if (p && p.el && !p.el.dataset.searchWired) {
+        p.el.dataset.searchWired = "1";
+        p.el.addEventListener("input", (e) => {
+          const input = e.target;
+          if (!input || !input.closest || !input.closest(`.${ui.fig.family}__emoji-search`)) return;
+          ui._emojiQuery = input.value || "";
+          renderEmojis(ui);
+        });
+      }
       renderEmojis(ui);
       armOutsideClose(ui);
+      const field = p && p.el && p.el.querySelector(`.${ui.fig.family}__emoji-search input`);
+      if (field) field.focus();
     }
   );
 }
@@ -235,11 +248,11 @@ function renderEmojis(ui) {
         }
       } else if (ui._emojiTab === "search") {
         title = LOCALE.NOTE_FREQUENTLY_USED;
-        list = readRecent();
-        if (!list.length) {
-          const people = (data.categories || []).find((c) => c.id === "people");
-          list = ((people && people.emojis) || []).slice(0, RECENT_MAX).map(native).filter(Boolean);
-        }
+        // History first, topped up with the first smileys so the grid is
+        // always full (Figma draws four rows).
+        const people = (data.categories || []).find((c) => c.id === "people");
+        const fill = ((people && people.emojis) || []).map(native).filter(Boolean);
+        list = [...new Set([...readRecent(), ...fill])].slice(0, RECENT_MAX);
       } else {
         const cat = CATEGORIES.find((c) => c.id === ui._emojiTab);
         const found = (data.categories || []).find((c) => c.id === ui._emojiTab);
@@ -533,16 +546,6 @@ function onPartReady(ui, child, pn) {
         if (t) pickEmoji(ui, t.dataset.emoji);
       });
       return true;
-
-    case "emoji-search": {
-      const input = child.el.querySelector("input") || child.el;
-      input.addEventListener("input", () => {
-        ui._emojiQuery = input.value || "";
-        renderEmojis(ui);
-      });
-      setTimeout(() => input.focus && input.focus(), 0);
-      return true;
-    }
 
     case "cover-file": {
       const input = child.el.tagName === "INPUT" ? child.el : child.el.querySelector("input");

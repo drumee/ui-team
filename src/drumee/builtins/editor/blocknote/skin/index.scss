@@ -444,6 +444,8 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     height: 120px;
     overflow-y: auto;
     overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-30) transparent;
   }
 
   &__emoji {

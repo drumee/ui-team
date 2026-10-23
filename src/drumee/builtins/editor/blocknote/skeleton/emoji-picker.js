@@ -51,7 +51,6 @@ module.exports = function (ui, categories) {
           Skeletons.Entry({
             className: `${pfx}__emoji-search`,
             sys_pn: "emoji-search",
-            partHandler: ui,
             placeholder: LOCALE.NOTE_SEARCH_EMOJI,
           }),
           Skeletons.Note({
