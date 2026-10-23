@@ -536,7 +536,11 @@
   &__ui[data-loading="1"] &__chat-panel {
     position: relative;
 
-    > * {
+    // Every descendant, not just the direct kids: visibility is inherited, but
+    // the global `[data-state="open"] { visibility: visible }` (skin/lib/utils)
+    // re-shows any open part inside — an inbox row's unread badge
+    // (.widget-chatcontactItem__badge) floated over the skeleton.
+    * {
       visibility: hidden;
     }
   }
