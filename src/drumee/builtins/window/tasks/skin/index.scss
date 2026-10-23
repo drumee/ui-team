@@ -6331,8 +6331,8 @@ $theme-colors: (
     flex: 0 0 auto;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 0 16px;
+    gap: 6px;
+    padding: 0 12px;
     box-sizing: border-box;
     background: var(--normal-bg-80, #f7f7fa);
     border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
@@ -6340,24 +6340,24 @@ $theme-colors: (
 
   &__gantt-work {
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     cursor: pointer;
   }
 
   &__gantt-work-ico {
     @include drumee.typo(
-      $size: 16px,
+      $size: 14px,
       $weight: 600,
-      $line: 20px,
+      $line: 16px,
       $color: var(--normal-fg-30, #65656c)
     );
   }
 
   &__gantt-work-label {
     @include drumee.typo(
-      $size: 14px,
+      $size: 12px,
       $weight: 600,
-      $line: 20px,
+      $line: 16px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
@@ -6367,9 +6367,9 @@ $theme-colors: (
     opacity: 0.45;
     pointer-events: none;
     @include drumee.typo(
-      $size: 13px,
+      $size: 12px,
       $weight: 500,
-      $line: 18px,
+      $line: 16px,
       $color: var(--col-error, #d74e49)
     );
 
@@ -6382,8 +6382,8 @@ $theme-colors: (
   &__gantt-arow {
     flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
-    padding: 0 16px;
+    gap: 6px;
+    padding: 0 12px;
     box-sizing: border-box;
     border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
 
@@ -6404,19 +6404,19 @@ $theme-colors: (
   }
 
   &__gantt-check {
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     justify-content: center;
     align-items: center;
     box-sizing: border-box;
-    border: 1.5px solid var(--normal-bg-60, #aeaeb2);
-    border-radius: 4px;
+    border: 1px solid var(--normal-bg-60, #aeaeb2);
+    border-radius: 3px;
     cursor: pointer;
 
     svg {
-      width: 11px;
-      height: 11px;
+      width: 9px;
+      height: 9px;
       opacity: 0;
     }
     &[data-checked="1"] {
@@ -6434,22 +6434,22 @@ $theme-colors: (
     // Fixed width, not `auto`: the `data-empty` spacer on a childless or child
     // row has no glyph, so an auto-width one collapses to 0 and the titles it
     // was meant to align drift left.
-    flex: 0 0 10px;
-    width: 10px;
+    flex: 0 0 8px;
+    width: 8px;
     text-align: center;
     cursor: pointer;
     @include drumee.typo(
-      $size: 16px,
+      $size: 14px,
       $weight: 400,
-      $line: 16px,
+      $line: 14px,
       $color: var(--normal-fg-40, #84848c)
     );
   }
 
   &__gantt-dot {
-    flex: 0 0 8px;
-    width: 8px;
-    height: 8px;
+    flex: 0 0 6px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
   }
 
@@ -6460,22 +6460,6 @@ $theme-colors: (
     white-space: nowrap;
     cursor: pointer;
     @include drumee.typo(
-      $size: 14px,
-      $weight: 600,
-      $line: 20px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
-  }
-
-  // Child rows (Figma 873:233238): stack glyph + 12px semibold title.
-  &__gantt-subico {
-    flex: 0 0 16px;
-    width: 16px;
-    height: 16px;
-    color: var(--normal-fg-10, #0b0a21);
-  }
-  &__gantt-arow[data-child="1"] &__gantt-title {
-    @include drumee.typo(
       $size: 12px,
       $weight: 600,
       $line: 16px,
@@ -6483,17 +6467,33 @@ $theme-colors: (
     );
   }
 
+  // Child rows (Figma 873:233238): stack glyph + a smaller semibold title.
+  &__gantt-subico {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+  &__gantt-arow[data-child="1"] &__gantt-title {
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 14px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
   &__gantt-del {
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.12s;
 
     svg {
-      width: 14px;
-      height: 14px;
+      width: 11px;
+      height: 11px;
     }
   }
 
@@ -9717,10 +9717,10 @@ $theme-colors: (
   &__gantt-arow[data-child="1"] {
     background: var(--normal-bg-90, #fafafc);
 
+    // No extra indent: the stack glyph before the title already marks it.
     .tasks-panel__gantt-title {
-      padding-left: 18px;
       @include drumee.typo(
-        $size: 12px,
+        $size: 11px,
         $color: var(--normal-fg-30, #4a4a68)
       );
     }
@@ -9739,16 +9739,16 @@ $theme-colors: (
     // positioning context for the __tip flyover child
     position: relative;
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.12s ease;
 
     svg {
       display: block;
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       fill: var(--normal-fg-40, #6f6d87);
     }
 

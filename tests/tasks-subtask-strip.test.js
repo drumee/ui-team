@@ -236,3 +236,16 @@ test("strip items use the compact scale (32px rows, 22px pill, 20px avatar)", ()
   assert.match(SCSS, /&__substrip-avatar,\n  &__substrip-noassignee \{\n    flex: 0 0 auto;\n    width: 20px;\n    height: 20px;/);
   assert.match(SCSS, /&__substrip-ico,\n  &__substrip-caret \{\n    flex: 0 0 auto;\n    width: 14px;\n    height: 14px;/);
 });
+
+test("gantt aside items use the compact scale", () => {
+  assert.match(rule("&__gantt-title"), /\$size: 12px/);
+  assert.match(rule('&__gantt-arow[data-child="1"] &__gantt-title'), /\$size: 11px/);
+  assert.match(rule("&__gantt-check"), /width: 14px;/);
+  assert.match(rule("&__gantt-dot"), /width: 6px;/);
+  assert.match(rule("&__gantt-subico"), /width: 14px;/);
+  assert.match(rule("&__gantt-del"), /width: 14px;/);
+  assert.match(rule("&__gantt-add-child"), /width: 14px;/);
+  assert.match(rule("&__gantt-work-label"), /\$size: 12px/);
+  assert.match(rule("&__gantt-del-sel"), /\$size: 12px/);
+  assert.match(rule("&__gantt-arow"), /padding: 0 12px;/);
+});
