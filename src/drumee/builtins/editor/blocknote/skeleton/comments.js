@@ -22,7 +22,8 @@ module.exports = function (ui, comments) {
     const lastname = who ? Visitor.get(_a.lastname) : entity.lastname || m.lastname || "";
     const name =
       `${firstname || ""} ${lastname || ""}`.trim() || entity.fullname || entity.email || "";
-    const when = m.ctime ? Dayjs.unix(Number(m.ctime)).fromNow() : "";
+    // The server clock may run ahead of this one; never say "in 2 minutes".
+    const when = m.ctime ? Dayjs.unix(Math.min(Number(m.ctime), Date.now() / 1000)).fromNow() : "";
     return Skeletons.Box.X({
       className: `${pfx}__comment`,
       kids: [

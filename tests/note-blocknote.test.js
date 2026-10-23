@@ -395,6 +395,16 @@ test("the header is the shared player topbar, laid out to the Figma", () => {
   assert.ok(!existsSync(resolve(ROOT, NOTE_DIR, "skeleton/rail.js")), "rail.js is gone");
 });
 
+test("the note is lifted above the folder window it was opened from", () => {
+  // The shared editor skin carries `.editor__ui[data-state="1"] { z-index }`.
+  // Dropping its @use (2026-10-22, while rewriting this skin) opened the note
+  // UNDER the docked workspace window — present in the DOM, invisible.
+  const skin = readNote("skin/index.scss");
+  assert.match(skin, /@use "\.\.\/\.\.\/skin\/topbar\.scss";/);
+  const shared = readFileSync(resolve(ROOT, "src/drumee/builtins/editor/skin/topbar.scss"), "utf8");
+  assert.match(shared, /&\[data-state="1"\] \{\s*z-index: 10000 !important;/);
+});
+
 test("labels in this editor carry the ONE tooltip rule", () => {
   // The shared skins style tooltips under prefixes this editor does not
   // carry; uncovered, a label renders static, in the page font, wrapping.

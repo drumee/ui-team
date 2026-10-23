@@ -6,6 +6,10 @@
 # ===================================================================**/
 
 @use "mixins/drumee";
+// The shared editor skin: among other things it lifts an active editor
+// window (`.editor__ui[data-state="1"]`) above the docked folder window.
+// Without it the note opens UNDER the workspace it was opened from.
+@use "../../skin/topbar.scss";
 
 // The page's side margin: the title, the actions and the comment bar sit
 // 120px in from the window edge (Figma, frame padding 60/120).
@@ -264,9 +268,10 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     padding-top: 24px;
   }
 
+  // An empty slot must not keep its share of the 12px gaps either.
   &__actions[data-empty="1"].drumee-box,
-  &__comments-slot:empty.drumee-box,
-  &__icon-slot:empty.drumee-box {
+  &[data-icon="0"] &__icon-row.drumee-box,
+  &[data-comments="0"] &__comments-slot.drumee-box {
     display: none;
   }
 
@@ -429,8 +434,9 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   }
 
   // 8 across, 25px cells (Figma 1406:27172), four rows visible.
+  // `!important`: the element would otherwise keep the framework's flex row.
   &__emoji-grid {
-    display: grid;
+    display: grid !important;
     grid-template-columns: repeat(8, 25px);
     grid-auto-rows: 25px;
     justify-content: space-between;
@@ -536,7 +542,7 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   }
 
   &__comment-text {
-    white-space: pre-wrap;
+    white-space: normal;
     word-break: break-word;
     @include drumee.typo($line: 19.2px, $size: 14px, $color: var(--normal-fg-10));
   }
@@ -645,9 +651,11 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     box-sizing: border-box;
   }
 
+  // The yellow note of the Figma, drawn at the Figma's 70%.
   .drumee-topbar__filetype-icon {
     width: 28px;
     height: 28px;
+    opacity: 0.7;
   }
 
   .drumee-topbar__title {
@@ -760,9 +768,11 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     -webkit-user-select: text;
   }
 
-  // The empty-page hint, "Press '/' for commands" (Figma 16px, #84848c).
-  .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
+  // The empty-page hint, "Press '/' for commands" (Figma 16px, #84848c,
+  // upright). BlockNote draws it as the block's ::after.
+  .bn-editor .bn-block-content::after {
     color: var(--normal-fg-50);
+    font-style: normal;
   }
 
   // "/ Type to search": the decorated "/" grows a hint while nothing has been
@@ -824,6 +834,10 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     min-height: 0;
     overflow-y: auto;
     padding-right: 12px;
+    // The Figma's 4px purple thumb. The standard properties win over the
+    // ::-webkit-scrollbar ones wherever both are supported.
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-30) transparent;
 
     &::-webkit-scrollbar {
       width: 4px;

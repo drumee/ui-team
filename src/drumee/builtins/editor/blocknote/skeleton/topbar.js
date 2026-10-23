@@ -82,7 +82,7 @@ function config(ui) {
 
   return {
     left: {
-      fileTypeIcon: "raw-ab_notes",
+      fileTypeIcon: "raw-note-sticky",
       title: filename || LOCALE.UNTITLED,
     },
     right: {

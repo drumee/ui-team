@@ -7,6 +7,8 @@
 //  parts and answering their clicks, so the window stays about the window.
 // ===========================================================
 
+const { uploadFile } = require("@drumee/ui-essentials");
+
 const RECENT_KEY = "drumee.note.recentEmojis";
 const RECENT_MAX = 32;
 const SEARCH_MAX = 64;
@@ -139,6 +141,7 @@ function paint(ui) {
   if (ui.el) {
     ui.el.dataset.cover = cover ? "1" : "0";
     ui.el.dataset.icon = icon ? "1" : "0";
+    ui.el.dataset.comments = commentsOpen ? "1" : "0";
   }
 
   const offer = {
@@ -336,10 +339,15 @@ function uploadCover(ui, file) {
   if (!dest) return;
   closeCoverPopup(ui);
   ui._setStatus("saving");
+  // The shared uploader, on a context of its own: called on the window it
+  // would wire the window's upload hooks (onUploadEnd & co., which the MFS
+  // base implements for a file tile) to a request that is not about it.
+  const ctx = { get: () => null, verbose: () => {}, warn: (...a) => ui.warn(...a) };
   let xhr;
   try {
-    xhr = ui.uploadFile(file, { hub_id: dest.hub_id, nid: dest.pid });
+    xhr = uploadFile.call(ctx, file, { hub_id: dest.hub_id, nid: dest.pid });
   } catch (e) {
+    ui.warn("editor_blocknote: cover upload did not start", e);
     xhr = null;
   }
   if (!xhr) {
