@@ -4,6 +4,8 @@
 #          Casual Docs / Casual Sheets windows (Figma 1319:50973)
 # ===================================================================**/
 
+@use "./phosphor" as ph;
+
 // Tokens, straight from the Figma (Drumee 2.0 GLOBAL_VARS).
 $fv-ink: #0b0a21; // Primary/100
 $fv-grey90: #34343a;
@@ -202,5 +204,104 @@ $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
 
   .drumee-topbar__snap-glyph-fill {
     background-color: $fv-grey80;
+  }
+}
+
+// ── Glyphs, exactly the Figma's ───────────────────────────────────────────
+// Header actions and gear rows: Phosphor regular (LockKey, DownloadSimple,
+// Gear, ArrowsOutSimple, X; Copy, PencilSimpleLine, Hash, ShareNetwork, Info,
+// Trash). The sprite glyph inside each control is hidden and the Phosphor
+// one painted in its place (skin/phosphor). File glyphs: the design's own
+// bitmaps (editor/chrome installGlyphs → --fv-docx-glyph / --fv-sheet-glyph).
+.editor-docs,
+.editor-sheet {
+  .editor-chrome__share {
+    @include ph.ph("lock-key", 20px, true);
+  }
+
+  .editor-chrome__download {
+    @include ph.ph("download-simple", 24px, true);
+  }
+
+  .drumee-topbar__menu > .icon.gear {
+    @include ph.ph("gear", 24px, true);
+  }
+
+  .drumee-topbar__snap-trigger {
+    @include ph.ph("arrows-out-simple", 24px, true);
+  }
+
+  .editor-chrome__close {
+    @include ph.ph("x", 24px, true);
+  }
+
+  .drumee-topbar__menu-icon {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+  }
+
+  .fv-row--copy .drumee-topbar__menu-icon { @include ph.ph("copy", 16px, true); }
+  .fv-row--rename .drumee-topbar__menu-icon { @include ph.ph("pencil-simple-line", 16px, true); }
+  .fv-row--tabs .drumee-topbar__menu-icon { @include ph.ph("files", 16px, true); }
+  .fv-row--threads .drumee-topbar__menu-icon { @include ph.ph("hash", 16px, true); }
+  .fv-row--share .drumee-topbar__menu-icon { @include ph.ph("share-network", 16px, true); }
+  .fv-row--info .drumee-topbar__menu-icon { @include ph.ph("info", 16px, true); }
+  .fv-row--trash .drumee-topbar__menu-icon { @include ph.ph("trash", 16px, true); }
+
+  // The Files rail inside the editor card.
+  .file-switcher__search-ico { @include ph.ph("magnifying-glass", 16px, true); }
+  .file-switcher__create-ico { @include ph.ph("plus", 20px, true); }
+  .file-switcher__toggle { @include ph.ph("square-split-horizontal", 20px, true); }
+  .file-switcher__section:first-child .file-switcher__section-ico { @include ph.ph("clock", 20px, true); }
+  .file-switcher__section:last-child .file-switcher__section-ico { @include ph.ph("files", 20px, true); }
+
+  .file-switcher__row-icon[data-ext="udoc"],
+  .file-switcher__row-icon[data-ext="usheet"] {
+    .preview-icon {
+      display: none !important;
+    }
+
+    &::before {
+      content: "";
+      display: block;
+      width: 22px;
+      height: 22px;
+      background: var(--fv-docx-glyph) center / contain no-repeat;
+    }
+  }
+
+  .file-switcher__row-icon[data-ext="usheet"]::before {
+    background-image: var(--fv-sheet-glyph);
+  }
+}
+
+// Docs header: the 40px docx glyph (docs_state._decorateTitleBar box).
+.editor-docs .docs-state .editor-docs__file-glyph {
+  svg {
+    display: none !important;
+  }
+
+  &::before {
+    content: "";
+    display: block;
+    width: 32px;
+    height: 32px;
+    background: var(--fv-docx-glyph) center / contain no-repeat;
+  }
+}
+
+// Sheet header: the 36px sheet glyph in the shared topbar's identity block.
+.editor-sheet .drumee-topbar__filetype {
+  .drumee-topbar__filetype-icon {
+    display: none !important;
+  }
+
+  &::before {
+    content: "";
+    display: block;
+    width: 28px;
+    height: 28px;
+    background: var(--fv-sheet-glyph) center / contain no-repeat;
   }
 }

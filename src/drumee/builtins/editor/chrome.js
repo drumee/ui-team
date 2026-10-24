@@ -23,13 +23,36 @@ const details = require("builtins/player/widget/details");
 const share = require("builtins/player/widget/share");
 
 const DELEGATED = [_a.duplicate, _e.copy, _e.remove, _a.chat, "chat-threads", "download-file-chat"];
+
+/**
+ * The Figma's file glyphs (docx page, sheet grid) for the editor headers,
+ * handed to the skins as CSS variables on the editor windows. Bitmaps from
+ * the design file (assets/file-icons), through webpack's file-loader.
+ */
+function glyphUrl(mod) {
+  const u = mod && mod.default ? mod.default : mod;
+  return `url("${u}")`;
+}
+(function installGlyphs() {
+  if (typeof document === "undefined" || document.getElementById("fv-file-glyphs")) return;
+  try {
+    const docx = glyphUrl(require("assets/file-icons/file-docx.png"));
+    const sheet = glyphUrl(require("assets/file-icons/file-sheet.png"));
+    const style = document.createElement("style");
+    style.id = "fv-file-glyphs";
+    style.textContent = `.editor-docs,.editor-sheet{--fv-docx-glyph:${docx};--fv-sheet-glyph:${sheet}}`;
+    document.head.appendChild(style);
+  } catch (e) {
+    /** the sprite glyphs stay */
+  }
+})();
 const PRESETS = ["full", "left", "right", "center"];
 
 /** The gear menu rows (Figma 1364:120251). `opt.tabs` adds Document tabs. */
 function gearMenu(ui, opt = {}) {
   const rows = [
-    { id: "menu-copy", label: LOCALE.MAKE_A_COPY, icon: "apps-copy", service: _a.duplicate },
-    { id: "menu-rename", label: LOCALE.RENAME, icon: "file-rename", service: "direct-rename" },
+    { id: "menu-copy", label: LOCALE.MAKE_A_COPY, icon: "apps-copy", service: _a.duplicate, className: "fv-row fv-row--copy" },
+    { id: "menu-rename", label: LOCALE.RENAME, icon: "file-rename", service: "direct-rename", className: "fv-row fv-row--rename" },
   ];
   if (opt.tabs) {
     // Google-Docs "Document tabs" (docs/skeleton/tabs-rail) — not in the
@@ -39,6 +62,7 @@ function gearMenu(ui, opt = {}) {
       label: LOCALE.DOCUMENT_TABS || "Document tabs",
       icon: "app-doc-file",
       service: "toggle-doc-tabs",
+      className: "fv-row fv-row--tabs",
     });
   }
   rows.push({
@@ -46,6 +70,7 @@ function gearMenu(ui, opt = {}) {
     label: LOCALE.CHAT_THREADS,
     icon: "ctxmenu-chat-thread",
     service: "chat-threads",
+    className: "fv-row fv-row--threads",
     children: [
       { id: "menu-view-chat-threads", label: LOCALE.VIEW_CHAT_THREADS, service: _a.chat },
       {
@@ -56,15 +81,15 @@ function gearMenu(ui, opt = {}) {
     ],
   });
   rows.push({ separator: true });
-  rows.push({ id: "menu-share", label: LOCALE.SHARE, icon: "noti-share-network", service: "secure-share" });
-  rows.push({ id: "menu-info", label: LOCALE.GET_INFO, icon: "ctxmenu-info", service: "info" });
+  rows.push({ id: "menu-share", label: LOCALE.SHARE, icon: "noti-share-network", service: "secure-share", className: "fv-row fv-row--share" });
+  rows.push({ id: "menu-info", label: LOCALE.GET_INFO, icon: "ctxmenu-info", service: "info", className: "fv-row fv-row--info" });
   rows.push({ separator: true });
   rows.push({
     id: "menu-trash",
     label: LOCALE.MOVE_TO_TRASH,
     icon: "ph-trash",
     service: _e.remove,
-    className: "trash",
+    className: "trash fv-row fv-row--trash",
   });
   return rows;
 }
@@ -92,7 +117,7 @@ function topbarConfig(ui, opt = {}) {
     id: "ctrl-download",
     icon: "dl-download-simple",
     service: _e.download,
-    className: "icon editor-chrome__btn",
+    className: "icon editor-chrome__btn editor-chrome__download",
   });
   return {
     left: opt.left,
@@ -104,7 +129,7 @@ function topbarConfig(ui, opt = {}) {
         className: "icon gear editor-chrome__btn",
       },
       "move-resize": { icon: "meet-expand" },
-      close: { icon: "cross", className: "icon close editor-chrome__btn", service: _e.close },
+      close: { icon: "cross", className: "icon close editor-chrome__btn editor-chrome__close", service: _e.close },
     },
   };
 }
