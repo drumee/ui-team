@@ -569,6 +569,12 @@ class __window_folder extends mfsInteract {
       `change:${_a.privilege}`,
       this.syncNewCtrlVisibility,
     );
+    // Same for the Meet tab's Start/Schedule buttons (built once per render).
+    this.listenTo(
+      this.model,
+      `change:${_a.privilege}`,
+      this._syncMeetingStartGate,
+    );
     // Bind uploadFile for the meeting description's inline image paste/drop
     // (mfsInteract doesn't provide it — same pattern as the tasks widget).
     if (!this.uploadFile) {
@@ -4822,6 +4828,24 @@ class __window_folder extends mfsInteract {
   }
 
   /**
+   * Keep the Meet tab's Start / Schedule buttons (and the grid's add slots) in
+   * step with a privilege that changed under an open window — an admin moving
+   * us to View or Chat in the Access matrix must take "Start a Meeting" away
+   * now, not on the next reopen. The skeleton stamps what it was built with
+   * (_schedRenderedMayStart), so an unchanged answer costs nothing. A tab never
+   * opened builds from the live privilege anyway; a hidden one is only flagged
+   * stale by _refreshSchedule and redraws when shown.
+   */
+  _syncMeetingStartGate() {
+    if (!this._meetingPanelMounted) return;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this._schedRenderedMayStart === this._mayScheduleMeetings()) return;
+    // A re-feed under an open dropdown would strand its dismisser.
+    this._closeSchedMenus();
+    this._refreshSchedule();
+  }
+
+  /**
    * The task tab's refusal, for meetings: "You can't schedule meetings because
    * your current permission level is <role>…". The weekly slots open the form
    * for anyone, and an admin's demotion can land while it is open, so the
@@ -7645,6 +7669,7 @@ class __window_folder extends mfsInteract {
     // derived chrome left stale by an earlier lifecycle transition.
     if (Number(this.mget(_a.privilege)) === Number(privilege)) {
       this.syncNewCtrlVisibility();
+      this._syncMeetingStartGate();
       return;
     }
     this.mset(_a.privilege, Number(privilege));
