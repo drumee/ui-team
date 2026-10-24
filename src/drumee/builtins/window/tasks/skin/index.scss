@@ -3544,6 +3544,7 @@ $theme-colors: (
   // is contenteditable=false and uses the browser's native CSS resize handle
   // (bottom-right) to make the image width adjustable; the <img> fills it.
   &__inline-img {
+    position: relative;
     display: inline-block;
     resize: horizontal;
     overflow: hidden;
@@ -3560,6 +3561,46 @@ $theme-colors: (
       display: block;
       pointer-events: none;
       border-radius: 8px;
+    }
+  }
+
+  // The committed image's ✕ (_makeInlineImage). Always shown, top-right, clear
+  // of the native resize grip bottom-right. The cross is two ::before/::after
+  // bars — a font glyph sits off-centre in the circle, and generated content
+  // is never seen by the serializer.
+  &__inline-img-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 1;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+
+    &::before,
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 1.5px;
+      border-radius: 1px;
+      background: #fff;
+    }
+
+    &::before {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.75);
     }
   }
 

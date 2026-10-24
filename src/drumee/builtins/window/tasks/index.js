@@ -8791,7 +8791,42 @@ class __tasks_panel extends LetcBox {
     if (hub) wrap.dataset.hub = String(hub);
     if (width) wrap.style.width = `${width}px`;
     wrap.appendChild(img);
+    // ✕ to take the image out again. Its glyph is ::after content and the
+    // serializer emits a marker for the wrapper without walking into it, so
+    // nothing of it reaches the saved body. The click is handled once per
+    // editor (_wireInlineImageRemove), since a render rebuilds these nodes.
+    const remove = document.createElement("span");
+    remove.className = `${this.fig.family}__inline-img-remove`;
+    remove.setAttribute("role", "button");
+    remove.setAttribute("aria-label", LOCALE.REMOVE || "Remove");
+    wrap.appendChild(remove);
     return wrap;
+  }
+
+  // Delegated, so images rendered from the draft and ones pasted later share
+  // one listener. The scope is read at click time: _initDescEditor re-runs on
+  // the same element and keeps it current.
+  _wireInlineImageRemove(editorEl, scope) {
+    editorEl.__inlineImgScope = scope;
+    if (editorEl.__inlineImgRemoveWired) return;
+    editorEl.__inlineImgRemoveWired = 1;
+    const pfx = this.fig.family;
+    // Keep the press from moving the caret or blurring the editor (which
+    // would close a mention popup — see onblur in _initDescEditor).
+    editorEl.addEventListener("mousedown", (e) => {
+      if (e.target.closest && e.target.closest(`.${pfx}__inline-img-remove`)) {
+        e.preventDefault();
+      }
+    });
+    editorEl.addEventListener("click", (e) => {
+      const hit = e.target.closest && e.target.closest(`.${pfx}__inline-img-remove`);
+      if (!hit || !editorEl.contains(hit)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const wrap = hit.closest(`.${pfx}__inline-img`);
+      if (wrap) wrap.remove();
+      this._onDescInput(editorEl.__inlineImgScope, editorEl);
+    });
   }
 
   // Anchor node for a hyperlink. In an editor it is contenteditable=false so it
@@ -8953,6 +8988,7 @@ class __tasks_panel extends LetcBox {
       this._mentionCloseTimer = setTimeout(() => this._closeMention(), 150);
     };
     editorEl.onpaste = (e) => this._onEditorPaste(e, scope, editorEl);
+    this._wireInlineImageRemove(editorEl, scope);
   }
 
   // Clipboard image (screenshot / copied external image): upload it, then
