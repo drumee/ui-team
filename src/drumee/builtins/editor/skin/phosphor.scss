@@ -63,7 +63,9 @@ $ph: (
 ///                        and keeps a trailing caret (Casual Docs)
 @mixin ph($name, $px: 20px, $deep: false) {
   @if $deep {
-    svg {
+    // Casual Sheets draws its glyphs with the Material Symbols font.
+    svg,
+    .material-symbols-outlined {
       display: none !important;
     }
   } @else {

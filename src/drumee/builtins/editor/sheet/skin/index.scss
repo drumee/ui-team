@@ -673,23 +673,18 @@ body > div:has(> [class*="univer-popup"]) {
     // context menu have it), the font-size steppers (the size box stays),
     // merge, and the trailing Format Cells / chart / pivot (all under the
     // Format and Insert menus) are left out, with the divider before them.
-    // (Casual wraps each group in a <span>, a lone button in a <div>.)
-    > :has(> button[aria-label^="Paste ("]),
-    > :has(> button[aria-label="Increase font size"]),
-    > :has(> button[aria-label="Decrease font size"]),
-    > :has(> button[aria-label="Merge cells"]),
-    > :has(> button[aria-label="Format Cells…"]),
-    > :has(> button[aria-label="Insert chart"]),
-    > :has(> button[aria-label="Insert PivotTable"]),
-    > :has(+ :has(> button[aria-label="Format Cells…"])),
-    > button[aria-label^="Paste ("],
+    // Casual wraps a group in a <span>, and puts the size steppers and the
+    // trailing Format Cells / chart / pivot buttons straight in the bar.
+    // NOTE: one selector list, no nested :has() — an invalid selector would
+    // void the whole rule.
+    > span:has(> [data-testid="cs-paste"]),
+    > span:has(> [data-testid="cs-merge"]),
     > button[aria-label="Increase font size"],
     > button[aria-label="Decrease font size"],
-    > button[aria-label="Merge cells"],
-    > button[aria-label="Unmerge cells"],
     > button[aria-label="Format Cells…"],
     > button[aria-label="Insert chart"],
-    > button[aria-label="Insert PivotTable"] {
+    > button[aria-label="Insert PivotTable"],
+    > span:empty:has(+ button[aria-label="Format Cells…"]) {
       display: none !important;
     }
 
@@ -752,19 +747,19 @@ body > div:has(> [class*="univer-popup"]) {
 
 // ── Figma parity pass (user review 2026-10-23): Phosphor toolbar glyphs ─────
 .editor-sheet[data-theme="light"] .sheet-state [data-testid="casual-sheets-toolbar"] {
-  button[aria-label^="Undo"] { @include ph.ph("arrow-u-up-left", 20px, true); }
-  button[aria-label^="Redo"] { @include ph.ph("arrow-u-up-right", 20px, true); }
-  button[aria-label="Format Painter"] { @include ph.ph("paint-roller", 20px, true); }
-  button[aria-label^="Bold"] { @include ph.ph("text-b", 20px, true); }
-  button[aria-label^="Italic"] { @include ph.ph("text-italic", 20px, true); }
-  button[aria-label^="Underline"] { @include ph.ph("text-underline", 20px, true); }
-  button[aria-label="Strikethrough"] { @include ph.ph("text-strikethrough", 20px, true); }
-  button[aria-label="Align left"] { @include ph.ph("text-align-left", 20px, true); }
-  button[aria-label="Align center"] { @include ph.ph("text-align-center", 20px, true); }
-  button[aria-label="Align right"] { @include ph.ph("text-align-right", 20px, true); }
-  button[aria-label="Text color"] { @include ph.ph("text-a-underline", 20px, true); }
-  button[aria-label="Fill color"] { @include ph.ph("paint-bucket", 20px, true); }
-  button[aria-label="AutoSum"] { @include ph.ph("sigma", 20px, true); }
+  [data-testid="cs-undo"] { @include ph.ph("arrow-u-up-left", 20px, true); }
+  [data-testid="cs-redo"] { @include ph.ph("arrow-u-up-right", 20px, true); }
+  [data-testid="cs-format-painter"] { @include ph.ph("paint-roller", 20px, true); }
+  [data-testid="cs-bold"] { @include ph.ph("text-b", 20px, true); }
+  [data-testid="cs-italic"] { @include ph.ph("text-italic", 20px, true); }
+  [data-testid="cs-underline"] { @include ph.ph("text-underline", 20px, true); }
+  [data-testid="cs-strikethrough"] { @include ph.ph("text-strikethrough", 20px, true); }
+  [data-testid="cs-align-left"] { @include ph.ph("text-align-left", 20px, true); }
+  [data-testid="cs-align-center"] { @include ph.ph("text-align-center", 20px, true); }
+  [data-testid="cs-align-right"] { @include ph.ph("text-align-right", 20px, true); }
+  [data-testid="cs-color-text"] { @include ph.ph("text-a-underline", 20px, true); }
+  [data-testid="cs-color-fill"] { @include ph.ph("paint-bucket", 20px, true); }
+  [data-testid="cs-autosum-button"] { @include ph.ph("sigma", 20px, true); }
 
   button {
     color: #0b0a21;
