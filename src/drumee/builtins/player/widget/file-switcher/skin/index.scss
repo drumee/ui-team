@@ -497,12 +497,13 @@
 }
 
 // ── The design's icons, in every viewer ────────────────────────────────────
-// Phosphor regular glyphs for the panel chrome (Figma 873:221431) and the
-// Figma "file icon" set for the rows: the docx page stands for every document
-// (Casual's .udoc and Word's .docx alike), the sheet grid for every sheet, the
-// pptx one for slides — 22px in the 30px box at 70%, like the design (:root
-// variables from ./glyphs). The whole preview wrapper is hidden, not only its
-// svg: left in the flex row it squeezed the ::before down to 13px.
+// Phosphor regular glyphs for the panel chrome (Figma 873:221431), and the
+// Figma "file icon" glyphs (docx page, sheet grid) for the NEW Casual files
+// only (.udoc / .usheet) — 22px in the 30px box at 70%, like the design
+// (:root variables from ./glyphs). Word / Excel / PowerPoint rows keep their
+// own Office logos (user's call, 2026-10-25). The whole preview wrapper is
+// hidden, not only its svg: left in the flex row it squeezed the ::before
+// down to 13px.
 .file-switcher__search-ico { @include ph.ph("magnifying-glass", 16px, true); }
 .file-switcher__create-ico { @include ph.ph("plus", 20px, true); }
 .file-switcher__toggle { @include ph.ph("square-split-horizontal", 20px, true); }
@@ -511,13 +512,7 @@
 
 .file-switcher__row-icon {
   &[data-ext="udoc"],
-  &[data-ext="doc"],
-  &[data-ext="docx"],
-  &[data-ext="usheet"],
-  &[data-ext="xls"],
-  &[data-ext="xlsx"],
-  &[data-ext="ppt"],
-  &[data-ext="pptx"] {
+  &[data-ext="usheet"] {
     > * {
       display: none !important;
     }
@@ -533,15 +528,8 @@
     }
   }
 
-  &[data-ext="usheet"]::before,
-  &[data-ext="xls"]::before,
-  &[data-ext="xlsx"]::before {
+  &[data-ext="usheet"]::before {
     background-image: var(--fv-sheet-glyph);
-  }
-
-  &[data-ext="ppt"]::before,
-  &[data-ext="pptx"]::before {
-    background-image: var(--fv-pptx-glyph);
   }
 }
 
