@@ -562,6 +562,8 @@
   "ORG_IDENT_AVAILABLE": "This subdomain is available.",
   "ORG_ALREADY_IN_DOMAIN": "Your account already belongs to an organization.",
   "ORG_PROVISIONED": "Your organization space is ready — reloading to your new address…",
+  "ORG_JOINED_RELOAD": "You are now a member of {0}. Reloading to apply your organization plan…",
+  "ORG_LEFT_RELOAD": "You are no longer a member of this organization. Reloading…",
   "ROLE_VIEW": "View",
   "ROLE_CHAT": "Chat",
   "ROLE_EDIT": "Edit",

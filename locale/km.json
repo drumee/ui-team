@@ -1648,6 +1648,8 @@
   "ORG_IDENT_AVAILABLE": "This subdomain is available.",
   "ORG_ALREADY_IN_DOMAIN": "Your account already belongs to an organization.",
   "ORG_PROVISIONED": "Your organization space is ready — reloading to your new address…",
+  "ORG_JOINED_RELOAD": "អ្នកឥឡូវជាសមាជិករបស់ {0}។ កំពុងផ្ទុកឡើងវិញដើម្បីអនុវត្តគម្រោងអង្គភាពរបស់អ្នក…",
+  "ORG_LEFT_RELOAD": "អ្នកលែងជាសមាជិករបស់អង្គភាពនេះទៀតហើយ។ កំពុងផ្ទុកឡើងវិញ…",
   "ROLE_VIEW": "View",
   "ROLE_CHAT": "Chat",
   "ROLE_EDIT": "Edit",

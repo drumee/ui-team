@@ -1650,6 +1650,8 @@
   "ORG_IDENT_AVAILABLE": "Ce sous-domaine est disponible.",
   "ORG_ALREADY_IN_DOMAIN": "Votre compte appartient déjà à une organisation.",
   "ORG_PROVISIONED": "L'espace de votre organisation est prêt — rechargement vers votre nouvelle adresse…",
+  "ORG_JOINED_RELOAD": "Vous êtes maintenant membre de {0}. Rechargement pour appliquer l'offre de votre organisation…",
+  "ORG_LEFT_RELOAD": "Vous ne faites plus partie de cette organisation. Rechargement…",
   "ROLE_VIEW": "Lecture",
   "ROLE_CHAT": "Discussion",
   "ROLE_EDIT": "Modification",

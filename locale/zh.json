@@ -1648,6 +1648,8 @@
   "ORG_IDENT_AVAILABLE": "This subdomain is available.",
   "ORG_ALREADY_IN_DOMAIN": "Your account already belongs to an organization.",
   "ORG_PROVISIONED": "Your organization space is ready — reloading to your new address…",
+  "ORG_JOINED_RELOAD": "您现在是 {0} 的成员。正在重新加载以应用组织套餐…",
+  "ORG_LEFT_RELOAD": "您已不再是该组织的成员。正在重新加载…",
   "ROLE_VIEW": "View",
   "ROLE_CHAT": "Chat",
   "ROLE_EDIT": "Edit",
