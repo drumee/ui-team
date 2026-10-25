@@ -109,14 +109,8 @@ function startRename(ui, tab) {
 function build(ui, tabs, active, opt = {}) {
   const root = el("div", "editor-docs__tabs");
 
-  const top = el("div", "editor-docs__tabs-top");
-  const back = el("div", "editor-docs__tabs-close");
-  back.appendChild(icon("--icon-arrow-left", 18));
-  back.title = LOCALE.CLOSE || "Close";
-  back.addEventListener("click", () => ui.toggleTabs(false));
-  top.appendChild(back);
-  root.appendChild(top);
-
+  // The design's side panel head (Figma "Headings": title, then the close
+  // X at the right); "+" adds a tab. The glyphs are painted by the skin.
   const head = el("div", "editor-docs__tabs-head");
   head.appendChild(el("span", "editor-docs__tabs-title", LOCALE.DOCUMENT_TABS || "Document tabs"));
   const plus = el("div", "editor-docs__tabs-add");
@@ -124,6 +118,11 @@ function build(ui, tabs, active, opt = {}) {
   plus.title = LOCALE.NEW_TAB || "New tab";
   plus.addEventListener("click", () => ui.addTab());
   head.appendChild(plus);
+  const close = el("div", "editor-docs__tabs-close");
+  close.appendChild(icon("--icon-cross", 18));
+  close.title = LOCALE.CLOSE || "Close";
+  close.addEventListener("click", () => ui.toggleTabs(false));
+  head.appendChild(close);
   root.appendChild(head);
 
   const list = el("div", "editor-docs__tabs-list");
@@ -133,7 +132,6 @@ function build(ui, tabs, active, opt = {}) {
     if (t.id === opt.loading) state.push("is-loading");
     const row = el("div", `editor-docs__tab-row${state.length ? " " + state.join(" ") : ""}`);
     row.dataset.tab = t.id;
-    row.appendChild(icon("--icon-raw-documents_udoc", 18));
     row.appendChild(el("span", "editor-docs__tab-name", t.name || ""));
     const more = el("div", "editor-docs__tab-more", "⋮");
     more.addEventListener("click", (e) => {
