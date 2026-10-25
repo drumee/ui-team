@@ -10,6 +10,8 @@
  * `pid` is kept and the list is long enough to hold a few per folder.
  */
 
+const { dataTypeOf } = require("libs/file-meta");
+
 const MAX = 30;
 
 function key() {
@@ -33,12 +35,19 @@ function write(list) {
   }
 }
 
-/** Put `node` at the head of the list. */
+/**
+ * Put `node` at the head of the list. The Casual marker travels with it:
+ * the early Casual sheets are `.json` files told apart only by their
+ * dataType, and a row without it drew the "{..}" JSON badge.
+ */
 function remember(node = {}) {
   const { nid, hub_id, pid, filename, ext, filetype, area } = node;
   if (!nid || !hub_id) return;
   const rest = read().filter((r) => r.nid !== nid);
-  write([{ nid, hub_id, pid, filename, ext, filetype, area }, ...rest]);
+  const entry = { nid, hub_id, pid, filename, ext, filetype, area };
+  const dataType = dataTypeOf(node);
+  if (dataType) entry.dataType = dataType;
+  write([entry, ...rest]);
 }
 
 /** Drop a file that could not be opened any more. */

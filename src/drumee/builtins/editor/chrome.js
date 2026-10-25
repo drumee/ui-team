@@ -24,10 +24,6 @@ const share = require("builtins/player/widget/share");
 
 const DELEGATED = [_a.duplicate, _e.copy, _e.remove, _a.chat, "chat-threads", "download-file-chat"];
 
-// The design's file glyphs for the rail rows and the editor headers (:root
-// CSS variables, see the rail helper).
-require("builtins/player/widget/file-switcher/glyphs").install();
-
 const PRESETS = ["full", "left", "right", "center"];
 
 /** The gear menu rows (Figma 1364:120251). `opt.tabs` adds Document tabs. */

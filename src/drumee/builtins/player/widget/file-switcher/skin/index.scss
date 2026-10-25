@@ -497,44 +497,24 @@
 }
 
 // ── The design's icons, in every viewer ────────────────────────────────────
-// Phosphor regular glyphs for the panel chrome (Figma 873:221431), and the
-// Figma "file icon" glyphs (docx page, sheet grid) for the NEW Casual files
-// only (.udoc / .usheet) — 22px in the 30px box at 70%, like the design
-// (:root variables from ./glyphs). Word / Excel / PowerPoint rows keep their
-// own Office logos (user's call, 2026-10-25). The whole preview wrapper is
-// hidden, not only its svg: left in the flex row it squeezed the ::before
-// down to 13px.
+// Phosphor regular glyphs for the panel chrome (Figma 873:221431). The rows
+// draw the sprite as everywhere else; the Casual files' symbols
+// (raw-documents_udoc / _usheet) ARE the Figma "file icon" glyphs, at the
+// design's 70%. Word / Excel / PowerPoint rows keep their own Office logos
+// (user's call, 2026-10-25).
 .file-switcher__search-ico { @include ph.ph("magnifying-glass", 16px, true); }
 .file-switcher__create-ico { @include ph.ph("plus", 20px, true); }
 .file-switcher__toggle { @include ph.ph("square-split-horizontal", 20px, true); }
 .file-switcher__section:first-child .file-switcher__section-ico { @include ph.ph("clock", 20px, true); }
 .file-switcher__section:last-child .file-switcher__section-ico { @include ph.ph("files", 20px, true); }
 
-.file-switcher__row-icon {
-  &[data-ext="udoc"],
-  &[data-ext="usheet"] {
-    > * {
-      display: none !important;
-    }
-
-    &::before {
-      content: "";
-      display: block;
-      flex: none;
-      width: 22px;
-      height: 22px;
-      opacity: 0.7;
-      background: var(--fv-docx-glyph) center / contain no-repeat;
-    }
-  }
-
-  &[data-ext="usheet"]::before {
-    background-image: var(--fv-sheet-glyph);
-  }
+.file-switcher__row-icon[data-ext="udoc"] .preview-icon,
+.file-switcher__row-icon[data-ext="usheet"] .preview-icon {
+  opacity: 0.7;
 }
 
 // On the brand fill of the open file's row the glyph stays solid.
-.file-switcher__row--current .file-switcher__row-icon::before {
+.file-switcher__row--current .file-switcher__row-icon .preview-icon {
   opacity: 1;
 }
 

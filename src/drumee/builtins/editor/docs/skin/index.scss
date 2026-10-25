@@ -862,14 +862,6 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 // clutter beside the actions (the avatars stay), and the Figma's toolbar:
 // Phosphor glyphs, no strike / caps / super-sub / clear-format buttons.
 .editor-docs .docs-state {
-  .editor-docs__file-glyph {
-    color: #71a3f4;
-
-    svg {
-      fill: currentColor;
-    }
-  }
-
   [data-testid="title-bar"] {
     // The Figma menu row has no carets.
     button[aria-haspopup="menu"] svg {

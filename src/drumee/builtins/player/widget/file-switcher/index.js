@@ -25,7 +25,6 @@
  * (node, permissions) and closes it once the next file is up.
  */
 require("./skin");
-require("./glyphs").install();
 
 const { openMedia, CONTAINER_FILETYPES } = require("libs/open-media");
 const recent = require("./recent");
@@ -221,7 +220,15 @@ class __file_switcher extends LetcBox {
 
   renderLists() {
     const { nid } = this.node();
+    // A remembered row is a thin copy (recent.js); the folder listing has the
+    // fresh name and the metadata (the Casual marker of the early `.json`
+    // sheets), so a recent that is also listed takes the listing's fields.
+    const fresh = (n) => {
+      const f = this._folder.find((x) => x.nid === n.nid);
+      return f ? { ...n, ...f } : n;
+    };
     const recents = this._recent
+      .map(fresh)
       .filter((n) => (n.nid === nid || this.inScope(n)) && this.match(n))
       .slice(0, MAX_RECENT);
     // The whole folder, as the folder's own Group view lists it, the open

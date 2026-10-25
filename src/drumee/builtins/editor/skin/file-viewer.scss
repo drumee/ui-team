@@ -224,8 +224,8 @@ $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
 // Header actions and gear rows: Phosphor regular (LockKey, DownloadSimple,
 // Gear, ArrowsOutSimple, X; Copy, PencilSimpleLine, Hash, ShareNetwork, Info,
 // Trash). The sprite glyph inside each control is hidden and the Phosphor
-// one painted in its place (skin/phosphor). File glyphs: the design's own
-// bitmaps (editor/chrome installGlyphs → --fv-docx-glyph / --fv-sheet-glyph).
+// one painted in its place (skin/phosphor). File glyphs: the sprite's
+// raw-documents_udoc / _usheet, the design's file icons redrawn as vectors.
 .editor-docs,
 .editor-sheet {
   .editor-chrome__share {
@@ -264,34 +264,9 @@ $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
 
 }
 
-// Docs header: the 40px docx glyph (docs_state._decorateTitleBar box).
-.editor-docs .docs-state .editor-docs__file-glyph {
-  svg {
-    display: none !important;
-  }
-
-  &::before {
-    content: "";
-    display: block;
-    width: 32px;
-    height: 32px;
-    opacity: 0.7;
-    background: var(--fv-docx-glyph) center / contain no-repeat;
-  }
-}
-
-// Sheet header: the 36px sheet glyph in the shared topbar's identity block.
-.editor-sheet .drumee-topbar__filetype {
-  .drumee-topbar__filetype-icon {
-    display: none !important;
-  }
-
-  &::before {
-    content: "";
-    display: block;
-    width: 28px;
-    height: 28px;
-    opacity: 0.7;
-    background: var(--fv-sheet-glyph) center / contain no-repeat;
-  }
+// Headers: the design's file glyphs (sprite raw-documents_udoc / _usheet,
+// the Figma "file icon" set redrawn as vectors) at the design's 70%.
+.editor-docs .docs-state .editor-docs__file-glyph svg,
+.editor-sheet .drumee-topbar__filetype .drumee-topbar__filetype-icon {
+  opacity: 0.7;
 }

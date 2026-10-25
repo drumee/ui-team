@@ -367,7 +367,7 @@ class __docs_state extends DrumeeMFS {
     const glyph = document.createElement("span");
     glyph.className = "editor-docs__file-glyph";
     glyph.innerHTML =
-      '<svg width="32" height="32" aria-hidden="true"><use href="#--icon-addmenu-document"></use></svg>';
+      '<svg width="32" height="32" aria-hidden="true"><use href="#--icon-raw-documents_udoc"></use></svg>';
     host.insertBefore(glyph, host.firstChild);
   }
 

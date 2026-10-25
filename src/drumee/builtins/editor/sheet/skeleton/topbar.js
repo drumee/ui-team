@@ -17,7 +17,7 @@ function config(ui) {
       // Casual Sheets has no title bar of its own (unlike Docs), so this row
       // IS the document title row: the Figma's 36px sheet glyph + 18px
       // inline-editable name.
-      fileTypeIcon: "addmenu-spreadsheet",
+      fileTypeIcon: "raw-documents_usheet",
       title: ui.mget(_a.filename),
     },
     status: Skeletons.Note({

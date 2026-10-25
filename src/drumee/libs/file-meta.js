@@ -66,13 +66,41 @@ function humanFileSize(bytes) {
  * @param {Object} node        `{filetype, ext}` — either may be absent
  * @returns {String} sprite name
  */
+/**
+ * The Casual marker of a node: `dataType` on a media model, inside
+ * `metadata` on a raw listing row — where it may still be the JSON string
+ * the server stores. The early Casual sheets are `.json` on disk, so this
+ * marker is the only thing telling them from plain JSON.
+ */
+function dataTypeOf(node = {}) {
+  if (node.dataType) return node.dataType;
+  let meta = node.metadata;
+  if (typeof meta === "string") {
+    try {
+      meta = JSON.parse(meta);
+    } catch (e) {
+      meta = null;
+    }
+  }
+  return (meta && meta.dataType) || "";
+}
+
+/** Which Casual editor a node belongs to: "sheet", "docs" or "" (none). */
+function casualKind(node = {}) {
+  const ext = String(node.ext || "").toLowerCase();
+  const dataType = dataTypeOf(node);
+  if (ext === "usheet" || dataType === "sheet.univer") return "sheet";
+  if (ext === "udoc" || dataType === "doc.casual") return "docs";
+  return "";
+}
+
 function fileGlyph(node = {}) {
   const filetype = String(node.filetype || "").toLowerCase();
   const ext = String(node.ext || "").toLowerCase();
   // Univer/Casual sheets are .json on disk but show the spreadsheet glyph.
-  const dataType = node.dataType || (node.metadata && node.metadata.dataType);
-  if (dataType === "sheet.univer" || ext === "usheet") return "app-xls-file";
-  if (dataType === "doc.casual" || ext === "udoc") return "app-doc-file";
+  const casual = casualKind(node);
+  if (casual === "sheet") return "app-xls-file";
+  if (casual === "docs") return "app-doc-file";
 
   if (filetype === "audio") return "app-audio-file";
   if (filetype === "video" || filetype === "stream") return "app-video-file";
@@ -181,4 +209,4 @@ function chipGlyph(node) {
   return mapped || "app-file";
 }
 
-module.exports = { humanFileSize, fileGlyph, fileMeta, chipGlyph };
+module.exports = { humanFileSize, fileGlyph, fileMeta, chipGlyph, dataTypeOf, casualKind };
