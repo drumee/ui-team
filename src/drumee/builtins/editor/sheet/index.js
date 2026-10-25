@@ -24,7 +24,8 @@ class __editor_sheet extends __player {
     // never pop an OLDER editor over one the user opened afterwards.
     window.__drumeeEditorSeq = (window.__drumeeEditorSeq || 0) + 1;
     this._launchSeq = window.__drumeeEditorSeq;
-    window.onbeforeunload = this.checkUnsavedWork.bind(this);
+    this._beforeUnload = this.checkUnsavedWork.bind(this);
+    window.onbeforeunload = this._beforeUnload;
     if (!opt.media) {
       /** New sheet: no source file yet, defaults to the owner's deck */
       this.mset({
@@ -52,7 +53,9 @@ class __editor_sheet extends __player {
    *
    */
   onBeforeDestroy() {
-    window.removeEventListener("beforeunload", this.checkUnsavedWork.bind(this));
+    // Assigned, not added: removeEventListener on a fresh bind never detached
+    // it, so a closed editor kept answering the page's beforeunload.
+    if (window.onbeforeunload === this._beforeUnload) window.onbeforeunload = null;
     try {
       if (this._wsObserver) this._wsObserver.disconnect();
     } catch (e) {

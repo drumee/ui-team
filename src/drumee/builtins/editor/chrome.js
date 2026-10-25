@@ -24,28 +24,10 @@ const share = require("builtins/player/widget/share");
 
 const DELEGATED = [_a.duplicate, _e.copy, _e.remove, _a.chat, "chat-threads", "download-file-chat"];
 
-/**
- * The Figma's file glyphs (docx page, sheet grid) for the editor headers,
- * handed to the skins as CSS variables on the editor windows. Bitmaps from
- * the design file (assets/file-icons), through webpack's file-loader.
- */
-function glyphUrl(mod) {
-  const u = mod && mod.default ? mod.default : mod;
-  return `url("${u}")`;
-}
-(function installGlyphs() {
-  if (typeof document === "undefined" || document.getElementById("fv-file-glyphs")) return;
-  try {
-    const docx = glyphUrl(require("assets/file-icons/file-docx.png"));
-    const sheet = glyphUrl(require("assets/file-icons/file-sheet.png"));
-    const style = document.createElement("style");
-    style.id = "fv-file-glyphs";
-    style.textContent = `.editor-docs,.editor-sheet{--fv-docx-glyph:${docx};--fv-sheet-glyph:${sheet}}`;
-    document.head.appendChild(style);
-  } catch (e) {
-    /** the sprite glyphs stay */
-  }
-})();
+// The design's file glyphs for the rail rows and the editor headers (:root
+// CSS variables, see the rail helper).
+require("builtins/player/widget/file-switcher/glyphs").install();
+
 const PRESETS = ["full", "left", "right", "center"];
 
 /** The gear menu rows (Figma 1364:120251). `opt.tabs` adds Document tabs. */
@@ -151,6 +133,41 @@ function adoptNode(ui, file) {
   ui._chromeNode = file;
 }
 
+/**
+ * The node, built when there is none: a window opened from a deep link, a
+ * desk link or Recently viewed has no source tile, and Make a copy / Move
+ * to trash / Chat threads were silent no-ops there. Same detached media view
+ * libs/open-media hands a player, from the node's attributes, kept for the
+ * next click. Resolves null when the file is not on disk yet.
+ */
+function ensureNode(ui) {
+  const found = nodeOf(ui);
+  if (found) return Promise.resolve(found);
+  if (ui._chromeNodeP) return ui._chromeNodeP;
+  const nid = ui.mget(_a.nid);
+  const hub_id = ui.mget(_a.hub_id);
+  if (!nid || !hub_id) return Promise.resolve(null);
+  ui._chromeNodeP = (async () => {
+    try {
+      const node = await ui.fetchService(
+        { service: SERVICE.media.attributes, nid, hub_id },
+        { async: 1 }
+      );
+      if (!node || !node.nid || ui.isDestroyed()) return null;
+      const k = await Kind.waitFor(_a.media);
+      const view = new k({ model: new Backbone.Model(node) });
+      ui._chromeNode = view;
+      return view;
+    } catch (e) {
+      ui.warn("editor chrome: could not build the file's node", e);
+      return null;
+    } finally {
+      ui._chromeNodeP = null;
+    }
+  })();
+  return ui._chromeNodeP;
+}
+
 function snapOpt() {
   return { minWidth: 480, minHeight: 320 };
 }
@@ -219,18 +236,19 @@ function handleService(ui, cmd, args = {}) {
     // launch, from this window's own attributes). A window opened from a
     // tile only adopted nid / hub_id / pid: the rest of the node (filetype,
     // area, ext, name) is copied in first so the panel knows the file.
-    case "secure-share": {
-      const node = nodeOf(ui);
-      if (node) {
-        const fill = {};
-        for (const k of [_a.filetype, _a.area, _a.ext, _a.filename, _a.nid, _a.hub_id]) {
-          if (ui.mget(k) == null && node.mget(k) != null) fill[k] = node.mget(k);
+    case "secure-share":
+      ensureNode(ui).then((node) => {
+        if (ui.isDestroyed()) return;
+        if (node) {
+          const fill = {};
+          for (const k of [_a.filetype, _a.area, _a.ext, _a.filename, _a.nid, _a.hub_id]) {
+            if (ui.mget(k) == null && node.mget(k) != null) fill[k] = node.mget(k);
+          }
+          if (Object.keys(fill).length) ui.mset(fill);
         }
-        if (Object.keys(fill).length) ui.mset(fill);
-      }
-      share.click(ui, cmd);
+        share.click(ui, cmd);
+      });
       return true;
-    }
 
     // The base player's _showInfo() needs a `wrapper-info` part the editor
     // skeletons do not have; the document player's details card instead.
@@ -244,13 +262,29 @@ function handleService(ui, cmd, args = {}) {
 
     default:
       if (!DELEGATED.includes(service)) return false;
-      {
-        const node = nodeOf(ui);
-        if (node) node.onUiEvent(cmd, args);
-        else ui.warn(`editor chrome: no source node for ${service} yet`);
-      }
+      ensureNode(ui).then((node) => {
+        if (ui.isDestroyed()) return;
+        if (!node) {
+          ui.warn(`editor chrome: no source node for ${service} yet`);
+          return;
+        }
+        let ret;
+        try {
+          ret = node.onUiEvent(cmd, args);
+        } catch (e) {
+          ui.warn(`editor chrome: ${service} failed`, e);
+          return;
+        }
+        // The copy is made by the tile's service call: once it answers, the
+        // Files rail re-lists the folder (it listens on its player).
+        if (service === _a.duplicate) {
+          Promise.resolve(ret)
+            .then(() => !ui.isDestroyed() && ui.trigger("folder-changed"))
+            .catch(() => {});
+        }
+      });
       return true;
   }
 }
 
-module.exports = { gearMenu, topbarConfig, handleService, adoptNode, nodeOf, PRESETS };
+module.exports = { gearMenu, topbarConfig, handleService, adoptNode, nodeOf, ensureNode, PRESETS };

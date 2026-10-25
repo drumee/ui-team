@@ -25,6 +25,7 @@
  * (node, permissions) and closes it once the next file is up.
  */
 require("./skin");
+require("./glyphs").install();
 
 const { openMedia, CONTAINER_FILETYPES } = require("libs/open-media");
 const recent = require("./recent");
@@ -138,6 +139,31 @@ class __file_switcher extends LetcBox {
         p.el.scrollTop = h.scrollTop;
       });
     }
+    // Follow the open file: a rename goes through the player's model, and
+    // the editors say when the folder changed under them (Make a copy).
+    const p = this.player;
+    if (p && p.model && !this._following) {
+      this._following = 1;
+      this.listenTo(p.model, `change:${_a.filename}`, (m, filename) => {
+        this.onPlayerRenamed(filename);
+      });
+      this.listenTo(p, "folder-changed", () => this.loadOthers());
+    }
+  }
+
+  /** The open file was renamed: its rows (and the remembered entry) follow. */
+  onPlayerRenamed(filename) {
+    if (!filename || this.isDestroyed()) return;
+    const node = this.node();
+    const { nid } = node;
+    if (!nid) return;
+    for (const list of [this._recent, this._folder]) {
+      for (const n of list) {
+        if (n.nid === nid) n.filename = filename;
+      }
+    }
+    recent.remember({ ...node, filename });
+    this.renderLists();
   }
 
   /** Files of the listed folder (_scope), newest first; folders left out. */

@@ -1,4 +1,5 @@
 @use "mixins/drumee";
+@use "../../../../editor/skin/phosphor" as ph;
 
 // Open-File Switcher — Figma "Drumee 2.0" 828:87909 (expanded, 240px) and
 // 873:221431 (collapsed, icons only).
@@ -493,6 +494,60 @@
       display: none;
     }
   }
+}
+
+// ── The design's icons, in every viewer ────────────────────────────────────
+// Phosphor regular glyphs for the panel chrome (Figma 873:221431) and the
+// Figma "file icon" set for the rows: the docx page stands for every document
+// (Casual's .udoc and Word's .docx alike), the sheet grid for every sheet, the
+// pptx one for slides — 22px in the 30px box at 70%, like the design (:root
+// variables from ./glyphs). The whole preview wrapper is hidden, not only its
+// svg: left in the flex row it squeezed the ::before down to 13px.
+.file-switcher__search-ico { @include ph.ph("magnifying-glass", 16px, true); }
+.file-switcher__create-ico { @include ph.ph("plus", 20px, true); }
+.file-switcher__toggle { @include ph.ph("square-split-horizontal", 20px, true); }
+.file-switcher__section:first-child .file-switcher__section-ico { @include ph.ph("clock", 20px, true); }
+.file-switcher__section:last-child .file-switcher__section-ico { @include ph.ph("files", 20px, true); }
+
+.file-switcher__row-icon {
+  &[data-ext="udoc"],
+  &[data-ext="doc"],
+  &[data-ext="docx"],
+  &[data-ext="usheet"],
+  &[data-ext="xls"],
+  &[data-ext="xlsx"],
+  &[data-ext="ppt"],
+  &[data-ext="pptx"] {
+    > * {
+      display: none !important;
+    }
+
+    &::before {
+      content: "";
+      display: block;
+      flex: none;
+      width: 22px;
+      height: 22px;
+      opacity: 0.7;
+      background: var(--fv-docx-glyph) center / contain no-repeat;
+    }
+  }
+
+  &[data-ext="usheet"]::before,
+  &[data-ext="xls"]::before,
+  &[data-ext="xlsx"]::before {
+    background-image: var(--fv-sheet-glyph);
+  }
+
+  &[data-ext="ppt"]::before,
+  &[data-ext="pptx"]::before {
+    background-image: var(--fv-pptx-glyph);
+  }
+}
+
+// On the brand fill of the open file's row the glyph stays solid.
+.file-switcher__row--current .file-switcher__row-icon::before {
+  opacity: 1;
 }
 
 // Namespaced: @keyframes is global.

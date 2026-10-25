@@ -19,12 +19,19 @@ $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
 .editor-docs,
 .editor-sheet {
   // ---- Header action cluster ------------------------------------------
-  // Share pill, then four 48px buttons (Download / gear / Move & Resize /
-  // Close), 16px apart. A pressed/open button sits on Grey/20, radius 12.
+  // Share pill, 16px, then the "Options" group: four 48px buttons edge to
+  // edge (Download / gear / Move & Resize / Close). A pressed/open button
+  // sits on Grey/20, radius 12. The status label, when shown, keeps the same
+  // 16px before the pill.
   .drumee-topbar__actions {
     align-items: center;
-    gap: 16px;
+    gap: 0;
     height: 48px;
+  }
+
+  .drumee-topbar__status,
+  .editor-chrome__share {
+    margin-right: 16px;
   }
 
   .drumee-topbar__actions .icon,
@@ -134,8 +141,14 @@ $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
       background-color: $fv-grey20;
     }
 
+    // A 1px Grey/30 rule, as the design — not a padded row.
     &.separator {
       background-color: $fv-grey30;
+      border-radius: 0;
+      height: 1px;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
     }
 
     &.trash {
@@ -249,31 +262,6 @@ $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
   .fv-row--info .drumee-topbar__menu-icon { @include ph.ph("info", 16px, true); }
   .fv-row--trash .drumee-topbar__menu-icon { @include ph.ph("trash", 16px, true); }
 
-  // The Files rail inside the editor card.
-  .file-switcher__search-ico { @include ph.ph("magnifying-glass", 16px, true); }
-  .file-switcher__create-ico { @include ph.ph("plus", 20px, true); }
-  .file-switcher__toggle { @include ph.ph("square-split-horizontal", 20px, true); }
-  .file-switcher__section:first-child .file-switcher__section-ico { @include ph.ph("clock", 20px, true); }
-  .file-switcher__section:last-child .file-switcher__section-ico { @include ph.ph("files", 20px, true); }
-
-  .file-switcher__row-icon[data-ext="udoc"],
-  .file-switcher__row-icon[data-ext="usheet"] {
-    .preview-icon {
-      display: none !important;
-    }
-
-    &::before {
-      content: "";
-      display: block;
-      width: 22px;
-      height: 22px;
-      background: var(--fv-docx-glyph) center / contain no-repeat;
-    }
-  }
-
-  .file-switcher__row-icon[data-ext="usheet"]::before {
-    background-image: var(--fv-sheet-glyph);
-  }
 }
 
 // Docs header: the 40px docx glyph (docs_state._decorateTitleBar box).
@@ -287,6 +275,7 @@ $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
     display: block;
     width: 32px;
     height: 32px;
+    opacity: 0.7;
     background: var(--fv-docx-glyph) center / contain no-repeat;
   }
 }
@@ -302,6 +291,7 @@ $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
     display: block;
     width: 28px;
     height: 28px;
+    opacity: 0.7;
     background: var(--fv-sheet-glyph) center / contain no-repeat;
   }
 }
