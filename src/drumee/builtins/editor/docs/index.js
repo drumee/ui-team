@@ -2,6 +2,7 @@ const __player = require("player/interact");
 const renameInline = require("builtins/player/widget/topbar/rename");
 const { attachHelpContactMenu } = require("builtins/editor/help-contact-menu");
 const collab = require("./collab");
+const chrome = require("builtins/editor/chrome");
 const docTabs = require("./tabs");
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 
@@ -36,7 +37,8 @@ class __editor_docs extends __player {
     // never pop an OLDER editor over one the user opened afterwards.
     window.__drumeeEditorSeq = (window.__drumeeEditorSeq || 0) + 1;
     this._launchSeq = window.__drumeeEditorSeq;
-    window.onbeforeunload = this.checkUnsavedWork.bind(this);
+    this._beforeUnload = this.checkUnsavedWork.bind(this);
+    window.onbeforeunload = this._beforeUnload;
     if (!opt.media) {
       this.mset({
         hub_id: Visitor.id,
@@ -67,6 +69,14 @@ class __editor_docs extends __player {
       }
     }
     this.target = opt.target || Wm.getActiveWindow();
+    // A NEW file lands in the folder window it was created from (the save
+    // target), not in the owner's home: the Open-File Switcher lists that
+    // folder, and the model must say so before the skeleton is built.
+    if (!opt.media && this.target && _.isFunction(this.target.getCurrentNid)) {
+      const pid = this.target.getCurrentNid();
+      const hub_id = this.target.mget(_a.hub_id);
+      if (pid && hub_id) this.mset({ pid, hub_id });
+    }
   }
 
   /**
@@ -74,7 +84,9 @@ class __editor_docs extends __player {
    */
   onBeforeDestroy() {
     console.log("[DOCS] window onBeforeDestroy");
-    window.removeEventListener("beforeunload", this.checkUnsavedWork.bind(this));
+    // Assigned, not added: removeEventListener on a fresh bind never detached
+    // it, so a closed editor kept answering the page's beforeunload.
+    if (window.onbeforeunload === this._beforeUnload) window.onbeforeunload = null;
     try {
       if (this._wsObserver) this._wsObserver.disconnect();
     } catch (e) {
@@ -103,7 +115,10 @@ class __editor_docs extends __player {
     // outright (collab.js answers at once when nothing changed since the
     // last save). Only "Unsaved changes" left on the header means it failed.
     if (st && st._collab) {
-      await this.saveContent();
+      // Casual's flush can stay pending (a brand-new room, a throttled tab):
+      // the autosave has been writing all along, so a flush that takes more
+      // than a few seconds must not keep the window from closing.
+      await capped(this.saveContent(), 8000);
       return this._saveState !== "unsaved";
     }
     if (!this._changed) return true;
@@ -621,6 +636,8 @@ class __editor_docs extends __player {
           if (!b || !b.getItemsByAttr) continue;
           let [file] = b.getItemsByAttr(_a.nid, data.nid);
           if (file) {
+            // The tile the first save created: the gear menu acts on it.
+            chrome.adoptNode(this, file);
             if (file.restart) {
               file.mset(data);
               file.restart("media:modified");
@@ -635,6 +652,11 @@ class __editor_docs extends __player {
               ...data,
             };
             delete item.replace;
+            // The save reply names the node but not always its type: the tile
+            // must carry them, or a double-click on it resolves its player
+            // from the category ("text") and opens the stored JSON.
+            if (!item.ext) item.ext = "udoc";
+            if (!item.dataType) item.dataType = "doc.casual";
             b.insertMedia(item, 0);
           }
         }
@@ -682,6 +704,9 @@ class __editor_docs extends __player {
       case "contact-support":
         return this.contactSupport();
       default:
+        // Share / Download / Get info / Move & Resize / node actions
+        // (editor/chrome); the rest is player chrome and belongs to the base.
+        if (chrome.handleService(this, cmd, args)) return;
         if (super.onUiEvent) super.onUiEvent(cmd, args);
     }
   }
@@ -708,7 +733,10 @@ class __editor_docs extends __player {
     // The co-editing mount joins the file's original room before the list is
     // known; once it is, move to the room of the tab the file was left on.
     if (this._doc && this._doc.ensureRoomForActive) this._doc.ensureRoomForActive();
-    if (this._tabs.length && !this._tabsClosedByUser && !this._tabsOpen) {
+    // Only once there is something to switch between: the Figma "File
+    // viewer" header has no tabs column, so a one-tab document (every new
+    // one) keeps the whole card for the page; the gear menu opens the rail.
+    if (this._tabs.length > 1 && !this._tabsClosedByUser && !this._tabsOpen) {
       this.toggleTabs(true);
       return;
     }

@@ -2,6 +2,11 @@
 #   FILE : /src/drumee/builtins/editor/docs/skin
 #   TYPE : Component style — Casual Docs (DocxEditor) window
 # ===================================================================**/
+@use "../../skin/file-viewer";
+@use "../../skin/phosphor" as ph;
+
+// Material Symbols arrow_drop_down — the caret the Figma draws on every toolbar menu.
+$fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-360 280-560h400L480-360Z'/%3E%3C/svg%3E";
 
 // The Drumee player window sets user-select:none (drag chrome). That inherits
 // onto the ProseMirror editing surface and blocks typing — re-enable selection
@@ -12,10 +17,12 @@
 // "All changes saved" label would duplicate it — EXCEPT when a save failed:
 // Casual keeps reading "Unsaved changes" whatever the reason, so the one
 // state the user must see stays visible.
-.editor-docs--collab .editor-docs__save-status:not([data-state="unsaved"]) {
+// Both shells: the design has no status text in the header — only the
+// "Unsaved changes" warning shows, while it lasts.
+.editor-docs .editor-docs__save-status:not([data-state="unsaved"]) {
   display: none !important;
 }
-.editor-docs--collab .editor-docs__save-status[data-state="unsaved"] {
+.editor-docs .editor-docs__save-status[data-state="unsaved"] {
   color: var(--warning-fg, #b06000);
 }
 
@@ -348,7 +355,7 @@
   // no class or test id of its own.
   div:has(> [data-testid="presence-cluster"]) {
     flex-direction: row-reverse;
-    margin-right: 150px;
+    margin-right: 0;
   }
   [data-testid="presence-cluster"] {
     gap: 10px;
@@ -364,18 +371,20 @@
   .editor-docs__collab-name {
     display: flex;
     align-items: center;
-    margin: 0 8px 0 12px;
+    margin: 0;
+    min-width: 0;
 
     input {
-      font: 400 16px/1.2 var(--font-main);
-      color: #1f2328;
+      font: 400 18px/1.2 var(--font-main);
+      color: #0b0a21;
       background: transparent;
       border: 0;
       outline: none;
-      padding: 4px 8px;
+      padding: 2px 8px;
       border-radius: 6px;
-      min-width: 120px;
-      max-width: 320px;
+      min-width: 160px;
+      max-width: 46ch;
+      text-overflow: ellipsis;
 
       &:hover {
         background: #f1f3f4;
@@ -576,15 +585,22 @@
   // presence cluster and the autosave label that share the row.
   // NOTE the shared topbar names its rows by `fig.group` → `.editor__header`
   // (not `.editor-docs__header`).
-  > .editor__main > .editor__header.container {
+  // Figma 1319:146667: the header is 75px — glyph + name on the first row,
+  // File / Edit / View … on the second (docs_state lays Casual's title bar
+  // out as that grid, below) — and the Share pill + 48px actions are
+  // centred on its full height, 10px from the right edge.
+  // The Open-File Switcher frame nests the header under its stage (which is
+  // position:relative), hence the second selector.
+  > .editor__main > .editor__header.container,
+  .file-switcher__stage > .editor__header.container {
     position: absolute;
     top: 0;
     right: 0;
     left: auto;
     width: auto;
-    height: 48px;
+    height: 75px;
     min-height: 0;
-    padding: 0 12px 0 0;
+    padding: 0 10px 0 0;
     border: 0;
     background: transparent;
     z-index: 200;
@@ -596,6 +612,9 @@
     .drumee-topbar__bar {
       width: auto;
       height: 100%;
+      // The shared topbar pads its row 22px: the Figma's X sits 10px from
+      // the card edge, which the container's own padding already gives.
+      padding: 0;
       background: transparent;
       justify-content: flex-end;
       pointer-events: auto;
@@ -603,7 +622,7 @@
     .drumee-topbar__actions {
       align-items: center;
       height: 100%;
-      gap: 2px;
+      gap: 0;
     }
   }
 
@@ -670,5 +689,284 @@
   }
   100% {
     transform: translateX(333%);
+  }
+}
+
+// ── Drumee 2.0 "File viewer" (Figma 1319:146667) ───────────────────────────
+// Casual's chrome, laid out and coloured as the design: white header in two
+// rows (40px glyph + 18px name, then the menu row), the formatting bar as a
+// 40px pill on Overlay/blue inset 16px, the panel rail on the LEFT, and the
+// Drumee font everywhere.
+.editor-docs .docs-state {
+  // Casual paints its title bar, toolbar wrapper and status bar with
+  // --doc-chrome, and the ground around the page with --doc-bg: the design
+  // has them all white, the paper drawn by a hairline instead of a shadow.
+  --doc-chrome: #ffffff;
+  --doc-bg: #ffffff;
+
+  .paged-editor__pages {
+    background: #fff;
+  }
+
+  .layout-page {
+    border: 1px solid #c7c7c7;
+    border-bottom: 0;
+    box-shadow: none !important;
+  }
+
+  .ep-root {
+    font-family: var(--font-main);
+  }
+
+  // Title bar → 3-column, 2-row grid, the Figma "file-name" block: the 40px
+  // glyph at the left edge, centred on the 75px bar (out of flow, see
+  // .editor-docs__file-glyph), the name row and the menu row stacked 6px
+  // apart and centred as a block, the presence cluster centred on the bar
+  // like the floating action cluster. Casual's children, in order: Drumee's
+  // name box (co-editing shell), Casual's column (menu row; name + menu in
+  // the single-user shell), the right slot.
+  // The right padding leaves room for the floating action cluster (Share
+  // 111 + 16 + 4 x 48 + 10 edge) plus 16 before the avatar.
+  [data-testid="title-bar"] {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-content: center;
+    align-items: center;
+    column-gap: 0;
+    row-gap: 6px;
+    height: 75px;
+    box-sizing: border-box;
+    padding: 8px 350px 8px 8px;
+    border: 0;
+    background: #fff;
+
+    // Row 1: the name, its text 8px after the glyph (Figma "Top" row).
+    > .editor-docs__collab-name {
+      grid-column: 1;
+      grid-row: 1;
+      padding-left: 40px;
+    }
+
+    // Row 2: Casual's column — its menu row has 4px of its own (px-1), so
+    // 36px here puts "File" (button padding 8) right under the name text
+    // (glyph 40 + input padding 8): both 48px in, as the Figma.
+    > .flex-col {
+      grid-column: 1 / span 2;
+      grid-row: 2;
+      padding: 0 0 0 36px !important;
+      overflow: visible;
+    }
+
+    // The right slot (presence cluster), centred on the bar.
+    > .flex-col ~ div {
+      grid-column: 3;
+      grid-row: 1 / span 2;
+      align-self: center;
+      justify-self: end;
+      padding: 0 !important;
+    }
+
+    button[aria-haspopup="menu"] {
+      font: 400 14px/1.2 var(--font-main);
+      color: #34343a;
+      padding: 3px 8px;
+      border-radius: 4px;
+      height: auto;
+      min-height: 0;
+
+      &:hover,
+      &[data-state="open"] {
+        background: #f2f2f7;
+        color: #0b0a21;
+      }
+    }
+  }
+
+  // The 40px file glyph (docs_state._decorateTitleBar): out of the grid
+  // flow, 8px from the card edge and centred on the 75px bar — the name and
+  // menu rows stack beside it (padding-left 40 above).
+  .editor-docs__file-glyph {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 4px;
+    box-sizing: border-box;
+    border-radius: 6px;
+
+    svg {
+      width: 32px;
+      height: 32px;
+      display: block;
+    }
+  }
+
+  // Formatting bar: a pill on Overlay/blue, 40px, 16px in from the card.
+  .ep-root [data-testid="formatting-bar"] {
+    margin: 0 16px 10px !important;
+    padding: 6px 8px !important;
+    min-height: 40px;
+    gap: 4px;
+    background: rgba(113, 163, 244, 0.1) !important;
+    border-radius: 100px;
+    color: #0b0a21;
+
+    > div {
+      border-color: #d1d1d6 !important;
+    }
+
+    button {
+      color: #0b0a21;
+      border-radius: 4px;
+    }
+  }
+
+  // The comments / history / outline rail: Casual floats it at the right
+  // edge; the design has it at the LEFT of the page, 48px tiles.
+  [data-testid="panel-rail"] {
+    left: 8px !important;
+    right: auto !important;
+    padding: 12px 8px;
+    border: 0;
+    background: #fff;
+
+    button {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      color: #0b0a21;
+
+      svg {
+        width: 24px;
+        height: 24px;
+      }
+    }
+  }
+
+  [data-testid="status-bar"] {
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    color: #65656c;
+    font-family: var(--font-main);
+  }
+}
+
+// ── Figma parity pass (user review 2026-10-23) ─────────────────────────────
+// Blue doc glyph, no carets on the menu row, no "Live / Unsaved changes"
+// clutter beside the actions (the avatars stay), and the Figma's toolbar:
+// Phosphor glyphs, no strike / caps / super-sub / clear-format buttons.
+.editor-docs .docs-state {
+  [data-testid="title-bar"] {
+    // The Figma menu row has no carets.
+    button[aria-haspopup="menu"] svg {
+      display: none !important;
+    }
+
+    > :nth-child(3) {
+      // Casual's own "Unsaved changes" text and the Live pill.
+      span.text-xs {
+        display: none !important;
+      }
+
+      [data-testid="presence-cluster"] > :not(:first-child) {
+        display: none !important;
+      }
+    }
+  }
+
+  .ep-root [data-testid="formatting-bar"] {
+    [data-testid="toolbar-undo"] { @include ph.ph("arrow-u-up-left"); }
+    [data-testid="toolbar-redo"] { @include ph.ph("arrow-u-up-right"); }
+    [data-testid="toolbar-paint-format"] { @include ph.ph("paint-roller"); }
+    [data-testid="toolbar-bold"] { @include ph.ph("text-b"); }
+    [data-testid="toolbar-italic"] { @include ph.ph("text-italic"); }
+    [data-testid="toolbar-underline"] { @include ph.ph("text-underline"); }
+    button[title="Font Color"]:first-child { @include ph.ph("text-a-underline"); }
+    button[title="Text Highlight Color"]:first-child { @include ph.ph("highlighter"); }
+    [data-testid="toolbar-insert-link"] { @include ph.ph("link-simple-horizontal"); }
+    [data-testid="toolbar-image"] { @include ph.ph("image"); }
+    [data-testid="toolbar-add-comment"] { @include ph.ph("chat-text"); }
+    [data-testid="toolbar-alignment"] { @include ph.ph("text-align-left"); }
+    button[title^="Bullet List"] { @include ph.ph("list-bullets"); }
+    button[title^="Numbered List"] { @include ph.ph("list-numbers"); }
+    button[title^="Decrease Indent"] { @include ph.ph("text-outdent"); }
+    button[title^="Increase Indent"] { @include ph.ph("text-indent"); }
+
+    // "Editing ▾" → the pencil alone, as the Figma draws it.
+    button[aria-label^="Editing"] {
+      @include ph.ph("pencil-simple");
+      font-size: 0 !important;
+      gap: 2px;
+
+      > span,
+      > div {
+        font-size: 0 !important;
+        line-height: 0;
+      }
+    }
+
+    // Casual mixes two carets: a heroicons chevron on the zoom / paragraph
+    // style / font family / line spacing menus, Material's arrow_drop_down
+    // elsewhere. The Figma uses arrow_drop_down on every menu and none on
+    // line spacing: repaint the chevrons (path hidden, the svg box masked
+    // with the triangle) and drop the line-spacing one.
+    svg.h-4.w-4 {
+      width: 18px;
+      height: 18px;
+      flex: none;
+      background-color: currentColor;
+      -webkit-mask: url($fv-caret) center / contain no-repeat;
+      mask: url($fv-caret) center / contain no-repeat;
+
+      path {
+        display: none;
+      }
+    }
+
+    button[title^="Line spacing"] > svg.h-4.w-4 {
+      display: none !important;
+    }
+
+    [data-testid="toolbar-alignment"] svg.-ml-1 {
+      width: 18px;
+      height: 18px;
+      margin-left: 0;
+    }
+
+    // Not in the Figma toolbar (all of them live in the Format menu).
+    [data-testid="toolbar-strikethrough"],
+    [data-testid="toolbar-small-caps"],
+    [data-testid="toolbar-all-caps"],
+    [data-testid="toolbar-superscript"],
+    [data-testid="toolbar-subscript"],
+    > div:has(> [data-testid="toolbar-superscript"]),
+    > [data-testid="toolbar-clear-formatting"] {
+      display: none !important;
+    }
+
+    button {
+      color: #0b0a21;
+    }
+  }
+}
+
+// Single-user shell (DocxEditor, collab gateway down): Casual renders its own
+// logo box, then the column with the name row AND the menu row, then the
+// right slot; the glyph is inserted first (docs_state._decorateSingleTitleBar).
+// The logo box goes, the column takes both grid rows.
+.editor-docs:not(.editor-docs--collab) .docs-state [data-testid="title-bar"] {
+  > .editor-docs__file-glyph ~ div:not(.flex-col):not(.flex-col ~ div) {
+    display: none;
+  }
+
+  > .flex-col {
+    grid-row: 1 / span 2;
+    gap: 6px;
   }
 }
