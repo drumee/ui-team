@@ -733,10 +733,10 @@ class __editor_docs extends __player {
     // The co-editing mount joins the file's original room before the list is
     // known; once it is, move to the room of the tab the file was left on.
     if (this._doc && this._doc.ensureRoomForActive) this._doc.ensureRoomForActive();
-    // Only once there is something to switch between: the Figma "File
-    // viewer" header has no tabs column, so a one-tab document (every new
-    // one) keeps the whole card for the page; the gear menu opens the rail.
-    if (this._tabs.length > 1 && !this._tabsClosedByUser && !this._tabsOpen) {
+    // Open by default, one tab or many (user's call, 2026-10-25): the rail
+    // is where a tab is added. Closed by hand, it stays closed; the gear
+    // menu row brings it back.
+    if (!this._tabsClosedByUser && !this._tabsOpen) {
       this.toggleTabs(true);
       return;
     }
