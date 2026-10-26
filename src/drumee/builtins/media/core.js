@@ -2877,6 +2877,10 @@ class __media_core extends DrumeeMFS {
           this.mset({ zipid: data.zipid, zipname: data.zipname });
           this._zipsize = data.size;
           if (this._progress) this._progress.setLabel(LOCALE.PREPARING);
+          // The worker may have finished before this reply arrived: its end
+          // was pushed while no tile carried the zipid (libs/zip-pushes).
+          const missed = require("libs/zip-pushes").take(data.zipid);
+          if (missed) this.handleDownload(missed);
         }
         break;
       case SERVICE.media.make_dir:
