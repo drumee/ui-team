@@ -25,7 +25,7 @@ const {
   subtaskStrip,
   mayCreateTask,
 } = require("./helpers");
-const { stripMarkers } = require("../mention-markers");
+const { toPlain } = require("../rich-text");
 
 const ymd = (d) => d.format("YYYY-MM-DD");
 
@@ -225,7 +225,7 @@ module.exports = function (ui) {
         t.description
           ? Skeletons.Note({
               className: `${pfx}__cal-card-desc`,
-              content: stripMarkers(t.description),
+              content: toPlain(t.description),
             })
           : null,
         filesNode,

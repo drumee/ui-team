@@ -19,13 +19,11 @@ const completeParent = require("./complete-parent");
 const { killTaskToast } = require("./task-toast");
 const {
   markerRe,
-  contentTokenRe,
-  imgMarker,
-  linkMarker,
   linkifyTokens,
   safeUrl,
   uidsFromText,
 } = require("./mention-markers");
+const { parse, stringify, fromDom, toDom } = require("./rich-text");
 const {
   unfinishedPending,
   abandonedPending,
@@ -8861,95 +8859,49 @@ class __tasks_panel extends LetcBox {
     return a;
   }
 
-  // Render stored marker text into the editor as text nodes, chip spans,
-  // inline images, and links.
+  // Render stored text into the editor (or a posted body): marks as
+  // <b>/<i>/<u>/<s>, list lines as <ul>/<ol>, mentions as chips, inline
+  // images, and links — see rich-text.js for the grammar.
   _renderEditorContent(editorEl, markerText) {
     editorEl.textContent = "";
-    const text = String(markerText || "");
     const editable = editorEl.getAttribute("contenteditable") === "true";
-    const appendText = (str) => {
-      str.split("\n").forEach((part, i) => {
-        if (i > 0) editorEl.appendChild(document.createElement("br"));
-        if (!part) return;
-        // Read-only only: linkifying in an editor would turn every half-typed
-        // address into an atomic chip under the caret. There, Ctrl+K does it.
-        if (editable) {
-          editorEl.appendChild(document.createTextNode(part));
-          return;
-        }
-        linkifyTokens(part).forEach((tok) => {
-          editorEl.appendChild(
-            tok.url
-              ? this._makeLinkNode(tok.label, tok.url, false)
-              : document.createTextNode(tok.text),
-          );
-        });
-      });
-    };
-    const re = contentTokenRe();
-    let last = 0;
-    let m;
-    while ((m = re.exec(text))) {
-      if (m.index > last) appendText(text.slice(last, m.index));
-      if (m[2] != null) {
-        editorEl.appendChild(this._makeMentionChip(m[2], m[1]));
-      } else if (m[3] != null) {
-        editorEl.appendChild(
-          this._makeInlineImage(m[3], m[4], m[5], editable),
-        );
-      } else if (m[7] != null) {
-        // A rejected scheme renders as its label, never as a live href.
-        const href = safeUrl(m[7]);
-        editorEl.appendChild(
-          href
-            ? this._makeLinkNode(m[6], href, editable)
-            : document.createTextNode(m[6]),
-        );
-      }
-      last = re.lastIndex;
-    }
-    if (last < text.length) appendText(text.slice(last));
+    editorEl.appendChild(toDom(parse(markerText), document, this._richMakers(editable)));
   }
 
-  // Editor DOM → marker text. Chips become "[@Name](user:uid)"; <br>/<div>
-  // boundaries become newlines.
+  // Editor DOM → stored text (rich-text.js). The tags Ctrl+B / I / U and the
+  // toolbar leave become marks; <br>/<div> boundaries become newlines.
   _serializeEditor(editorEl) {
-    const chipClass = `${this.fig.family}__mention-chip`;
-    const imgClass = `${this.fig.family}__inline-img`;
-    let out = "";
-    const walk = (node) => {
-      node.childNodes.forEach((n) => {
-        if (n.nodeType === 3) {
-          out += n.textContent;
-        } else if (n.nodeType === 1) {
-          if (n.classList && n.classList.contains(chipClass)) {
-            const uid = n.dataset.uid;
-            const name = n.dataset.name || n.textContent.replace(/^@/, "");
-            out += `[@${name}](user:${uid})`;
-          } else if (n.classList && n.classList.contains(imgClass)) {
-            const w = parseInt(n.style.width, 10) || 0;
-            out += imgMarker(n.dataset.nid, n.dataset.hub, w || undefined);
-          } else if (n.tagName === "A") {
-            const href = safeUrl(n.dataset.href || n.getAttribute("href"));
-            const label = (n.textContent || "").trim();
-            if (!href || !label) walk(n);
-            // A link that reads as its own target needs no marker — read-only
-            // rendering re-links the bare URL anyway.
-            else if (label === href) out += label;
-            else out += linkMarker(label, href);
-          } else if (n.tagName === "BR") {
-            out += "\n";
-          } else if (n.tagName === "DIV") {
-            if (out && !out.endsWith("\n")) out += "\n";
-            walk(n);
-          } else {
-            walk(n);
-          }
-        }
-      });
+    return stringify(fromDom(editorEl, this._richOpt()));
+  }
+
+  // What fromDom needs to tell this panel's atoms from plain markup.
+  _richOpt() {
+    return {
+      chipClass: `${this.fig.family}__mention-chip`,
+      imgClass: `${this.fig.family}__inline-img`,
+      safeUrl,
     };
-    walk(editorEl);
-    return out;
+  }
+
+  // The nodes toDom draws atoms with. Bare URLs are linkified on read-only
+  // bodies only: in an editor that would turn every half-typed address into an
+  // atomic chip under the caret. There, Ctrl+K does it.
+  _richMakers(editable) {
+    return {
+      mention: (name, uid) => this._makeMentionChip(uid, name),
+      img: (nid, hub, width) => this._makeInlineImage(nid, hub, width, editable),
+      // A rejected scheme renders as its label, never as a live href.
+      link: (label, url) => {
+        const href = safeUrl(url);
+        return href ? this._makeLinkNode(label, href, editable) : document.createTextNode(label);
+      },
+      text: editable
+        ? (s) => [document.createTextNode(s)]
+        : (s) =>
+            linkifyTokens(s).map((tok) =>
+              tok.url ? this._makeLinkNode(tok.label, tok.url, false) : document.createTextNode(tok.text),
+            ),
+    };
   }
 
   _collectMentionUids(editorEl) {
@@ -9087,49 +9039,31 @@ class __tasks_panel extends LetcBox {
   }
 
   // Clipboard payload → a fragment of what this editor can store: text, line
-  // breaks and links. Everything else collapses to its text, which is all the
-  // serializer would have kept anyway.
+  // breaks, links, bold / italic / underline / strike and lists, read by the
+  // same fromDom the serializer uses. Everything else collapses to its text,
+  // which is all the serializer would have kept anyway.
   _pasteFragment(html, plain) {
-    const frag = document.createDocumentFragment();
-    const addText = (str, collapse) => {
-      // HTML source whitespace is collapsed by the renderer; plain text is not.
-      const s = collapse ? String(str).replace(/[\t\r\n]+/g, " ") : String(str);
-      if (!s) return;
-      s.split("\n").forEach((part, i) => {
-        if (i > 0) frag.appendChild(document.createElement("br"));
-        if (part) frag.appendChild(document.createTextNode(part));
-      });
-    };
-    if (!html) {
-      addText(plain, false);
-      return frag;
-    }
-    const BLOCK = /^(?:DIV|P|LI|TR|H[1-6]|BLOCKQUOTE|SECTION|ARTICLE|UL|OL)$/;
+    // Plain text is taken literally: a pasted "**" is two stars, not bold.
+    const plainFrag = () =>
+      toDom(
+        String(plain || "")
+          .split("\n")
+          .map((v) => ({ t: "line", kids: v ? [{ t: "text", v }] : [] })),
+        document,
+        this._richMakers(true),
+      );
+    if (!html) return plainFrag();
     const doc = new DOMParser().parseFromString(html, "text/html");
-    const walk = (node) => {
-      node.childNodes.forEach((n) => {
-        if (n.nodeType === 3) return addText(n.textContent, true);
-        if (n.nodeType !== 1) return;
-        if (n.tagName === "A") {
-          const href = safeUrl(n.getAttribute("href"));
-          const label = (n.textContent || "").replace(/\s+/g, " ").trim();
-          if (href && label) frag.appendChild(this._makeLinkNode(label, href, true));
-          else addText(n.textContent, true);
-          return;
-        }
-        if (n.tagName === "BR") return frag.appendChild(document.createElement("br"));
-        if (n.tagName === "SCRIPT" || n.tagName === "STYLE") return;
-        if (BLOCK.test(n.tagName) && frag.lastChild) {
-          frag.appendChild(document.createElement("br"));
-        }
-        walk(n);
-      });
-    };
-    walk(doc.body);
+    // HTML source whitespace is collapsed by the renderer; fromDom would read
+    // its newlines as line breaks.
+    const tw = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      n.textContent = n.textContent.replace(/[\t\r\n]+/g, " ");
+    }
+    const frag = toDom(fromDom(doc.body, this._richOpt()), document, this._richMakers(true));
     // An HTML flavour that sanitises to nothing (wrapper-only markup) must not
     // swallow the paste — and _insertAtCaret would still drop the selection.
-    if (!frag.firstChild) addText(plain, false);
-    return frag;
+    return frag.firstChild ? frag : plainFrag();
   }
 
   // Drop a fragment where the caret is, then put the caret after it.

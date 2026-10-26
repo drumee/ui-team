@@ -16,7 +16,7 @@
 // the editor that changed) — never _render(); see tasks-panel-render-paths.
 
 const { rowOf, ownedPatch } = require("./live-sync");
-const { contentTokenRe } = require("./mention-markers");
+const { hasRichContent } = require("./rich-text");
 const {
   TEXT_FIELDS,
   fieldPatch,
@@ -186,9 +186,9 @@ module.exports = {
     if (this._listEdit && this._listEdit.id === id && this._listEdit.field === field) {
       return this._closeListEdit();
     }
-    // A description holding mention chips or inline images cannot round-trip
-    // through a plain text box — hand it to the detail card's rich editor.
-    if (field === "description" && contentTokenRe().test(task.description || "")) {
+    // A description holding mention chips, inline images, formatting or lists
+    // cannot round-trip through a plain text box — hand it to the detail card's rich editor.
+    if (field === "description" && hasRichContent(task.description || "")) {
       this._closeListEdit({ silent: true });
       return this._openDetail(id);
     }

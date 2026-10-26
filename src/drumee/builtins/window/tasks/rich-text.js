@@ -267,6 +267,9 @@ function toPlain(text) {
 
 // ── DOM → blocks ────────────────────────────────────────────────────────────
 const MARK_ORDER = ["b", "i", "u", "s"];
+// Elements that start a line of their own. The editor only ever holds DIV /
+// LI; the rest arrive in pasted HTML.
+const BLOCK_TAG = /^(?:DIV|P|LI|TR|H[1-6]|BLOCKQUOTE|SECTION|ARTICLE)$/;
 
 // The marks an element turns on or off for its subtree. Its own inline style
 // wins over its tag: Google Docs wraps a whole paste in
@@ -382,7 +385,8 @@ function fromDom(root, { chipClass, imgClass, safeUrl }) {
         cur = null;
         return;
       }
-      if (tag === "DIV" || tag === "P" || tag === "LI") return block(n, type, m);
+      if (BLOCK_TAG.test(tag)) return block(n, type, m);
+      if (tag === "SCRIPT" || tag === "STYLE") return;
       walk(n, type, m);
     });
   };

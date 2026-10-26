@@ -97,7 +97,7 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
   return [];
 }
 
-const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
+const { toPlain } = require("../rich-text");
 // formatDue is aliased: `make` declares its own closure const of that name, and
 // the subtask builders below live at module scope where that one isn't visible.
 const {
@@ -400,7 +400,7 @@ const make = function (ui) {
         task.description
           ? Skeletons.Note({
               className: `${pfx}__task-desc`,
-              content: stripMentionMarkers(task.description),
+              content: toPlain(task.description),
             })
           : null,
       ].filter(Boolean),

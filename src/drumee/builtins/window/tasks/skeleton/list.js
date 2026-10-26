@@ -22,7 +22,7 @@ const {
   priorityMeta,
   subtaskBadge,
 } = require("./helpers");
-const { stripMarkers } = require("../mention-markers");
+const { toPlain } = require("../rich-text");
 const { formatDateInput, monthGrid } = require("../list-edit");
 
 const MAX_FILES = 2; // file chips shown before collapsing to a "+N" chip
@@ -318,7 +318,7 @@ module.exports = function (ui) {
     cell(t, "description", [
       Skeletons.Note({
         className: `${pfx}__list-desc`,
-        content: stripMarkers(t.description || "").replace(/\s+/g, " ").trim(),
+        content: toPlain(t.description || "").replace(/\s+/g, " ").trim(),
       }),
     ]);
 
