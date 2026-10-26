@@ -429,6 +429,57 @@ class __file_switcher extends LetcBox {
   }
 
   /**
+   * "Document lite" / "Spreadsheet lite": a Casual editor window on a NEW
+   * file in the listed folder — what the desk's "+ New" rows do from a
+   * folder window (window/core add-doc / add-sheet). The editor saves into
+   * that folder and carries this panel, so it reads like any other switch:
+   * this viewer is saved, the editor launched, this viewer closed.
+   *
+   * @param {String} kind  editor_docs | editor_sheet
+   */
+  async createCasual(kind) {
+    this.setCreateMenu(false);
+    if (!kind || this._switching) return;
+    if (require("libs/over-limit").guardWrite("write")) return;
+    const { pid, hub_id } = this._scope || this.node();
+    if (!pid || !hub_id) return;
+    this._switching = 1;
+    this.el.dataset.busy = 1;
+    if (!(await this.saveBeforeSwitch())) {
+      this._switching = 0;
+      if (!this.isDestroyed()) this.el.dataset.busy = 0;
+      return;
+    }
+    const scroll = this.getPart && this.getPart("scroll");
+    handoff = {
+      at: Date.now(),
+      scope: this._scope,
+      folder: this._folder,
+      scrollTop: scroll && scroll.el ? scroll.el.scrollTop : 0,
+    };
+    const p0 = this.player;
+    const target = p0 && p0.target && !p0.target.isDestroyed() ? p0.target : undefined;
+    let w = null;
+    try {
+      w = Wm.launch(
+        { kind, folder: { nid: pid, hub_id }, target, uiHandler: [target || p0] },
+        { explicit: 1 }
+      );
+    } catch (e) {
+      this.warn("file-switcher: create failed", e);
+    }
+    this._switching = 0;
+    if (this.isDestroyed()) return;
+    this.el.dataset.busy = 0;
+    if (!w) {
+      handoff = null;
+      return;
+    }
+    const p = this.player;
+    if (p && !p.isDestroyed()) p.goodbye();
+  }
+
+  /**
    *
    * @param {*} cmd
    * @param {*} args
@@ -471,6 +522,8 @@ class __file_switcher extends LetcBox {
 
       case "create-file":
         return this.createFile(cmd.mget(_a.name));
+      case "create-casual":
+        return this.createCasual(cmd.mget(_a.name));
     }
   }
 }

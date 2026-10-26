@@ -715,12 +715,39 @@ body > div:has(> [class*="univer-popup"]) {
     font-family: var(--font-main);
     align-items: center;
 
-    // "+" first, as in the design ([+] [≡] [Sheet1]).
-    [data-testid="cs-tab-add"] {
+    // "+" then the all-sheets ≡ first, as in the design ([+] [≡] [Sheet1 ▾]).
+    [data-testid="cs-tab-add"],
+    .editor-sheet__sheets-list {
       order: -1;
       width: 24px;
       height: 24px;
       color: #0b0a21;
+    }
+
+    .editor-sheet__sheets-list {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: -8px;
+      border: 0;
+      border-radius: 6px;
+      background: none;
+      cursor: pointer;
+      @include ph.ph("list", 20px, true);
+
+      &:hover {
+        background: #f2f2f7;
+      }
+    }
+
+    // The open tab's caret: Casual's Rename / Delete menu.
+    .editor-sheet__tab-caret {
+      display: inline-flex;
+      margin-left: 6px;
+      vertical-align: middle;
+      color: inherit;
+      cursor: pointer;
+      @include ph.ph("caret-down", 14px, true);
     }
 
     button[aria-selected="true"],
@@ -761,5 +788,33 @@ body > div:has(> [class*="univer-popup"]) {
 
   button {
     color: #0b0a21;
+  }
+}
+
+// The all-sheets list (sheet_state._toggleSheetsMenu), on the body.
+.editor-sheet__sheets-menu {
+  position: fixed;
+  z-index: 60000;
+  min-width: 160px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  font: 400 14px/1.2 var(--font-main);
+  color: #0b0a21;
+
+  &-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+      background: #f2f2f7;
+    }
+
+    &.is-active {
+      color: #54b684;
+      font-weight: 500;
+    }
   }
 }

@@ -77,6 +77,12 @@ class __editor_docs extends __player {
       const hub_id = this.target.mget(_a.hub_id);
       if (pid && hub_id) this.mset({ pid, hub_id });
     }
+    // Launched from the Open-File Switcher ("Document lite" in its create
+    // menu): the panel names the listed folder — its player is no folder
+    // window to ask — and that folder wins.
+    if (!opt.media && opt.folder && opt.folder.nid && opt.folder.hub_id) {
+      this.mset({ pid: opt.folder.nid, hub_id: opt.folder.hub_id });
+    }
   }
 
   /**
