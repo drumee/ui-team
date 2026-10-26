@@ -9498,7 +9498,8 @@ $theme-colors: (
 
   // Assignee + due date on one row: exactly half each (basis 0, so the chips
   // or the date's text never widen one side), centred on each other, and the
-  // same 46px box. Wraps to two rows once a half would drop under 140px.
+  // same 32px box with 13/18 text. Wraps to two rows once a half would drop
+  // under 140px.
   &__subtask-card-fields {
     align-items: center;
     justify-content: center;
@@ -9518,10 +9519,10 @@ $theme-colors: (
       flex-basis: 60px;
       min-width: 60px;
 
-      // Same text as the date beside it (__due-input: 16/22).
+      // Same text as the date beside it (__subtask-due-input: 13/18).
       input {
-        font-size: 16px;
-        line-height: 22px;
+        font-size: 13px;
+        line-height: 18px;
       }
     }
   }
@@ -9530,17 +9531,50 @@ $theme-colors: (
   // grey box as the due-date field beside it rather than underlined.
   &__subtask-card-assignee {
     .tasks-panel__assignee-control {
-      // Same height as the due-date field beside it (12+22+12).
-      min-height: 46px;
+      // Exactly the due-date field's height (7+18+7): the chips stay on one
+      // line and scroll sideways rather than wrapping the box taller.
+      height: 32px;
       box-sizing: border-box;
-      padding: 4px 12px;
+      flex-wrap: nowrap;
+      gap: 6px;
+      padding: 0 10px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
       border: 0;
       border-radius: 6px;
       background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
 
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
       &:focus-within {
         box-shadow: 0 0 0 2px rgba(67, 60, 197, 0.35);
       }
+    }
+
+    .tasks-panel__assignee-chips {
+      flex-wrap: nowrap;
+      flex-shrink: 0;
+      gap: 4px;
+    }
+
+    .tasks-panel__assignee-chip {
+      gap: 4px;
+      height: 22px;
+      box-sizing: border-box;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
+
+    .tasks-panel__assignee-chip-avatar {
+      width: 14px;
+      height: 14px;
+    }
+
+    .tasks-panel__assignee-chip-name {
+      white-space: nowrap;
     }
   }
 
@@ -9574,6 +9608,20 @@ $theme-colors: (
 
     .tasks-panel__subtask-due-input {
       width: 100%;
+
+      &::after {
+        right: 10px;
+        width: 14px;
+        height: 14px;
+      }
+
+      // 7+18+7 = 32px, the assignee box beside it.
+      input {
+        height: 32px;
+        padding: 7px 30px 7px 10px;
+        font-size: 13px;
+        line-height: 18px;
+      }
     }
   }
 
