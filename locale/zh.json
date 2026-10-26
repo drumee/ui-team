@@ -2344,6 +2344,8 @@
   "CANCEL_OVER_LIMIT": "您当前的使用量（{0} GB）已超过免费的 20 GB 限制——在释放空间之前您将无法上传新文件。",
   "CANCEL_TEAM_SEATS": "您团队的 {0} 个席位将被移除，每位成员将转为各自的免费套餐。",
   "SUBSCRIPTION_CANCELED_TOAST": "您的套餐将在本期结束时取消。",
+  "CANCEL_PAST_DUE_NOW": "您的上一笔付款未成功。取消后您的套餐将立即结束，未支付的账单不会被扣款。您的工作区现在将恢复为 Free 套餐（20 GB）。",
+  "SUBSCRIPTION_ENDED_TOAST": "您的套餐已取消。您已恢复为 Free 套餐。",
   "SUBSCRIPTION_RESUMED_TOAST": "您的订阅已恢复。",
   "SUBSCRIPTION_CANCELS_ON": "您的订阅将于 {0} 取消",
   "PAYMENT_SUCCESS_TITLE": "支付成功！",
