@@ -374,6 +374,10 @@ class __editor_docs extends __player {
    *
    */
   onDomRefresh() {
+    // The Document tabs rail is open by default, from the first paint (a
+    // window the desk restores may get its tab list late); setTabs re-draws
+    // the rows once the file has loaded. Closed by hand, it stays closed.
+    if (!this._tabsClosedByUser && !this._tabsOpen) this.toggleTabs(true);
     this.feed(require("./skeleton")(this));
     this._wireTitleRename();
     this._wireHotkeys();
