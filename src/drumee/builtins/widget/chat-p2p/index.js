@@ -1670,6 +1670,8 @@ class __chat_p2p extends LetcBox {
       if (scope === this._scopeKey()) {
         this._showPane(scope);
         this.el.dataset.mview = "chat";
+        // Clicking the row again reads what arrived since it was opened.
+        if (_.isFunction(mounted.widget.readNow)) mounted.widget.readNow();
       }
       return;
     }
@@ -1732,6 +1734,9 @@ class __chat_p2p extends LetcBox {
       // file picker straight away instead of a From device / From workspace
       // menu.
       no_workspace_attach: 1,
+      // Opening a row, or pressing in its composer, reads the conversation:
+      // the server cursor moves and the row's unread badge clears.
+      read_on_open: 1,
     };
     // A workspace conversation is that workspace's team chat, scoped like the
     // folder window's (window/skeleton/toolkit chatPanel): posts land in the
@@ -1795,6 +1800,14 @@ class __chat_p2p extends LetcBox {
     });
     const widget = panel.append(widget_chat);
     this._panes[scope] = { peer, type, contact, widget };
+    // The chat acked the server; this socket hears no echo of it, so clear
+    // the row's badge here. Same lookup a pushed acknowledge uses — the row
+    // (entity_id) is the peer for a DM and the hub for a workspace.
+    if (widget && _.isFunction(widget.on)) {
+      this.listenTo(widget, "conversation-read", () =>
+        this._resetContactItemCount({ peer_id: hub_id }),
+      );
+    }
     if (scope === this._scopeKey()) {
       this.chatWidget = widget;
     } else if (widget && _.isFunction(widget.park)) {

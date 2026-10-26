@@ -518,7 +518,7 @@ function userMenu(pfx, ui) {
           className: `${pfx}__account-avatar-img`,
           active: 0,
           // The frame draws a presence dot on the menu's 40px avatar, not on
-          // the 30px trigger — at that size it would sit on the initials.
+          // the 34px trigger — at that size it would sit on the initials.
           live_status: 0,
           oneLetter: 1,
         }),

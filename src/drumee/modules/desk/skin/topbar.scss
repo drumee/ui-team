@@ -1332,12 +1332,15 @@
   // Notifications / Calendar / Inbox / Contacts / Trash / Admin, top-right.
   // A SIBLING of __actions-cluster, so it survives that cluster's
   // data-state="0" display:none on the full-canvas screens.
-  // 43:23955: six 30x30 buttons with NO gap (they sit edge to edge at 30px
-  // pitch), then a 4px gap before the 30px avatar.
+  // 43:23955 has six buttons edge to edge, then a 4px gap before the avatar.
+  // Upsized from the design's 30x30 to 34x34 with a 22px glyph, and
+  // spaced 6px apart so the bigger icons don't crowd each other; the 46px bar
+  // absorbs the extra 2px top and bottom in its 8px padding, so the row height
+  // does not change.
   &__utility-cluster {
     align-items: center;
-    gap: 0;
-    height: 30px;
+    gap: 6px;
+    height: 34px;
     padding-left: 12px;
     flex: 0 0 auto;
     // The tooltip hangs outside the bar; a clipped cluster would cut it off.
@@ -1346,10 +1349,10 @@
 
   &__utility-btn {
     position: relative; // anchor for the absolute tooltip (&__utility-tip)
-    width: 30px;
-    min-width: 30px;
-    height: 30px;
-    // Box.X is a flex row; without this a 30px-tall button in a taller line
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    // Box.X is a flex row; without this a 34px-tall button in a taller line
     // box gets stretched by align-items:stretch and the glyphs stop sharing a
     // baseline with their neighbours.
     align-self: center;
@@ -1374,7 +1377,7 @@
 
     // Working — stamped by desk _runUtilityBusy until the screen behind the
     // icon is up. The glyph (and badge) give way to a border spinner in the
-    // same colour, pinned to the centre so the 30px button does not reflow.
+    // same colour, pinned to the centre so the 34px button does not reflow.
     &[data-loading="1"] {
       cursor: progress;
       pointer-events: none;
@@ -1389,8 +1392,8 @@
         position: absolute;
         inset: 0;
         margin: auto;
-        width: 14px;
-        height: 14px;
+        width: 16px;
+        height: 16px;
         box-sizing: border-box;
         border-radius: 50%;
         border: 2px solid currentColor;
@@ -1408,8 +1411,8 @@
   }
 
   &__utility-ico {
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     flex: 0 0 auto;
     color: currentColor;
     pointer-events: none;
@@ -2009,16 +2012,17 @@
   }
 
   // UserProfile renders its own inner picture/initials box. Pin the whole
-  // subtree to 30px, or its intrinsic height sets the row's line box and the
+  // subtree to 34px (upsized from 30 to match the utility buttons), or its
+  // intrinsic height sets the row's line box and the
   // icon buttons beside it stop sharing a centre line.
-  // The trigger: a real 30px circle that OWNS the round mask and the centring,
+  // The trigger: a real 34px circle that OWNS the round mask and the centring,
   // so neither depends on what UserProfile renders inside (a picture, initials,
   // or an empty placeholder — it was square because the radius sat on an inner
   // element that did not always exist).
   &__account-avatar {
-    width: 30px;
-    height: 30px;
-    min-width: 30px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
     // Box.X sets display:flex; these centre whatever lands inside it.
     align-items: center;
     justify-content: center;
@@ -2071,11 +2075,11 @@
       object-fit: cover;
     }
 
-    // Initials fallback — centred, and sized to fit a 30px circle.
+    // Initials fallback — centred, and sized to fit a 34px circle.
     .user-profile__main {
       align-items: center;
       justify-content: center;
-      @include drumee.typo($size: 12px, $line: 1, $color: var(--gray-white));
+      @include drumee.typo($size: 14px, $line: 1, $color: var(--gray-white));
       font-weight: 600;
       text-transform: uppercase;
     }
@@ -2208,7 +2212,7 @@
 
   // Hover tooltip for the icon-only utility buttons. Taken OUT OF FLOW — the
   // framework mounts it as a child of the button, so in normal flow it widens
-  // the 30px button and breaks the row. Dark bubble below the icon, matching
+  // the 34px button and breaks the row. Dark bubble below the icon, matching
   // the chat-item action tooltips.
   &__utility-tip {
     position: absolute;
@@ -2269,8 +2273,8 @@
 
   &__utility-badge {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 5px;
+    right: 5px;
     width: 6px;
     height: 6px;
     padding: 0;

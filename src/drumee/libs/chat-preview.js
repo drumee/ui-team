@@ -266,8 +266,22 @@ function meetingStatusOf(data) {
   return status === "ended" ? "ended" : null;
 }
 
+/**
+ * Inbox row timestamp: time only for today, date + time before that, and the
+ * year too once it differs from the current one.
+ * @param {Number} ctime unix seconds
+ * @returns {String}
+ */
+function chatTime(ctime) {
+  const day = Dayjs.unix(ctime).locale(Visitor.language());
+  const now = Dayjs();
+  if (day.isSame(now, "day")) return day.format("HH:mm");
+  return day.format(day.isSame(now, "year") ? "DD MMM, HH:mm" : "DD MMM YYYY, HH:mm");
+}
+
 module.exports = {
   chatPreview,
+  chatTime,
   parseMeetingSentinel,
   findMeetingRow,
   meetingStatusOf,

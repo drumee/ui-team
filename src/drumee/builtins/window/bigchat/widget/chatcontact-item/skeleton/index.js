@@ -2,13 +2,13 @@
 const { supportAvatar, isSupportEntity } = require("libs/support");
 // The one place a conversation row's preview line is computed — shared with the
 // live-update paths in chat_p2p / chatcontact_list.
-const { chatPreview } = require("libs/chat-preview");
+const { chatPreview, chatTime: formatChatTime } = require("libs/chat-preview");
 // The workspace icon — the area-tinted folder shape. Single source, shared
 // with the desk sidebar's workspace_item (via its getFolderIcon wrapper).
 const folderIcon = require("media/grid/template/folder");
 
 const __skl_widget_chatcontactItem = function (ui) {
-  let chat_icon, msg, state;
+  let chat_icon, msg;
   const contentFig = ui.fig.family;
   // Hoisted out of the `flag === 'contact'` branch so the name Note below can
   // fall back the same way the chat header does (chat-header.js): a contact
@@ -120,23 +120,18 @@ const __skl_widget_chatcontactItem = function (ui) {
     className: `${contentFig}__note time`,
     sys_pn: 'msg-time',
     content: ctime
-      ? Dayjs.unix(ctime).locale(Visitor.language()).format("HH:mm")
+      ? formatChatTime(ctime)
       : (supportPeer ? LOCALE.SUPPORT_ALWAYS : '')
   });
 
-  const value = ui.mget('room_count') || "";
-
-  if (!~~value) {
-    state = _a.closed;
-  } else {
-    state = _a.open;
-  }
-
-  const counterNote = Skeletons.Box.X({
+  // Unread count, under the time. Kept in sync by updateNotification().
+  const count = ~~(ui.mget('room_count') || 0);
+  const unreadBadge = Skeletons.Note({
+    className: `${contentFig}__badge`,
     sys_pn: "counter",
-    className: `${contentFig}__digit`,
+    content: ui.unreadLabel(count),
     dataset: {
-      state
+      state: count ? _a.open : _a.closed
     }
   });
 
@@ -150,8 +145,7 @@ const __skl_widget_chatcontactItem = function (ui) {
           Skeletons.Box.X({
             className: `${contentFig}__avatar-wrapper`,
             kids: [
-              chat_icon,
-              counterNote
+              chat_icon
             ]
           }),
 
@@ -166,7 +160,13 @@ const __skl_widget_chatcontactItem = function (ui) {
                   chatTime
                 ]
               }),
-              chatMessage
+              Skeletons.Box.X({
+                className: `${contentFig}__info-bottom`,
+                kids: [
+                  chatMessage,
+                  unreadBadge
+                ]
+              })
             ]
           })
         ]

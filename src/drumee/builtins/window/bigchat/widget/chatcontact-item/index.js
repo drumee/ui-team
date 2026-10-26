@@ -103,9 +103,21 @@ class ___widget_chatcontactItem extends LetcBox {
    */
   updateNotification() {
     const count = ~~(this.mget("room_count") || 0);
-    this.__counter.el.dataset.state = count ? _a.open : _a.closed;
-
+    if (this.__counter) {
+      this.__counter.set(_a.content, this.unreadLabel(count));
+      this.__counter.el.dataset.state = count ? _a.open : _a.closed;
+    }
     this.trigger(_e.update);
+  }
+
+  /**
+   * Badge text for an unread count, capped so it stays a pill.
+   * @param {Number} count
+   * @returns {String}
+   */
+  unreadLabel(count) {
+    if (!count) return "";
+    return count > 99 ? "99+" : `${count}`;
   }
 }
 

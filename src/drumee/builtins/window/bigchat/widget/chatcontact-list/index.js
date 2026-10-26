@@ -3,6 +3,7 @@ const { timestamp } = require("@drumee/ui-essentials")
 // a system card cannot read one way on load and another way after a WS push.
 const {
   chatPreview,
+  chatTime,
   findMeetingRow,
   meetingStatusOf,
 } = require("libs/chat-preview");
@@ -371,7 +372,7 @@ class ___widget_chatcontactList extends LetcBox {
         item.mset('meeting_status', meetingStatusOf(data));
         item.mset(_a.ctime, data.ctime);
 
-        const msgTime = Dayjs.unix(data.ctime).locale(Visitor.language()).format("HH:mm");
+        const msgTime = chatTime(data.ctime);
         item.__msgTime.set(_a.content, msgTime);
         item.__message.set(_a.content, msg);
 
