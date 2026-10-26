@@ -794,6 +794,9 @@ test("a note created from the switcher saves into the LISTED folder, not the act
   assert.match(win, /if \(!this\.media && opt\.folder && opt\.folder\.nid && opt\.folder\.hub_id\) \{/);
   assert.match(win, /this\._folder = \{ pid: nid, hub_id \};/);
   assert.match(win, /t\.getCurrentNid\(\) == nid &&\s*t\.mget\(_a\.hub_id\) == hub_id/);
+  // only a window that holds tiles: a player's getCurrentNid is its file's folder too
+  assert.match(win, /\[opt\.target, viewer, viewer && viewer\.media && viewer\.media\.logicalParent\]/);
+  assert.match(win, /_\.isFunction\(t\.insertMedia\) &&/);
   // _saveTarget: the folder wins over whatever is active
   const st = win.slice(win.indexOf("_saveTarget() {"));
   assert.ok(st.indexOf("if (this._folder)") < st.indexOf("Wm.getActiveWindow()"),

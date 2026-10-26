@@ -77,19 +77,22 @@ class __editor_blocknote extends __player {
     this.lastActiveWindow = Wm.getActiveWindow();
     // Launched from the Open-File Switcher ("Note" in its create menu): the
     // panel names the listed folder, and that folder wins (as editor/docs).
-    // The active window is then the viewer being switched away from — its
-    // nid is a FILE's, no place to save in. The new tile goes into the
-    // folder window the switch came from (the viewer's `target`, else the
-    // window its file was opened from), only when it shows this very folder.
+    // The active window may then be the viewer being switched away from —
+    // its nid is a FILE's, no place to save in. The new tile goes into the
+    // window the switch came from (the viewer's `target`, the active window,
+    // or the window the viewer's file was opened from), only when it holds
+    // tiles (insertMedia — a player's getCurrentNid is its file's folder too)
+    // and shows this very folder.
     if (!this.media && opt.folder && opt.folder.nid && opt.folder.hub_id) {
       const { nid, hub_id } = opt.folder;
       const viewer = this.lastActiveWindow;
       this._folder = { pid: nid, hub_id };
       this.lastActiveWindow =
-        [opt.target, viewer && viewer.media && viewer.media.logicalParent].find(
+        [opt.target, viewer, viewer && viewer.media && viewer.media.logicalParent].find(
           (t) =>
             t &&
             !(_.isFunction(t.isDestroyed) && t.isDestroyed()) &&
+            _.isFunction(t.insertMedia) &&
             _.isFunction(t.getCurrentNid) &&
             t.getCurrentNid() == nid &&
             t.mget(_a.hub_id) == hub_id
