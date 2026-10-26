@@ -1,17 +1,164 @@
-// Personal task modal — create (Figma 58222:392038) and edit (58222:393597).
+// Personal task modal — create (Figma 1693:198659) and edit (1693:198307,
+// "Card detail").
 //
-// Fields per decision C-03: Title, Description, Due date, Status, Priority.
-// The Duration toggle the frames draw is deliberately NOT here (decision M-04):
-// `task.create` accepts start_date, but neither the month grid nor the hour
-// canvas can span a task across cells yet, so the toggle would produce a change
-// the user cannot see. Add it with cell-spanning, not before.
+// Left: Task title, Description, Subtasks, Files. Right: Status, Priority,
+// Start → End date, then the actions — Cancel · Create, or Delete · Cancel ·
+// Update — at the foot of that column, where both frames put them. The task
+// sits in its End date's cell (due_date): the grids do not draw a task across
+// several cells, so Start only bounds the pickers and travels with the row.
 //
-// No folder picker and no assignee field — requirement §4. Assignment is also
-// refused server-side for a personal-hub task, which is where it has to be
-// enforced; omitting the field here is the UI half only.
+// The edit frame drops the Title field and heads the card with the task's
+// name. The heading follows the frame; the field stays, or a task could no
+// longer be renamed. The share icon the edit frame draws beside ✕ is not
+// drawn: what it would share is not specified.
+//
+// No assignee anywhere, the avatar slot the frames draw on a subtask row
+// included: a personal task has nobody else to assign. The server does not
+// refuse it (task.update_assignee accepts a personal-hub task), so leaving the
+// control out is the whole of it.
 const { STATUSES, PRIORITIES } = require("./helpers");
 const dateField = require("./date-field");
-const attachments = require("./attachments");
+const { taskFiles } = require("./attachments");
+
+// ── subtasks ─────────────────────────────────────────────────────────────────
+// draft.subtasks rows: { localKey, id?, title, status, priority, due_date,
+// start_date, busy?, error? }. A row with an id exists on the server and shows
+// its name; one without is typed in place (its input is named
+// `subtask:<localKey>` so index.js can read it back). The open Priority /
+// Status menu is form.subMenu ({ key, kind }); the done columns
+// (task.column_list is_done) are form.doneKeys.
+
+function subtaskRow(ui, s, menu) {
+  const pfx = ui.fig.family;
+  const key = s.localKey;
+
+  const cell = (kind, list, value) => {
+    const open = !!menu && menu.key === key && menu.kind === kind;
+    const current = list.find((o) => o.key === value);
+    return Skeletons.Box.X({
+      className: `${pfx}__subtask-cell`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-chip`,
+          attrOpt: { "data-kind": kind, "data-open": open ? "1" : "0" },
+          bubble: 0,
+          service: "cal-subtask-menu",
+          uiHandler: [ui],
+          calSubKey: key,
+          calSubKind: kind,
+          kidsOpt: { active: 0 },
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__subtask-chip-label`,
+              content: current
+                ? LOCALE[current.label] || current.key
+                : LOCALE[kind === "status" ? "STATUS" : "PRIORITY"],
+            }),
+            Skeletons.Image.Svg({ ico: "apps-caret-down", className: `${pfx}__subtask-chip-ico` }),
+          ],
+        }),
+        open
+          ? Skeletons.Box.Y({
+              className: `${pfx}__subtask-menu`,
+              kids: list.map((o) =>
+                Skeletons.Box.X({
+                  className: `${pfx}__subtask-option`,
+                  attrOpt: { "data-active": o.key === value ? "1" : "0" },
+                  bubble: 0,
+                  service: "cal-subtask-set",
+                  uiHandler: [ui],
+                  calSubKey: key,
+                  calSubKind: kind,
+                  calValue: o.key,
+                  kidsOpt: { active: 0 },
+                  kids: [
+                    Skeletons.Note({ className: `${pfx}__pill-dot`, styleOpt: { background: o.color } }),
+                    Skeletons.Note({ className: `${pfx}__subtask-option-label`, content: LOCALE[o.label] || o.key }),
+                  ],
+                }),
+              ),
+            })
+          : null,
+      ].filter(Boolean),
+    });
+  };
+
+  return Skeletons.Box.X({
+    className: `${pfx}__subtask`,
+    attrOpt: {
+      "data-key": key,
+      "data-busy": s.busy ? "1" : "0",
+      "data-error": s.error ? "1" : "0",
+    },
+    kids: [
+      s.id
+        ? Skeletons.Note({ className: `${pfx}__subtask-name`, content: s.title || "" })
+        : Skeletons.Entry({
+            className: `${pfx}__subtask-input`,
+            name: `subtask:${key}`,
+            value: s.title || "",
+            placeholder: LOCALE.SUBTASK_PLACEHOLDER,
+            // Enter saves the row (edit mode) — see the title Entry for why
+            // this is commit-only and never `interactive`.
+            mode: "commit",
+            service: "cal-subtask-commit",
+            calSubKey: key,
+            uiHandler: [ui],
+          }),
+      cell("priority", PRIORITIES, s.priority),
+      cell("status", STATUSES, s.status),
+      Skeletons.Box.X({
+        className: `${pfx}__subtask-end`,
+        kids: [
+          Skeletons.Button.Svg({
+            className: `${pfx}__subtask-remove`,
+            ico: "cross",
+            bubble: 0,
+            service: "cal-subtask-remove",
+            uiHandler: [ui],
+            calSubKey: key,
+            // Button.Svg is a plain div: focusable and announced here, pressed
+            // on Enter / Space by index.js _installFormKeys.
+            attrOpt: { "aria-label": LOCALE.REMOVE, role: "button", tabindex: "0" },
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+// Progress rail ("N% Done") and the rows — the part index.js re-feeds after
+// every subtask change.
+function subtaskBody(ui) {
+  const pfx = ui.fig.family;
+  const form = ui.getForm() || {};
+  const subs = (form.draft && form.draft.subtasks) || [];
+  const done = new Set(form.doneKeys || []);
+  const total = subs.length;
+  const pct = total ? Math.round((subs.filter((s) => done.has(s.status)).length / total) * 100) : 0;
+  return [
+    // A failed read of the subtasks or of the done columns: said here instead
+    // of an empty list or a 0% that would be untrue.
+    form.subtaskLoadError
+      ? Skeletons.Note({ className: `${pfx}__subtask-error`, content: LOCALE.CAL_SUBTASKS_LOAD_FAILED })
+      : total
+      ? Skeletons.Box.X({
+          className: `${pfx}__subtask-progress`,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}__subtask-track`,
+              kids: [Skeletons.Box.X({ className: `${pfx}__subtask-fill`, styleOpt: { width: `${pct}%` } })],
+            }),
+            Skeletons.Note({ className: `${pfx}__subtask-pct`, content: `${pct}% ${LOCALE.DONE}` }),
+          ],
+        })
+      : null,
+    Skeletons.Box.Y({
+      className: `${pfx}__subtask-list`,
+      kids: subs.map((s) => subtaskRow(ui, s, form.subMenu)),
+    }),
+  ].filter(Boolean);
+}
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -19,9 +166,9 @@ module.exports = function (ui) {
   const draft = form.draft || {};
   const editing = form.mode === "edit";
 
-  const pillRow = (className, options, selected, service, argKey) =>
+  const pillRow = (kind, options, selected, service, argKey) =>
     Skeletons.Box.X({
-      className,
+      className: `${pfx}__pills ${pfx}__pills--${kind}`,
       kids: options.map((o) =>
         Skeletons.Box.X({
           className: `${pfx}__pill`,
@@ -39,6 +186,8 @@ module.exports = function (ui) {
           // 12px of side padding. Same trap the toolbar documents three times.
           kidsOpt: { active: 0 },
           kids: [
+            // A status pill shows its dot; a priority pill hides it and the
+            // lit one is filled with that colour (skin, __pills--priority).
             Skeletons.Note({
               className: `${pfx}__pill-dot`,
               styleOpt: { background: o.color },
@@ -80,6 +229,27 @@ module.exports = function (ui) {
       ].filter(Boolean),
     });
 
+  // One end of the Start → End pair: each picker is bounded by the other's
+  // date, and the controller re-bounds the other one after a pick.
+  const range = { start_date: draft.start_date, due_date: draft.due_date };
+  const dateBox = (name) =>
+    Skeletons.Box.X({
+      className: `${pfx}__date-box`,
+      kids: [
+        dateField(ui, { name, value: draft[name], range, placeholder: LOCALE.DATE_PLACEHOLDER }),
+        Skeletons.Image.Svg({ ico: "top-calendar", className: `${pfx}__date-ico` }),
+      ],
+    });
+
+  const button = (variant, content, service) =>
+    Skeletons.Note({
+      className: `${pfx}__button ${pfx}__button--${variant}`,
+      content,
+      bubble: 0,
+      service,
+      uiHandler: [ui],
+    });
+
   return Skeletons.Box.Y({
     className: `${pfx}__modal`,
     attrOpt: { "data-form": "task" },
@@ -89,9 +259,7 @@ module.exports = function (ui) {
         kids: [
           Skeletons.Note({
             className: `${pfx}__modal-title`,
-            // The edit frame is still titled "New personal task" in Figma —
-            // a frame defect (C-09), not a spec.
-            content: editing ? LOCALE.EDIT_PERSONAL_TASK : LOCALE.NEW_PERSONAL_TASK,
+            content: editing ? draft.title || LOCALE.EDIT_PERSONAL_TASK : LOCALE.NEW_TASK,
           }),
           Skeletons.Button.Svg({
             className: `${pfx}__modal-close`,
@@ -99,12 +267,12 @@ module.exports = function (ui) {
             bubble: 0,
             service: "cal-close-form",
             uiHandler: [ui],
+            attrOpt: { "aria-label": LOCALE.CLOSE, role: "button", tabindex: "0" },
           }),
         ],
       }),
 
-      // Two columns (skin stacks them under 700px): what the task IS on the
-      // left, how it is tracked on the right.
+      // Two columns; the skin stacks them on a narrow screen.
       Skeletons.Box.X({
         className: `${pfx}__modal-body ${pfx}__modal-body--split`,
         kids: [
@@ -112,14 +280,14 @@ module.exports = function (ui) {
             className: `${pfx}__modal-col ${pfx}__modal-col--main`,
             kids: [
               field(
-                "TITLE",
+                "TASK_TITLE",
                 Skeletons.Entry({
                   className: `${pfx}__input`,
                   sys_pn: "form-title",
                   formItem: "title",
                   name: "title",
                   value: draft.title || "",
-                  placeholder: LOCALE.TITLE,
+                  placeholder: LOCALE.TASK_TITLE,
                   require: "text",
                   // NO `interactive: 1` here. With mode:"commit" the base Entry
                   // still fires its own `service` on EVERY printable keyup when
@@ -157,7 +325,33 @@ module.exports = function (ui) {
                 }),
               ),
 
-              field("ATTACHMENTS", attachments(ui)),
+              Skeletons.Box.Y({
+                className: `${pfx}__field ${pfx}__subtasks`,
+                kids: [
+                  Skeletons.Box.X({
+                    className: `${pfx}__subtasks-head`,
+                    kids: [
+                      Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.SUBTASKS }),
+                      Skeletons.Button.Svg({
+                        className: `${pfx}__subtasks-add`,
+                        ico: "app-add",
+                        bubble: 0,
+                        service: "cal-subtask-add",
+                        uiHandler: [ui],
+                        attrOpt: { "aria-label": LOCALE.CREATE_SUBTASK },
+                      }),
+                    ],
+                  }),
+                  Skeletons.Box.Y({
+                    className: `${pfx}__subtasks-body`,
+                    sys_pn: "form-subtasks",
+                    partHandler: ui,
+                    kids: subtaskBody(ui),
+                  }),
+                ],
+              }),
+
+              field("FILES", taskFiles(ui)),
             ],
           }),
           Skeletons.Box.Y({
@@ -165,68 +359,38 @@ module.exports = function (ui) {
             kids: [
               field(
                 "STATUS",
-                pillRow(
-                  `${pfx}__pills`,
-                  STATUSES,
-                  draft.status || "todo",
-                  "cal-form-status",
-                  "calStatus",
-                ),
+                pillRow("status", STATUSES, draft.status || "todo", "cal-form-status", "calStatus"),
               ),
 
               field(
                 "PRIORITY",
-                pillRow(
-                  `${pfx}__pills`,
-                  PRIORITIES,
-                  draft.priority || "medium",
-                  "cal-form-priority",
-                  "calPriority",
-                ),
+                pillRow("priority", PRIORITIES, draft.priority || "medium", "cal-form-priority", "calPriority"),
               ),
 
-              field(
-                "DUE_DATE",
-                dateField(ui, { name: "due_date", value: draft.due_date }),
-              ),
+              Skeletons.Box.X({
+                className: `${pfx}__dates`,
+                kids: [
+                  field("START_DATE", dateBox("start_date")),
+                  Skeletons.Image.Svg({ ico: "arrow-right", className: `${pfx}__dates-arrow` }),
+                  // Required: a task with no End date has no cell to sit in.
+                  field("END_DATE", dateBox("due_date"), "due_date"),
+                ],
+              }),
+
+              Skeletons.Box.X({
+                className: `${pfx}__modal-foot`,
+                kids: [
+                  editing ? button("danger", LOCALE.DELETE, "cal-delete-task") : null,
+                  button("neutral", LOCALE.CANCEL, "cal-close-form"),
+                  button("primary", editing ? LOCALE.UPDATE : LOCALE.CREATE, "cal-submit-task"),
+                ].filter(Boolean),
+              }),
             ],
           }),
         ],
       }),
-
-      // Delete (destructive, pushed left) · Cancel · confirm — the footer both
-      // the Task tab's create modal and the Meet tab's schedule modal use.
-      // Cancel is not decoration here: this dialog's only other way out was the
-      // ✕ in the header, which neither of those two relies on alone.
-      Skeletons.Box.X({
-        className: `${pfx}__modal-foot`,
-        attrOpt: { "data-mode": editing ? "edit" : "create" },
-        kids: [
-          editing
-            ? Skeletons.Note({
-                className: `${pfx}__button ${pfx}__button--danger`,
-                content: LOCALE.DELETE_TASK,
-                bubble: 0,
-                service: "cal-delete-task",
-                uiHandler: [ui],
-              })
-            : null,
-          Skeletons.Note({
-            className: `${pfx}__button ${pfx}__button--neutral`,
-            content: LOCALE.CANCEL,
-            bubble: 0,
-            service: "cal-close-form",
-            uiHandler: [ui],
-          }),
-          Skeletons.Note({
-            className: `${pfx}__button ${pfx}__button--primary`,
-            content: editing ? LOCALE.UPDATE_TASK : LOCALE.CREATE_TASK,
-            bubble: 0,
-            service: "cal-submit-task",
-            uiHandler: [ui],
-          }),
-        ].filter(Boolean),
-      }),
     ],
   });
 };
+
+module.exports.subtaskBody = subtaskBody;

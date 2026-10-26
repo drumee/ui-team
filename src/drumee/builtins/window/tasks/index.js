@@ -14,6 +14,7 @@ const { restoreScroll } = require("./scroll-restore");
 const { titleTooLong, toggleUid } = require("./list-edit");
 const { stamp, reconcile } = require("./reconcile");
 const listInline = require("./list-inline");
+const listSubtask = require("./list-subtask");
 const completeParent = require("./complete-parent");
 const { killTaskToast } = require("./task-toast");
 const {
@@ -42,6 +43,12 @@ const {
 // "click close → delay → popup finally disappears" this panel was already
 // bitten by once. See _dismissOverlay.
 const OVERLAY_EXIT_MS = 140;
+
+// Every mounted panel. The Personal Calendar's quick-open card is a second
+// panel in this tab, and its writes reach the board of the same hub as no push
+// (the server skips the sending socket, which they share), so on its way out
+// it asks that board to refetch (_quickOpenLeft).
+const LIVE_PANELS = new Set();
 // The child creator card's exit — matches `tasks-panel-subtask-out` in the skin.
 const SUBTASK_CARD_EXIT_MS = 160;
 // The card's entrance highlight (slide-in + glow), after which data-anim is
@@ -181,7 +188,9 @@ const BUILTIN_META = {
 };
 
 // Every people-picker scope. "create" / "detail" are the multi-select assignee
-// fields; the "-reporter" pair are single-select. A scope is the identity of one
+// fields; the "-reporter" pair are single-select; "subtask" / "create-subtask"
+// are the child creator card's assignee field (detail panel / create modal),
+// multi-select and editing that card's draft. A scope is the identity of one
 // picker: it names its Entry (assignee-search-{scope}), its two parts
 // ({scope}-assignee-chips / -suggestions) and its onUiEvent service
 // (pickerService). Keep it in sync with pickerService().
@@ -190,6 +199,8 @@ const PICKER_SCOPES = [
   "detail",
   "create-reporter",
   "detail-reporter",
+  "subtask",
+  "create-subtask",
 ];
 
 // How long a "a peer changed this out from under you" notice stays up before
@@ -256,6 +267,13 @@ class __tasks_panel extends LetcBox {
     // Deep-link target from a task mention/assignment notification (forwarded by
     // the folder window). Consumed once after the initial load in onDomRefresh.
     this._openTaskId = this.mget("open_task_id") || null;
+    // Mounted by the Personal Calendar as a quick-open card: only that task's
+    // detail card is drawn, and the host is told when it goes (_quickOpenLeft).
+    // Off for the board itself, which never sets quick_open.
+    this._quickOpen = !!this.mget("quick_open");
+    LIVE_PANELS.add(this);
+    // Set by the card's "Open in board" so _quickOpenLeft names that exit.
+    this._quickToBoard = 0;
     this._tasks = [];
     this._members = [];
     this._labels = [];
@@ -303,6 +321,8 @@ class __tasks_panel extends LetcBox {
     // List-view expand state: ids of the parents whose subtasks are showing.
     // Purely local — collapsed is the default on every open, matching Jira.
     this._subtasksOpen = new Set();
+    // List view inline subtask creator (list-subtask.js): { parentId } | null.
+    this._inlineSubtask = null;
     // Panel-wide commit mutex: gates commit-task / commit-detail so two
     // commits cannot overlap.
     this._submitting = false;
@@ -408,11 +428,13 @@ class __tasks_panel extends LetcBox {
   }
 
   onBeforeDestroy() {
+    LIVE_PANELS.delete(this);
     // The panel is going; uploads still on their way have no task to join.
     this._cancelUnfinishedUploads("create", this._createDefaults);
     this._cancelUnfinishedUploads("detail", this._detailDraft);
     this.unbindEvent(_a.live);
     this._unbindCalMenuDismiss();
+    this._unbindSubtaskMenuDismiss();
     // Parts that never mounted leave their waiter behind (their promise simply
     // never settles, exactly as ensurePart's would) — drop them with the panel.
     for (const cb of this._partWaiters || []) this.off(_e.part.ready, cb);
@@ -723,15 +745,19 @@ class __tasks_panel extends LetcBox {
     // scroll around the DOM swap, which is what makes repainting safe at all.
     const seeded = this._seedFromCache();
     const core = Promise.all([this._loadTasks(), this._loadColumns()]);
-    const decorations = Promise.all([
-      this._loadColumnWatches(),
-      this._loadMembers(),
-      this._loadLabels(),
-    ]);
-    this._loadActivity().then(() => {
-      if (this.isDestroyed && this.isDestroyed()) return;
-      if (this.getView() === "summary" || this._detailId) this._render();
-    });
+    // The quick-open card draws no column bells, no label chips and no Health
+    // feed, so it loads only the members its assignee and reporter fields read.
+    const decorations = Promise.all(
+      this._quickOpen
+        ? [this._loadMembers()]
+        : [this._loadColumnWatches(), this._loadMembers(), this._loadLabels()],
+    );
+    if (!this._quickOpen) {
+      this._loadActivity().then(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (this.getView() === "summary" || this._detailId) this._render();
+      });
+    }
     let painted = null;
     if (seeded) {
       this._render();
@@ -754,15 +780,17 @@ class __tasks_panel extends LetcBox {
     if (this._openTaskId) {
       const id = this._openTaskId;
       this._openTaskId = null;
-      this.openTaskById(id);
+      // The rows just landed, so no second fetch unless the task is missing.
+      this.openTaskById(id, { loaded: true });
     }
   }
 
   // Same deep link as above, but for a panel that is ALREADY mounted: the
   // mount-time `open_task_id` is consumed once in onDomRefresh, so a second
   // notification click (folder already open) has to reach the detail this way.
-  // Called by the folder window's openTaskDeepLink.
-  async openTaskById(id) {
+  // Called by the folder window's openTaskDeepLink. `loaded` is the mount-time
+  // path's word that the rows have only just been fetched.
+  async openTaskById(id, { loaded = false } = {}) {
     if (!id) return;
     // Not rendered yet: hand it back to the mount-time path, which opens the
     // detail as soon as the first load lands.
@@ -776,15 +804,24 @@ class __tasks_panel extends LetcBox {
     // this panel last loaded is simply absent — it only appeared after a full
     // page reload, and the deep link below then found nothing to open. Refresh
     // once before concluding the task is not in this folder.
+    //
+    // A task the board DOES hold can be stale too. The Personal Calendar's
+    // quick-open card is another panel in this tab, and its writes never come
+    // back here as a push: the server skips the sending socket, which both
+    // panels share. So its "Open in board" would show the card as it was before
+    // the edit. Refetch on every deep link, then, unless the rows just landed.
     const seek = () =>
       Array.isArray(this._tasks)
         ? this._tasks.find((t) => `${t.id}` === `${id}`)
         : null;
-    if (!seek()) {
+    if (!loaded || !seek()) {
+      const before = this._boardSignature();
       await this._loadTasks();
       // The window can be closed while the refetch is in flight.
       if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
-      this._render();
+      // _openDetail below repaints the card anyway; the board only needs a
+      // render when the rows it draws actually changed.
+      if (this._boardSignature() !== before) this._render();
     }
     // Same guard as onDomRefresh — only open a task that really belongs to this
     // folder's list, never an empty detail panel.
@@ -803,7 +840,11 @@ class __tasks_panel extends LetcBox {
     // calendar row names a task that has since moved workspace or been
     // deleted; the meeting twin already refuses out loud (MEETING_NOT_FOUND).
     this.warn("tasks: deep-linked task is not on this board", id);
+    // The quick-open card has nothing to show, so its host must not be left
+    // holding an empty overlay.
+    if (this._quickOpen) this._quickOpenLeft();
   }
+
 
   // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not
   // native dataTransfer — register the panel as a droppable so they attach.
@@ -874,11 +915,15 @@ class __tasks_panel extends LetcBox {
   _sayCannotEditTasks() {
     const PD = require("libs/permission-denied");
     if (PD.saidRecently()) return;
-    PD.sayWeakPrivilege(
-      LOCALE.PERMISSION_ACTION_EDIT_TASKS,
-      PD.workspacePrivilege(this.mget(_a.hub_id)),
-      _K.permission.write,
-    );
+    let level = PD.workspacePrivilege(this.mget(_a.hub_id));
+    // Outside a workspace window (the Personal Calendar's quick-open card)
+    // there is no window to ask; the member list this panel loaded carries the
+    // viewer's own row.
+    if (!level) {
+      const own = this.getMember(Visitor.id);
+      level = (own && own.privilege) || 0;
+    }
+    PD.sayWeakPrivilege(LOCALE.PERMISSION_ACTION_EDIT_TASKS, level, _K.permission.write);
   }
 
   /**
@@ -898,7 +943,8 @@ class __tasks_panel extends LetcBox {
     return new Set([
       "add-task", "commit-task", "cal-add", "add-board", "board-submit",
       "commit-detail", "remove-task", "toggle-complete",
-      "add-child-task", "create-subtask", "toggle-subtask-complete",
+      "add-child-task", "create-subtask",
+      "list-add-subtask", "list-subtask-commit", "toggle-subtask-complete",
       "set-subtask-row-priority", "set-subtask-row-status",
       "toggle-subtask-row-assignee", "gantt-toggle-select",
       "gantt-delete-selected", "col-menu", "col-rename-submit", "col-theme-set",
@@ -2019,6 +2065,16 @@ class __tasks_panel extends LetcBox {
         return this._openSubtaskDraft();
       }
 
+      // List view ＋ : inline "Enter subtask name..." row (list-subtask.js).
+      case "list-add-subtask":
+        return this._openInlineSubtask(trigger);
+
+      case "list-subtask-commit":
+        return this._commitInlineSubtask();
+
+      case "list-subtask-cancel":
+        return this._closeInlineSubtask();
+
       case "cancel-subtask":
         return this._closeSubtaskDraft();
 
@@ -2032,6 +2088,9 @@ class __tasks_panel extends LetcBox {
         if (!this._subtaskDraft) return;
         const kind = trigger.mget("menuKind");
         this._subtaskDraft.menu = this._subtaskDraft.menu === kind ? null : kind;
+        // One menu at a time: opening the creator's closes any row's.
+        this._subtaskRowMenu = null;
+        this._bindSubtaskMenuDismiss();
         // A plain re-feed is safe here: the card's title Entry is seeded from
         // the draft and kept current by the `task-input-changed` watch, so
         // rebuilding the block cannot lose what has been typed.
@@ -2065,6 +2124,8 @@ class __tasks_panel extends LetcBox {
         const cur = this._subtaskRowMenu;
         this._subtaskRowMenu =
           cur && cur.id === id && cur.kind === kind ? null : { id, kind };
+        if (this._subtaskDraft) this._subtaskDraft.menu = null;
+        this._bindSubtaskMenuDismiss();
         return this._refreshSubtaskSection();
       }
 
@@ -2114,6 +2175,8 @@ class __tasks_panel extends LetcBox {
         const kind = trigger.mget("menuKind");
         this._createSubtaskDraft.menu =
           this._createSubtaskDraft.menu === kind ? null : kind;
+        this._createSubtaskRowMenu = null;
+        this._bindSubtaskMenuDismiss();
         return this._refreshCreateSubtaskSection();
       }
 
@@ -2131,6 +2194,20 @@ class __tasks_panel extends LetcBox {
         return this._refreshCreateSubtaskSection();
       }
 
+      // The creator card's assignee picker, in either scope. Edits the card's
+      // draft and repaints the picker in place (chips + suggestions), never the
+      // block: a re-feed would drop the search field's focus mid-pick.
+      case "set-subtask-assignee":
+      case "set-create-subtask-assignee": {
+        const scope = service === "set-subtask-assignee" ? "subtask" : "create-subtask";
+        const draft = this._pickerDraft(scope);
+        if (!draft) return;
+        const before = (draft.assignees || []).length;
+        draft.assignees = this._toggleAssignee(draft.assignees, trigger.mget("memberUid"));
+        this._applyAssigneeChange(scope, draft.assignees, draft.assignees.length > before);
+        return;
+      }
+
       // Chips on a child QUEUED on the create draft: edit the queued row; it
       // is posted with these values once the parent exists.
       case "toggle-create-subtask-row-menu": {
@@ -2139,6 +2216,8 @@ class __tasks_panel extends LetcBox {
         const cur = this._createSubtaskRowMenu;
         this._createSubtaskRowMenu =
           cur && cur.id === id && cur.kind === kind ? null : { id, kind };
+        if (this._createSubtaskDraft) this._createSubtaskDraft.menu = null;
+        this._bindSubtaskMenuDismiss();
         return this._refreshCreateSubtaskSection();
       }
 
@@ -2271,6 +2350,17 @@ class __tasks_panel extends LetcBox {
       case "open-detail":
         return this._openDetail(trigger.mget("taskId"));
 
+      // Quick-open card only (its footer's "Open in board"): leave the card the
+      // way Cancel does, dropping unsaved edits, and let the host open the
+      // workspace board on this task.
+      case "quick-open-board":
+        this._quickToBoard = 1;
+        return this._closeDetailSilently(() => this._renderOverlays());
+
+      // Quick-open card only: the × shown while the card is still loading.
+      case "quick-open-cancel":
+        return this._quickOpenLeft();
+
       case "set-view": {
         const v = trigger.mget("viewMode");
         if (v && v !== this._view) {
@@ -2283,6 +2373,7 @@ class __tasks_panel extends LetcBox {
           this._view = v;
           // An inline list editor belongs to the list; it does not follow.
           this._listEdit = null;
+          this._inlineSubtask = null;
           // Deferred: paint the loading veil THIS frame so the click gets
           // instant feedback (Project Health links / viewbar tabs felt dead
           // while the synchronous full re-feed built the new view).
@@ -2352,19 +2443,6 @@ class __tasks_panel extends LetcBox {
 
       case "cal-next":
         return this._calShift(1);
-
-      case "cal-day-more": {
-        // "+N" on a busy month cell → that DAY, where every task is a full
-        // card. It used to open the week, which is the Personal Calendar's
-        // "+N" going somewhere different from this one's.
-        const day = trigger.mget("calDay");
-        this._closeCalMenus();
-        if (day) {
-          this._calCursor = day;
-          this._calMode = "day";
-        }
-        return this._repaintCalendar();
-      }
 
       case "cal-add": {
         // "+" on a day cell → open the create modal pre-dated to that day.
@@ -2778,13 +2856,18 @@ class __tasks_panel extends LetcBox {
    * the panel's surgical re-feeds can never disagree about it — adding a picker
    * means adding a scope here and nowhere else.
    *
-   * Scopes: "create" | "detail" (assignee, multi-select) and "create-reporter" |
-   * "detail-reporter" (reporter, single-select).
+   * Scopes: "create" | "detail" (assignee, multi-select), "create-reporter" |
+   * "detail-reporter" (reporter, single-select) and "subtask" |
+   * "create-subtask" (the child creator card's assignees, multi-select).
    */
   pickerService(scope) {
     switch (scope) {
       case "create":
         return "create-assignee";
+      case "subtask":
+        return "set-subtask-assignee";
+      case "create-subtask":
+        return "set-create-subtask-assignee";
       case "create-reporter":
         return "create-reporter";
       case "detail-reporter":
@@ -2807,6 +2890,9 @@ class __tasks_panel extends LetcBox {
 
   // Which draft a picker scope edits.
   _pickerDraft(scope) {
+    // The creator cards first: "create-subtask" would otherwise match ^create.
+    if (scope === "subtask") return this._subtaskDraft;
+    if (scope === "create-subtask") return this._createSubtaskDraft;
     return /^create/.test(String(scope || ""))
       ? this._createDefaults
       : this._detailDraft;
@@ -3443,6 +3529,36 @@ class __tasks_panel extends LetcBox {
     this._closeCommentReactionsPicker();
     this._resetFileSearch();
     this._dismissOverlay("detail-backdrop", done);
+    // The quick-open card has nothing else to show once its card goes, so the
+    // host is told: after the exit animation on a dismissal, on the next tick
+    // otherwise. A walk back to the parent reopens in that same tick, which is
+    // why the check waits for it.
+    if (this._quickOpen) {
+      this._quickLeaving = 1;
+      setTimeout(() => this._quickOpenLeft(), done ? OVERLAY_EXIT_MS : 0);
+    }
+  }
+
+  // Skeleton: the quick-open card is still loading — no card has opened yet,
+  // and none is on its way out.
+  isQuickLoading() {
+    return !!this._quickOpen && !this._detailId && !this._quickLeaving;
+  }
+
+  // Hand control back to the Personal Calendar that mounted this card, unless a
+  // card is open again by now or the panel has gone. The host reloads its own
+  // rows on either exit.
+  _quickOpenLeft() {
+    if (this._detailId || (this.isDestroyed && this.isDestroyed())) return;
+    // Coalesced, and held until shown when that board is out of sight.
+    for (const p of LIVE_PANELS) {
+      if (p !== this && !p._quickOpen && `${p._hubId}` === `${this._hubId}`) {
+        p._queueWsRefresh({ tasks: 1 });
+      }
+    }
+    this.triggerHandlers({
+      service: this._quickToBoard ? "task-quick-open-board" : "task-quick-open-closed",
+    });
   }
 
   // A peer deleted the task this user has open. Their edits can no longer be
@@ -3728,7 +3844,16 @@ class __tasks_panel extends LetcBox {
           files = [];
         }
       }
-      result.linked_files = Array.isArray(files) ? files : [];
+      // task_list names the id `nid`; task_link_file / task_get_linked_files
+      // and every client match (peerPatch, the detail commit's merge, the List
+      // toggle) read `file_nid`. Without this, a card loaded by task.list
+      // never matched: a peer's unlink left the chip, and linking from the
+      // detail panel kept every old entry on top of the server's full list.
+      result.linked_files = Array.isArray(files)
+        ? files.map((f) =>
+            f && f.file_nid == null && f.nid != null ? { ...f, file_nid: f.nid } : f,
+          )
+        : [];
     }
 
     // Subtask link. The server sends null for a top-level task, but a legacy
@@ -4002,14 +4127,10 @@ class __tasks_panel extends LetcBox {
     // and rebuilding it would tear down the calendar under the click.
     if (name === "subtask-due-date") {
       if (this._subtaskDraft) this._subtaskDraft.due_date = value;
-      if (value) this._clearSubtaskDueMissing("detail-panel", this._subtaskDraft);
       return;
     }
     if (name === "create-subtask-due-date") {
       if (this._createSubtaskDraft) this._createSubtaskDraft.due_date = value;
-      if (value) {
-        this._clearSubtaskDueMissing("create-modal", this._createSubtaskDraft);
-      }
       return;
     }
 
@@ -4024,13 +4145,11 @@ class __tasks_panel extends LetcBox {
       this._createDefaults[name] = value;
       if (name === "title" && value.trim()) this._clearTitleMissing("create");
       if (name === "title" && !titleTooLong(value)) this._clearTitleTooLong("create");
-      if (name === "due_date" && value) this._clearDueMissing("create");
       if (DATE_FIELDS.has(name)) this._syncDateRow("create", name);
     } else if (this._detailDraft && inDetail && inDetail.contains(scopeEl)) {
       this._detailDraft[name] = value;
       if (name === "title" && value.trim()) this._clearTitleMissing("detail");
       if (name === "title" && !titleTooLong(value)) this._clearTitleTooLong("detail");
-      if (name === "due_date" && value) this._clearDueMissing("detail");
       if (DATE_FIELDS.has(name)) this._syncDateRow("detail", name);
     }
   }
@@ -4096,36 +4215,6 @@ class __tasks_panel extends LetcBox {
     if (field) field.classList.remove("is-missing");
   }
 
-  /**
-   * The due date is required too: same in-place flag as the title, on the
-   * __due-field wrapper (outline + message), riding on the draft so a re-feed
-   * of the date section — after a Start/End pick — keeps it.
-   */
-  _flagDueMissing(scope) {
-    const { draft, root } = this._titleScope(scope);
-    if (draft) draft._dueMissing = true;
-    const field =
-      root &&
-      root.querySelector(
-        // The child creator card's date is a __due-field too — skip it.
-        `.${this.fig.family}__due-field:not(.${this.fig.family}__subtask-card-date)`,
-      );
-    if (field) field.dataset.missing = "1";
-  }
-
-  _clearDueMissing(scope) {
-    const { draft, root } = this._titleScope(scope);
-    if (!draft || !draft._dueMissing) return;
-    draft._dueMissing = false;
-    const field =
-      root &&
-      root.querySelector(
-        // The child creator card's date is a __due-field too — skip it.
-        `.${this.fig.family}__due-field:not(.${this.fig.family}__subtask-card-date)`,
-      );
-    if (field) field.dataset.missing = "0";
-  }
-
   async _commitTask() {
     this._captureCreateDraft();
     const draft = this._createDefaults || {};
@@ -4139,9 +4228,6 @@ class __tasks_panel extends LetcBox {
     // Already in marker form (chips serialize to "[@Name](user:uid)").
     const description = String(draft.description || "").trim();
 
-    // Both required fields are flagged in one pass, so the user sees every
-    // missing field at once rather than one per press.
-    if (!dueRaw) this._flagDueMissing("create");
     if (!title) return this._flagTitleMissing("create");
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagTitleTooLong("create");
@@ -4152,7 +4238,7 @@ class __tasks_panel extends LetcBox {
     const childTooLong =
       !!childDraft && titleTooLong(this._readCreateSubtaskTitle());
     if (childTooLong) this._flagSubtaskTitleTooLong("create-modal", childDraft);
-    if (tooLong || childTooLong || !dueRaw) return;
+    if (tooLong || childTooLong) return;
     if (!(await this._gateUnfinishedUploads("create", draft))) return;
 
     this._setSubmitting(".tasks-panel__create-submit", true);
@@ -4451,12 +4537,10 @@ class __tasks_panel extends LetcBox {
     if (!task) return;
     // planDetailCommit drops an empty title and saves everything else, so a
     // cleared title used to quietly snap back to the old one. Refuse instead.
-    const dueMissing = !String(draft.due_date || "").trim();
-    if (dueMissing) this._flagDueMissing("detail");
     if (!String(draft.title || "").trim()) return this._flagTitleMissing("detail");
     const tooLong = titleTooLong(draft.title);
     if (tooLong) this._flagTitleTooLong("detail");
-    if (dueMissing || tooLong) return;
+    if (tooLong) return;
     if (!(await this._gateUnfinishedUploads("detail", draft))) return;
 
     this._setSubmitting(".tasks-panel__detail-submit", true);
@@ -4756,7 +4840,13 @@ class __tasks_panel extends LetcBox {
     // Three fetches follow, and the card is about to be drawn without any of
     // them. Flag all three BEFORE the render, or it paints the empty states
     // for one frame before the skeleton could replace them.
-    this._loading = { attachments: 1, comments: 1, history: 1 };
+    // Attachments are the exception when the list row already says there are
+    // none (task_list ships linked_files): skeleton rows for a section that
+    // will settle empty just flash and collapse. The fetch still runs, so a
+    // file linked since the list loaded is fed in when it lands.
+    const knownNoFiles =
+      task && Array.isArray(task.linked_files) && !task.linked_files.length;
+    this._loading = { attachments: knownNoFiles ? 0 : 1, comments: 1, history: 1 };
     this._renderOverlays();
     this._refreshAttachments(id).then(() => {
       if (this._detailId !== id) return;
@@ -5071,9 +5161,9 @@ class __tasks_panel extends LetcBox {
    */
   _repaintCalendar() {
     // A different range (or view) is new content, so it opens at the top. The
-    // month's offset used to carry over: scroll to the last week, follow a
-    // "+N" into its day, and the Day view opened scrolled past that day's
-    // first tasks — or ‹ › landed mid-grid on the next month. A repaint of the
+    // month's offset used to carry over: scroll to the last week, switch to
+    // Day, and the Day view opened scrolled past that day's first tasks — or
+    // ‹ › landed mid-grid on the next month. A repaint of the
     // SAME range (a task edit, a filter) still goes through the plain
     // _refreshViewBody and keeps its place; this is the rule the Personal
     // Calendar keys on too (_placeHoursScroll).
@@ -5124,6 +5214,64 @@ class __tasks_panel extends LetcBox {
     if (!this._calMenuDismiss) return;
     document.removeEventListener("click", this._calMenuDismiss, true);
     this._calMenuDismiss = null;
+  }
+
+  // ── outside-click dismissal for the subtask chip menus ──────────────────
+  // Priority / Status / assignee menus on the creator card and on each child
+  // row, in both scopes. A click on a menu or on a chip/avatar trigger is left
+  // to its own handler (pick, toggle, switch menu); anything else closes.
+  //
+  // Closing flips the DOM in place rather than re-feeding the block: the click
+  // may land on the card's title Entry, ✕ or done tick, and a re-feed in the
+  // capture phase would rebuild that target before it is reached (and steal
+  // the Entry's focus). The cleared state keeps the menus shut on the next
+  // re-feed, which is the one that removes them for good.
+  _anySubtaskMenuOpen() {
+    return !!(
+      (this._subtaskDraft && this._subtaskDraft.menu) ||
+      this._subtaskRowMenu ||
+      (this._createSubtaskDraft && this._createSubtaskDraft.menu) ||
+      this._createSubtaskRowMenu
+    );
+  }
+
+  _bindSubtaskMenuDismiss() {
+    if (this._subtaskMenuDismiss || typeof document === "undefined") return;
+    const pfx = this.fig.family;
+    const keep = `.${pfx}__subtask-menu, .${pfx}__subtask-chip, .${pfx}__subtask-assignee`;
+    this._subtaskMenuDismiss = (ev) => {
+      if (this.isDestroyed && this.isDestroyed()) return this._unbindSubtaskMenuDismiss();
+      if (!this._anySubtaskMenuOpen()) return this._unbindSubtaskMenuDismiss();
+      const t = ev && ev.target;
+      // THIS panel's controls only — another window's Task tab is outside.
+      const hit = t && t.closest && t.closest(keep);
+      if (hit && this.el && this.el.contains(hit)) return;
+      this._closeSubtaskMenus();
+    };
+    // Bound from inside the opening click, after the document capture phase
+    // has passed — so that click cannot dismiss the menu it just opened.
+    document.addEventListener("click", this._subtaskMenuDismiss, true);
+  }
+
+  _unbindSubtaskMenuDismiss() {
+    if (!this._subtaskMenuDismiss) return;
+    document.removeEventListener("click", this._subtaskMenuDismiss, true);
+    this._subtaskMenuDismiss = null;
+  }
+
+  _closeSubtaskMenus() {
+    if (this._subtaskDraft) this._subtaskDraft.menu = null;
+    if (this._createSubtaskDraft) this._createSubtaskDraft.menu = null;
+    this._subtaskRowMenu = null;
+    this._createSubtaskRowMenu = null;
+    this._unbindSubtaskMenuDismiss();
+    if (!this.el) return;
+    const pfx = this.fig.family;
+    for (const menu of this.el.querySelectorAll(`.${pfx}__subtask-menu`)) {
+      const trigger = menu.parentElement && menu.parentElement.closest("[data-open]");
+      if (trigger) trigger.setAttribute("data-open", "0");
+      menu.style.display = "none";
+    }
   }
 
   async _loadComments(taskId) {
@@ -7258,6 +7406,9 @@ class __tasks_panel extends LetcBox {
         onFileDone: (node, parent, entry) =>
           this._onEagerFileDone(scopeKey, draft, entry, node),
         onDone: () => this._onEagerBatchDone(scopeKey, draft, paired),
+        // The quick-open card on the Personal Calendar: its tiles show each
+        // file's state, and the card stays a bar clear of it (calendar skin).
+        collapsed: !!this._quickOpen,
       },
     ).catch(() => null);
     // No window, or one that refused the batch before creating a job (client
@@ -7306,7 +7457,12 @@ class __tasks_panel extends LetcBox {
     const pending = unfinishedPending(draft && draft.pending_files);
     if (!pending.length) return true;
     // The card is non-modal; a second press must not stack a second question.
-    if (this._confirmingUploads) return false;
+    // It brings the upload window that is asking forward instead, so the press
+    // is not a silent no-op when that window sits behind something.
+    if (this._confirmingUploads) {
+      require("window/upload-progress").getOrCreate().then((win) => win && win.raise && win.raise());
+      return false;
+    }
     this._confirmingUploads = true;
     let choice = "keep";
     try {
@@ -7622,6 +7778,22 @@ class __tasks_panel extends LetcBox {
     this._attachments[taskId] = (this._attachments[taskId] || []).filter(
       (f) => f.file_nid !== fileNid,
     );
+    // The card's strip reads the task row, not _attachments. The unlink is
+    // already written, so Update later sends no file op and never patches the
+    // row — and the server's broadcast skips this socket. Patch it here, or
+    // the card keeps the removed file until the next full reload.
+    const task = this._tasks.find((t) => t.id === taskId);
+    if (task && Array.isArray(task.linked_files)) {
+      this._mergeTask({
+        id: taskId,
+        linked_files: task.linked_files.filter(
+          (f) => String(f.file_nid) !== String(fileNid),
+        ),
+      });
+      // The view host sits under the overlay, so this leaves the open detail
+      // (and its unsaved draft) alone.
+      this._repaintBoard();
+    }
     // Surgical update — full _render() would blow away any unsaved
     // title/description/etc. the user is currently editing.
     this._refreshAttachmentsList();
@@ -8321,12 +8493,18 @@ class __tasks_panel extends LetcBox {
 
   // Reflect the current assignee set in place: re-feed the chips row and the
   // suggestions (the picked member must leave them), and clear the query.
-  // `kind` is "create-assignee" | "detail-assignee". `picked` = a member was
+  // `kind` is "create-assignee" | "detail-assignee", or a picker scope as is
+  // ("subtask" | "create-subtask"). `picked` = a member was
   // just added, so keep the field focused for the next pick; a chip removal
   // leaves focus (and the dropdown's open state) alone.
   _applyAssigneeChange(kind, assignees, picked = false) {
     if (!this.el) return;
-    const scope = kind === "create-assignee" ? "create" : "detail";
+    const scope =
+      kind === "create-assignee"
+        ? "create"
+        : kind === "detail-assignee"
+          ? "detail"
+          : kind;
     this._withPart(`${scope}-assignee-chips`)
       .then((chips) => {
         if (!chips || chips.isDestroyed?.()) return;
@@ -8613,7 +8791,42 @@ class __tasks_panel extends LetcBox {
     if (hub) wrap.dataset.hub = String(hub);
     if (width) wrap.style.width = `${width}px`;
     wrap.appendChild(img);
+    // ✕ to take the image out again. Its glyph is ::after content and the
+    // serializer emits a marker for the wrapper without walking into it, so
+    // nothing of it reaches the saved body. The click is handled once per
+    // editor (_wireInlineImageRemove), since a render rebuilds these nodes.
+    const remove = document.createElement("span");
+    remove.className = `${this.fig.family}__inline-img-remove`;
+    remove.setAttribute("role", "button");
+    remove.setAttribute("aria-label", LOCALE.REMOVE || "Remove");
+    wrap.appendChild(remove);
     return wrap;
+  }
+
+  // Delegated, so images rendered from the draft and ones pasted later share
+  // one listener. The scope is read at click time: _initDescEditor re-runs on
+  // the same element and keeps it current.
+  _wireInlineImageRemove(editorEl, scope) {
+    editorEl.__inlineImgScope = scope;
+    if (editorEl.__inlineImgRemoveWired) return;
+    editorEl.__inlineImgRemoveWired = 1;
+    const pfx = this.fig.family;
+    // Keep the press from moving the caret or blurring the editor (which
+    // would close a mention popup — see onblur in _initDescEditor).
+    editorEl.addEventListener("mousedown", (e) => {
+      if (e.target.closest && e.target.closest(`.${pfx}__inline-img-remove`)) {
+        e.preventDefault();
+      }
+    });
+    editorEl.addEventListener("click", (e) => {
+      const hit = e.target.closest && e.target.closest(`.${pfx}__inline-img-remove`);
+      if (!hit || !editorEl.contains(hit)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const wrap = hit.closest(`.${pfx}__inline-img`);
+      if (wrap) wrap.remove();
+      this._onDescInput(editorEl.__inlineImgScope, editorEl);
+    });
   }
 
   // Anchor node for a hyperlink. In an editor it is contenteditable=false so it
@@ -8775,6 +8988,7 @@ class __tasks_panel extends LetcBox {
       this._mentionCloseTimer = setTimeout(() => this._closeMention(), 150);
     };
     editorEl.onpaste = (e) => this._onEditorPaste(e, scope, editorEl);
+    this._wireInlineImageRemove(editorEl, scope);
   }
 
   // Clipboard image (screenshot / copied external image): upload it, then
@@ -10048,6 +10262,7 @@ class __tasks_panel extends LetcBox {
     if (viewChanged) this._scrollActiveViewTabIntoView();
     this._positionFilterPicker();
     if (this._listEdit) this._afterListPaint();
+    if (this._inlineSubtask) this._wireInlineSubtask();
     this._markPainted();
     // The board has drawn: the folder window's Task entrance keys on this
     // (window/folder/skin, data-view="task"), so it slides in WITH its columns.
@@ -10247,6 +10462,7 @@ class __tasks_panel extends LetcBox {
           this._restoreViewScroll(savedScroll);
           // The list's floating editor follows its cell (list-inline.js).
           if (this._listEdit) this._afterListPaint();
+          if (this._inlineSubtask) this._wireInlineSubtask();
         },
         { enter: opt.enter !== false },
       );
@@ -11047,6 +11263,7 @@ class __tasks_panel extends LetcBox {
       due_date: this._notPast(parent.due_date),
       priority: "medium",
       status: firstOpen ? firstOpen.key : "todo",
+      assignees: [],
       // Which chip's dropdown is open: null | "priority" | "status".
       menu: null,
     };
@@ -11234,21 +11451,6 @@ class __tasks_panel extends LetcBox {
     if (card) card.dataset.titleMissing = "0";
   }
 
-  _flagSubtaskDueMissing(host, draft) {
-    if (draft) draft._dueMissing = true;
-    const card = this._subtaskCard(host);
-    const field = card && card.querySelector(`.${this.fig.family}__due-field`);
-    if (field) field.dataset.missing = "1";
-  }
-
-  _clearSubtaskDueMissing(host, draft) {
-    if (!draft || !draft._dueMissing) return;
-    draft._dueMissing = false;
-    const card = this._subtaskCard(host);
-    const field = card && card.querySelector(`.${this.fig.family}__due-field`);
-    if (field) field.dataset.missing = "0";
-  }
-
   _subtaskCard(host) {
     const pfx = this.fig.family;
     return this.el && this.el.querySelector(`.${pfx}__${host} .${pfx}__subtask-card`);
@@ -11308,6 +11510,7 @@ class __tasks_panel extends LetcBox {
       due_date: this._notPast(this._createDefaults.due_date),
       priority: "medium",
       status: firstOpen ? firstOpen.key : "todo",
+      assignees: [],
       menu: null,
     };
     this._refreshCreateSubtaskSection().then(() =>
@@ -11368,9 +11571,8 @@ class __tasks_panel extends LetcBox {
   _flushCreateSubtaskDraft() {
     const draft = this._createSubtaskDraft;
     if (!draft || !this._readCreateSubtaskTitle()) return;
-    // Runs inside the parent's Create, after the parent's own due date passed
-    // validation — so a child the user typed but never dated takes that date
-    // rather than being dropped without a word.
+    // Runs inside the parent's Create — a child the user typed but never
+    // dated takes the parent's due date (if any).
     if (!draft.due_date && this._createDefaults) {
       draft.due_date = this._createDefaults.due_date || "";
     }
@@ -11390,11 +11592,10 @@ class __tasks_panel extends LetcBox {
     const draft = this._createSubtaskDraft;
     if (!parentDraft || !draft) return;
     const title = this._readCreateSubtaskTitle();
-    if (!draft.due_date) this._flagSubtaskDueMissing("create-modal", draft);
     if (!title) return this._flagSubtaskTitleMissing("create-modal", draft);
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagSubtaskTitleTooLong("create-modal", draft);
-    if (!draft.due_date || tooLong) return;
+    if (tooLong) return;
     if (!Array.isArray(parentDraft.subtasks)) parentDraft.subtasks = [];
     parentDraft.subtasks.push({
       // Local key, not a server id. Named `id` so the shared row skeleton can
@@ -11405,6 +11606,7 @@ class __tasks_panel extends LetcBox {
       priority: draft.priority || "medium",
       status: draft.status || this.getDefaultStatus(),
       due_date: draft.due_date || "",
+      assignees: Array.isArray(draft.assignees) ? draft.assignees.slice() : [],
     });
     // Queued: close the card, matching the detail-panel creator — the row now
     // shows in the list, and the ＋ opens a fresh card for the next one.
@@ -11500,11 +11702,10 @@ class __tasks_panel extends LetcBox {
         `.${this.fig.family}__detail-panel .${this.fig.family}__subtask-card-title input`,
       );
     const title = String((input && input.value) || draft.title || "").trim();
-    if (!draft.due_date) this._flagSubtaskDueMissing("detail-panel", draft);
     if (!title) return this._flagSubtaskTitleMissing("detail-panel", draft);
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagSubtaskTitleTooLong("detail-panel", draft);
-    if (!draft.due_date || tooLong) return;
+    if (tooLong) return;
 
     // _setControlBusy, NOT _setSubmitting: the latter raises the panel-wide
     // _submitting flag that gates commit-task / commit-detail, and creating a
@@ -11517,40 +11718,17 @@ class __tasks_panel extends LetcBox {
       );
     this._setControlBusy(submitBtn, true, { swapLabel: true });
     try {
-      const created = await this.postService({
-        service: SERVICE.task.create,
-        hub_id: this._hubId,
-        // nid is sent for parity with a normal create, but the server ignores
-        // it for a subtask and inherits the parent's folder instead.
-        nid: this._scopeNid,
-        parent_task_id: parentId,
+      const row = await this._postSubtask(parentId, {
         title,
-        priority: draft.priority || "medium",
-        status: draft.status || undefined,
-        due_date: draft.due_date || null,
+        priority: draft.priority,
+        status: draft.status,
+        due_date: draft.due_date,
+        assignees: draft.assignees,
       });
-      const row = Array.isArray(created) ? created[0] : created;
-      if (!row || !row.id) {
-        // postService resolves falsy on failure rather than rejecting.
-        this._alertWriteFailed();
-        return;
-      }
-      this._mergeTask(row);
+      if (!row) return;
       // Done: the creator card closes and the new child shows in the list
       // above. The ＋ in the section header opens a fresh card for the next.
       this._subtaskDraft = null;
-      // Two targeted re-feeds rather than a full _render().
-      //
-      // The parent's count badge lives OUTSIDE this part — on the board card,
-      // list row, gantt row and calendar chip behind the modal — so the view
-      // does have to be rebuilt or those read as "the subtask was never
-      // created". But the view sits in its own "view-host" part, a SIBLING of
-      // the detail wrapper, so re-feeding it leaves this section alone.
-      // Both calls are therefore safe together:
-      // they touch disjoint subtrees, which was not true of the old
-      // _render()-then-ensurePart pairing.
-      this._syncSubtaskBadges(parentId);
-      this._refreshViewBody();
       // The card plays its exit first; the re-feed then drops it and shows the
       // new child row in one paint.
       this._leaveSubtaskCard("detail-panel").then(() =>
@@ -11565,6 +11743,42 @@ class __tasks_panel extends LetcBox {
       // spinning forever.
       this._setControlBusy(submitBtn, false, { swapLabel: true });
     }
+  }
+
+  /**
+   * task.create a child of `parentId`, merge it, and repaint the view — shared
+   * by the detail creator (_commitSubtask) and the List inline creator
+   * (list-subtask.js). Resolves the server row, or null (alerted) on failure.
+   */
+  async _postSubtask(parentId, fields) {
+    const created = await this.postService({
+      service: SERVICE.task.create,
+      hub_id: this._hubId,
+      // nid is sent for parity with a normal create, but the server ignores
+      // it for a subtask and inherits the parent's folder instead.
+      nid: this._scopeNid,
+      parent_task_id: parentId,
+      title: fields.title,
+      priority: fields.priority || "medium",
+      status: fields.status || undefined,
+      due_date: fields.due_date || null,
+      assignee_uids: Array.isArray(fields.assignees) ? fields.assignees : [],
+    });
+    const row = Array.isArray(created) ? created[0] : created;
+    if (!row || !row.id) {
+      // postService resolves falsy on failure rather than rejecting.
+      this._alertWriteFailed();
+      return null;
+    }
+    this._mergeTask(row);
+    // The parent's count lives OUTSIDE the detail panel — on the board card
+    // strip, list row, gantt row and calendar chip — so the view has to be
+    // rebuilt or those read as "the subtask was never created". The view sits
+    // in its own "view-host" part, a SIBLING of the detail wrapper, so
+    // re-feeding it leaves an open detail section alone.
+    this._syncSubtaskBadges(parentId);
+    this._refreshViewBody();
+    return row;
   }
 
   /**
@@ -11605,11 +11819,12 @@ class __tasks_panel extends LetcBox {
         if (row.parent) this._mergeTask(row.parent);
         this._refreshSubtaskSection();
         this._syncSubtaskBadges(task.parent_task_id);
-        // A parent that just auto-completed changes its own card/row/pill, so
-        // the underlying view does need rebuilding — but only the view: the
-        // open detail panel was already refreshed above, and a full _render()
-        // here would rebuild it a second time under the user's cursor.
-        if (row.parent) this._refreshViewBody();
+        // The view behind the panel shows this child too — the Board and
+        // Calendar Subtasks strips carry its status pill and the done/total
+        // bar, and an auto-completed parent changes its own card — so it is
+        // rebuilt. Only the view: the open detail panel was already refreshed
+        // above, and a full _render() would rebuild it under the cursor.
+        this._refreshViewBody();
       } else {
         task.status = originalStatus;
         this._refreshSubtaskSection();
@@ -11900,6 +12115,8 @@ class __tasks_panel extends LetcBox {
   const { LIST_SERVICES, ...methods } = listInline;
   Object.assign(__tasks_panel.prototype, methods);
 }
+// So does the List view's inline subtask creator.
+Object.assign(__tasks_panel.prototype, listSubtask);
 // Completing a parent with open subtasks asks first (complete-parent.js).
 Object.assign(__tasks_panel.prototype, completeParent);
 

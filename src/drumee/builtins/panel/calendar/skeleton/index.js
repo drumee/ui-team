@@ -22,7 +22,39 @@ function modalKids(ui) {
   }
   if (form.kind === "meeting") return [meetingForm(ui)];
   if (form.kind === "task") return [taskForm(ui)];
+  if (form.kind === "task-quick-open") return [quickOpen(ui, form.row)];
   return [];
+}
+
+// A workspace task (Figma 1697:50129): the board's own card, from the board's
+// own panel mounted in quick-open mode for the row's hub. The box around it is
+// this page's modal, so the toast dodge (_modalEl) and the slot lift see it;
+// the card itself is drawn and styled by the board.
+function quickOpen(ui, row) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__modal`,
+    attrOpt: { "data-form": "task-quick-open" },
+    kids: [
+      {
+        kind: "tasks_panel",
+        hub_id: row.hub_id,
+        open_task_id: row.id,
+        // An explicit false is what locks the card; the viewer's role in that
+        // workspace, read on the hub side by calendar.list.
+        may_write: !!row.can_write,
+        // The folder the task was filed under: where the panel files new
+        // children and falls back for uploads, as the workspace window would
+        // with the folder it stands in.
+        nid: row.nid,
+        scope_nid: row.nid,
+        quick_open: 1,
+        sys_pn: "quick-open-panel",
+        partHandler: ui,
+        uiHandler: [ui],
+      },
+    ],
+  });
 }
 
 // Exported so the controller can re-feed ONLY the modal slot on open/close

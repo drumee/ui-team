@@ -40,22 +40,8 @@
   // responsive block below needs the scrollbar on a different element.
   @mixin thin-scroll {
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-
-    &::-webkit-scrollbar {
-      width: 4px;
-      height: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: var(--scrollbar-track);
-      border-radius: 45px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb);
-      border-radius: 45px;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   // Shared focus ring — keyboard users get a visible target on every

@@ -405,6 +405,9 @@ class __window_downloader extends mfsInteract {
       const timer = setTimeout(() => this._settleTreeZip({ error: "timeout" }), TREE_TIMEOUT_MS);
       this._treeZip = { zipid, index, resolve, timer };
       this.mset({ zipid });
+      // Its end may have been pushed before this window held the zipid.
+      const missed = require("libs/zip-pushes").take(zipid);
+      if (missed) this.handleDownload(missed);
     });
   }
 
@@ -867,6 +870,10 @@ class __window_downloader extends mfsInteract {
           } else {
             this.downloadZip(opt);
           }
+        } else {
+          // Its end may have been pushed before this window held the zipid.
+          const missed = require("libs/zip-pushes").take(opt.zipid);
+          if (missed) this.handleDownload(missed);
         }
       }).catch(this.warn.bind(this));
     }).catch(this.warn.bind(this));
@@ -1134,6 +1141,13 @@ class __window_downloader extends mfsInteract {
         this._zipPaint(this._archivePercent(progress, message));
         break;
       case 'exit':
+        // 7z's exit code (server-team offline/media/download.js): anything
+        // but 0 means the archive is missing or incomplete — nothing to fetch.
+        if (data.exit) {
+          this._zipItem('error', data.zipname);
+          this._zipSettle({ state: 'failed', title: LOCALE.DOWNLOAD_FAILED });
+          break;
+        }
         this.downloadZip(data);
         break;
     }

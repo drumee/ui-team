@@ -18,6 +18,7 @@ const {
 // "Open this file once I am signed in" — armed at module scope in index.web.js
 // from the original URL, consumed below once the desk has mounted after sign-in.
 const fileDeepLink = require("libs/file-deep-link");
+const locationUrl = require("libs/location-url");
 const {
   blocksGroupedArrange,
 } = require("window/skeleton/toolkit/file-group");
@@ -58,6 +59,8 @@ class __window_manager extends push {
     RADIO_KBD.on(_e.keyup, this._handelKbdEvents);
     /** Preload some most used widget. Do not use await to avoid blocking */
     Kind.waitFor("window_folder");
+    // Keep the address bar on the visitor's location — libs/location-url.
+    locationUrl.start();
     // Post-Checkout return (?checkout=success|cancel) → payment result modal.
     // Deferred so the wrapper-modal slot exists before we feed it.
     setTimeout(() => this.checkCheckoutReturn(), 1200);
@@ -550,9 +553,22 @@ class __window_manager extends push {
    * @returns
    */
   route(l) {
+    // An address this desk wrote itself (libs/location-url) — reached by a
+    // reload, Back or Forward — is where the visitor already is, not a link to
+    // open: a reload is served by the remembered-screen restore, and Back /
+    // Forward leave the desk where it stands, exactly as the resting "home"
+    // hash did. The URL is then put back on the actual location. A reload with
+    // nothing remembered armed the file-deep-link relay instead (captureFromUrl)
+    // — that one is opened below like any link, which also settles the relay.
+    if (locationUrl.isMirrorEntry() && !fileDeepLink.peek()) {
+      locationUrl.schedule();
+      return;
+    }
     let args = Visitor.parseModuleArgs() || {};
     let path = Visitor.parseModule() || [];
 
+    // Nothing writes the address bar while this navigation is being routed.
+    locationUrl.hold();
     /** Reset the url to its default value*/
     setTimeout(()=>{
       // NOT while a tour was launched from this URL.
@@ -572,7 +588,11 @@ class __window_manager extends push {
       try {
         if (require('libs/window-tutorial-intent').armed()) return;
       } catch (e) { /* never let a URL tidy-up break the desk */ }
-      location.hash='#/desk/wm/home'
+      // The address bar now shows where the visitor is (Lexis 2026-10-22),
+      // "#/desk/wm/home" only when that is nowhere in particular. Written with
+      // replaceState, so unlike the hash assignment it replaces, it no longer
+      // re-routes the desk — see libs/location-url.
+      locationUrl.settle();
     }, Visitor.timeout(5000))
 
     switch (path[2]) {
@@ -952,6 +972,7 @@ class __window_manager extends push {
       open_task_id,
       open_meeting_nid,
       open_meeting_stime,
+      topic_id,
     } = args;
     if (!hub_id) {
       this.warn("openNotificationLocation: missing hub_id", args);
@@ -1085,6 +1106,11 @@ class __window_manager extends push {
       win.openMeetingDeepLink(open_meeting_nid, open_meeting_stime);
     } else if (activeTab && _.isFunction(win.showFolderTab)) {
       win.showFolderTab(activeTab);
+      // A folder-chat notification names the topic its message is in: the
+      // chat opens on # General, which leaves topic messages out.
+      if (activeTab === _a.chat && topic_id && _.isFunction(win.openChatTopic)) {
+        win.openChatTopic(topic_id);
+      }
     }
     // Keep the rail agreeing with the screen. loadWorkspace does not touch it
     // (it is desk chrome, rebuilt with nothing) — the defect Lexis reported for
@@ -1101,7 +1127,10 @@ class __window_manager extends push {
       window.Desk._railHighlight(lit);
     }
 
-    if (highlight) this._revealFromNotification(nid, filetype, pid);
+    if (highlight) {
+      // revealTtl: a timed reveal (chat "Show in folder"); absent = persistent.
+      this._revealFromNotification(nid, filetype, pid, { ttl: args.revealTtl });
+    }
     return win;
   }
 
@@ -2656,6 +2685,17 @@ class __window_manager extends push {
     // tracks the window's PRESENCE. The topbar compensation in desk/skin keys
     // on the same condition, for the same reason.
     this._installDeskStateMirror("call-layer", "deskCall", ".window-connect");
+    // A chat or meeting card is up. The section screens (home overview,
+    // Calendar, Inbox, Settings…) sit in settings-main-slot at z 1500, OUTSIDE
+    // `.window-manager__ui`, whose isolation kept the card's layer under them:
+    // every card arriving on the home screen was mounted but never seen.
+    // desk/skin dissolves the isolation for this flag exactly as for an upload.
+    // The layer always holds a blank placeholder, hence the card classes.
+    this._installDeskStateMirror(
+      "meeting-toast-layer",
+      "deskToast",
+      ".panel-activity-toast, .desk-meeting-toast",
+    );
   }
 
   onPartReady(child, pn) {
@@ -2864,13 +2904,11 @@ class __window_manager extends push {
     }
     this._lastTaget = this._target;
     this.moveAllowed(moving);
-
-    const targetPOS =
-      (this._target.bbox.y || 0) + (this._target.bbox.h || 0) - 10;
-    const movingPOS = (moving.bbox.y || 0) + (moving.bbox.h || 0);
-    if (targetPOS < movingPOS) {
-      this._target.scrollToBottom();
-    }
+    // No auto-scroll while dragging. The old rule compared the window's
+    // bottom edge with `moving.bbox` — the tile's RESTING seat, measured at
+    // drag start, not where the pointer is — so grabbing any tile already
+    // clipped by the window's bottom edge (e.g. the last row of a section)
+    // satisfied it on the very first tick and jumped the list to the end.
   }
 
   /**

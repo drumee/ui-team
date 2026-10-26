@@ -186,24 +186,28 @@ html *::-webkit-scrollbar-corner {
   background-color: var(--scrollbar-track, transparent);
 }
 
-// Theme-aware scrollbar for every list view. The vendored `.list-smart__container`
-// rule (in @drumee/ui-core) hardcodes a light thumb (--primary-400) + white track,
-// so it never adapts to dark mode. node_modules can't be edited, so this override
-// re-points both to theme tokens. The single `html` prefix lifts specificity to
-// (0,1,2) so it outranks the vendored (0,1,1) rule regardless of bundle order.
-// Token values live in router/skin/themes/{light,dark}.scss: light = unchanged,
-// dark = darker track + thumb.
-html .list-smart__container {
-  // Fallbacks (light defaults) so a context that renders a list before/without
-  // the theme tokens still gets a styled bar instead of the browser default.
-  scrollbar-color: var(--scrollbar-thumb, var(--primary-400))
+// The vendored list containers (@drumee/ui-core list/smart and list/table)
+// set their own bar — a --primary-400 thumb on a white track, and a 3px webkit
+// bar capped by max-width/max-height — at (0,1,0), which beats `html *`.
+// node_modules can't be edited, so the single `html` prefix lifts these to
+// (0,1,1) and puts them back on the canonical bar regardless of bundle order.
+// scrollbar-width stays the vendored `thin`: lifting it too would outrank a
+// view that hides a list's bar with a single-class `scrollbar-width: none`.
+html .list-smart__container,
+html .list-table__container {
+  scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
     var(--scrollbar-track, transparent);
 
-  &::-webkit-scrollbar-track {
-    background-color: var(--scrollbar-track, transparent);
+  &::-webkit-scrollbar,
+  &[data-flow="x"]::-webkit-scrollbar,
+  &[data-axis="x"]::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    max-width: none;
+    max-height: none;
   }
 
   &::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb, var(--primary-400));
+    background-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22));
   }
 }

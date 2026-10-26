@@ -655,7 +655,12 @@ html {
 //        (0,1,0) + (0,1,0) + (0,1,0) = (0,3,0)
 //   now  .desk-module[data-desk-upload] .window-manager__ui
 //        (0,1,0) + (0,1,0) + (0,1,0) = (0,3,0)
-.desk-module[data-desk-upload] {
+// The chat / meeting card (`data-desk-toast`, same mirror) needs the same
+// escape: the section screens in settings-main-slot (1500) covered it, so a
+// message arriving on the home screen showed nothing. While a card is up the
+// desk stacks exactly as during an upload.
+.desk-module[data-desk-upload],
+.desk-module[data-desk-toast] {
   .window-manager__ui {
     isolation: auto;
     z-index: auto;
@@ -705,6 +710,7 @@ html {
 // clear of the global (0,1,0) and the focus lift (0,4,0). The attribute is
 // doubled on each so the two flags rank identically.
 .desk-module[data-desk-upload][data-desk-upload],
+.desk-module[data-desk-toast][data-desk-toast],
 .desk-module[data-desk-call][data-desk-call] {
   .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer):not(.call-layer) {
     z-index: 1300 !important;
@@ -1212,16 +1218,13 @@ html {
 // that looks pressable and does nothing is worse than one that is not drawn.
 //
 //   __open       the org dropdown's "Open" pill, which leads to THIS screen.
-//   __nav-main   the workspace rail (Files / Chat / Task / Meet / Access).
-//                Every item drives the ACTIVE WORKSPACE WINDOW
+//   sidebar      the whole desk sidebar (rail + __main): logo row, the
+//                workspace rail (Files / Chat / Task / Meet / Access) and the
+//                footer. Every rail item drives the ACTIVE WORKSPACE WINDOW
 //                (Wm.getActiveWindow at click time), and the org screen is not
-//                a workspace.
-//
-// __nav-main, NOT its parent __nav. __nav also holds the logo row — the
-// wordmark, the organisation's name and the collapse/pin toggle — which is
-// chrome the screen has no quarrel with: the sidebar keeps its identity and its
-// pin control, and only the five rail items go. Hiding __nav took the logo with
-// them and left the column empty above the footer.
+//                a workspace — so the screen gets the full width instead.
+//                (Previously only __nav-main went and the logo row and footer
+//                stayed.)
 //
 // ONE RULE, TWO SUBJECTS, and one home for the condition. Both were about to
 // key off the same `:has()` in two different skins — this file already reaches
@@ -1267,9 +1270,19 @@ html {
 //   now  .desk-module[data-desk-orgview][data-desk-orgview][data-desk-orgview] .desk-org-tab__open
 //        (0,1,0) + (0,1,0)x3        + (0,1,0) = (0,5,0)
 .desk-module[data-desk-orgview][data-desk-orgview][data-desk-orgview] {
-  .desk-org-tab__open,
-  .desk-module-sidebar__nav-main {
+  .desk-org-tab__open {
     display: none;
+  }
+
+  // The whole sidebar goes while the org screen is up. The __rail with it, not
+  // just __main: the rail is the in-flow column that reserves the sidebar's
+  // 64/231px (sidebar.scss __rail), so hiding __main alone would leave an empty
+  // strip where it was. `!important` because the ≤650px block in sidebar.scss
+  // forces `__main { display: flex !important }`. The mobile drawer has no
+  // rail, so __main is listed for it.
+  .desk-module-sidebar__rail,
+  .desk-module-sidebar__main {
+    display: none !important;
   }
 }
 

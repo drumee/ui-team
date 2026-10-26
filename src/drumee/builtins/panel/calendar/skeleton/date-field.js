@@ -60,14 +60,25 @@ function unfollow(instance) {
   instance.__calFollow = null;
 }
 
+// The Task tab's Start/End rules (window/tasks/skeleton dateFieldDisable): no
+// past day except the one the field holds, Start never after End, End never
+// before Start. `name` is "start_date" or "due_date"; the controller calls this
+// again after each pick to re-bound the other picker.
+function rangeDisable(name, start, due) {
+  return require("../../../window/tasks/skeleton").dateFieldDisable(name, start || "", due || "");
+}
+
+// opt.range ({ start_date, due_date }) makes the field one end of a Start → End
+// pair; without it the picker is unbounded, as the meeting form's is.
 module.exports = function (ui, opt) {
   const pfx = ui.fig.family;
+  const range = opt.range;
   return {
     kind: "date_picker",
     className: `${pfx}__date-input`,
     innerClass: `${pfx}__date-input-inner`,
     name: opt.name,
-    placeholder: LOCALE.SELECT_DATE,
+    placeholder: opt.placeholder || LOCALE.SELECT_DATE,
     value: opt.value || "",
     service: "cal-form-date",
     uiHandler: [ui],
@@ -79,6 +90,7 @@ module.exports = function (ui, opt) {
       // itself with today would stamp every task with its creation date
       // (the same trap the board documents).
       defaultDate: opt.value || null,
+      ...(range ? { disable: rangeDisable(opt.name, range.start_date, range.due_date) } : {}),
       appendTo: document.body,
       position: placeCalendar,
       onOpen: [(_d, _s, instance) => follow(instance)],
@@ -86,3 +98,5 @@ module.exports = function (ui, opt) {
     },
   };
 };
+
+module.exports.rangeDisable = rangeDisable;

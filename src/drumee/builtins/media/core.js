@@ -434,9 +434,13 @@ class __media_core extends DrumeeMFS {
        *  workspace (`private`) → Designation link, which a fellow member opens
        *  in their own desk (Lexis 2026-10-05: folders too, not only files).
        *  Never on a WORKSPACE: the desk switcher's ⋯ menu is built from this
-       *  same builder (see 6), and a workspace is not "a folder in" one. */
+       *  same builder (see 6), and a workspace is not "a folder in" one.
+       *  An external workspace also offers the member-facing link (shown as
+       *  "Internal Link") next to Share (Lexis 2026-10-21). */
       if (this.mget(_a.area) === _a.share) {
-        sections.push(['secureShare']);
+        const links = ['secureShare'];
+        if (!this._isWorkspace() && !Visitor.inDmz) links.push('designationLink');
+        sections.push(links);
       } else if (this.mget(_a.area) === _a.private && !this._isWorkspace()) {
         sections.push(['designationLink']);
       }
@@ -541,6 +545,11 @@ class __media_core extends DrumeeMFS {
     const extra = [];
     if (editable) {
       switch (this.isRegularFile() && this.mget(_a.area)) {
+        case _a.share:
+          /** External workspace: the member-facing link sits beside Share
+           * (Lexis 2026-10-21). Never for a DMZ guest — it is for members. */
+          if (!Visitor.inDmz) extra.push('designationLink');
+          break;
         case _a.private:
           extra.push('designationLink'); /** Open a file from the link with the user environment */
           break;
@@ -2877,6 +2886,10 @@ class __media_core extends DrumeeMFS {
           this.mset({ zipid: data.zipid, zipname: data.zipname });
           this._zipsize = data.size;
           if (this._progress) this._progress.setLabel(LOCALE.PREPARING);
+          // The worker may have finished before this reply arrived: its end
+          // was pushed while no tile carried the zipid (libs/zip-pushes).
+          const missed = require("libs/zip-pushes").take(data.zipid);
+          if (missed) this.handleDownload(missed);
         }
         break;
       case SERVICE.media.make_dir:

@@ -188,6 +188,32 @@ for (const name of ["docs", "sheet"]) {
   });
 }
 
+test("docs in co-editing (Live): the pending Casual autosave is flushed on close even with no dirty flag", async () => {
+  const saveBeforeClose = fn(SRC.docs, "async saveBeforeClose()");
+  let saves = 0;
+  const self = {
+    _changed: 0,
+    _saving: 0,
+    _saveState: "saved",
+    _doc: { _collab: { nid: "n", hub_id: "h" } },
+    async saveContent() {
+      saves++;
+      this._saveState = "saved";
+    },
+    saveBeforeClose,
+  };
+  // Live mode keeps no _changed: the flush goes out regardless.
+  assert.equal(await self.saveBeforeClose(), true);
+  assert.equal(saves, 1);
+  // The flush failed (header left on "Unsaved changes"): keep the editor open.
+  self.saveContent = async function () {
+    saves++;
+    this._saveState = "unsaved";
+  };
+  assert.equal(await self.saveBeforeClose(), false);
+  assert.equal(saves, 2);
+});
+
 for (const name of ["markdown", "text"]) {
   test(`${name}: saveBeforeClose saves when something was typed, reports a save that did not go through`, async () => {
     const saveBeforeClose = fn(SRC[name], "async saveBeforeClose()");
@@ -269,6 +295,76 @@ test("the saves can be awaited: every editor hands its request back", () => {
   // docs / sheet: the create-then-replace follow-up is part of the same wait.
   assert.match(SRC.docs, /if \(!opt\.replace\) return this\.saveContent\(\);/);
   assert.match(SRC.sheet, /if \(!opt\.replace\) \{\n\s+return this\.saveContent\(\);/);
+});
+
+// ---------------------------------------------------------------- X button
+
+const INTERACT = read("src/drumee/builtins/player/interact.js");
+
+test("X button: an editor saves first and closes once the server has it; a viewer closes at once", async () => {
+  const closeAfterSave = fn(INTERACT, "async closeAfterSave()", { Wm: {}, LOCALE: {} });
+  let calls = [];
+  const viewer = { isDestroyed: () => false, goodbye: () => calls.push("goodbye"), warn() {}, closeAfterSave };
+  await viewer.closeAfterSave();
+  assert.deepEqual(calls, ["goodbye"]);
+
+  calls = [];
+  const editor = {
+    ...viewer,
+    async saveBeforeClose() {
+      calls.push("save");
+      return true;
+    },
+  };
+  await editor.closeAfterSave();
+  assert.deepEqual(calls, ["save", "goodbye"]);
+});
+
+test("X button: a save that fails asks before closing, and a No keeps the editor open", async () => {
+  let answer = { response: "confirm" };
+  let asked = 0;
+  const closeAfterSave = fn(INTERACT, "async closeAfterSave()", {
+    Wm: { confirm: async () => (asked++, answer) },
+    LOCALE: { UNSAVED_CLOSE_ANYWAY: "close anyway?" },
+  });
+  let calls = [];
+  const editor = {
+    isDestroyed: () => false,
+    goodbye: () => calls.push("goodbye"),
+    warn: () => calls.push("warn"),
+    saveBeforeClose: async () => false,
+    closeAfterSave,
+  };
+  await editor.closeAfterSave();
+  assert.equal(asked, 1);
+  assert.deepEqual(calls, ["goodbye"]);
+
+  calls = [];
+  answer = { response: "cancel" };
+  await editor.closeAfterSave();
+  assert.deepEqual(calls, []);
+
+  // A save that throws is logged and lands on the same question.
+  calls = [];
+  answer = { response: "confirm" };
+  editor.saveBeforeClose = async () => {
+    throw new Error("export failed");
+  };
+  await editor.closeAfterSave();
+  assert.deepEqual(calls, ["warn", "goodbye"]);
+});
+
+test("every editor's close button goes through closeAfterSave; the question exists in the six locales", () => {
+  for (const name of ["docs", "sheet", "markdown", "text", "note"]) {
+    assert.match(SRC[name], /case _e\.close:\n\s+return this\.closeAfterSave\(\);/, name);
+  }
+  // The diagram editor inherits the base player's close case.
+  assert.match(INTERACT, /case _e\.close:\n\s+return this\.closeAfterSave\(\);/);
+  assert.doesNotMatch(SRC.diagram, /case _e\.close/);
+  for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
+    const l = JSON.parse(read(`locale/${lang}.json`));
+    assert.ok(l.UNSAVED_CLOSE_ANYWAY && l.UNSAVED_CLOSE_ANYWAY.length > 10, lang);
+  }
 });
 
 test("text viewer: typing marks the file unsaved (it had no such flag)", () => {

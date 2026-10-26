@@ -126,13 +126,6 @@ textarea {
   border-style: inset;
   outline: none;
 
-  &::-webkit-scrollbar {
-    height: 100%;
-    width: 3px;
-    max-height: 3px;
-    cursor: pointer;
-  }
-
   &:focus {
     border-color: var(--eblue);
     border-width: 1px;

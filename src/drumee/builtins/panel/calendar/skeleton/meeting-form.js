@@ -1,20 +1,33 @@
-// Personal meeting modal — Figma 58222:396301, 58227:18289, 58227:19341.
+// Personal meeting modal — Figma 1693:163829 (create), 1693:166935 (the same
+// form in two columns, for short screens), 1693:163906 (invite link ready).
 //
-// Title · Date · start/end time · Invite. The Invite block is the SECURE-SHARE
-// access-control block, which is what the frames actually draw (decision C-02) —
-// and all three controls already exist server-side on the room path:
+// Title · Date · Attachments · Enter time → End time · Invite, built as ONE
+// tree. The skin stacks it in the frame's single 460px column and, on a short
+// wide screen, lays the same nodes out in the landscape frame's two columns.
+// Two trees with one hidden by CSS would put every input `name` in the DOM
+// twice, and the submit reads by name (getData) — the hidden, empty copy of
+// the password could win while the toggle still says it is on.
 //
-//   "Require email to view"  → per-email dmz grants via room.js _commit_invitation,
-//                              which also sends real invitation mail
-//   "Restrict to emails…"    → the recipient list handed to that same call
-//   "Add password protection"→ room.public_link's `password` param
+// Invite holds "Add password protection" only: room.public_link's `password`,
+// which the server enforces. The frames also draw "Require email to view" and
+// "Restrict access to specific emails or domains". Those are not drawn,
+// because nothing on the server acts on them yet — the per-email grant they
+// would feed (room.js _commit_invitation) has no caller, so the link would
+// stay open to anyone holding it. Their handlers (index.js
+// cal-toggle-require-email / cal-toggle-restrict / cal-add-recipient) and
+// recipientChips stay, so drawing the rows again is all it takes once the
+// server makes that call.
 //
-// The per-email grant is issued 'no_traversal', so an invitee — member or not —
-// never gains workspace access. That is requirement §5, already enforced by the
-// server rather than by this form.
+// Attachments are not in the frames but the feature ships (room.link_files),
+// so they sit under Date.
 
 const dateField = require("./date-field");
 const attachments = require("./attachments");
+
+// Button.Svg renders a plain div: no role, not in the tab order. These make
+// the icon buttons below focusable and announced; index.js _installFormKeys
+// presses them on Enter / Space.
+const keyButton = (label) => ({ "aria-label": label, role: "button", tabindex: "0" });
 
 // 12-hour clock parts, matching the frames' Hour / Minute / AM-PM triplet.
 function timePicker(ui, which, value) {
@@ -123,8 +136,9 @@ function toggleRow(ui, opt) {
   });
 }
 
-// Recipient chips. Its own part ("form-recipient-chips") so adding or removing
-// an address re-feeds this row alone, not the modal around it.
+// Recipient chips for the "Restrict access" list. Not drawn while that row is
+// hidden (see the header); kept for index.js _renderRecipients, which feeds
+// the "form-recipient-chips" part once the row is back.
 function recipientChips(ui, recipients) {
   const pfx = ui.fig.family;
   return recipients.map((email) =>
@@ -152,7 +166,6 @@ module.exports = function (ui) {
   const pfx = ui.fig.family;
   const form = ui.getForm() || {};
   const draft = form.draft || {};
-  const recipients = Array.isArray(draft.recipients) ? draft.recipients : [];
 
   // `required` names the draft key the field must fill. The field then
   // carries data-field / data-required, and an error line that stays hidden
@@ -179,131 +192,54 @@ module.exports = function (ui) {
       ].filter(Boolean),
     });
 
-  // Recipient chips + entry, shown only while "restrict" is on. Always
-  // rendered and hidden by data-open, so flipping the switch is an attribute
-  // change rather than a re-render.
-  const recipientList = Skeletons.Box.Y({
-    className: `${pfx}__recipients`,
-    attrOpt: {
-      "data-sub": "restrict",
-      "data-open": draft.restrict ? "1" : "0",
-    },
-    kids: [
-      Skeletons.Box.X({
-        className: `${pfx}__chips`,
-        sys_pn: "form-recipient-chips",
-        partHandler: ui,
-        attrOpt: { "data-count": String(recipients.length) },
-        kids: recipientChips(ui, recipients),
-      }),
-      Skeletons.Entry({
-        className: `${pfx}__input`,
-        sys_pn: "form-recipient",
-        name: "recipient",
-        placeholder: LOCALE.ENTER_EMAIL_OR_DOMAIN,
-        require: "any",
-        mode: "commit",
-        bubble: 0,
-        service: "cal-add-recipient",
-        uiHandler: [ui],
-        partHandler: ui,
-      }),
-    ],
-  });
-
+  // The password row is always rendered and hidden by data-open, so flipping
+  // the checkbox is an attribute change rather than a re-render.
   const inviteBlock = Skeletons.Box.Y({
-    className: `${pfx}__invite`,
+    className: `${pfx}__invite-group`,
     kids: [
-      Skeletons.Box.Y({
-        className: `${pfx}__invite-group`,
-        kids: [
-          toggleRow(ui, {
-            ico: "ph-envelope-simple",
-            labelKey: "REQUIRE_EMAIL_TO_VIEW",
-            hintKey: "REQUIRE_EMAIL_HINT",
-            on: !!draft.require_email,
-            flag: "require_email",
-            service: "cal-toggle-require-email",
-          }),
-          // The restrict sub-toggle only shows once an email is required —
-          // restricting to a list you never collect is meaningless.
-          Skeletons.Box.Y({
-            className: `${pfx}__invite-sub`,
-            attrOpt: {
-              "data-sub": "require_email",
-              "data-open": draft.require_email ? "1" : "0",
-            },
-            kids: [
-              Skeletons.Box.X({
-                className: `${pfx}__switch-row`,
-                attrOpt: { "data-toggle": "restrict" },
-                bubble: 0,
-                service: "cal-toggle-restrict",
-                uiHandler: [ui],
-                // active:0 or the label/switch eats the click.
-                kidsOpt: { active: 0 },
-                kids: [
-                  Skeletons.Note({
-                    className: `${pfx}__switch-label`,
-                    content: LOCALE.RESTRICT_ACCESS_EMAILS,
-                  }),
-                  Skeletons.Note({
-                    className: `${pfx}__switch`,
-                    attrOpt: { "data-on": draft.restrict ? "1" : "0" },
-                  }),
-                ],
-              }),
-              recipientList,
-            ],
-          }),
-        ],
+      toggleRow(ui, {
+        ico: "app-lock",
+        labelKey: "ADD_PASSWORD_PROTECTION",
+        hintKey: "PASSWORD_PROTECTION_HINT",
+        on: !!draft.password_on,
+        flag: "password_on",
+        service: "cal-toggle-password",
       }),
-
       Skeletons.Box.Y({
-        className: `${pfx}__invite-group`,
+        className: `${pfx}__invite-sub`,
+        attrOpt: {
+          "data-sub": "password_on",
+          "data-open": draft.password_on ? "1" : "0",
+        },
         kids: [
-          toggleRow(ui, {
-            ico: "ph-hard-drives",
-            labelKey: "ADD_PASSWORD_PROTECTION",
-            hintKey: "PASSWORD_PROTECTION_HINT",
-            on: !!draft.password_on,
-            flag: "password_on",
-            service: "cal-toggle-password",
-          }),
-          Skeletons.Box.Y({
-            className: `${pfx}__invite-sub`,
-            attrOpt: {
-              "data-sub": "password_on",
-              "data-open": draft.password_on ? "1" : "0",
-            },
+          // Same build as the sign-in form's PASSWORD row
+          // (welcome/signin skeleton/content.js): a row holding a plain
+          // password EntryBox and a separate eye button, rather than the
+          // EntryBox's own `shower` icon, which it never sizes or places.
+          Skeletons.Box.X({
+            className: `${pfx}__password`,
             kids: [
-              // Same build as the sign-in form's PASSWORD row
-              // (welcome/signin skeleton/content.js): a row holding a plain
-              // password EntryBox and a separate eye button, rather than the
-              // EntryBox's own `shower` icon, which it never sizes or places.
-              Skeletons.Box.X({
-                className: `${pfx}__password`,
-                kids: [
-                  Skeletons.EntryBox({
-                    type: _a.password,
-                    className: `${pfx}__password-input`,
-                    sys_pn: "form-password",
-                    formItem: "password",
-                    name: "password",
-                    placeholder: LOCALE.PASSWORD,
-                    require: "any",
-                    bubble: 0,
-                    uiHandler: [ui],
-                    partHandler: ui,
-                  }),
-                  Skeletons.Button.Svg({
-                    ico: "eye_closed",
-                    className: `${pfx}__password-eye`,
-                    bubble: 0,
-                    service: "cal-toggle-password-visibility",
-                    uiHandler: [ui],
-                  }),
-                ],
+              Skeletons.EntryBox({
+                type: _a.password,
+                className: `${pfx}__password-input`,
+                sys_pn: "form-password",
+                formItem: "password",
+                name: "password",
+                placeholder: LOCALE.PASSWORD,
+                require: "any",
+                bubble: 0,
+                uiHandler: [ui],
+                partHandler: ui,
+              }),
+              Skeletons.Button.Svg({
+                ico: "eye_closed",
+                className: `${pfx}__password-eye`,
+                bubble: 0,
+                service: "cal-toggle-password-visibility",
+                uiHandler: [ui],
+                // A toggle: "Show", pressed while the password is shown
+                // (index.js flips aria-pressed with the icon).
+                attrOpt: { ...keyButton(LOCALE.SHOW), "aria-pressed": "false" },
               }),
             ],
           }),
@@ -329,13 +265,15 @@ module.exports = function (ui) {
             bubble: 0,
             service: "cal-close-form",
             uiHandler: [ui],
+            attrOpt: keyButton(LOCALE.CLOSE),
           }),
         ],
       }),
 
-      // Two columns, as in the task modal (skin stacks them under 700px):
-      // what and when on the left, the time and who on the right.
-      Skeletons.Box.X({
+      // What and when in the main column, Invite in the side one. The skin
+      // stacks the two (the portrait frame) and puts them side by side only
+      // on a short wide screen (the landscape frame).
+      Skeletons.Box.Y({
         className: `${pfx}__modal-body ${pfx}__modal-body--split`,
         kids: [
           Skeletons.Box.Y({
@@ -367,44 +305,38 @@ module.exports = function (ui) {
 
               field(
                 "DATE",
-                dateField(ui, { name: "meeting_date", value: draft.date }),
+                Skeletons.Box.X({
+                  className: `${pfx}__date-box`,
+                  kids: [
+                    dateField(ui, { name: "meeting_date", value: draft.date }),
+                    Skeletons.Image.Svg({ ico: "top-calendar", className: `${pfx}__date-ico` }),
+                  ],
+                }),
               ),
 
               field("ATTACHMENTS", attachments(ui)),
+
+              Skeletons.Box.X({
+                className: `${pfx}__time-row`,
+                kids: [
+                  field("ENTER_TIME", timePicker(ui, "start", draft.start)),
+                  Skeletons.Image.Svg({ ico: "arrow-right", className: `${pfx}__time-arrow` }),
+                  field("END_TIME", timePicker(ui, "end", draft.end)),
+                ],
+              }),
             ],
           }),
           Skeletons.Box.Y({
             className: `${pfx}__modal-col ${pfx}__modal-col--side`,
-            kids: [
-              Skeletons.Box.X({
-                className: `${pfx}__time-row`,
-                kids: [
-                  field("START_TIME", timePicker(ui, "start", draft.start)),
-                  Skeletons.Note({
-                    className: `${pfx}__time-arrow`,
-                    content: "→",
-                  }),
-                  field("END_TIME", timePicker(ui, "end", draft.end)),
-                ],
-              }),
-
-              field("INVITE", inviteBlock),
-            ],
+            kids: [field("INVITE", inviteBlock)],
           }),
         ],
       }),
 
-      // Cancel · confirm, as in the Meet tab's own schedule modal.
+      // One full-width action, as the frames draw it; the × closes.
       Skeletons.Box.X({
         className: `${pfx}__modal-foot`,
         kids: [
-          Skeletons.Note({
-            className: `${pfx}__button ${pfx}__button--neutral`,
-            content: LOCALE.CANCEL,
-            bubble: 0,
-            service: "cal-close-form",
-            uiHandler: [ui],
-          }),
           Skeletons.Note({
             className: `${pfx}__button ${pfx}__button--primary`,
             content: LOCALE.CREATE_MEETING_SEND_INVITE,
@@ -418,8 +350,10 @@ module.exports = function (ui) {
   });
 };
 
-// "Invite link ready" — Figma 58227:43238. Shown after room.public_link
-// answers; the link is already on the clipboard by then.
+// "Invite link ready" — Figma 1693:163906. Shown after room.public_link
+// answers; the link is already on the clipboard by then. One filled row:
+// link glyph, the link (truncated, full text in the tooltip) and a copy
+// button, then Done.
 module.exports.inviteLink = function (ui, link) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
@@ -439,37 +373,26 @@ module.exports.inviteLink = function (ui, link) {
             bubble: 0,
             service: "cal-close-form",
             uiHandler: [ui],
+            attrOpt: keyButton(LOCALE.CLOSE),
           }),
         ],
       }),
-      // Built like Settings' referral rows (settings_main referralCard →
-      // innerItem: __inner + __referral-row): a title over the value on the
-      // left, a ghost "Copy" button on the right. Only the button copies, as
-      // there.
       Skeletons.Box.X({
         className: `${pfx}__link-row`,
         kids: [
-          Skeletons.Box.Y({
-            className: `${pfx}__link-text-box`,
-            kids: [
-              Skeletons.Note({
-                className: `${pfx}__link-title`,
-                content: LOCALE.SHARE_LINK,
-              }),
-              Skeletons.Note({
-                className: `${pfx}__link-text`,
-                content: link,
-                attrOpt: { title: link },
-              }),
-            ],
-          }),
+          Skeletons.Image.Svg({ ico: "chat-link-simple", className: `${pfx}__link-ico` }),
           Skeletons.Note({
+            className: `${pfx}__link-text`,
+            content: link,
+            attrOpt: { title: link },
+          }),
+          Skeletons.Button.Svg({
             className: `${pfx}__link-copy`,
-            content: LOCALE.COPY,
+            ico: "chat-action-copy",
             bubble: 0,
             service: "cal-copy-link",
             uiHandler: [ui],
-            attrOpt: { "aria-label": LOCALE.COPY_LINK },
+            attrOpt: { ...keyButton(LOCALE.COPY_LINK), title: LOCALE.COPY_LINK },
           }),
         ],
       }),

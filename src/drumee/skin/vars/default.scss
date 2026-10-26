@@ -22,6 +22,7 @@
   --default-background-caution: #ea4d44;
   --default-background-inactive: #89929e;
   --default-scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22));
+  --default-scrollbar-white: var(--scrollbar-track, transparent);
   --default-transparent-bg: hsla(0, 0%, 78.4%, 0.5);
   --background-tooltips: #e8e8e8;
   --default-background-alert: #fd635b;
@@ -116,6 +117,7 @@
 
   --default-radio-active: rgb(64 64 255 / 70%);
   --default-scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22));
+  --default-scrollbar-white: var(--scrollbar-track, transparent);
   --desk-scrollbar-color: var(--default-scrollbar-color);
 
   --x-small-width: 361px;

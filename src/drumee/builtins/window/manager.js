@@ -2059,10 +2059,41 @@ class __window_manager extends mfsInteract {
   }
 
   /**
+   * Is anything the user is looking at living outside windowsLayer?
+   *
+   * newVersion used to read an empty windowsLayer as "nothing open" and reload
+   * on the spot. Since the docked workspace, files open into headlessLayer
+   * (getWindowsPool) and calls into the call layer, so windowsLayer stays empty
+   * while a document is on screen: a new build announced by sys.hello (after a
+   * deploy, on the WebSocket reconnect) reloaded the page under it, and the
+   * file seemed to close by itself a second or two after opening.
+   *
+   * The workspace pane itself (`headless`) is the desk, not a window: a reload
+   * reopens it, so it alone does not count.
+   *
+   * @returns {Boolean}
+   */
+  _hasDeskWindows() {
+    for (const pool of [this.headlessLayer, this.callLayer]) {
+      if (!pool || !pool.children) continue;
+      if (pool.isDestroyed && pool.isDestroyed()) continue;
+      const open = pool.children.find(
+        (c) => c && !(c.isDestroyed && c.isDestroyed()) && !c.mget(_a.headless),
+      );
+      if (open) return true;
+    }
+    return false;
+  }
+
+  /**
    *
    */
   newVersion() {
-    if (this.__windowsLayer && this.__windowsLayer.isEmpty()) {
+    if (
+      this.__windowsLayer &&
+      this.__windowsLayer.isEmpty() &&
+      !this._hasDeskWindows()
+    ) {
       location.reload();
     } else {
       this.confirm({

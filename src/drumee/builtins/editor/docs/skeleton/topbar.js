@@ -1,80 +1,31 @@
 // ===========================================================
-//  Casual Docs editor topbar — the shared player topbar widget
-//  (file glyph + filename + Save + gear + window controls).
+//  Casual Docs editor topbar — the shared player topbar widget,
+//  configured as the Drumee 2.0 "File viewer" header (Figma
+//  1319:146667): Share pill + Download / gear / Move & Resize /
+//  Close. The gear rows and the services live in editor/chrome.
 // ===========================================================
 const Topbar = require("builtins/player/widget/topbar");
-
-function gearMenu(ui) {
-  return [
-    { id: "menu-save", label: LOCALE.SAVE || "Save", icon: "floppy", service: _e.save },
-    // Same row the sheet's gear menu carries. Casual's own title bar has an
-    // inline-editable name, but it only appears in co-editing mode and it
-    // renames through Casual — this is the Drumee rename (media.rename), and
-    // it is the ONLY one in single-user mode.
-    {
-      id: "menu-rename",
-      label: LOCALE.RENAME || "Rename",
-      icon: "app-edit",
-      service: "direct-rename",
-    },
-    // Google-Docs "Document tabs": several documents in one file, listed in a
-    // rail on the left (docs/skeleton/tabs-rail).
-    {
-      id: "menu-tabs",
-      label: LOCALE.DOCUMENT_TABS || "Document tabs",
-      icon: "app-doc-file",
-      service: "toggle-doc-tabs",
-    },
-    { separator: true },
-    // Replaces Casual's own "Help" menu (hidden by docs_state): opens Drumee's
-    // support conversation, or the support mail link as a fallback.
-    {
-      id: "menu-contact",
-      label: LOCALE.CONTACT_US,
-      icon: "apps-chat",
-      service: "contact-support",
-    },
-    { separator: true },
-    { id: "menu-close", label: LOCALE.CLOSE || "Close", icon: "cross", service: _e.close },
-  ];
-}
+const chrome = require("builtins/editor/chrome");
 
 // The identity block (glyph + title) is gone on purpose: Casual's OWN title
-// bar renders the logo, the inline-editable document name and the menu row —
-// exactly the docs.casualoffice.org header. This Drumee bar shrinks to a
-// floating cluster (save status + gear + maximize/close) over its right side.
+// bar renders the document name and the menu row; docs_state lays it out as
+// the Figma's two rows (glyph + name, then File / Edit / View …) and this
+// Drumee bar floats its action cluster over the right side of that header.
 function config(ui) {
-  return {
-    right: {
-      before: [
-        {
-          // Google-Docs/Casual-demo style: no floppy button — the document
-          // autosaves (state.js onSave, debounced) and Ctrl+S saves at once.
-          // This label mirrors the demo's "All changes saved" and is driven
-          // by editor.setSaveStatus(): saved | saving | unsaved.
-          type: "custom",
-          component: Skeletons.Note({
-            sys_pn: "save-status",
-            className: "editor-docs__save-status drumee-topbar__status",
-            content: LOCALE.ALL_CHANGES_SAVED || "All changes saved",
-            active: 0,
-            dataset: { state: "saved" },
-          }),
-        },
-      ],
-      after: [
-        {
-          type: "custom",
-          component: require("window/skeleton/topbar/control")(ui, "sc"),
-        },
-      ],
-    },
-    defaults: {
-      "folder-settings": { menu: gearMenu(ui) },
-      "move-resize": { visible: false },
-      close: { visible: false },
-    },
-  };
+  return chrome.topbarConfig(ui, {
+    tabs: true,
+    status: Skeletons.Note({
+      // No floppy button — the document autosaves (state.js onSave,
+      // debounced) and Ctrl+S saves at once. The label mirrors the demo's
+      // "All changes saved" and is driven by editor.setSaveStatus():
+      // saved | saving | unsaved.
+      sys_pn: "save-status",
+      className: "editor-docs__save-status drumee-topbar__status",
+      content: LOCALE.ALL_CHANGES_SAVED || "All changes saved",
+      active: 0,
+      dataset: { state: "saved" },
+    }),
+  });
 }
 
 module.exports = function (ui) {

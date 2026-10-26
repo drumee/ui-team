@@ -1,5 +1,7 @@
 // The hour-ruled canvas behind both Week (7 columns) and Day (1 column).
-// Figma 58222:171611 (week) and 58222:172317 (day).
+// Figma 1693:187899 (week) and 1693:189056 (day). A timed meeting is the
+// frame's weekly schedule card (43:31735) and an all-day task the month cell's
+// task card, both drawn by skeleton/chip.js.
 //
 // There is no precedent for this layout in the codebase — the board calendar is
 // day-cells only — so the geometry lives here once and both views configure it.
@@ -220,7 +222,8 @@ module.exports = function (ui, days, view) {
             }),
           ],
         }),
-        // All-day strip: tasks, and any meeting whose start time was cleared.
+        // All-day strip: the day's tasks. A meeting always has a start here —
+        // rowStart drops one without, above, before it reaches a column.
         items.length
           ? Skeletons.Box.Y({
               className: `${pfx}__allday`,

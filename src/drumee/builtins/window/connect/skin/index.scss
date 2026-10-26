@@ -574,17 +574,15 @@
     background-color: #ffffff;
 
     // Figma "meeting frame": the two participants sit SIDE BY SIDE — two
-    // columns, one row. The shared meeting shell stacks a two-person call
-    // vertically (`[data-remote="2"]` → 1 column / 2 rows), which is the team
-    // meeting's intent but not the 1:1 call's.
+    // columns, one row, whatever the window's shape.
     //
-    // Safe to do in plain CSS: participants/index.js CLEARS its inline
-    // gridTemplate* whenever there are <= 2 tiles (the `items <= 2` branch of
-    // responsive()), so nothing inline outranks this. Only 3+ participants get
-    // an inline grid, and a 1:1 call never has them.
+    // participants/index.js responsive() writes an inline grid-template for
+    // every tile count (area per tile → roughly square cells), which in a tall
+    // window stacks two tiles. The 1:1 call always wants them side by side,
+    // hence !important to beat the inline style.
     &[data-mode="normal"][data-remote="2"] {
-      grid-template-columns: 1fr 1fr;
-      grid-template-rows: 1fr;
+      grid-template-columns: 1fr 1fr !important;
+      grid-template-rows: 1fr !important;
     }
   }
 

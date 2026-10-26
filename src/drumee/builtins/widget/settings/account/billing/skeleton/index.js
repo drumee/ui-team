@@ -10,7 +10,10 @@ function getContent(ui) {
   const tab = ui.state?.currentTab ?? ui.tab ?? 0;
   
   if (tab === 2) {
-    return require("./checkout").default(ui);
+    // Checkout carries the subscription banner at the head of its own left
+    // column (Figma 734-59617), not in the page-wide banner row — see
+    // bannerRow, which leaves it out on this tab.
+    return require("./checkout").default(ui, { banner: subscriptionBanner(ui) });
   } else {
     const cycle = ui.state?.plansTab?.cycle ?? (tab === 0 ? "monthly" : "yearly");
     const plans = require("./plans").default(ui, cycle);
@@ -91,25 +94,43 @@ function subscriptionBanner(ui) {
   const paidByQuota = ui._isPaidByQuota ? ui._isPaidByQuota() : /^(pro|team|enterprise)$/.test(quotaPlan);
   if (!ui._hasPaidSub && !paidByQuota) return null;
   const fig = `${ui.fig.family}__sub-banner`;
-  const when = ui._periodEnd ? Dayjs(ui._periodEnd * 1000).format("MMM D, YYYY") : "";
+  // Full month name, as the design writes it ("August 10, 2026").
+  const when = ui._periodEnd ? Dayjs(ui._periodEnd * 1000).format("MMMM D, YYYY") : "";
   const planLabel = quotaPlan ? quotaPlan.charAt(0).toUpperCase() + quotaPlan.slice(1) : "";
 
   if (ui._isCanceling) {
-    return Skeletons.Box.X({
+    // Which plan is ending leads, then when: "You are on the Pro plan" /
+    // "Your plan ends on August 10, 2026" / what happens after. The plan name
+    // goes through the catalog labels so it is translated with the rest.
+    const planName = (quotaPlan && LOCALE[quotaPlan.toUpperCase()]) || planLabel;
+    const endsOn = when
+      ? (LOCALE.SUBSCRIPTION_ENDS_ON || "Your plan ends on {0}").format(when)
+      : "";
+    return Skeletons.Box.Y({
       className: `${fig} ${fig}--canceling${ui._motionClass()}`,
       kids: [
         Skeletons.Box.Y({
           className: `${fig}-text`,
           kids: [
-            Skeletons.Note({
-              className: `${fig}-title`,
-              content: (LOCALE.SUBSCRIPTION_ENDS_ON || "Your plan ends on {0}").format(when),
-            }),
+            // No plan known (quota not loaded): the end date is the headline,
+            // as before, rather than "You are on the  plan".
+            planName
+              ? Skeletons.Note({
+                  className: `${fig}-title`,
+                  content: (LOCALE.CURRENT_PLAN_BANNER || "You are on the {0} plan").format(planName),
+                })
+              : null,
+            endsOn
+              ? Skeletons.Note({
+                  className: planName ? `${fig}-ends` : `${fig}-title`,
+                  content: endsOn,
+                })
+              : null,
             Skeletons.Note({
               className: `${fig}-desc`,
-              content: LOCALE.SUBSCRIPTION_ENDS_DESC || "You keep full access until then, after which your workspace returns to the Free plan.",
+              content: LOCALE.SUBSCRIPTION_ENDS_DESC || "You keep full access until then, after which your workspace returns to the Free plan",
             }),
-          ],
+          ].filter(Boolean),
         }),
         Skeletons.Note({
           className: `${fig}-action ${fig}-resume`,
@@ -125,7 +146,7 @@ function subscriptionBanner(ui) {
   // LAUNCH30 free trial — no Stripe renew. Banner names the trial end date
   // and Cancel ends it immediately via promo.cancel (not cancel_subscription).
   if (ui._isPromoTrial) {
-    return Skeletons.Box.X({
+    return Skeletons.Box.Y({
       className: `${fig} ${fig}--active ${fig}--promo${ui._motionClass()}`,
       kids: [
         Skeletons.Note({
@@ -145,7 +166,7 @@ function subscriptionBanner(ui) {
     });
   }
 
-  return Skeletons.Box.X({
+  return Skeletons.Box.Y({
     className: `${fig} ${fig}--active${ui._motionClass()}`,
     kids: [
       Skeletons.Note({
@@ -244,7 +265,10 @@ function promoBanner(ui) {
  * @returns {Object|null} Skeletons component
  */
 function bannerRow(ui) {
-  const kids = [subscriptionBanner(ui), promoBanner(ui)].filter(Boolean);
+  const tab = ui.state?.currentTab ?? ui.tab ?? 0;
+  // On Checkout the subscription banner heads the form column instead
+  // (getContent), and promoBanner is already null there.
+  const kids = [tab === 2 ? null : subscriptionBanner(ui), promoBanner(ui)].filter(Boolean);
   if (!kids.length) return null;
   return Skeletons.Box.X({
     className: `${ui.fig.family}__banner-row`,

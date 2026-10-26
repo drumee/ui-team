@@ -9,10 +9,12 @@
 // exactly like the documented calendar.list contract (skeleton/helpers.js), so
 // whatever renders here is what will render against the real service.
 //
-// Deliberately exercises the awkward cases: a folder-owned row (read-only) next
-// to a personal one (editable), two OVERLAPPING meetings that must lay out side
-// by side, a recurring personal task, every status and every priority, and a
-// title long enough to force the provenance pill to truncate it.
+// Deliberately exercises the awkward cases: workspace tasks for an editor and
+// for a viewer (their quick-open cards need the real hub, so with these fake
+// hubs a click closes again) next to a personal one (editable), two
+// OVERLAPPING meetings that must lay out side by side, a recurring personal
+// task, every status and every priority, and a title long enough to force the
+// provenance pill to truncate it.
 module.exports = function fixtureRows() {
   const today = Dayjs();
   const at = (dayOffset, hour, minute) =>
@@ -47,7 +49,8 @@ module.exports = function fixtureRows() {
       kind: "task", id: "fx-t1", hub_id: "fx-hub-1", nid: "fx-n10",
       scope: "workspace", origin_name: "Product",
       title: "Ship the icon sprite", description: "Rebuild and verify",
-      due_date: on(0), status: "in_progress", priority: "urgent", can_write: 0, recur: null,
+      // An editor of this workspace; fx-t3 below is a viewer's.
+      due_date: on(0), status: "in_progress", priority: "urgent", can_write: 1, recur: null,
     },
     {
       kind: "task", id: "fx-t2", hub_id: "fx-hub-1", nid: null,

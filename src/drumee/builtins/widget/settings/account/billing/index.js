@@ -488,6 +488,13 @@ class settings_billing extends LetcBox {
         LOCALE.PROMO_CANCEL_IMMEDIATE
           || "Your free Team trial will end immediately. Your workspace returns to the Free plan right away — no card was ever charged.",
       );
+    } else if (sub.status === "past_due") {
+      // The renewal is unpaid: payment.cancel_subscription ends the plan now
+      // and voids that invoice instead of keeping it until period end.
+      lines.push(
+        LOCALE.CANCEL_PAST_DUE_NOW
+          || "Your last payment didn't go through. Canceling ends your plan right away and the unpaid invoice won't be charged. Your workspace returns to the Free plan (20 GB) now.",
+      );
     } else {
       const when = this._periodEnd ? Dayjs(this._periodEnd * 1000).format("MMM D, YYYY") : "";
       lines.push((LOCALE.CANCEL_KEEP_UNTIL || "You'll keep your current plan until {0}. After that your workspace returns to the Free plan (20 GB).").format(when));
@@ -562,6 +569,14 @@ class settings_billing extends LetcBox {
     const data = await this.postService(SERVICE.payment.cancel_subscription, { hub_id: Visitor.id }).catch(() => null);
     if (!data || /FAILED|NO_SUBSCRIPTION|NOT_CONFIGURED/.test(data.status || "")) {
       if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+      return;
+    }
+    // Unpaid renewal: the plan ended now, nothing is pending. The deletion
+    // webhook drops the entitlement and pushes payment.plan_updated.
+    if (data.ended) {
+      if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.SUBSCRIPTION_ENDED_TOAST || "Your plan has been canceled. You're back on the Free plan.");
+      await this._loadSubscription();
+      if (!this.isDestroyed()) this.fetchPlanData();
       return;
     }
     // Optimistic: reflect the pending cancel immediately from the endpoint's

@@ -172,12 +172,20 @@
 }
 
 // ══ "Meeting Started" card ═════════════════════════════════════════════════
+// Two classes, to beat window/skin/window.scss: `.window__ui` floors every
+// window at 600x320, and a minimum always wins over the card's own 520px/auto
+// size — the card rendered 600 wide with ~90px of empty white below the text.
+.window-switchcall__ui.window__ui {
+  min-width: 0;
+  min-height: 0;
+}
+
 .window-switchcall {
   &__ui {
-    width: 520px;
+    width: 460px;
     height: auto;
     min-height: 0;
-    left: calc(50vw - 260px);
+    left: calc(50vw - 230px);
     top: calc(50vh - 160px);
     background-color: #ffffff;
     border: none;
@@ -212,16 +220,21 @@
     &:hover { background: rgba(0, 0, 0, 0.06); color: #0b0a21; }
   }
 
+  // Every row is pinned to the full card width and centres its own content,
+  // so nothing depends on a Note's intrinsic width or on text-align being
+  // inherited through ui-core's inner .note-content.
   &__body {
+    width: 100%;
     height: auto;
     align-items: center;
+    text-align: center;
     gap: 12px;
   }
 
   &__brand {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
     background: rgba(89, 80, 255, 0.1);
     align-items: center;
     justify-content: center;
@@ -230,42 +243,81 @@
 
   &__brand-icon {
     display: flex;
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     color: var(--primary-40, #5950ff);
     align-items: center;
     justify-content: center;
-    svg { width: 24px; height: 24px; fill: currentColor; }
+    svg { width: 28px; height: 28px; fill: currentColor; }
   }
 
   &__title-row {
+    width: 100%;
     align-items: center;
+    justify-content: center;
     gap: 8px;
+    max-width: 100%;
   }
 
+  // The invite title ("X is inviting you to join the meeting in Y") runs to two
+  // lines; centred so it sits under the icon like the one-line title does.
+  // Balanced so a long workspace name does not leave "(2)" alone on the last
+  // line; a name with no spaces still breaks; capped at three lines.
   &__title {
-    @include drumee.typo($size: 20px, $line: 28px, $weight: 700, $color: #0b0a21);
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    justify-content: center;
+    text-align: center;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+    @include drumee.typo($size: 20px, $line: 28px, $weight: 600, $color: #0b0a21);
+
+    .note-content {
+      width: 100%;
+      text-align: center;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-box-pack: center;
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+  }
+
+  // "● LIVE" pill between the icon and the title (skeleton).
+  &__live {
+    width: auto;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: rgba(89, 80, 255, 0.1);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 600, $color: var(--primary-40, #5950ff));
+
+    .note-content {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
   }
 
   &__live-dot {
-    width: 10px;
-    height: 10px;
+    display: inline-block;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    border: 1px solid var(--primary-40, #5950ff);
-    position: relative;
+    background: var(--primary-40, #5950ff);
     flex-shrink: 0;
-
-    &::after {
-      content: "";
-      position: absolute;
-      inset: 2px;
-      border-radius: 50%;
-      background: var(--primary-40, #5950ff);
-    }
   }
 
   &__byline-row {
     align-items: center;
+    justify-content: center;
     gap: 8px;
     max-width: 100%;
   }
@@ -288,6 +340,10 @@
 
   &__commands {
     width: 100%;
+    // The legacy block above gives the row a 56px height and 25px margins on
+    // top of __main's own 24px gap — most of the empty band under the text.
+    height: auto;
+    margin: 0;
     gap: 12px;
     padding: 0;
     align-items: stretch;
@@ -310,7 +366,9 @@
       color: #0b0a21;
       border: none;
       width: auto;
-      &:hover { background: #e5e5ea; }
+      // Override the legacy hover above as well (2px border, pale
+      // rollback text), which made Dismiss look disabled under the pointer.
+      &:hover { background: #e5e5ea; color: #0b0a21; border: none; }
     }
 
     .ctrl-button.accept {
@@ -318,14 +376,17 @@
       color: #ffffff;
       border: none;
       width: auto;
+      // The legacy block's margin-right: 30px outranks the margin: 0 above
+      // and pushed both buttons 30px left of centre.
+      margin: 0;
       .note-content { color: #ffffff; }
       &:hover { background: var(--primary-50, #433cc5); }
     }
   }
 
-  // Phones: the 520px card + viewport-centered offset would overflow; fit it
+  // Phones: the 460px card + viewport-centered offset would overflow; fit it
   // to the screen with a small margin instead.
-  @media (max-width: 560px) {
+  @media (max-width: 500px) {
     &__ui {
       width: calc(100vw - 24px);
       left: 12px;

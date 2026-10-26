@@ -1,4 +1,5 @@
 @use "mixins/drumee";
+@use "../../../../editor/skin/phosphor" as ph;
 
 // Open-File Switcher — Figma "Drumee 2.0" 828:87909 (expanded, 240px) and
 // 873:221431 (collapsed, icons only).
@@ -57,8 +58,10 @@
     overflow: hidden;
     transition: width 220ms ease;
 
+    // Figma 1319:146672 (collapse=yes): 12px inset around a 36px column,
+    // the "Files" title kept on top — wide enough for the word.
     &[data-collapsed="1"] {
-      width: 60px;
+      width: 66px;
     }
 
     // Kept on one line so a half-open panel clips them instead of wrapping.
@@ -83,6 +86,22 @@
     gap: 20px;
     height: 100%;
     min-height: 0;
+  }
+
+  // Toggle slide (setCollapsed): the content leaves to the left before the
+  // panel narrows, and comes back in from the left on either width.
+  &__ui[data-slide="out"] .file-switcher__main {
+    animation: file-switcher-slide-out 160ms ease-in forwards;
+  }
+
+  &__ui[data-slide="in"] .file-switcher__main {
+    animation: file-switcher-slide-in 220ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__ui[data-slide] .file-switcher__main {
+      animation: none;
+    }
   }
 
   &__head {
@@ -155,7 +174,7 @@
   &__create {
     align-items: center;
     background-color: var(--primary-purple-50);
-    border-radius: 6px;
+    border-radius: 12px;
     color: #fff;
     cursor: pointer;
     gap: 8px;
@@ -169,8 +188,8 @@
 
     &-ico {
       display: none;
-      height: 16px;
-      width: 16px;
+      height: 20px;
+      width: 20px;
     }
 
     &-label {
@@ -430,9 +449,26 @@
     }
   }
 
-  // Collapsed: one 36px column of icons; the split-panel toggle takes the
-  // "Files" title's place on top and expands it back (toggle-panel).
+  // Collapsed: one 36px column of icons (Figma 1319:146672). The title
+  // trades "Files" for the split-panel glyph and expands the panel back
+  // (expand-panel), so the toggle itself is not drawn there.
   &__ui[data-collapsed="1"] {
+    .file-switcher__toggle {
+      display: none;
+    }
+
+    .file-switcher__title {
+      @include ph.ph("square-split-horizontal", 20px);
+      cursor: pointer;
+      display: flex;
+      height: 20px;
+      width: 20px;
+
+      .note-content {
+        display: none;
+      }
+    }
+
     // The 36px icon column has no room for a scrollbar: hide it, keep the
     // wheel / touch / keyboard scroll (overflow-y stays auto).
     .file-switcher__scroll {
@@ -447,7 +483,6 @@
       justify-content: center;
     }
 
-    .file-switcher__title,
     .file-switcher__search-input,
     .file-switcher__create-label,
     .file-switcher__section-title,
@@ -485,6 +520,28 @@
   }
 }
 
+// ── The design's icons, in every viewer ────────────────────────────────────
+// Phosphor regular glyphs for the panel chrome (Figma 873:221431). The rows
+// draw the sprite as everywhere else; the Casual files' symbols
+// (raw-documents_udoc / _usheet) ARE the Figma "file icon" glyphs, at the
+// design's 70%. Word / Excel / PowerPoint rows keep their own Office logos
+// (user's call, 2026-10-25).
+.file-switcher__search-ico { @include ph.ph("magnifying-glass", 16px, true); }
+.file-switcher__create-ico { @include ph.ph("plus", 20px, true); }
+.file-switcher__toggle { @include ph.ph("square-split-horizontal", 20px, true); }
+.file-switcher__section:first-child .file-switcher__section-ico { @include ph.ph("clock", 20px, true); }
+.file-switcher__section:last-child .file-switcher__section-ico { @include ph.ph("files", 20px, true); }
+
+.file-switcher__row-icon[data-ext="udoc"] .preview-icon,
+.file-switcher__row-icon[data-ext="usheet"] .preview-icon {
+  opacity: 0.7;
+}
+
+// On the brand fill of the open file's row the glyph stays solid.
+.file-switcher__row--current .file-switcher__row-icon .preview-icon {
+  opacity: 1;
+}
+
 // Namespaced: @keyframes is global.
 @keyframes file-switcher-skeleton-pulse {
   0%,
@@ -494,5 +551,19 @@
 
   50% {
     opacity: 0.45;
+  }
+}
+
+@keyframes file-switcher-slide-out {
+  to {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+@keyframes file-switcher-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
   }
 }

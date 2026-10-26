@@ -196,7 +196,6 @@ function workspaceDialog(ui, opt = {}) {
                 className: `${pfx}__wsd-heading`,
                 content: LOCALE.CREATE_NEW_WORKSPACE,
               }),
-              Skeletons.Image.Svg({ active: 0, ico: "cross", className: `${pfx}__wsd-close` }),
             ],
           }),
 

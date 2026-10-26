@@ -269,6 +269,14 @@ module.exports = function (ui) {
                 styleOpt: { background: pm.color },
               })
             : null,
+          // Stack glyph marks a child row (Figma 873:233238).
+          child
+            ? Skeletons.Image.Svg({
+                className: `${pfx}__gantt-subico`,
+                ico: "ph-stack-simple",
+                active: 0,
+              })
+            : null,
           Skeletons.Note({
             className: `${pfx}__gantt-title`,
             content: task.title || "",

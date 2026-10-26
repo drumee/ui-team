@@ -2393,6 +2393,9 @@ class __panel_activity extends LetcBox {
       // Same debounced refresh as the chat/channel mention path — refreshActivity now
       // also pulls channel.list_notifications, where task mentions live.
       case "task.mention":
+      // "<A> edited / commented on <your file>" (server-team
+      // lib/file-owner-notify pushes it to the owner only).
+      case "activity.file_owner":
         if (this.timer) return;
         this.timer = setTimeout(() => {
           this.refreshActivity();

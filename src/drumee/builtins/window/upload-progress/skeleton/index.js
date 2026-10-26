@@ -18,7 +18,7 @@ module.exports = function (ui) {
     className: `${pfx}__container`,
     debug: __filename,
     dataset: {
-      expanded: "1",
+      expanded: ui._isExpanded === false ? "0" : "1",
       phase: ui._phase || "progress"
     },
     kids: [

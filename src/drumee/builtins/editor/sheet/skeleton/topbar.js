@@ -1,91 +1,36 @@
 // ===========================================================
 //  Sheet editor topbar — the SAME shared widget the office
-//  (document) player uses, so the header reads identically:
-//  file-type glyph + filename on the left, a Save action, a
-//  gear menu (Rename / Save / Close) and the window controls
-//  on the right. The title is registered as the "player-title"
-//  part, which is what renameInline() edits in place.
+//  (document) player uses, configured as the Drumee 2.0 "File
+//  viewer" header (Figma 1337:16842): sheet glyph + title on
+//  the left (Casual's menu row sits right under them), then a
+//  Share pill and Download / gear / Move & Resize / Close. The
+//  title is registered as the "player-title" part, which is
+//  what renameInline() edits in place. Gear rows + services:
+//  editor/chrome.
 // ===========================================================
 const Topbar = require("builtins/player/widget/topbar");
-
-/** Gear-menu rows. Only services this editor actually answers. */
-function gearMenu(ui) {
-  return [
-    { id: "menu-save", label: LOCALE.SAVE || "Save", icon: "floppy", service: _e.save },
-    {
-      id: "menu-rename",
-      label: LOCALE.RENAME || "Rename",
-      icon: "app-edit",
-      service: "direct-rename",
-    },
-    { separator: true },
-    // Replaces Casual's own "Help" menu (hidden in the skin): opens Drumee's
-    // support conversation, or the support mail link as a fallback.
-    {
-      id: "menu-contact",
-      label: LOCALE.CONTACT_US,
-      icon: "apps-chat",
-      service: "contact-support",
-    },
-    { separator: true },
-    { id: "menu-close", label: LOCALE.CLOSE || "Close", icon: "cross", service: _e.close },
-  ];
-}
+const chrome = require("builtins/editor/chrome");
 
 function config(ui) {
-  return {
+  return chrome.topbarConfig(ui, {
     left: {
-      // Casual Sheets has no title bar of its own (unlike Docs), so this row IS
-      // the document title row — styled like the Casual/Google demo: coloured
-      // sheet logo + 16px inline-editable name.
+      // Casual Sheets has no title bar of its own (unlike Docs), so this row
+      // IS the document title row: the Figma's 36px sheet glyph + 18px
+      // inline-editable name.
       fileTypeIcon: "raw-documents_usheet",
       title: ui.mget(_a.filename),
     },
-    right: {
-      before: [
-        {
-          // No floppy: the sheet autosaves (state.js onChange, debounced) and
-          // Ctrl+S saves at once; this label mirrors the demo's
-          // "All changes saved" — driven by editor.setSaveStatus().
-          type: "custom",
-          component: Skeletons.Note({
-            sys_pn: "save-status",
-            className: "editor-sheet__save-status drumee-topbar__status",
-            content: LOCALE.ALL_CHANGES_SAVED,
-            active: 0,
-            dataset: { state: "saved" },
-          }),
-        },
-        {
-          // Light/dark switch, the demo's half-disc glyph. Routes to
-          // editor.applyTheme() which re-skins this window AND tells Casual
-          // (api.setTheme) so the grid follows.
-          type: "custom",
-          component: Skeletons.Note({
-            sys_pn: "ctrl-theme",
-            className: "editor-sheet__theme-toggle icon",
-            content: "◐",
-            service: "toggle-theme",
-            uiHandler: [ui],
-          }),
-        },
-      ],
-      // Keep the proven window controls (maximize / close) that the base
-      // player already answers, instead of the widget's Move & Resize snap
-      // panel (which needs per-consumer snap plumbing this editor doesn't have).
-      after: [
-        {
-          type: "custom",
-          component: require("window/skeleton/topbar/control")(ui, "sc"),
-        },
-      ],
-    },
-    defaults: {
-      "folder-settings": { menu: gearMenu(ui) },
-      "move-resize": { visible: false },
-      close: { visible: false },
-    },
-  };
+    status: Skeletons.Note({
+      // No floppy: the sheet autosaves (state.js onChange, debounced) and
+      // Ctrl+S saves at once; this label mirrors the demo's "All changes
+      // saved" — driven by editor.setSaveStatus().
+      sys_pn: "save-status",
+      className: "editor-sheet__save-status drumee-topbar__status",
+      content: LOCALE.ALL_CHANGES_SAVED,
+      active: 0,
+      dataset: { state: "saved" },
+    }),
+  });
 }
 
 const __skl_editor_sheet_topbar = function (ui) {

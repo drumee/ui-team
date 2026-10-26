@@ -477,7 +477,8 @@ $theme-colors: (
     padding: 8px;
     // Overrides the global .drumee-box bar (see every-box scrollbar note).
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
     animation: tasks-filter-page-in 0.16s cubic-bezier(0.2, 0, 0, 1);
 
     &[data-page="root"] {
@@ -924,7 +925,8 @@ $theme-colors: (
     scrollbar-gutter: stable;
     border-radius: 8px;
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
     transition:
       background-color 0.15s,
       outline-color 0.15s;
@@ -1993,14 +1995,8 @@ $theme-colors: (
     margin: -2px; // keep focus rings from clipping against the scroll edge
 
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--scrollbar-thumb);
-      border-radius: 6px;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   &__modal-main {
@@ -2057,14 +2053,8 @@ $theme-colors: (
     // sitting flush against it (the default wide scrollbar overran the 8px).
     padding-right: 12px;
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--scrollbar-thumb);
-      border-radius: 6px;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   // Mobile refinements for the popups (plus Gantt & List) live in ONE
@@ -2177,10 +2167,13 @@ $theme-colors: (
   &__detail-title-field {
     flex: 1 1 auto;
     min-width: 0;
-    gap: 4px;
+    gap: 6px;
+    // Title text flush with the body below; the textarea's own pad + border
+    // would otherwise indent it 9px.
+    margin-left: -9px;
 
     .tasks-panel__title-missing {
-      padding: 0 6px;
+      padding: 0 9px;
     }
   }
 
@@ -2461,8 +2454,8 @@ $theme-colors: (
   // drawing them.
   &__skel-row {
     // Full width in the two column lists (comments, history). The attachment
-    // strip is a WRAPPING row, so its rows take a chip's width instead — see
-    // the override below.
+    // strip is a WRAPPING row, so its rows also pin flex-basis — see the
+    // override below.
     width: 100%;
     align-items: flex-start;
     gap: 8px;
@@ -2503,15 +2496,26 @@ $theme-colors: (
     }
   }
 
-  // An attachment row is a single chip, so it carries no avatar, takes a
-  // chip's width in the wrapping strip, and its bar stands in for the whole
-  // card rather than for a line of prose.
+  // An attachment row is a single chip, so it carries no avatar and its bar
+  // stands in for the whole card rather than for a line of prose. It spans the
+  // full width of the section (one bar per line of the wrapping strip) rather
+  // than a chip's width, so the placeholder reads as the section loading, not
+  // as a couple of oddly blank files.
   &__skel-row[data-shape="attachments"] {
-    width: 180px;
+    width: 100%;
+    flex: 0 0 100%;
     padding: 0;
   }
 
+  // The bars sit side by side as chips, sharing the row equally.
+  &__skel-row[data-shape="attachments"] &__skel-lines {
+    flex-direction: row;
+    gap: 8px;
+  }
+
   &__skel-row[data-shape="attachments"] &__skel-bar {
+    flex: 1 1 0;
+    min-width: 0;
     height: 32px;
     border-radius: 8px;
   }
@@ -2567,6 +2571,67 @@ $theme-colors: (
     overflow: hidden;
   }
 
+  // Quick-open card while its rows load: the spinner of the view-switch veil
+  // above, centred over the calendar, and a × in the card's own corner.
+  &__quick-loading {
+    position: absolute;
+    inset: 0;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 28px;
+      height: 28px;
+      margin: -14px 0 0 -14px;
+      border-radius: 50%;
+      border: 3px solid rgba(89, 80, 255, 0.2);
+      border-top-color: var(--primary-40, #5950ff);
+      animation: tasks-panel-view-spin 0.7s linear infinite;
+    }
+  }
+
+  &__quick-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+  }
+
+  // Quick-open card (Personal Calendar, Figma 1697:50129): the same card,
+  // capped at the frame's 1272×739 instead of filling the host.
+  &__root--quick &__detail-panel {
+    max-width: 1272px;
+    max-height: 739px;
+  }
+
+  // Quick-open card for a member who may not write. The fields are read-only
+  // and the control-only blocks inert (skeleton); these clickable pills and
+  // chips stop responding but stay on screen and in the accessibility tree,
+  // and the existing reactions stay visible.
+  &__detail-panel[data-may-write="0"] &__detail-status-pill,
+  &__detail-panel[data-may-write="0"] &__priority-pill,
+  &__detail-panel[data-may-write="0"] &__assignee-caret,
+  &__detail-panel[data-may-write="0"] &__due-clear,
+  &__detail-panel[data-may-write="0"] &__subtask-chip,
+  &__detail-panel[data-may-write="0"] &__subtask-row-chip,
+  &__detail-panel[data-may-write="0"] &__subtask-assignee,
+  &__detail-panel[data-may-write="0"] &__react-chip {
+    pointer-events: none;
+  }
+  // Actions with nothing to show once refused are not offered at all.
+  &__detail-panel[data-may-write="0"] &__comment-actions,
+  &__detail-panel[data-may-write="0"] &__react-pick,
+  &__detail-panel[data-may-write="0"] &__react-more,
+  &__detail-panel[data-may-write="0"] &__subtask-add,
+  &__detail-panel[data-may-write="0"] &__subtask-del,
+  &__detail-panel[data-may-write="0"] &__attachment-unlink {
+    display: none;
+  }
+
   // The detail panel re-renders on every keystroke in its own form, so an
   // ungated entrance here flashed the whole panel on each one.
   &__detail-backdrop[data-entered="0"] &__detail-panel {
@@ -2598,55 +2663,65 @@ $theme-colors: (
   // now, so it no longer has an inline avatar+name row of its own.)
 
   // Breadcrumb shown only when the open task is a child: names the parent and
-  // is the route back to it (the X walks back there too).
+  // is the route back to it (the X walks back there too). First kid of the
+  // title column, so it sits right above the title in every layout. Plain
+  // "Parent / child" text (Figma 944:107305); only the parent's name links.
   &__detail-parent {
     align-items: center;
-    gap: 4px;
     align-self: flex-start;
+    gap: 6px;
     max-width: 100%;
-    // __detail-panel is a 32px-gap column, which parks the crumb miles above
-    // the title it belongs to. Pull it back to ~8px.
-    margin-bottom: -24px;
-    padding: 2px 6px 2px 2px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.15s;
-
-    &:hover {
-      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
-    }
-  }
-
-  &__detail-parent-ico {
-    flex-shrink: 0;
-    width: 12px;
-    height: 12px;
-
-    svg {
-      display: block; // inline svg would sit on the baseline — see chip-ico
-      width: 12px;
-      height: 12px;
-      fill: var(--normal-fg-40, #6f6d87);
-    }
-  }
-
-  &__detail-parent-title {
     min-width: 0;
+    // Lines the crumb's text up with the title's (the textarea pads 8px).
+    margin-left: 2px;
+  }
+
+  // The ellipsis needs overflow:hidden, which clips at the padding box — so
+  // the line box must be tall enough for stacked Vietnamese marks (ế, ỗ, ậ
+  // carry two diacritics above the x-height). 20px line + 1px top pad clears
+  // them.
+  &__detail-parent-title,
+  &__detail-parent-current {
+    min-width: 0;
+    padding-top: 1px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     @include drumee.typo(
-      $size: 12px,
-      $weight: 500,
-      $line: 16px,
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+  &__detail-parent-title {
+    flex: 0 1 auto;
+    cursor: pointer;
+    transition: color 0.15s;
+
+    &:hover {
+      color: var(--accent, #433cc5);
+      text-decoration: underline;
+    }
+  }
+  &__detail-parent-current {
+    flex: 0 1 auto;
+  }
+  &__detail-parent-sep {
+    flex: 0 0 auto;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
       $color: var(--normal-fg-40, #6f6d87)
     );
   }
 
+  // Title column + close. flex-start, not center: a title that wraps to two
+  // or three lines kept the X floating in the middle of it.
   &__detail-header {
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
   }
 
   &__detail-title {
@@ -2657,15 +2732,17 @@ $theme-colors: (
     input,
     textarea {
       width: 100%;
-      padding: 4px 6px;
+      padding: 4px 8px;
       border: 1px solid transparent;
-      border-radius: 6px;
+      border-radius: 8px;
       outline: none;
       background: transparent;
+      // 32px, not 26px: a 24px title needs the extra headroom for stacked
+      // Vietnamese marks, same as the crumb above it.
       @include drumee.typo(
         $size: 24px,
         $weight: 600,
-        $line: 26px,
+        $line: 32px,
         $color: var(--normal-fg-20, #34343a)
       );
       transition:
@@ -2687,21 +2764,33 @@ $theme-colors: (
     textarea {
       resize: none;
       overflow-y: auto;
-      min-height: 30px;
-      max-height: 88px;
+      min-height: 42px;
+      max-height: 106px;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
       display: block;
     }
   }
 
+  // A 32px round hit target, centred on the title's first line. Sized by
+  // padding (9 + 14 + 9), not width/height + flex centring: Button.Svg's root
+  // is ui-core's `svg-wrapper` div, which is not a flex box, so align-items
+  // did nothing and the X sat in the circle's top-left corner.
   &__detail-close {
     flex-shrink: 0;
+    box-sizing: content-box;
+    width: 14px;
+    height: 14px;
+    padding: 9px;
+    margin-top: 5px;
+    border-radius: 50%;
     color: var(--normal-fg-50, #65656c);
     cursor: pointer;
     overflow: hidden;
     font-size: 0;
-    transition: opacity 0.15s;
+    transition:
+      background 0.15s,
+      color 0.15s;
 
     svg {
       width: 14px;
@@ -2710,8 +2799,15 @@ $theme-colors: (
     }
 
     &:hover {
-      opacity: 0.7;
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+      color: var(--normal-fg-10, #0b0a21);
     }
+  }
+
+  // With a crumb above the title, the X stays level with the crumb row
+  // instead of drifting down to the title.
+  &__detail-header:has(.tasks-panel__detail-parent) .tasks-panel__detail-close {
+    margin-top: 0;
   }
 
   &__detail-label {
@@ -2792,31 +2888,10 @@ $theme-colors: (
     }
   }
 
-  // Wraps the End (due) picker and its required message (create, detail and
-  // the child creator card). data-missing="1" outlines the field in red.
+  // Wraps the End (due) picker (create, detail and the child creator card).
   &__due-field {
     width: 100%;
     gap: 4px;
-  }
-
-  &__due-missing {
-    @include drumee.typo(
-      $size: 12px,
-      $line: 16px,
-      $color: var(--error, #f6514b)
-    );
-  }
-
-  // !important: ui-core's data-flow rules give every Note display:flex at
-  // higher specificity (same as __title-missing).
-  &__due-field:not([data-missing="1"]) .tasks-panel__due-missing {
-    display: none !important;
-  }
-
-  &__due-field[data-missing="1"] .tasks-panel__due-input {
-    box-shadow:
-      0 0 0 1px var(--error, #f6514b),
-      0 0 0 4px rgba(246, 81, 75, 0.15);
   }
 
   &__attachments {
@@ -2829,6 +2904,9 @@ $theme-colors: (
   }
 
   &__attachment-rows {
+    // Spans the section, so full-width content (the loading bars) has a full
+    // width to fill rather than the shrink-wrapped width of its chips.
+    width: 100%;
     gap: 8px;
     // Cards wrap into a strip; overflow scrolls instead of clipping.
     flex-wrap: wrap;
@@ -2952,6 +3030,13 @@ $theme-colors: (
   }
 
   &__attachment-unlink {
+    // Centred, not left to the padding: the thumbnail overlay (20px box, 12px
+    // glyph) and the pending strip (32x24, 12px glyph) both size the box
+    // bigger than the icon, which then sat in its top-left corner.
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
     flex-shrink: 0;
     width: 18px;
     height: 18px;
@@ -3459,6 +3544,7 @@ $theme-colors: (
   // is contenteditable=false and uses the browser's native CSS resize handle
   // (bottom-right) to make the image width adjustable; the <img> fills it.
   &__inline-img {
+    position: relative;
     display: inline-block;
     resize: horizontal;
     overflow: hidden;
@@ -3475,6 +3561,46 @@ $theme-colors: (
       display: block;
       pointer-events: none;
       border-radius: 8px;
+    }
+  }
+
+  // The committed image's ✕ (_makeInlineImage). Always shown, top-right, clear
+  // of the native resize grip bottom-right. The cross is two ::before/::after
+  // bars — a font glyph sits off-centre in the circle, and generated content
+  // is never seen by the serializer.
+  &__inline-img-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 1;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+
+    &::before,
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 1.5px;
+      border-radius: 1px;
+      background: #fff;
+    }
+
+    &::before {
+      transform: translate(-50%, -50%) rotate(45deg);
+    }
+
+    &::after {
+      transform: translate(-50%, -50%) rotate(-45deg);
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.75);
     }
   }
 
@@ -3796,7 +3922,7 @@ $theme-colors: (
   }
 
   // !important: ui-core gives every active widget display:flex at higher
-  // specificity (same as __due-missing).
+  // specificity.
   &__due-slot[data-filled="0"] .tasks-panel__due-clear {
     display: none !important;
   }
@@ -5642,12 +5768,9 @@ $theme-colors: (
     container-name: cal;
     animation: tasks-cal-fade 0.16s ease;
     // A month row's FLOOR (rows share the grid's height above it, as the Meet
-    // tab's do). skeleton/calendar.js MONTH_FIT = 3 is measured against it:
-    // 16px of padding, a 20px date line and a 2px gap, then three 19px chips
-    // on 2px gaps (61px) and the pinned "+N" — 117px, so 118. The Personal
-    // Calendar's --cal-cell-min is the same number for the same reason. Change
-    // one, change the other.
-    --tcal-cell-min: 118px;
+    // tab's do); a row grows with its chips up to twice this, then its cells
+    // scroll. 190px is close to the Figma cell (1697:48540, 196px).
+    --tcal-cell-min: 190px;
   }
 
   // The fade above is for a view switch or a new range. The same range
@@ -5669,20 +5792,26 @@ $theme-colors: (
     border-bottom: 0;
   }
 
-  // Centred over its column, as the Personal Calendar and the Meet tab draw
-  // it (this one alone right-aligned its labels). Note is a flex row, so the
-  // centring is justify-content on the wrapper, not text-align.
-  // Full day names, left-aligned, 12px padding — the Meet tab's month header.
-  // A Note is a flex row, so the ellipsis has to be set on .note-content, not
-  // on the wrapper (note-widget-is-a-flex-row).
+  // The month header sits ABOVE the ruled grid (Figma 1697:48528), unruled;
+  // the grid's own border is its top rule. Week and day keep the ruled row.
+  &__calendar[data-mode="month"] &__cal-weekdays {
+    gap: 0;
+    background: none;
+    border: 0;
+  }
+
+  // Short day names, centred over the column, 14/1.2 grey, 12px above the
+  // grid — the month header all three calendars draw. A Note is a flex row,
+  // so the centring is justify-content and the ellipsis has to be set on
+  // .note-content, not on the wrapper (note-widget-is-a-flex-row).
   &__cal-weekday {
     flex: 1 1 0;
     min-width: 0;
-    padding: 12px;
+    padding: 0 4px 12px;
     box-sizing: border-box;
+    justify-content: center;
     overflow: hidden;
-    background: var(--normal-bg-elevated, #fff);
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
     font-weight: 400;
 
     .note-content {
@@ -5710,13 +5839,21 @@ $theme-colors: (
   }
 
   // Each week shares the grid height in month mode; one tall row in week and
-  // day mode. The floor is the token MONTH_FIT is measured against.
+  // day mode. The floor is --tcal-cell-min; a month row may grow to twice it.
   &__cal-week-row {
     flex: 1 1 0;
     align-items: stretch;
     gap: 1px;
     min-height: var(--tcal-cell-min);
     background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+  }
+
+  // A busy week grows to show more of its chips instead of clipping them at
+  // the floor — up to 2× it; past that its cells scroll (__cal-day-body).
+  // __calendar scrolls when the taller weeks outgrow the window.
+  &__calendar[data-mode="month"] &__cal-week-row {
+    flex: 1 0 auto;
+    max-height: calc(2 * var(--tcal-cell-min));
   }
 
   &__calendar[data-mode="week"] &__cal-week-row,
@@ -5728,9 +5865,9 @@ $theme-colors: (
     overflow: hidden;
   }
 
-  // A white cell, no hover wash — the Meet tab's cells. Week and day keep the
-  // 12px their full cards need; the month cell is the Meet tab's 8px 10px with
-  // 2px between the date and its chips.
+  // A white cell, no hover wash. Week and day keep the 12px their full cards
+  // need; the month cell is Figma 1697:48545's 12px with 10px between the
+  // date line and its chips (the chips keep their own gap).
   &__cal-day {
     flex: 1 1 0;
     min-width: 0;
@@ -5742,8 +5879,9 @@ $theme-colors: (
   }
 
   &__calendar[data-mode="month"] &__cal-day {
-    padding: 8px 10px;
-    gap: 2px;
+    padding: 12px;
+    gap: 10px;
+    max-height: calc(2 * var(--tcal-cell-min));
   }
 
   // The whole square adds a task (skeleton/calendar.js dayCell) — for a viewer
@@ -5819,20 +5957,38 @@ $theme-colors: (
     opacity: 1;
   }
 
+  // The month cell's 20px date line, packed right: the hover "+", 10px, then
+  // the date in the corner (Figma 1693:180986).
   &__cal-day-head {
     flex: 0 0 auto;
-    justify-content: space-between;
+    height: 20px;
+    justify-content: flex-end;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
-  // Hover-revealed "add task on this day" affordance (top-left of the cell) —
-  // the Personal Calendar's quick-add: a 26px box with a 22px glyph and a wash
-  // on hover. It was a bare 17px brand "+" that scaled itself on hover, which
-  // made the same control look and move differently in two tabs.
+  // In the month cell the "+" is Figma 1693:180987's 20px circle on the 5%
+  // wash. Scoped to the date line: the week/day column header shares
+  // __cal-day-add and keeps its 26px box.
+  &__cal-day-head &__cal-day-add {
+    margin: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--overlay-bg-05);
+  }
+
+  &__cal-day-head &__cal-day-add-ico {
+    @include drumee.typo($size: 18px, $line: 20px, $color: var(--normal-fg));
+  }
+
+  // Hover-revealed "add task on this day" affordance. This base is the
+  // week/day column header's: a 26px box with a 22px glyph and a wash on
+  // hover, beside the date. The month cell's date line restyles it as the
+  // 20px circle above.
   &__cal-day-add {
     flex: 0 0 auto;
-    // Kept from growing the 20px date line it shares a row with.
+    // Kept from growing the header's date row it shares a line with.
     margin: -3px -4px -3px 0;
     width: 26px;
     height: 26px;
@@ -5853,35 +6009,36 @@ $theme-colors: (
     user-select: none;
   }
 
-  // A plain label, as in the other two month grids. nowrap: the first cell of
-  // a month reads "Sep 1", and beside the 26px "+" a narrow cell broke it onto
-  // two lines and pushed the chips down a row.
-  // Top-left, two digits, in body ink — the Meet tab's month date.
+  // Top-right, 14/1.2 regular in grey ink, as in the other two month grids.
+  // nowrap: the first cell of a month reads "Sep 1", and beside the "+" a
+  // narrow cell broke it onto two lines and pushed the chips down a row.
   &__cal-day-num {
     white-space: nowrap;
-    font-variant-numeric: tabular-nums;
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
     font-weight: 400;
   }
 
   // The cell's scroll container: every task renders, and a busy day is read
-  // by scrolling here or by following the "+N" into the Day view.
+  // by scrolling here (or in the Day view).
   //
-  // Scrollbar set here, not left to .drumee-box's global 5px orange bar. It
-  // is transparent at rest, and inked when the skeleton stamps the cell as
-  // overflowing — otherwise a cell with more below the fold looks exactly
-  // like one that simply ends.
+  // Scrollbar hidden here, not left to .drumee-box's global 5px orange bar:
+  // a non-auto scrollbar-width wins over any ::-webkit-scrollbar styling.
   &__cal-day-body {
     flex: 1 1 auto;
     min-height: 0;
     gap: 4px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
 
-    &:hover,
-    &[data-overflow="1"] {
-      scrollbar-color: var(--scrollbar-thumb) transparent;
+    // The month cell's 10px between cards (1697:48540).
+    .tasks-panel__calendar[data-mode="month"] & {
+      gap: 10px;
+    }
+    // Scrolls (wheel, touch, keyboard) with no visible bar.
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 
@@ -5946,49 +6103,49 @@ $theme-colors: (
     }
   }
 
-  // Compact month chip: status-tinted single line (dot + title). Its geometry
-  // is the Meet tab's month card — 19px, r=4, 12/15 bold title — as is the
-  // Personal Calendar's compact chip,
-  // so a task reads the same size in both month grids. The status tint is this
-  // board's own and stays: it is the only place a month cell says where a task
-  // stands, and the Personal Calendar has no columns to colour by.
+  // Month card (Figma 1697:48543; hover 1697:48544), the Personal Calendar's
+  // month card: white, hairline border, r=12, 12px in, the priority dot over
+  // the name 4px apart; Drop Shadow/300 and the × on hover. 52.4px tall
+  // (12 + 8 + 4 + 14.4 + 12 + 2px of border).
+  // The frame's hairline is 0.5px of 20% black, drawn as the 1px token
+  // border as the Personal Calendar does, so the card has one height on 1x
+  // and 2x screens. It used to be a status-tinted one-line chip; Figma has
+  // no status in the month cell (Aaron, 2026-10-15).
   &__cal-chip {
     position: relative;
     flex: 0 0 auto;
-    align-items: center;
-    gap: 6px;
-    min-height: 19px;
-    padding: 2px 6px;
+    min-width: 0;
+    gap: 4px;
+    padding: 12px;
     box-sizing: border-box;
-    border-radius: 4px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.2));
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
     cursor: pointer;
-    transform-origin: left center;
-    transition: filter 0.12s, transform 0.12s;
-    // Tint keyed on data-theme, so custom columns colour their chips too.
-    @include theme-tint(rgba(174, 174, 178, 0.16));
+    transition: box-shadow 0.12s ease-out;
     &:hover {
-      filter: brightness(0.97);
-      transform: scale(1.03);
+      box-shadow:
+        0 4px 4px -1px rgba(12, 12, 13, 0.1),
+        0 4px 4px -1px rgba(12, 12, 13, 0.05);
     }
     &:hover &-remove {
       opacity: 1;
     }
   }
 
-  // Same treatment on the compact month chip — transparent by default (the
-  // previous white fill showed as an odd square), tint red only on its hover.
+  // The month card's × (16px, top-right on the dot's row, as 1697:48544
+  // draws it) — transparent by default, tinted red only on its own hover.
   &__cal-chip-remove {
     position: absolute;
-    top: 50%;
-    right: 2px;
+    top: 12px;
+    right: 12px;
     width: 16px;
     height: 16px;
-    margin-top: -8px;
-    padding: 2px;
+    padding: 0;
     justify-content: center;
     align-items: center;
     border-radius: 4px;
-    color: var(--normal-fg-40, #84848c);
+    color: var(--normal-fg);
     background: transparent;
     opacity: 0;
     cursor: pointer;
@@ -5997,8 +6154,8 @@ $theme-colors: (
     transition: opacity 0.12s, color 0.12s, background 0.12s;
 
     svg {
-      width: 10px;
-      height: 10px;
+      width: 16px;
+      height: 16px;
       display: block;
     }
 
@@ -6009,35 +6166,35 @@ $theme-colors: (
   }
 
   &__cal-chip-dot {
-    flex: 0 0 8px;
+    flex: 0 0 auto;
     width: 8px;
     height: 8px;
     border-radius: 50%;
   }
 
+  // Buttons/Mini Button, 12/1.2 semibold, one line, so every month card has
+  // the same height whatever its name.
   &__cal-chip-title {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($size: 12px, $line: 15px, $color: var(--normal-fg));
+    @include drumee.typo($size: 12px, $line: 1.2, $color: var(--normal-fg));
     font-weight: 600;
-  }
+    // Room for stacked Vietnamese marks ("ế", "ặ" reach above and below a
+    // 1.2 line): overflow clips at the padding box, so 4px of padding each
+    // way widens the clip and the negative margin gives the line its height
+    // back — the card does not move.
+    padding-block: 4px;
+    margin-block: -4px;
 
-  // "+N" — pinned to the foot of the scrolling cell so the one way to the rest
-  // of a busy day can never scroll out of reach itself. The Personal
-  // Calendar's footer: 11px brand, painted on the cell's own ground so chips
-  // scroll UNDER it, never through it.
-  &__cal-day-more {
-    flex: 0 0 auto;
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-    margin-top: -2px;
-    padding: 2px 0 0 4px;
-    cursor: pointer;
-    background: var(--normal-bg-elevated, #fff);
-    @include drumee.typo($size: 11px, $line: 16px, $color: var(--primary-40));
-    font-weight: 600;
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-block: 4px;
+      margin-block: -4px;
+    }
   }
 
 
@@ -6199,8 +6356,8 @@ $theme-colors: (
     flex: 0 0 auto;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 0 16px;
+    gap: 6px;
+    padding: 0 12px;
     box-sizing: border-box;
     background: var(--normal-bg-80, #f7f7fa);
     border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
@@ -6208,24 +6365,24 @@ $theme-colors: (
 
   &__gantt-work {
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     cursor: pointer;
   }
 
   &__gantt-work-ico {
     @include drumee.typo(
-      $size: 16px,
+      $size: 14px,
       $weight: 600,
-      $line: 20px,
+      $line: 16px,
       $color: var(--normal-fg-30, #65656c)
     );
   }
 
   &__gantt-work-label {
     @include drumee.typo(
-      $size: 14px,
+      $size: 12px,
       $weight: 600,
-      $line: 20px,
+      $line: 16px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
@@ -6235,9 +6392,9 @@ $theme-colors: (
     opacity: 0.45;
     pointer-events: none;
     @include drumee.typo(
-      $size: 13px,
+      $size: 12px,
       $weight: 500,
-      $line: 18px,
+      $line: 16px,
       $color: var(--col-error, #d74e49)
     );
 
@@ -6250,8 +6407,8 @@ $theme-colors: (
   &__gantt-arow {
     flex: 0 0 auto;
     align-items: center;
-    gap: 8px;
-    padding: 0 16px;
+    gap: 6px;
+    padding: 0 12px;
     box-sizing: border-box;
     border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
 
@@ -6272,19 +6429,19 @@ $theme-colors: (
   }
 
   &__gantt-check {
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     justify-content: center;
     align-items: center;
     box-sizing: border-box;
-    border: 1.5px solid var(--normal-bg-60, #aeaeb2);
-    border-radius: 4px;
+    border: 1px solid var(--normal-bg-60, #aeaeb2);
+    border-radius: 3px;
     cursor: pointer;
 
     svg {
-      width: 11px;
-      height: 11px;
+      width: 9px;
+      height: 9px;
       opacity: 0;
     }
     &[data-checked="1"] {
@@ -6302,22 +6459,22 @@ $theme-colors: (
     // Fixed width, not `auto`: the `data-empty` spacer on a childless or child
     // row has no glyph, so an auto-width one collapses to 0 and the titles it
     // was meant to align drift left.
-    flex: 0 0 10px;
-    width: 10px;
+    flex: 0 0 8px;
+    width: 8px;
     text-align: center;
     cursor: pointer;
     @include drumee.typo(
-      $size: 16px,
+      $size: 14px,
       $weight: 400,
-      $line: 16px,
+      $line: 14px,
       $color: var(--normal-fg-40, #84848c)
     );
   }
 
   &__gantt-dot {
-    flex: 0 0 8px;
-    width: 8px;
-    height: 8px;
+    flex: 0 0 6px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
   }
 
@@ -6328,24 +6485,40 @@ $theme-colors: (
     white-space: nowrap;
     cursor: pointer;
     @include drumee.typo(
-      $size: 14px,
+      $size: 12px,
       $weight: 600,
-      $line: 20px,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // Child rows (Figma 873:233238): stack glyph + a smaller semibold title.
+  &__gantt-subico {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+  &__gantt-arow[data-child="1"] &__gantt-title {
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 14px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
   &__gantt-del {
-    flex: 0 0 18px;
-    width: 18px;
-    height: 18px;
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.12s;
 
     svg {
-      width: 14px;
-      height: 14px;
+      width: 11px;
+      height: 11px;
     }
   }
 
@@ -6578,19 +6751,8 @@ $theme-colors: (
     margin: 12px 12px 0;
     // Same thin neutral bar as the detail panel's columns.
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-    &::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--scrollbar-thumb);
-      border-radius: 6px;
-    }
-    &::-webkit-scrollbar-track,
-    &::-webkit-scrollbar-corner {
-      background: transparent;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   &__list-head,
@@ -6710,6 +6872,7 @@ $theme-colors: (
     align-items: center;
     gap: 6px;
     align-self: stretch;
+    padding: 0 6px;
     border-radius: 6px;
 
     &[data-editable="1"] {
@@ -6729,6 +6892,11 @@ $theme-colors: (
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      // Room for stacked Vietnamese marks ("ế" reaches above a 16px line):
+      // overflow clips at the padding box, so 4px each way widens the clip
+      // and the negative margin gives the line its height back.
+      padding-block: 4px;
+      margin-block: -4px;
     }
   }
   &__list-row[data-done="1"] &__list-title {
@@ -6737,6 +6905,139 @@ $theme-colors: (
   }
   &__list-row[data-sub="1"] &__list-title {
     font-weight: 500;
+  }
+
+  // ── Subtasks strip (Board card, Calendar card + month chip) ────────────
+  // Figma `subtasks-desktop-board` layout, at a compact scale: hairline top
+  // rule, header row, and when expanded a 3px progress rail + one 32px row
+  // per child.
+  &__substrip {
+    align-items: stretch;
+    gap: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    min-width: 0;
+  }
+  &__substrip-head {
+    align-items: center;
+    gap: 6px;
+    min-height: 15px;
+    cursor: pointer;
+  }
+  &__substrip-ico,
+  &__substrip-caret {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+  }
+  &__substrip-ico {
+    color: #0b0a21;
+  }
+  &__substrip-label {
+    @include drumee.typo($size: 11px, $weight: 400, $line: 15px, $color: #0b0a21);
+  }
+  &__substrip-count {
+    padding: 0 4px;
+    border-radius: 4px;
+    background: #f2f2f7;
+    @include drumee.typo($size: 11px, $weight: 400, $line: 15px, $color: #0b0a21);
+  }
+  &__substrip-caret {
+    margin-left: auto;
+    color: #65656c;
+    transition: transform 0.15s;
+  }
+  &__substrip[data-open="1"] &__substrip-caret {
+    transform: rotate(90deg);
+  }
+  &__substrip[data-complete="1"] &__substrip-count {
+    background: #dff5e7;
+    color: #1b8f52;
+  }
+  &__substrip-bar {
+    height: 3px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+  }
+  &__substrip-fill {
+    height: 3px;
+    border-radius: 18px;
+    background: #433cc5;
+  }
+  &__substrip-row {
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    background: #fff;
+    min-width: 0;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+  }
+  &__substrip-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
+  }
+  &__substrip-status {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 11px;
+    background: #f2f2f7;
+  }
+  &__substrip-status-dot {
+    flex: 0 0 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  &__substrip-status-label {
+    white-space: nowrap;
+    @include drumee.typo($size: 11px, $weight: 400, $line: 15px, $color: #0b0a21);
+  }
+  &__substrip-avatar,
+  &__substrip-noassignee {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    overflow: hidden;
+    font-size: 9px;
+  }
+  // Calendar cards are 163px wide: the row keeps the status pill and avatar
+  // whole and lets the name ellipsise down to nothing (873:231660 "S…").
+  &__substrip[data-surface="cal"] &__substrip-row {
+    gap: 6px;
+  }
+  &__substrip[data-surface="cal"] &__substrip-name {
+    flex: 1 1 0;
+  }
+  &__substrip[data-surface="cal"] &__substrip-status {
+    flex: 0 1 auto;
+    min-width: 0;
+    padding: 0 6px;
+  }
+  &__substrip[data-surface="cal"] &__substrip-status-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  &__substrip-noassignee {
+    box-sizing: border-box;
+    padding: 4px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #65656c;
   }
 
   &__list-subcount {
@@ -6862,6 +7163,45 @@ $theme-colors: (
       cursor: default;
       visibility: hidden;
     }
+  }
+
+  // Stack glyph on a child row and the inline creator (873:238375).
+  &__list-subico {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  // Inline "Enter subtask name..." creator: a bare input on the row, grey
+  // placeholder, with its ＋ always shown. Too long → red underline, which the
+  // first keystroke clears (list-subtask.js).
+  &__list-subcreate {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: 0;
+      border-bottom: 1px solid transparent;
+      outline: none;
+      background: transparent;
+      padding: 0;
+      @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: var(--normal-fg-10, #0b0a21));
+
+      &::placeholder {
+        color: var(--normal-fg-40, #65656c);
+      }
+    }
+  }
+  &__list-subcreate-row[data-toolong="1"] &__list-subcreate input {
+    border-bottom-color: #d74e49;
+  }
+  &__list-subcreate-row &__list-check[data-empty="1"] {
+    visibility: hidden;
+  }
+  &__list-subcreate-add {
+    opacity: 1;
   }
 
   // Hover actions: "open" appears on hover, the ＋ (Create subtask) always
@@ -7162,15 +7502,21 @@ $theme-colors: (
   }
 
   // Footer — "Remove selected" + "N of M ⟳" (Figma 867:104812).
+  // "Remove selected" is pinned out of flow so showing it neither grows the
+  // footer (it's 32px vs the count's 16px) nor shifts the centred count.
   &__list-foot {
+    position: relative;
     flex: 0 0 auto;
     align-items: center;
-    gap: 10px;
     padding: 12px;
   }
 
   &__list-remove {
-    flex: 0 0 auto;
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    z-index: 1;
     padding: 8px 14px;
     border-radius: 10px;
     background: rgba(246, 81, 75, 0.1);
@@ -7420,19 +7766,8 @@ $theme-colors: (
     overflow-y: auto;
     gap: 2px;
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-    &::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--scrollbar-thumb);
-      border-radius: 6px;
-    }
-    &::-webkit-scrollbar-track,
-    &::-webkit-scrollbar-corner {
-      background: transparent;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   &__list-pop-empty {
@@ -8627,7 +8962,10 @@ $theme-colors: (
     border-top: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
   }
 
-  &__detail-cancel {
+  // The quick-open card's "Open in board" is a second secondary action,
+  // drawn exactly like Cancel.
+  &__detail-cancel,
+  &__detail-open-board {
     flex: 0 0 auto;
     min-width: 132px;
     display: flex;
@@ -8914,6 +9252,17 @@ $theme-colors: (
     overflow: hidden;
   }
 
+  // The avatar is a UserProfile widget: it takes the click itself and the
+  // parent's service never runs — so with someone assigned only the bare "+N"
+  // opened the menu. Let the click fall through to __subtask-assignee, which
+  // carries the toggle (same fix as __assignee-option). The glyph and "+N"
+  // too, so every part of the button behaves the same.
+  &__subtask-assignee-avatar,
+  &__subtask-assignee-ico,
+  &__subtask-assignee-more {
+    pointer-events: none;
+  }
+
   &__subtask-assignee-more {
     padding-right: 8px;
     @include drumee.typo(
@@ -9147,6 +9496,88 @@ $theme-colors: (
     flex-wrap: wrap;
   }
 
+  // Assignee + due date on one row: exactly half each (basis 0, so the chips
+  // or the date's text never widen one side), centred on each other, and the
+  // same 32px box with 13/18 text. Wraps to two rows once a half would drop
+  // under 140px.
+  &__subtask-card-fields {
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    > .tasks-panel__subtask-card-assignee,
+    > .tasks-panel__subtask-card-date {
+      flex: 1 1 0;
+      min-width: 140px;
+      width: auto;
+    }
+
+    // Chips + query share a half-width box, so the query may shrink further
+    // than the parent card's 120px before it wraps under the chips.
+    .tasks-panel__assignee-search {
+      flex-basis: 60px;
+      min-width: 60px;
+
+      // Same text as the date beside it (__subtask-due-input: 13/18).
+      input {
+        font-size: 13px;
+        line-height: 18px;
+      }
+    }
+  }
+
+  // Assignee picker: the parent card's __assignee-picker, drawn as the same
+  // grey box as the due-date field beside it rather than underlined.
+  &__subtask-card-assignee {
+    .tasks-panel__assignee-control {
+      // Exactly the due-date field's height (7+18+7): the chips stay on one
+      // line and scroll sideways rather than wrapping the box taller.
+      height: 32px;
+      box-sizing: border-box;
+      flex-wrap: nowrap;
+      gap: 6px;
+      padding: 0 10px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      border: 0;
+      border-radius: 6px;
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      &:focus-within {
+        box-shadow: 0 0 0 2px rgba(67, 60, 197, 0.35);
+      }
+    }
+
+    .tasks-panel__assignee-chips {
+      flex-wrap: nowrap;
+      flex-shrink: 0;
+      gap: 4px;
+    }
+
+    .tasks-panel__assignee-chip {
+      gap: 4px;
+      height: 22px;
+      box-sizing: border-box;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
+
+    .tasks-panel__assignee-chip-avatar {
+      width: 14px;
+      height: 14px;
+    }
+
+    .tasks-panel__assignee-chip-name {
+      white-space: nowrap;
+    }
+  }
+
   // Required title — same red as the parent's __title-missing. !important on
   // the hide for the same reason as there: ui-core's data-flow rules give
   // every Note display:flex at higher specificity.
@@ -9175,12 +9606,22 @@ $theme-colors: (
   &__subtask-card-date {
     width: 100%;
 
-    .tasks-panel__due-missing {
-      font-size: 11px;
-    }
-
     .tasks-panel__subtask-due-input {
       width: 100%;
+
+      &::after {
+        right: 10px;
+        width: 14px;
+        height: 14px;
+      }
+
+      // 7+18+7 = 32px, the assignee box beside it.
+      input {
+        height: 32px;
+        padding: 7px 30px 7px 10px;
+        font-size: 13px;
+        line-height: 18px;
+      }
     }
   }
 
@@ -9349,10 +9790,10 @@ $theme-colors: (
   &__gantt-arow[data-child="1"] {
     background: var(--normal-bg-90, #fafafc);
 
+    // No extra indent: the stack glyph before the title already marks it.
     .tasks-panel__gantt-title {
-      padding-left: 18px;
       @include drumee.typo(
-        $size: 12px,
+        $size: 11px,
         $color: var(--normal-fg-30, #4a4a68)
       );
     }
@@ -9371,16 +9812,16 @@ $theme-colors: (
     // positioning context for the __tip flyover child
     position: relative;
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.12s ease;
 
     svg {
       display: block;
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       fill: var(--normal-fg-40, #6f6d87);
     }
 
@@ -9436,10 +9877,7 @@ html[data-theme="dark"] .tasks-panel {
 
   // Subtasks: the tokens carry themselves, but the three literals in the light
   // rules (the all-done green and the checkbox fill) burn out on a dark ground.
-  &__task-subcount,
   &__list-subcount,
-  &__cal-chip-subcount,
-  &__cal-card-subcount,
   &__gantt-subcount {
     &[data-complete="1"] {
       background: rgba(34, 181, 115, 0.22);
@@ -9449,6 +9887,29 @@ html[data-theme="dark"] .tasks-panel {
 
   &__list-row[data-sub="1"] {
     background: rgba(255, 255, 255, 0.04);
+  }
+
+  &__substrip {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+  &__substrip-ico,
+  &__substrip-label,
+  &__substrip-name,
+  &__substrip-status-label {
+    color: var(--normal-fg-90, #f2f2f7);
+  }
+  &__substrip-count,
+  &__substrip-status,
+  &__substrip-bar {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--normal-fg-90, #f2f2f7);
+  }
+  &__substrip[data-complete="1"] &__substrip-count {
+    background: rgba(34, 181, 115, 0.22);
+    color: #7cc79b;
+  }
+  &__substrip-row {
+    background: rgba(255, 255, 255, 0.03);
   }
 
   &__subtask-row {
@@ -9725,7 +10186,7 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     display: none;
   }
   .tasks-panel__cal-weekday {
-    padding: 8px;
+    padding: 0 4px 8px;
     font-size: 12px;
   }
 }
@@ -9831,6 +10292,7 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     padding-top: 12px;
   }
   .tasks-panel__detail-cancel,
+  .tasks-panel__detail-open-board,
   .tasks-panel__detail-submit {
     flex: 1 1 0;
     min-width: 0;
@@ -9858,6 +10320,9 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
   }
   .tasks-panel__list-foot {
     padding: 12px 8px;
+  }
+  .tasks-panel__list-remove {
+    left: 8px;
   }
 }
 

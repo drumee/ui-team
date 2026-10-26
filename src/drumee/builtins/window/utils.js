@@ -1265,6 +1265,9 @@ class __window_mfs extends DrumeeMFS {
    */
   downloadContent(args) {
     let { zipid } = args;
+    // Kept for a carrier that does not hold this zipid yet: its media.download
+    // reply can land after the push (libs/zip-pushes).
+    require("libs/zip-pushes").remember(args);
     this.getItemsByAttr("zipid", zipid).filter((c) => {
       if (!c) return false;
       c.handleDownload(args);
@@ -1689,7 +1692,7 @@ class __window_mfs extends DrumeeMFS {
       // Already rendered in an open window: a reveal just scrolls/flashes/
       // highlights in place; a normal open triggers the node's open action.
       if (highlight) {
-        this._revealFromNotification(nid, filetype, pid);
+        this._revealFromNotification(nid, filetype, pid, { ttl: data.revealTtl });
         return;
       }
       found.triggerHandlers({ service: "open-node" });
@@ -1727,7 +1730,9 @@ class __window_mfs extends DrumeeMFS {
       { ...opt, ...parent, kind: "window_folder" },
       { explicit: 1 },
     );
-    if (highlight) this._revealFromNotification(nid, filetype, pid);
+    if (highlight) {
+      this._revealFromNotification(nid, filetype, pid, { ttl: data.revealTtl });
+    }
     return opened;
   }
 
@@ -1738,7 +1743,7 @@ class __window_mfs extends DrumeeMFS {
    *    contains (the files the notification is about). The opened window's nid
    *    matches the container itself, so there is no single file cell to reveal.
    */
-  _revealFromNotification(nid, filetype, pid) {
+  _revealFromNotification(nid, filetype, pid, opt = {}) {
     // The reveal always opens the PARENT folder (pid). When the notification
     // target is a distinct child of that parent (nid !== pid) — a created file
     // OR a created sub-folder — it is a single grid cell inside the opened
@@ -1753,9 +1758,9 @@ class __window_mfs extends DrumeeMFS {
     const targetIsChildCell = nid && pid
       && `${nid}` !== '0' && `${pid}` !== '0' && `${nid}` !== `${pid}`;
     if (isContainer && !targetIsChildCell) {
-      this._highlightFolderNewFiles(nid);
+      this._highlightFolderNewFiles(nid, 24, opt);
     } else {
-      this._highlightNode(nid);
+      this._highlightNode(nid, 24, opt);
     }
   }
 
@@ -1763,11 +1768,11 @@ class __window_mfs extends DrumeeMFS {
    * Soft-highlight (and scroll the eye to) a single file cell once it renders.
    * The grid renders asynchronously after Wm.launch, so poll briefly by nid.
    */
-  _highlightNode(nid, tries = 24) {
+  _highlightNode(nid, tries = 24, opt = {}) {
     if (!nid || `${nid}` === "0") return;
     const seek = (n) => {
       const item = this._findMediaCellByNid(nid);
-      if (item) return this._applyReveal([item], true);
+      if (item) return this._applyReveal([item], true, opt);
       if (n <= 0) {
         // Give up loudly enough to be diagnosable. Silence here is what made
         // the unzip reveal take four wrong theories to find: no highlight, no
@@ -1818,6 +1823,10 @@ class __window_mfs extends DrumeeMFS {
         (c) =>
           c &&
           _.isFunction(c._setNotifyHighlight) &&
+          // A chat attachment card (media_grid, isAttachment) can carry the
+          // same nid and sits visible beside the grid in the Files view's
+          // chat column; a reveal is never about that card.
+          !(c.mget && c.mget("isAttachment")) &&
           c.el &&
           // offsetWidth/Height are 0 for anything under display:none, which is
           // exactly how the inactive view mode is parked.
@@ -1832,7 +1841,7 @@ class __window_mfs extends DrumeeMFS {
    * Highlight every NEW (unseen-badge) file inside an opened folder/hub window,
    * and scroll the first into view. Polls until the grid cells render.
    */
-  _highlightFolderNewFiles(nid, tries = 24) {
+  _highlightFolderNewFiles(nid, tries = 24, opt = {}) {
     if (!nid || `${nid}` === "0") return;
     const isFile = (c) => {
       const ft = c.mget(_a.filetype);
@@ -1848,7 +1857,7 @@ class __window_mfs extends DrumeeMFS {
           isFile(c) &&
           (parseInt(c.mget("new_file")) || 0) > 0,
       );
-      if (fresh.length) return this._applyReveal(fresh, true);
+      if (fresh.length) return this._applyReveal(fresh, true, opt);
       if (n <= 0) return;
       setTimeout(() => seek(n - 1), 150);
     };
@@ -1856,11 +1865,34 @@ class __window_mfs extends DrumeeMFS {
   }
 
   /**
+   * Drop every soft highlight a previous reveal left behind, so the next one
+   * points at one file only. The highlight is DOM-only (media/core
+   * _setNotifyHighlight), so this clears the attribute wherever it sits —
+   * both view-mode twins included.
+   */
+  clearReveal() {
+    clearTimeout(this._revealTimer);
+    this._revealTimer = null;
+    for (const el of document.querySelectorAll("[data-ui-highlight]")) {
+      el.classList.remove("media-highlight");
+      el.removeAttribute("data-ui-highlight");
+    }
+  }
+
+  /**
    * Apply the persistent soft highlight to each cell, and (for the first) scroll
    * it into view with a one-off flash. The highlight is cleared when the file is
    * opened or its window closes (media/core.js).
+   *
+   * With `opt.ttl` (ms) the highlight is timed instead ("Show in folder"): the
+   * cell is just lit, with no flash or other animation, and unlit when the ttl
+   * ends. Only the latest timed reveal owns the timer — a newer one, or
+   * clearReveal(), cancels it, so an old timer never un-lights the file that
+   * is lit now.
    */
-  _applyReveal(cells, scrollFirst) {
+  _applyReveal(cells, scrollFirst, opt = {}) {
+    const ttl = Number(opt.ttl) || 0;
+    if (ttl > 0) clearTimeout(this._revealTimer);
     cells.forEach((item, i) => {
       if (!item || !item.el) return;
       try {
@@ -1868,16 +1900,28 @@ class __window_mfs extends DrumeeMFS {
           if (item.el.scrollIntoView) {
             item.el.scrollIntoView({ behavior: "smooth", block: "center" });
           }
-          item.el.classList.add("media-highlight");
-          setTimeout(() => {
-            if (item.el) item.el.classList.remove("media-highlight");
-          }, 2400);
+          // The ring flash is for the persistent (notification) highlight
+          // only; a timed reveal is a plain highlight.
+          if (!(ttl > 0)) {
+            item.el.classList.add("media-highlight");
+            setTimeout(() => {
+              if (item.el) item.el.classList.remove("media-highlight");
+            }, 1200);
+          }
         }
         if (item._setNotifyHighlight) item._setNotifyHighlight(true);
       } catch (e) {
         if (this.warn) this.warn("[openFileLocation] highlight failed", e);
       }
     });
+    if (ttl > 0) {
+      this._revealTimer = setTimeout(() => {
+        this._revealTimer = null;
+        for (const item of cells) {
+          if (item && item.el) item.el.removeAttribute("data-ui-highlight");
+        }
+      }, ttl);
+    }
   }
 
   /**

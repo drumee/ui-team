@@ -1,11 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-label="Casual Sheets">
-  <!-- Casual Sheets logo (sheet.casualoffice.org). The original tile is a
-       #1aa3c4 → #0a5266 gradient; paint servers do not render from Drumee's
-       hidden sprite, so the tile is a solid mid-tone instead. -->
-  <rect x="3" y="3" width="42" height="42" rx="12" fill="#148aa8"/>
-  <path d="M3 15C3 8.373 8.373 3 15 3H33C39.627 3 45 8.373 45 15V18H3V15Z" fill="#ffffff" fill-opacity="0.12"/>
-  <rect x="13" y="13" width="10" height="10" rx="2.5" fill="#ffffff" fill-opacity="0.5"/>
-  <rect x="25" y="13" width="10" height="10" rx="2.5" fill="#ffffff" fill-opacity="0.5"/>
-  <rect x="13" y="25" width="10" height="10" rx="2.5" fill="#ffffff" fill-opacity="0.4"/>
-  <rect x="25" y="25" width="10" height="10" rx="2.5" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="93" height="93" viewBox="0 0 93 93" role="img" aria-label="Casual Sheets">
+  <!-- Drumee 2.0 "file icon / sheet" (Figma 1319:176155), redrawn as vector. -->
+  <rect width="93" height="93" rx="14" fill="#4cb14f"/>
+  <rect x="10" y="10" width="73" height="73" rx="2" fill="#deedc7"/>
+  <rect x="10" y="10" width="73" height="19" fill="#bddd98"/>
+  <rect x="10" y="47" width="73" height="4" fill="#bddd98"/>
+  <rect x="10" y="65" width="73" height="4" fill="#bddd98"/>
+  <rect x="10" y="29" width="73" height="4" fill="#398e3c"/>
+  <rect x="30" y="10" width="4" height="73" fill="#398e3c"/>
 </svg>

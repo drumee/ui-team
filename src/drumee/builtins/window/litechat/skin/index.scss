@@ -93,16 +93,6 @@
           white-space: pre-wrap;
           @include typo($line: 14px, $size: 13px,  $color: var(--default-text-color));//$weight: 300,
 
-          &::-webkit-scrollbar {
-            height: 100%;
-            width: 3px;
-          }
-      
-          &::-webkit-scrollbar-thumb {
-            background-color: var(--default-scrollbar-color);
-            cursor: pointer;
-          }
-
           &::before {
             text-transform: capitalize;
             @include typo($line: 14px, $size: 12px, $weight: 300, $color:var(--default-text-placeholder));

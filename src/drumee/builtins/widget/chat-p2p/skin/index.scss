@@ -432,21 +432,8 @@
   .slimScrollBarY,
   &__contact-list,
   &__chat-panel {
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-  }
-
-  &__contact-list,
-  &__chat-panel {
-    ::-webkit-scrollbar-thumb,
-    &::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb) !important;
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-track,
-    &::-webkit-scrollbar-track {
-      background: transparent !important;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   // ...and reserve the width so text never runs UNDER the bar. The plugin
@@ -536,7 +523,11 @@
   &__ui[data-loading="1"] &__chat-panel {
     position: relative;
 
-    > * {
+    // Every descendant, not just the direct kids: visibility is inherited, but
+    // the global `[data-state="open"] { visibility: visible }` (skin/lib/utils)
+    // re-shows any open part inside — an inbox row's unread badge
+    // (.widget-chatcontactItem__badge) floated over the skeleton.
+    * {
       visibility: hidden;
     }
   }
@@ -1352,12 +1343,8 @@ html[data-theme="dark"] .chat-p2p {
 
   .chat-p2p__contact-list,
   .chat-p2p__chat-panel {
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-
-    ::-webkit-scrollbar-thumb,
-    &::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb) !important;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 }
 

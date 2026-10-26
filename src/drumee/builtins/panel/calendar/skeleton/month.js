@@ -1,38 +1,78 @@
-// Month grid — 6 rows × 7 day cells, Sun…Sat, matching Figma 58222:69628.
+// Month grid — 6 rows × 7 day cells, Sun…Sat, matching Figma 1693:181977.
+// Cell and header: Figma 1693:181977 (header 1697:48528, cells 1697:48538 /
+// 1697:48540 / 1697:48545, hover 1693:180985) — the cell the Meet and Task
+// tabs draw too.
 //
 // Ported from the folder-scoped board calendar (window/tasks/skeleton/calendar.js):
 // same day-cell head with a hover "+", the same chip list with a "+N" that jumps
 // to that day. What is new here is that a cell holds BOTH tasks and meetings,
-// and that every chip carries provenance.
-//
-// The two no longer behave identically, though. That one still slices its cell
-// to MONTH_MAX and drops the remainder, so a busy day there is still unreadable
-// — it has its own skin (window/tasks/skin/index.scss, __cal-day-*), so fixing
-// it is a separate change along the lines of this one.
-const { chip } = require("./chip");
+// drawn as the frame's cards and chips (skeleton/chip.js), so its items are not
+// all one height and the "+N" below is counted from each item's own.
+const { chip, hasPill } = require("./chip");
 const { ymd, day, rowStart } = require("./helpers");
 
 // A busy day renders EVERY item and the cell scrolls — skin/index.scss makes
-// __day-body the scroll container.
+// __day-body the scroll container — and a "+N" footer, pinned to the bottom of
+// it, counts the items that do not stand whole above that footer.
 //
-// It used to slice to four and drop the rest, and the rest was unreachable two
-// ways at once. --cal-cell-min replaces the row's content-based `min-height`,
-// so a row never grows to fit its fullest cell; and four chips did not fit what
-// that leaves, because the compact chip was inheriting the hour block's 12px
-// padding and standing 42px tall. Measured in the old geometry: an 87px cell
-// body showed ONE of four task chips, and clipped the "+N" that was supposed to
-// rescue it — the last child of a hidden-overflow stack is the first thing lost.
+// The count is made here, from the heights the skin gives each kind of item,
+// because CSS cannot ask whether a box overflows. Every item is one line of
+// text per field, so its height depends only on what it is, never on its
+// title. All in px; measured on stage:
 //
-// MONTH_FIT is how many compact chips stand in a cell at rest, and it only
-// labels the "+N". Measured against the row FLOOR (--cal-cell-min: 118px in the
-// skin): 16px of padding, a 20px date line and a 2px gap leave 80px — three
-// 19px chips on 2px gaps (61px) plus the pinned footer. Rows grow with the
-// grid above that floor, as the Meet tab's do, so in a tall window the label
-// can run ahead of what is actually below the fold. Nothing is
-// hidden now, so the number reads as "this day runs past the fold" — and the
-// footer is sticky, so the one affordance that leads to the whole day cannot
-// itself scroll out of reach.
-const MONTH_FIT = 3;
+//   body      115   the cell body at the row FLOOR (--cal-cell-min 170px, less
+//                   12px padding top and bottom, the 20px date line, its 10px
+//                   gap and the 1px rule)
+//   gap        10   between items (--cal-gap)
+//   footer     26   the "+N" line, 16px, plus the gap it covers above itself
+//   meeting  24.8   the one-line chip: 4px padding around a 16.8px line
+//   task     52.4   the card: 12px padding, the 8px dot, 4px, the 14.4px name,
+//                   inside a 1px border
+//   workspace 86.8  the card plus 12px and the 22.4px workspace pill
+//
+// Change any of these rules in the skin and this table goes stale silently.
+//
+// Exact at the floor, which is the height rows keep in any window up to about
+// 1240px tall (the grid gets 709px of a 900px window and needs 1050px for its
+// header and six rows). Above that it shares its extra height among the rows, so
+// a cell shows more than the floor would and "+N" can run ahead of what is
+// actually out of sight; nothing is ever hidden, so it still reads as "this
+// day runs past the fold".
+const FIT = {
+  body: 115,
+  gap: 10,
+  footer: 26,
+  meeting: 24.8,
+  task: 52.4,
+  workspace: 86.8,
+};
+
+// A task card is a workspace card exactly when chip.js draws it the pill.
+const itemHeight = (row) => {
+  if (row.kind === "meeting") return FIT.meeting;
+  return hasPill(row) ? FIT.workspace : FIT.task;
+};
+
+/**
+ * How many of a day's items (in display order) stand whole in a cell at its
+ * floor height. All of them when they fit the body; otherwise those that end
+ * above the "+N" footer.
+ */
+function fitCount(list) {
+  const heights = list.map(itemHeight);
+  const total =
+    heights.reduce((sum, h) => sum + h, 0) + FIT.gap * (heights.length - 1);
+  if (total <= FIT.body) return heights.length;
+  const room = FIT.body - FIT.footer;
+  let top = 0;
+  let n = 0;
+  for (const h of heights) {
+    if (top + h > room) break;
+    top += h + FIT.gap;
+    n++;
+  }
+  return n;
+}
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -62,7 +102,7 @@ module.exports = function (ui) {
   const dayBody = (list, key) => {
     if (!list.length) return null;
     const kids = list.map((row) => chip(ui, row, { compact: 1 }));
-    const more = list.length - MONTH_FIT;
+    const more = list.length - fitCount(list);
     if (more > 0) {
       kids.push(
         Skeletons.Note({
@@ -94,11 +134,10 @@ module.exports = function (ui) {
     const key = ymd(d);
     const inMonth = d.month() === anchorMonth;
     const list = byDay[key] || [];
-    // Two digits, top-left, as the Meet tab's month cell draws it ("07").
-    // It used to read "7" on the right and "Sep 1" on the first of a month;
-    // the month boundary is carried by the dimmed outside-month dates instead,
-    // which is the Meet tab's cue.
-    const numText = d.format("DD");
+    // Top-right, no leading zero ("7"), and the first of a month names its
+    // month ("Jun 1") — the same rule in all three month grids. Outside-month
+    // dates still dim, so the boundary reads both ways.
+    const numText = d.date() === 1 ? d.format("MMM D") : d.format("D");
 
     // The whole cell is the day's "add a task" target, not just its "+": a
     // click anywhere in the square opens the create-task popup due that day,
@@ -127,17 +166,10 @@ module.exports = function (ui) {
           className: `${pfx}__day-head`,
           active: 0,
           kids: [
-            // The date on the left (the Meet tab's place for it), the
-            // hover-revealed quick-add on the right.
-            Skeletons.Note({
-              className: `${pfx}__day-num`,
-              content: numText,
-              active: 0,
-            }),
-            // Quick-add on the cell. A text glyph rather than the `plus`
-            // sprite: the sprite symbol cannot be recoloured across the <use>
-            // boundary and renders invisible (same reason as the board
-            // calendar).
+            // Right-packed: the hover-revealed quick-add, then the date in
+            // the corner. A text glyph rather than the `plus` sprite: the
+            // sprite symbol cannot be recoloured across the <use> boundary
+            // and renders invisible (same reason as the board calendar).
             Skeletons.Box.X({
               className: `${pfx}__day-add`,
               bubble: 0,
@@ -154,6 +186,11 @@ module.exports = function (ui) {
                 }),
               ],
             }),
+            Skeletons.Note({
+              className: `${pfx}__day-num`,
+              content: numText,
+              active: 0,
+            }),
           ],
         }),
         dayBody(list, key),
@@ -165,11 +202,11 @@ module.exports = function (ui) {
   const weekdays = Skeletons.Box.X({
     className: `${pfx}__weekdays`,
     kids: Array.from({ length: 7 }, (_, i) =>
-      // Full day names, left-aligned in a bordered header row — the Meet tab's
-      // month header ("Monday"), not the centred "Mon" this grid used.
+      // Short day names ("Sun"), centred over their column, in the UI
+      // language (the global Dayjs locale, set where the string table is).
       Skeletons.Note({
         className: `${pfx}__weekday`,
-        content: weekStart.add(i, "day").format("dddd"),
+        content: weekStart.add(i, "day").format("ddd"),
       }),
     ),
   });
