@@ -383,6 +383,7 @@ class __docs_state extends DrumeeMFS {
       try {
         const bar = root.querySelector('[data-testid="title-bar"]');
         if (bar) this._decorateTitleBar(bar, null);
+        this._wirePrintButton();
       } catch (e) {
         /** editor gone */
       }
@@ -440,10 +441,11 @@ class __docs_state extends DrumeeMFS {
     const editor = this.editor;
     const tidy = () => {
       try {
+        const host = this._activeHost() || root;
         for (const b of root.querySelectorAll('button[aria-label^="Theme:"], button[aria-label^="Theme "]')) {
           b.style.display = "none";
         }
-        const cluster = root.querySelector('[data-testid="presence-cluster"]');
+        const cluster = host.querySelector('[data-testid="presence-cluster"]');
         if (cluster) {
           for (const b of cluster.querySelectorAll("button")) {
             if (/share/i.test(b.textContent || "")) b.style.display = "none";
@@ -461,8 +463,9 @@ class __docs_state extends DrumeeMFS {
           }
         }
         // CasualEditor ignores documentName*: add Drumee's own editable name
-        // at the left of Casual's title row (menus shift right).
-        const bar = root.querySelector('[data-testid="title-bar"]');
+        // at the left of Casual's title row (menus shift right) — the row of
+        // the pane on screen.
+        const bar = host.querySelector('[data-testid="title-bar"]');
         if (bar && editor) {
           let box = this._nameBox;
           if (!box) {
@@ -501,6 +504,8 @@ class __docs_state extends DrumeeMFS {
             if (input.value !== cur) input.value = cur;
           }
         }
+        this._wireCollabUndo();
+        this._wirePrintButton();
       } catch (e) {
         /** editor gone */
       }
@@ -513,6 +518,232 @@ class __docs_state extends DrumeeMFS {
       });
       this._tidyObs.observe(root, { childList: true, subtree: true });
     }
+  }
+
+  /**
+   * Undo / redo while co-editing. Casual's collab mount swaps ProseMirror's
+   * history for y-prosemirror's yUndoPlugin but leaves its toolbar buttons
+   * and Mod-Z on prosemirror-history (1.4.2): the buttons stay disabled and
+   * Mod-Z does nothing. And yUndoPlugin's own UndoManager never fills: Casual
+   * appends a paragraph-id housekeeping transaction (`addToHistory: false`)
+   * to every edit, y-prosemirror hands the LAST flag of the batch to the Yjs
+   * transaction, and the manager skips it. So Drumee's own pair takes their
+   * place, driven by a Yjs UndoManager of its own on the room's fragment
+   * (same tracked origin and delete filter, every transaction captured), and
+   * the shortcuts are answered on the editor root. Re-applied from the chrome
+   * observer (Casual re-renders the bar), re-built when the room changes.
+   */
+  _wireCollabUndo() {
+    const root = this.el;
+    const view = this._collabView();
+    if (!root || !view) return;
+    const host = this._activeHost() || root;
+    const bar = host.querySelector('[data-testid="formatting-bar"]');
+    const native = bar && bar.querySelector('[data-testid="toolbar-undo"]');
+    if (!native) return;
+    let box = bar.querySelector(".editor-docs__undo-redo");
+    if (!box) {
+      box = document.createElement("span");
+      box.className = "editor-docs__undo-redo";
+      const nativeRedo = bar.querySelector('[data-testid="toolbar-redo"]');
+      const make = (kind, title) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = `editor-docs__history editor-docs__history--${kind}`;
+        b.title = title;
+        // The editor keeps its selection: no focus change on press.
+        b.addEventListener("mousedown", (e) => e.preventDefault());
+        b.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this._yHistory(kind);
+        });
+        box.appendChild(b);
+        return b;
+      };
+      box._undo = make("undo", native.getAttribute("aria-label") || native.title || "Undo");
+      box._redo = make(
+        "redo",
+        (nativeRedo && (nativeRedo.getAttribute("aria-label") || nativeRedo.title)) || "Redo"
+      );
+      native.parentElement.insertBefore(box, native);
+    }
+    const plugins = view.state.plugins || [];
+    const syncPlugin = plugins.find((p) => String(p.key) === "y-sync$");
+    const undoPlugin = plugins.find((p) => String(p.key) === "y-undo$");
+    const sync = syncPlugin && syncPlugin.getState(view.state);
+    const theirs = undoPlugin && undoPlugin.getState(view.state);
+    const fragment = sync && sync.type;
+    const model = theirs && theirs.undoManager;
+    if (!fragment || !model) return;
+    if (this._undoFragment !== fragment) {
+      this._unbindUndoManager();
+      // Same Yjs as the document's (the class of Casual's own manager).
+      const UndoManager = model.constructor;
+      const origins = new Set(model.trackedOrigins || []);
+      if (syncPlugin.spec && syncPlugin.spec.key) origins.add(syncPlugin.spec.key);
+      const um = new UndoManager(fragment, {
+        trackedOrigins: origins,
+        deleteFilter: model.deleteFilter,
+        captureTransaction: () => true,
+      });
+      this._undoFragment = fragment;
+      this._undoManager = um;
+      this._undoOwned = 1;
+      this._undoRefresh = () => this._refreshHistoryButtons();
+      for (const ev of ["stack-item-added", "stack-item-popped", "stack-cleared"]) {
+        um.on(ev, this._undoRefresh);
+      }
+    }
+    this._refreshHistoryButtons();
+    if (!this._undoKeys) {
+      // On the document, capture phase: Casual answers Mod-Z from a document
+      // level listener of its own (prosemirror-history, a no-op in a room)
+      // before anything on the editor root would see the key.
+      this._undoKeys = (e) => {
+        if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+        // Casual keeps the ProseMirror surface off screen, outside the pane
+        // (its pages are drawn apart): the key counts when it lands on the
+        // view of the room on screen, or anywhere in the pane.
+        const view = this._collabView();
+        const inView = !!(view && view.dom && view.dom.contains(e.target));
+        const scope = this._activeHost() || this._host || this.el;
+        if (!inView && !(scope && scope.contains(e.target))) return;
+        const k = (e.key || "").toLowerCase();
+        let kind = null;
+        if (k === "z") kind = e.shiftKey ? "redo" : "undo";
+        else if (k === "y") kind = "redo";
+        if (!kind) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this._yHistory(kind);
+      };
+      document.addEventListener("keydown", this._undoKeys, true);
+    }
+  }
+
+  /**
+   * The design's Printer button (Figma toolbar: Search, Undo, Redo, Printer,
+   * Paint format…). Casual's bar has none, its API prints: before Paint
+   * format, in the bar of the pane on screen, both shells.
+   */
+  _wirePrintButton() {
+    const host = this._activeHost() || this.el;
+    const bar = host && host.querySelector('[data-testid="formatting-bar"]');
+    const paint = bar && bar.querySelector('[data-testid="toolbar-paint-format"]');
+    if (!paint || bar.querySelector(".editor-docs__print")) return;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "editor-docs__print";
+    b.title = LOCALE.PRINT || "Print";
+    b.addEventListener("mousedown", (e) => e.preventDefault());
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.printDocument();
+    });
+    paint.parentElement.insertBefore(b, paint);
+  }
+
+  /** Casual's print (its own preview / layout), the browser's as a fallback. */
+  printDocument() {
+    const api = (this._ref && this._ref.current) || this._apiHandle;
+    try {
+      if (api && typeof api.print === "function") return api.print();
+      if (api && typeof api.openPrintPreview === "function") return api.openPrintPreview();
+    } catch (e) {
+      /** falls back to the browser */
+    }
+    try {
+      window.print();
+    } catch (e) {
+      /** blocked */
+    }
+    return undefined;
+  }
+
+  /**
+   * The ProseMirror view of the room on screen, through Casual's handle:
+   * CasualEditor's ref exposes DocxEditor's API, whose getEditorRef() is the
+   * inner editor (getView / getState / dispatch).
+   */
+  _collabView() {
+    const ref = this._ref && this._ref.current;
+    if (!ref) return null;
+    try {
+      if (typeof ref.getView === "function") return ref.getView() || null;
+      const inner = typeof ref.getEditorRef === "function" ? ref.getEditorRef() : null;
+      if (inner && typeof inner.getView === "function") return inner.getView() || null;
+      if (inner && inner.current && typeof inner.current.getView === "function") {
+        return inner.current.getView() || null;
+      }
+    } catch (e) {
+      /** editor gone */
+    }
+    return null;
+  }
+
+  /**
+   * The element of the pane on screen. Every tab's pane stays mounted
+   * (hidden) once opened, so a query from the window root finds the FIRST
+   * title bar in the DOM — a hidden tab's, after a switch — and the name box
+   * went there, off screen (the "title lost on tab switch" of 2026-10-26).
+   */
+  _activeHost() {
+    const pane = this._panes && this._room != null ? this._panes.get(this._room) : null;
+    return pane && pane.host ? pane.host : null;
+  }
+
+  _yHistory(kind) {
+    const um = this._undoManager;
+    const view = this._collabView();
+    if (!um || !view) return false;
+    let done = null;
+    try {
+      done = kind === "redo" ? um.redo() : um.undo();
+    } catch (e) {
+      done = null;
+    }
+    this._refreshHistoryButtons();
+    try {
+      view.focus();
+    } catch (e) {
+      /** view gone */
+    }
+    return done != null;
+  }
+
+  _refreshHistoryButtons() {
+    const host = this._activeHost() || this.el;
+    const box = host && host.querySelector(".editor-docs__undo-redo");
+    const um = this._undoManager;
+    if (!box || !um) return;
+    if (box._undo) box._undo.disabled = !(um.undoStack && um.undoStack.length);
+    if (box._redo) box._redo.disabled = !(um.redoStack && um.redoStack.length);
+  }
+
+  _unbindUndoManager() {
+    const um = this._undoManager;
+    if (um && this._undoRefresh) {
+      for (const ev of ["stack-item-added", "stack-item-popped", "stack-cleared"]) {
+        try {
+          um.off(ev, this._undoRefresh);
+        } catch (e) {
+          /** already gone */
+        }
+      }
+    }
+    if (um && this._undoOwned) {
+      try {
+        um.destroy();
+      } catch (e) {
+        /** already gone */
+      }
+    }
+    this._undoManager = null;
+    this._undoOwned = 0;
+    this._undoFragment = null;
+    this._undoRefresh = null;
   }
 
   /**
@@ -1110,6 +1341,13 @@ class __docs_state extends DrumeeMFS {
    *
    */
   onBeforeDestroy() {
+    try {
+      this._unbindUndoManager();
+      if (this._undoKeys) document.removeEventListener("keydown", this._undoKeys, true);
+      this._undoKeys = null;
+    } catch (e) {
+      /** already gone */
+    }
     console.log("[DOCS] onBeforeDestroy (state) called");
     this._destroyed = 1;
     if (this._saveTimer) {

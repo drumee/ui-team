@@ -1126,3 +1126,70 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     }
   }
 }
+
+// ── Co-editing undo / redo (docs_state._wireCollabUndo) ─────────────────────
+// Drumee's pair replaces Casual's (disabled for good in a Yjs room).
+.editor-docs--collab .docs-state [data-testid="formatting-bar"] {
+  [data-testid="toolbar-undo"],
+  [data-testid="toolbar-redo"] {
+    display: none !important;
+  }
+
+  .editor-docs__undo-redo {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .editor-docs__history {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: #0b0a21;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    &--undo {
+      @include ph.ph("arrow-u-up-left", 20px, true);
+    }
+
+    &--redo {
+      @include ph.ph("arrow-u-up-right", 20px, true);
+    }
+  }
+}
+
+// ── Printer (docs_state._wirePrintButton), both shells ──────────────────────
+.editor-docs .docs-state [data-testid="formatting-bar"] .editor-docs__print {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #0b0a21;
+  cursor: pointer;
+  @include ph.ph("printer", 20px, true);
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
