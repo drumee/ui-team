@@ -77,6 +77,12 @@ class __editor_docs extends __player {
       const hub_id = this.target.mget(_a.hub_id);
       if (pid && hub_id) this.mset({ pid, hub_id });
     }
+    // Launched from the Open-File Switcher ("Document lite" in its create
+    // menu): the panel names the listed folder — its player is no folder
+    // window to ask — and that folder wins.
+    if (!opt.media && opt.folder && opt.folder.nid && opt.folder.hub_id) {
+      this.mset({ pid: opt.folder.nid, hub_id: opt.folder.hub_id });
+    }
   }
 
   /**
@@ -374,6 +380,10 @@ class __editor_docs extends __player {
    *
    */
   onDomRefresh() {
+    // The Document tabs rail is open by default, from the first paint (a
+    // window the desk restores may get its tab list late); setTabs re-draws
+    // the rows once the file has loaded. Closed by hand, it stays closed.
+    if (!this._tabsClosedByUser && !this._tabsOpen) this.toggleTabs(true);
     this.feed(require("./skeleton")(this));
     this._wireTitleRename();
     this._wireHotkeys();
@@ -733,10 +743,10 @@ class __editor_docs extends __player {
     // The co-editing mount joins the file's original room before the list is
     // known; once it is, move to the room of the tab the file was left on.
     if (this._doc && this._doc.ensureRoomForActive) this._doc.ensureRoomForActive();
-    // Only once there is something to switch between: the Figma "File
-    // viewer" header has no tabs column, so a one-tab document (every new
-    // one) keeps the whole card for the page; the gear menu opens the rail.
-    if (this._tabs.length > 1 && !this._tabsClosedByUser && !this._tabsOpen) {
+    // Open by default, one tab or many (user's call, 2026-10-25): the rail
+    // is where a tab is added. Closed by hand, it stays closed; the gear
+    // menu row brings it back.
+    if (!this._tabsClosedByUser && !this._tabsOpen) {
       this.toggleTabs(true);
       return;
     }

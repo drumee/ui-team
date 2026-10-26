@@ -970,3 +970,159 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     gap: 6px;
   }
 }
+
+// ── Side panels, the design's "Tab" column (Figma 1337:16607) ──────────────
+// Casual's document outline and Drumee's Document tabs share one look: a
+// 16px Grey/90 title with a 20px X at the right (padding 16px 0), rows as
+// 36px pills (radius 100, padding 8px 16px, 14px Grey/90), the open row on
+// Overlay/blue, nested rows 24px in behind a 1px #CCCCCC line. Casual
+// styles its outline inline, hence the !important.
+.editor-docs .docs-state nav.docx-outline-nav {
+  left: 60px !important;
+  width: 212px !important;
+  padding: 8px 8px 16px 0 !important;
+  font-family: var(--font-main) !important;
+
+  // Head: no list glyph, the title, the X.
+  > div:first-child {
+    padding: 16px 0 16px 16px !important;
+    gap: 18px !important;
+
+    > svg {
+      display: none !important;
+    }
+
+    > span {
+      font: 400 16px/1.2 var(--font-main) !important;
+      color: #34343a !important;
+    }
+
+    > button {
+      width: 28px !important;
+      height: 28px !important;
+      border-radius: 8px !important;
+      color: #34343a !important;
+      @include ph.ph("x", 20px, true);
+    }
+  }
+
+  // Body: one flex row per heading.
+  > div:nth-child(2) {
+    padding: 0 !important;
+
+    > div {
+      margin-bottom: 4px;
+
+      // A nested heading: 24px in, behind the 1px line (Figma "Container").
+      &[style*="margin-left: "]:not([style*="margin-left: 0px"]) {
+        margin-left: 24px !important;
+        padding-left: 8px;
+        border-left: 1px solid #ccc;
+      }
+
+      // The expand / collapse caret sits at the right of the pill.
+      > button[aria-expanded] {
+        order: 2;
+        width: 20px !important;
+        height: 20px !important;
+        margin: 0 8px 0 4px;
+        color: #34343a !important;
+      }
+
+      // Rows without children keep no 16px spacer: text aligns in the pill.
+      > span[aria-hidden="true"] {
+        display: none !important;
+      }
+    }
+
+    .docx-outline-heading-btn {
+      box-sizing: border-box;
+      height: 36px !important;
+      padding: 8px 16px !important;
+      border: 0 !important;
+      border-radius: 100px !important;
+      background: transparent !important;
+      font: 400 14px/1.2 var(--font-main) !important;
+      color: #34343a !important;
+
+      &:hover {
+        background: #f2f2f7 !important;
+      }
+
+      &[aria-current="true"] {
+        background: rgba(113, 163, 244, 0.1) !important;
+        font-weight: 500 !important;
+      }
+    }
+
+    // A heading with children: the group pill (Figma "Headings 1 ▾").
+    > div:has(> button[aria-expanded]) > .docx-outline-heading-btn {
+      background: rgba(113, 163, 244, 0.1) !important;
+    }
+  }
+}
+
+.editor-docs {
+  &[data-tabs="open"] &__tabs-slot {
+    width: 236px;
+    flex: 0 0 236px;
+    border-right: 0;
+    background: #fff;
+  }
+
+  &__tabs {
+    padding: 8px 8px 16px 0;
+    color: #34343a;
+  }
+
+  &__tabs-head {
+    padding: 16px 0 16px 16px;
+    gap: 8px;
+  }
+
+  &__tabs-title {
+    flex: 1 1 auto;
+    font: 400 16px/1.2 var(--font-main);
+    color: #34343a;
+  }
+
+  &__tabs-add,
+  &__tabs-close {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: #34343a;
+  }
+
+  &__tabs-add {
+    @include ph.ph("plus", 20px, true);
+  }
+
+  &__tabs-close {
+    @include ph.ph("x", 20px, true);
+  }
+
+  &__tabs-list {
+    margin-top: 0;
+  }
+
+  &__tab-row {
+    height: 36px;
+    gap: 8px;
+    margin-bottom: 4px;
+    padding: 0 8px 0 16px;
+    border-radius: 100px;
+    font: 400 14px/1.2 var(--font-main);
+    color: #34343a;
+
+    &:hover {
+      background: #f2f2f7;
+    }
+
+    &.is-active {
+      background: rgba(113, 163, 244, 0.1);
+      color: #34343a;
+      font-weight: 500;
+    }
+  }
+}
