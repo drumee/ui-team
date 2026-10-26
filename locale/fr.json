@@ -317,6 +317,7 @@
   "PASSWORD_SAME_AS_CURRENT": "Le nouveau mot de passe doit être différent de votre mot de passe actuel.",
   "PASS_PHRASE": "Mot de passe",
   "PASTE": "Coller",
+  "PASTE_WITH_SHORTCUT": "Pour coller ici, utilisez Ctrl+V (⌘V sur Mac).",
   "PHOTOS": "Photos",
   "PICTURES": "Photos",
   "PLUGGINS": "Extensions",

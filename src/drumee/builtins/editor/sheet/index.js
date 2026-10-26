@@ -1,6 +1,5 @@
 const __player = require("player/interact");
 const renameInline = require("builtins/player/widget/topbar/rename");
-const { attachHelpContactMenu } = require("builtins/editor/help-contact-menu");
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const chrome = require("builtins/editor/chrome");
 
@@ -358,11 +357,6 @@ class __editor_sheet extends __player {
       },
       true
     );
-    // Casual's "Help" menubar item stays visible but opens a one-row Drumee
-    // menu ("Contact us" → support conversation) instead of Casual's own
-    // Help menu. See builtins/editor/help-contact-menu.
-    const isHelp = (t) => !!(t && t.closest && t.closest('[data-testid="cs-menu-help"]'));
-    this._closeHelpMenu = attachHelpContactMenu(this, isHelp);
     this.el.addEventListener(
       "keydown",
       (e) => {

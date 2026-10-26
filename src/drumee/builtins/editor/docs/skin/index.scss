@@ -855,6 +855,21 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     color: #65656c;
     font-family: var(--font-main);
   }
+
+  // Version history keeps its snapshots in this browser only (no co-editor
+  // and no other device sees them): hidden from the rail as from File
+  // (docs_state _wireMenus).
+  [data-testid="rail-history"] {
+    display: none !important;
+  }
+
+  // Insert → Text box draws a box with no outline: an empty one could not
+  // be seen at all. A light dashed frame on screen (Casual's print window
+  // copies no stylesheet, so it never prints); a callout keeps its border.
+  .layout-page .layout-textbox:not([style*="border"]) {
+    outline: 1px dashed rgba(11, 10, 33, 0.25);
+    outline-offset: -1px;
+  }
 }
 
 // ── Figma parity pass (user review 2026-10-23) ─────────────────────────────
