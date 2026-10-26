@@ -3274,5 +3274,12 @@
   "MIGRATE_PHONE_LINK_PLACEHOLDER": "Pega el enlace",
   "MIGRATE_PHONE_VERIFY_IMPORT": "Verificar e importar",
   "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE": "Empieza a hablar del archivo en el hilo de chat",
-  "DMZ_MEETING_PASSWORD_PROTECTED": "Esta reunión está protegida. Introduce la contraseña para continuar."
+  "DMZ_MEETING_PASSWORD_PROTECTED": "Esta reunión está protegida. Introduce la contraseña para continuar.",
+  "FORMAT_BOLD": "Negrita (Ctrl+B)",
+  "FORMAT_ITALIC": "Cursiva (Ctrl+I)",
+  "FORMAT_UNDERLINE": "Subrayado (Ctrl+U)",
+  "FORMAT_STRIKE": "Tachado (Ctrl+Shift+X)",
+  "FORMAT_BULLET_LIST": "Lista con viñetas (Ctrl+Shift+8)",
+  "FORMAT_NUMBERED_LIST": "Lista numerada (Ctrl+Shift+7)",
+  "FORMAT_LINK": "Enlace (Ctrl+K)"
 }

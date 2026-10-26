@@ -3279,5 +3279,12 @@
   "MIGRATE_PHONE_LINK_PLACEHOLDER": "Вставьте ссылку",
   "MIGRATE_PHONE_VERIFY_IMPORT": "Проверить и импортировать",
   "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE": "Начните обсуждать файл в ветке чата",
-  "DMZ_MEETING_PASSWORD_PROTECTED": "Эта встреча защищена паролем. Введите пароль, чтобы продолжить."
+  "DMZ_MEETING_PASSWORD_PROTECTED": "Эта встреча защищена паролем. Введите пароль, чтобы продолжить.",
+  "FORMAT_BOLD": "Жирный (Ctrl+B)",
+  "FORMAT_ITALIC": "Курсив (Ctrl+I)",
+  "FORMAT_UNDERLINE": "Подчёркнутый (Ctrl+U)",
+  "FORMAT_STRIKE": "Зачёркнутый (Ctrl+Shift+X)",
+  "FORMAT_BULLET_LIST": "Маркированный список (Ctrl+Shift+8)",
+  "FORMAT_NUMBERED_LIST": "Нумерованный список (Ctrl+Shift+7)",
+  "FORMAT_LINK": "Ссылка (Ctrl+K)"
 }

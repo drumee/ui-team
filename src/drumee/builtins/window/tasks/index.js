@@ -19,13 +19,11 @@ const completeParent = require("./complete-parent");
 const { killTaskToast } = require("./task-toast");
 const {
   markerRe,
-  contentTokenRe,
-  imgMarker,
-  linkMarker,
   linkifyTokens,
   safeUrl,
   uidsFromText,
 } = require("./mention-markers");
+const { parse, stringify, fromDom, toDom } = require("./rich-text");
 const {
   unfinishedPending,
   abandonedPending,
@@ -82,6 +80,24 @@ const COMMENT_SUBMIT_BY_SCOPE = {
   comment: "_submitComment",
   "comment-edit": "_saveCommentEdit",
   "comment-reply": "_submitReply",
+};
+
+// Format toolbar button (skeleton formatBar's data-format) → execCommand.
+// "link" has no command: it opens the Ctrl+K prompt.
+const FORMAT_COMMANDS = {
+  bold: "bold",
+  italic: "italic",
+  underline: "underline",
+  strike: "strikeThrough",
+  ul: "insertUnorderedList",
+  ol: "insertOrderedList",
+};
+
+// Ctrl/Cmd+Shift shortcuts, by e.code: Shift changes e.key ("8" → "*").
+const SHIFT_FORMAT_KEYS = {
+  KeyX: "strike",
+  Digit8: "ul",
+  Digit7: "ol",
 };
 
 // Scopes the file picker accepts, i.e. the drafts _draftForKey can queue a file
@@ -440,6 +456,10 @@ class __tasks_panel extends LetcBox {
     for (const cb of this._partWaiters || []) this.off(_e.part.ready, cb);
     this._partWaiters = null;
     this._closeCommentReactionsPicker();
+    if (this._onSelectionChange) {
+      document.removeEventListener("selectionchange", this._onSelectionChange);
+      this._onSelectionChange = null;
+    }
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
     if (this._assigneeBlurTimer) clearTimeout(this._assigneeBlurTimer);
@@ -2350,6 +2370,10 @@ class __tasks_panel extends LetcBox {
       case "open-detail":
         return this._openDetail(trigger.mget("taskId"));
 
+      // Format toolbar above a description editor (skeleton formatBar).
+      case "desc-format":
+        return this._applyFormat(trigger.mget("formatScope"), trigger.mget("format"));
+
       // Quick-open card only (its footer's "Open in board"): leave the card the
       // way Cancel does, dropping unsaved edits, and let the host open the
       // workspace board on this task.
@@ -2751,6 +2775,17 @@ class __tasks_panel extends LetcBox {
     // comment / comment-edit / comment-reply). Init each with its scope.
     if (typeof pn === "string" && pn.endsWith("-desc-editor")) {
       this._initDescEditor(child.el, pn.slice(0, -"-desc-editor".length));
+      return;
+    }
+    // Format toolbar ("<scope>-format-bar"): pressing a button must not take
+    // the focus — or the selection it formats — out of the editor. The click
+    // still reaches the service.
+    if (typeof pn === "string" && pn.endsWith("-format-bar")) {
+      child.el.addEventListener("mousedown", (e) => e.preventDefault());
+      if (!this._onSelectionChange) {
+        this._onSelectionChange = () => this._syncFormatBar();
+        document.addEventListener("selectionchange", this._onSelectionChange);
+      }
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
@@ -4216,6 +4251,7 @@ class __tasks_panel extends LetcBox {
   }
 
   async _commitTask() {
+    this._flushDescEditor("create");
     this._captureCreateDraft();
     const draft = this._createDefaults || {};
     const title = String(draft.title || "").trim();
@@ -4529,6 +4565,7 @@ class __tasks_panel extends LetcBox {
   }
 
   async _commitDetail() {
+    this._flushDescEditor("detail");
     if (!this._detailId || !this._detailDraft) return;
     this._captureDetailDraft();
     const id = this._detailId;
@@ -8861,95 +8898,92 @@ class __tasks_panel extends LetcBox {
     return a;
   }
 
-  // Render stored marker text into the editor as text nodes, chip spans,
-  // inline images, and links.
+  // Render stored text into the editor (or a posted body): marks as
+  // <b>/<i>/<u>/<s>, list lines as <ul>/<ol>, mentions as chips, inline
+  // images, and links — see rich-text.js for the grammar.
   _renderEditorContent(editorEl, markerText) {
     editorEl.textContent = "";
-    const text = String(markerText || "");
     const editable = editorEl.getAttribute("contenteditable") === "true";
-    const appendText = (str) => {
-      str.split("\n").forEach((part, i) => {
-        if (i > 0) editorEl.appendChild(document.createElement("br"));
-        if (!part) return;
-        // Read-only only: linkifying in an editor would turn every half-typed
-        // address into an atomic chip under the caret. There, Ctrl+K does it.
-        if (editable) {
-          editorEl.appendChild(document.createTextNode(part));
-          return;
-        }
-        linkifyTokens(part).forEach((tok) => {
-          editorEl.appendChild(
-            tok.url
-              ? this._makeLinkNode(tok.label, tok.url, false)
-              : document.createTextNode(tok.text),
-          );
-        });
-      });
-    };
-    const re = contentTokenRe();
-    let last = 0;
-    let m;
-    while ((m = re.exec(text))) {
-      if (m.index > last) appendText(text.slice(last, m.index));
-      if (m[2] != null) {
-        editorEl.appendChild(this._makeMentionChip(m[2], m[1]));
-      } else if (m[3] != null) {
-        editorEl.appendChild(
-          this._makeInlineImage(m[3], m[4], m[5], editable),
-        );
-      } else if (m[7] != null) {
-        // A rejected scheme renders as its label, never as a live href.
-        const href = safeUrl(m[7]);
-        editorEl.appendChild(
-          href
-            ? this._makeLinkNode(m[6], href, editable)
-            : document.createTextNode(m[6]),
-        );
-      }
-      last = re.lastIndex;
-    }
-    if (last < text.length) appendText(text.slice(last));
+    editorEl.appendChild(toDom(parse(markerText), document, this._richMakers(editable)));
   }
 
-  // Editor DOM → marker text. Chips become "[@Name](user:uid)"; <br>/<div>
-  // boundaries become newlines.
+  // Editor DOM → stored text (rich-text.js). The tags Ctrl+B / I / U and the
+  // toolbar leave become marks; <br>/<div> boundaries become newlines.
   _serializeEditor(editorEl) {
-    const chipClass = `${this.fig.family}__mention-chip`;
-    const imgClass = `${this.fig.family}__inline-img`;
-    let out = "";
-    const walk = (node) => {
-      node.childNodes.forEach((n) => {
-        if (n.nodeType === 3) {
-          out += n.textContent;
-        } else if (n.nodeType === 1) {
-          if (n.classList && n.classList.contains(chipClass)) {
-            const uid = n.dataset.uid;
-            const name = n.dataset.name || n.textContent.replace(/^@/, "");
-            out += `[@${name}](user:${uid})`;
-          } else if (n.classList && n.classList.contains(imgClass)) {
-            const w = parseInt(n.style.width, 10) || 0;
-            out += imgMarker(n.dataset.nid, n.dataset.hub, w || undefined);
-          } else if (n.tagName === "A") {
-            const href = safeUrl(n.dataset.href || n.getAttribute("href"));
-            const label = (n.textContent || "").trim();
-            if (!href || !label) walk(n);
-            // A link that reads as its own target needs no marker — read-only
-            // rendering re-links the bare URL anyway.
-            else if (label === href) out += label;
-            else out += linkMarker(label, href);
-          } else if (n.tagName === "BR") {
-            out += "\n";
-          } else if (n.tagName === "DIV") {
-            if (out && !out.endsWith("\n")) out += "\n";
-            walk(n);
-          } else {
-            walk(n);
-          }
-        }
-      });
+    return stringify(fromDom(editorEl, this._richOpt()));
+  }
+
+  // What fromDom needs to tell this panel's atoms from plain markup.
+  _richOpt() {
+    return {
+      chipClass: `${this.fig.family}__mention-chip`,
+      imgClass: `${this.fig.family}__inline-img`,
+      safeUrl,
     };
-    walk(editorEl);
-    return out;
+  }
+
+  // The nodes toDom draws atoms with. Bare URLs are linkified on read-only
+  // bodies only: in an editor that would turn every half-typed address into an
+  // atomic chip under the caret. There, Ctrl+K does it.
+  _richMakers(editable) {
+    return {
+      mention: (name, uid) => this._makeMentionChip(uid, name),
+      img: (nid, hub, width) => this._makeInlineImage(nid, hub, width, editable),
+      // A rejected scheme renders as its label, never as a live href.
+      link: (label, url) => {
+        const href = safeUrl(url);
+        return href ? this._makeLinkNode(label, href, editable) : document.createTextNode(label);
+      },
+      text: editable
+        ? (s) => [document.createTextNode(s)]
+        : (s) =>
+            linkifyTokens(s).map((tok) =>
+              tok.url ? this._makeLinkNode(tok.label, tok.url, false) : document.createTextNode(tok.text),
+            ),
+    };
+  }
+
+  // A format toolbar button / shortcut. The browser applies it (execCommand
+  // keeps it on the native undo stack); styleWithCSS off makes it leave the
+  // <b>/<i>/<u>/<s>/<ul>/<ol> tags fromDom reads, not inline styles. Saved to
+  // the draft at once rather than left to the input event.
+  _applyFormat(scope, format) {
+    const target = this._mentionTarget(scope);
+    const ed = target && this.el && this.el.querySelector(target.editorSelector);
+    if (!ed || ed.getAttribute("contenteditable") !== "true") return;
+    ed.focus();
+    if (format === "link") return this._openLinkPrompt(scope);
+    const cmd = FORMAT_COMMANDS[format];
+    if (!cmd) return;
+    document.execCommand("styleWithCSS", false, false);
+    document.execCommand(cmd);
+    this._onDescInput(scope, ed);
+    this._syncFormatBar();
+  }
+
+  // Light each toolbar button whose format is on under the caret; with the
+  // selection outside a bar's editor, none of its buttons is lit.
+  _syncFormatBar() {
+    if (!this.el) return;
+    const pfx = this.fig.family;
+    const sel = window.getSelection();
+    const node = sel && sel.rangeCount ? sel.anchorNode : null;
+    this.el.querySelectorAll(`.${pfx}__format-bar`).forEach((bar) => {
+      const field = bar.closest(`.${pfx}__desc-field`);
+      const ed = field && field.querySelector(`.${pfx}__desc-editor`);
+      const inside = !!(node && ed && ed.contains(node));
+      const elNode = node && (node.nodeType === 1 ? node : node.parentElement);
+      const link = inside && elNode && elNode.closest("a");
+      bar.querySelectorAll(`.${pfx}__format-btn`).forEach((btn) => {
+        const f = btn.dataset.format;
+        let on = false;
+        if (inside) {
+          on = f === "link" ? !!(link && ed.contains(link)) : !!document.queryCommandState(FORMAT_COMMANDS[f]);
+        }
+        if (on) btn.dataset.active = "1";
+        else delete btn.dataset.active;
+      });
+    });
   }
 
   _collectMentionUids(editorEl) {
@@ -9087,49 +9121,31 @@ class __tasks_panel extends LetcBox {
   }
 
   // Clipboard payload → a fragment of what this editor can store: text, line
-  // breaks and links. Everything else collapses to its text, which is all the
-  // serializer would have kept anyway.
+  // breaks, links, bold / italic / underline / strike and lists, read by the
+  // same fromDom the serializer uses. Everything else collapses to its text,
+  // which is all the serializer would have kept anyway.
   _pasteFragment(html, plain) {
-    const frag = document.createDocumentFragment();
-    const addText = (str, collapse) => {
-      // HTML source whitespace is collapsed by the renderer; plain text is not.
-      const s = collapse ? String(str).replace(/[\t\r\n]+/g, " ") : String(str);
-      if (!s) return;
-      s.split("\n").forEach((part, i) => {
-        if (i > 0) frag.appendChild(document.createElement("br"));
-        if (part) frag.appendChild(document.createTextNode(part));
-      });
-    };
-    if (!html) {
-      addText(plain, false);
-      return frag;
-    }
-    const BLOCK = /^(?:DIV|P|LI|TR|H[1-6]|BLOCKQUOTE|SECTION|ARTICLE|UL|OL)$/;
+    // Plain text is taken literally: a pasted "**" is two stars, not bold.
+    const plainFrag = () =>
+      toDom(
+        String(plain || "")
+          .split("\n")
+          .map((v) => ({ t: "line", kids: v ? [{ t: "text", v }] : [] })),
+        document,
+        this._richMakers(true),
+      );
+    if (!html) return plainFrag();
     const doc = new DOMParser().parseFromString(html, "text/html");
-    const walk = (node) => {
-      node.childNodes.forEach((n) => {
-        if (n.nodeType === 3) return addText(n.textContent, true);
-        if (n.nodeType !== 1) return;
-        if (n.tagName === "A") {
-          const href = safeUrl(n.getAttribute("href"));
-          const label = (n.textContent || "").replace(/\s+/g, " ").trim();
-          if (href && label) frag.appendChild(this._makeLinkNode(label, href, true));
-          else addText(n.textContent, true);
-          return;
-        }
-        if (n.tagName === "BR") return frag.appendChild(document.createElement("br"));
-        if (n.tagName === "SCRIPT" || n.tagName === "STYLE") return;
-        if (BLOCK.test(n.tagName) && frag.lastChild) {
-          frag.appendChild(document.createElement("br"));
-        }
-        walk(n);
-      });
-    };
-    walk(doc.body);
+    // HTML source whitespace is collapsed by the renderer; fromDom would read
+    // its newlines as line breaks.
+    const tw = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      n.textContent = n.textContent.replace(/[\t\r\n]+/g, " ");
+    }
+    const frag = toDom(fromDom(doc.body, this._richOpt()), document, this._richMakers(true));
     // An HTML flavour that sanitises to nothing (wrapper-only markup) must not
     // swallow the paste — and _insertAtCaret would still drop the selection.
-    if (!frag.firstChild) addText(plain, false);
-    return frag;
+    return frag.firstChild ? frag : plainFrag();
   }
 
   // Drop a fragment where the caret is, then put the caret after it.
@@ -9382,15 +9398,30 @@ class __tasks_panel extends LetcBox {
     return this._uploadAttachment(file, "_inline");
   }
 
+  // Re-read a description editor into its draft. Update and Create save the
+  // draft, which _onDescInput fills on the editor's input event; a change that
+  // fired none (an open IME composition, an execCommand some browser did not
+  // report) would otherwise be saved as the text before it. Not _onDescInput
+  // itself: that would also run the mention popup logic at commit time.
+  _flushDescEditor(scope) {
+    const target = this._mentionTarget(scope);
+    const ed = target && this.el && this.el.querySelector(target.editorSelector);
+    if (!ed || ed.getAttribute("contenteditable") !== "true") return;
+    target.set(this._serializeEditor(ed), this._collectMentionUids(ed));
+  }
+
   _onDescInput(scope, editorEl) {
     // Browsers leave a stray <br> when the field is cleared, which defeats the
     // :empty placeholder — strip it back to truly empty. But an image-only
     // editor has no text content, so guard on chips AND inline images too,
     // otherwise a freshly pasted (text-less) image would be wiped here.
+    // A list just started on an empty editor (<ul><li><br></li></ul>) has no
+    // text either, and must not be wiped with it.
     if (
       !editorEl.textContent.trim() &&
       !editorEl.querySelector(`.${this.fig.family}__mention-chip`) &&
-      !editorEl.querySelector(`.${this.fig.family}__inline-img`)
+      !editorEl.querySelector(`.${this.fig.family}__inline-img`) &&
+      !editorEl.querySelector("ul, ol")
     ) {
       editorEl.innerHTML = "";
     }
@@ -9426,6 +9457,12 @@ class __tasks_panel extends LetcBox {
   }
 
   _onDescKeydown(e, scope) {
+    // Ctrl/Cmd+Shift+X / 8 / 7: strikethrough, bulleted, numbered list (B / I /
+    // U are the browser's own). Before the mention guard, like Ctrl+K.
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && SHIFT_FORMAT_KEYS[e.code]) {
+      e.preventDefault();
+      return this._applyFormat(scope, SHIFT_FORMAT_KEYS[e.code]);
+    }
     // Before the mention guard — Ctrl/Cmd+K works whether or not a mention
     // popup happens to be open.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "k" || e.key === "K")) {
