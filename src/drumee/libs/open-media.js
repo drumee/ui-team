@@ -30,6 +30,16 @@ function isCasualFile(node) {
 }
 
 /**
+ * A Note (.dnote) carries `filetype: note` — its icon and the Notes filter —
+ * and the map gives `note` the legacy editor_note, which shows the stored
+ * JSON. Only the extension tells them apart (window/configs/application).
+ */
+function isBlocknoteFile(node) {
+  const { EXT } = require("libs/blocknote-format");
+  return `${(node && node.ext) || ""}`.toLowerCase() === EXT;
+}
+
+/**
  * Launch the player `opt` describes for (nid, hub_id), fetching the node's
  * attributes when the caller has none. The player gets a media node to read
  * its CONTENT through (editor/note, editor/markdow and player/text load their
@@ -58,8 +68,9 @@ async function launchPlayer({ opt, node, nid, hub_id, media }, { fetchService, w
   }
   // Callers resolve `opt` from the category alone (openFileLocation: a desk
   // link carries filetype "text"), so a Casual doc / sheet arrives here aimed
-  // at the text viewer. Route it by extension, as its tile does.
-  if (opt.media && isCasualFile(node)) {
+  // at the text viewer, and a Note (a link carries filetype "note") at the
+  // legacy note editor. Route it by extension, as its tile does.
+  if (opt.media && (isCasualFile(node) || isBlocknoteFile(node))) {
     const routed = appConfig(node.filetype, { ...node, media: opt.media });
     if (routed && routed.kind) opt = { ...opt, kind: routed.kind };
   }

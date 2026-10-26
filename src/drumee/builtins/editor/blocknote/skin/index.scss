@@ -656,11 +656,11 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     box-sizing: border-box;
   }
 
-  // The yellow note of the Figma, drawn at the Figma's 70%.
+  // The yellow note of the Figma. Its 70% is baked into the glyph's colours
+  // (icons/src/raw/note-sticky), so every place that draws it is as soft.
   .drumee-topbar__filetype-icon {
     width: 28px;
     height: 28px;
-    opacity: 0.7;
   }
 
   .drumee-topbar__title {

@@ -785,7 +785,6 @@ test("the Open-File Switcher's Create new file offers a Note, on every deploymen
   const idx = readFileSync(resolve(ROOT, "src/drumee/builtins/player/widget/file-switcher/index.js"), "utf8");
   assert.match(idx, /kind, folder: \{ nid: pid, hub_id \}, target/);
   const skin = readFileSync(resolve(ROOT, "src/drumee/builtins/player/widget/file-switcher/skin/index.scss"), "utf8");
-  assert.match(skin, /\.file-switcher__row-icon--note \.preview-icon \{\s*opacity: 0\.7;/);
 });
 
 test("a note created from the switcher saves into the LISTED folder, not the active window", () => {
@@ -803,4 +802,53 @@ test("a note created from the switcher saves into the LISTED folder, not the act
     "the switcher's folder must be checked before the active window");
   // an export with no folder window still works (no TypeError on null)
   assert.match(win, /if \(target && _\.isFunction\(target\.canUpload\) && !target\.canUpload\(\)\) return null;/);
+});
+
+test("the Note's glyph is soft in itself: the Figma's 70% baked into its colours, not re-applied", () => {
+  const svg = readFileSync(resolve(ROOT, "icons/src/raw/note-sticky.svg"), "utf8");
+  // #FFDA45 / #FFAE18 at 70% over white (Duy, 2026-10-26: "đỡ chói")
+  assert.match(svg, /fill="#FFE57D"/);
+  assert.equal((svg.match(/fill="#FFC65D"/g) || []).length, 3);
+  assert.ok(!/#FFDA45|#FFAE18/i.test(svg), "the glaring colours are gone");
+  const sprite = readFileSync(resolve(ROOT, "icons/sprites/raw.sprite.svg"), "utf8");
+  const sym = sprite.slice(sprite.indexOf('id="--icon-raw-note-sticky"'));
+  assert.match(sym.slice(0, sym.indexOf("</symbol>")), /#FFE57D/i, "sprite rebuilt");
+  // so nothing dims it a second time
+  const header = readNote("skin/index.scss");
+  const rule = header.slice(header.indexOf(".drumee-topbar__filetype-icon {"));
+  assert.ok(!/opacity/.test(rule.slice(0, rule.indexOf("}"))), "header must not dim it again");
+  const skin = readFileSync(resolve(ROOT, "src/drumee/builtins/player/widget/file-switcher/skin/index.scss"), "utf8");
+  assert.ok(!/row-icon--note \.preview-icon/.test(skin), "switcher must not dim it again");
+});
+
+test("a link to a .dnote (filetype note) opens the Note editor; a real legacy note keeps editor_note", async () => {
+  const restore = installGlobals();
+  const saved = {};
+  for (const k of ["SERVICE", "Kind", "Backbone", "Wm"]) saved[k] = global[k];
+  const _rf = Module._resolveFilename;
+  Module._resolveFilename = function (request, ...rest) {
+    if (request.startsWith("window/")) request = resolve(ROOT, "src/drumee/builtins", request);
+    return _rf.call(this, request, ...rest);
+  };
+  try {
+    Object.assign(global._a, { note: "note", hub: "hub", folder: "folder", contact: "contact", media: "media", ext: "ext", extension: "extension", mimetype: "mimetype" });
+    let launched = null;
+    global.SERVICE = { media: { attributes: "media.attributes" } };
+    global.Backbone = { Model: class { constructor(a) { this.a = a; } } };
+    global.Kind = { waitFor: async () => class { constructor({ model }) { this.model = model; } mget(k) { return this.model.a[k]; } } };
+    global.Wm = { launch: (o) => (launched = o), alert: () => {} };
+    const { launchPlayer } = require("../src/drumee/libs/open-media.js");
+    const app = require("../src/drumee/builtins/window/configs/application.js");
+    // what a compact link resolves to: filetype only, no ext
+    const opt = app("note", { nid: "n1", hub_id: "h1", filetype: "note" });
+    assert.equal(opt.kind, "editor_note", "precondition: the link alone names the legacy editor");
+    await launchPlayer({ opt: { ...opt }, node: { nid: "n1", hub_id: "h1", filetype: "note", ext: "dnote" } }, {});
+    assert.equal(launched.kind, "editor_blocknote", ".dnote must reach the Note editor");
+    await launchPlayer({ opt: { ...opt }, node: { nid: "n2", hub_id: "h1", filetype: "note", ext: "note" } }, {});
+    assert.equal(launched.kind, "editor_note", "a legacy note is untouched");
+  } finally {
+    Module._resolveFilename = _rf;
+    Object.assign(global, saved);
+    restore();
+  }
 });
