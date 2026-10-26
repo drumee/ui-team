@@ -241,6 +241,23 @@ class __push_manager extends winman {
       case "hub.member_removed":
         return this.onWorkspaceAccessRevoked(data);
 
+      // We just became a member of the organisation that owns a workspace we
+      // joined (or stopped being one by leaving its last internal workspace) —
+      // server lib/org-membership. Plan, quota, the org tab and the Admin
+      // Console gates are all frozen in Visitor at bootstrap, so reload, the
+      // way payment.org_provisioned does. The push carries the new quota, so
+      // Visitor is right even for the two seconds before the reload.
+      case "hub.org_joined":
+        if (data && data.quota) Visitor.respawn({ quota: data.quota });
+        if (Wm && Wm.alert) Wm.alert(LOCALE.ORG_JOINED_RELOAD.format((data && data.org_name) || ""));
+        setTimeout(() => location.reload(), 2500);
+        return;
+      case "hub.org_left":
+        if (data && data.quota) Visitor.respawn({ quota: data.quota });
+        if (Wm && Wm.alert) Wm.alert(LOCALE.ORG_LEFT_RELOAD);
+        setTimeout(() => location.reload(), 2500);
+        return;
+
       // The user's pinned workspaces changed in another tab or on another
       // device (server drumate.pinned_workspaces). The desk redraws them.
       case "drumate.pinned_workspaces":

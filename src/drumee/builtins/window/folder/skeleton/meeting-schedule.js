@@ -670,6 +670,9 @@ function toolbarKids(ui) {
   // syncNewCtrlVisibility uses; absent → treated as allowed (fail-open).
   const mayStart =
     typeof ui.canUpload !== "function" ? true : !!ui.canUpload();
+  // What this toolbar was built with: a live role change compares against it
+  // to know the row is stale (window/folder _syncMeetingStartGate).
+  ui._schedRenderedMayStart = mayStart;
   const startBtn = (!mayStart && !joined && !active) ? "" : Skeletons.Button.Label({
     className: `${pfx}-sched-start-btn`,
     ico: "meet-camera",

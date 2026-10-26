@@ -138,6 +138,31 @@ class __file_switcher extends LetcBox {
         p.el.scrollTop = h.scrollTop;
       });
     }
+    // Follow the open file: a rename goes through the player's model, and
+    // the editors say when the folder changed under them (Make a copy).
+    const p = this.player;
+    if (p && p.model && !this._following) {
+      this._following = 1;
+      this.listenTo(p.model, `change:${_a.filename}`, (m, filename) => {
+        this.onPlayerRenamed(filename);
+      });
+      this.listenTo(p, "folder-changed", () => this.loadOthers());
+    }
+  }
+
+  /** The open file was renamed: its rows (and the remembered entry) follow. */
+  onPlayerRenamed(filename) {
+    if (!filename || this.isDestroyed()) return;
+    const node = this.node();
+    const { nid } = node;
+    if (!nid) return;
+    for (const list of [this._recent, this._folder]) {
+      for (const n of list) {
+        if (n.nid === nid) n.filename = filename;
+      }
+    }
+    recent.remember({ ...node, filename });
+    this.renderLists();
   }
 
   /** Files of the listed folder (_scope), newest first; folders left out. */
@@ -195,7 +220,15 @@ class __file_switcher extends LetcBox {
 
   renderLists() {
     const { nid } = this.node();
+    // A remembered row is a thin copy (recent.js); the folder listing has the
+    // fresh name and the metadata (the Casual marker of the early `.json`
+    // sheets), so a recent that is also listed takes the listing's fields.
+    const fresh = (n) => {
+      const f = this._folder.find((x) => x.nid === n.nid);
+      return f ? { ...n, ...f } : n;
+    };
     const recents = this._recent
+      .map(fresh)
       .filter((n) => (n.nid === nid || this.inScope(n)) && this.match(n))
       .slice(0, MAX_RECENT);
     // The whole folder, as the folder's own Group view lists it, the open
@@ -221,7 +254,49 @@ class __file_switcher extends LetcBox {
 
   setCollapsed(v) {
     writeCollapsed(v);
-    this.el.dataset.collapsed = v ? 1 : 0;
+    const el = this.el;
+    const token = (this._slide = (this._slide || 0) + 1);
+    const slideIn = () => {
+      el.dataset.collapsed = v ? 1 : 0;
+      this.slide("in").then(() => {
+        if (this._slide === token) delete el.dataset.slide;
+      });
+    };
+    // Collapsing, the full panel slides out first and the icon column slides
+    // in once the width starts to shrink; expanding, it slides straight in.
+    if (v && el.dataset.collapsed != 1) {
+      this.slide("out").then(() => {
+        if (this._slide === token) slideIn();
+      });
+    } else {
+      slideIn();
+    }
+  }
+
+  /**
+   * Play the `file-switcher__main` slide `dir` (in | out); resolves when it
+   * ends, at once with reduced motion, or after a cap if no animationend
+   * comes (panel hidden, animation dropped).
+   */
+  slide(dir) {
+    const el = this.el;
+    const main = el.querySelector(`.${this.fig.family}__main`);
+    const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!main || still) return Promise.resolve();
+    // Re-set even when unchanged so a repeat click replays the keyframes.
+    delete el.dataset.slide;
+    void main.offsetWidth;
+    el.dataset.slide = dir;
+    return new Promise((resolve) => {
+      const done = (e) => {
+        if (e && e.target !== main) return;
+        main.removeEventListener("animationend", done);
+        clearTimeout(cap);
+        resolve();
+      };
+      const cap = setTimeout(done, 400);
+      main.addEventListener("animationend", done);
+    });
   }
 
   /**
@@ -396,6 +471,57 @@ class __file_switcher extends LetcBox {
   }
 
   /**
+   * "Document lite" / "Spreadsheet lite": a Casual editor window on a NEW
+   * file in the listed folder — what the desk's "+ New" rows do from a
+   * folder window (window/core add-doc / add-sheet). The editor saves into
+   * that folder and carries this panel, so it reads like any other switch:
+   * this viewer is saved, the editor launched, this viewer closed.
+   *
+   * @param {String} kind  editor_docs | editor_sheet
+   */
+  async createCasual(kind) {
+    this.setCreateMenu(false);
+    if (!kind || this._switching) return;
+    if (require("libs/over-limit").guardWrite("write")) return;
+    const { pid, hub_id } = this._scope || this.node();
+    if (!pid || !hub_id) return;
+    this._switching = 1;
+    this.el.dataset.busy = 1;
+    if (!(await this.saveBeforeSwitch())) {
+      this._switching = 0;
+      if (!this.isDestroyed()) this.el.dataset.busy = 0;
+      return;
+    }
+    const scroll = this.getPart && this.getPart("scroll");
+    handoff = {
+      at: Date.now(),
+      scope: this._scope,
+      folder: this._folder,
+      scrollTop: scroll && scroll.el ? scroll.el.scrollTop : 0,
+    };
+    const p0 = this.player;
+    const target = p0 && p0.target && !p0.target.isDestroyed() ? p0.target : undefined;
+    let w = null;
+    try {
+      w = Wm.launch(
+        { kind, folder: { nid: pid, hub_id }, target, uiHandler: [target || p0] },
+        { explicit: 1 }
+      );
+    } catch (e) {
+      this.warn("file-switcher: create failed", e);
+    }
+    this._switching = 0;
+    if (this.isDestroyed()) return;
+    this.el.dataset.busy = 0;
+    if (!w) {
+      handoff = null;
+      return;
+    }
+    const p = this.player;
+    if (p && !p.isDestroyed()) p.goodbye();
+  }
+
+  /**
    *
    * @param {*} cmd
    * @param {*} args
@@ -438,6 +564,8 @@ class __file_switcher extends LetcBox {
 
       case "create-file":
         return this.createFile(cmd.mget(_a.name));
+      case "create-casual":
+        return this.createCasual(cmd.mget(_a.name));
     }
   }
 }

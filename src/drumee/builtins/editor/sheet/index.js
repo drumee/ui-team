@@ -2,6 +2,7 @@ const __player = require("player/interact");
 const renameInline = require("builtins/player/widget/topbar/rename");
 const { attachHelpContactMenu } = require("builtins/editor/help-contact-menu");
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
+const chrome = require("builtins/editor/chrome");
 
 require("./skin");
 
@@ -23,7 +24,8 @@ class __editor_sheet extends __player {
     // never pop an OLDER editor over one the user opened afterwards.
     window.__drumeeEditorSeq = (window.__drumeeEditorSeq || 0) + 1;
     this._launchSeq = window.__drumeeEditorSeq;
-    window.onbeforeunload = this.checkUnsavedWork.bind(this);
+    this._beforeUnload = this.checkUnsavedWork.bind(this);
+    window.onbeforeunload = this._beforeUnload;
     if (!opt.media) {
       /** New sheet: no source file yet, defaults to the owner's deck */
       this.mset({
@@ -37,13 +39,29 @@ class __editor_sheet extends __player {
     // Save target: the folder window the sheet is created in (markdown editor
     // does the same). Opened-from-file saves replace in place and ignore it.
     this.target = opt.target || Wm.getActiveWindow();
+    // A NEW file lands in the folder window it was created from (the save
+    // target), not in the owner's home: the Open-File Switcher lists that
+    // folder, and the model must say so before the skeleton is built.
+    if (!opt.media && this.target && _.isFunction(this.target.getCurrentNid)) {
+      const pid = this.target.getCurrentNid();
+      const hub_id = this.target.mget(_a.hub_id);
+      if (pid && hub_id) this.mset({ pid, hub_id });
+    }
+    // Launched from the Open-File Switcher ("Document lite" in its create
+    // menu): the panel names the listed folder — its player is no folder
+    // window to ask — and that folder wins.
+    if (!opt.media && opt.folder && opt.folder.nid && opt.folder.hub_id) {
+      this.mset({ pid: opt.folder.nid, hub_id: opt.folder.hub_id });
+    }
   }
 
   /**
    *
    */
   onBeforeDestroy() {
-    window.removeEventListener("beforeunload", this.checkUnsavedWork.bind(this));
+    // Assigned, not added: removeEventListener on a fresh bind never detached
+    // it, so a closed editor kept answering the page's beforeunload.
+    if (window.onbeforeunload === this._beforeUnload) window.onbeforeunload = null;
     try {
       if (this._wsObserver) this._wsObserver.disconnect();
     } catch (e) {
@@ -482,6 +500,8 @@ class __editor_sheet extends __player {
           if (!b || !b.getItemsByAttr) continue;
           let [file] = b.getItemsByAttr(_a.nid, data.nid);
           if (file) {
+            // The tile the first save created: the gear menu acts on it.
+            chrome.adoptNode(this, file);
             if (file.restart) {
               file.mset(data);
               file.restart("media:modified");
@@ -496,6 +516,11 @@ class __editor_sheet extends __player {
               ...data,
             };
             delete item.replace;
+            // The save reply names the node but not always its type: the tile
+            // must carry them, or a double-click on it resolves its player
+            // from the category ("text") and opens the stored JSON.
+            if (!item.ext) item.ext = "usheet";
+            if (!item.dataType) item.dataType = "sheet.univer";
             b.insertMedia(item, 0);
           }
         }
@@ -638,6 +663,9 @@ class __editor_sheet extends __player {
       case "contact-support":
         return this.contactSupport();
       default:
+        // Share / Download / Get info / Move & Resize / node actions
+        // (editor/chrome); the rest is player chrome and belongs to the base.
+        if (chrome.handleService(this, cmd, args)) return;
         if (super.onUiEvent) super.onUiEvent(cmd, args);
     }
   }

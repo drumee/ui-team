@@ -148,15 +148,14 @@ export function createRows(ui) {
       content: LOCALE.DOCUMENT,
       className: `${cnItem}--document`,
     }),
-    // Casual Docs (native .docx editor, editor_docs) — sits next to the
-    // ONLYOFFICE "Document" with the SAME label and glyph; only the icon
-    // colour (Casual blue, see skin/mixins/drumee.scss) tells them apart.
-    // Handled by window/core.js `add-doc` → Wm.launch(editor_docs).
+    // Casual Docs (editor_docs, .udoc) — "Document lite", with the design's
+    // own file glyph (the one its tiles and the rail draw), so it reads apart
+    // from the ONLYOFFICE "Document" above. window/core.js `add-doc`.
     casual
       ? menuRow(ui, {
           service: "add-doc",
-          ico: "addmenu-document",
-          content: LOCALE.DOCUMENT,
+          ico: "raw-documents_udoc",
+          content: LOCALE.DOCUMENT_LITE,
           className: `${cnItem}--doc`,
         })
       : null,
@@ -167,13 +166,13 @@ export function createRows(ui) {
       content: LOCALE.SPREADSHEET,
       className: `${cnItem}--spreadsheet`,
     }),
-    // Casual Sheets — same label and glyph as the ONLYOFFICE "Spreadsheet",
-    // Casual teal icon colour.
+    // Casual Sheets (editor_sheet, .usheet) — "Spreadsheet lite", the
+    // design's sheet glyph.
     casual
       ? menuRow(ui, {
           service: "add-sheet",
-          ico: "addmenu-spreadsheet",
-          content: LOCALE.SPREADSHEET,
+          ico: "raw-documents_usheet",
+          content: LOCALE.SPREADSHEET_LITE,
           className: `${cnItem}--sheet`,
         })
       : null,

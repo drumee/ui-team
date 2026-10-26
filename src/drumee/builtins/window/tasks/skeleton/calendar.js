@@ -19,7 +19,12 @@
 // due_date is a calendar DATE with no time, so an hour grid would be 24 empty
 // rows; week and day stay columns of full cards, which is also how the Personal
 // Calendar treats tasks (its all-day strip, never an hour).
-const { priorityMeta, statusMeta, subtaskBadge, mayCreateTask } = require("./helpers");
+const {
+  priorityMeta,
+  statusMeta,
+  subtaskStrip,
+  mayCreateTask,
+} = require("./helpers");
 const { stripMarkers } = require("../mention-markers");
 
 const ymd = (d) => d.format("YYYY-MM-DD");
@@ -30,14 +35,6 @@ const VIEWS = [
   { key: "week", label: "CAL_VIEW_WEEK" },
   { key: "day", label: "CAL_VIEW_DAY" },
 ];
-
-// How many month cards stand in a month cell at rest. It only LABELS the
-// "+N" — every task renders and the cell scrolls — so it has to agree with the
-// cell geometry in the skin: --tcal-cell-min (190px) is two 52.4px cards on
-// the month body's 10px gap plus the pinned 18px "+N", under the 12px padding
-// and the 20px date line with its 10px gap. The derivation is next to that
-// token.
-const MONTH_FIT = 2;
 
 /** The active view, validated — anything unknown falls back to the month. */
 const calMode = (ui) => {
@@ -162,6 +159,7 @@ module.exports = function (ui) {
           content: t.title || "",
           active: 0,
         }),
+        subtaskStrip(ui, t, { pfx, surface: "cal" }),
         // Hover delete; bubble:0 so it doesn't also open the detail panel.
         Skeletons.Button.Svg({
           className: `${pfx}__cal-chip-remove`,
@@ -171,7 +169,7 @@ module.exports = function (ui) {
           uiHandler: [ui],
           taskId: t.id,
         }),
-      ],
+      ].filter(Boolean),
     });
   };
 
@@ -243,10 +241,9 @@ module.exports = function (ui) {
               className: `${pfx}__cal-card-status-label`,
               content: sm.name || LOCALE[sm.label] || sm.key,
             }),
-            // Week-mode card carries the same count as the month chip.
-            subtaskBadge(ui, t, `${pfx}__cal-card-subcount`),
-          ].filter(Boolean),
+          ],
         }),
+        subtaskStrip(ui, t, { pfx, surface: "cal" }),
       ].filter(Boolean),
     });
   };
@@ -256,15 +253,14 @@ module.exports = function (ui) {
   // The month cell used to slice to three and DROP the rest, leaving a "+N"
   // whose only job was to send the user to another view to find out what the
   // cell was hiding — the truncation the Personal Calendar removed from its own
-  // month grid. Every task renders now and the cell body scrolls; the "+N" is
-  // pinned to the foot of the cell (sticky, in the skin) so it can never scroll
-  // out of reach itself, and it opens that DAY, as the Personal Calendar's does.
+  // month grid. Every task renders now: the cell grows to twice its floor and
+  // then its body scrolls, with no scrollbar and no "+N" counter.
   //
   // Bounded without a slice: a month only ever builds the tasks whose due date
   // falls in its six weeks, as ~5-node chips, which even for the largest
   // workspace is under the board's own windowed budget (CARD_WINDOW × columns ×
   // ~19 nodes a card).
-  const dayBody = (list, k) => {
+  const dayBody = (list) => {
     if (!list.length) return null;
     if (mode !== "month") {
       return Skeletons.Box.Y({
@@ -274,29 +270,11 @@ module.exports = function (ui) {
         kids: list.map(card),
       });
     }
-    const kids = list.map(compactChip);
-    const more = list.length - MONTH_FIT;
-    if (more > 0) {
-      kids.push(
-        Skeletons.Note({
-          className: `${pfx}__cal-day-more`,
-          content: `+${more}`,
-          bubble: 0,
-          service: "cal-day-more",
-          uiHandler: [ui],
-          calDay: k,
-        }),
-      );
-    }
     return Skeletons.Box.Y({
       className: `${pfx}__cal-day-body`,
       // Inert: the space around the chips belongs to the square's click.
       active: 0,
-      // A scrolled cell with a transparent-at-rest bar looks exactly like a
-      // truncated one; the skeleton already knows which cells overflow (it is
-      // the "+N" comparison), so it says so and the skin inks the bar.
-      attrOpt: { "data-overflow": more > 0 ? "1" : "0" },
-      kids,
+      kids: list.map(compactChip),
     });
   };
 
@@ -347,7 +325,7 @@ module.exports = function (ui) {
     // click on its own area and the square would never hear it. What DOES
     // something keeps its own service, and that same stopPropagation stops it
     // from also firing the square: a chip or card opens its task, a × deletes,
-    // "+N" opens the Day view, and the "+" adds exactly as the square does.
+    // and the "+" adds exactly as the square does.
     const addable = mayCreate
       ? { bubble: 0, service: "cal-add", uiHandler: [ui], calDay: k }
       : {};
@@ -380,7 +358,7 @@ module.exports = function (ui) {
               ].filter(Boolean),
             })
           : null,
-        dayBody(list, k),
+        dayBody(list),
       ].filter(Boolean),
     });
   };

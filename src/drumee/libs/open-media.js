@@ -1,3 +1,4 @@
+const { casualKind } = require("libs/file-meta");
 /**
  * Open a file's player from anywhere — not only from a window.
  *
@@ -19,13 +20,13 @@ function appConfig(filetype, data) {
 }
 
 /**
- * A Casual doc / sheet (.udoc / .usheet) is "text" by category, so the map
- * names the text viewer — which shows the stored JSON; its own editor is told
- * apart only through a media model, by extension.
+ * A Casual doc / sheet (.udoc / .usheet, or an early `.json` sheet carrying
+ * the dataType marker) is "text" / "app-data" by category, so the map names
+ * the text viewer — which shows the stored JSON; its own editor is told
+ * apart only through a media model (libs/file-meta casualKind).
  */
-function isCasualFile(ext) {
-  const e = String(ext || "").toLowerCase();
-  return e === "udoc" || e === "usheet";
+function isCasualFile(node) {
+  return !!casualKind(node || {});
 }
 
 /**
@@ -58,7 +59,7 @@ async function launchPlayer({ opt, node, nid, hub_id, media }, { fetchService, w
   // Callers resolve `opt` from the category alone (openFileLocation: a desk
   // link carries filetype "text"), so a Casual doc / sheet arrives here aimed
   // at the text viewer. Route it by extension, as its tile does.
-  if (opt.media && isCasualFile(node.ext)) {
+  if (opt.media && isCasualFile(node)) {
     const routed = appConfig(node.filetype, { ...node, media: opt.media });
     if (routed && routed.kind) opt = { ...opt, kind: routed.kind };
   }
@@ -86,7 +87,7 @@ async function openMedia(data = {}, { fetchService, warn } = {}) {
   if (!filetype && !(await fetchNode())) return undefined;
   let opt = appConfig(filetype, { ...data, ...node });
   let media = null;
-  if (!opt || !opt.kind || isCasualFile((node && node.ext) || data.ext)) {
+  if (!opt || !opt.kind || isCasualFile(node || data)) {
     // A type the map does not name: a Univer sheet saved as .json, a Casual
     // doc, a note, a script. application() tells those apart from the node's
     // mimetype, dataType and ext, which it reads through a media model (the

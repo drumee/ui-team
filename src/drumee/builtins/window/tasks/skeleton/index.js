@@ -102,7 +102,7 @@ const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
 // the subtask builders below live at module scope where that one isn't visible.
 const {
   mayCreateTask,
-  subtaskBadge,
+  subtaskStrip,
   assigneeUids,
   formatDue: formatDueDate,
   FILTER_DIMS,
@@ -349,9 +349,6 @@ const make = function (ui) {
           })
         : null,
       task.due_date ? dueBadge(task) : null,
-      // Subtask count — rendered only when the task has children, so a board of
-      // ordinary tasks looks exactly as it does today.
-      subtaskBadge(ui, task, `${pfx}__task-subcount`),
     ].filter(Boolean);
     const meta = metaKids.length
       ? Skeletons.Box.X({ className: `${pfx}__task-meta`, kids: metaKids })
@@ -425,9 +422,17 @@ const make = function (ui) {
       service: "open-detail",
       uiHandler: [ui],
       taskId: task.id,
-      // Figma card order: labels, title+desc, files, priority+due row, then
-      // the status-pill + avatars row.
-      kids: [labelsStrip, head, filesNode, meta, footer].filter(Boolean),
+      // Figma card order: labels, title+desc, files, priority+due row, the
+      // status-pill + avatars row, then the Subtasks strip (873:228353) —
+      // null for a task with no children, so ordinary cards are unchanged.
+      kids: [
+        labelsStrip,
+        head,
+        filesNode,
+        meta,
+        footer,
+        subtaskStrip(ui, task, { pfx, surface: "board" }),
+      ].filter(Boolean),
     });
   };
 
@@ -1285,21 +1290,27 @@ const make = function (ui) {
     const parentTask = ui.isSubtask(detail)
       ? ui.getTaskById(detail.parent_task_id)
       : null;
+    // "Parent / child" (Figma 944:107305): only the parent's name is a link
+    // back; the child's is where you already are.
     const parentCrumb = parentTask
       ? Skeletons.Box.X({
           className: `${pfx}__detail-parent`,
-          bubble: 0,
-          service: "open-detail",
-          uiHandler: [ui],
-          taskId: parentTask.id,
           kids: [
-            Skeletons.Image.Svg({
-              ico: "caret-left",
-              className: `${pfx}__detail-parent-ico`,
-            }),
             Skeletons.Note({
               className: `${pfx}__detail-parent-title`,
               content: parentTask.title || "",
+              bubble: 0,
+              service: "open-detail",
+              uiHandler: [ui],
+              taskId: parentTask.id,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__detail-parent-sep`,
+              content: "/",
+            }),
+            Skeletons.Note({
+              className: `${pfx}__detail-parent-current`,
+              content: detail.title || "",
             }),
           ],
         })

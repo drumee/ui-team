@@ -569,6 +569,12 @@ class __window_folder extends mfsInteract {
       `change:${_a.privilege}`,
       this.syncNewCtrlVisibility,
     );
+    // Same for the Meet tab's Start/Schedule buttons (built once per render).
+    this.listenTo(
+      this.model,
+      `change:${_a.privilege}`,
+      this._syncMeetingStartGate,
+    );
     // Bind uploadFile for the meeting description's inline image paste/drop
     // (mfsInteract doesn't provide it — same pattern as the tasks widget).
     if (!this.uploadFile) {
@@ -2590,9 +2596,23 @@ class __window_folder extends mfsInteract {
         const value =
           (cmd.mget && cmd.mget(_a.value)) ||
           (cmd.options && cmd.options.value);
+        // The tabs are a radio group, not toggles: ui-core's radiotoggle flips
+        // a lit tab OFF when clicked again, which left the bar with nothing
+        // selected over a still-filtered listing (or over All). A click on the
+        // tab already in force is a no-op — re-light it once the behavior's
+        // own click handler has run (listener order is not ours to rely on).
+        // During a search the click still has work to do (leave the search).
+        const picked = value && value !== "all" ? value : null;
+        if (picked === this._filterType) {
+          setTimeout(() => {
+            if (cmd.isDestroyed && cmd.isDestroyed()) return;
+            cmd.setState(1);
+          }, 0);
+          if (!FilesSearch.isSearching(this)) return;
+        }
         // A type tab is a FOLDER filter; picking one leaves the search.
         FilesSearch.exit(this, { reload: false, clearInput: true });
-        this._filterType = value && value !== "all" ? value : null;
+        this._filterType = picked;
         this._stampFileFilter();
         return this.loadContent();
       }
@@ -4805,6 +4825,24 @@ class __window_folder extends mfsInteract {
    */
   _mayScheduleMeetings() {
     return typeof this.canUpload !== "function" || !!this.canUpload();
+  }
+
+  /**
+   * Keep the Meet tab's Start / Schedule buttons (and the grid's add slots) in
+   * step with a privilege that changed under an open window — an admin moving
+   * us to View or Chat in the Access matrix must take "Start a Meeting" away
+   * now, not on the next reopen. The skeleton stamps what it was built with
+   * (_schedRenderedMayStart), so an unchanged answer costs nothing. A tab never
+   * opened builds from the live privilege anyway; a hidden one is only flagged
+   * stale by _refreshSchedule and redraws when shown.
+   */
+  _syncMeetingStartGate() {
+    if (!this._meetingPanelMounted) return;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this._schedRenderedMayStart === this._mayScheduleMeetings()) return;
+    // A re-feed under an open dropdown would strand its dismisser.
+    this._closeSchedMenus();
+    this._refreshSchedule();
   }
 
   /**
@@ -7631,6 +7669,7 @@ class __window_folder extends mfsInteract {
     // derived chrome left stale by an earlier lifecycle transition.
     if (Number(this.mget(_a.privilege)) === Number(privilege)) {
       this.syncNewCtrlVisibility();
+      this._syncMeetingStartGate();
       return;
     }
     this.mset(_a.privilege, Number(privilege));

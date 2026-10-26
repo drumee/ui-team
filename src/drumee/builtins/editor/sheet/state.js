@@ -297,6 +297,7 @@ class __sheet_state extends DrumeeMFS {
           this._nudgeResize();
           this._setUniverUser(api);
           this._grantWorkbookPermissions(api);
+          this._decorateTabsBar();
           // Belt-and-suspenders for reopen: force-load the saved snapshot once
           // the editor is ready. `initialData` can race the workbook creation
           // and leave a reopened file blank ("mở lại không load nội dung").
@@ -674,6 +675,16 @@ class __sheet_state extends DrumeeMFS {
 
   onBeforeDestroy() {
     this._destroyed = 1;
+    try {
+      if (this._tabsBarObs) this._tabsBarObs.disconnect();
+      if (this._tabsStripObs) this._tabsStripObs.disconnect();
+      clearTimeout(this._tabsBarTimer);
+      this._closeSheetsMenu();
+    } catch (e) {
+      /** already gone */
+    }
+    this._tabsBarObs = null;
+    this._tabsStripObs = null;
     if (this._unitAddedSub) {
       try {
         this._unitAddedSub.unsubscribe();
@@ -706,6 +717,140 @@ class __sheet_state extends DrumeeMFS {
       /** already gone */
     }
     if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  /**
+   * The design's tab strip — [+] [≡] [Sheet1 ▾] (Figma 1337:16842). Casual
+   * draws the tabs and "+"; Drumee adds the all-sheets button, which lists
+   * them, and the caret on the open tab, which opens Casual's own tab menu
+   * (Rename / Delete — its right-click menu). Casual re-renders the strip on
+   * every switch, so the additions are re-applied from an observer.
+   */
+  _decorateTabsBar() {
+    const root = this.el;
+    if (!root || this._destroyed) return;
+    const run = () => {
+      if (this._destroyed) return;
+      try {
+        const bar = root.querySelector('[data-testid="casual-sheets-tabs"]');
+        if (!bar) return;
+        if (!this._tabsStripObs) {
+          this._tabsStripObs = new MutationObserver(() => {
+            clearTimeout(this._tabsBarTimer);
+            this._tabsBarTimer = setTimeout(run, 50);
+          });
+          this._tabsStripObs.observe(bar, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["aria-selected", "data-active", "class"],
+          });
+        }
+        const add = bar.querySelector('[data-testid="cs-tab-add"]');
+        if (add && !bar.querySelector(".editor-sheet__sheets-list")) {
+          const list = document.createElement("button");
+          list.type = "button";
+          list.className = "editor-sheet__sheets-list";
+          list.title = LOCALE.ALL_SHEETS || "All sheets";
+          list.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this._toggleSheetsMenu(bar, list);
+          });
+          add.insertAdjacentElement("afterend", list);
+        }
+        const tabs = [...bar.querySelectorAll('button[data-testid^="cs-tab-"]')].filter((b) => b.getAttribute("data-testid") !== "cs-tab-add");
+        for (const tab of tabs) {
+          const active = tab.getAttribute("aria-selected") === "true" || tab.dataset.active === "true";
+          const caret = tab.querySelector(".editor-sheet__tab-caret");
+          if (active && !caret) {
+            const c = document.createElement("span");
+            c.className = "editor-sheet__tab-caret";
+            c.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const b = tab.getBoundingClientRect();
+              tab.dispatchEvent(
+                new MouseEvent("contextmenu", {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: b.left + 12,
+                  clientY: b.top + 12,
+                  button: 2,
+                })
+              );
+            });
+            tab.appendChild(c);
+          } else if (!active && caret) {
+            caret.remove();
+          }
+        }
+      } catch (e) {
+        /** editor gone */
+      }
+    };
+    run();
+    if (!this._tabsBarObs) {
+      // Until the strip exists (it mounts with the workbook), watch the tree.
+      this._tabsBarObs = new MutationObserver(() => {
+        if (this._tabsStripObs) return;
+        clearTimeout(this._tabsBarTimer);
+        this._tabsBarTimer = setTimeout(run, 50);
+      });
+      this._tabsBarObs.observe(root, { childList: true, subtree: true });
+    }
+  }
+
+  /** The all-sheets list, under the ≡ button; a row switches to that sheet. */
+  _toggleSheetsMenu(bar, anchor) {
+    if (this._sheetsMenu) return this._closeSheetsMenu();
+    const tabs = [...bar.querySelectorAll('button[data-testid^="cs-tab-"]')].filter((b) => b.getAttribute("data-testid") !== "cs-tab-add");
+    if (!tabs.length) return;
+    const menu = document.createElement("div");
+    menu.className = "editor-sheet__sheets-menu";
+    for (const tab of tabs) {
+      const row = document.createElement("div");
+      const active = tab.getAttribute("aria-selected") === "true" || tab.dataset.active === "true";
+      row.className = `editor-sheet__sheets-menu-item${active ? " is-active" : ""}`;
+      row.textContent = (tab.textContent || "").trim();
+      row.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this._closeSheetsMenu();
+        // Casual switches on the pointer, not on a bare click().
+        const b = tab.getBoundingClientRect();
+        const at = { bubbles: true, cancelable: true, clientX: b.left + 8, clientY: b.top + 8, button: 0 };
+        for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
+          tab.dispatchEvent(
+            type.startsWith("pointer")
+              ? new PointerEvent(type, { ...at, pointerId: 1, isPrimary: true })
+              : new MouseEvent(type, at)
+          );
+        }
+      });
+      menu.appendChild(row);
+    }
+    const a = anchor.getBoundingClientRect();
+    menu.style.left = `${Math.round(a.left)}px`;
+    menu.style.bottom = `${Math.round(window.innerHeight - a.top + 4)}px`;
+    document.body.appendChild(menu);
+    this._sheetsMenu = menu;
+    this._sheetsMenuClose = (e) => {
+      if (e && e.type === "keydown" && e.key !== "Escape") return;
+      if (e && e.type === "pointerdown" && menu.contains(e.target)) return;
+      this._closeSheetsMenu();
+    };
+    setTimeout(() => {
+      document.addEventListener("pointerdown", this._sheetsMenuClose, true);
+      document.addEventListener("keydown", this._sheetsMenuClose, true);
+    }, 0);
+  }
+
+  _closeSheetsMenu() {
+    if (this._sheetsMenu) this._sheetsMenu.remove();
+    this._sheetsMenu = null;
+    if (this._sheetsMenuClose) {
+      document.removeEventListener("pointerdown", this._sheetsMenuClose, true);
+      document.removeEventListener("keydown", this._sheetsMenuClose, true);
+      this._sheetsMenuClose = null;
+    }
   }
 
   /**

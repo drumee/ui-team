@@ -4,6 +4,36 @@
 # ===================================================================**/
 @use 'mixins/drumee';
 @use '../../skin/topbar.scss';
+@use '../../skin/file-viewer';
+@use '../../skin/phosphor' as ph;
+
+// The strip's glyphs are Material Symbols in the design (1393:3887: "Add",
+// "Menu", "Arrow drop down", 24px): the control's own glyph is hidden and the
+// symbol painted in its place, the way skin/phosphor does for Phosphor.
+$ms-add: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z'/%3E%3C/svg%3E";
+$ms-menu: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z'/%3E%3C/svg%3E";
+$ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M480-360 280-560h400L480-360Z'/%3E%3C/svg%3E";
+
+@mixin ms-glyph($uri, $px: 24px) {
+  font-size: 0 !important;
+  line-height: 0;
+
+  svg,
+  .material-symbols-outlined {
+    display: none !important;
+  }
+
+  &::before {
+    content: "";
+    display: inline-block;
+    flex: none;
+    width: $px;
+    height: $px;
+    background-color: currentColor;
+    -webkit-mask: url($uri) center / contain no-repeat;
+    mask: url($uri) center / contain no-repeat;
+  }
+}
 
 .sheet {
   &__ui {
@@ -40,13 +70,23 @@
   // `.editor-sheet__header`. Make the title row read like the Casual demo's:
   // one flat block, same chrome colour as Casual's menu row right below it
   // (`#eef1f5`), no divider — so logo + name + menus form a single header.
-  > .editor__main > .editor__header.container {
+  // Figma 1337:16842: a white 70px header — 36px glyph, 18px name, then
+  // Casual's menu row under the name (styled below so the two rows read as
+  // one block) — with the Share pill + 48px actions centred on its height,
+  // 20px from the right edge. This Drumee row is the name row only.
+  // The Open-File Switcher frame nests the header under its stage, hence
+  // the second selector.
+  > .editor__main > .editor__header.container,
+  .file-switcher__stage > .editor__header.container {
+    position: relative;
     width: 100%;
-    height: 52px;
-    min-height: 52px;
+    height: 42px;
+    min-height: 42px;
     border: 0;
     z-index: 200;
-    background-color: var(--doc-chrome, #eef1f5);
+    background-color: #fff;
+    padding: 12px 0 0;
+    box-sizing: border-box;
 
     &[data-header="0"] {
       display: none;
@@ -55,11 +95,13 @@
     .drumee-topbar__bar {
       height: 100%;
       background: transparent;
-      padding: 0 12px 0 14px;
+      padding: 0 20px;
+      align-items: flex-start;
     }
     .drumee-topbar__actions {
-      align-items: center;
-      gap: 2px;
+      position: absolute;
+      top: 12px;
+      right: 20px;
     }
   }
 
@@ -92,25 +134,31 @@
     gap: 10px;
     min-width: 0;
   }
-  // 32px coloured sheet logo, like the demo's.
+  // 36px sheet glyph (Figma 1319:176155), centred on name + menu rows.
   .drumee-topbar__filetype {
-    width: 32px;
-    height: 32px;
-    flex: 0 0 32px;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    margin-top: 5px;
+    background-color: transparent;
     .drumee-topbar__filetype-icon {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
     }
+  }
+  .drumee-topbar__identity {
+    gap: 12px;
+    align-items: flex-start;
   }
 
   // Demo/Google-Sheets document title: 16px regular, quiet until hovered,
   // click-to-edit (renameInline swaps in the input below).
   .drumee-topbar__title.editor-sheet__editable-title {
     cursor: text;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 400;
-    line-height: 24px;
-    color: var(--normal-fg-10, #202124);
+    line-height: 22px;
+    color: #0b0a21;
     padding: 2px 8px;
     border-radius: 6px;
     border: 1px solid transparent;
@@ -127,10 +175,10 @@
   }
   .drumee-topbar__title-input {
     font-family: inherit;
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 400;
-    line-height: 24px;
-    color: var(--normal-fg-10, #202124);
+    line-height: 22px;
+    color: #0b0a21;
     padding: 2px 8px;
     border-radius: 6px;
     border: 1px solid var(--active-border, #5950ff);
@@ -251,18 +299,20 @@
 .editor-sheet[data-theme="light"] .sheet-state {
   background-color: #ffffff;
   color: #201f1e;
-  --color-surface-strip: #eef1f5;
+  // Figma 1337:16842: every chrome strip is white; the toolbar and the
+  // sheet tabs get their green tints below.
+  --color-surface-strip: #ffffff;
   --color-surface: #ffffff;
   --color-text: #201f1e;
   --color-text-secondary: #605e5c;
-  --color-divider: #edeff3;
+  --color-divider: rgba(0, 0, 0, 0.05);
   --color-hover: rgba(15, 23, 42, 0.045);
   --color-selected: rgba(14, 116, 144, 0.11);
   --color-accent: #0e7490;
   [data-testid="casual-sheets"],
   [data-testid="casual-sheets"] * {
-    --cs-chrome-bg: #eef1f5 !important;
-    --cs-chrome-border: #edeff3 !important;
+    --cs-chrome-bg: #ffffff !important;
+    --cs-chrome-border: rgba(0, 0, 0, 0.05) !important;
     --cs-chrome-input-bg: #ffffff !important;
     --cs-chrome-fg: #201f1e !important;
     --cs-chrome-muted: #605e5c !important;
@@ -421,13 +471,11 @@
   }
 }
 
-// Co-editing indicator: sheet_state stamps data-collab on the window el.
-.editor-sheet[data-collab="live"] .editor-sheet__save-status::before,
-.editor-sheet[data-collab="connected"] .editor-sheet__save-status::before {
-  content: "\25CF  Live";
-  color: #16a34a;
-  font-weight: 600;
-  margin-right: 14px;
+// The Figma header carries no "Live" / "All changes saved" text: the save
+// label only shows when a save FAILED (the one state the user must see);
+// the presence avatars stay as the co-editing indicator.
+.editor-sheet .editor-sheet__save-status:not([data-state="unsaved"]) {
+  display: none !important;
 }
 
 // Presence avatars (editor_sheet.setPeers) — stacked initials before Live.
@@ -595,5 +643,212 @@ body > div:has(> [class*="univer-popup"]) {
 
   &[data-theme="dark"] .editor-loading__text {
     color: #aab2c2;
+  }
+}
+
+// ── Drumee 2.0 "File viewer" (Figma 1337:16842) ────────────────────────────
+// Casual Sheets' chrome strips, laid out as the design: the menu row right
+// under the name (68px in: 20 edge + 36 glyph + 12 gap), the toolbar as a
+// 44px pill on the green tint inset 20px, a white formula bar, and a 40px
+// sheet-tab bar with the active tab on the green tint.
+.editor-sheet[data-theme="light"] .sheet-state {
+  [data-testid="cs-menubar"] {
+    height: 30px;
+    // Casual's own inline padding (2px 6px) — the row starts under the name.
+    padding: 0 20px 8px 68px !important;
+    gap: 16px;
+    border: 0;
+    background: #fff !important;
+    align-items: flex-start;
+
+    button {
+      font: 400 14px/1.2 var(--font-main);
+      color: #34343a;
+      padding: 3px 0;
+      height: auto;
+      min-height: 0;
+      border-radius: 4px;
+
+      &:hover,
+      &[data-state="open"],
+      &[aria-expanded="true"] {
+        color: #0b0a21;
+        background: transparent;
+      }
+    }
+  }
+
+  [data-testid="casual-sheets-toolbar"] {
+    box-sizing: border-box;
+    height: 44px;
+    margin: 0 20px 12px;
+    padding: 6px 16px;
+    gap: 8px;
+    border: 0;
+    border-radius: 40px;
+    background: rgba(61, 222, 140, 0.1) !important;
+    color: #0b0a21;
+
+    // Group dividers.
+    > div:empty,
+    > span:empty {
+      background: #d1d1d6;
+    }
+
+    // The design's bar is shorter than Casual's: clipboard (keyboard and the
+    // context menu have it), the font-size steppers (the size box stays),
+    // merge, and the trailing Format Cells / chart / pivot (all under the
+    // Format and Insert menus) are left out, with the divider before them.
+    // Casual wraps a group in a <span>, and puts the size steppers and the
+    // trailing Format Cells / chart / pivot buttons straight in the bar.
+    // NOTE: one selector list, no nested :has() — an invalid selector would
+    // void the whole rule.
+    > span:has(> [data-testid="cs-paste"]),
+    > span:has(> [data-testid="cs-merge"]),
+    > button[aria-label="Increase font size"],
+    > button[aria-label="Decrease font size"],
+    > button[aria-label="Format Cells…"],
+    > button[aria-label="Insert chart"],
+    > button[aria-label="Insert PivotTable"],
+    > span:empty:has(+ button[aria-label="Format Cells…"]) {
+      display: none !important;
+    }
+
+    // Whatever still overflows a narrow window scrolls, without a bar.
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  [data-testid="casual-sheets-formula-bar"] {
+    height: 40px;
+    padding: 4px 20px;
+    border: 0;
+    background: #fff !important;
+    font-family: var(--font-main);
+  }
+
+  [data-testid="casual-sheets-tabs"] {
+    height: 40px !important;
+    min-height: 40px;
+    box-sizing: border-box;
+    padding: 0 20px 0 48px !important;
+    gap: 24px;
+    border: 0;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    background: #fff !important;
+    font-family: var(--font-main);
+    align-items: center;
+
+    // "+" then the all-sheets ≡ first, as in the design ([+] [≡] [Sheet1 ▾]):
+    // 24px Material glyphs, 24px apart (the strip's gap).
+    [data-testid="cs-tab-add"],
+    .editor-sheet__sheets-list {
+      order: -1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0 !important;
+      border: 0;
+      border-radius: 6px;
+      background: none;
+      color: #0b0a21;
+      cursor: pointer;
+
+      &:hover {
+        background: #f2f2f7;
+      }
+    }
+
+    [data-testid="cs-tab-add"] {
+      @include ms-glyph($ms-add);
+    }
+
+    .editor-sheet__sheets-list {
+      @include ms-glyph($ms-menu);
+    }
+
+    // The open tab's caret (Material "Arrow drop down"): Casual's Rename /
+    // Delete menu.
+    .editor-sheet__tab-caret {
+      display: inline-flex;
+      margin-left: 2px;
+      vertical-align: middle;
+      color: inherit;
+      cursor: pointer;
+      @include ms-glyph($ms-arrow-drop-down);
+    }
+
+    button[aria-selected="true"],
+    button[data-active="true"] {
+      height: 40px !important;
+      padding: 0 12px !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: rgba(61, 222, 140, 0.15) !important;
+      color: #54b684 !important;
+      font-size: 16px;
+    }
+  }
+
+  [data-testid="casual-sheets-status-bar"] {
+    border: 0;
+    background: #fff !important;
+    color: #65656c;
+    font-family: var(--font-main);
+  }
+}
+
+// ── Figma parity pass (user review 2026-10-23): Phosphor toolbar glyphs ─────
+.editor-sheet[data-theme="light"] .sheet-state [data-testid="casual-sheets-toolbar"] {
+  [data-testid="cs-undo"] { @include ph.ph("arrow-u-up-left", 20px, true); }
+  [data-testid="cs-redo"] { @include ph.ph("arrow-u-up-right", 20px, true); }
+  [data-testid="cs-format-painter"] { @include ph.ph("paint-roller", 20px, true); }
+  [data-testid="cs-bold"] { @include ph.ph("text-b", 20px, true); }
+  [data-testid="cs-italic"] { @include ph.ph("text-italic", 20px, true); }
+  [data-testid="cs-underline"] { @include ph.ph("text-underline", 20px, true); }
+  [data-testid="cs-strikethrough"] { @include ph.ph("text-strikethrough", 20px, true); }
+  [data-testid="cs-align-left"] { @include ph.ph("text-align-left", 20px, true); }
+  [data-testid="cs-align-center"] { @include ph.ph("text-align-center", 20px, true); }
+  [data-testid="cs-align-right"] { @include ph.ph("text-align-right", 20px, true); }
+  [data-testid="cs-color-text"] { @include ph.ph("text-a-underline", 20px, true); }
+  [data-testid="cs-color-fill"] { @include ph.ph("paint-bucket", 20px, true); }
+  [data-testid="cs-autosum-button"] { @include ph.ph("sigma", 20px, true); }
+
+  button {
+    color: #0b0a21;
+  }
+}
+
+// The all-sheets list (sheet_state._toggleSheetsMenu), on the body.
+.editor-sheet__sheets-menu {
+  position: fixed;
+  z-index: 60000;
+  min-width: 160px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  font: 400 14px/1.2 var(--font-main);
+  color: #0b0a21;
+
+  &-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+      background: #f2f2f7;
+    }
+
+    &.is-active {
+      color: #54b684;
+      font-weight: 500;
+    }
   }
 }

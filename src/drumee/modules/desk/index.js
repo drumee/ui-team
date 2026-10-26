@@ -3428,8 +3428,16 @@ class desk_module extends LetcBox {
    *
    * Cached: both the switcher menu and the boot default read it, and it is a
    * network call. Refreshed on demand via `force`.
+   *
+   * A FAILED fetch answers with the last good list (or [] if there is none),
+   * which is right for the switcher but wrong for anything deciding "this
+   * account has no workspace": [] reads exactly like an empty account. Those
+   * callers pass `strict` and get the error instead.
+   *
+   * @param {Boolean} [force] refetch instead of serving the cached list.
+   * @param {Boolean} [strict] rethrow a failed fetch instead of answering.
    */
-  async _fetchWorkspaces(force) {
+  async _fetchWorkspaces(force, strict) {
     if (this._workspaces && !force) {
       // Serve the cached list immediately — the switcher must open filled, not
       // empty behind a request — but refresh behind it once it has aged out.
@@ -3448,7 +3456,8 @@ class desk_module extends LetcBox {
       rows = await this._fetchWorkspacePages(force);
     } catch (e) {
       this.warn && this.warn("[workspaces] desk.home failed", e);
-      return [];
+      if (strict) throw e;
+      return this._workspaces || [];
     }
 
     const list = rows
@@ -3537,26 +3546,34 @@ class desk_module extends LetcBox {
     const asRows = (r) => (r == null ? [] : _.isArray(r) ? r : [r]);
     const all = [];
     for (let page = 1; page <= WS_MAX_PAGES; page++) {
-      const rows = asRows(
-        await this.fetchService(SERVICE.desk.home, {
-          hub_id: Visitor.id,
-          type: "node",
-          page,
-          // Cache-buster, on the FORCED path only.
-          //
-          // `fetchService` is a GET and ui-essentials builds it with
-          // `cache: "default"` (socket/utils.js), so a repeat of this exact URL
-          // can be answered from the browser's HTTP cache. Every forced refetch
-          // here is a read-after-WRITE — a workspace was just created — which is
-          // precisely the case that gets served the pre-create response and
-          // leaves the new workspace missing from the switcher until a reload.
-          // A scalar param makes the URL unique and forces the miss.
-          //
-          // Only when forced: the boot read wants the cache, and busting it there
-          // would cost a request on every desk mount for nothing.
-          ...(force ? { _ts: Date.now() } : {}),
-        }),
-      );
+      const res = await this.fetchService(SERVICE.desk.home, {
+        hub_id: Visitor.id,
+        type: "node",
+        page,
+        // Cache-buster, on the FORCED path only.
+        //
+        // `fetchService` is a GET and ui-essentials builds it with
+        // `cache: "default"` (socket/utils.js), so a repeat of this exact URL
+        // can be answered from the browser's HTTP cache. Every forced refetch
+        // here is a read-after-WRITE — a workspace was just created — which is
+        // precisely the case that gets served the pre-create response and
+        // leaves the new workspace missing from the switcher until a reload.
+        // A scalar param makes the URL unique and forces the miss.
+        //
+        // Only when forced: the boot read wants the cache, and busting it there
+        // would cost a request on every desk mount for nothing.
+        ...(force ? { _ts: Date.now() } : {}),
+      });
+      // fetchService does NOT reject on a server error: every view inherits
+      // onServerComplain (ui-core), which swallows it, so a failed desk.home
+      // resolves to undefined — or to the error payload, on a 200 carrying
+      // `error`. A real empty desk is `[]` (output.list never sends nothing).
+      // Read as a failure here, or "the proc threw" becomes "no workspaces"
+      // and the desk offers to create a first one to someone who has twelve.
+      if (res == null || res.error) {
+        throw res || new Error("desk.home answered nothing");
+      }
+      const rows = asRows(res);
       if (!rows.length) break;
       all.push(...rows);
       // A short page is the last page. Checked against the server's own page
@@ -5674,9 +5691,15 @@ class desk_module extends LetcBox {
 
     // Otherwise just keep the screen honest: a create cannot make the desk
     // empty, but a REMOVAL reaches this same handler (ws:event) and can.
-    await this._showEmptyWorkspaceScreen(
-      !((await this._fetchWorkspaces()) || []).length,
-    );
+    // Strict: a list that failed to load says nothing about the count, so the
+    // screen stays as it is.
+    let rows;
+    try {
+      rows = await this._fetchWorkspaces(false, true);
+    } catch (e) {
+      return;
+    }
+    await this._showEmptyWorkspaceScreen(!(rows || []).length);
   }
 
   /**
@@ -6302,12 +6325,12 @@ class desk_module extends LetcBox {
           // Nothing left as far as the cache knows. Confirm with the server
           // before putting up "create your first workspace" — the cache may
           // simply be missing a workspace shared since it was filled.
-          rows = without(await this._fetchWorkspaces(true));
+          rows = without(await this._fetchWorkspaces(true, true));
         }
       } else if (excludeKey) {
-        rows = without(await this._fetchWorkspaces(true));
+        rows = without(await this._fetchWorkspaces(true, true));
       } else {
-        rows = await this._fetchWorkspaces(opt.force);
+        rows = await this._fetchWorkspaces(opt.force, true);
       }
     } catch (e) {
       // An unreachable list is not evidence of an empty account. Leave the
