@@ -3564,9 +3564,14 @@ $theme-colors: (
     background: var(--overlay-bg-10, rgba(0, 0, 0, 0.1));
   }
 
-  // Lists drawn by rich-text.js (the toolbar, or a stored "- " / "N. " line),
-  // in every editor and in posted comments: the UA's 40px indent and 1em
-  // margins are far too much for a 16px box.
+  // Rich text drawn by rich-text.js (the toolbar, Ctrl+B / I / U, or a stored
+  // "- " / "N. " line), in every editor and in posted comments.
+  //
+  // The app-wide reset (skin/lib/reset.scss) takes it all off again: li/ul
+  // lose their markers, b / i / em / s are `font: inherit`, and u loses its
+  // underline and turns #666. Each is put back here, scoped to these surfaces
+  // so the reset still holds everywhere else. The UA's 40px list indent and
+  // 1em margins are too much for a 16px box.
   &__desc-editor,
   &__comment-input,
   &__comment-edit-input,
@@ -3578,8 +3583,39 @@ $theme-colors: (
       padding-left: 20px;
     }
 
+    ul {
+      list-style-type: disc;
+    }
+
+    ol {
+      list-style-type: decimal;
+    }
+
+    // The reset names li itself, so the item has to take its list's marker
+    // back explicitly.
     li {
       margin: 0;
+      list-style-type: inherit;
+    }
+
+    b,
+    strong {
+      font-weight: 700;
+    }
+
+    i,
+    em {
+      font-style: italic;
+    }
+
+    u {
+      text-decoration: underline;
+      color: inherit;
+    }
+
+    s,
+    strike {
+      text-decoration: line-through;
     }
   }
 
