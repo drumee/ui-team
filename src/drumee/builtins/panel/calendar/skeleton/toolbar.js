@@ -369,7 +369,9 @@ module.exports = function (ui) {
     Skeletons.Box.X({
       className: `${pfx}__toolbar-right`,
       // SHOW_NEW_BUTTON hides "+ New" when set to false.
-      kids: [viewPicker, audienceBar, filterPicker, SHOW_NEW_BUTTON ? newButton : null].filter(Boolean),
+      // Personal | Team hidden for now (2026-10-26): the calendar stays on its
+      // default audience, Team (every row). Put audienceBar back here to restore it.
+      kids: [viewPicker, filterPicker, SHOW_NEW_BUTTON ? newButton : null].filter(Boolean),
     }),
   ];
 };
