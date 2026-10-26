@@ -1265,6 +1265,9 @@ class __window_mfs extends DrumeeMFS {
    */
   downloadContent(args) {
     let { zipid } = args;
+    // Kept for a carrier that does not hold this zipid yet: its media.download
+    // reply can land after the push (libs/zip-pushes).
+    require("libs/zip-pushes").remember(args);
     this.getItemsByAttr("zipid", zipid).filter((c) => {
       if (!c) return false;
       c.handleDownload(args);
