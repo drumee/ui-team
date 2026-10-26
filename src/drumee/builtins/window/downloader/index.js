@@ -1141,6 +1141,13 @@ class __window_downloader extends mfsInteract {
         this._zipPaint(this._archivePercent(progress, message));
         break;
       case 'exit':
+        // 7z's exit code (server-team offline/media/download.js): anything
+        // but 0 means the archive is missing or incomplete — nothing to fetch.
+        if (data.exit) {
+          this._zipItem('error', data.zipname);
+          this._zipSettle({ state: 'failed', title: LOCALE.DOWNLOAD_FAILED });
+          break;
+        }
         this.downloadZip(data);
         break;
     }
