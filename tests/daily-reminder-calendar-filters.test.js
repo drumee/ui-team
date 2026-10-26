@@ -124,10 +124,11 @@ function calendar(state) {
 }
 
 test("focusView switches the kind filter and refetches", () => {
-  const { self, reloads } = calendar({ _view: "week" });
+  const { self, reloads } = calendar({ _view: "week", _audience: "personal" });
   focusView.call(self, "day", "meeting");
   assert.equal(self._view, "day");
   assert.equal(self._filter, "meeting");
+  assert.equal(self._audience, "team");
   assert.equal(reloads(), 1);
 });
 

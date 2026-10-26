@@ -623,17 +623,6 @@
         &::before {
           color: var(--normal-fg-50);
         }
-
-        &::-webkit-scrollbar {
-          width: 3px;
-        }
-        &::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        &::-webkit-scrollbar-thumb {
-          background: var(--scrollbar-thumb);
-          border-radius: 3px;
-        }
       }
     }
 
@@ -1189,17 +1178,6 @@
     z-index: 1000;
     box-shadow: var(--shadow-top-tiny);
 
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    &::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb);
-      border-radius: 4px;
-    }
-
     &[data-state="open"] {
       display: flex;
       flex-direction: column;
@@ -1397,20 +1375,8 @@
     padding: 16px;
     gap: 16px;
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--scrollbar-thumb);
-      border-radius: 4px;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   .widget-chatItem__ui {

@@ -111,7 +111,6 @@ module.exports = function (ui, opt = {}) {
                 className: `${pfx}__heading`,
                 content: LOCALE.IMPORT_FOLDER_OR_FILE,
               }),
-              Skeletons.Image.Svg({ active: 0, ico: "cross", className: `${pfx}__close` }),
             ],
           }),
 

@@ -1,3 +1,4 @@
+const { casualKind } = require("libs/file-meta");
 
 const __skl_window_application = function (filetype, opt = {}) {
   const a = {
@@ -104,17 +105,29 @@ const __skl_window_application = function (filetype, opt = {}) {
 
   let { media } = opt;
   let r = a[filetype] || {};
+  // A Casual doc / sheet is "text" by category, so every path that resolves
+  // a player from the category alone (a desk link, a tile inserted by the
+  // editor's own first save, Recently viewed) would land in the text viewer
+  // and show the stored JSON. Route them by extension / dataType from the
+  // node itself, media view or not (the tile's media carries the same).
+  {
+    const node = media && media.model ? media.model.toJSON() : opt;
+    const name = String((node && node.filename) || "");
+    const ext = String(
+      (node && node.ext) || (name.includes(".") ? name.split(".").pop() : "")
+    ).toLowerCase();
+    const casual = casualKind({ ...(node || {}), ext });
+    if (casual === "sheet") return { ...opt, kind: "editor_sheet" };
+    if (casual === "docs") return { ...opt, kind: "editor_docs" };
+  }
   if (media && media.model) {
-    let { mimetype, dataType, ext } = media.model.toJSON();
-    // Univer/Casual sheets carry the dedicated `.usheet` extension (its mimetype
-    // may not be application/json), so route them to the editor by extension.
-    if (String(ext || "").toLowerCase() === "usheet") {
-      return { ...opt, kind: "editor_sheet" };
-    }
-    // Casual Docs carry `.udoc` (base64-wrapped .docx).
-    if (String(ext || "").toLowerCase() === "udoc") {
-      return { ...opt, kind: "editor_docs" };
-    }
+    const json = media.model.toJSON();
+    let { mimetype, dataType } = json;
+    // Casual files: by the dedicated `.usheet` / `.udoc` extension, or by the
+    // dataType marker of the early `.json` sheets (libs/file-meta casualKind).
+    const casual = casualKind(json);
+    if (casual === "sheet") return { ...opt, kind: "editor_sheet" };
+    if (casual === "docs") return { ...opt, kind: "editor_docs" };
     if (media.imgCapable && media.imgCapable()) {
       let { kind } = a[filetype] || { kind: "image_viewer" };
       return { kind, ...opt };

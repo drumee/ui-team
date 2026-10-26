@@ -640,8 +640,7 @@ class __editor_markdown extends __player {
         }, 3000);
         break;
       case _e.close:
-        this.goodbye();
-        return
+        return this.closeAfterSave();
       default:
         super.onUiEvent(cmd, args);
     }

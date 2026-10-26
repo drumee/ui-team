@@ -7,10 +7,17 @@
  * file icon, and the search / create buttons shrink to square buttons.
  */
 const nodeIconHtml = require("builtins/widget/chat/node-icon");
+const { isDevDeployment } = require("builtins/window/skeleton/toolkit/new-menu-rows");
 
+// The desk's "+ New" rows, in the same order: the Office files (made by the
+// doc-editor service, `name` gives the kind) and, on the dev deployments
+// only, the Casual editors ("Document lite" / "Spreadsheet lite", `kind` is
+// the editor window launched on a new file in the listed folder).
 const CREATE_OPTIONS = [
   { type: "document", name: "document.docx", ico: "addmenu-document", label: "DOCUMENT" },
+  { type: "doc-lite", kind: "editor_docs", ico: "raw-documents_udoc", label: "DOCUMENT_LITE", casual: true },
   { type: "spreadsheet", name: "spreadsheet.xlsx", ico: "addmenu-spreadsheet", label: "SPREADSHEET" },
+  { type: "sheet-lite", kind: "editor_sheet", ico: "raw-documents_usheet", label: "SPREADSHEET_LITE", casual: true },
   { type: "presentation", name: "presentation.pptx", ico: "addmenu-presentation", label: "PRESENTATION" },
 ];
 
@@ -169,12 +176,12 @@ function __skl_file_switcher(ui) {
   const createMenu = create
     ? Skeletons.Box.Y({
       className: `${pfx}__create-menu`,
-      kids: CREATE_OPTIONS.map(({ type, name, ico, label }) =>
+      kids: CREATE_OPTIONS.filter((o) => !o.casual || isDevDeployment()).map(({ type, name, kind, ico, label }) =>
         Skeletons.Box.X({
           className: `${pfx}__create-option ${pfx}__create-option--${type}`,
-          service: "create-file",
+          service: kind ? "create-casual" : "create-file",
           uiHandler: [ui],
-          name,
+          name: name || kind,
           kids: [
             Skeletons.Button.Svg({ ico, className: `${pfx}__create-option-ico` }),
             Skeletons.Note({ className: `${pfx}__create-option-label`, content: LOCALE[label] }),

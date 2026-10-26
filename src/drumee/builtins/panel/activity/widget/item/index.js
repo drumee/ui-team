@@ -86,6 +86,92 @@ function isFileCategory(category) {
   return category === _a.media || category === _a.mfs;
 }
 
+// "<A> edited <file>" / "<A> commented on <file>", addressed to the file's
+// owner (server-team lib/file-owner-notify).
+function isFileOwnerCategory(category) {
+  return category === 'file_edited' || category === 'file_commented';
+}
+
+/**
+ * Click on a file-owner row: land on the file in its folder (the docked
+ * workspace, scrolled to, selected and flashed — the reveal every file
+ * notification uses), then
+ *   - a comment in the file's chat thread (message_id): open that thread and
+ *     scroll to the comment, highlighted;
+ *   - anything else (an edit, a comment inside a document): open the file in
+ *     its player. openMedia, not Wm.openFileLocation: the latter launches a
+ *     floating folder window for a type with no player while the docked pane
+ *     is still loading.
+ * Waits for the landing, like openShareOpenAccess: launched earlier, the thread
+ * or the player would be wiped or buried when the workspace pane mounts.
+ * Best-effort: without Wm the reveal hash alone still lands on the file.
+ */
+function openFileOwnerActivity({ hub_id, nid, filetype, ext, pid, filename, message_id, focus, ts }, { fetchService, openMedia } = {}) {
+  const wm = window.Wm;
+  const reveal = { hub_id, nid, filetype, pid: `${pid || "0"}`, highlight: "1", ts: `${ts}` };
+  if (!wm || !_.isFunction(wm.openNotificationLocation)) {
+    location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=${nid}&filetype=${filetype}&pid=${reveal.pid}&highlight=1&ts=${ts}`;
+    return;
+  }
+  Promise.resolve(wm.openNotificationLocation(reveal))
+    .then((pane) => {
+      if (!pane) return;
+      if (message_id && _.isFunction(pane.scopeChatToFile)) {
+        return openThreadComment(pane, { nid, filename, message_id });
+      }
+      // A comment INSIDE the document: the editor that opens this nid takes
+      // it and opens the file on that comment (builtins/editor/pending-focus).
+      if (focus && typeof focus === "object") require("builtins/editor/pending-focus").set(nid, focus);
+      return openRevealedFile(wm, { hub_id, nid, filetype, ext, filename }, { fetchService, openMedia });
+    })
+    .catch((e) => console.warn("[activity] file-owner notification open failed", e));
+}
+
+// Open the file the reveal just landed on the way a double-click on its tile
+// does ("open-node"), so every type reaches its own player or editor — a
+// Casual doc or sheet included, which the tile's media model routes by
+// extension. The tile renders a moment after the landing, hence the wait;
+// without it, openMedia from the node's attributes.
+const TILE_WAIT_MS = 4000;
+const TILE_POLL_MS = 200;
+function openRevealedFile(wm, data, { fetchService, openMedia } = {}) {
+  const canFind = _.isFunction(wm._findMediaByNid);
+  return new Promise((resolve) => {
+    let waited = canFind ? 0 : TILE_WAIT_MS;
+    const tick = () => {
+      const tile = canFind ? wm._findMediaByNid(data.nid) : null;
+      if (tile && _.isFunction(tile.triggerHandlers)) {
+        tile.triggerHandlers({ service: "open-node" });
+        return resolve(tile);
+      }
+      if (waited >= TILE_WAIT_MS) {
+        const open = openMedia || require("libs/open-media").openMedia;
+        return resolve(open(data, { fetchService }));
+      }
+      waited += TILE_POLL_MS;
+      setTimeout(tick, TILE_POLL_MS);
+    };
+    tick();
+  });
+}
+
+// Scope the pane's chat to the file's thread, then scroll to the comment. On
+// the wide Chat tab the thread lives in the side panel (file-thread-chat);
+// elsewhere the folder chat itself is scoped in place (folder-chat). ensurePart,
+// not getPart: a part map keeps a destroyed widget once the panel is re-fed.
+function openThreadComment(pane, { nid, filename, message_id }) {
+  const wide = pane.activeTab === _a.chat
+    && !(_.isFunction(pane._isCompactChat) && pane._isCompactChat());
+  return Promise.resolve(pane.scopeChatToFile(nid, filename))
+    .then(() => (_.isFunction(pane.ensurePart)
+      ? pane.ensurePart(wide ? "file-thread-chat" : "folder-chat")
+      : null))
+    .then((chat) => {
+      if (!chat || (_.isFunction(chat.isDestroyed) && chat.isDestroyed())) return;
+      if (_.isFunction(chat.scrollToMessage)) chat.scrollToMessage(message_id);
+    });
+}
+
 /**
  * A share-open notification ("{who} opened {item}") also opens that item's
  * share panel, with the opener's rows marked in "View access list"
@@ -299,6 +385,10 @@ class __activity_item extends LetcBox {
     // persists via dismissed_at instead of falling back to the mfs path.
     const item_type = opt.event === 'media.workspace_move'
       ? 'mfs'
+      // "<A> edited / commented on <your file>": a yp.contact_activity row that
+      // the server stamps with its own category; read and removed by its id
+      // like every other contact_activity row.
+      : isFileOwnerCategory(opt.category) ? 'contact_invite'
       : opt.category
       || (opt.event === 'hub.invite_received' ? 'hub_invite'
         : opt.event === 'task_assigned' ? 'contact_invite'
@@ -439,6 +529,8 @@ class __activity_item extends LetcBox {
             return
 
           case 'contact_refused':
+          case 'file_edited':
+          case 'file_commented':
             this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
             return
 
@@ -669,6 +761,22 @@ class __activity_item extends LetcBox {
       const sourceHubId = this.mget('source_hub_id') || hub_id;
       location.hash = `#/desk/wm/reveal/?hub_id=${sourceHubId}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&highlight=1&ts=${ts}`;
       this.triggerHandlers({ service: 'read-activity', hub_id: sourceHubId, nid: target_nid, item_type, changelog_id });
+      this.triggerHandlers({ service: 'close-activity-panel' });
+      return;
+    }
+    if (isFileOwnerCategory(category)) {
+      openFileOwnerActivity({
+        hub_id,
+        nid,
+        filetype,
+        pid: this.mget('pid') || parent_id,
+        filename: this.mget('filename'),
+        message_id: this.mget('message_id'),
+        focus: this.mget('focus'),
+        ext: this.mget('ext'),
+        ts,
+      }, { fetchService: this.fetchService && this.fetchService.bind(this) });
+      this.triggerHandlers({ service: 'read-activity', hub_id, nid, item_type, item_key, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;
     }

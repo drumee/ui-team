@@ -1218,16 +1218,13 @@ html {
 // that looks pressable and does nothing is worse than one that is not drawn.
 //
 //   __open       the org dropdown's "Open" pill, which leads to THIS screen.
-//   __nav-main   the workspace rail (Files / Chat / Task / Meet / Access).
-//                Every item drives the ACTIVE WORKSPACE WINDOW
+//   sidebar      the whole desk sidebar (rail + __main): logo row, the
+//                workspace rail (Files / Chat / Task / Meet / Access) and the
+//                footer. Every rail item drives the ACTIVE WORKSPACE WINDOW
 //                (Wm.getActiveWindow at click time), and the org screen is not
-//                a workspace.
-//
-// __nav-main, NOT its parent __nav. __nav also holds the logo row — the
-// wordmark, the organisation's name and the collapse/pin toggle — which is
-// chrome the screen has no quarrel with: the sidebar keeps its identity and its
-// pin control, and only the five rail items go. Hiding __nav took the logo with
-// them and left the column empty above the footer.
+//                a workspace — so the screen gets the full width instead.
+//                (Previously only __nav-main went and the logo row and footer
+//                stayed.)
 //
 // ONE RULE, TWO SUBJECTS, and one home for the condition. Both were about to
 // key off the same `:has()` in two different skins — this file already reaches
@@ -1273,9 +1270,19 @@ html {
 //   now  .desk-module[data-desk-orgview][data-desk-orgview][data-desk-orgview] .desk-org-tab__open
 //        (0,1,0) + (0,1,0)x3        + (0,1,0) = (0,5,0)
 .desk-module[data-desk-orgview][data-desk-orgview][data-desk-orgview] {
-  .desk-org-tab__open,
-  .desk-module-sidebar__nav-main {
+  .desk-org-tab__open {
     display: none;
+  }
+
+  // The whole sidebar goes while the org screen is up. The __rail with it, not
+  // just __main: the rail is the in-flow column that reserves the sidebar's
+  // 64/231px (sidebar.scss __rail), so hiding __main alone would leave an empty
+  // strip where it was. `!important` because the ≤650px block in sidebar.scss
+  // forces `__main { display: flex !important }`. The mobile drawer has no
+  // rail, so __main is listed for it.
+  .desk-module-sidebar__rail,
+  .desk-module-sidebar__main {
+    display: none !important;
   }
 }
 

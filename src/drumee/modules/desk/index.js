@@ -12,6 +12,7 @@ const { inviteWorkspaceScope } = require("libs/invite-scope");
 // "Open this file once I am signed in" — a Designation link opened by a visitor
 // with no session. Armed at module scope in index.web.js, consumed below.
 const fileDeepLink = require("libs/file-deep-link");
+const locationUrl = require("libs/location-url");
 const { openSupportMail } = require("libs/support");
 const { showToast, clearToast } = require("libs/toast");
 
@@ -1854,7 +1855,8 @@ class desk_module extends LetcBox {
   // still starts on Home; two tabs never overwrite each other.
 
   static get _DESK_STATE_KEY() {
-    return "drumee.desk.lastScreen";
+    // Shared with libs/location-url, which asks whether a reload will restore.
+    return locationUrl.DESK_STATE_KEY;
   }
 
   /** service string ↔ sidebar nav item (sys_pn) for the restorable screens */
@@ -1998,6 +2000,41 @@ class desk_module extends LetcBox {
       (child.mget && child.mget(_a.kind)) ||
       (child.el.dataset && child.el.dataset.kind);
     return kind === "desk_org_view";
+  }
+
+  /**
+   * Is a full-canvas screen (Inbox, Calendar, Settings, Apps, Help, Billing,
+   * the organisation screen) covering the desk? The same top-child read as
+   * _orgViewOnScreen, for any kind. libs/location-url rests the address bar on
+   * "#/desk/wm/home" while one is.
+   *
+   * @returns {Boolean}
+   */
+  _mainScreenOnTop() {
+    const slot = this.getPart && this.getPart("settings-main-slot");
+    const child = slot && slot.children && slot.children.last && slot.children.last();
+    if (!child || (child.isDestroyed && child.isDestroyed()) || !child.el) return false;
+    return !(child.el.dataset && child.el.dataset.anim === "out");
+  }
+
+  /**
+   * Opening or closing a full-canvas screen announces nothing on the
+   * breadcrumb channel libs/location-url listens to, so watch the slot itself:
+   * a child coming or going, or its data-anim flipping in / out.
+   *
+   * @param {LetcBox} p the settings-main-slot part
+   */
+  _installLocationUrlWatch(p) {
+    if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
+    if (typeof MutationObserver !== "function") return;
+    if (this._locationUrlObserver) this._locationUrlObserver.disconnect();
+    this._locationUrlObserver = new MutationObserver(() => locationUrl.schedule());
+    this._locationUrlObserver.observe(p.el, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-anim"],
+    });
   }
 
   /**
@@ -2278,6 +2315,11 @@ class desk_module extends LetcBox {
     } catch (e) {
       /* sessionStorage unavailable — fall through to the hash check */
     }
+    // The address bar mirrors the visitor's location (libs/location-url): an
+    // entry the desk wrote itself is a resting hash like "home", not a link.
+    // When a reload had nothing to restore, file-deep-link armed it instead and
+    // the relay check above has already answered.
+    if (locationUrl.isMirrorEntry()) return false;
     const path = Visitor.parseModule() || [];
     if (path[1] === "wm") {
       // Compare against the literal resting segment — `_a.home` is not
@@ -2548,6 +2590,7 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: LOCALE.NOTIFICATIONS,
       ico: "top-bell",
+      noSwitcher: 1,
     });
   }
 
@@ -2995,7 +3038,7 @@ class desk_module extends LetcBox {
     // support account itself, and the inbox badges support conversations.
     // Failure is already swallowed into null — nothing here depends on it.
     this.supportContact();
-    this._installOrgViewMirror();
+    // _installOrgViewMirror runs from onPartReady("settings-main-slot").
     this._installWsMenuMirror();
     this._installUtilityLights();
   }
@@ -3073,30 +3116,38 @@ class desk_module extends LetcBox {
    * An attribute on the root is matched against the root and nothing else. The
    * observer is scoped to the slot the screen actually mounts into
    * (togglePanel -> "settings-main-slot"), so it cannot re-create the cost.
+   *
+   * INSTALLED FROM onPartReady, NOT ensurePart. ui-core's ensurePart resolves
+   * by `this.off(_e.part.ready)` with no handler, which drops EVERY pending
+   * ensurePart on the desk, not just its own. At boot this one queued behind
+   * top-bar / desk-content / others, lost its listener to whichever resolved
+   * first, and never ran — the flag was never stamped, and none of the rules
+   * keyed on it ever applied on stage. onPartReady also re-installs on a
+   * re-fed skeleton, where a once-resolved part would be the dead old slot.
+   *
+   * @param {Object} p the settings-main-slot part
    */
-  _installOrgViewMirror() {
-    this.ensurePart("settings-main-slot").then((p) => {
-      if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
-      const root = this.el;
-      if (!root || !root.dataset || typeof MutationObserver !== "function") return;
-      if (this._orgViewObserver) this._orgViewObserver.disconnect();
-      // Same test the selector made: an org-view root that is not animating out
-      // and has actually drawn its __main. `data-anim !== "out"` is the desk's
-      // own liveness test (see the `topChild` read in _sectionScreenService).
-      const SEL = '.desk-org-view__ui:not([data-anim="out"]) .desk-org-view__main';
-      const sync = () => {
-        if (p.el.querySelector(SEL)) root.dataset.deskOrgview = "1";
-        else delete root.dataset.deskOrgview;
-      };
-      this._orgViewObserver = new MutationObserver(sync);
-      this._orgViewObserver.observe(p.el, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["data-anim"],
-      });
-      sync();
+  _installOrgViewMirror(p) {
+    if (!p || !p.el || (this.isDestroyed && this.isDestroyed())) return;
+    const root = this.el;
+    if (!root || !root.dataset || typeof MutationObserver !== "function") return;
+    if (this._orgViewObserver) this._orgViewObserver.disconnect();
+    // Same test the selector made: an org-view root that is not animating out
+    // and has actually drawn its __main. `data-anim !== "out"` is the desk's
+    // own liveness test (see the `topChild` read in _sectionScreenService).
+    const SEL = '.desk-org-view__ui:not([data-anim="out"]) .desk-org-view__main';
+    const sync = () => {
+      if (p.el.querySelector(SEL)) root.dataset.deskOrgview = "1";
+      else delete root.dataset.deskOrgview;
+    };
+    this._orgViewObserver = new MutationObserver(sync);
+    this._orgViewObserver.observe(p.el, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-anim"],
     });
+    sync();
   }
 
 
@@ -3377,8 +3428,16 @@ class desk_module extends LetcBox {
    *
    * Cached: both the switcher menu and the boot default read it, and it is a
    * network call. Refreshed on demand via `force`.
+   *
+   * A FAILED fetch answers with the last good list (or [] if there is none),
+   * which is right for the switcher but wrong for anything deciding "this
+   * account has no workspace": [] reads exactly like an empty account. Those
+   * callers pass `strict` and get the error instead.
+   *
+   * @param {Boolean} [force] refetch instead of serving the cached list.
+   * @param {Boolean} [strict] rethrow a failed fetch instead of answering.
    */
-  async _fetchWorkspaces(force) {
+  async _fetchWorkspaces(force, strict) {
     if (this._workspaces && !force) {
       // Serve the cached list immediately — the switcher must open filled, not
       // empty behind a request — but refresh behind it once it has aged out.
@@ -3397,7 +3456,8 @@ class desk_module extends LetcBox {
       rows = await this._fetchWorkspacePages(force);
     } catch (e) {
       this.warn && this.warn("[workspaces] desk.home failed", e);
-      return [];
+      if (strict) throw e;
+      return this._workspaces || [];
     }
 
     const list = rows
@@ -3486,26 +3546,34 @@ class desk_module extends LetcBox {
     const asRows = (r) => (r == null ? [] : _.isArray(r) ? r : [r]);
     const all = [];
     for (let page = 1; page <= WS_MAX_PAGES; page++) {
-      const rows = asRows(
-        await this.fetchService(SERVICE.desk.home, {
-          hub_id: Visitor.id,
-          type: "node",
-          page,
-          // Cache-buster, on the FORCED path only.
-          //
-          // `fetchService` is a GET and ui-essentials builds it with
-          // `cache: "default"` (socket/utils.js), so a repeat of this exact URL
-          // can be answered from the browser's HTTP cache. Every forced refetch
-          // here is a read-after-WRITE — a workspace was just created — which is
-          // precisely the case that gets served the pre-create response and
-          // leaves the new workspace missing from the switcher until a reload.
-          // A scalar param makes the URL unique and forces the miss.
-          //
-          // Only when forced: the boot read wants the cache, and busting it there
-          // would cost a request on every desk mount for nothing.
-          ...(force ? { _ts: Date.now() } : {}),
-        }),
-      );
+      const res = await this.fetchService(SERVICE.desk.home, {
+        hub_id: Visitor.id,
+        type: "node",
+        page,
+        // Cache-buster, on the FORCED path only.
+        //
+        // `fetchService` is a GET and ui-essentials builds it with
+        // `cache: "default"` (socket/utils.js), so a repeat of this exact URL
+        // can be answered from the browser's HTTP cache. Every forced refetch
+        // here is a read-after-WRITE — a workspace was just created — which is
+        // precisely the case that gets served the pre-create response and
+        // leaves the new workspace missing from the switcher until a reload.
+        // A scalar param makes the URL unique and forces the miss.
+        //
+        // Only when forced: the boot read wants the cache, and busting it there
+        // would cost a request on every desk mount for nothing.
+        ...(force ? { _ts: Date.now() } : {}),
+      });
+      // fetchService does NOT reject on a server error: every view inherits
+      // onServerComplain (ui-core), which swallows it, so a failed desk.home
+      // resolves to undefined — or to the error payload, on a 200 carrying
+      // `error`. A real empty desk is `[]` (output.list never sends nothing).
+      // Read as a failure here, or "the proc threw" becomes "no workspaces"
+      // and the desk offers to create a first one to someone who has twelve.
+      if (res == null || res.error) {
+        throw res || new Error("desk.home answered nothing");
+      }
+      const rows = asRows(res);
       if (!rows.length) break;
       all.push(...rows);
       // A short page is the last page. Checked against the server's own page
@@ -5623,9 +5691,15 @@ class desk_module extends LetcBox {
 
     // Otherwise just keep the screen honest: a create cannot make the desk
     // empty, but a REMOVAL reaches this same handler (ws:event) and can.
-    await this._showEmptyWorkspaceScreen(
-      !((await this._fetchWorkspaces()) || []).length,
-    );
+    // Strict: a list that failed to load says nothing about the count, so the
+    // screen stays as it is.
+    let rows;
+    try {
+      rows = await this._fetchWorkspaces(false, true);
+    } catch (e) {
+      return;
+    }
+    await this._showEmptyWorkspaceScreen(!(rows || []).length);
   }
 
   /**
@@ -5818,7 +5892,14 @@ class desk_module extends LetcBox {
     // along with the chip.
     const chip = this._crumbGroupPart;
     if (!chip || !chip.el || !chip.el.querySelector) return false;
-    // THE CARET ALWAYS OPENS. It is drawn in every state — loading, a deeper
+    // A UTILITY SCREEN HAS NO SWITCHER. Notifications, Personal Calendar,
+    // Inbox, Contacts, Trash and Admin console ask for `noSwitcher` on their
+    // breadcrumb:context; the caret is hidden there (desk/skin/topbar) and the
+    // chip is a plain label, so nothing in it opens the panel.
+    if (chip.el.querySelector(':scope > .desk-breadcrumb__ui[data-no-switcher="1"]')) {
+      return false;
+    }
+    // THE CARET OPENS EVERYWHERE ELSE. It is drawn in every state — loading, a deeper
     // path, a section screen (desk/skin/topbar.scss) — so it must never be a
     // dead glyph. The panel lives inside __ws-wrapper, not inside __ws-btn, so
     // this cannot catch a click meant for a row in the open dropdown.
@@ -6244,12 +6325,12 @@ class desk_module extends LetcBox {
           // Nothing left as far as the cache knows. Confirm with the server
           // before putting up "create your first workspace" — the cache may
           // simply be missing a workspace shared since it was filled.
-          rows = without(await this._fetchWorkspaces(true));
+          rows = without(await this._fetchWorkspaces(true, true));
         }
       } else if (excludeKey) {
-        rows = without(await this._fetchWorkspaces(true));
+        rows = without(await this._fetchWorkspaces(true, true));
       } else {
-        rows = await this._fetchWorkspaces(opt.force);
+        rows = await this._fetchWorkspaces(opt.force, true);
       }
     } catch (e) {
       // An unreachable list is not evidence of an empty account. Leave the
@@ -8427,6 +8508,12 @@ class desk_module extends LetcBox {
       case "desk-content":
         this.content_wrapper = child;
         return;
+
+      // Pass the child: see _installOrgViewMirror for why not ensurePart.
+      case "settings-main-slot":
+        this._installOrgViewMirror(child);
+        this._installLocationUrlWatch(child);
+        break;
 
       case "desk-wrapper":
         return (this.desk_wrapper = child);
@@ -11816,6 +11903,7 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.INBOX,
           ico: "top-inbox",
+          noSwitcher: 1,
         });
         // Full-canvas, so the rail no longer describes the screen — see
         // _railUnlight. Beside the breadcrumb retitle and for the same reason:
@@ -11830,6 +11918,7 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.CONTACTS,
           ico: "top-contacts",
+          noSwitcher: 1,
         });
         return this.togglePanel("address_book", "chat-panel");
 
@@ -11863,6 +11952,7 @@ class desk_module extends LetcBox {
           // sheet tile, which label the launcher, not the screen.
           filename: LOCALE.PERSONAL_CALENDAR,
           ico: "top-calendar",
+          noSwitcher: 1,
         });
         // See _railUnlight — the calendar covers the workspace pane entirely.
         // Before _openCalendar, which always reaches togglePanel (there is no
@@ -12210,6 +12300,7 @@ class desk_module extends LetcBox {
           RADIO_BROADCAST.trigger("breadcrumb:context", {
             filename: LOCALE.ADMIN_CONSOLE,
             ico: "top-apps",
+            noSwitcher: 1,
           });
           // See _railUnlight. AFTER the upsell gate above — a personal plan
           // gets a modal over the workspace it is still looking at, not a
@@ -12269,6 +12360,7 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.TRASH,
           ico: "top-trash",
+          noSwitcher: 1,
         });
         return this.togglePanel("panel_trash", "trash-panel");
 

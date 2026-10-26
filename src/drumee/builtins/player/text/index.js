@@ -268,7 +268,7 @@ class __player_text extends __player {
         return;
       }
       case _e.close:
-        return this.goodbye();
+        return this.closeAfterSave();
 
       // Move & Resize presets, from the shared topbar widget. Same snap
       // module the folder window and the other players use, so every window

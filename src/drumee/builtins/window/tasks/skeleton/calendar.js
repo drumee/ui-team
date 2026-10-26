@@ -9,15 +9,22 @@
 // (window/folder/skeleton/meeting-schedule.js) are the three calendars a user
 // moves between, and the Meet tab's is the reference the other two follow: the
 // [ ‹ range › ] pill whose label opens a mini calendar, a Month / Week / Day
-// dropdown, the same locale keys (CAL_VIEW_*) and range wording, and the same
-// month cell — full day names over it, the date top-left as "07", today in
-// brand ink, one-line 19px cards.
+// dropdown, the same locale keys (CAL_VIEW_*) and range wording. The month
+// cell all three draw is Figma 1693:181977's: short day names centred over an
+// unruled header ("Sun"), the date top-right without a leading zero ("7",
+// "Jun 1" on the first of a month), a hover "+" beside it, outside-month
+// dates dimmed and today in brand ink.
 //
 // What deliberately stays its own: there is no hour canvas here. A task's
 // due_date is a calendar DATE with no time, so an hour grid would be 24 empty
 // rows; week and day stay columns of full cards, which is also how the Personal
 // Calendar treats tasks (its all-day strip, never an hour).
-const { priorityMeta, statusMeta, subtaskBadge, mayCreateTask } = require("./helpers");
+const {
+  priorityMeta,
+  statusMeta,
+  subtaskStrip,
+  mayCreateTask,
+} = require("./helpers");
 const { stripMarkers } = require("../mention-markers");
 
 const ymd = (d) => d.format("YYYY-MM-DD");
@@ -28,12 +35,6 @@ const VIEWS = [
   { key: "week", label: "CAL_VIEW_WEEK" },
   { key: "day", label: "CAL_VIEW_DAY" },
 ];
-
-// How many compact chips stand in a month cell at rest. It only LABELS the
-// "+N" — every task renders and the cell scrolls — so it has to agree with the
-// cell geometry in the skin (--tcal-cell-min, the 19px chip, the 2px gap), the
-// same coupling the Personal Calendar documents for its own MONTH_FIT.
-const MONTH_FIT = 3;
 
 /** The active view, validated — anything unknown falls back to the month. */
 const calMode = (ui) => {
@@ -52,8 +53,10 @@ const anchorOf = (value) => {
 };
 
 // "September 2026" / "September 20-26, 2026" / "Sep 28 - Oct 04, 2026" /
-// "September 25, 2026" — the Meet tab's rangeLabel (and, since, the Personal
-// Calendar's), so one range never reads two ways in two tabs.
+// "September 25, 2026" — the Meet tab's rangeLabel, so one range never reads
+// two ways in two tabs. The Personal Calendar matches it for week and day;
+// its month label alone carries a comma ("September, 2026"), as its design
+// draws it.
 function rangeLabel(mode, anchor) {
   if (!anchor) return "";
   if (mode === "day") return anchor.format("MMMM DD, YYYY");
@@ -128,45 +131,45 @@ module.exports = function (ui) {
       ],
     });
 
-  // Compact month chip — a single line (priority dot + title), status-tinted.
-  // Month cells are small, so the full board-style card is reserved for week.
+  // Month card (Figma 1697:48543, hover 1697:48544) — the Personal Calendar's
+  // month card: the priority dot over the name, 4px apart, on a white card;
+  // the × shows on hover. No status tint and no subtask count: the frame has
+  // neither (Aaron, 2026-10-15). The week card keeps both.
+  //
+  // The dot and the name are inert: a kid left active takes the click itself
+  // (ui-core stops propagation before triggerHandlers), so only the card's
+  // padding used to open the task. The × keeps its own service.
   const compactChip = (t) => {
     const pm = priorityMeta(ui, t.priority || "medium");
-    return Skeletons.Box.X({
+    return Skeletons.Box.Y({
       className: `${pfx}__cal-chip`,
       bubble: 0,
       service: "open-detail",
       uiHandler: [ui],
       taskId: t.id,
-      // data-theme carries the chip tint — a custom column's status IS its DB
-      // id, so the old per-status rules only ever matched the four built-ins.
-      dataset: {
-        status: t.status || "",
-        theme: statusMeta(ui, t.status || ui.getDefaultStatus()).theme,
-      },
+      dataset: { status: t.status || "" },
       kids: [
         Skeletons.Note({
           className: `${pfx}__cal-chip-dot`,
           styleOpt: { background: pm.color },
+          active: 0,
         }),
         Skeletons.Note({
           className: `${pfx}__cal-chip-title`,
           content: t.title || "",
+          active: 0,
         }),
-        // Count only — Calendar gets no expand this round. A subtask never
-        // earns its own cell even when its due date differs from the parent's;
-        // getTopLevelTasks above is what enforces that.
-        subtaskBadge(ui, t, `${pfx}__cal-chip-subcount`),
+        subtaskStrip(ui, t, { pfx, surface: "cal" }),
         // Hover delete; bubble:0 so it doesn't also open the detail panel.
         Skeletons.Button.Svg({
           className: `${pfx}__cal-chip-remove`,
-          ico: "cross",
+          ico: "ph-x",
           bubble: 0,
           service: "remove-task",
           uiHandler: [ui],
           taskId: t.id,
         }),
-      ],
+      ].filter(Boolean),
     });
   };
 
@@ -238,10 +241,9 @@ module.exports = function (ui) {
               className: `${pfx}__cal-card-status-label`,
               content: sm.name || LOCALE[sm.label] || sm.key,
             }),
-            // Week-mode card carries the same count as the month chip.
-            subtaskBadge(ui, t, `${pfx}__cal-card-subcount`),
-          ].filter(Boolean),
+          ],
         }),
+        subtaskStrip(ui, t, { pfx, surface: "cal" }),
       ].filter(Boolean),
     });
   };
@@ -251,15 +253,14 @@ module.exports = function (ui) {
   // The month cell used to slice to three and DROP the rest, leaving a "+N"
   // whose only job was to send the user to another view to find out what the
   // cell was hiding — the truncation the Personal Calendar removed from its own
-  // month grid. Every task renders now and the cell body scrolls; the "+N" is
-  // pinned to the foot of the cell (sticky, in the skin) so it can never scroll
-  // out of reach itself, and it opens that DAY, as the Personal Calendar's does.
+  // month grid. Every task renders now: the cell grows to twice its floor and
+  // then its body scrolls, with no scrollbar and no "+N" counter.
   //
   // Bounded without a slice: a month only ever builds the tasks whose due date
   // falls in its six weeks, as ~5-node chips, which even for the largest
   // workspace is under the board's own windowed budget (CARD_WINDOW × columns ×
   // ~19 nodes a card).
-  const dayBody = (list, k) => {
+  const dayBody = (list) => {
     if (!list.length) return null;
     if (mode !== "month") {
       return Skeletons.Box.Y({
@@ -269,29 +270,11 @@ module.exports = function (ui) {
         kids: list.map(card),
       });
     }
-    const kids = list.map(compactChip);
-    const more = list.length - MONTH_FIT;
-    if (more > 0) {
-      kids.push(
-        Skeletons.Note({
-          className: `${pfx}__cal-day-more`,
-          content: `+${more}`,
-          bubble: 0,
-          service: "cal-day-more",
-          uiHandler: [ui],
-          calDay: k,
-        }),
-      );
-    }
     return Skeletons.Box.Y({
       className: `${pfx}__cal-day-body`,
       // Inert: the space around the chips belongs to the square's click.
       active: 0,
-      // A scrolled cell with a transparent-at-rest bar looks exactly like a
-      // truncated one; the skeleton already knows which cells overflow (it is
-      // the "+N" comparison), so it says so and the skin inks the bar.
-      attrOpt: { "data-overflow": more > 0 ? "1" : "0" },
-      kids,
+      kids: list.map(compactChip),
     });
   };
 
@@ -330,10 +313,9 @@ module.exports = function (ui) {
     const k = ymd(d);
     const inMonth = mode !== "month" || d.month() === anchorMonth;
     const list = byDay[k] || [];
-    // Two digits, top-left, as the Meet tab's month cell draws it ("07"). The
-    // month boundary is carried by the dimmed outside-month dates, not by a
-    // "Jun 1" abbreviation on the first.
-    const numText = d.format("DD");
+    // Top-right, no leading zero ("7"); the first of a month names its month
+    // ("Jun 1"). Outside-month dates still dim.
+    const numText = d.date() === 1 ? d.format("MMM D") : d.format("D");
     // The whole square adds a task due that day — the month cell and the
     // week/day column alike, the way the Personal Calendar's squares do.
     //
@@ -343,7 +325,7 @@ module.exports = function (ui) {
     // click on its own area and the square would never hear it. What DOES
     // something keeps its own service, and that same stopPropagation stops it
     // from also firing the square: a chip or card opens its task, a × deletes,
-    // "+N" opens the Day view, and the "+" adds exactly as the square does.
+    // and the "+" adds exactly as the square does.
     const addable = mayCreate
       ? { bubble: 0, service: "cal-add", uiHandler: [ui], calDay: k }
       : {};
@@ -365,26 +347,26 @@ module.exports = function (ui) {
           ? Skeletons.Box.X({
               className: `${pfx}__cal-day-head`,
               active: 0,
-              // The date where the Meet tab puts it (left), the hover "+"
-              // on the right.
+              // Right-packed: the hover "+", then the date in the corner.
               kids: [
+                addBtn(k),
                 Skeletons.Note({
                   className: `${pfx}__cal-day-num`,
                   content: numText,
                   active: 0,
                 }),
-                addBtn(k),
               ].filter(Boolean),
             })
           : null,
-        dayBody(list, k),
+        dayBody(list),
       ].filter(Boolean),
     });
   };
 
   // ── Column header ───────────────────────────────────────────
-  // Month: full weekday names, left-aligned, in a ruled header row — the Meet
-  // tab's month header. Its week/day header names the day in full too.
+  // Month: short weekday names ("Sun"), centred, above the ruled grid — the
+  // month header all three calendars draw. The week/day header names the
+  // day in full.
   //
   // Week / day: the date itself, num over name — the Personal Calendar's and
   // the Meet tab's week/day header — with today marked by inking the NUMBER.
@@ -403,7 +385,7 @@ module.exports = function (ui) {
       mode === "month"
         ? Skeletons.Note({
             className: `${pfx}__cal-weekday`,
-            content: d.format("dddd"),
+            content: d.format("ddd"),
           })
         : Skeletons.Box.X({
             className: `${pfx}__cal-headday`,

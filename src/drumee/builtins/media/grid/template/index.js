@@ -8,6 +8,15 @@
 // two-decimal, which turns "1.2 MB" into "1.26 MB" and "1.5 KB" into "1.54 kB".
 const { humanFileSize, chipGlyph } = require('libs/file-meta');
 
+// "Show in folder" on a chat attachment card. The card is the message's own
+// copy, so where it leads is resolved on click (widget/chat-item
+// _showInFolder → channel.attachment_location). `noReveal`: a conversation
+// with no workspace to look in (p2p) — chat-item sets it.
+function revealLink(m) {
+  if (Visitor.inDmz || m.noReveal) return '';
+  return `<a class="media-grid__reveal" data-service="show-in-folder">${LOCALE.SHOW_IN_FOLDER}</a>`;
+}
+
 /**
  *
  * @param {*} ui
@@ -94,14 +103,13 @@ const __media_tpl_grid = function (ui) {
       : `<video class="media-grid__inline-video" src="${orig}" poster="${slide}" controls preload="none" playsinline></video>`;
     const size = humanFileSize(m.filesize);
     const sizeHtml = size ? `<span class="media-grid__filesize">${size}</span>` : '';
-    const sep = size ? `<span class="media-grid__meta-sep"> · </span>` : '';
+    const reveal = revealLink(m);
+    const sep = size && reveal ? `<span class="media-grid__meta-sep"> · </span>` : '';
     html =
       `<div class="media-grid__background media-grid__inline ${m.filetype}">${media}${require('../../template/command')(m)}</div>` +
       `<div class="media-grid__meta-row">` +
         `<div class="media-grid__meta-row-top">${filenameHtml}</div>` +
-        `<span class="media-grid__chatmeta">${sizeHtml}${sep}` +
-          `<a class="media-grid__reveal" data-service="show-in-folder">${LOCALE.SHOW_IN_FOLDER}</a>` +
-        `</span>` +
+        `<span class="media-grid__chatmeta">${sizeHtml}${sep}${reveal}</span>` +
       `</div>`;
     if (!Visitor.inDmz) html = html + require('../../template/notify')(m);
     return `<div class="full media-grid__content inline-media ${m.filetype}">${html}</div>`;
@@ -134,12 +142,9 @@ const __media_tpl_grid = function (ui) {
     if (m.isAttachment) {
       const size = humanFileSize(m.filesize);
       const sizeHtml = size ? `<span class="media-grid__filesize">${size}</span>` : '';
-      const sep = size ? `<span class="media-grid__meta-sep"> · </span>` : '';
-      secondLine =
-        `<span class="media-grid__chatmeta">` +
-          `${sizeHtml}${sep}` +
-          `<a class="media-grid__reveal" data-service="show-in-folder">${LOCALE.SHOW_IN_FOLDER}</a>` +
-        `</span>`;
+      const reveal = revealLink(m);
+      const sep = size && reveal ? `<span class="media-grid__meta-sep"> · </span>` : '';
+      secondLine = `<span class="media-grid__chatmeta">${sizeHtml}${sep}${reveal}</span>`;
       removeBtn = require('../../template/command')(m);
 
       // Filename uses the default single-line render (metaTop = filenameHtml);

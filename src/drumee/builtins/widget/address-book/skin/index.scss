@@ -250,14 +250,8 @@
     padding: 0 16px 16px;
 
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--scrollbar-thumb);
-      border-radius: 4px;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   // 72px row: 12px padding around a 48px avatar (Figma "Active Convo").

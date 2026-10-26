@@ -250,7 +250,9 @@
       min-height: 0;
       height: 22px;
       line-height: 20px;
-      padding: 0 6px;
+      // 2px top and bottom around the typo() mixin's 18px line fills the 22px
+      // box exactly, so the name sits in the vertical middle, not on the top.
+      padding: 2px 10px;
       resize: none;
       overflow: hidden;
       white-space: nowrap;
@@ -491,6 +493,18 @@
     display: none !important;
   }
 
+  // A UTILITY SCREEN — Notifications, Personal Calendar, Inbox, Contacts,
+  // Trash, Admin console — keeps its label but has no switcher: the caret goes,
+  // and desk._crumbClickOpensSwitcher refuses the chip on the same flag
+  // (`noSwitcher` on breadcrumb:context, stamped by
+  // desk_breadcrumb._setSectionMode). `!important`: the framework forces a
+  // widget's display inline.
+  &__crumb-group:has(> .desk-breadcrumb__ui[data-no-switcher="1"]) {
+    .desk-module-topbar__ws-btn {
+      display: none !important;
+    }
+  }
+
   &__crumb-group:has(.breadcrumb-item__icon):has(.breadcrumb-item__filename),
   &__crumb-group:has(.breadcrumb-item__main--section .breadcrumb-item__filename) {
     .desk-breadcrumb__main {
@@ -518,9 +532,6 @@
     flex: 0 1 auto;
     min-width: 0;
     overflow: auto;
-    &::-webkit-scrollbar { width: 4px; } ;
-    &::-webkit-scrollbar-track { background: var(--scrollbar-track); } ;
-    &::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; };
   }
 
   &__folder-tab {
@@ -1889,27 +1900,11 @@
     // A VISIBLE bar — this used to be the hide-the-scrollbar idiom
     // (`scrollbar-width: none` + `-ms-overflow-style` + a `display: none`
     // pseudo), so a capped list gave no sign there was more below it.
-    //
-    // Same shape the sidebar nav and the folder-tab strip already use: 4px,
-    // faint track, rounded thumb. `scrollbar-color` is the addition — those two
-    // set only `scrollbar-width: thin`, which leaves Firefox drawing its
-    // DEFAULT grey while Chrome gets the brand colour. Both halves are needed
-    // for the thumb to be --primary-70 in both engines.
+    // The app's one bar (router/skin/index.scss), written out because the
+    // hide idiom it replaced lived here.
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: var(--scrollbar-track);
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--scrollbar-thumb);
-      border-radius: 4px;
-    }
+    scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
+      var(--scrollbar-track, transparent);
   }
 
   // Footer action. Separated by a rule and given the full menu width so it

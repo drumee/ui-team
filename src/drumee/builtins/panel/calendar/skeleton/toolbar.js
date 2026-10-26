@@ -1,22 +1,24 @@
-// View toolbar: the [ ‹ range › ] pill on the left; view dropdown, All/Task/
-// Meet filter and "+ New" on the right.
+// View toolbar, Figma 1697:47993 (Personal) / 1693:180534 (Team):
 //
-// The left half is the workspace Meet tab's schedule toolbar
-// (window/folder/skeleton/meeting-schedule.js → toolbarKids): one grey pill
-// holding the arrows with the range label BETWEEN them, and the label opens
-// the mini calendar. There is no "Today" button — the Meet tab hides its own
-// until the design brings it back, and the mini calendar marks today in bold,
-// one click away. The label carries NO caret; the open state is the wash it
-// keeps while data-open="1". Dropdown mechanics are shared with the view and
-// New menus.
-const { VIEWS, FILTERS, rangeLabel, day, ymd } = require("./helpers");
+//   [ ‹ Today › ]  June, 2026 ▾        [Month ▾] [Personal | Team] [≡ All] [+ New]
+//
+// ‹ and › step the range; "Today" brings it back to today in the current view.
+// The range label opens the mini calendar, and its caret flips while the popup
+// is open, as the view button's does. The range label, the view button, the
+// filter button and New each own a dropdown, and all four share one mechanism:
+// one open at a time, closed by a click anywhere outside the row (_openMenu /
+// _syncMenuDismiss in ../index.js).
+const { VIEWS, FILTERS, AUDIENCES, rangeLabel, day, ymd } = require("./helpers");
 
+// The personal task and meeting forms open from "+ New" (Figma 1693:164274).
+// Hidden for now; a task still opens from a day cell's "+".
 const SHOW_NEW_BUTTON = false;
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
   const view = ui.getView();
   const filter = ui.getActiveFilter();
+  const audience = ui.getActiveAudience();
 
   // ── range label + mini calendar ────────────────────────────────────────────
   const cursor = day(ui.getCursor()) || Dayjs();
@@ -107,7 +109,7 @@ module.exports = function (ui) {
     }),
   );
 
-  const rangeMenu = ui.isRangeMenuOpen()
+  const rangeMenu = ui.isMenuOpen("range")
     ? Skeletons.Box.Y({
         className: `${pfx}__menu ${pfx}__range-menu`,
         attrOpt: { "data-anchor": "range" },
@@ -115,9 +117,8 @@ module.exports = function (ui) {
       })
     : null;
 
-  // [ ‹ label › ] — the Meet tab's pill. The popup is a sibling of the pill,
-  // inside __range-picker (position: relative), so it anchors under the whole
-  // pill and does not move with the label's text.
+  // [ ‹ Today › ] — three controls in one grey pill. The pill itself carries
+  // no service, so each kid keeps its own click.
   const nav = Skeletons.Box.X({
     className: `${pfx}__nav`,
     kids: [
@@ -129,23 +130,12 @@ module.exports = function (ui) {
         uiHandler: [ui],
         attrOpt: { "aria-label": LOCALE.PREVIOUS },
       }),
-      Skeletons.Box.X({
-        className: `${pfx}__range`,
-        attrOpt: { "data-open": ui.isRangeMenuOpen() ? "1" : "0" },
+      Skeletons.Note({
+        className: `${pfx}__today`,
+        content: LOCALE.TODAY,
         bubble: 0,
-        service: "cal-toggle-range-menu",
+        service: "cal-today",
         uiHandler: [ui],
-        // ui-core binds a click to EVERY widget that does not set active:0,
-        // and its handler calls e.stopPropagation() BEFORE triggerHandlers —
-        // so a child left at the default eats the click and this service never
-        // fires. Clicking the label did nothing; only the padding worked.
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__range-label`,
-            content: rangeLabel(view, ui.getCursor()),
-          }),
-        ],
       }),
       Skeletons.Button.Svg({
         className: `${pfx}__nav-arrow`,
@@ -158,14 +148,40 @@ module.exports = function (ui) {
     ],
   });
 
+  // "June, 2026 ▾". The popup is a sibling of the label inside __range-picker
+  // (position: relative), so it anchors under the label and does not move with
+  // the text inside it.
+  const range = Skeletons.Box.X({
+    className: `${pfx}__range`,
+    attrOpt: { "data-open": ui.isMenuOpen("range") ? "1" : "0" },
+    bubble: 0,
+    service: "cal-toggle-range-menu",
+    uiHandler: [ui],
+    // ui-core binds a click to EVERY widget that does not set active:0,
+    // and its handler calls e.stopPropagation() BEFORE triggerHandlers —
+    // so a child left at the default eats the click and this service never
+    // fires. Clicking the label did nothing; only the padding worked.
+    kidsOpt: { active: 0 },
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__range-label`,
+        content: rangeLabel(view, ui.getCursor()),
+      }),
+      Skeletons.Image.Svg({
+        ico: "ph-caret-down",
+        className: `${pfx}__range-caret`,
+      }),
+    ],
+  });
+
   const label = Skeletons.Box.Y({
     className: `${pfx}__range-picker`,
-    kids: [nav, rangeMenu].filter(Boolean),
+    kids: [range, rangeMenu].filter(Boolean),
   });
 
   // ── view dropdown ──────────────────────────────────────────────────────────
   const current = VIEWS.find((v) => v.key === view) || VIEWS[0];
-  const viewMenu = ui.isViewMenuOpen()
+  const viewMenu = ui.isMenuOpen("view")
     ? Skeletons.Box.Y({
         className: `${pfx}__menu`,
         attrOpt: { "data-anchor": "view" },
@@ -188,7 +204,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__view-button`,
-        attrOpt: { "data-open": ui.isViewMenuOpen() ? "1" : "0" },
+        attrOpt: { "data-open": ui.isMenuOpen("view") ? "1" : "0" },
         bubble: 0,
         service: "cal-toggle-view-menu",
         uiHandler: [ui],
@@ -196,7 +212,7 @@ module.exports = function (ui) {
         kidsOpt: { active: 0 },
         kids: [
           Skeletons.Image.Svg({
-            ico: "sidebar_calendar",
+            ico: "nudge-calendar-dots",
             className: `${pfx}__view-ico`,
           }),
           Skeletons.Note({
@@ -213,21 +229,74 @@ module.exports = function (ui) {
     ].filter(Boolean),
   });
 
-  // ── All / Task only / Meeting only ─────────────────────────────────────────
-  // Not persisted: the spec is explicit that it resets to All each session.
-  const filterBar = Skeletons.Box.X({
-    className: `${pfx}__filter`,
-    kids: FILTERS.map((f) =>
+  // ── Personal | Team ────────────────────────────────────────────────────────
+  // A segmented pair, not a dropdown: both choices stay on screen.
+  const audienceBar = Skeletons.Box.X({
+    className: `${pfx}__audience`,
+    kids: AUDIENCES.map((a) =>
       Skeletons.Note({
-        className: `${pfx}__filter-item`,
-        content: LOCALE[f.label],
-        attrOpt: { "data-active": f.key === filter ? "1" : "0" },
+        className: `${pfx}__audience-item`,
+        content: LOCALE[a.label],
+        attrOpt: { "data-active": a.key === audience ? "1" : "0" },
         bubble: 0,
-        service: "cal-set-filter",
+        service: "cal-set-audience",
         uiHandler: [ui],
-        calFilter: f.key,
+        calAudience: a.key,
       }),
     ),
+  });
+
+  // ── ≡ All / Task / Meeting ─────────────────────────────────────────────────
+  // Not persisted: the spec is explicit that it resets to All each session.
+  // The button names the current choice. The design draws the closed button
+  // only, so the open list is built the way the view menu is.
+  const currentFilter = FILTERS.find((f) => f.key === filter) || FILTERS[0];
+  const filterMenu = ui.isMenuOpen("filter")
+    ? Skeletons.Box.Y({
+        className: `${pfx}__menu`,
+        attrOpt: { "data-anchor": "filter" },
+        kids: FILTERS.map((f) =>
+          Skeletons.Note({
+            className: `${pfx}__menu-item`,
+            content: LOCALE[f.label],
+            attrOpt: { "data-active": f.key === filter ? "1" : "0" },
+            bubble: 0,
+            service: "cal-set-filter",
+            uiHandler: [ui],
+            calFilter: f.key,
+          }),
+        ),
+      })
+    : null;
+
+  const filterPicker = Skeletons.Box.Y({
+    className: `${pfx}__filter-picker`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__filter-button`,
+        attrOpt: {
+          "data-open": ui.isMenuOpen("filter") ? "1" : "0",
+          // The visible value stays in the accessible name: "Filter: Task".
+          "aria-label": `${LOCALE.FILTER}: ${LOCALE[currentFilter.label]}`,
+        },
+        bubble: 0,
+        service: "cal-toggle-filter-menu",
+        uiHandler: [ui],
+        // See __range above — a child without active:0 swallows the click.
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "app-filter-list",
+            className: `${pfx}__filter-ico`,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__filter-label`,
+            content: LOCALE[currentFilter.label],
+          }),
+        ],
+      }),
+      filterMenu,
+    ].filter(Boolean),
   });
 
   // ── + New ▾ ────────────────────────────────────────────────────────────────
@@ -256,13 +325,13 @@ module.exports = function (ui) {
       ],
     });
 
-  const newMenu = ui.isNewMenuOpen()
+  const newMenu = ui.isMenuOpen("new")
     ? Skeletons.Box.Y({
         className: `${pfx}__menu`,
         attrOpt: { "data-anchor": "new" },
         kids: [
-          newMenuRow("app-task-list", LOCALE.TASK, "cal-new-task"),
-          newMenuRow("ph-video", LOCALE.MEETING, "cal-new-meeting"),
+          newMenuRow("noti-list-checks", LOCALE.TASK, "cal-new-task"),
+          newMenuRow("noti-video-camera", LOCALE.MEETING, "cal-new-meeting"),
         ],
       })
     : null;
@@ -272,7 +341,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__new-button`,
-        attrOpt: { "data-open": ui.isNewMenuOpen() ? "1" : "0" },
+        attrOpt: { "data-open": ui.isMenuOpen("new") ? "1" : "0" },
         bubble: 0,
         service: "cal-toggle-new-menu",
         uiHandler: [ui],
@@ -280,7 +349,7 @@ module.exports = function (ui) {
         // did nothing while a click on the button's padding opened the menu.
         kidsOpt: { active: 0 },
         kids: [
-          Skeletons.Note({ className: `${pfx}__new-plus`, content: "+" }),
+          Skeletons.Image.Svg({ ico: "ph-plus", className: `${pfx}__new-plus` }),
           Skeletons.Note({ className: `${pfx}__new-label`, content: LOCALE.NEW }),
         ],
       }),
@@ -295,12 +364,12 @@ module.exports = function (ui) {
   return [
     Skeletons.Box.X({
       className: `${pfx}__toolbar-left`,
-      kids: [label],
+      kids: [nav, label],
     }),
     Skeletons.Box.X({
       className: `${pfx}__toolbar-right`,
-      // "+ New" hidden for now; flip SHOW_NEW_BUTTON to bring it back.
-      kids: [viewPicker, filterBar, SHOW_NEW_BUTTON ? newButton : null].filter(Boolean),
+      // SHOW_NEW_BUTTON hides "+ New" when set to false.
+      kids: [viewPicker, audienceBar, filterPicker, SHOW_NEW_BUTTON ? newButton : null].filter(Boolean),
     }),
   ];
 };

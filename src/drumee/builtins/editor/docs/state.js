@@ -2,13 +2,23 @@ import { createElement, createRef } from "react";
 import { createRoot } from "react-dom/client";
 import { DocxEditor } from "@casualoffice/docs/react";
 import { CasualEditor } from "@casualoffice/docs";
-import { serializeDocx } from "@casualoffice/docs/core";
+import { serializeDocx, attemptSelectiveSave, parseDocx } from "@casualoffice/docs/core";
 import "@casualoffice/docs/styles.css";
 import { contentUrl } from "builtins/editor/content-url";
 const docTabs = require("./tabs");
 
 // Co-editing helpers: gateway probe, Drumee FileSource adapter, identity.
 const collab = require("./collab");
+// Live comment threads into the saved file, and back into a re-created room.
+const liveComments = require("./live-comments");
+// "Open this file on that comment", left by a notification click.
+const pendingFocus = require("builtins/editor/pending-focus");
+// A room counts as changed for this long after its last update: covers the
+// export Casual runs before handing the bytes to FileSource.save.
+const LIVE_SETTLE_MS = 2000;
+// How long after "connected" a room is given to receive its threads from the
+// gateway before an empty map is taken as a room re-created from the file.
+const LIVE_SEED_DELAY_MS = 2500;
 
 // A guaranteed-valid minimal blank .docx (OOXML: [Content_Types], _rels, an empty
 // word/document.xml). NEW docs mount through the same documentBuffer path an
@@ -63,6 +73,11 @@ class __docs_state extends DrumeeMFS {
    */
   onDomRefresh() {
     if (this._mounted) return;
+    // A "<A> commented on <file>" click opens the file ON that comment.
+    if (!this._focusAsked) {
+      this._focusAsked = 1;
+      this._focusPendingComment();
+    }
     this.containerId = `${this.mget(_a.widgetId)}-docs-state`;
     this.el.setAttribute(_a.id, this.containerId);
     // Co-editing when the gateway answers: the room is the nid, CasualEditor
@@ -279,6 +294,7 @@ class __docs_state extends DrumeeMFS {
             api ? Object.keys(api).filter((k) => typeof api[k] === "function").length : "null");
           this._apiHandle = api;
           this._nudgeResize();
+          this._decorateSingleTitleBar();
           // The editor is now fully mounted — make sure the window sits
           // above the desk's Files folder (see editor._raiseAboveDesk).
           if (this.editor && this.editor._raiseAboveDesk) this.editor._raiseAboveDesk();
@@ -337,6 +353,52 @@ class __docs_state extends DrumeeMFS {
    * it installs no OS listener.
    */
   /**
+   * Figma 1319:146667: the header starts with a 40px file glyph before the
+   * document name. Casual's title bar has none (its logo is hidden), so one
+   * is placed first — inside Drumee's name box in co-editing (`box`), else
+   * first in the bar. Idempotent: the observers re-run it on every render.
+   *
+   * @param {Element} bar   Casual's [data-testid="title-bar"]
+   * @param {Element} box   the co-editing name box, when there is one
+   */
+  _decorateTitleBar(bar, box) {
+    const host = box || bar;
+    if (!host || host.querySelector(":scope > .editor-docs__file-glyph")) return;
+    const glyph = document.createElement("span");
+    glyph.className = "editor-docs__file-glyph";
+    glyph.innerHTML =
+      '<svg width="32" height="32" aria-hidden="true"><use href="#--icon-raw-documents_udoc"></use></svg>';
+    host.insertBefore(glyph, host.firstChild);
+  }
+
+  /**
+   * Single-user shell (DocxEditor): no name box is injected, so the glyph
+   * goes straight into Casual's title bar, re-applied when Casual re-renders
+   * it (a rename re-renders the whole bar).
+   */
+  _decorateSingleTitleBar() {
+    const root = this.el;
+    if (!root) return;
+    const run = () => {
+      try {
+        const bar = root.querySelector('[data-testid="title-bar"]');
+        if (bar) this._decorateTitleBar(bar, null);
+        this._wirePrintButton();
+      } catch (e) {
+        /** editor gone */
+      }
+    };
+    run();
+    if (!this._glyphObs) {
+      this._glyphObs = new MutationObserver(() => {
+        clearTimeout(this._glyphTimer);
+        this._glyphTimer = setTimeout(run, 80);
+      });
+      this._glyphObs.observe(root, { childList: true, subtree: true });
+    }
+  }
+
+  /**
    * Hide Casual's "Help" menubar menu (Report issue / About Casual Editor /
    * shortcuts): Drumee's gear menu offers "Contact us" instead. DocxEditor
    * exposes no prop for it, so hide the menu's wrapper after each render (a
@@ -379,10 +441,11 @@ class __docs_state extends DrumeeMFS {
     const editor = this.editor;
     const tidy = () => {
       try {
+        const host = this._activeHost() || root;
         for (const b of root.querySelectorAll('button[aria-label^="Theme:"], button[aria-label^="Theme "]')) {
           b.style.display = "none";
         }
-        const cluster = root.querySelector('[data-testid="presence-cluster"]');
+        const cluster = host.querySelector('[data-testid="presence-cluster"]');
         if (cluster) {
           for (const b of cluster.querySelectorAll("button")) {
             if (/share/i.test(b.textContent || "")) b.style.display = "none";
@@ -400,8 +463,9 @@ class __docs_state extends DrumeeMFS {
           }
         }
         // CasualEditor ignores documentName*: add Drumee's own editable name
-        // at the left of Casual's title row (menus shift right).
-        const bar = root.querySelector('[data-testid="title-bar"]');
+        // at the left of Casual's title row (menus shift right) — the row of
+        // the pane on screen.
+        const bar = host.querySelector('[data-testid="title-bar"]');
         if (bar && editor) {
           let box = this._nameBox;
           if (!box) {
@@ -432,6 +496,7 @@ class __docs_state extends DrumeeMFS {
             box.appendChild(input);
             this._nameBox = box;
           }
+          this._decorateTitleBar(bar, box);
           if (box.parentElement !== bar) bar.insertBefore(box, bar.firstChild);
           const input = box.querySelector("input");
           if (input && document.activeElement !== input) {
@@ -439,6 +504,8 @@ class __docs_state extends DrumeeMFS {
             if (input.value !== cur) input.value = cur;
           }
         }
+        this._wireCollabUndo();
+        this._wirePrintButton();
       } catch (e) {
         /** editor gone */
       }
@@ -451,6 +518,232 @@ class __docs_state extends DrumeeMFS {
       });
       this._tidyObs.observe(root, { childList: true, subtree: true });
     }
+  }
+
+  /**
+   * Undo / redo while co-editing. Casual's collab mount swaps ProseMirror's
+   * history for y-prosemirror's yUndoPlugin but leaves its toolbar buttons
+   * and Mod-Z on prosemirror-history (1.4.2): the buttons stay disabled and
+   * Mod-Z does nothing. And yUndoPlugin's own UndoManager never fills: Casual
+   * appends a paragraph-id housekeeping transaction (`addToHistory: false`)
+   * to every edit, y-prosemirror hands the LAST flag of the batch to the Yjs
+   * transaction, and the manager skips it. So Drumee's own pair takes their
+   * place, driven by a Yjs UndoManager of its own on the room's fragment
+   * (same tracked origin and delete filter, every transaction captured), and
+   * the shortcuts are answered on the editor root. Re-applied from the chrome
+   * observer (Casual re-renders the bar), re-built when the room changes.
+   */
+  _wireCollabUndo() {
+    const root = this.el;
+    const view = this._collabView();
+    if (!root || !view) return;
+    const host = this._activeHost() || root;
+    const bar = host.querySelector('[data-testid="formatting-bar"]');
+    const native = bar && bar.querySelector('[data-testid="toolbar-undo"]');
+    if (!native) return;
+    let box = bar.querySelector(".editor-docs__undo-redo");
+    if (!box) {
+      box = document.createElement("span");
+      box.className = "editor-docs__undo-redo";
+      const nativeRedo = bar.querySelector('[data-testid="toolbar-redo"]');
+      const make = (kind, title) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = `editor-docs__history editor-docs__history--${kind}`;
+        b.title = title;
+        // The editor keeps its selection: no focus change on press.
+        b.addEventListener("mousedown", (e) => e.preventDefault());
+        b.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this._yHistory(kind);
+        });
+        box.appendChild(b);
+        return b;
+      };
+      box._undo = make("undo", native.getAttribute("aria-label") || native.title || "Undo");
+      box._redo = make(
+        "redo",
+        (nativeRedo && (nativeRedo.getAttribute("aria-label") || nativeRedo.title)) || "Redo"
+      );
+      native.parentElement.insertBefore(box, native);
+    }
+    const plugins = view.state.plugins || [];
+    const syncPlugin = plugins.find((p) => String(p.key) === "y-sync$");
+    const undoPlugin = plugins.find((p) => String(p.key) === "y-undo$");
+    const sync = syncPlugin && syncPlugin.getState(view.state);
+    const theirs = undoPlugin && undoPlugin.getState(view.state);
+    const fragment = sync && sync.type;
+    const model = theirs && theirs.undoManager;
+    if (!fragment || !model) return;
+    if (this._undoFragment !== fragment) {
+      this._unbindUndoManager();
+      // Same Yjs as the document's (the class of Casual's own manager).
+      const UndoManager = model.constructor;
+      const origins = new Set(model.trackedOrigins || []);
+      if (syncPlugin.spec && syncPlugin.spec.key) origins.add(syncPlugin.spec.key);
+      const um = new UndoManager(fragment, {
+        trackedOrigins: origins,
+        deleteFilter: model.deleteFilter,
+        captureTransaction: () => true,
+      });
+      this._undoFragment = fragment;
+      this._undoManager = um;
+      this._undoOwned = 1;
+      this._undoRefresh = () => this._refreshHistoryButtons();
+      for (const ev of ["stack-item-added", "stack-item-popped", "stack-cleared"]) {
+        um.on(ev, this._undoRefresh);
+      }
+    }
+    this._refreshHistoryButtons();
+    if (!this._undoKeys) {
+      // On the document, capture phase: Casual answers Mod-Z from a document
+      // level listener of its own (prosemirror-history, a no-op in a room)
+      // before anything on the editor root would see the key.
+      this._undoKeys = (e) => {
+        if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
+        // Casual keeps the ProseMirror surface off screen, outside the pane
+        // (its pages are drawn apart): the key counts when it lands on the
+        // view of the room on screen, or anywhere in the pane.
+        const view = this._collabView();
+        const inView = !!(view && view.dom && view.dom.contains(e.target));
+        const scope = this._activeHost() || this._host || this.el;
+        if (!inView && !(scope && scope.contains(e.target))) return;
+        const k = (e.key || "").toLowerCase();
+        let kind = null;
+        if (k === "z") kind = e.shiftKey ? "redo" : "undo";
+        else if (k === "y") kind = "redo";
+        if (!kind) return;
+        e.preventDefault();
+        e.stopPropagation();
+        this._yHistory(kind);
+      };
+      document.addEventListener("keydown", this._undoKeys, true);
+    }
+  }
+
+  /**
+   * The design's Printer button (Figma toolbar: Search, Undo, Redo, Printer,
+   * Paint format…). Casual's bar has none, its API prints: before Paint
+   * format, in the bar of the pane on screen, both shells.
+   */
+  _wirePrintButton() {
+    const host = this._activeHost() || this.el;
+    const bar = host && host.querySelector('[data-testid="formatting-bar"]');
+    const paint = bar && bar.querySelector('[data-testid="toolbar-paint-format"]');
+    if (!paint || bar.querySelector(".editor-docs__print")) return;
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "editor-docs__print";
+    b.title = LOCALE.PRINT || "Print";
+    b.addEventListener("mousedown", (e) => e.preventDefault());
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.printDocument();
+    });
+    paint.parentElement.insertBefore(b, paint);
+  }
+
+  /** Casual's print (its own preview / layout), the browser's as a fallback. */
+  printDocument() {
+    const api = (this._ref && this._ref.current) || this._apiHandle;
+    try {
+      if (api && typeof api.print === "function") return api.print();
+      if (api && typeof api.openPrintPreview === "function") return api.openPrintPreview();
+    } catch (e) {
+      /** falls back to the browser */
+    }
+    try {
+      window.print();
+    } catch (e) {
+      /** blocked */
+    }
+    return undefined;
+  }
+
+  /**
+   * The ProseMirror view of the room on screen, through Casual's handle:
+   * CasualEditor's ref exposes DocxEditor's API, whose getEditorRef() is the
+   * inner editor (getView / getState / dispatch).
+   */
+  _collabView() {
+    const ref = this._ref && this._ref.current;
+    if (!ref) return null;
+    try {
+      if (typeof ref.getView === "function") return ref.getView() || null;
+      const inner = typeof ref.getEditorRef === "function" ? ref.getEditorRef() : null;
+      if (inner && typeof inner.getView === "function") return inner.getView() || null;
+      if (inner && inner.current && typeof inner.current.getView === "function") {
+        return inner.current.getView() || null;
+      }
+    } catch (e) {
+      /** editor gone */
+    }
+    return null;
+  }
+
+  /**
+   * The element of the pane on screen. Every tab's pane stays mounted
+   * (hidden) once opened, so a query from the window root finds the FIRST
+   * title bar in the DOM — a hidden tab's, after a switch — and the name box
+   * went there, off screen (the "title lost on tab switch" of 2026-10-26).
+   */
+  _activeHost() {
+    const pane = this._panes && this._room != null ? this._panes.get(this._room) : null;
+    return pane && pane.host ? pane.host : null;
+  }
+
+  _yHistory(kind) {
+    const um = this._undoManager;
+    const view = this._collabView();
+    if (!um || !view) return false;
+    let done = null;
+    try {
+      done = kind === "redo" ? um.redo() : um.undo();
+    } catch (e) {
+      done = null;
+    }
+    this._refreshHistoryButtons();
+    try {
+      view.focus();
+    } catch (e) {
+      /** view gone */
+    }
+    return done != null;
+  }
+
+  _refreshHistoryButtons() {
+    const host = this._activeHost() || this.el;
+    const box = host && host.querySelector(".editor-docs__undo-redo");
+    const um = this._undoManager;
+    if (!box || !um) return;
+    if (box._undo) box._undo.disabled = !(um.undoStack && um.undoStack.length);
+    if (box._redo) box._redo.disabled = !(um.redoStack && um.redoStack.length);
+  }
+
+  _unbindUndoManager() {
+    const um = this._undoManager;
+    if (um && this._undoRefresh) {
+      for (const ev of ["stack-item-added", "stack-item-popped", "stack-cleared"]) {
+        try {
+          um.off(ev, this._undoRefresh);
+        } catch (e) {
+          /** already gone */
+        }
+      }
+    }
+    if (um && this._undoOwned) {
+      try {
+        um.destroy();
+      } catch (e) {
+        /** already gone */
+      }
+    }
+    this._undoManager = null;
+    this._undoOwned = 0;
+    this._undoFragment = null;
+    this._undoRefresh = null;
   }
 
   /**
@@ -548,6 +841,75 @@ class __docs_state extends DrumeeMFS {
       filename: () =>
         (editor && editor.mget(_a.filename)) || this.mget(_a.filename) || "Untitled document",
     };
+    // Per room (= per document tab): its collab state, whether its Y.Doc has
+    // changed since the last save, and the bytes it was opened with.
+    const live = (this._live = this._live || new Map());
+    const liveRoom = (room) => {
+      let entry = live.get(String(room));
+      if (!entry) {
+        entry = { dirty: false, lastUpdateAt: 0 };
+        live.set(String(room), entry);
+      }
+      return entry;
+    };
+    ctx.onOpened = (room, bytes) => {
+      liveRoom(room).bytes = bytes;
+    };
+    // Idle only when the room's Y.Doc is known and has not changed since its
+    // last save; any doubt -> not idle -> the save goes out as before.
+    ctx.isIdle = (room) => {
+      const entry = live.get(String(room));
+      return !!(entry && entry.ydoc && !entry.dirty);
+    };
+    ctx.prepareBytes = (room, bytes) => {
+      const entry = live.get(String(room));
+      const map = entry && entry.state && entry.state.commentsMap;
+      return liveComments.withComments(bytes, map, attemptSelectiveSave);
+    };
+    ctx.onSaved = (room, startedAt) => {
+      const entry = live.get(String(room));
+      // A change shortly before the save started may not be in the bytes
+      // Casual exported: keep the room dirty, the next tick saves it.
+      if (entry && entry.lastUpdateAt < startedAt - LIVE_SETTLE_MS) entry.dirty = false;
+    };
+    // Called with every collab state of a room, on screen or not.
+    const trackRoom = (room, state) => {
+      const entry = liveRoom(room);
+      entry.state = state;
+      const ydoc = state && state.commentsMap && state.commentsMap.doc;
+      if (ydoc && entry.ydoc !== ydoc && typeof ydoc.on === "function") {
+        if (entry.unsub) entry.unsub();
+        const onUpdate = () => {
+          entry.dirty = true;
+          entry.lastUpdateAt = Date.now();
+        };
+        ydoc.on("update", onUpdate);
+        entry.unsub = () => ydoc.off("update", onUpdate);
+        entry.ydoc = ydoc;
+      }
+      if (state && state.status === "connected" && !entry.seedTimer) {
+        entry.seedTimer = setTimeout(() => {
+          const now = live.get(String(room));
+          if (!now || !now.state || this._destroyed) return;
+          liveComments
+            .seedComments(now.state.commentsMap, now.bytes, parseDocx)
+            .then((n) => {
+              if (n) console.log("[DOCS] restored", n, "comment threads into room", room);
+            });
+        }, LIVE_SEED_DELAY_MS);
+      }
+    };
+    const untrackRoom = (room) => {
+      const entry = live.get(String(room));
+      if (!entry) return;
+      if (entry.unsub) entry.unsub();
+      clearTimeout(entry.seedTimer);
+      live.delete(String(room));
+    };
+    this._untrackRoom = untrackRoom;
+    // This peer's own comment-id range (Casual issue #257).
+    if (!this._commentIdBase) this._commentIdBase = liveComments.peerCommentIdBase();
+
     const fileSource = collab.makeFileSource(editor, ctx);
     // Kept so flushCollabSave() can push bytes through the very same adapter
     // the autosave uses when Casual exposes no flush handle.
@@ -601,6 +963,7 @@ class __docs_state extends DrumeeMFS {
         const pane = this._panes.get(room);
         if (!pane) continue;
         this._panes.delete(room);
+        untrackRoom(room);
         try {
           pane.root.unmount();
           pane.host.remove();
@@ -643,9 +1006,20 @@ class __docs_state extends DrumeeMFS {
         autosaveInterval: 4000,
         // File → Save / Ctrl+S inside Casual: with no onSave prop the shell
         // DOWNLOADS a .docx; route it to Drumee's save (autosave flush).
+        //
+        // Casual calls onSave from EVERY save, its own autosave included, and
+        // that autosave persists through FileSource.save right after. Flushing
+        // on each call queued one more save behind the running one, which
+        // called onSave again: a save about every second for as long as the
+        // document stayed open. So only a save that nothing persisted shortly
+        // after -- a File -> Save -- is flushed.
         onSave: () => {
           if (room !== this._room) return;
-          if (editor && typeof editor.saveContent === "function") editor.saveContent();
+          const askedAt = Date.now();
+          setTimeout(() => {
+            if (this._destroyed || fileSource.lastSaveAt(room) >= askedAt) return;
+            if (editor && typeof editor.saveContent === "function") editor.saveContent();
+          }, 1500);
         },
         showRuler: true,
         // Hidden tabs keep running, so every callback belongs to ONE room and
@@ -657,7 +1031,11 @@ class __docs_state extends DrumeeMFS {
           this._autosave = state;
           if (editor && editor.setSaveStatus) editor.setSaveStatus(mapStatus(state));
         },
+        // Comment ids partitioned per peer: two peers commenting at once
+        // cannot overwrite each other's thread (live-comments).
+        docxEditorProps: { commentIdBase: this._commentIdBase },
         onCollabState: (state) => {
+          trackRoom(room, state);
           if (room !== this._room) return;
           this._collabState = state;
           if (state && state.status === "connected" && !this._raisedOnce) {
@@ -773,6 +1151,58 @@ class __docs_state extends DrumeeMFS {
     this._roomSynced = 1;
     const want = docTabs.roomId(this._collab.nid, tabs, active);
     if (this._room && want !== this._room) this.showTab(active);
+  }
+
+  /**
+   * The comment a notification asked this file to open on (pending-focus):
+   * bring its tab up, wait for its highlight to be in the document, then put
+   * the caret in it -- exactly what a click on the highlight does: the
+   * comments panel opens with that thread expanded and the anchor marked.
+   * Gives up silently (the file stays open) when the comment never shows.
+   */
+  async _focusPendingComment() {
+    const target = pendingFocus.take(this.mget(_a.nid));
+    const id = target ? Number(target.comment_id) : NaN;
+    if (!Number.isFinite(id) || id <= 0) return;
+    const editor = this.editor;
+    const cancelled = () => !!this._destroyed;
+    if (target.tab_id && editor && editor.getTabs && editor.activeTabId && editor.selectTab) {
+      const known = await pendingFocus.waitFor(
+        () => editor.getTabs().some((t) => t.id === target.tab_id),
+        { timeout: 10000, cancelled },
+      );
+      if (known && editor.activeTabId() !== target.tab_id) await editor.selectTab(target.tab_id);
+    }
+    // In a Live room the content (and so the highlight) arrives after mount.
+    const found = await pendingFocus.waitFor(() => {
+      const ref = this.currentRef();
+      const pe = ref && ref.getEditorRef && ref.getEditorRef();
+      const view = pe && pe.getView && pe.getView();
+      if (!view) return null;
+      let pos = null;
+      view.state.doc.descendants((n, p) => {
+        if (pos != null) return false;
+        if (n.isText && n.marks.some((m) => m.type.name === "comment" && Number(m.attrs.commentId) === id)) {
+          pos = p;
+          return false;
+        }
+        return true;
+      });
+      return pos == null ? null : { pe, pos };
+    }, { timeout: 20000, cancelled });
+    if (!found) return;
+    try {
+      found.pe.scrollToPosition(found.pos);
+      found.pe.setSelection(found.pos + 1);
+    } catch (e) {
+      this.warn("docs_state: could not open the comment", e);
+    }
+    // A RESOLVED thread is skipped by that path; its collapsed card opens on
+    // a click.
+    setTimeout(() => {
+      const card = this.el && this.el.querySelector(`[data-comment-id="${id}"][data-comment-resolved="true"]`);
+      if (card && typeof card.click === "function") card.click();
+    }, 600);
   }
 
   /** The editor handle of the tab currently on screen. */
@@ -911,6 +1341,13 @@ class __docs_state extends DrumeeMFS {
    *
    */
   onBeforeDestroy() {
+    try {
+      this._unbindUndoManager();
+      if (this._undoKeys) document.removeEventListener("keydown", this._undoKeys, true);
+      this._undoKeys = null;
+    } catch (e) {
+      /** already gone */
+    }
     console.log("[DOCS] onBeforeDestroy (state) called");
     this._destroyed = 1;
     if (this._saveTimer) {
@@ -923,6 +1360,11 @@ class __docs_state extends DrumeeMFS {
         this._helpObs = null;
       }
       clearTimeout(this._helpTimer);
+      if (this._glyphObs) {
+        this._glyphObs.disconnect();
+        this._glyphObs = null;
+      }
+      clearTimeout(this._glyphTimer);
       clearInterval(this._veilPoll);
       if (this._root) this._root.unmount();
       if (this._host) {
@@ -941,6 +1383,9 @@ class __docs_state extends DrumeeMFS {
           }
         }
         this._panes.clear();
+      }
+      if (this._live) {
+        for (const room of Array.from(this._live.keys())) this._untrackRoom(room);
       }
     } catch (e) {
       /** already gone */

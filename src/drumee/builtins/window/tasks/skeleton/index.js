@@ -102,7 +102,7 @@ const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
 // the subtask builders below live at module scope where that one isn't visible.
 const {
   mayCreateTask,
-  subtaskBadge,
+  subtaskStrip,
   assigneeUids,
   formatDue: formatDueDate,
   FILTER_DIMS,
@@ -111,6 +111,14 @@ const {
   filterDimLabel,
   filterLabels,
 } = require("./helpers");
+
+// The Personal Calendar's quick-open card for a member who may not write. Its
+// controls are locked and its fields read-only, while everything they show
+// (title, description, status, priority, people, dates, subtasks, reactions)
+// stays readable, scrollable and selectable. Never true on the board itself.
+function quickLockedOf(ui) {
+  return !!(ui.mget && ui.mget("quick_open")) && !mayCreateTask(ui);
+}
 
 const make = function (ui) {
   const pfx = ui.fig.family;
@@ -143,6 +151,13 @@ const make = function (ui) {
   const creating = ui.isCreating();
   const draft = ui.getCreateDraft();
   const detail = ui.getDetailTask();
+  // Quick-open card (mounted by the Personal Calendar with quick_open): only
+  // the detail card is drawn. Locked for a member who may not write (see
+  // quickLockedOf): `inert` goes on the blocks that hold nothing but controls,
+  // the fields become read-only, and the skin stops the clickable pills.
+  const quickOpen = !!ui.mget("quick_open");
+  const quickLocked = quickLockedOf(ui);
+  const lockOpt = quickLocked ? { attrOpt: { inert: "" } } : {};
   const priorities = ui.getPriorities();
   const members = ui.getMembers();
   const allLabels = ui.getLabels();
@@ -197,7 +212,8 @@ const make = function (ui) {
   // primitive Jira/Linear use. The panel owns the editor's content and events
   // via onPartReady; `scope` is "create" | "detail" so it targets the right
   // editor + dropdown.
-  const descEditor = (scope) => mentionField(ui, scope);
+  const descEditor = (scope) =>
+    mentionField(ui, scope, scope === "detail" && quickLocked ? { readOnly: true } : {});
 
   // ── Card pieces ───────────────────────────────────────────────
   // Title on the card is a plain Note: clicking it bubbles up to the card,
@@ -333,9 +349,6 @@ const make = function (ui) {
           })
         : null,
       task.due_date ? dueBadge(task) : null,
-      // Subtask count — rendered only when the task has children, so a board of
-      // ordinary tasks looks exactly as it does today.
-      subtaskBadge(ui, task, `${pfx}__task-subcount`),
     ].filter(Boolean);
     const meta = metaKids.length
       ? Skeletons.Box.X({ className: `${pfx}__task-meta`, kids: metaKids })
@@ -409,9 +422,17 @@ const make = function (ui) {
       service: "open-detail",
       uiHandler: [ui],
       taskId: task.id,
-      // Figma card order: labels, title+desc, files, priority+due row, then
-      // the status-pill + avatars row.
-      kids: [labelsStrip, head, filesNode, meta, footer].filter(Boolean),
+      // Figma card order: labels, title+desc, files, priority+due row, the
+      // status-pill + avatars row, then the Subtasks strip (873:228353) —
+      // null for a task with no children, so ordinary cards are unchanged.
+      kids: [
+        labelsStrip,
+        head,
+        filesNode,
+        meta,
+        footer,
+        subtaskStrip(ui, task, { pfx, surface: "board" }),
+      ].filter(Boolean),
     });
   };
 
@@ -602,67 +623,15 @@ const make = function (ui) {
       ),
     });
 
-  // Assignee control — same interaction as the meeting-schedule invitee field:
-  // chips + inline search, suggestions fed live by _filterAssignees. It is a
-  // combobox, not a search-only field: focusing the input (or clicking the
-  // caret) lists every member, and typing filters that same list — so the set
-  // stays browsable for people who don't know who they're looking for.
-  // `scope` is "create" | "detail".
-  const assigneeSearchField = (selectedUids, scope) => {
-    const selected = Array.isArray(selectedUids)
-      ? selectedUids.map(String)
-      : selectedUids
-        ? [String(selectedUids)]
-        : [];
-    // One mapping for both scopes, shared with the panel (_applyAssigneeChange
-    // / _filterAssignees resolve the same way) so a new picker only has to name
-    // its scope. "-reporter" scopes are single-select — see reporterPicker.
-    const service = ui.pickerService(scope);
-    return Skeletons.Box.Y({
-      className: `${pfx}__assignee-picker`,
-      kids: [
-        Skeletons.Box.X({
-          className: `${pfx}__assignee-control`,
-          kids: [
-            Skeletons.Box.X({
-              className: `${pfx}__assignee-chips`,
-              sys_pn: `${scope}-assignee-chips`,
-              partHandler: ui,
-              kids: buildAssigneeChips(ui, selected, service),
-            }),
-            // Entry (not a bare input) so the framework keeps it typeable.
-            Skeletons.Entry({
-              className: `${pfx}__assignee-search`,
-              name: `assignee-search-${scope}`,
-              placeholder: LOCALE.SEARCH_PEOPLE,
-              require: "any",
-              bubble: 0,
-              uiHandler: [ui],
-            }),
-            // Visible affordance that a full member list is one click away —
-            // focusing the input opens the same list.
-            Skeletons.Button.Svg({
-              className: `${pfx}__assignee-caret`,
-              ico: "apps-caret-down",
-              bubble: 0,
-              service: "toggle-assignee-list",
-              uiHandler: [ui],
-              assigneeScope: scope,
-            }),
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__assignee-suggestions`,
-          sys_pn: `${scope}-assignee-suggestions`,
-          partHandler: ui,
-          // dataset is dropped at render unless attrOpt is also set.
-          attrOpt: { "data-open": "0" },
-          bubble: 0,
-          kids: [],
-        }),
-      ],
-    });
-  };
+  // Assignee control for the task cards — see assigneePickerField. `scope` is
+  // "create" | "detail"; only the detail card takes the quick lock.
+  const assigneeSearchField = (selectedUids, scope) =>
+    assigneePickerField(
+      ui,
+      selectedUids,
+      scope,
+      scope === "detail" ? lockOpt : {},
+    );
 
   // Reporter control — the assignee picker in single-select mode. Same shell
   // (chips row + combobox + suggestions part), so it inherits the delegated
@@ -691,6 +660,7 @@ const make = function (ui) {
             Skeletons.Entry({
               className: `${pfx}__assignee-search`,
               name: `assignee-search-${scope}`,
+              ...(scope === "detail" || scope === "detail-reporter" ? lockOpt : {}),
               placeholder: LOCALE.SEARCH_PEOPLE,
               require: "any",
               bubble: 0,
@@ -868,6 +838,7 @@ const make = function (ui) {
     // fields above (create modal) — all "file rows" land together.
     return Skeletons.Box.Y({
       className: `${pfx}__file-picker`,
+      ...(scope === "detail" ? lockOpt : {}),
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__file-pending-list`,
@@ -1190,6 +1161,7 @@ const make = function (ui) {
         // own avatar · "Write a comment…" field · paperclip / @ / send icons.
         Skeletons.Box.X({
           className: `${pfx}__comment-composer`,
+          ...lockOpt,
           kids: [
             Skeletons.UserProfile({
               className: `${pfx}__composer-avatar`,
@@ -1287,14 +1259,28 @@ const make = function (ui) {
           service: "close-detail",
           uiHandler: [ui],
         }),
-        Skeletons.Note({
-          className: `${pfx}__detail-submit`,
-          content: LOCALE.UPDATE,
-          bubble: 0,
-          service: "commit-detail",
-          uiHandler: [ui],
-        }),
-      ],
+        // Quick-open card only (Figma 1697:50129): leave for the workspace
+        // board, on this task.
+        quickOpen
+          ? Skeletons.Note({
+              className: `${pfx}__detail-open-board`,
+              content: LOCALE.OPEN_IN_BOARD,
+              bubble: 0,
+              service: "quick-open-board",
+              uiHandler: [ui],
+            })
+          : null,
+        // A member who may not write has nothing to save.
+        quickLocked
+          ? null
+          : Skeletons.Note({
+              className: `${pfx}__detail-submit`,
+              content: LOCALE.UPDATE,
+              bubble: 0,
+              service: "commit-detail",
+              uiHandler: [ui],
+            }),
+      ].filter(Boolean),
     });
 
     // A child opens in the SAME panel as its parent — without this the panel
@@ -1304,21 +1290,27 @@ const make = function (ui) {
     const parentTask = ui.isSubtask(detail)
       ? ui.getTaskById(detail.parent_task_id)
       : null;
+    // "Parent / child" (Figma 944:107305): only the parent's name is a link
+    // back; the child's is where you already are.
     const parentCrumb = parentTask
       ? Skeletons.Box.X({
           className: `${pfx}__detail-parent`,
-          bubble: 0,
-          service: "open-detail",
-          uiHandler: [ui],
-          taskId: parentTask.id,
           kids: [
-            Skeletons.Image.Svg({
-              ico: "caret-left",
-              className: `${pfx}__detail-parent-ico`,
-            }),
             Skeletons.Note({
               className: `${pfx}__detail-parent-title`,
               content: parentTask.title || "",
+              bubble: 0,
+              service: "open-detail",
+              uiHandler: [ui],
+              taskId: parentTask.id,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__detail-parent-sep`,
+              content: "/",
+            }),
+            Skeletons.Note({
+              className: `${pfx}__detail-parent-current`,
+              content: detail.title || "",
             }),
           ],
         })
@@ -1330,6 +1322,10 @@ const make = function (ui) {
         Skeletons.Box.Y({
           className: `${pfx}__title-field ${pfx}__detail-title-field${titleFlags(dDraft)}`,
           kids: [
+            // Inside the title column, not a sibling of the header: the
+            // panel's gap (32 / 16 / 12px by layout) would otherwise sit
+            // between the crumb and the title it names.
+            parentCrumb,
             // Textarea (not Entry) so a long title wraps and stays fully
             // visible in the update popup instead of being clipped past the
             // field width. `ignoreEnter` keeps it logically single-line.
@@ -1339,6 +1335,7 @@ const make = function (ui) {
               value: dDraft.title || "",
               placeholder: LOCALE.TASK_TITLE,
               require: "any",
+              ...(quickLocked ? { readonly: 1 } : {}),
               rows: 1,
               ignoreEnter: true,
               bubble: 0,
@@ -1346,7 +1343,7 @@ const make = function (ui) {
               uiHandler: [ui],
             }),
             ...titleMissingNote(),
-          ],
+          ].filter(Boolean),
         }),
         Skeletons.Button.Svg({
           className: `${pfx}__detail-close`,
@@ -1383,10 +1380,13 @@ const make = function (ui) {
         Skeletons.Box.Y({
           className: `${pfx}__detail-panel`,
           // JS-stamped phone flag — see `isMobile` at the top of make().
-          attrOpt: { "data-mobile": isMobile ? "1" : "0" },
+          // The quick-open card also stamps whether the viewer may write; its
+          // skin hides the per-comment and per-file actions when not.
+          attrOpt: quickOpen
+            ? { "data-mobile": isMobile ? "1" : "0", "data-may-write": quickLocked ? "0" : "1" }
+            : { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
           kids: [
-            parentCrumb,
             header,
             // Column on mobile (Box.Y) so the main content + metadata side
             // stack instead of squeezing into two narrow columns.
@@ -1426,7 +1426,6 @@ const make = function (ui) {
               className: `${pfx}__reactions-picker`,
               name: "reactions",
             }),
-            // filter: parentCrumb is null on a top-level task.
           ].filter(Boolean),
         }),
       ],
@@ -2136,6 +2135,51 @@ const make = function (ui) {
     });
   };
 
+  const detailWrapper = () =>
+    Skeletons.Wrapper.Y({
+      className: `${pfx}__detail-wrapper`,
+      name: "task-detail",
+      partHandler: ui,
+      kids: detail ? [detailPanel()] : [],
+    });
+  // sys_pn is hardcoded to "fileselector" by Skeletons.FileSelector;
+  // ensurePart("fileselector") + onPartReady("fileselector") match it.
+  const fileSelector = () =>
+    Skeletons.FileSelector({
+      accept: "*/*",
+      partHandler: ui,
+      uiHandler: [ui],
+      bubble: 0,
+    });
+
+  // The quick-open card draws the detail card and the file input its Upload
+  // needs, and nothing of the board around it. Until the card opens (the
+  // workspace's rows are still loading) it shows the panel's spinner and a ×,
+  // so the overlay is never blank and never a dead end.
+  if (quickOpen) {
+    return Skeletons.Box.Y({
+      className: `${pfx}__root ${pfx}__root--quick`,
+      kids: [
+        detailWrapper(),
+        !ui.isQuickLoading()
+          ? null
+          : Skeletons.Box.Y({
+              className: `${pfx}__quick-loading`,
+              kids: [
+                Skeletons.Button.Svg({
+                  className: `${pfx}__quick-close`,
+                  ico: "cross",
+                  bubble: 0,
+                  service: "quick-open-cancel",
+                  uiHandler: [ui],
+                }),
+              ],
+            }),
+        fileSelector(),
+      ].filter(Boolean),
+    });
+  }
+
   // Sub-views over the same folder-scoped task set. Board is rendered inline
   // (its columns + DnD); List/Summary are separate modules fed the same data.
   const view = ui.getView();
@@ -2343,12 +2387,7 @@ const make = function (ui) {
       // Filter overlay (anchored top-right, below the tab bar's filter button).
       // Every view gets the same multi-dimension accordion.
       filterOpen ? filterDropdown() : null,
-      Skeletons.Wrapper.Y({
-        className: `${pfx}__detail-wrapper`,
-        name: "task-detail",
-        partHandler: ui,
-        kids: detail ? [detailPanel()] : [],
-      }),
+      detailWrapper(),
       Skeletons.Wrapper.Y({
         className: `${pfx}__create-wrapper`,
         name: "task-create",
@@ -2361,14 +2400,7 @@ const make = function (ui) {
         partHandler: ui,
         kids: ui.getBoardModalState().open ? [boardModal()] : [],
       }),
-      // sys_pn is hardcoded to "fileselector" by Skeletons.FileSelector;
-      // ensurePart("fileselector") + onPartReady("fileselector") match it.
-      Skeletons.FileSelector({
-        accept: "*/*",
-        partHandler: ui,
-        uiHandler: [ui],
-        bubble: 0,
-      }),
+      fileSelector(),
     ].filter(Boolean),
   });
 };
@@ -2467,6 +2499,72 @@ function buildReporterChip(ui, uid, opt = {}) {
       ].filter(Boolean),
     }),
   ];
+}
+
+// Assignee control — same interaction as the meeting-schedule invitee field:
+// chips + inline search, suggestions fed live by _filterAssignees. It is a
+// combobox, not a search-only field: focusing the input (or clicking the
+// caret) lists every member, and typing filters that same list — so the set
+// stays browsable for people who don't know who they're looking for.
+// `scope` is a multi-select PICKER_SCOPES entry: "create" | "detail" (the task
+// cards) or "subtask" | "create-subtask" (the child creator card).
+// `entryOpt` is spread onto the search Entry (the detail card's quick lock).
+function assigneePickerField(ui, selectedUids, scope, entryOpt = {}) {
+  const pfx = ui.fig.family;
+  const selected = Array.isArray(selectedUids)
+    ? selectedUids.map(String)
+    : selectedUids
+      ? [String(selectedUids)]
+      : [];
+  // One mapping for every scope, shared with the panel (_applyAssigneeChange
+  // / _filterAssignees resolve the same way) so a new picker only has to name
+  // its scope. "-reporter" scopes are single-select — see reporterPicker.
+  const service = ui.pickerService(scope);
+  return Skeletons.Box.Y({
+    className: `${pfx}__assignee-picker`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__assignee-control`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${pfx}__assignee-chips`,
+            sys_pn: `${scope}-assignee-chips`,
+            partHandler: ui,
+            kids: buildAssigneeChips(ui, selected, service),
+          }),
+          // Entry (not a bare input) so the framework keeps it typeable.
+          Skeletons.Entry({
+            className: `${pfx}__assignee-search`,
+            name: `assignee-search-${scope}`,
+            ...entryOpt,
+            placeholder: LOCALE.SEARCH_PEOPLE,
+            require: "any",
+            bubble: 0,
+            uiHandler: [ui],
+          }),
+          // Visible affordance that a full member list is one click away —
+          // focusing the input opens the same list.
+          Skeletons.Button.Svg({
+            className: `${pfx}__assignee-caret`,
+            ico: "apps-caret-down",
+            bubble: 0,
+            service: "toggle-assignee-list",
+            uiHandler: [ui],
+            assigneeScope: scope,
+          }),
+        ],
+      }),
+      Skeletons.Box.Y({
+        className: `${pfx}__assignee-suggestions`,
+        sys_pn: `${scope}-assignee-suggestions`,
+        partHandler: ui,
+        // dataset is dropped at render unless attrOpt is also set.
+        attrOpt: { "data-open": "0" },
+        bubble: 0,
+        kids: [],
+      }),
+    ],
+  });
 }
 
 // Selected assignees as removable chips. Exported so the panel can re-feed
@@ -2634,7 +2732,7 @@ function mentionField(ui, scope, opt = {}) {
         partHandler: ui,
         flow: "none", // block flow for contenteditable, not flex
         attrOpt: {
-          contenteditable: "true",
+          contenteditable: opt.readOnly ? "false" : "true",
           "data-placeholder":
             opt.placeholder || LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
           // Which editor this is, for the drop zone (../drop-zones.js). It has
@@ -3889,8 +3987,8 @@ function dateFieldDisable(name, start, due) {
 
 // Kids for the date section (shared by the detail panel and the create modal —
 // pass scope "detail" | "create"), per Figma 741:96472: "Start date → End
-// date", two independent pickers. `start_date` is optional; the End date is
-// `due_date` and stays required (its __due-field carries the missing flag).
+// date", two independent pickers. Both are optional; the End date is
+// `due_date`.
 // Each stores ISO (Y-m-d) and displays d/m/Y via altInput. Each calendar is
 // bounded by the other field's date (dateFieldDisable) so the pair can never
 // read end-before-start; the controller re-bounds the other picker after a
@@ -3898,6 +3996,8 @@ function dateFieldDisable(name, start, due) {
 function buildDueSectionContent(ui, scope = "detail") {
   const pfx = ui.fig.family;
   const isCreate = scope === "create";
+  // A locked quick-open card shows its dates but does not open the pickers.
+  const locked = !isCreate && quickLockedOf(ui);
   const draft = (isCreate ? ui.getCreateDraft() : ui.getDetailDraft()) || {};
   const start = draft.start_date || "";
   const due = draft.due_date || "";
@@ -3922,6 +4022,7 @@ function buildDueSectionContent(ui, scope = "detail") {
       uiHandler: [ui],
       // appendTo: body escapes the panel's overflow clip.
       vendorOpt: {
+        ...(locked ? { clickOpens: false } : {}),
         dateFormat: "Y-m-d",
         altInput: true,
         altFormat: "d/m/Y",
@@ -3974,21 +4075,9 @@ function buildDueSectionContent(ui, scope = "detail") {
           className: `${pfx}__due-col`,
           kids: [
             label(LOCALE.END_DATE),
-            // Only the End field is a __due-field: _flagDueMissing flags the
-            // FIRST __due-field it finds, so the Start field must not be one.
-            // The picker and its required-field message share this wrapper, so
-            // the flag (draft._dueMissing, also stamped in place by the
-            // controller) outlines the field and reveals the message.
             Skeletons.Box.Y({
               className: `${pfx}__due-field`,
-              attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
-              kids: [
-                picker("due_date", due),
-                Skeletons.Note({
-                  className: `${pfx}__due-missing`,
-                  content: LOCALE.TASK_DUE_REQUIRED,
-                }),
-              ],
+              kids: [picker("due_date", due)],
             }),
           ],
         }),
@@ -4027,7 +4116,9 @@ function skelRows(pfx, shape, n) {
   const LINES = {
     comments: ["38%", "82%"],
     history: ["64%"],
-    attachments: ["100%"],
+    // One row of chips side by side rather than a line of prose: no inline
+    // width, the skin shares the row out equally between them.
+    attachments: [null, null, null, null],
   };
   const withDot = shape !== "attachments";
   return Array.from({ length: n }, (_, i) =>
@@ -4047,7 +4138,7 @@ function skelRows(pfx, shape, n) {
               // Stagger the rows a little so they pulse as a group rather than
               // blinking in lockstep.
               styleOpt: {
-                width: w,
+                ...(w ? { width: w } : {}),
                 "animation-delay": `${(i * 2 + j) * 0.08}s`,
               },
             }),
@@ -4065,7 +4156,7 @@ const isLoading = (ui, key) => !!(ui.isLoading && ui.isLoading(key));
 
 function buildAttachmentRowsContent(ui, attachments, taskId) {
   const pfx = ui.fig.family;
-  if (isLoading(ui, "attachments")) return skelRows(pfx, "attachments", 2);
+  if (isLoading(ui, "attachments")) return skelRows(pfx, "attachments", 1);
   if (!attachments || !attachments.length) {
     return [
       Skeletons.Note({
@@ -4534,40 +4625,54 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
             ),
           ],
         }),
-        // Due date on a row of its own, as the same flatpickr field the parent's
-        // Due date uses (__due-input) rather than a chip over a native picker.
-        Skeletons.Box.Y({
-          className: `${pfx}__subtask-card-date ${pfx}__due-field`,
-          attrOpt: { "data-missing": draft._dueMissing ? "1" : "0" },
+        // Assignees and due date side by side on one row.
+        Skeletons.Box.X({
+          className: `${pfx}__subtask-card-fields`,
           kids: [
-            {
-              kind: "date_picker",
-              className: `${pfx}__due-input ${pfx}__subtask-due-input`,
-              innerClass: `${pfx}__due-input-inner`,
-              name: svc.dateField,
-              placeholder: LOCALE.DUE_DATE,
-              value: draft.due_date || "",
-              service: "task-input-changed",
-              uiHandler: [ui],
-              vendorOpt: {
-                dateFormat: "Y-m-d",
-                altInput: true,
-                altFormat: "d/m/Y",
-                // Explicit null keeps an unset due date unset (see the parent's
-                // picker in buildDueSectionContent).
-                defaultDate: draft.due_date || null,
-                disable: noPastDaysExcept(draft.due_date),
-                appendTo: document.body,
-                position: positionDueCalendarLeft,
-                onReady: (_d, _s, instance) => {
-                  const cc = instance && instance.calendarContainer;
-                  if (cc) cc.classList.add("tasks-panel__flatpickr");
+            // Assignees — the parent card's people picker, editing this card's
+            // draft. Its own scope, so its chips / suggestions parts never collide
+            // with the parent's picker on the same panel.
+            Skeletons.Box.Y({
+              className: `${pfx}__subtask-card-assignee`,
+              kids: [
+                assigneePickerField(
+                  ui,
+                  draft.assignees,
+                  isCreate ? "create-subtask" : "subtask",
+                ),
+              ],
+            }),
+            // Due date: the same flatpickr field the parent's Due date uses
+            // (__due-input) rather than a chip over a native picker.
+            Skeletons.Box.Y({
+              className: `${pfx}__subtask-card-date ${pfx}__due-field`,
+              kids: [
+                {
+                  kind: "date_picker",
+                  className: `${pfx}__due-input ${pfx}__subtask-due-input`,
+                  innerClass: `${pfx}__due-input-inner`,
+                  name: svc.dateField,
+                  placeholder: LOCALE.DUE_DATE,
+                  value: draft.due_date || "",
+                  service: "task-input-changed",
+                  uiHandler: [ui],
+                  vendorOpt: {
+                    dateFormat: "Y-m-d",
+                    altInput: true,
+                    altFormat: "d/m/Y",
+                    // Explicit null keeps an unset due date unset (see the parent's
+                    // picker in buildDueSectionContent).
+                    defaultDate: draft.due_date || null,
+                    disable: noPastDaysExcept(draft.due_date),
+                    appendTo: document.body,
+                    position: positionDueCalendarLeft,
+                    onReady: (_d, _s, instance) => {
+                      const cc = instance && instance.calendarContainer;
+                      if (cc) cc.classList.add("tasks-panel__flatpickr");
+                    },
+                  },
                 },
-              },
-            },
-            Skeletons.Note({
-              className: `${pfx}__due-missing`,
-              content: LOCALE.TASK_DUE_REQUIRED,
+              ],
             }),
           ],
         }),

@@ -1,4 +1,5 @@
 const _file_icon = require('./map');
+const { casualKind } = require('libs/file-meta');
 
 
 const __icon_name = function (m) {
@@ -6,12 +7,15 @@ const __icon_name = function (m) {
   // Casual Docs / Casual Sheets files: black Word/Excel-family glyphs whatever
   // filetype the listing reports (document vs app-data), never the generic
   // extension badge.
-  const lext = String(m.ext || "").toLowerCase();
-  if (lext === "udoc" || m.dataType === "doc.casual") {
+  // By ext or by the dataType marker (libs/file-meta casualKind): the early
+  // Casual sheets are `.json` files whose marker sits in the metadata string
+  // of a raw listing row — the Files rail drew them with the "{..}" badge.
+  const casual = casualKind(m);
+  if (casual === "docs") {
     m.imgCapable = false;
     return { chartId: "raw-documents_udoc", ext: undefined };
   }
-  if (lext === "usheet" || m.dataType === "sheet.univer") {
+  if (casual === "sheet") {
     m.imgCapable = false;
     return { chartId: "raw-documents_usheet", ext: undefined };
   }
