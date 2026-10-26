@@ -449,10 +449,15 @@ function toDom(blocks, doc, make) {
   return frag;
 }
 
-/** True when the text holds anything a plain text box would show as markup. */
+/**
+ * True when the text holds anything a plain text box would show as markup —
+ * an atom, a mark, a list, or an escape ("2\*3" would show its backslash).
+ */
 function hasRichContent(text) {
+  const src = String(text == null ? "" : text);
+  if (/\\[\\*_+~]/.test(src) || /^(?:\\-|\d+\\\.) /m.test(src)) return true;
   const rich = (kids) => kids.some((n) => n.t !== "text");
-  return parse(text).some((b) => (b.t === "line" ? rich(b.kids) : true));
+  return parse(src).some((b) => (b.t === "line" ? rich(b.kids) : true));
 }
 
 module.exports = { parse, stringify, fromDom, toDom, toPlain, hasRichContent };

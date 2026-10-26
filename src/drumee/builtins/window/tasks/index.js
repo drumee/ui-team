@@ -4251,6 +4251,7 @@ class __tasks_panel extends LetcBox {
   }
 
   async _commitTask() {
+    this._flushDescEditor("create");
     this._captureCreateDraft();
     const draft = this._createDefaults || {};
     const title = String(draft.title || "").trim();
@@ -4564,6 +4565,7 @@ class __tasks_panel extends LetcBox {
   }
 
   async _commitDetail() {
+    this._flushDescEditor("detail");
     if (!this._detailId || !this._detailDraft) return;
     this._captureDetailDraft();
     const id = this._detailId;
@@ -9396,15 +9398,30 @@ class __tasks_panel extends LetcBox {
     return this._uploadAttachment(file, "_inline");
   }
 
+  // Re-read a description editor into its draft. Update and Create save the
+  // draft, which _onDescInput fills on the editor's input event; a change that
+  // fired none (an open IME composition, an execCommand some browser did not
+  // report) would otherwise be saved as the text before it. Not _onDescInput
+  // itself: that would also run the mention popup logic at commit time.
+  _flushDescEditor(scope) {
+    const target = this._mentionTarget(scope);
+    const ed = target && this.el && this.el.querySelector(target.editorSelector);
+    if (!ed || ed.getAttribute("contenteditable") !== "true") return;
+    target.set(this._serializeEditor(ed), this._collectMentionUids(ed));
+  }
+
   _onDescInput(scope, editorEl) {
     // Browsers leave a stray <br> when the field is cleared, which defeats the
     // :empty placeholder — strip it back to truly empty. But an image-only
     // editor has no text content, so guard on chips AND inline images too,
     // otherwise a freshly pasted (text-less) image would be wiped here.
+    // A list just started on an empty editor (<ul><li><br></li></ul>) has no
+    // text either, and must not be wiped with it.
     if (
       !editorEl.textContent.trim() &&
       !editorEl.querySelector(`.${this.fig.family}__mention-chip`) &&
-      !editorEl.querySelector(`.${this.fig.family}__inline-img`)
+      !editorEl.querySelector(`.${this.fig.family}__inline-img`) &&
+      !editorEl.querySelector("ul, ol")
     ) {
       editorEl.innerHTML = "";
     }
