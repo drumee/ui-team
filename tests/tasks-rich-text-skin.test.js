@@ -53,6 +53,15 @@ const RESTORES = [
   ["strike", /text-decoration:line-through/],
 ];
 
+test("a lit toolbar button is the primary fill with a white glyph, hovered or not", () => {
+  for (const sel of ['.tasks-panel__format-btn[data-active="1"]', '.tasks-panel__format-btn[data-active="1"]:hover']) {
+    const d = declsFor(sel);
+    assert.match(d, /background:var\(--col-primary-40, ?#5950ff\)/, sel);
+    // The glyph is a mask over currentColor, so white text is a white icon.
+    assert.match(d, /color:#fff/, sel);
+  }
+});
+
 for (const surface of SURFACES) {
   test(`${surface} puts back what the reset takes off lists and marks`, () => {
     for (const [tag, want] of RESTORES) {

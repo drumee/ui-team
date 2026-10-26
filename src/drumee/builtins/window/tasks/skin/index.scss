@@ -3543,9 +3543,12 @@ $theme-colors: (
       background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
     }
 
-    &[data-active="1"] {
-      background: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
-      color: var(--accent, #433cc5);
+    // Lit: the panel's primary fill (as its Create button), glyph in white —
+    // the glyph is a mask over currentColor. Hover keeps it lit.
+    &[data-active="1"],
+    &[data-active="1"]:hover {
+      background: var(--col-primary-40, #5950ff);
+      color: #fff;
     }
 
     &[data-format="bold"] { @include ph.ph("text-b", 16px); }
