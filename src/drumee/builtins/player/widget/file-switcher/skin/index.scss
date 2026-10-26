@@ -88,6 +88,22 @@
     min-height: 0;
   }
 
+  // Toggle slide (setCollapsed): the content leaves to the left before the
+  // panel narrows, and comes back in from the left on either width.
+  &__ui[data-slide="out"] .file-switcher__main {
+    animation: file-switcher-slide-out 160ms ease-in forwards;
+  }
+
+  &__ui[data-slide="in"] .file-switcher__main {
+    animation: file-switcher-slide-in 220ms ease-out;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &__ui[data-slide] .file-switcher__main {
+      animation: none;
+    }
+  }
+
   &__head {
     align-items: center;
     flex-shrink: 0;
@@ -433,16 +449,24 @@
     }
   }
 
-  // Collapsed: one 36px column of icons under the "Files" title (Figma
-  // 1319:146672); the title itself expands the panel back (expand-panel),
-  // so the split-panel toggle is not drawn there.
+  // Collapsed: one 36px column of icons (Figma 1319:146672). The title
+  // trades "Files" for the split-panel glyph and expands the panel back
+  // (expand-panel), so the toggle itself is not drawn there.
   &__ui[data-collapsed="1"] {
     .file-switcher__toggle {
       display: none;
     }
 
     .file-switcher__title {
+      @include ph.ph("square-split-horizontal", 20px);
       cursor: pointer;
+      display: flex;
+      height: 20px;
+      width: 20px;
+
+      .note-content {
+        display: none;
+      }
     }
 
     // The 36px icon column has no room for a scrollbar: hide it, keep the
@@ -527,5 +551,19 @@
 
   50% {
     opacity: 0.45;
+  }
+}
+
+@keyframes file-switcher-slide-out {
+  to {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+@keyframes file-switcher-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
   }
 }

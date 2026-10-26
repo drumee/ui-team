@@ -254,7 +254,49 @@ class __file_switcher extends LetcBox {
 
   setCollapsed(v) {
     writeCollapsed(v);
-    this.el.dataset.collapsed = v ? 1 : 0;
+    const el = this.el;
+    const token = (this._slide = (this._slide || 0) + 1);
+    const slideIn = () => {
+      el.dataset.collapsed = v ? 1 : 0;
+      this.slide("in").then(() => {
+        if (this._slide === token) delete el.dataset.slide;
+      });
+    };
+    // Collapsing, the full panel slides out first and the icon column slides
+    // in once the width starts to shrink; expanding, it slides straight in.
+    if (v && el.dataset.collapsed != 1) {
+      this.slide("out").then(() => {
+        if (this._slide === token) slideIn();
+      });
+    } else {
+      slideIn();
+    }
+  }
+
+  /**
+   * Play the `file-switcher__main` slide `dir` (in | out); resolves when it
+   * ends, at once with reduced motion, or after a cap if no animationend
+   * comes (panel hidden, animation dropped).
+   */
+  slide(dir) {
+    const el = this.el;
+    const main = el.querySelector(`.${this.fig.family}__main`);
+    const still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!main || still) return Promise.resolve();
+    // Re-set even when unchanged so a repeat click replays the keyframes.
+    delete el.dataset.slide;
+    void main.offsetWidth;
+    el.dataset.slide = dir;
+    return new Promise((resolve) => {
+      const done = (e) => {
+        if (e && e.target !== main) return;
+        main.removeEventListener("animationend", done);
+        clearTimeout(cap);
+        resolve();
+      };
+      const cap = setTimeout(done, 400);
+      main.addEventListener("animationend", done);
+    });
   }
 
   /**
