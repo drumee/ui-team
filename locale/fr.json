@@ -2358,6 +2358,8 @@
   "CANCEL_OVER_LIMIT": "Votre utilisation actuelle ({0} Go) dépasse la limite gratuite de 20 Go — vous ne pourrez plus téléverser de fichiers tant que vous n'aurez pas libéré de l'espace.",
   "CANCEL_TEAM_SEATS": "Les {0} sièges de votre équipe seront supprimés et chaque membre repassera à sa propre offre Gratuite.",
   "SUBSCRIPTION_CANCELED_TOAST": "Votre offre sera annulée à la fin de la période.",
+  "CANCEL_PAST_DUE_NOW": "Votre dernier paiement n'a pas abouti. L'annulation met fin à votre offre immédiatement et la facture impayée ne sera pas prélevée. Votre espace repasse dès maintenant à l'offre Free (20 Go).",
+  "SUBSCRIPTION_ENDED_TOAST": "Votre offre a été annulée. Vous êtes de retour sur l'offre Free.",
   "SUBSCRIPTION_RESUMED_TOAST": "Votre abonnement a été réactivé.",
   "SUBSCRIPTION_CANCELS_ON": "Votre abonnement sera annulé le {0}",
   "PAYMENT_SUCCESS_TITLE": "Paiement réussi !",

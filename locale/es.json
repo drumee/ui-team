@@ -2350,6 +2350,8 @@
   "CANCEL_OVER_LIMIT": "Tu uso actual ({0} GB) supera el límite gratuito de 20 GB — no podrás subir archivos nuevos hasta que liberes espacio.",
   "CANCEL_TEAM_SEATS": "Se eliminarán los {0} asientos de tu equipo y cada miembro pasará a su propio plan Gratis.",
   "SUBSCRIPTION_CANCELED_TOAST": "Tu plan se cancelará al final del período.",
+  "CANCEL_PAST_DUE_NOW": "Tu último pago no se pudo procesar. Al cancelar, tu plan termina de inmediato y la factura pendiente no se cobrará. Tu espacio vuelve ahora al plan Free (20 GB).",
+  "SUBSCRIPTION_ENDED_TOAST": "Tu plan ha sido cancelado. Vuelves al plan Free.",
   "SUBSCRIPTION_RESUMED_TOAST": "Tu suscripción se ha reanudado.",
   "SUBSCRIPTION_CANCELS_ON": "Tu suscripción se cancelará el {0}",
   "PAYMENT_SUCCESS_TITLE": "¡Pago realizado!",

@@ -2542,6 +2542,8 @@
   "CANCEL_OVER_LIMIT": "Your current usage ({0} GB) is over the Free 20 GB limit — you won't be able to upload new files until you free up space.",
   "CANCEL_TEAM_SEATS": "Your team's {0} member seats will be removed and each member drops to their own Free plan.",
   "SUBSCRIPTION_CANCELED_TOAST": "Your plan will be canceled at the end of the period.",
+  "CANCEL_PAST_DUE_NOW": "Your last payment didn't go through. Canceling ends your plan right away and the unpaid invoice won't be charged. Your workspace returns to the Free plan (20 GB) now.",
+  "SUBSCRIPTION_ENDED_TOAST": "Your plan has been canceled. You're back on the Free plan.",
   "SUBSCRIPTION_RESUMED_TOAST": "Your subscription has been resumed.",
   "SUBSCRIPTION_CANCELS_ON": "Your subscription will be canceled on {0}",
   "PAYMENT_SUCCESS_TITLE": "Payment Success!",
