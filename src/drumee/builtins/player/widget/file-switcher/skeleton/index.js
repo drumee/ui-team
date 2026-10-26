@@ -9,11 +9,13 @@
 const nodeIconHtml = require("builtins/widget/chat/node-icon");
 const { isDevDeployment } = require("builtins/window/skeleton/toolkit/new-menu-rows");
 
-// The desk's "+ New" rows, in the same order: the Office files (made by the
-// doc-editor service, `name` gives the kind) and, on the dev deployments
-// only, the Casual editors ("Document lite" / "Spreadsheet lite", `kind` is
-// the editor window launched on a new file in the listed folder).
+// The desk's "+ New" rows, in the same order: the Note, the Office files
+// (made by the doc-editor service, `name` gives the kind) and, on the dev
+// deployments only, the Casual editors ("Document lite" / "Spreadsheet
+// lite"). A row with a `kind` launches that editor window on a new file in
+// the listed folder.
 const CREATE_OPTIONS = [
+  { type: "note", kind: "editor_blocknote", ico: "raw-note-sticky", label: "NOTE" },
   { type: "document", name: "document.docx", ico: "addmenu-document", label: "DOCUMENT" },
   { type: "doc-lite", kind: "editor_docs", ico: "raw-documents_udoc", label: "DOCUMENT_LITE", casual: true },
   { type: "spreadsheet", name: "spreadsheet.xlsx", ico: "addmenu-spreadsheet", label: "SPREADSHEET" },

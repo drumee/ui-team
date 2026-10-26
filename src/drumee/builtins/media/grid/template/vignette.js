@@ -15,7 +15,7 @@ module.exports = function (ui) {
       html = require('./filetype/audio.txt').default;
       break;
     case _a.note:
-      html = require('./filetype/note.txt').default;
+      html = require('./preview')(m, 'raw-note-sticky');
       break;
     default:
       html = require('./preview')(m);

@@ -690,3 +690,114 @@ test("the Open-File Switcher draws a note with the Note's glyph, not the shrunk 
   // every other file keeps the shared node icon
   assert.match(sk, /content: nodeIconHtml\(node, \{/);
 });
+
+// ── the Note's glyph outside the editor (Duy, 2026-10-26) ───────────────────
+// Every place a note is drawn or created shows the yellow note glyph
+// (raw-note-sticky), the way test made the Casual files' glyphs (fe52eac73).
+
+test("the file icon of a note is the Note's glyph; every other icon is unchanged", () => {
+  const restore = installGlobals();
+  try {
+    Object.assign(global._a, { note: "note", web: "web", document: "document", image: "image" });
+    for (const f of [
+      "src/drumee/builtins/media/template/icon-name.js",
+      "src/drumee/builtins/panel/activity/item/skeleton/template/icon-name.js",
+    ]) {
+      const iconName = require(resolve(ROOT, f));
+      for (const m of [{ filetype: "note" }, { filetype: "drumee.note" }, { filetype: "web", dataType: "drumee.note" }]) {
+        const r = iconName({ ...m, imgCapable: true });
+        assert.equal(r.chartId, "raw-note-sticky", `${f} ${JSON.stringify(m)}`);
+      }
+      // regression: what was not a note keeps its own icon
+      assert.equal(iconName({ filetype: "markdown" }).chartId, "raw-markdown");
+      assert.equal(iconName({ filetype: "image" }).chartId, "desktop_picture");
+      assert.equal(iconName({ filetype: "document", ext: "docx" }).chartId, "raw-documents_word");
+      assert.ok(!readFileSync(resolve(ROOT, f), "utf8").includes("raw-ab_notes"));
+    }
+    const media = require(resolve(ROOT, "src/drumee/builtins/media/template/icon-name.js"));
+    assert.equal(media({ ext: "udoc" }).chartId, "raw-documents_udoc");
+  } finally { restore(); }
+});
+
+test("a grid preview can be told its glyph, and is then never a picture", () => {
+  const restore = installGlobals();
+  const saved = { Visitor: global.Visitor, Template: global.Template };
+  global.Visitor = { inDmz: false };
+  global.Template = { Xmlns: (id) => `<use href="#--icon-${id}"></use>`, SvgText: (t) => `<text>${t}</text>` };
+  try {
+    Object.assign(global._a, { note: "note", video: "video" });
+    const preview = require(resolve(ROOT, "src/drumee/builtins/media/grid/template/preview.js"));
+    const html = preview({ filetype: "markdown", ext: "md", imgCapable: true, url: "x.png", _id: "a" }, "raw-note-sticky");
+    assert.match(html, /#--icon-raw-note-sticky/);
+    assert.ok(!/background-image/.test(html), "a glyph is never drawn as the file's picture");
+    // without a glyph: what it always drew
+    const img = preview({ filetype: "image", imgCapable: true, url: "x.png", _id: "b" });
+    assert.match(img, /background-image:url\(x\.png\)/);
+  } finally { Object.assign(global, saved); restore(); }
+});
+
+test("the folder grid, its vignette and the chat node icon draw a note with the glyph, not the lined page", () => {
+  for (const f of [
+    "src/drumee/builtins/media/grid/template/index.js",
+    "src/drumee/builtins/media/grid/template/vignette.js",
+    "src/drumee/builtins/widget/chat/node-icon.js",
+  ]) {
+    const src = readFileSync(resolve(ROOT, f), "utf8");
+    assert.ok(!src.includes("filetype/note.txt"), `${f} still draws the lined-page card`);
+    assert.match(src, /\(m(odel)?, ['"]raw-note-sticky['"]\)/, `${f} must pass the Note's glyph`);
+  }
+});
+
+test("every Create-Note button carries the Note's glyph", () => {
+  const restore = installGlobals();
+  try {
+    const { createEntries } = require("../src/drumee/modules/desk/skeleton/create-items.js");
+    assert.equal(createEntries(true).find((e) => e.service === "new-note").ico, "raw-note-sticky");
+    const { createRows } = requireEsmish("src/drumee/builtins/window/skeleton/toolkit/new-menu-rows.js");
+    const ui = { fig: { group: "window" }, mget: () => "personal" };
+    const row = createRows(ui).find((r) => r && r.service === "add-blocknote");
+    assert.ok(JSON.stringify(row).includes('"raw-note-sticky"'), "workspace + New row");
+  } finally { restore(); }
+  const ctx = readFileSync(resolve(ROOT, "src/drumee/builtins/contextmenu/skeleton/items.js"), "utf8");
+  assert.match(ctx, /ico: 'raw-note-sticky', label: LOCALE\.NOTE, service: 'new-note'/);
+  const tour = readFileSync(resolve(ROOT, "src/drumee/modules/desk/tutorial/skeleton/toolkit/files-grid.js"), "utf8");
+  assert.match(tour, /ico: "raw-note-sticky", name: "note"/);
+  for (const f of [
+    "src/drumee/modules/desk/skeleton/create-items.js",
+    "src/drumee/builtins/window/skeleton/toolkit/new-menu-rows.js",
+    "src/drumee/builtins/contextmenu/skeleton/items.js",
+    "src/drumee/modules/desk/tutorial/skeleton/toolkit/files-grid.js",
+  ]) {
+    assert.ok(!readFileSync(resolve(ROOT, f), "utf8").includes("addmenu-note"), f);
+  }
+});
+
+test("the Open-File Switcher's Create new file offers a Note, on every deployment", () => {
+  const sk = readFileSync(resolve(ROOT, "src/drumee/builtins/player/widget/file-switcher/skeleton/index.js"), "utf8");
+  const line = /\{ type: "note",[^}]*\}/.exec(sk);
+  assert.ok(line, "the Note row is missing");
+  assert.match(line[0], /kind: "editor_blocknote"/);
+  assert.match(line[0], /ico: "raw-note-sticky"/);
+  assert.match(line[0], /label: "NOTE"/);
+  assert.ok(!/casual: true/.test(line[0]), "the Note is not a dev-only Casual row");
+  // a kind row goes through createCasual, which hands the editor the folder
+  assert.match(sk, /service: kind \? "create-casual" : "create-file"/);
+  const idx = readFileSync(resolve(ROOT, "src/drumee/builtins/player/widget/file-switcher/index.js"), "utf8");
+  assert.match(idx, /kind, folder: \{ nid: pid, hub_id \}, target/);
+  const skin = readFileSync(resolve(ROOT, "src/drumee/builtins/player/widget/file-switcher/skin/index.scss"), "utf8");
+  assert.match(skin, /\.file-switcher__row-icon--note \.preview-icon \{\s*opacity: 0\.7;/);
+});
+
+test("a note created from the switcher saves into the LISTED folder, not the active window", () => {
+  const win = readNote("index.js");
+  // initialize: the folder is taken, and only a window showing it gets the tile
+  assert.match(win, /if \(!this\.media && opt\.folder && opt\.folder\.nid && opt\.folder\.hub_id\) \{/);
+  assert.match(win, /this\._folder = \{ pid: nid, hub_id \};/);
+  assert.match(win, /t\.getCurrentNid\(\) == nid &&\s*t\.mget\(_a\.hub_id\) == hub_id/);
+  // _saveTarget: the folder wins over whatever is active
+  const st = win.slice(win.indexOf("_saveTarget() {"));
+  assert.ok(st.indexOf("if (this._folder)") < st.indexOf("Wm.getActiveWindow()"),
+    "the switcher's folder must be checked before the active window");
+  // an export with no folder window still works (no TypeError on null)
+  assert.match(win, /if \(target && _\.isFunction\(target\.canUpload\) && !target\.canUpload\(\)\) return null;/);
+});

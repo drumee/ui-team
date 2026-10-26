@@ -75,6 +75,26 @@ class __editor_blocknote extends __player {
     // Where a new note gets written. Captured now, because by save time this
     // window is itself the active one.
     this.lastActiveWindow = Wm.getActiveWindow();
+    // Launched from the Open-File Switcher ("Note" in its create menu): the
+    // panel names the listed folder, and that folder wins (as editor/docs).
+    // The active window is then the viewer being switched away from — its
+    // nid is a FILE's, no place to save in. The new tile goes into the
+    // folder window the switch came from (the viewer's `target`, else the
+    // window its file was opened from), only when it shows this very folder.
+    if (!this.media && opt.folder && opt.folder.nid && opt.folder.hub_id) {
+      const { nid, hub_id } = opt.folder;
+      const viewer = this.lastActiveWindow;
+      this._folder = { pid: nid, hub_id };
+      this.lastActiveWindow =
+        [opt.target, viewer && viewer.media && viewer.media.logicalParent].find(
+          (t) =>
+            t &&
+            !(_.isFunction(t.isDestroyed) && t.isDestroyed()) &&
+            _.isFunction(t.getCurrentNid) &&
+            t.getCurrentNid() == nid &&
+            t.mget(_a.hub_id) == hub_id
+        ) || null;
+    }
     // A new note lives where it will be saved — the folder it was created
     // from. The Open-File Switcher lists that folder (it reads pid/hub_id),
     // and Share names the right workspace; the home defaults above only stay
@@ -397,6 +417,11 @@ class __editor_blocknote extends __player {
    * @returns {{target: Object, pid: String, hub_id: String}|null}
    */
   _saveTarget() {
+    // The folder the Open-File Switcher named: fixed, whatever is active.
+    if (this._folder) {
+      const target = (this.media && this.media.logicalParent) || this.lastActiveWindow || null;
+      return { target, ...this._folder };
+    }
     let target = this.lastActiveWindow || Wm.getActiveWindow();
     if (this.media && this.media.logicalParent) {
       target = this.media.logicalParent;
@@ -512,7 +537,7 @@ class __editor_blocknote extends __player {
     const dest = this._saveTarget();
     if (!dest) return null;
     const { target } = dest;
-    if (_.isFunction(target.canUpload) && !target.canUpload()) return null;
+    if (target && _.isFunction(target.canUpload) && !target.canUpload()) return null;
     return dest;
   }
 

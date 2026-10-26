@@ -374,12 +374,6 @@
         width: 22px;
       }
 
-      // The Note's glyph (raw sprite, its own colours), drawn like the
-      // header's file icon: the Figma "file icon" component at 70%.
-      &--note .preview-icon {
-        opacity: 0.7;
-      }
-
       // Office glyphs come from the raw sprite, where every detail path
       // carries its own colour EXCEPT the page body, which has no fill and
       // would default to black behind the blue/green/orange detail.
@@ -539,7 +533,8 @@
 .file-switcher__section:last-child .file-switcher__section-ico { @include ph.ph("files", 20px, true); }
 
 .file-switcher__row-icon[data-ext="udoc"] .preview-icon,
-.file-switcher__row-icon[data-ext="usheet"] .preview-icon {
+.file-switcher__row-icon[data-ext="usheet"] .preview-icon,
+.file-switcher__row-icon--note .preview-icon {
   opacity: 0.7;
 }
 

@@ -137,7 +137,7 @@ export function createRows(ui) {
     // added, so the CSS and any muscle memory around it stay put.
     menuRow(ui, {
       service: "add-blocknote",
-      ico: "addmenu-note",
+      ico: "raw-note-sticky",
       content: LOCALE.NOTE,
       className: `${cnItem}--add-note`,
     }),
