@@ -7,6 +7,34 @@
 @use '../../skin/file-viewer';
 @use '../../skin/phosphor' as ph;
 
+// The strip's glyphs are Material Symbols in the design (1393:3887: "Add",
+// "Menu", "Arrow drop down", 24px): the control's own glyph is hidden and the
+// symbol painted in its place, the way skin/phosphor does for Phosphor.
+$ms-add: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M440-440H200v-80h240v-240h80v240h240v80H520v240h-80v-240Z'/%3E%3C/svg%3E";
+$ms-menu: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z'/%3E%3C/svg%3E";
+$ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='currentColor'%3E%3Cpath d='M480-360 280-560h400L480-360Z'/%3E%3C/svg%3E";
+
+@mixin ms-glyph($uri, $px: 24px) {
+  font-size: 0 !important;
+  line-height: 0;
+
+  svg,
+  .material-symbols-outlined {
+    display: none !important;
+  }
+
+  &::before {
+    content: "";
+    display: inline-block;
+    flex: none;
+    width: $px;
+    height: $px;
+    background-color: currentColor;
+    -webkit-mask: url($uri) center / contain no-repeat;
+    mask: url($uri) center / contain no-repeat;
+  }
+}
+
 .sheet {
   &__ui {
     width: 100%;
@@ -715,39 +743,45 @@ body > div:has(> [class*="univer-popup"]) {
     font-family: var(--font-main);
     align-items: center;
 
-    // "+" then the all-sheets ≡ first, as in the design ([+] [≡] [Sheet1 ▾]).
+    // "+" then the all-sheets ≡ first, as in the design ([+] [≡] [Sheet1 ▾]):
+    // 24px Material glyphs, 24px apart (the strip's gap).
     [data-testid="cs-tab-add"],
     .editor-sheet__sheets-list {
       order: -1;
-      width: 24px;
-      height: 24px;
-      color: #0b0a21;
-    }
-
-    .editor-sheet__sheets-list {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-left: -8px;
+      width: 28px;
+      height: 28px;
+      padding: 0 !important;
       border: 0;
       border-radius: 6px;
       background: none;
+      color: #0b0a21;
       cursor: pointer;
-      @include ph.ph("list", 20px, true);
 
       &:hover {
         background: #f2f2f7;
       }
     }
 
-    // The open tab's caret: Casual's Rename / Delete menu.
+    [data-testid="cs-tab-add"] {
+      @include ms-glyph($ms-add);
+    }
+
+    .editor-sheet__sheets-list {
+      @include ms-glyph($ms-menu);
+    }
+
+    // The open tab's caret (Material "Arrow drop down"): Casual's Rename /
+    // Delete menu.
     .editor-sheet__tab-caret {
       display: inline-flex;
-      margin-left: 6px;
+      margin-left: 2px;
       vertical-align: middle;
       color: inherit;
       cursor: pointer;
-      @include ph.ph("caret-down", 14px, true);
+      @include ms-glyph($ms-arrow-drop-down);
     }
 
     button[aria-selected="true"],
