@@ -82,6 +82,24 @@ const COMMENT_SUBMIT_BY_SCOPE = {
   "comment-reply": "_submitReply",
 };
 
+// Format toolbar button (skeleton formatBar's data-format) → execCommand.
+// "link" has no command: it opens the Ctrl+K prompt.
+const FORMAT_COMMANDS = {
+  bold: "bold",
+  italic: "italic",
+  underline: "underline",
+  strike: "strikeThrough",
+  ul: "insertUnorderedList",
+  ol: "insertOrderedList",
+};
+
+// Ctrl/Cmd+Shift shortcuts, by e.code: Shift changes e.key ("8" → "*").
+const SHIFT_FORMAT_KEYS = {
+  KeyX: "strike",
+  Digit8: "ul",
+  Digit7: "ol",
+};
+
 // Scopes the file picker accepts, i.e. the drafts _draftForKey can queue a file
 // on. Anything else falls back to "detail" and attaches to the task.
 const PICK_ATTACHMENT_SCOPES = [
@@ -438,6 +456,10 @@ class __tasks_panel extends LetcBox {
     for (const cb of this._partWaiters || []) this.off(_e.part.ready, cb);
     this._partWaiters = null;
     this._closeCommentReactionsPicker();
+    if (this._onSelectionChange) {
+      document.removeEventListener("selectionchange", this._onSelectionChange);
+      this._onSelectionChange = null;
+    }
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
     if (this._assigneeBlurTimer) clearTimeout(this._assigneeBlurTimer);
@@ -2348,6 +2370,10 @@ class __tasks_panel extends LetcBox {
       case "open-detail":
         return this._openDetail(trigger.mget("taskId"));
 
+      // Format toolbar above a description editor (skeleton formatBar).
+      case "desc-format":
+        return this._applyFormat(trigger.mget("formatScope"), trigger.mget("format"));
+
       // Quick-open card only (its footer's "Open in board"): leave the card the
       // way Cancel does, dropping unsaved edits, and let the host open the
       // workspace board on this task.
@@ -2749,6 +2775,17 @@ class __tasks_panel extends LetcBox {
     // comment / comment-edit / comment-reply). Init each with its scope.
     if (typeof pn === "string" && pn.endsWith("-desc-editor")) {
       this._initDescEditor(child.el, pn.slice(0, -"-desc-editor".length));
+      return;
+    }
+    // Format toolbar ("<scope>-format-bar"): pressing a button must not take
+    // the focus — or the selection it formats — out of the editor. The click
+    // still reaches the service.
+    if (typeof pn === "string" && pn.endsWith("-format-bar")) {
+      child.el.addEventListener("mousedown", (e) => e.preventDefault());
+      if (!this._onSelectionChange) {
+        this._onSelectionChange = () => this._syncFormatBar();
+        document.addEventListener("selectionchange", this._onSelectionChange);
+      }
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
@@ -8904,6 +8941,49 @@ class __tasks_panel extends LetcBox {
     };
   }
 
+  // A format toolbar button / shortcut. The browser applies it (execCommand
+  // keeps it on the native undo stack); styleWithCSS off makes it leave the
+  // <b>/<i>/<u>/<s>/<ul>/<ol> tags fromDom reads, not inline styles. Saved to
+  // the draft at once rather than left to the input event.
+  _applyFormat(scope, format) {
+    const target = this._mentionTarget(scope);
+    const ed = target && this.el && this.el.querySelector(target.editorSelector);
+    if (!ed || ed.getAttribute("contenteditable") !== "true") return;
+    ed.focus();
+    if (format === "link") return this._openLinkPrompt(scope);
+    const cmd = FORMAT_COMMANDS[format];
+    if (!cmd) return;
+    document.execCommand("styleWithCSS", false, false);
+    document.execCommand(cmd);
+    this._onDescInput(scope, ed);
+    this._syncFormatBar();
+  }
+
+  // Light each toolbar button whose format is on under the caret; with the
+  // selection outside a bar's editor, none of its buttons is lit.
+  _syncFormatBar() {
+    if (!this.el) return;
+    const pfx = this.fig.family;
+    const sel = window.getSelection();
+    const node = sel && sel.rangeCount ? sel.anchorNode : null;
+    this.el.querySelectorAll(`.${pfx}__format-bar`).forEach((bar) => {
+      const field = bar.closest(`.${pfx}__desc-field`);
+      const ed = field && field.querySelector(`.${pfx}__desc-editor`);
+      const inside = !!(node && ed && ed.contains(node));
+      const elNode = node && (node.nodeType === 1 ? node : node.parentElement);
+      const link = inside && elNode && elNode.closest("a");
+      bar.querySelectorAll(`.${pfx}__format-btn`).forEach((btn) => {
+        const f = btn.dataset.format;
+        let on = false;
+        if (inside) {
+          on = f === "link" ? !!(link && ed.contains(link)) : !!document.queryCommandState(FORMAT_COMMANDS[f]);
+        }
+        if (on) btn.dataset.active = "1";
+        else delete btn.dataset.active;
+      });
+    });
+  }
+
   _collectMentionUids(editorEl) {
     const uids = [];
     editorEl
@@ -9360,6 +9440,12 @@ class __tasks_panel extends LetcBox {
   }
 
   _onDescKeydown(e, scope) {
+    // Ctrl/Cmd+Shift+X / 8 / 7: strikethrough, bulleted, numbered list (B / I /
+    // U are the browser's own). Before the mention guard, like Ctrl+K.
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && SHIFT_FORMAT_KEYS[e.code]) {
+      e.preventDefault();
+      return this._applyFormat(scope, SHIFT_FORMAT_KEYS[e.code]);
+    }
     // Before the mention guard — Ctrl/Cmd+K works whether or not a mention
     // popup happens to be open.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "k" || e.key === "K")) {

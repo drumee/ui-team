@@ -3273,5 +3273,12 @@
   "MIGRATE_PHONE_LINK_PLACEHOLDER": "粘贴链接",
   "MIGRATE_PHONE_VERIFY_IMPORT": "验证并导入",
   "TUTORIAL_CHAT_PHONE_DISCUSS_TITLE": "开始在聊天讨论串中讨论该文件",
-  "DMZ_MEETING_PASSWORD_PROTECTED": "此会议受密码保护。请输入密码以继续。"
+  "DMZ_MEETING_PASSWORD_PROTECTED": "此会议受密码保护。请输入密码以继续。",
+  "FORMAT_BOLD": "粗体 (Ctrl+B)",
+  "FORMAT_ITALIC": "斜体 (Ctrl+I)",
+  "FORMAT_UNDERLINE": "下划线 (Ctrl+U)",
+  "FORMAT_STRIKE": "删除线 (Ctrl+Shift+X)",
+  "FORMAT_BULLET_LIST": "项目符号列表 (Ctrl+Shift+8)",
+  "FORMAT_NUMBERED_LIST": "编号列表 (Ctrl+Shift+7)",
+  "FORMAT_LINK": "链接 (Ctrl+K)"
 }

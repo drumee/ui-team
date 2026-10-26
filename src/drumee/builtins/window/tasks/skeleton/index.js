@@ -213,7 +213,7 @@ const make = function (ui) {
   // via onPartReady; `scope` is "create" | "detail" so it targets the right
   // editor + dropdown.
   const descEditor = (scope) =>
-    mentionField(ui, scope, scope === "detail" && quickLocked ? { readOnly: true } : {});
+    mentionField(ui, scope, scope === "detail" && quickLocked ? { readOnly: true } : { formatBar: true });
 
   // ── Card pieces ───────────────────────────────────────────────
   // Title on the card is a plain Note: clicking it bubbles up to the card,
@@ -2717,6 +2717,43 @@ function composerTools(ui, scope) {
   ];
 }
 
+// Format toolbar over a description editor: B I U S | bulleted, numbered | link.
+// Each button posts "desc-format" with its format; the panel runs it on this
+// scope's editor (_applyFormat) and lights the active ones (_syncFormatBar).
+// Its sys_pn lets the panel keep a press from taking the editor's focus. A
+// null entry is a divider.
+function formatBar(ui, scope) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.X({
+    className: `${pfx}__format-bar`,
+    sys_pn: `${scope}-format-bar`,
+    partHandler: ui,
+    kids: [
+      ["bold", "FORMAT_BOLD"],
+      ["italic", "FORMAT_ITALIC"],
+      ["underline", "FORMAT_UNDERLINE"],
+      ["strike", "FORMAT_STRIKE"],
+      null,
+      ["ul", "FORMAT_BULLET_LIST"],
+      ["ol", "FORMAT_NUMBERED_LIST"],
+      null,
+      ["link", "FORMAT_LINK"],
+    ].map((b) =>
+      b
+        ? Skeletons.Note({
+            className: `${pfx}__format-btn`,
+            content: "",
+            service: "desc-format",
+            format: b[0],
+            formatScope: scope,
+            uiHandler: [ui],
+            attrOpt: { "data-format": b[0], title: LOCALE[b[1]] },
+          })
+        : Skeletons.Box.X({ className: `${pfx}__format-sep` }),
+    ),
+  });
+}
+
 // Reusable contenteditable mention editor. `scope` keys the panel's editor
 // logic + dropdown part; opt overrides the field/editor classes + placeholder
 // so the description and the comment composer/editor each style their own.
@@ -2725,6 +2762,7 @@ function mentionField(ui, scope, opt = {}) {
   return Skeletons.Box.Y({
     className: opt.fieldClass || `${pfx}__desc-field`,
     kids: [
+      ...(opt.formatBar && !opt.readOnly ? [formatBar(ui, scope)] : []),
       Skeletons.Element({
         tagName: "div",
         className: opt.editorClass || `${pfx}__desc-editor`,

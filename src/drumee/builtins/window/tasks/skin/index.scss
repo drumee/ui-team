@@ -1,4 +1,5 @@
 @use "mixins/drumee";
+@use "../../../editor/skin/phosphor" as ph;
 
 // ── Board colour system (Figma 2040-106090) ──────────────────────────────────
 // Every column carries a `theme` key from this 10-swatch palette. Column colour
@@ -3518,6 +3519,49 @@ $theme-colors: (
     max-height: 340px;
     min-height: min(200px, 26cqh);
     max-height: min(340px, 42cqh);
+  }
+
+  // Format toolbar over the description (skeleton formatBar): Phosphor glyphs
+  // from the Docs editor's set, lit while the format is on under the caret.
+  &__format-bar {
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+
+  &__format-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--normal-fg-40, #65656c);
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    }
+
+    &[data-active="1"] {
+      background: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
+      color: var(--accent, #433cc5);
+    }
+
+    &[data-format="bold"] { @include ph.ph("text-b", 16px); }
+    &[data-format="italic"] { @include ph.ph("text-italic", 16px); }
+    &[data-format="underline"] { @include ph.ph("text-underline", 16px); }
+    &[data-format="strike"] { @include ph.ph("text-strikethrough", 16px); }
+    &[data-format="ul"] { @include ph.ph("list-bullets", 16px); }
+    &[data-format="ol"] { @include ph.ph("list-numbers", 16px); }
+    &[data-format="link"] { @include ph.ph("link-simple-horizontal", 16px); }
+  }
+
+  &__format-sep {
+    width: 1px;
+    height: 16px;
+    margin: 0 4px;
+    background: var(--overlay-bg-10, rgba(0, 0, 0, 0.1));
   }
 
   // Lists drawn by rich-text.js (the toolbar, or a stored "- " / "N. " line),
