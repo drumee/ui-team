@@ -1,7 +1,7 @@
 import { createElement, createRef } from "react";
 import { createRoot } from "react-dom/client";
 import { DocxEditor } from "@casualoffice/docs/react";
-import { CasualEditor } from "@casualoffice/docs";
+import { CasualEditor, exportDocxAs } from "@casualoffice/docs";
 import { serializeDocx, attemptSelectiveSave, parseDocx } from "@casualoffice/docs/core";
 import "@casualoffice/docs/styles.css";
 import { contentUrl } from "builtins/editor/content-url";
@@ -13,6 +13,10 @@ const collab = require("./collab");
 const liveComments = require("./live-comments");
 // "Open this file on that comment", left by a notification click.
 const pendingFocus = require("builtins/editor/pending-focus");
+// Casual's menu bar, cut to what works in Drumee (see _wireMenus).
+const { attachMenuPolicy } = require("builtins/editor/menu-policy");
+const { saveBlob } = require("builtins/editor/export");
+const chrome = require("builtins/editor/chrome");
 // A room counts as changed for this long after its last update: covers the
 // export Casual runs before handing the bytes to FileSource.save.
 const LIVE_SETTLE_MS = 2000;
@@ -304,6 +308,9 @@ class __docs_state extends DrumeeMFS {
         },
         onChange,
         onSave,
+        // File → Open is hidden (_wireMenus); Ctrl/Cmd+O would still load a
+        // file from the computer INTO this document.
+        onRequestOpen: () => {},
         // Casual's Help → "Report issue" goes to Drumee support too.
         onReportBug: () => {
           if (this.editor && this.editor.contactSupport) this.editor.contactSupport();
@@ -321,6 +328,7 @@ class __docs_state extends DrumeeMFS {
     renderSingle();
 
     this.el.addEventListener("contextmenu", (e) => e.stopPropagation(), false);
+    this._wireMenus();
     this._nudgeResize();
     /** POC debug handle */
     window.__casualDocsAPI = () => this._apiHandle;
@@ -648,6 +656,7 @@ class __docs_state extends DrumeeMFS {
   /** Casual's print (its own preview / layout), the browser's as a fallback. */
   printDocument() {
     const api = (this._ref && this._ref.current) || this._apiHandle;
+    this._titleNextWindow(this._exportBaseName());
     try {
       if (api && typeof api.print === "function") return api.print();
       if (api && typeof api.openPrintPreview === "function") return api.openPrintPreview();
@@ -660,6 +669,247 @@ class __docs_state extends DrumeeMFS {
       /** blocked */
     }
     return undefined;
+  }
+
+  /**
+   * Casual prints from a window of its own, titled "Print" ("Document" for
+   * Export as PDF), and the browser names a saved PDF after that title. The
+   * next window opened by this click gets the file's name instead (it is
+   * written synchronously right after window.open returns, so a microtask
+   * lands after Casual's markup and before its load-time print()).
+   */
+  _titleNextWindow(title) {
+    const open = window.open;
+    if (!title || typeof open !== "function" || open.__drumeeTitled) return;
+    const titled = function (...args) {
+      window.open = open;
+      const w = open.apply(this, args);
+      if (w) {
+        queueMicrotask(() => {
+          try {
+            w.document.title = title;
+          } catch (e) {
+            /** window gone */
+          }
+        });
+      }
+      return w;
+    };
+    titled.__drumeeTitled = 1;
+    window.open = titled;
+    // No window after all (layout not ready, popup blocked): put it back.
+    setTimeout(() => {
+      if (window.open === titled) window.open = open;
+    }, 3000);
+  }
+
+  /** The file's name, for what leaves the editor (exports, the print title). */
+  _exportBaseName() {
+    const raw =
+      (this.editor && this.editor.mget(_a.filename)) ||
+      this.mget(_a.filename) ||
+      this._docName ||
+      LOCALE.UNTITLED_DOCUMENT ||
+      "Document";
+    const name = String(raw)
+      .replace(/<.+>/, "")
+      .replace(/\.(udoc|docx)$/i, "")
+      .replace(/[\\/:*?"<>|]+/g, "-")
+      .trim();
+    return name || "Document";
+  }
+
+  /**
+   * File → Export as ODT / Markdown, named after the file. Casual's own rows
+   * name the export after its `documentName`, which the co-editing shell
+   * does not have: every export came out as "document.odt" / "document.md".
+   * Same bytes and converter (exportDocxAs) as Casual's rows.
+   */
+  async _exportAs(fmt) {
+    const api = this._ref && this._ref.current;
+    const save = api && (api.save || api.exportDocx);
+    if (typeof save !== "function") return;
+    try {
+      const bytes = await save.call(api);
+      if (!bytes || this._destroyed) return;
+      const out = await exportDocxAs(new Uint8Array(bytes), fmt);
+      const type = fmt === "odt" ? "application/vnd.oasis.opendocument.text" : "text/markdown";
+      saveBlob(new Blob([out], { type }), `${this._exportBaseName()}.${fmt}`);
+    } catch (e) {
+      this.warn("docs: export failed", fmt, e);
+      Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+    }
+  }
+
+  /**
+   * Edit → Paste. Casual's row runs document.execCommand("paste"), which no
+   * browser grants a page: the row did nothing. The clipboard is read
+   * through the Clipboard API instead (the browser asks for the permission
+   * once) and handed to ProseMirror's own paste path, so it goes through the
+   * editor's paste rules like a Ctrl+V: HTML first, then plain text, then an
+   * image. Refused or unsupported: say how to paste with the keyboard.
+   */
+  async _pasteFromClipboard() {
+    const view = this._collabView();
+    if (!view) return;
+    const clip = navigator.clipboard;
+    const hint = () => Wm.alert(LOCALE.PASTE_WITH_SHORTCUT);
+    if (!clip || (typeof clip.read !== "function" && typeof clip.readText !== "function")) {
+      return hint();
+    }
+    try {
+      view.focus();
+      if (typeof clip.read !== "function") {
+        const text = await clip.readText();
+        if (text) view.pasteText(text);
+        return;
+      }
+      const items = await clip.read();
+      const find = (type) => items.find((it) => it.types.includes(type));
+      const html = find("text/html");
+      if (html) {
+        const markup = await (await html.getType("text/html")).text();
+        if (markup) return view.pasteHTML(markup);
+      }
+      const plain = find("text/plain");
+      if (plain) {
+        const text = await (await plain.getType("text/plain")).text();
+        if (text) return view.pasteText(text);
+      }
+      const image = items.find((it) => it.types.some((t) => /^image\//.test(t)));
+      if (image) {
+        const type = image.types.find((t) => /^image\//.test(t));
+        const blob = await image.getType(type);
+        const src = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = reject;
+          r.readAsDataURL(blob);
+        });
+        view.pasteHTML(`<img src="${src}">`);
+      }
+    } catch (e) {
+      this.warn("docs: clipboard read refused", e);
+      hint();
+    }
+  }
+
+  /**
+   * Casual's menu bar, cut to what works in Drumee (builtins/editor/
+   * menu-policy; the rows carry no ids, they are matched by label).
+   * Hidden:
+   *   - File → Open: loads a file from the computer INTO this document, and
+   *     the autosave then writes it over the Drumee file;
+   *   - File → Email as attachment: a download plus an empty mail to fill;
+   *   - File → Version history: snapshots kept in this browser only, none
+   *     for co-editors or on another device (the rail's button too, skin);
+   *   - File → Properties: file facts it cannot know here, every field "—"
+   *     (the gear's Get info has them);
+   *   - View → Theme rows: they switch the theme of the whole desk;
+   *   - Tools → Spell check: its dictionary is not shipped ("Couldn't load
+   *     the spell-check dictionary").
+   * Answered by Drumee: Make a copy (a copy next to the file, like the
+   * gear's, not a "Copy of document.docx" download), Paste (see
+   * _pasteFromClipboard), Print / Export as PDF / ODT / Markdown (named after
+   * the file) and, while co-editing, Undo / Redo (Casual greys them out
+   * there; the toolbar pair's manager answers, _wireCollabUndo).
+   * Help keeps one row, Drumee's "Contact us", in place of Casual's (its
+   * command palette, bug tracker, About box and shortcut sheet), and
+   * Ctrl/Cmd+Shift+P (that command palette, which lists every one of the
+   * hidden commands) is swallowed in this editor.
+   */
+  _wireMenus() {
+    if (this._menuPolicy || !this.el) return;
+    const ROW_ENABLED = '[role="menuitem"]:not([disabled])';
+    const HIDDEN = new Set([
+      "Open",
+      "Email as attachment\u2026",
+      "Version history",
+      "Properties",
+      "Theme: match system",
+      "Theme: light",
+      "Theme: dark",
+      "Spell check",
+      // Help: Casual's own rows (its command palette, its bug tracker, its
+      // About box, its shortcut sheet) give way to Drumee's "Contact us".
+      "Search the menus",
+      "Report issue",
+      "About Casual Editor",
+      "Keyboard shortcuts",
+    ]);
+    const live = () => !!this._undoManager;
+    const stack = (kind) => {
+      const um = this._undoManager;
+      const s = um && (kind === "undo" ? um.undoStack : um.redoStack);
+      return !!(s && s.length);
+    };
+    const ACTIONS = {
+      [LOCALE.CONTACT_US]: () => {
+        if (this.editor && this.editor.contactSupport) this.editor.contactSupport();
+      },
+      "Make a copy": () => chrome.handleService(this.editor, null, { service: _a.duplicate }),
+      Paste: () => this._pasteFromClipboard(),
+      Print: () => this.printDocument(),
+      "Export as PDF": () => this.printDocument(),
+      "Export as ODT": () => this._exportAs("odt"),
+      "Export as Markdown": () => this._exportAs("md"),
+    };
+    this._menuPolicy = attachMenuPolicy(this.el, {
+      // The label: the first non-empty span of the row (the icon has no
+      // text), without the check mark of a toggled row.
+      key: (row) => {
+        for (const s of row.children) {
+          if (s.tagName !== "SPAN") continue;
+          const t = (s.textContent || "").replace(/^\u2713\s*/, "").trim();
+          if (t) return t;
+        }
+        return "";
+      },
+      hidden: (key) => HIDDEN.has(key),
+      action: (key) => {
+        if (ACTIONS[key]) return ACTIONS[key];
+        if (live() && (key === "Undo" || key === "Redo")) {
+          return () => this._yHistory(key === "Undo" ? "undo" : "redo");
+        }
+        return null;
+      },
+      enabled: (key) => live() && ((key === "Undo" && stack("undo")) || (key === "Redo" && stack("redo"))),
+      // Help → "Contact us" (the support conversation), styled as Casual's rows.
+      extra: (menu) => {
+        if (menu.getAttribute("aria-label") !== "Help") return;
+        if (menu.querySelector(":scope > .editor-docs__help-contact")) return;
+        const like = menu.querySelector(ROW_ENABLED);
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "editor-docs__help-contact";
+        row.setAttribute("role", "menuitem");
+        if (like) row.style.cssText = like.style.cssText;
+        const label = document.createElement("span");
+        label.textContent = LOCALE.CONTACT_US;
+        row.appendChild(label);
+        row.addEventListener("mouseover", () => {
+          row.style.backgroundColor = "var(--doc-hover, #f3f4f6)";
+        });
+        row.addEventListener("mouseout", () => {
+          row.style.backgroundColor = "transparent";
+        });
+        menu.appendChild(row);
+      },
+      // The menubar button toggles its dropdown.
+      close: (trigger) => trigger.click(),
+    });
+    if (!this._paletteKeys) {
+      this._paletteKeys = (e) => {
+        if (!(e.metaKey || e.ctrlKey) || !e.shiftKey || e.altKey) return;
+        if (String(e.key || "").toLowerCase() !== "p") return;
+        const view = this._collabView();
+        const inView = !!(view && view.dom && view.dom.contains(e.target));
+        if (!inView && !(this.el && this.el.contains(e.target))) return;
+        e.preventDefault();
+        e.stopPropagation();
+      };
+      document.addEventListener("keydown", this._paletteKeys, true);
+    }
   }
 
   /**
@@ -1033,7 +1283,9 @@ class __docs_state extends DrumeeMFS {
         },
         // Comment ids partitioned per peer: two peers commenting at once
         // cannot overwrite each other's thread (live-comments).
-        docxEditorProps: { commentIdBase: this._commentIdBase },
+        // File → Open is hidden (_wireMenus); Ctrl/Cmd+O would still load a
+        // file from the computer into the room.
+        docxEditorProps: { commentIdBase: this._commentIdBase, onRequestOpen: () => {} },
         onCollabState: (state) => {
           trackRoom(room, state);
           if (room !== this._room) return;
@@ -1055,6 +1307,7 @@ class __docs_state extends DrumeeMFS {
     renderCollab(nid);
 
     this.el.addEventListener("contextmenu", (e) => e.stopPropagation(), false);
+    this._wireMenus();
     this._nudgeResize();
     if (editor && editor._raiseAboveDesk) setTimeout(() => editor._raiseAboveDesk(), 1200);
   }
@@ -1341,6 +1594,14 @@ class __docs_state extends DrumeeMFS {
    *
    */
   onBeforeDestroy() {
+    try {
+      if (this._menuPolicy) this._menuPolicy();
+      this._menuPolicy = null;
+      if (this._paletteKeys) document.removeEventListener("keydown", this._paletteKeys, true);
+      this._paletteKeys = null;
+    } catch (e) {
+      /** already gone */
+    }
     try {
       this._unbindUndoManager();
       if (this._undoKeys) document.removeEventListener("keydown", this._undoKeys, true);

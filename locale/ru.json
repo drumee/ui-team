@@ -317,6 +317,7 @@
   "PASSWORD_SAME_AS_CURRENT": "Новый пароль должен отличаться от текущего.",
   "PASS_PHRASE": "Пароль",
   "PASTE": "Вставить",
+  "PASTE_WITH_SHORTCUT": "Чтобы вставить сюда, нажмите Ctrl+V (⌘V на Mac).",
   "PHOTOS": "Фотографии",
   "PICTURES": "Фото",
   "PLUGGINS": "Плагины",

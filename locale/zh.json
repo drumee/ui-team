@@ -317,6 +317,7 @@
   "PASSWORD_SAME_AS_CURRENT": "新密码必须与当前密码不同。",
   "PASS_PHRASE": "密码",
   "PASTE": "标签",
+  "PASTE_WITH_SHORTCUT": "要在此处粘贴，请使用 Ctrl+V（Mac 上为 ⌘V）。",
   "PHOTOS": "图片",
   "PICTURES": "图片",
   "PLUGGINS": "插件",

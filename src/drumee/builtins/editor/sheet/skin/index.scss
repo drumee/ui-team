@@ -852,3 +852,12 @@ body > div:has(> [class*="univer-popup"]) {
     }
   }
 }
+
+// Edit → Find & Replace: Casual pins its panel 8px under the top of its root,
+// which in this window is the menu row; the panel covered Share and the
+// header buttons. It goes under the toolbar pill instead, right-aligned like
+// the design's dropdowns.
+.editor-sheet .sheet-state [data-testid="cs-find-replace"] {
+  top: 82px !important;
+  right: 20px !important;
+}
