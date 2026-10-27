@@ -487,15 +487,10 @@ $tint: rgba(89, 80, 255, 0.1);
     scrollbar-color: var(--scrollbar-thumb, rgba(0, 0, 0, 0.22))
       var(--scrollbar-track, transparent);
 
-    // An OPEN ROLE MENU LIFTS THE CLIP. The menu is absolutely positioned
-    // below its row inside this scroller, so with overflow:auto it opens into
-    // the scroll overflow — invisible on a one- or two-row list, the ordinary
-    // case — and its hover descriptions are cut off on the right. The
-    // pre-redesign skin carried the same escape on __workspaces for exactly
-    // this bug. Scrolling is suspended only while the menu is open.
-    &:has(.invite-popup__role-options[data-state="1"]) {
-      overflow: visible;
-    }
+    // NEVER LIFT THIS CLIP to show a role menu. `overflow: visible` while a
+    // menu was open spilled every row past max-height, over Send and off the
+    // card, with no scrollbar left to reach them. The open menu is
+    // position:fixed instead (_placeRoleMenu), which this scroller can't clip.
   }
 
   &__tree-empty {
@@ -754,8 +749,12 @@ $tint: rgba(89, 80, 255, 0.1);
     // The hover description card sits OUTSIDE the menu box — don't clip it.
     overflow: visible;
 
+    // Open = out of the __tree scroller: fixed, at the top/left that
+    // _placeRoleMenu writes inline from the pill's rect.
     &[data-state="1"] {
       display: flex !important;
+      position: fixed;
+      right: auto;
     }
   }
 
