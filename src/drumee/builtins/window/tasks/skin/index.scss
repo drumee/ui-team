@@ -4707,13 +4707,12 @@ $theme-colors: (
   }
 
   // Bordered comment card (Figma Activity: 1px border, radius 12, padding 16).
+  // No frame of its own: the thread around it is the card (Figma 944:107305).
   &__comment-row {
     gap: 12px;
     align-items: flex-start;
     min-width: 0; // let the body column shrink + wrap instead of overflowing
-    padding: 16px;
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
-    border-radius: 12px;
+    border-radius: 12px; // rounds __comment-drop-overlay's dashed frame
     // Anchors __comment-drop-overlay to this row while it is being edited.
     position: relative;
 
@@ -4748,7 +4747,7 @@ $theme-colors: (
     @include drumee.typo(
       $size: 16px,
       $weight: 600,
-      $line: 22px,
+      $line: 1.2,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
@@ -4757,7 +4756,7 @@ $theme-colors: (
     @include drumee.typo(
       $size: 12px,
       $weight: 400,
-      $line: 16px,
+      $line: 1.4,
       $color: var(--normal-fg-50, #65656c)
     );
   }
@@ -4792,11 +4791,21 @@ $theme-colors: (
       -webkit-user-select: text !important;
     }
     @include drumee.typo(
-      $size: 14px,
+      $size: 16px,
       $weight: 400,
-      $line: 20px,
+      $line: 1.4,
       $color: var(--normal-fg-10, #0b0a21)
     );
+
+    // A posted mention reads as plain brand-purple text (Figma), not the
+    // editor's tag chip.
+    .tasks-panel__mention-chip {
+      padding: 0;
+      margin: 0;
+      background: none;
+      color: var(--col-primary-40, #5950ff);
+      font-weight: 400;
+    }
   }
 
   // React bar and actions share one horizontal footer row.
@@ -4815,7 +4824,6 @@ $theme-colors: (
   &__comment-actions {
     align-items: center;
     gap: 8px;
-    margin-top: 2px;
   }
 
   &__comment-action {
@@ -4836,8 +4844,8 @@ $theme-colors: (
   // delete). Dimmed by default, accent on hover.
   &__comment-action-ico {
     position: relative; // anchors the hover highlight + flyover tooltip
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     cursor: pointer;
 
     // Soft rounded highlight behind the glyph on hover (no layout shift).
@@ -4855,8 +4863,8 @@ $theme-colors: (
     svg {
       position: relative;
       z-index: 1;
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       opacity: 0.55;
       transition: opacity 0.15s ease;
     }
@@ -4919,7 +4927,7 @@ $theme-colors: (
   &__comment-composer {
     align-items: center;
     gap: 12px;
-    padding-bottom: 12px;
+    padding: 12px 0;
     border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
 
     // The mention field grows between the avatar and the icon cluster.
@@ -4940,12 +4948,12 @@ $theme-colors: (
   &__composer-actions {
     flex: 0 0 auto;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
   }
 
   &__composer-ico {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     opacity: 0.55;
     cursor: pointer;
 
@@ -4976,71 +4984,96 @@ $theme-colors: (
     cursor: pointer;
 
     svg {
-      width: 18px;
-      height: 18px;
+      width: 20px;
+      height: 20px;
     }
     &:hover {
       opacity: 0.8;
     }
   }
 
-  // A root comment and its replies form one thread group joined by a single
-  // vertical connector: it starts at the parent card's bottom border, runs down
-  // the replies container's left edge, branches into each reply with a curved
-  // elbow, and ends at the last reply's avatar. $spine-x is the root avatar's
-  // centre (16px card padding + 16px half of the 32px avatar).
+  // A root comment and its replies form ONE card (Figma 944:107305): the
+  // replies sit inside it under the root's text column, joined by a connector
+  // that drops from below the root avatar and bends into each reply's avatar
+  // with a rounded elbow. The trunk is the card's own ::before, so it starts
+  // under the avatar however tall the root grows; each reply / the open reply
+  // composer draws its elbow, and the last of them masks the trunk below its
+  // curve so the line ends there.
+  //   $spine-x  root avatar centre, from the card's padding edge (16 + 16)
+  //   $reply-x  reply indent = avatar 32 + column gap 12
+  //   $elbow-x  trunk position seen from a reply's own left edge
   $spine-x: 32px;
-  $spine-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+  $reply-x: 44px;
+  $elbow-x: $spine-x - 16px - $reply-x; // -28px
+  $spine-color: var(--col-primary-20, #b1adff);
 
   &__comment-thread {
-    gap: 0; // the connector starts flush with the parent card's bottom border
-  }
-
-  // Replies container carries the connector as its left border; its top sits at
-  // the parent's bottom border, padding-top restores the inter-card spacing, and
-  // its left edge aligns to the root avatar centre.
-  &__comment-thread-replies {
-    gap: 12px;
-    margin-left: $spine-x - 1px;
-    padding-left: 25px;
-    padding-top: 12px;
     position: relative;
-    border-left: 1px solid $spine-color;
+    gap: 12px; // root's last row → first reply / composer (Figma column gap)
+    padding: 16px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
+    border-radius: 12px;
   }
 
-  // Curved elbow branching from the connector into each reply / the composer,
-  // meeting the card at the avatar's vertical centre.
+  &__comment-thread[data-has-replies="1"]::before {
+    content: "";
+    position: absolute;
+    left: $spine-x;
+    top: 52px; // 16 padding + 32 avatar + 4 clear of it
+    bottom: 16px;
+    border-left: 1px solid $spine-color;
+    pointer-events: none;
+  }
+
+  &__comment-thread-replies {
+    gap: 0; // reply rows carry their own 16px top/bottom padding
+    margin-left: $reply-x;
+  }
+
+  &__comment-thread-replies &__comment-row[data-reply="1"] {
+    padding: 16px 0;
+  }
+
+  // The elbow: from the trunk down to the avatar's (or pill's) vertical
+  // centre, bending right.
   &__comment-thread-replies &__comment-row[data-reply="1"],
   &__comment-thread-replies &__comment-replybox {
-    position: relative;
-
     &::before {
       content: "";
       position: absolute;
-      left: -25px; // back to the connector (= padding-left + border)
+      left: $elbow-x;
       top: 0;
-      width: 25px;
-      height: 32px; // down to the avatar centre
+      width: 21px;
+      height: 32px; // row: 16 padding + 16 half avatar
+      border-left: 1px solid $spine-color;
       border-bottom: 1px solid $spine-color;
       border-bottom-left-radius: 12px;
+      pointer-events: none;
     }
   }
 
-  // The last item terminates the connector: mask the vertical trunk below the
-  // elbow's curve so the line reads as curving into that item rather than
-  // trailing past it. The mask is kept narrow (trunk width only) so it never
-  // clips the elbow's rounded corner.
+  &__comment-thread-replies &__comment-replybox::before {
+    height: 22px; // half the 44px pill
+  }
+
+  // The last item ends the trunk: a strip in the card's colour over the trunk
+  // only (3px), from just inside the elbow's curve to the card's bottom.
   &__comment-thread-replies > &__comment-row[data-reply="1"]:last-child,
   &__comment-thread-replies > &__comment-replybox:last-child {
     &::after {
       content: "";
       position: absolute;
-      left: -27px; // over the trunk (border sits ~2px right of here)
-      top: 22px; // just below where the curve meets the trunk
-      bottom: -8px; // past the container's bottom edge
-      width: 3px; // trunk only — clear of the rounded elbow
+      left: $elbow-x - 1px;
+      top: 22px;
+      bottom: -17px; // past the card's bottom padding (16) + border
+      width: 3px;
       background: var(--normal-bg-elevated, #fff);
+      pointer-events: none;
     }
+  }
+
+  &__comment-thread-replies > &__comment-replybox:last-child::after {
+    top: 12px;
   }
 
   &__comment-replybox {
@@ -5055,7 +5088,7 @@ $theme-colors: (
   &__comment-reply-pill {
     align-items: center;
     gap: 12px;
-    padding: 8px 16px;
+    padding: 12px 16px;
     border-radius: 8px;
     background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
 
@@ -5071,7 +5104,7 @@ $theme-colors: (
   &__comment-reply-pill &__comment-reply-input {
     border: 0;
     background: transparent;
-    padding: 6px 0;
+    padding: 0;
     min-height: 20px;
     max-height: 140px;
     border-radius: 0;
@@ -5091,7 +5124,7 @@ $theme-colors: (
   &__comment-reply-tools {
     flex: 0 0 auto;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
   }
 
   &__comment-reply-send {

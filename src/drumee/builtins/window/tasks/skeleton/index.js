@@ -3590,11 +3590,12 @@ function buildCommentListContent(ui) {
       ].filter(Boolean),
     });
 
-  // Each root + its replies (+ the open composer) form one thread group. The
-  // replies live in their own container so a continuous vertical spine (the
-  // container's left border, styled in the skin) can connect them to the root,
-  // with a curved elbow branching into each reply. Timestamped so threads keep
-  // a stable oldest-first order regardless of the order rows arrive in.
+  // Each root + its replies (+ the open composer) form one thread group, drawn
+  // as a single card (Figma 944:107305). The replies live in their own
+  // container, indented under the root's text column; the connector is the
+  // card's ::before trunk with a curved elbow into each reply (see the skin).
+  // Timestamped so threads keep a stable oldest-first order regardless of the
+  // order rows arrive in.
   const out = [];
   roots.forEach((root) => {
     const showComposer = replyingToRootId === String(root.id);
