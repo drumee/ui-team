@@ -112,3 +112,12 @@ test("16px action icons, composer and reply pill spacing", () => {
   // theme-aware overlay (rgba(0,0,0,.05) on white) stands in for it.
   assert.match(pill, /background:var\(--overlay-bg-05/);
 });
+
+test("with a 'Replying to' hint above the pill, the elbow and mask follow the pill down", () => {
+  const box = `${REPLYBOX}:has(>${P}__comment-replying-to)`;
+  assert.match(declsFor(`${box}::before`), /height:44px/);
+  assert.match(
+    declsFor(`${REPLIES}>${P}__comment-replybox:last-child:has(>${P}__comment-replying-to)::after`),
+    /top:34px/,
+  );
+});

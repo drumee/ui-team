@@ -80,9 +80,19 @@ test("tab row is All · Comments · History with the Figma glyphs", () => {
   assert.match(skel, /activityTab\("history", LOCALE\.HISTORY, "ph-arrow-counter-clockwise"\)/);
 });
 
-test("All shows both lists but drops an empty one", () => {
+test("All shows both lists but drops an empty one only beside a filled one", () => {
   const p = '.tasks-panel__comments[data-tab="all"]';
-  assert.match(declsFor(`${p} .tasks-panel__activity-section[data-empty="1"]`), /display:none/);
+  const s = ".tasks-panel__activity-section";
+  // Hiding every empty section would blank the tab when both are empty (or
+  // both still loading): only the empty half next to a non-empty one goes.
+  assert.doesNotMatch(declsFor(`${p} ${s}[data-empty="1"]`), /display:none/);
+  for (const [gone, kept] of [["comments", "history"], ["history", "comments"]]) {
+    assert.match(
+      declsFor(`${p}:has(${s}[data-kind="${kept}"][data-empty="0"]) ${s}[data-kind="${gone}"][data-empty="1"]`),
+      /display:none/,
+      gone,
+    );
+  }
   for (const k of ["comments", "history"]) {
     assert.doesNotMatch(declsFor(`${p} .tasks-panel__activity-section[data-kind="${k}"]`), /display:none/);
   }

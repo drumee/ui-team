@@ -4145,10 +4145,14 @@ $theme-colors: (
     display: none;
   }
 
-  // All stacks both runs, so each gets its caption back — and a run with
-  // nothing in it is dropped rather than leaving its "No …" line under the
-  // other one.
-  &__comments[data-tab="all"] &__activity-section[data-empty="1"] {
+  // All stacks both runs, so each gets its caption back — and an empty run is
+  // dropped when the other has content, rather than leaving its "No …" line
+  // under it. Both empty (or both still loading) keep both, so the tab never
+  // goes blank.
+  &__comments[data-tab="all"]:has(&__activity-section[data-kind="history"][data-empty="0"])
+    &__activity-section[data-kind="comments"][data-empty="1"],
+  &__comments[data-tab="all"]:has(&__activity-section[data-kind="comments"][data-empty="0"])
+    &__activity-section[data-kind="history"][data-empty="1"] {
     display: none;
   }
 
@@ -5076,6 +5080,16 @@ $theme-colors: (
 
   &__comment-thread-replies > &__comment-replybox:last-child::after {
     top: 12px;
+  }
+
+  // Replying to a child puts a "Replying to …" line (16px + 6px gap) above the
+  // pill: the elbow and the mask move down with the pill.
+  &__comment-thread-replies &__comment-replybox:has(> &__comment-replying-to)::before {
+    height: 44px;
+  }
+
+  &__comment-thread-replies > &__comment-replybox:last-child:has(> &__comment-replying-to)::after {
+    top: 34px;
   }
 
   &__comment-replybox {
