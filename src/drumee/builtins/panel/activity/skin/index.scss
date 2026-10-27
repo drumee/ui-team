@@ -214,7 +214,7 @@
         min-width: 16px;
         height: 16px;
         font-size: 10px;
-        line-height: 10px;
+        line-height: 1;
       }
 
       .panel-activity__empty {
@@ -763,12 +763,23 @@
     @include drumee.typo($color: #ffffff, $size: 8px, $weight: 400, $line: 8px);
     min-width: 12px;
     height: 12px;
-    padding: 2px 4px;
+    // Centred by flex, not by line-height: the digits sit in the Note's inner
+    // .note-content div, and a line-height tuned to one badge height leaves
+    // them off-centre at any other (the phone badge is 16px).
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
     box-sizing: border-box;
     border-radius: 100px;
     background-color: #d74e49;
     text-align: center;
     flex-shrink: 0;
+
+    .note-content {
+      line-height: 1;
+    }
 
     &[data-empty="1"] {
       display: none;
