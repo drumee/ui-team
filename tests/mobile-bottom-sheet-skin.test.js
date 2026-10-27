@@ -40,6 +40,9 @@ function inMedia(css, prefix, sel) {
 }
 
 function rulesIn(css, sel) {
+  // Compressed output drops the quotes around an identifier attribute value
+  // (mobile), but keeps them around one that starts with a digit ("0").
+  sel = sel.replace(/="([a-z_][\w-]*)"/gi, "=$1");
   const out = [];
   const re = /([^{}]+)\{([^{}]*)\}/g;
   let m;
@@ -93,6 +96,25 @@ test("desk __msheet is drawn by the shared mixin", () => {
   assert.match(d, /position:absolute/);
   assert.match(declsFor(css, ".desk-module__msheet-grabber"), /width:36px/);
   assert.match(declsFor(css, ".desk-module__msheet-content"), /min-height:0/);
+});
+
+test("activity panel is a bottom sheet on mobile", () => {
+  const css = compile("builtins/panel/activity/skin/index.scss");
+  const root = '.panel-activity__ui[data-device="mobile"]';
+  const d = declsFor(css, root);
+  assert.match(d, /position:fixed/);
+  assert.match(d, /bottom:0/);
+  assert.match(d, /height:62dvh !important/);
+  assert.match(d, /width:100% !important/);
+  assert.match(d, /border-radius:16px 16px 0 0/);
+  assert.doesNotMatch(d, /margin:auto/);
+  assert.match(inMedia(css, "(orientation: landscape)", root), /height:88dvh !important/);
+  // Closed is a fade, never a translate: a transform on __ui would make it the
+  // containing block of its fixed ::before scrim.
+  assert.match(declsFor(css, `${root}[data-state="0"]`), /transform:none/);
+  assert.match(declsFor(css, `${root}[data-state="0"]`), /opacity:0/);
+  assert.match(declsFor(css, `${root} .panel-activity__main`), /border-radius:16px 16px 0 0/);
+  assert.match(declsFor(css, `${root} .panel-activity__main::before`), /width:36px/);
 });
 
 module.exports = { compile, declsFor, inMedia };
