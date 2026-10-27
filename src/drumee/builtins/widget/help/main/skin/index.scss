@@ -21,7 +21,13 @@
   // space the desk slot gives us, so the page doesn't sprawl on wide screens.
   $content-max: 900px;
 
+  // The breakpoints below are container queries on THIS box, not viewport
+  // media queries: the screen sits in the desk's settings-main-slot, inset by
+  // the sidebar, so a 1024px tablet gives it ~790px and the viewport says
+  // nothing about the width the layout actually has.
   &__ui {
+    container-type: inline-size;
+    container-name: help-main;
     width: 100%;
     height: 100%;
     overflow: hidden;
@@ -783,26 +789,37 @@
   }
 
   // ── Responsive ────────────────────────────────────────────
+  // Container queries on __ui (see there): every threshold is the SCREEN's
+  // width. The design is 320 nav + 900 content + 2×40 gutter = 1300px.
+  //
+  // Reflow by wrapping, never by flex-direction: the framework owns
+  // flex-direction on Box elements (`.box[data-flow]`, (0,2,0) — ui-team
+  // CLAUDE.md), and the overrides this block used to carry lost to it, so the
+  // screen never stacked at all.
+  //
   // Below the design width the 40px gutter is too generous; step it down
   // before the layout has to stack.
-  @media (max-width: 1280px) {
+  @container help-main (max-width: 1100px) {
     &__content {
       padding: var(--spacer-7) var(--spacer-6);
     }
   }
 
-  // The 320px nav + 900px content stop fitting side by side around here:
-  // stack them and let the whole page scroll as one surface.
-  @media (max-width: 1024px) {
+  // Side by side, the content column would be left under ~420px here — too
+  // narrow for two-up cards: stack the nav above the content and let the whole
+  // page scroll as one surface. The nav takes a full line of the wrapping row
+  // and the content the next.
+  @container help-main (max-width: 800px) {
     &__main {
       @include thin-scroll;
-      flex-direction: column;
+      flex-wrap: wrap;
+      align-content: flex-start;
       overflow-y: auto;
     }
 
     &__nav-column {
       width: 100%;
-      flex: 0 0 auto;
+      flex: 0 0 100%;
       height: auto;
       overflow: visible;
       border-right: none;
@@ -812,11 +829,11 @@
     // The nav becomes a horizontal strip once it's a header rather than a
     // rail, so the three entries don't eat a screenful before the content.
     &__nav-list {
-      flex-direction: row;
       flex-wrap: wrap;
     }
 
     &__content {
+      flex: 1 1 100%;
       height: auto;
       overflow: visible;
       padding: var(--spacer-6) var(--spacer-5);
@@ -824,7 +841,7 @@
     }
   }
 
-  @media (max-width: 768px) {
+  @container help-main (max-width: 640px) {
     &__page {
       gap: var(--spacer-6);
 
@@ -892,15 +909,20 @@
       padding: var(--spacer-4);
     }
 
-    // Stack the two footer halves so neither is squeezed.
+    // Stack the two footer halves so neither is squeezed. The row already
+    // wraps; a full-width basis puts each half on its own line.
     &__feedback-row {
-      flex-direction: column;
       align-items: flex-start;
       gap: var(--spacer-4);
     }
+
+    &__feedback-helpful,
+    &__feedback-support {
+      flex: 0 0 100%;
+    }
   }
 
-  @media (max-width: 480px) {
+  @container help-main (max-width: 440px) {
     &__content {
       padding: var(--spacer-5) var(--spacer-4);
     }
