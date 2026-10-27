@@ -1431,15 +1431,16 @@ html {
   }
 }
 
-@media (max-width: 650px) {
-  html,
-  body {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-  }
-
-  .desk-module {
+// The phone shell's layout. Emitted TWICE, mirroring mixins/responsive.scss:
+// under the 650px viewport query, and under a desk the JS built as a phone.
+// Visitor.device() says "mobile" up to 800px (mobile UA), so a 768px tablet
+// gets the phone shell with none of this — __main had no definite height and
+// __body, the window manager and settings-main-slot all laid out at 0px tall:
+// an empty screen under the top bar. $root is wrapped in :where() at the
+// device include so both copies keep the media block's specificity, and the
+// ≤1024px block below still wins where the ranges overlap.
+@mixin desk-phone-layout($root) {
+  #{$root} {
     &__main {
       height: 100vh;
       height: 100dvh;
@@ -1501,6 +1502,26 @@ html {
     }
   }
 }
+
+@media (max-width: 650px) {
+  html,
+  body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  @include desk-phone-layout(".desk-module");
+}
+
+html:has(.desk-module[data-device="mobile"]),
+body:has(.desk-module[data-device="mobile"]) {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+@include desk-phone-layout(':where(.desk-module[data-device="mobile"]) .desk-module');
 
 // Tablet & mobile (≤ 1024px): the right slide-out container (chat-p2p
 // inbox) overlays the workspace (__right-side) only — not the 231px
