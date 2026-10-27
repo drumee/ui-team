@@ -133,4 +133,19 @@ test("trash panel is a bottom sheet on mobile, still closable", () => {
   assert.match(declsFor(css, `${root} .panel-trash__main::before`), /width:36px/);
 });
 
+test("otp gate is a bottom sheet on a phone, a card elsewhere", () => {
+  const css = compile("builtins/widget/otp-gate/skin/index.scss");
+  const d = inMedia(css, "(max-width: 560px)", ".otp-gate-card");
+  assert.match(d, /position:fixed/);
+  assert.match(d, /bottom:0/);
+  assert.match(d, /width:auto/);
+  assert.match(d, /max-width:none/);
+  assert.match(d, /border-radius:16px 16px 0 0/);
+  assert.match(inMedia(css, "(max-width: 560px)", ".otp-gate-card::before"), /width:36px/);
+  assert.match(declsFor(css, ".otp-gate-card"), /width:450px/);
+  assert.match(declsFor(css, 'html[data-theme="dark"] .otp-gate-card'), /--normal-bg-elevated/);
+  // Sign-in draws its own OTP card on .dtk-otp__main; it must not change.
+  assert.doesNotMatch(compile("modules/welcome/signin/skin/index.scss"), /62dvh/);
+});
+
 module.exports = { compile, declsFor, inMedia };
