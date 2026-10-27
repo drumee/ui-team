@@ -949,6 +949,40 @@
     &__nav-column {
       padding: var(--spacer-4);
     }
+
+    // 16px: iOS Safari zooms the page on focus into any smaller input (same
+    // rule as desk/skin/mobile-search.scss).
+    &__nav-search-input input,
+    &__faq-search-input input {
+      font-size: 16px;
+    }
+
+    // Touch targets. The chips are pointer-sized on desktop.
+    &__nav-item,
+    &__faq-chip {
+      min-height: 44px;
+      box-sizing: border-box;
+    }
+  }
+}
+
+// ── Phone desk: clear the bottom rail ───────────────────────
+// The settings-main-slot runs under the phone's fixed bottom rail
+// (desk/skin/mobile-rail.scss: 12px + 54px pill + 12px, plus the home-strip
+// inset), so the page end would scroll under it. On a phone the screen is
+// always stacked, which makes __main the scroller — the padding goes there.
+//
+// Gated like the rail itself rather than on the container: the rail exists
+// because of the DEVICE, not the screen's width. Emitted twice, as
+// mixins/responsive.scss does it: Visitor.device() only answers "mobile"
+// below 801px.
+.desk-module[data-device="mobile"] .help-main__main {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 650px) {
+  .help-main__main {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 }
 

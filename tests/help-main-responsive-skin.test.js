@@ -143,3 +143,21 @@ test("stacked nav is a sideways-scrolling chip strip", () => {
   assert.match(item, /flex:0 0 auto/);
   assert.match(item, /white-space:nowrap/);
 });
+
+test("page end clears the bottom rail on a phone desk", () => {
+  const pad = /padding-bottom:calc\(80px \+ env\(safe-area-inset-bottom/;
+  assert.match(declsFor('.desk-module[data-device="mobile"] .help-main__main'), pad);
+  assert.match(inMedia("(max-width: 650px)", ".help-main__main"), pad);
+});
+
+test("inputs are 16px on phones", () => {
+  const at = "help-main (max-width: 440px)";
+  assert.match(inContainer(at, ".help-main__nav-search-input input"), /font-size:16px/);
+  assert.match(inContainer(at, ".help-main__faq-search-input input"), /font-size:16px/);
+});
+
+test("touch-sized nav chips and FAQ chips on phones", () => {
+  const at = "help-main (max-width: 440px)";
+  assert.match(inContainer(at, ".help-main__nav-item"), /min-height:44px/);
+  assert.match(inContainer(at, ".help-main__faq-chip"), /min-height:44px/);
+});
