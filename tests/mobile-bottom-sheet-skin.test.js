@@ -148,4 +148,22 @@ test("otp gate is a bottom sheet on a phone, a card elsewhere", () => {
   assert.doesNotMatch(compile("modules/welcome/signin/skin/index.scss"), /62dvh/);
 });
 
+test("desk mobile search opens as the bottom sheet", () => {
+  const css = compile("modules/desk/skin/mobile-search.scss");
+  const card = ".desk-module__mobile-search";
+  const d = declsFor(css, card);
+  assert.match(d, /bottom:0/);
+  assert.match(d, /height:62dvh/);
+  assert.match(d, /z-index:100000/);
+  // Hidden is the default; only data-state="1" reveals it.
+  assert.match(d, /transform:translateY\(100%\)/);
+  assert.match(d, /visibility:hidden/);
+  assert.match(declsFor(css, `${card}[data-state="1"]`), /transform:none/);
+  assert.match(declsFor(css, `${card}[data-state="1"]`), /visibility:visible/);
+  assert.match(declsFor(css, `${card}::before`), /width:36px/);
+  const list = declsFor(css, ".desk-module__mobile-search-suggestions");
+  assert.match(list, /min-height:0/);
+  assert.match(list, /overflow-y:auto/);
+});
+
 module.exports = { compile, declsFor, inMedia };
