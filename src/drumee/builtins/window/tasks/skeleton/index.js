@@ -101,6 +101,7 @@ const { toPlain } = require("../rich-text");
 // formatDue is aliased: `make` declares its own closure const of that name, and
 // the subtask builders below live at module scope where that one isn't visible.
 const {
+  newestFirst,
   mayCreateTask,
   subtaskStrip,
   assigneeUids,
@@ -1107,8 +1108,9 @@ const make = function (ui) {
     });
 
     // Comments: flat feed (a re-feedable part) + an @-mention composer.
-    // Activity header: title + Comments / History tabs, which flip which of the
-    // two independently-fed lists below is visible. Comments is the default.
+    // Activity header: title + All / Comments / History tabs (Figma 944:107305),
+    // which flip which of the two independently-fed lists below is visible —
+    // All shows both. Comments is the default.
     const currentTab = ui.getActivityTab ? ui.getActivityTab() : "comments";
     const activityTab = (tab, label, icon) =>
       Skeletons.Box.X({
@@ -1151,8 +1153,9 @@ const make = function (ui) {
             Skeletons.Box.X({
               className: `${pfx}__activity-tabs`,
               kids: [
-                activityTab("comments", LOCALE.COMMENTS, "message"),
-                activityTab("history", LOCALE.HISTORY, "apps-clock"),
+                activityTab("all", LOCALE.ALL, null),
+                activityTab("comments", LOCALE.COMMENTS, "ph-chat-circle-dots"),
+                activityTab("history", LOCALE.HISTORY, "ph-arrow-counter-clockwise"),
               ],
             }),
           ],
@@ -1181,7 +1184,7 @@ const make = function (ui) {
               kids: [
                 ...composerTools(ui, "comment"),
                 Skeletons.Button.Svg({
-                  ico: "app-send",
+                  ico: "ph-paper-plane-right",
                   className: `${pfx}__composer-send`,
                   bubble: 0,
                   service: "comment-submit",
@@ -2698,17 +2701,19 @@ function mentionDropdown(ui, scope) {
 function composerTools(ui, scope) {
   const pfx = ui.fig.family;
   return [
+    // One icon family (Phosphor, like the comment actions) so the paperclip,
+    // @ and send glyphs read at the same size in the same box.
     Skeletons.Button.Svg({
-      ico: "app-attachment",
+      ico: "ph-paperclip",
       className: `${pfx}__composer-ico`,
       bubble: 0,
       service: "pick-attachment",
       uiHandler: [ui],
       searchScope: scope,
     }),
-    Skeletons.Note({
-      className: `${pfx}__composer-at`,
-      content: "@",
+    Skeletons.Button.Svg({
+      ico: "ph-at",
+      className: `${pfx}__composer-ico`,
       bubble: 0,
       service: "comment-mention-insert",
       mentionScope: scope,
@@ -3570,7 +3575,7 @@ function buildCommentListContent(ui) {
               kids: [
                 ...composerTools(ui, "comment-reply"),
                 Skeletons.Button.Svg({
-                  ico: "app-send",
+                  ico: "ph-paper-plane-right",
                   className: `${pfx}__comment-reply-send`,
                   bubble: 0,
                   service: "comment-reply-submit",
@@ -3588,11 +3593,12 @@ function buildCommentListContent(ui) {
       ].filter(Boolean),
     });
 
-  // Each root + its replies (+ the open composer) form one thread group. The
-  // replies live in their own container so a continuous vertical spine (the
-  // container's left border, styled in the skin) can connect them to the root,
-  // with a curved elbow branching into each reply. Timestamped so threads keep
-  // a stable oldest-first order regardless of the order rows arrive in.
+  // Each root + its replies (+ the open composer) form one thread group, drawn
+  // as a single card (Figma 944:107305). The replies live in their own
+  // container, indented under the root's text column; the connector is the
+  // card's ::before trunk with a curved elbow into each reply (see the skin).
+  // Timestamped so threads keep a stable newest-first order regardless of the
+  // order rows arrive in.
   const out = [];
   roots.forEach((root) => {
     const showComposer = replyingToRootId === String(root.id);
@@ -3619,7 +3625,7 @@ function buildCommentListContent(ui) {
       );
     }
     out.push({
-      ts: Number(root.ctime) || 0,
+      ctime: root.ctime,
       node: Skeletons.Box.Y({
         className: `${pfx}__comment-thread`,
         attrOpt: { "data-has-replies": replyKids.length ? "1" : "0" },
@@ -3627,8 +3633,9 @@ function buildCommentListContent(ui) {
       }),
     });
   });
-  // Oldest first (comments arrive ASC, but don't depend on it).
-  return out.sort((a, b) => a.ts - b.ts).map((e) => e.node);
+  // Newest thread first, by its root's time (comments arrive ASC, but don't
+  // depend on it). Replies inside a thread stay in conversation order.
+  return newestFirst(out).map((e) => e.node);
 }
 
 // One change-log line: who, what, when. Project Health names the task after
@@ -3695,11 +3702,8 @@ function buildHistoryListContent(ui) {
       ],
     });
   };
-  // Oldest first — the activity proc returns newest-first.
-  return history
-    .slice()
-    .sort((a, b) => (Number(a.ctime) || 0) - (Number(b.ctime) || 0))
-    .map(historyBlock);
+  // Newest first, like the comment threads beside it.
+  return newestFirst(history).map(historyBlock);
 }
 
 function buildMentionItemsContent(ui, members) {
