@@ -90,7 +90,7 @@ test("the last reply OR an open composer ends the trunk, masked in the card's ow
   }
 });
 
-test("type: 16px author, a smaller and lighter body, long strings still wrap", () => {
+test("type: 14px author, a smaller and lighter body, long strings still wrap", () => {
   const body = declsFor(`${P}__comment-body`);
   // QA 2026-10-27: down from Figma's 16px / 400. The typo mixin never emits
   // font-weight, so the weight has to be its own declaration.
@@ -99,7 +99,7 @@ test("type: 16px author, a smaller and lighter body, long strings still wrap", (
   assert.match(body, /line-height:1\.4/);
   assert.match(body, /overflow-wrap:anywhere/);
   const author = declsFor(`${P}__comment-author`);
-  assert.match(author, /font-size:16px/);
+  assert.match(author, /font-size:14px/);
   assert.match(author, /line-height:1\.2/);
   assert.match(declsFor(`${P}__comment-time`), /line-height:1\.4/);
 });

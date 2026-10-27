@@ -4748,7 +4748,7 @@ $theme-colors: (
 
   &__comment-author {
     @include drumee.typo(
-      $size: 16px,
+      $size: 14px,
       $weight: 600,
       $line: 1.2,
       $color: var(--normal-fg-10, #0b0a21)
