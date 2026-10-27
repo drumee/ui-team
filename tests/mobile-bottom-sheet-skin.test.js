@@ -234,4 +234,26 @@ test("search sheet runs full height under the topbar and fades in place", () => 
   assert.match(declsFor(css, '.desk-module__mobile-search[data-state="1"]'), /opacity:1/);
 });
 
+test("folder window \"+ New\" menu is a bottom sheet on mobile, and still hides when closed", () => {
+  const css = compile("builtins/window/folder/skin/index.scss");
+  const ctrl = '.window-folder__main .window-folder-topbar__new-ctrl[data-device="mobile"]';
+  for (const [where, d] of [
+    ["device", declsFor(css, `${ctrl} .menu-topic-items__wrapper`)],
+    ["650px", inMedia(css, "(max-width: 650px)", ".window-folder__main .window-folder-topbar__new-ctrl .menu-topic-items__wrapper")],
+  ]) {
+    assert.match(d, /position:fixed !important/, where);
+    assert.match(d, /bottom:0/, where);
+    assert.match(d, /height:62dvh/, where);
+    assert.match(d, /border-radius:16px 16px 0 0/, where);
+    assert.doesNotMatch(d, /translate\(-50%/, where);
+  }
+  // The sheet mixin's display:flex must not beat the shared closed-state hide.
+  assert.match(
+    declsFor(css, `${ctrl} .window-button__dropdown-menu__wrapper:not([data-state="1"]) .menu-topic-items__wrapper`),
+    /display:none/,
+  );
+  assert.match(declsFor(css, `${ctrl} .menu-topic-items__wrapper::before`), /width:36px/);
+  assert.match(declsFor(css, `${ctrl} .menu-items`), /overflow-y:auto/);
+});
+
 module.exports = { compile, declsFor, inMedia };
