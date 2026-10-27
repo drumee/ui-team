@@ -161,3 +161,13 @@ test("touch-sized nav chips and FAQ chips on phones", () => {
   assert.match(inContainer(at, ".help-main__nav-item"), /min-height:44px/);
   assert.match(inContainer(at, ".help-main__faq-chip"), /min-height:44px/);
 });
+
+test("on a phone the three nav chips fit: icons drop, labels stay", () => {
+  // Measured: with icons, Product tour / Self-hosting setup / FAQ need ~420px
+  // and FAQ sat off the right edge of a 390px phone.
+  const at = "help-main (max-width: 440px)";
+  assert.match(
+    inContainer(at, ".help-main__nav-list .help-main__nav-item .help-main__nav-item-ico"),
+    /display:none/,
+  );
+});

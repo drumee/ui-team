@@ -963,6 +963,14 @@
       min-height: 44px;
       box-sizing: border-box;
     }
+    // The strip's three chips (Product tour / Self-hosting setup / FAQ) need
+    // ~420px with their glyphs, which pushed FAQ off the right edge of a 390px
+    // phone. The glyph is decoration — the label names the page — so it goes,
+    // and the three fit in ~312px. (0,3,0): the icon is a ui-core widget,
+    // whose framework flow rule sets display at (0,2,0).
+    &__nav-list &__nav-item &__nav-item-ico {
+      display: none;
+    }
   }
 }
 
