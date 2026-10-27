@@ -1183,3 +1183,96 @@ $tint: rgba(89, 80, 255, 0.1);
 .window-manager__wrapper-modal.window__wrapper-modal[data-invite-overlay][data-overlay="blur"]::before {
   content: none;
 }
+
+// ── Phone: the desk's bottom sheet ──────────────────────────────────────
+//
+// On a phone the popup is drawn as the desk's own bottom sheet
+// (drumee.mobile-bottom-sheet — the same box as the workspace / go-to /
+// account sheets) instead of a centred card. __ui is the sheet, as it is the
+// card on desktop; __container is the padded column inside it and becomes the
+// sheet's one scroller, so Send scrolls into reach instead of being cut.
+//
+// Why the !importants and the long selector. Wm's wrapper-modal centring
+// (desk/wm/skin, wrapper-modal-mobile-centre) pulls every child into its flex
+// flow on a phone with `position:relative; inset:auto; margin:auto;
+// transform:none; max-width/height: …` — all !important, at (0,2,0). Keyed
+// on data-invite-overlay (set only by this popup, see the backdrop block
+// above) this reaches (0,5,0), so it wins those back without touching any
+// other occupant of the shared wrapper. The !important offsets also beat the
+// inline left/top the window manager writes on this element. The plain
+// `.invite-popup__ui[data-device="mobile"]` selector beside it covers a popup
+// mounted anywhere else.
+//
+// The slide animates `translate`, NOT `transform`: an !important declaration
+// outranks a keyframe, and wm's `transform: none !important` would freeze a
+// transform-based slide. `translate` is a separate property nothing pins.
+// `backwards` / `forwards` for the same reason as the desktop pair at the top
+// of this file.
+//
+// Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
+// answers "mobile" below 801px.
+@mixin invite-popup-sheet {
+  @include drumee.mobile-bottom-sheet;
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  top: auto !important;
+  margin: 0 !important;
+  width: auto;
+  max-width: none !important;
+  max-height: none !important;
+  border: 0;
+  // Back to the card's white over the mixin's --normal-bg: this popup has no
+  // dark palette (its ink is #0b0a21 everywhere), so a dark ground would put
+  // the text on its own colour.
+  background-color: #fff;
+  backdrop-filter: none;
+  animation: invite-popup-sheet-in 0.22s ease-out backwards;
+
+  &[data-closing="1"] {
+    animation: invite-popup-sheet-out 0.16s ease-in forwards;
+  }
+
+  // The desktop pair's reduced-motion rule (above) is (0,1,0) and cannot reach
+  // these selectors. The close keeps its 160ms timer either way.
+  @media (prefers-reduced-motion: reduce) {
+    &,
+    &[data-closing="1"] {
+      animation: none;
+    }
+  }
+
+  &::before {
+    @include drumee.mobile-bottom-sheet-grabber;
+    margin-bottom: 0;
+  }
+
+  .invite-popup__container {
+    @include drumee.mobile-bottom-sheet-scroller;
+    max-height: none;
+    padding-top: 8px;
+  }
+}
+
+.invite-popup__ui[data-device="mobile"],
+.window-manager__wrapper-modal.window__wrapper-modal[data-invite-overlay] .invite-popup__ui[data-device="mobile"] {
+  @include invite-popup-sheet;
+}
+
+@media (max-width: 650px) {
+  .invite-popup__ui,
+  .window-manager__wrapper-modal.window__wrapper-modal[data-invite-overlay] .invite-popup__ui {
+    @include invite-popup-sheet;
+  }
+}
+
+@keyframes invite-popup-sheet-in {
+  from { translate: 0 100%; }
+  to   { translate: 0 0; }
+}
+
+@keyframes invite-popup-sheet-out {
+  from { translate: 0 0; }
+  to   { translate: 0 100%; }
+}

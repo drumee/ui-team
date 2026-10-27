@@ -26,44 +26,23 @@
     background: rgba(11, 10, 33, 0.42);
   }
 
-  // ONE height for every sheet, whatever it holds. It used to be
-  // `max-height: 78vh`, which made the panel hug its content: the switcher was
-  // a different size for every workspace count, and tapping the avatar after
-  // the go-to grid resized the sheet under the thumb. A fixed height means the
-  // panel is the same box every time and only its CONTENT moves.
-  //
-  // dvh, not vh: `vh` counts the strip behind a mobile browser's collapsing
-  // URL bar, so the old 78vh put the sheet's bottom padding — and the
-  // safe-area inset with it — underneath that chrome. `100dvh` is already the
-  // house answer for this (desk/wm/skin/index.scss). The vh line above it is
-  // the fallback for engines without dvh; they drop the second declaration and
-  // keep the first.
+  // The sheet's look — fixed 62dvh height (88dvh on a landscape phone), the
+  // 16px top radius, safe-area padding — is the shared
+  // `drumee.mobile-bottom-sheet` (skin/mixins/responsive.scss), which the
+  // other phone sheets (Activity, Trash, OTP gate, search, invite) wear too.
+  // The reasoning for each value lives there.
   //
   // The height is deliberately not per-kind. `data-kind` is stamped on the
   // host and could size each shape, but a single constant was the call: the
   // go-to grid carries dead space below its two tile rows, and that is the
   // trade for a panel that never resizes between sheets.
+  //
+  // absolute, not the mixin's fixed: this one sits inside __msheet-host, which
+  // is already the fixed full-viewport layer.
   &__msheet {
+    @include drumee.mobile-bottom-sheet;
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 62vh;
-    height: 62dvh;
-    background: var(--normal-bg);
-    border-radius: 16px 16px 0 0;
-    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px));
-    box-sizing: border-box;
-    overflow: hidden;
-
-    // A landscape phone is ~380px tall, where 62dvh is barely three rows.
-    // Hand those viewports almost the whole screen instead; the dim above it
-    // is still tappable, which is the only thing the sheet must not cover.
-    @media (orientation: landscape) and (max-height: 480px) {
-      height: 88vh;
-      height: 88dvh;
-    }
 
     // "There is more below." With a FIXED height a row is routinely cut by the
     // bottom edge, and a cut row reads as the last row. The gradient fades it
@@ -91,33 +70,14 @@
   }
 
   &__msheet-grabber {
-    width: 36px;
-    height: 4px;
-    min-height: 4px;
-    border-radius: 999px;
-    background: var(--normal-bg-80);
-    margin: 4px auto 10px;
+    @include drumee.mobile-bottom-sheet-grabber;
     align-self: center;
-    flex: 0 0 auto;
   }
 
-  // The sheet's ONE scroll region. Now that __msheet has a fixed height this
-  // has to absorb whatever is left under the grabber, so it takes `flex: 1 1
-  // auto` — without it a short list would sit at its natural height and a long
-  // one would try to grow the flex parent past the fixed height rather than
-  // scroll. `min-height: 0` is the other half of that: a flex child's default
-  // `min-height: auto` refuses to shrink below its content, which silently
-  // defeats the overflow.
-  //
-  // overscroll-behavior: contain — flicking past the end of the list must not
-  // hand the scroll to the desk behind the sheet. Same reason, same spelling
-  // as desk/tutorial/share/skin/index.scss.
+  // The sheet's ONE scroll region (drumee.mobile-bottom-sheet-scroller says
+  // why each declaration is there).
   &__msheet-content {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
+    @include drumee.mobile-bottom-sheet-scroller;
   }
 
   // ── The workspace switcher: chrome pinned, rows scrolling ─────────────────

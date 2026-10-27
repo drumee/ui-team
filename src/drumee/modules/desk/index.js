@@ -5893,9 +5893,10 @@ class desk_module extends LetcBox {
     const chip = this._crumbGroupPart;
     if (!chip || !chip.el || !chip.el.querySelector) return false;
     // A UTILITY SCREEN HAS NO SWITCHER. Notifications, Personal Calendar,
-    // Inbox, Contacts, Trash and Admin console ask for `noSwitcher` on their
-    // breadcrumb:context; the caret is hidden there (desk/skin/topbar) and the
-    // chip is a plain label, so nothing in it opens the panel.
+    // Inbox, Contacts, Trash, Admin console, Settings and Get help ask for
+    // `noSwitcher` on their breadcrumb:context; the caret is hidden there
+    // (desk/skin/topbar) and the chip is a plain label, so nothing in it opens
+    // the panel.
     if (chip.el.querySelector(':scope > .desk-breadcrumb__ui[data-no-switcher="1"]')) {
       return false;
     }
@@ -9100,6 +9101,7 @@ class desk_module extends LetcBox {
       // Reached from the rail and the account menu; `ph-info` is the id both
       // the mobile sheet and the account menu already give it.
       ico: "ph-info",
+      noSwitcher: 1,
     });
     return this.togglePanel("help_main", "settings-main-slot", true);
   }
@@ -11933,6 +11935,7 @@ class desk_module extends LetcBox {
           // menu, never the utility cluster. The rail's own id, so the crumb
           // still matches the control that opened it.
           ico: "sidebar_settings",
+          noSwitcher: 1,
         });
         // Open-only — clicking Settings (sidebar) or the bottom Profile
         // item never closes the panel; the close icon inside Settings
