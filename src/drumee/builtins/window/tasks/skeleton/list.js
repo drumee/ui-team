@@ -606,7 +606,9 @@ function textEditor(ui, edit, task, pfx) {
           content:
             edit.error === "too-long"
               ? LOCALE.TASK_TITLE_TOO_LONG
-              : LOCALE.TASK_TITLE_REQUIRED,
+              : edit.error === "duplicate"
+                ? LOCALE.TASK_TITLE_DUPLICATE
+                : LOCALE.TASK_TITLE_REQUIRED,
         })
       : null,
   ].filter(Boolean);

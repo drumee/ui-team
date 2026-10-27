@@ -220,13 +220,14 @@ module.exports = {
   async _commitListField(id, field, value, { close = false } = {}) {
     let task = this.getTask(id);
     if (!task) return;
-    const plan = fieldPatch(task, field, value);
+    const siblings = task.parent_task_id ? this.getSubtasks(task.parent_task_id) : null;
+    const plan = fieldPatch(task, field, value, siblings);
     if (!plan) {
       if (close) this._closeListEdit();
       return;
     }
     if (plan.error) {
-      // An empty title: say so and stay in edit mode.
+      // An empty, too long or duplicate title: say so and stay in edit mode.
       if (this._listEdit) this._listEdit.error = plan.error;
       return this._listRepaint();
     }

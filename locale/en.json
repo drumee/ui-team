@@ -1745,6 +1745,7 @@
   "TASK_TITLE": "Task title",
   "TASK_TITLE_REQUIRED": "Please give the task a title.",
   "TASK_TITLE_TOO_LONG": "The title can't be longer than 250 characters.",
+  "TASK_TITLE_DUPLICATE": "A subtask with this title already exists.",
   "TASK_DUE_REQUIRED": "Please pick a due date.",
   "DUE_DATE": "Due date",
   "SELECT_DATE": "Select date",
