@@ -5039,10 +5039,14 @@ $theme-colors: (
   }
 
   // The elbow: from the trunk down to the avatar's (or pill's) vertical
-  // centre, bending right.
+  // centre, bending right. It is the ::after so it paints OVER the last
+  // item's ::before mask below — the other way round, the mask erased the
+  // start of the curve (QA 2026-10-27).
+  $elbow-r: 12px;
+
   &__comment-thread-replies &__comment-row[data-reply="1"],
   &__comment-thread-replies &__comment-replybox {
-    &::before {
+    &::after {
       content: "";
       position: absolute;
       left: $elbow-x;
@@ -5051,26 +5055,26 @@ $theme-colors: (
       height: 32px; // row: 16 padding + 16 half avatar
       border-left: 1px solid $spine-color;
       border-bottom: 1px solid $spine-color;
-      border-bottom-left-radius: 12px;
+      border-bottom-left-radius: $elbow-r;
       pointer-events: none;
     }
   }
 
-  &__comment-thread-replies &__comment-replybox::before {
+  &__comment-thread-replies &__comment-replybox::after {
     height: 22px; // half the 44px pill
   }
 
   // The last item ends the trunk: a strip in the card's colour over the trunk
-  // only (3px), from just inside the elbow's curve to the item's bottom —
-  // where the trunk itself stops (card padding). Any lower and it paints over
-  // the card's bottom border.
+  // only (3px), from where the curve leaves it (elbow height - radius) to the
+  // item's bottom — where the trunk itself stops (card padding). Any lower and
+  // it paints over the card's bottom border.
   &__comment-thread-replies > &__comment-row[data-reply="1"]:last-child,
   &__comment-thread-replies > &__comment-replybox:last-child {
-    &::after {
+    &::before {
       content: "";
       position: absolute;
       left: $elbow-x - 1px;
-      top: 22px;
+      top: 32px - $elbow-r;
       bottom: 0;
       width: 3px;
       background: var(--normal-bg-elevated, #fff);
@@ -5078,18 +5082,18 @@ $theme-colors: (
     }
   }
 
-  &__comment-thread-replies > &__comment-replybox:last-child::after {
-    top: 12px;
+  &__comment-thread-replies > &__comment-replybox:last-child::before {
+    top: 22px - $elbow-r;
   }
 
   // Replying to a child puts a "Replying to …" line (16px + 6px gap) above the
   // pill: the elbow and the mask move down with the pill.
-  &__comment-thread-replies &__comment-replybox:has(> &__comment-replying-to)::before {
+  &__comment-thread-replies &__comment-replybox:has(> &__comment-replying-to)::after {
     height: 44px;
   }
 
-  &__comment-thread-replies > &__comment-replybox:last-child:has(> &__comment-replying-to)::after {
-    top: 34px;
+  &__comment-thread-replies > &__comment-replybox:last-child:has(> &__comment-replying-to)::before {
+    top: 44px - $elbow-r;
   }
 
   &__comment-replybox {

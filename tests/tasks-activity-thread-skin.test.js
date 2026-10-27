@@ -64,7 +64,9 @@ test("connector: purple trunk from under the root avatar, curved elbow into each
   assert.match(trunk, /left:32px/);
   assert.match(trunk, /top:52px/);
   assert.match(trunk, /--col-primary-20/);
-  for (const sel of [`${REPLY_ROW}::before`, `${REPLYBOX}::before`]) {
+  // The elbow is the ::after so it paints OVER the last item's ::before mask
+  // (QA 2026-10-27: with the mask on top, the start of the curve was erased).
+  for (const sel of [`${REPLY_ROW}::after`, `${REPLYBOX}::after`]) {
     const d = declsFor(sel);
     assert.match(d, /--col-primary-20/, sel);
     assert.match(d, /border-bottom-left-radius:12px/, sel);
@@ -72,10 +74,13 @@ test("connector: purple trunk from under the root avatar, curved elbow into each
 });
 
 test("the last reply OR an open composer ends the trunk, masked in the card's own colour", () => {
-  for (const sel of [
-    `${REPLIES}>${P}__comment-row[data-reply="1"]:last-child::after`,
-    `${REPLIES}>${P}__comment-replybox:last-child::after`,
+  // The mask starts where the curve leaves the trunk (elbow height - 12px
+  // radius): row 32 → 20, pill 22 → 10.
+  for (const [sel, top] of [
+    [`${REPLIES}>${P}__comment-row[data-reply="1"]:last-child::before`, 20],
+    [`${REPLIES}>${P}__comment-replybox:last-child::before`, 10],
   ]) {
+    assert.match(declsFor(sel), new RegExp(`top:${top}px`), sel);
     const d = declsFor(sel);
     assert.match(d, /background:var\(--normal-bg-elevated/, sel);
     assert.doesNotMatch(d, /background:#fff/, sel);
@@ -115,9 +120,9 @@ test("16px action icons, composer and reply pill spacing", () => {
 
 test("with a 'Replying to' hint above the pill, the elbow and mask follow the pill down", () => {
   const box = `${REPLYBOX}:has(>${P}__comment-replying-to)`;
-  assert.match(declsFor(`${box}::before`), /height:44px/);
+  assert.match(declsFor(`${box}::after`), /height:44px/);
   assert.match(
-    declsFor(`${REPLIES}>${P}__comment-replybox:last-child:has(>${P}__comment-replying-to)::after`),
-    /top:34px/,
+    declsFor(`${REPLIES}>${P}__comment-replybox:last-child:has(>${P}__comment-replying-to)::before`),
+    /top:32px/,
   );
 });
