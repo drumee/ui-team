@@ -174,3 +174,12 @@ test("on a phone the three nav chips fit: icons drop, labels stay", () => {
     /display:none/,
   );
 });
+
+test("the active nav row is primary with white text and icon", () => {
+  const active = '.help-main__nav-item[data-active="1"]';
+  assert.match(declsFor(active), /background:var\(--primary-40, ?#5950ff\)/);
+  assert.match(declsFor(`${active}:hover`), /background:var\(--primary-50, ?#433cc5\)/);
+  assert.match(declsFor(`${active} .help-main__nav-item-label`), /color:#fff/);
+  assert.match(declsFor(`${active} .help-main__nav-item-ico`), /color:#fff/);
+  assert.match(declsFor(`${active} .help-main__nav-item-ico svg`), /fill:currentColor/);
+});

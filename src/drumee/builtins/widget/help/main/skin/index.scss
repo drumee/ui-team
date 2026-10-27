@@ -154,11 +154,27 @@
         background: rgba(0, 0, 0, 0.06);
       }
 
+      // The page on screen: primary fill, white label and glyph. Declared
+      // after :hover/:active at the same (0,2,0), so it holds under the
+      // pointer; its own hover steps one shade darker.
       &[data-active="1"] {
-        background: $surface;
+        background: var(--primary-40, #{$purple-base});
+
+        &:hover {
+          background: var(--primary-50, #{$purple-deep});
+        }
 
         .help-main__nav-item-label {
           font-weight: 600;
+          color: #fff;
+        }
+
+        .help-main__nav-item-ico {
+          color: #fff;
+
+          svg {
+            fill: currentColor;
+          }
         }
       }
 
