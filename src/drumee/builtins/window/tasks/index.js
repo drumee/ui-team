@@ -11969,12 +11969,13 @@ class __tasks_panel extends LetcBox {
     return Array.isArray(this._taskActivity) ? this._taskActivity : [];
   }
 
-  // Pure visibility flip: data-active on the tabs, data-tab on the section (the
-  // skin hides whichever list the tab excludes). Neither list is re-fed — both
+  // Pure visibility flip over all | comments | history: data-active on the tabs,
+  // data-tab on the section (the skin hides whichever list the tab excludes;
+  // All excludes none). Neither list is re-fed — both
   // already hold their full content — so switching costs no rebuild and can't
   // drop the caret mid-comment.
   _switchActivityTab(tab) {
-    const next = ["comments", "history"].includes(tab) ? tab : "comments";
+    const next = ["all", "comments", "history"].includes(tab) ? tab : "comments";
     if (next === this._activityTab) return;
     this._activityTab = next;
     if (this.el) {
@@ -11986,9 +11987,9 @@ class __tasks_panel extends LetcBox {
       if (section) section.dataset.tab = next;
     }
     // Nothing fetched yet (the open-time load failed or is still in flight) —
-    // try again so History isn't permanently empty. Only a genuinely missing
+    // try again so History (and All, which shows it too) isn't permanently empty. Only a genuinely missing
     // change log costs a request; an already-loaded one is a pure toggle.
-    if (next === "history" && !this.getTaskHistory().length) {
+    if (next !== "comments" && !this.getTaskHistory().length) {
       const id = this._detailId;
       this._loadTaskHistory(id).then(() => {
         if (this._detailId === id && this.getTaskHistory().length) {

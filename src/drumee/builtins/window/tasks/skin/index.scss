@@ -4066,15 +4066,17 @@ $theme-colors: (
     );
   }
 
+  // Figma 944:107305: the pills sit edge to edge.
   &__activity-tabs {
     align-items: center;
-    gap: 4px;
+    gap: 0;
   }
 
   &__activity-tab {
     align-items: center;
     gap: 4px;
-    padding: 6px 12px;
+    height: 35px;
+    padding: 9px 17.5px;
     border-radius: 71px;
     cursor: pointer;
     @include drumee.typo(
@@ -4141,6 +4143,17 @@ $theme-colors: (
   &__comments[data-tab="comments"] &__activity-section[data-kind="history"],
   &__comments[data-tab="history"] &__activity-section[data-kind="comments"] {
     display: none;
+  }
+
+  // All stacks both runs, so each gets its caption back — and a run with
+  // nothing in it is dropped rather than leaving its "No …" line under the
+  // other one.
+  &__comments[data-tab="all"] &__activity-section[data-empty="1"] {
+    display: none;
+  }
+
+  &__comments[data-tab="all"] &__section-label {
+    display: block;
   }
 
   // ── Change-log line (History tab) ─────────────────────────────────

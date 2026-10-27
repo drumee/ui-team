@@ -1107,8 +1107,9 @@ const make = function (ui) {
     });
 
     // Comments: flat feed (a re-feedable part) + an @-mention composer.
-    // Activity header: title + Comments / History tabs, which flip which of the
-    // two independently-fed lists below is visible. Comments is the default.
+    // Activity header: title + All / Comments / History tabs (Figma 944:107305),
+    // which flip which of the two independently-fed lists below is visible —
+    // All shows both. Comments is the default.
     const currentTab = ui.getActivityTab ? ui.getActivityTab() : "comments";
     const activityTab = (tab, label, icon) =>
       Skeletons.Box.X({
@@ -1151,8 +1152,9 @@ const make = function (ui) {
             Skeletons.Box.X({
               className: `${pfx}__activity-tabs`,
               kids: [
-                activityTab("comments", LOCALE.COMMENTS, "message"),
-                activityTab("history", LOCALE.HISTORY, "apps-clock"),
+                activityTab("all", LOCALE.ALL, null),
+                activityTab("comments", LOCALE.COMMENTS, "ph-chat-circle-dots"),
+                activityTab("history", LOCALE.HISTORY, "ph-arrow-counter-clockwise"),
               ],
             }),
           ],
