@@ -117,4 +117,20 @@ test("activity panel is a bottom sheet on mobile", () => {
   assert.match(declsFor(css, `${root} .panel-activity__main::before`), /width:36px/);
 });
 
+test("trash panel is a bottom sheet on mobile, still closable", () => {
+  const css = compile("builtins/panel/trash/skin/index.scss");
+  const root = '.panel-trash__ui[data-device="mobile"]';
+  const d = declsFor(css, root);
+  assert.match(d, /left:0 !important/);
+  assert.match(d, /top:auto !important/);
+  assert.match(d, /bottom:0 !important/);
+  assert.match(d, /height:62dvh !important/);
+  assert.match(d, /border-radius:16px 16px 0 0/);
+  assert.doesNotMatch(d, /translate\(-50%/);
+  // (0,3,0): nested under the device gate, so they beat the desktop pair.
+  assert.match(declsFor(css, `${root}[data-anim="in"]`), /transform:translateY\(0\)/);
+  assert.match(declsFor(css, `${root}[data-anim="out"]`), /transform:translateY\(100%\)/);
+  assert.match(declsFor(css, `${root} .panel-trash__main::before`), /width:36px/);
+});
+
 module.exports = { compile, declsFor, inMedia };

@@ -38,7 +38,12 @@
       transform: translateX(calc(100% + var(--desk-gutter, 8px)));
     }
 
-    // Mobile: a centered card instead of the full-height left drawer.
+    // Mobile: the desk's bottom sheet (drumee.mobile-bottom-sheet — the same
+    // box as the workspace / go-to / account sheets) instead of the
+    // full-height right drawer. It slides up from below and parks just off
+    // the bottom edge. The scrim behind it is the panel container's ::before
+    // (Mobile backdrop, further down), so a transform here traps nothing.
+    //
     // The in/out states MUST be nested here. A single unconditional
     // transform at this level carries the same specificity as the
     // [data-anim] rules above (0,2,0) and, being declared later, wins —
@@ -46,62 +51,46 @@
     // close, since every close path (_onOutsideClick, _hidePanel, the
     // header cross) only flips that attribute. Nesting takes these to
     // (0,3,0) so they beat the desktop pair regardless of order.
+    //
+    // The !important offsets and sizes release the desktop drawer's
+    // right/top/bottom anchoring and its 512px width; the landscape twin has
+    // to repeat the height for the same reason.
     &[data-device="mobile"] {
-      width: 360px !important;
-      height: 500px !important;
-      left: 50% !important;
-      // Release the desktop right-edge anchor, otherwise left+width+right
-      // are all set at once and the centring depends on the browser
-      // silently dropping one of them. Now that the panel is fixed, this
-      // 50% resolves against the viewport, so the card no longer needs the
-      // container to supply a width (that prop was the reason for the
-      // `.left [data-partname="trash-panel"]` containing-block rule in
-      // desk/skin/index.scss).
-      right: auto !important;
+      @include drumee.mobile-bottom-sheet;
+      left: 0 !important;
+      right: 0 !important;
+      top: auto !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      height: 62vh !important;
+      height: 62dvh !important;
+      transform: translateY(100%);
 
-      // Centred on the SCREEN, which needs the anchor at mid-viewport. The
-      // previous pair kept the base `top: 0` and pushed the card down by
-      // translateY(15%) — 15% of the CARD's own 500px, i.e. a fixed 75px from
-      // the top whatever the screen height, so it always sat high. A percentage
-      // translate cannot express "centre" from top:0; from top:50% it can.
-      top: 50% !important;
+      @media (orientation: landscape) and (max-height: 480px) {
+        height: 88vh !important;
+        height: 88dvh !important;
+      }
 
-      // Parked just off the bottom edge: from the 50% anchor, translateY(50vh)
-      // puts the top edge at 100vh — the same resting place and the same slide
-      // distance the old translateY(100vh) gave from top:0, so the animation
-      // feels unchanged.
-      transform: translate(-50%, 50vh);
-
-      // A hard 500px card would hang ~62px off both edges of a landscape phone
-      // (~375px tall) once centred — centred but unusable. The cap wins over
-      // the height above and keeps it on screen; __main is height:100% so it
-      // follows.
-      max-height: calc(100dvh - 32px);
-
-      // Rounded corners now that this is a floating card rather than the
-      // full-height drawer it is on desktop, where square edges are correct
-      // because it meets the viewport edge.
-      //
-      // overflow:hidden is what makes the radius visible: __topbar carries its
-      // own opaque background (var(--normal-bg-100)) and would paint square
-      // over the top two corners otherwise. It also clips the list, which is
-      // already the panel's own scroll container.
-      border-radius: 6px;
-      overflow: hidden;
-
-      // Asked for explicitly alongside the root. Redundant while the root
-      // clips, but it keeps __main correct on its own terms — it is the box
-      // that actually carries the card surface — and costs nothing.
+      // Rounded to match the sheet; the root clips (overflow:hidden from the
+      // mixin), this keeps __main — the box that actually carries the surface —
+      // correct on its own terms. Its ::before is the grabber, the first slot
+      // of a column flex box, above the topbar.
       .panel-trash__main {
-        border-radius: 6px;
+        border-radius: 16px 16px 0 0;
+
+        &::before {
+          @include drumee.mobile-bottom-sheet-grabber;
+          // __main's own 12px padding already spaces it from the top edge.
+          margin-top: -4px;
+        }
       }
 
       &[data-anim="in"] {
-        transform: translate(-50%, -50%);
+        transform: translateY(0);
       }
 
       &[data-anim="out"] {
-        transform: translate(-50%, 50vh);
+        transform: translateY(100%);
       }
     }
   }
@@ -702,7 +691,7 @@
   // so the panel still closes. (Re-declaring transform at this level is
   // exactly what made the phone card unclosable before it was nested.)
   //
-  // Phones keep the centred card instead — see &__ui[data-device="mobile"]
+  // Phones get the bottom sheet instead — see &__ui[data-device="mobile"]
   // above. The :not() keeps the two regimes disjoint by construction
   // rather than leaning on specificity to arbitrate between them, since a
   // phone (≤ 800px + mobile UA, see Visitor.device()) also matches this
@@ -730,7 +719,7 @@
 }
 
 // ── Mobile backdrop ─────────────────────────────────────────────────────
-// On a phone this panel is a centred card floating over a sharp desk, with no
+// On a phone this panel is a bottom sheet over a sharp desk, with no
 // backdrop of its own. Give it the desk's scrim — the same var(--overlay-bg)
 // and blur(6px) that .desk-module__overlay uses behind the mobile drawer, so
 // every mobile overlay surface matches.
@@ -742,7 +731,7 @@
 //     `position:relative; z-index:10001` — a stacking context. Nothing outside
 //     it can paint between the desk grid and this card whatever z-index it
 //     claims, so the borrowed overlay covered the card instead of backing it.
-//   • Not a ::before on the card itself: the card is centred AND animated with
+//   • Not a ::before on the card itself: the sheet is animated with
 //     transform, and a transform makes it the containing block for fixed
 //     descendants, shrinking a full-viewport scrim to the card's own box. The
 //     only way round that is to drop the transform (what panel_activity does),
