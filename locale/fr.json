@@ -3512,5 +3512,7 @@
   "FORMAT_STRIKE": "Barré (Ctrl+Shift+X)",
   "FORMAT_BULLET_LIST": "Liste à puces (Ctrl+Shift+8)",
   "FORMAT_NUMBERED_LIST": "Liste numérotée (Ctrl+Shift+7)",
-  "FORMAT_LINK": "Lien (Ctrl+K)"
+  "FORMAT_LINK": "Lien (Ctrl+K)",
+  "DMZ_MEETING_EMAIL_REQUIRED": "L’organisateur demande votre e-mail avant que vous puissiez rejoindre cette réunion.",
+  "DMZ_MEETING_EMAIL_SHARED": "Votre e-mail sera communiqué au propriétaire de la réunion."
 }

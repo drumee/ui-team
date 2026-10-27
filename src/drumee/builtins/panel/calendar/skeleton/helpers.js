@@ -386,6 +386,29 @@ function rangeLabel(view, cursor) {
   return anchor.format("MMMM, YYYY");
 }
 
+/**
+ * The visible rows grouped by day ('YYYY-MM-DD' → rows), in the order every
+ * grid draws a day: meetings before tasks, meetings by start time, tasks by
+ * title — a timed item above an all-day one reads as the agenda it is.
+ */
+function itemsByDay(rows) {
+  const byDay = {};
+  rows.forEach((row) => {
+    const s = rowStart(row);
+    if (!s) return;
+    const k = ymd(s);
+    (byDay[k] = byDay[k] || []).push(row);
+  });
+  Object.keys(byDay).forEach((k) => {
+    byDay[k].sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === "meeting" ? -1 : 1;
+      if (a.kind === "meeting") return (a.stime || 0) - (b.stime || 0);
+      return String(a.title).localeCompare(String(b.title));
+    });
+  });
+  return byDay;
+}
+
 module.exports = {
   STATUSES,
   PRIORITIES,
@@ -405,6 +428,7 @@ module.exports = {
   rowStart,
   rowEnd,
   startLabel,
+  itemsByDay,
   expandRecurrence,
   passesFilter,
   viewRange,

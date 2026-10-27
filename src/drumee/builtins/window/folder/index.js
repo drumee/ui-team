@@ -6485,12 +6485,13 @@ class __window_folder extends mfsInteract {
   /**
    * One meeting by nid, ignoring the visible range.
    *
-   * `room_list_scheduled` treats a MISSING bound as "no bound"
-   * (`_stime IS NULL OR _etime IS NULL` → every scheduled node), and
-   * `room.list` reads both with `input.use(..., null)` — so the bounds are
-   * OMITTED here rather than sent empty. fetchService writes a plain scalar
-   * straight into the query string, so an undefined one would arrive as the
-   * four-character string "undefined" and cast to 0, matching nothing.
+   * The bounds are EXPLICIT and span every possible epoch (0 … INT max),
+   * never omitted. Omitted, they reached `room_list_scheduled`'s INT
+   * parameters as '' on stage, which MariaDB refuses (ERROR 1366), so every
+   * lookup came back empty and every deep link said MEETING_NOT_FOUND. (Sent
+   * as `undefined`, fetchService would write the string "undefined", which
+   * casts to 0 and matches nothing.) A full range returns every scheduled
+   * node, which is what a rangeless read was meant to do.
    *
    * Resolves null rather than rejecting: a failed lookup is answered with
    * MEETING_NOT_FOUND by the caller, which is the honest outcome either way.
@@ -6501,7 +6502,9 @@ class __window_folder extends mfsInteract {
   async _fetchMeetingById(nid) {
     const svc = (SERVICE.room && SERVICE.room.list) || "room.list";
     const rows = await Promise.resolve()
-      .then(() => this.fetchService(svc, { ...this._meetingScope() }))
+      .then(() =>
+        this.fetchService(svc, { stime: 0, etime: 2147483647, ...this._meetingScope() }),
+      )
       .catch(() => null);
     return (
       this._asMeetingRows(rows).find((m) => `${m.id}` === `${nid}`) || null

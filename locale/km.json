@@ -3281,5 +3281,7 @@
   "FORMAT_STRIKE": "គូសបន្ទាត់ឆូត (Ctrl+Shift+X)",
   "FORMAT_BULLET_LIST": "បញ្ជីចំណុច (Ctrl+Shift+8)",
   "FORMAT_NUMBERED_LIST": "បញ្ជីលេខ (Ctrl+Shift+7)",
-  "FORMAT_LINK": "តំណ (Ctrl+K)"
+  "FORMAT_LINK": "តំណ (Ctrl+K)",
+  "DMZ_MEETING_EMAIL_REQUIRED": "អ្នករៀបចំតម្រូវឱ្យបញ្ចូលអ៊ីមែលរបស់អ្នក មុនពេលអ្នកអាចចូលរួមកិច្ចប្រជុំនេះ។",
+  "DMZ_MEETING_EMAIL_SHARED": "អ៊ីមែលរបស់អ្នកនឹងត្រូវបានចែករំលែកជាមួយម្ចាស់កិច្ចប្រជុំ។"
 }

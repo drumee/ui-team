@@ -3281,5 +3281,7 @@
   "FORMAT_STRIKE": "删除线 (Ctrl+Shift+X)",
   "FORMAT_BULLET_LIST": "项目符号列表 (Ctrl+Shift+8)",
   "FORMAT_NUMBERED_LIST": "编号列表 (Ctrl+Shift+7)",
-  "FORMAT_LINK": "链接 (Ctrl+K)"
+  "FORMAT_LINK": "链接 (Ctrl+K)",
+  "DMZ_MEETING_EMAIL_REQUIRED": "组织者要求您先提供电子邮箱，才能加入此会议。",
+  "DMZ_MEETING_EMAIL_SHARED": "您的电子邮箱将与会议所有者共享。"
 }
