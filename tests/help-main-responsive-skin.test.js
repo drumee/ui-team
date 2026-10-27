@@ -133,21 +133,24 @@ test("nav list is a wrapping row; one item per line on desktop", () => {
   assert.match(declsFor(".help-main__nav-item"), /flex:0 0 100%/);
 });
 
-test("stacked nav is a sideways-scrolling chip strip", () => {
+test("stacked nav chips wrap, so every chip — the active one included — stays on screen", () => {
+  // A sideways-scrolling strip came back scrolled to the left after each page
+  // switch (the widget re-renders), so in French — or English at 320px — the
+  // chip just tapped sat out of view with nothing lit.
   const at = "help-main (max-width: 800px)";
   const list = inContainer(at, ".help-main__nav-list");
-  assert.match(list, /flex-wrap:nowrap/);
-  assert.match(list, /overflow-x:auto/);
-  assert.match(list, /scrollbar-width:none/);
+  assert.match(list, /flex-wrap:wrap/);
+  assert.doesNotMatch(list, /overflow-x:auto/);
   const item = inContainer(at, ".help-main__nav-item");
   assert.match(item, /flex:0 0 auto/);
   assert.match(item, /white-space:nowrap/);
 });
 
-test("page end clears the bottom rail on a phone desk", () => {
-  const pad = /padding-bottom:calc\(80px \+ env\(safe-area-inset-bottom/;
-  assert.match(declsFor('.desk-module[data-device="mobile"] .help-main__main'), pad);
-  assert.match(inMedia("(max-width: 650px)", ".help-main__main"), pad);
+test("no rail clearance of its own: the desk body already reserves it", () => {
+  // desk/skin/mobile-rail.scss pads __body[data-device=mobile] by the rail's
+  // height, and this screen's slot sits inside it; a second padding left an
+  // empty 80px band at the page end.
+  assert.doesNotMatch(css, /help-main__main\{[^}]*padding-bottom:calc\(80px/);
 });
 
 test("inputs are 16px on phones", () => {

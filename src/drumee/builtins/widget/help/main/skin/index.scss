@@ -831,19 +831,16 @@
       border-bottom: 1px solid $hairline;
     }
 
-    // The nav becomes a horizontal strip once it's a header rather than a
-    // rail, so the three entries don't eat a screenful before the content.
-    // One line that scrolls sideways — same spelling as __faq-chips — so a
-    // long translation never wraps the strip into a second row.
+    // The nav becomes a row of chips once it's a header rather than a rail,
+    // so the three entries don't eat a screenful before the content.
+    //
+    // It WRAPS rather than scrolling sideways. Every page switch re-renders
+    // the widget, and a scrolled strip comes back scrolled to its start — so
+    // in a longer locale (French needs ~530px) the chip just tapped sat out of
+    // view and nothing on screen said which page this was. Wrapped, every chip
+    // is always visible, and there is no overflow box to clip the focus ring.
     &__nav-list {
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      overscroll-behavior-x: contain;
-      scrollbar-width: none;
-
-      &::-webkit-scrollbar {
-        display: none;
-      }
+      flex-wrap: wrap;
     }
 
     &__nav-item {
@@ -963,34 +960,14 @@
       min-height: 44px;
       box-sizing: border-box;
     }
-    // The strip's three chips (Product tour / Self-hosting setup / FAQ) need
-    // ~420px with their glyphs, which pushed FAQ off the right edge of a 390px
+    // The three chips (Product tour / Self-hosting setup / FAQ) need ~420px
+    // with their glyphs, which would wrap FAQ onto a second line on a 390px
     // phone. The glyph is decoration — the label names the page — so it goes,
-    // and the three fit in ~312px. (0,3,0): the icon is a ui-core widget,
+    // and the three fit on one line in ~312px. (0,3,0): the icon is a ui-core widget,
     // whose framework flow rule sets display at (0,2,0).
     &__nav-list &__nav-item &__nav-item-ico {
       display: none;
     }
-  }
-}
-
-// ── Phone desk: clear the bottom rail ───────────────────────
-// The settings-main-slot runs under the phone's fixed bottom rail
-// (desk/skin/mobile-rail.scss: 12px + 54px pill + 12px, plus the home-strip
-// inset), so the page end would scroll under it. On a phone the screen is
-// always stacked, which makes __main the scroller — the padding goes there.
-//
-// Gated like the rail itself rather than on the container: the rail exists
-// because of the DEVICE, not the screen's width. Emitted twice, as
-// mixins/responsive.scss does it: Visitor.device() only answers "mobile"
-// below 801px.
-.desk-module[data-device="mobile"] .help-main__main {
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-}
-
-@media (max-width: 650px) {
-  .help-main__main {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 }
 
