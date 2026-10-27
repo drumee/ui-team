@@ -125,3 +125,21 @@ test("no viewport @media left except reduced-motion and the phone rail block", (
   }
 });
 
+
+test("nav list is a wrapping row; one item per line on desktop", () => {
+  const nav = fs.readFileSync(path.join(SRC, HELP, "skeleton/nav.js"), "utf8");
+  assert.match(nav, /Skeletons\.Box\.X\(\{\s*className: `\$\{pfx\}-list`/);
+  assert.match(declsFor(".help-main__nav-list"), /flex-wrap:wrap/);
+  assert.match(declsFor(".help-main__nav-item"), /flex:0 0 100%/);
+});
+
+test("stacked nav is a sideways-scrolling chip strip", () => {
+  const at = "help-main (max-width: 800px)";
+  const list = inContainer(at, ".help-main__nav-list");
+  assert.match(list, /flex-wrap:nowrap/);
+  assert.match(list, /overflow-x:auto/);
+  assert.match(list, /scrollbar-width:none/);
+  const item = inContainer(at, ".help-main__nav-item");
+  assert.match(item, /flex:0 0 auto/);
+  assert.match(item, /white-space:nowrap/);
+});

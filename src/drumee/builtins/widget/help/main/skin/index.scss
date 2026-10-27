@@ -125,12 +125,17 @@
       }
     }
 
+    // A Box.X that wraps (skeleton/nav.js): each item takes a full line, so on
+    // desktop it reads as the vertical list it always was.
     &-list {
+      flex-wrap: wrap;
       gap: var(--spacer-2);
     }
 
     &-item {
       @include focus-ring;
+      flex: 0 0 100%;
+      box-sizing: border-box;
       align-items: center;
       gap: var(--spacer-4);
       padding: var(--spacer-3);
@@ -828,8 +833,22 @@
 
     // The nav becomes a horizontal strip once it's a header rather than a
     // rail, so the three entries don't eat a screenful before the content.
+    // One line that scrolls sideways — same spelling as __faq-chips — so a
+    // long translation never wraps the strip into a second row.
     &__nav-list {
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    &__nav-item {
+      flex: 0 0 auto;
+      white-space: nowrap;
     }
 
     &__content {
