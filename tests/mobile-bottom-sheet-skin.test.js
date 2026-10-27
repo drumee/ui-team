@@ -166,4 +166,34 @@ test("desk mobile search opens as the bottom sheet", () => {
   assert.match(list, /overflow-y:auto/);
 });
 
+test("invite popup is a bottom sheet on a phone, over wm's centring", () => {
+  const css = compile("builtins/widget/invite-popup/skin/index.scss");
+  const wrapped =
+    '.window-manager__wrapper-modal.window__wrapper-modal[data-invite-overlay] .invite-popup__ui[data-device="mobile"]';
+  for (const [sel, d] of [
+    ['.invite-popup__ui[data-device="mobile"]', declsFor(css, '.invite-popup__ui[data-device="mobile"]')],
+    [wrapped, declsFor(css, wrapped)],
+    ["650px .invite-popup__ui", inMedia(css, "(max-width: 650px)", ".invite-popup__ui")],
+  ]) {
+    // !important on each: wm's wrapper-modal-mobile-centre pins all of these.
+    assert.match(d, /position:fixed !important/, sel);
+    assert.match(d, /left:0 !important/, sel);
+    assert.match(d, /top:auto !important/, sel);
+    assert.match(d, /bottom:0 !important/, sel);
+    assert.match(d, /margin:0 !important/, sel);
+    assert.match(d, /height:62dvh/, sel);
+    assert.match(d, /border-radius:16px 16px 0 0/, sel);
+    assert.match(d, /backdrop-filter:none/, sel);
+    assert.match(d, /animation:invite-popup-sheet-in/, sel);
+  }
+  assert.match(declsFor(css, `${wrapped}[data-closing="1"]`), /animation:invite-popup-sheet-out/);
+  assert.match(declsFor(css, `${wrapped}::before`), /width:36px/);
+  const box = declsFor(css, `${wrapped} .invite-popup__container`);
+  assert.match(box, /max-height:none/);
+  assert.match(box, /overflow-y:auto/);
+  // translate, not transform: wm's transform:none !important would freeze it.
+  assert.match(css, /@keyframes invite-popup-sheet-in\{from\{translate:0 100%\}/);
+  assert.match(inMedia(css, "(prefers-reduced-motion: reduce)", `${wrapped}[data-closing="1"]`), /animation:none/);
+});
+
 module.exports = { compile, declsFor, inMedia };
