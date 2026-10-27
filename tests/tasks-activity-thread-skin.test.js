@@ -90,9 +90,12 @@ test("the last reply OR an open composer ends the trunk, masked in the card's ow
   }
 });
 
-test("Figma type: 16px author and body, long strings still wrap", () => {
+test("type: 16px author, a smaller and lighter body, long strings still wrap", () => {
   const body = declsFor(`${P}__comment-body`);
-  assert.match(body, /font-size:16px/);
+  // QA 2026-10-27: down from Figma's 16px / 400. The typo mixin never emits
+  // font-weight, so the weight has to be its own declaration.
+  assert.match(body, /font-size:14px/);
+  assert.match(body, /font-weight:300/);
   assert.match(body, /line-height:1\.4/);
   assert.match(body, /overflow-wrap:anywhere/);
   const author = declsFor(`${P}__comment-author`);
@@ -105,6 +108,7 @@ test("a mention in a posted comment is plain brand-purple text", () => {
   const d = declsFor(`${P}__comment-body ${P}__mention-chip`);
   assert.match(d, /color:var\(--col-primary-40, ?#5950ff\)/);
   assert.match(d, /background:(none|transparent)/);
+  assert.match(d, /font-weight:inherit/);
 });
 
 test("16px action icons, composer and reply pill spacing", () => {

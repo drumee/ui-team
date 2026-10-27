@@ -4793,12 +4793,16 @@ $theme-colors: (
       user-select: text !important;
       -webkit-user-select: text !important;
     }
+    // Smaller and lighter than Figma's 16px / 400 (QA 2026-10-27). The mixin
+    // never emits font-weight, hence the separate declaration; Armin Grotesk
+    // has no 300 face, so this renders with UltraLight (200).
     @include drumee.typo(
-      $size: 16px,
-      $weight: 400,
+      $size: 14px,
+      $weight: 300,
       $line: 1.4,
       $color: var(--normal-fg-10, #0b0a21)
     );
+    font-weight: 300;
 
     // A posted mention reads as plain brand-purple text (Figma), not the
     // editor's tag chip.
@@ -4807,7 +4811,7 @@ $theme-colors: (
       margin: 0;
       background: none;
       color: var(--col-primary-40, #5950ff);
-      font-weight: 400;
+      font-weight: inherit;
     }
   }
 
