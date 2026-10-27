@@ -11,7 +11,7 @@ const {
   settlePendingFiles,
 } = require("./detail-commit");
 const { restoreScroll } = require("./scroll-restore");
-const { titleTooLong, toggleUid } = require("./list-edit");
+const { titleTooLong, titleTaken, toggleUid } = require("./list-edit");
 const { stamp, reconcile } = require("./reconcile");
 const listInline = require("./list-inline");
 const listSubtask = require("./list-subtask");
@@ -4141,6 +4141,9 @@ class __tasks_panel extends LetcBox {
       if (!titleTooLong(value)) {
         this._clearSubtaskTitleTooLong("detail-panel", this._subtaskDraft);
       }
+      if (!titleTaken(value, this.getSubtasks(this._detailId))) {
+        this._clearSubtaskTitleDuplicate("detail-panel", this._subtaskDraft);
+      }
       return;
     }
     // Same, for the creator inside the create modal — its draft is a different
@@ -4154,6 +4157,9 @@ class __tasks_panel extends LetcBox {
       }
       if (!titleTooLong(value)) {
         this._clearSubtaskTitleTooLong("create-modal", this._createSubtaskDraft);
+      }
+      if (!titleTaken(value, this.getPendingSubtasks())) {
+        this._clearSubtaskTitleDuplicate("create-modal", this._createSubtaskDraft);
       }
       return;
     }
@@ -11474,6 +11480,21 @@ class __tasks_panel extends LetcBox {
     this._focusSubtaskTitle(host);
   }
 
+  // A sibling already has this title. Same in-place flag as the two above.
+  _flagSubtaskTitleDuplicate(host, draft) {
+    if (draft) draft._titleDuplicate = true;
+    const card = this._subtaskCard(host);
+    if (card) card.dataset.titleDuplicate = "1";
+    this._focusSubtaskTitle(host);
+  }
+
+  _clearSubtaskTitleDuplicate(host, draft) {
+    if (!draft || !draft._titleDuplicate) return;
+    draft._titleDuplicate = false;
+    const card = this._subtaskCard(host);
+    if (card) card.dataset.titleDuplicate = "0";
+  }
+
   _clearSubtaskTitleTooLong(host, draft) {
     if (!draft || !draft._titleTooLong) return;
     draft._titleTooLong = false;
@@ -11633,6 +11654,9 @@ class __tasks_panel extends LetcBox {
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagSubtaskTitleTooLong("create-modal", draft);
     if (tooLong) return;
+    if (titleTaken(title, parentDraft.subtasks)) {
+      return this._flagSubtaskTitleDuplicate("create-modal", draft);
+    }
     if (!Array.isArray(parentDraft.subtasks)) parentDraft.subtasks = [];
     parentDraft.subtasks.push({
       // Local key, not a server id. Named `id` so the shared row skeleton can
@@ -11743,6 +11767,9 @@ class __tasks_panel extends LetcBox {
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagSubtaskTitleTooLong("detail-panel", draft);
     if (tooLong) return;
+    if (titleTaken(title, this.getSubtasks(parentId))) {
+      return this._flagSubtaskTitleDuplicate("detail-panel", draft);
+    }
 
     // _setControlBusy, NOT _setSubmitting: the latter raises the panel-wide
     // _submitting flag that gates commit-task / commit-detail, and creating a

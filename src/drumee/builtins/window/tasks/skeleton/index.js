@@ -4608,6 +4608,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
       attrOpt: {
         "data-title-missing": draft._titleMissing ? "1" : "0",
         "data-title-too-long": draft._titleTooLong ? "1" : "0",
+        "data-title-duplicate": draft._titleDuplicate ? "1" : "0",
       },
       bubble: 0,
       kids: [
@@ -4647,6 +4648,10 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
         Skeletons.Note({
           className: `${pfx}__subtask-title-too-long`,
           content: LOCALE.TASK_TITLE_TOO_LONG,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__subtask-title-duplicate`,
+          content: LOCALE.TASK_TITLE_DUPLICATE,
         }),
         Skeletons.Box.X({
           className: `${pfx}__subtask-card-chips`,

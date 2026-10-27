@@ -7296,7 +7296,8 @@ $theme-colors: (
       }
     }
   }
-  &__list-subcreate-row[data-toolong="1"] &__list-subcreate input {
+  &__list-subcreate-row[data-toolong="1"] &__list-subcreate input,
+  &__list-subcreate-row[data-duplicate="1"] &__list-subcreate input {
     border-bottom-color: #d74e49;
   }
   &__list-subcreate-row &__list-check[data-empty="1"] {
@@ -9684,7 +9685,8 @@ $theme-colors: (
   // the hide for the same reason as there: ui-core's data-flow rules give
   // every Note display:flex at higher specificity.
   &__subtask-title-missing,
-  &__subtask-title-too-long {
+  &__subtask-title-too-long,
+  &__subtask-title-duplicate {
     margin-top: -6px;
     @include drumee.typo(
       $size: 11px,
@@ -9694,12 +9696,14 @@ $theme-colors: (
   }
 
   &__subtask-card:not([data-title-missing="1"]) .tasks-panel__subtask-title-missing,
-  &__subtask-card:not([data-title-too-long="1"]) .tasks-panel__subtask-title-too-long {
+  &__subtask-card:not([data-title-too-long="1"]) .tasks-panel__subtask-title-too-long,
+  &__subtask-card:not([data-title-duplicate="1"]) .tasks-panel__subtask-title-duplicate {
     display: none !important;
   }
 
   &__subtask-card[data-title-missing="1"] .tasks-panel__subtask-card-title,
-  &__subtask-card[data-title-too-long="1"] .tasks-panel__subtask-card-title {
+  &__subtask-card[data-title-too-long="1"] .tasks-panel__subtask-card-title,
+  &__subtask-card[data-title-duplicate="1"] .tasks-panel__subtask-card-title {
     border-color: var(--error, #f6514b);
     box-shadow: 0 0 0 3px rgba(246, 81, 75, 0.15);
   }
