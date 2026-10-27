@@ -79,6 +79,9 @@ test("the last reply OR an open composer ends the trunk, masked in the card's ow
     const d = declsFor(sel);
     assert.match(d, /background:var\(--normal-bg-elevated/, sel);
     assert.doesNotMatch(d, /background:#fff/, sel);
+    // The trunk stops at the last row's bottom edge (card padding), so the
+    // mask must too: reaching further paints over the card's bottom border.
+    assert.match(d, /bottom:0/, sel);
   }
 });
 

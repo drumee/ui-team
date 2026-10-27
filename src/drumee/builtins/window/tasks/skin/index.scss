@@ -5057,7 +5057,9 @@ $theme-colors: (
   }
 
   // The last item ends the trunk: a strip in the card's colour over the trunk
-  // only (3px), from just inside the elbow's curve to the card's bottom.
+  // only (3px), from just inside the elbow's curve to the item's bottom —
+  // where the trunk itself stops (card padding). Any lower and it paints over
+  // the card's bottom border.
   &__comment-thread-replies > &__comment-row[data-reply="1"]:last-child,
   &__comment-thread-replies > &__comment-replybox:last-child {
     &::after {
@@ -5065,7 +5067,7 @@ $theme-colors: (
       position: absolute;
       left: $elbow-x - 1px;
       top: 22px;
-      bottom: -17px; // past the card's bottom padding (16) + border
+      bottom: 0;
       width: 3px;
       background: var(--normal-bg-elevated, #fff);
       pointer-events: none;
