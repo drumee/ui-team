@@ -35,7 +35,18 @@
     font-family: var(--font-main);
   }
 
+  // One step down the spacer ramp (skin/vars/revamp.scss) for everything in
+  // the screen — every padding and gap here is a --spacer-*, so redefining
+  // them on the body scales the whole layout, breakpoints included, without
+  // touching each rule. The type and glyph sizes below are stepped down to
+  // match.
   &__main {
+    --spacer-8: 2rem; // 40 -> 32
+    --spacer-7: 1.5rem; // 32 -> 24
+    --spacer-6: 1.25rem; // 24 -> 20
+    --spacer-5: 0.75rem; // 16 -> 12
+    --spacer-4: 0.625rem; // 12 -> 10
+    --spacer-3: 0.375rem; // 8 -> 6
     width: 100%;
     height: 100%;
     align-items: stretch;
@@ -63,8 +74,8 @@
   &__nav {
     &-column {
       @include thin-scroll;
-      width: 320px;
-      flex: 0 0 320px;
+      width: 280px;
+      flex: 0 0 280px;
       height: 100%;
       padding: var(--spacer-5) var(--spacer-6);
       gap: var(--spacer-4);
@@ -75,9 +86,9 @@
     }
 
     &-title {
-      font-size: 1.125rem; // 18px
+      font-size: 1rem; // 16px
       font-weight: 600;
-      line-height: 1.5rem;
+      line-height: 1.375rem;
       color: $ink-900;
     }
 
@@ -98,9 +109,9 @@
       }
 
       &-ico {
-        width: 20px;
-        height: 20px;
-        flex: 0 0 20px;
+        width: 18px;
+        height: 18px;
+        flex: 0 0 18px;
         color: $ink-600;
       }
 
@@ -114,8 +125,8 @@
           outline: none;
           background: transparent;
           font-family: inherit;
-          font-size: 0.875rem;
-          line-height: 1.25rem;
+          font-size: 0.8125rem;
+          line-height: 1.125rem;
           color: $ink-900;
 
           &::placeholder {
@@ -179,15 +190,15 @@
       }
 
       &-ico {
-        width: 20px;
-        height: 20px;
-        flex: 0 0 20px;
+        width: 18px;
+        height: 18px;
+        flex: 0 0 18px;
         color: $ink-900;
       }
 
       &-label {
-        font-size: 0.875rem;
-        line-height: 1.25rem;
+        font-size: 0.8125rem;
+        line-height: 1.125rem;
         color: $ink-900;
         // Keep the row height stable when the active weight changes.
         transition: font-weight $fast $ease;
@@ -222,16 +233,16 @@
     }
 
     &-title {
-      font-size: 2rem; // 32px
+      font-size: 1.625rem; // 26px
       font-weight: 600;
-      line-height: 2.1875rem;
+      line-height: 2rem;
       color: $ink-900;
     }
 
     &-intro {
       max-width: 622px;
-      font-size: 1rem;
-      line-height: 1.375rem;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
       color: var(--black);
     }
   }
@@ -243,7 +254,7 @@
       position: relative;
       width: 100%;
       aspect-ratio: 900 / 506;
-      border-radius: 20px;
+      border-radius: 16px;
       background: $surface;
       align-items: center;
       justify-content: center;
@@ -361,8 +372,8 @@
     }
 
     &-play {
-      width: 72px;
-      height: 72px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       background: rgba(20, 17, 35, 0.4);
       // Frosted, so the badge holds up over the pale gradient fallback.
@@ -377,8 +388,8 @@
         box-shadow $base $ease;
 
       &-ico {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         color: var(--white);
         // Optical centring — a triangle reads left-heavy in a circle.
         margin-left: 3px;
@@ -391,9 +402,9 @@
       border-radius: 58px;
       background: rgba(255, 255, 255, 0.72);
       backdrop-filter: blur(6px);
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 600;
-      line-height: 1.25rem;
+      line-height: 1.125rem;
       color: $ink-900;
       white-space: nowrap;
     }
@@ -415,9 +426,9 @@
       padding: var(--spacer-4) var(--spacer-6);
       border-radius: 6px;
       background: var(--primary-50);
-      font-size: 0.9375rem; // 15px
+      font-size: 0.875rem; // 14px
       font-weight: 600;
-      line-height: 1.25rem;
+      line-height: 1.125rem;
       color: var(--white);
       white-space: nowrap;
       cursor: pointer;
@@ -480,22 +491,22 @@
     }
 
     &-ico {
-      width: 24px;
-      height: 24px;
-      flex: 0 0 24px;
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
       color: $ink-900;
     }
 
     &-title {
-      font-size: 1.25rem; // 20px
+      font-size: 1.125rem; // 18px
       font-weight: 600;
-      line-height: 1.375rem;
+      line-height: 1.25rem;
       color: $ink-900;
     }
 
     &-summary {
-      font-size: 1rem;
-      line-height: 1.375rem;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
       color: var(--black);
       // Design truncates to a single line; clamp keeps two-line summaries
       // from breaking the card grid's even rows.
@@ -534,9 +545,9 @@
       }
 
       &-ico {
-        width: 20px;
-        height: 20px;
-        flex: 0 0 20px;
+        width: 18px;
+        height: 18px;
+        flex: 0 0 18px;
         color: $ink-600;
       }
 
@@ -550,8 +561,8 @@
           outline: none;
           background: transparent;
           font-family: inherit;
-          font-size: 0.875rem;
-          line-height: 1.25rem;
+          font-size: 0.8125rem;
+          line-height: 1.125rem;
           color: $ink-900;
 
           &::placeholder {
@@ -589,8 +600,8 @@
       }
 
       &-label {
-        font-size: 0.875rem;
-        line-height: 1.25rem;
+        font-size: 0.8125rem;
+        line-height: 1.125rem;
         color: $ink-900;
         white-space: nowrap;
       }
@@ -641,9 +652,9 @@
     }
 
     &-question {
-      font-size: 1rem;
+      font-size: 0.875rem;
       font-weight: 600;
-      line-height: 1.5rem;
+      line-height: 1.375rem;
       color: $ink-900;
     }
 
@@ -651,8 +662,8 @@
     // is the cap the transition runs against, not the real height; it's set
     // well above the longest answer so nothing is ever clipped when open.
     &-answer {
-      font-size: 0.875rem;
-      line-height: 1.25rem;
+      font-size: 0.8125rem;
+      line-height: 1.125rem;
       color: $ink-600;
       max-height: 0;
       margin-top: 0;
@@ -671,9 +682,9 @@
     }
 
     &-caret {
-      width: 20px;
-      height: 20px;
-      flex: 0 0 20px;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
       margin-top: 2px;
       color: var(--black);
       // One glyph, rotated — swapping up/down icons can't be animated.
@@ -682,7 +693,7 @@
 
     &-empty {
       padding: var(--spacer-6) 0;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       color: $ink-600;
       animation: help-main-fade-in $base $ease both;
     }
@@ -709,8 +720,8 @@
     }
 
     &-label {
-      font-size: 1rem;
-      line-height: 1.375rem;
+      font-size: 0.875rem;
+      line-height: 1.25rem;
       color: var(--black);
     }
 
@@ -722,8 +733,8 @@
 
     &-thumb {
       @include focus-ring;
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       align-items: center;
       justify-content: center;
       border-radius: 8px;
@@ -750,8 +761,8 @@
       }
 
       &-ico {
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
         color: $ink-600;
         transition: color $fast $ease;
       }
@@ -759,9 +770,9 @@
 
     &-support-link {
       @include focus-ring;
-      font-size: 1rem;
+      font-size: 0.875rem;
       font-weight: 600;
-      line-height: 1.5rem;
+      line-height: 1.375rem;
       color: $purple-base;
       cursor: pointer;
       border-radius: 4px;
@@ -775,8 +786,8 @@
 
     &-support-btn {
       @include focus-ring;
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       align-items: center;
       justify-content: center;
       border-radius: 8px;
@@ -802,16 +813,16 @@
     // nothing — which left both glyphs at the svg wrapper's intrinsic size,
     // overflowing the 32px button, while the thumbs beside them sized right.
     &-support-ico {
-      width: 16px;
-      height: 16px;
-      flex: 0 0 16px;
+      width: 14px;
+      height: 14px;
+      flex: 0 0 14px;
       color: $purple-base;
     }
   }
 
   // ── Responsive ────────────────────────────────────────────
   // Container queries on __ui (see there): every threshold is the SCREEN's
-  // width. The design is 320 nav + 900 content + 2×40 gutter = 1300px.
+  // width. The layout is 280 nav + 900 content + 2×32 gutter = 1244px.
   //
   // Reflow by wrapping, never by flex-direction: the framework owns
   // flex-direction on Box elements (`.box[data-flow]`, (0,2,0) — ui-team
@@ -878,8 +889,8 @@
       gap: var(--spacer-6);
 
       &-title {
-        font-size: 1.5rem; // 24px
-        line-height: 1.875rem;
+        font-size: 1.25rem; // 20px
+        line-height: 1.625rem;
       }
     }
 
@@ -888,12 +899,12 @@
     }
 
     &__video-play {
-      width: 56px;
-      height: 56px;
+      width: 48px;
+      height: 48px;
 
       &-ico {
-        width: 22px;
-        height: 22px;
+        width: 20px;
+        height: 20px;
       }
     }
 
@@ -917,7 +928,7 @@
     }
 
     &__article-title {
-      font-size: 1.125rem;
+      font-size: 1rem;
     }
 
     // Chips scroll sideways instead of stacking into four wrapped rows.
