@@ -12308,7 +12308,9 @@ class desk_module extends LetcBox {
           this._railUnlight();
           return this.togglePanel("apps_main", "settings-main-slot", true, consoleOpt);
         };
-        if (Kind.get("apps_main")) return openConsole();
+        // exists(), not get(): get() logs "Failed to find kind" on a miss, and a
+        // miss is the normal case before the plugin has loaded.
+        if (Kind.exists("apps_main")) return openConsole();
         // COMMIT ONLY ONCE THE KIND EXISTS. loadPlugin resolves as soon as the
         // plugin file has run, whether or not it registered apps_main (the
         // toolkit seeds it carries fire `addons:registered` first), and
