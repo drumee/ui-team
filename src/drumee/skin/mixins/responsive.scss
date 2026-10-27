@@ -143,6 +143,11 @@
 // the element: a real one (the desk's __msheet-grabber) or a pseudo
 // (`&::before`) on a surface whose skeleton has no slot for it. `content` and
 // `display` are no-ops on a real element.
+//
+// `--sheet-grabber` overrides the colour. --normal-bg-80 reads on a
+// --normal-bg ground in both themes, but in dark mode it is the same #333042
+// as --normal-bg-elevated, so a sheet on an elevated ground sets this to a
+// light tint or its pill disappears.
 @mixin mobile-bottom-sheet-grabber {
   content: "";
   display: block;
@@ -150,7 +155,7 @@
   height: 4px;
   min-height: 4px;
   border-radius: 999px;
-  background: var(--normal-bg-80);
+  background: var(--sheet-grabber, var(--normal-bg-80));
   margin: 4px auto 10px;
   flex: 0 0 auto;
 }

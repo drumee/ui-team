@@ -153,12 +153,9 @@ test("desk mobile search opens as the bottom sheet", () => {
   const card = ".desk-module__mobile-search";
   const d = declsFor(css, card);
   assert.match(d, /bottom:0/);
-  assert.match(d, /height:62dvh/);
   assert.match(d, /z-index:100000/);
   // Hidden is the default; only data-state="1" reveals it.
-  assert.match(d, /transform:translateY\(100%\)/);
   assert.match(d, /visibility:hidden/);
-  assert.match(declsFor(css, `${card}[data-state="1"]`), /transform:none/);
   assert.match(declsFor(css, `${card}[data-state="1"]`), /visibility:visible/);
   assert.match(declsFor(css, `${card}::before`), /width:36px/);
   const list = declsFor(css, ".desk-module__mobile-search-suggestions");
@@ -194,6 +191,47 @@ test("invite popup is a bottom sheet on a phone, over wm's centring", () => {
   // translate, not transform: wm's transform:none !important would freeze it.
   assert.match(css, /@keyframes invite-popup-sheet-in\{from\{translate:0 100%\}/);
   assert.match(inMedia(css, "(prefers-reduced-motion: reduce)", `${wrapped}[data-closing="1"]`), /animation:none/);
+});
+
+// ── Final-review fixes ──────────────────────────────────────────────────
+
+test("invite sheet keeps its white ground: the popup has no dark palette", () => {
+  const css = compile("builtins/widget/invite-popup/skin/index.scss");
+  const wrapped =
+    '.window-manager__wrapper-modal.window__wrapper-modal[data-invite-overlay] .invite-popup__ui[data-device="mobile"]';
+  // Last background declaration wins: it must be the white, not --normal-bg.
+  const bgs = declsFor(css, wrapped).match(/background(-color)?:[^;]+/g);
+  assert.equal(bgs[bgs.length - 1], "background-color:#fff");
+});
+
+test("activity sheet has no padding strip under __main; the feed carries the safe area", () => {
+  const css = compile("builtins/panel/activity/skin/index.scss");
+  const root = '.panel-activity__ui[data-device="mobile"]';
+  const pads = declsFor(css, root).match(/padding-bottom:[^;]+/g);
+  assert.equal(pads[pads.length - 1], "padding-bottom:0");
+  assert.match(declsFor(css, `${root} .panel-activity__feed`), /padding:0 10px calc\(20px \+ env\(safe-area-inset-bottom/);
+});
+
+test("the grabber colour is overridable, and dark sheets on an elevated ground override it", () => {
+  const desk = compile("modules/desk/skin/mobile-sheets.scss");
+  assert.match(declsFor(desk, ".desk-module__msheet-grabber"), /background:var\(--sheet-grabber, var\(--normal-bg-80\)\)/);
+  const grab = /--sheet-grabber: ?rgba\(255, ?255, ?255, ?0?\.24\)/;
+  assert.match(declsFor(compile("builtins/widget/otp-gate/skin/index.scss"), 'html[data-theme="dark"] .otp-gate-card'), grab);
+  assert.match(declsFor(compile("modules/desk/skin/mobile-search.scss"), 'html[data-theme="dark"] .desk-module__mobile-search'), grab);
+  assert.match(declsFor(compile("builtins/panel/activity/skin/index.scss"), 'html[data-theme="dark"] .panel-activity__main'), grab);
+});
+
+test("search sheet runs full height under the topbar and fades in place", () => {
+  const css = compile("modules/desk/skin/mobile-search.scss");
+  const d = declsFor(css, ".desk-module__mobile-search");
+  // The keyboard covers the lower half of the screen; a 62dvh sheet left one
+  // row of results above it. Fades, never slides: _openMobileSearch focuses
+  // the input in the opening tap, which must not land on an off-screen input.
+  assert.match(d, /top:44px/);
+  assert.match(d, /height:auto/);
+  assert.doesNotMatch(d, /transform:translateY/);
+  assert.match(d, /opacity:0/);
+  assert.match(declsFor(css, '.desk-module__mobile-search[data-state="1"]'), /opacity:1/);
 });
 
 module.exports = { compile, declsFor, inMedia };

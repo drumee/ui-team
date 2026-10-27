@@ -65,6 +65,10 @@
       height: 62vh !important;
       height: 62dvh !important;
       border: 0;
+      // __main is height:100% of the CONTENT box, so the mixin's safe-area
+      // padding here would leave a strip under it where the scrim shows
+      // through. The feed carries the inset instead.
+      padding-bottom: 0;
       will-change: auto;
       transition: opacity 0.2s ease;
 
@@ -134,7 +138,7 @@
       .panel-activity__feed {
         max-height: none;
         min-height: 0;
-        padding: 0 10px 20px;
+        padding: 0 10px calc(20px + env(safe-area-inset-bottom, 0px));
       }
 
       // ── Enlarge content for touch UX ──────────────────────────────
@@ -887,6 +891,12 @@ html[data-theme="dark"] {
     &__ui {
       background-color: var(--normal-bg-90);
       box-shadow: 0 1px 11px rgba(0, 0, 0, 0.5);
+    }
+
+    // The phone sheet's grabber (drumee.mobile-bottom-sheet-grabber) on this
+    // ground is ~1.1:1 at its default colour.
+    &__main {
+      --sheet-grabber: rgba(255, 255, 255, 0.24);
     }
 
     &__header {

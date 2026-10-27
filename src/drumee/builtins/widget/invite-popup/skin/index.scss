@@ -1223,6 +1223,10 @@ $tint: rgba(89, 80, 255, 0.1);
   max-width: none !important;
   max-height: none !important;
   border: 0;
+  // Back to the card's white over the mixin's --normal-bg: this popup has no
+  // dark palette (its ink is #0b0a21 everywhere), so a dark ground would put
+  // the text on its own colour.
+  background-color: #fff;
   backdrop-filter: none;
   animation: invite-popup-sheet-in 0.22s ease-out backwards;
 

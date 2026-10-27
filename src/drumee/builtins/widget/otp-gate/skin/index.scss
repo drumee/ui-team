@@ -255,6 +255,8 @@
 
 html[data-theme="dark"] .otp-gate-card {
   background: var(--normal-bg-elevated);
+  // The phone sheet's grabber default is this same #333042 in dark mode.
+  --sheet-grabber: rgba(255, 255, 255, 0.24);
 }
 
 @keyframes otp-gate-spin {
