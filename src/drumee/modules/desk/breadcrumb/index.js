@@ -226,8 +226,8 @@ class __desk_breadcrumb extends LetcBox {
       if (section && hideAddress) this.el.dataset.hideAddress = 1;
       else delete this.el.dataset.hideAddress;
       // A utility screen (Notifications, Calendar, Inbox, Contacts, Trash,
-      // Admin console): the chip keeps its label but drops the switcher's
-      // caret and stops opening it (desk/skin/topbar, desk
+      // Admin console, Settings, Get help): the chip keeps its label but drops
+      // the switcher's caret and stops opening it (desk/skin/topbar, desk
       // _crumbClickOpensSwitcher). Self-clearing like hideAddress.
       if (section && noSwitcher) this.el.dataset.noSwitcher = 1;
       else delete this.el.dataset.noSwitcher;

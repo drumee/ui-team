@@ -494,8 +494,9 @@
   }
 
   // A UTILITY SCREEN — Notifications, Personal Calendar, Inbox, Contacts,
-  // Trash, Admin console — keeps its label but has no switcher: the caret goes,
-  // and desk._crumbClickOpensSwitcher refuses the chip on the same flag
+  // Trash, Admin console, Settings, Get help — keeps its label but has no
+  // switcher: the caret goes, and desk._crumbClickOpensSwitcher refuses the
+  // chip on the same flag
   // (`noSwitcher` on breadcrumb:context, stamped by
   // desk_breadcrumb._setSectionMode). `!important`: the framework forces a
   // widget's display inline.
