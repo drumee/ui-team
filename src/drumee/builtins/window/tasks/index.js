@@ -5407,108 +5407,119 @@ class __tasks_panel extends LetcBox {
     // comment that is only an attachment is still worth posting.
     const pending = (draft && draft.pending_files) || [];
     if (!body && !pending.length) return;
-    const taskId = this._detailId;
-    const mention_uids = Array.isArray(draft.mention_uids)
-      ? draft.mention_uids
-      : [];
-    const post = () =>
-      this.postService({
-        service: SERVICE.task.comment_create,
-        hub_id: this._hubId,
-        task_id: taskId,
-        body,
-        mention_uids,
-      });
+    // One send at a time: the composer shows it is busy (send icon spins,
+    // field dims) until the server answers, and a second Enter meanwhile is
+    // ignored rather than posting twice.
+    if (this._commentSending) return;
+    this._commentSending = true;
+    this._markLoading("comment-composer", true);
+    try {
+      const taskId = this._detailId;
+      const mention_uids = Array.isArray(draft.mention_uids)
+        ? draft.mention_uids
+        : [];
+      const post = () =>
+        this.postService({
+          service: SERVICE.task.comment_create,
+          hub_id: this._hubId,
+          task_id: taskId,
+          body,
+          mention_uids,
+        });
 
-    if (!pending.length) {
-      const tempId = `pending-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}`;
-      const now = Math.floor(Date.now() / 1000);
-      this._comments = (this._comments || []).concat({
-        id: tempId,
-        task_id: taskId,
-        author_uid: Visitor.id,
-        parent_id: null,
-        body,
-        edited: 0,
-        ctime: now,
-        mtime: now,
-        reactions: [],
-        attachments: [],
-        // The skin dims the row and the actions are withheld: reacting to or
-        // deleting a comment the server has not acknowledged has no id to act
-        // on yet.
-        _pending: 1,
-      });
-      this._commentDraft = null;
-      this._refreshCommentList();
-      this._refreshPendingList("comment");
-      const ed = this._descEditorEl("comment");
-      if (ed) this._renderEditorContent(ed, "");
+      if (!pending.length) {
+        const tempId = `pending-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+        const now = Math.floor(Date.now() / 1000);
+        this._comments = (this._comments || []).concat({
+          id: tempId,
+          task_id: taskId,
+          author_uid: Visitor.id,
+          parent_id: null,
+          body,
+          edited: 0,
+          ctime: now,
+          mtime: now,
+          reactions: [],
+          attachments: [],
+          // The skin dims the row and the actions are withheld: reacting to or
+          // deleting a comment the server has not acknowledged has no id to act
+          // on yet.
+          _pending: 1,
+        });
+        this._commentDraft = null;
+        this._refreshCommentList();
+        this._refreshPendingList("comment");
+        const ed = this._descEditorEl("comment");
+        if (ed) this._renderEditorContent(ed, "");
 
-      let row = null;
+        let row = null;
+        try {
+          const created = await post();
+          row = Array.isArray(created) ? created[0] : created;
+        } catch (err) {
+          console.error("[tasks_panel] comment.create failed:", err);
+        }
+        const newId = row && (row.id || row.comment_id);
+        if (newId) {
+          // A fresh comment has no reactions and no attachments — comment_create
+          // returns the row without those columns, so fill the shapes the
+          // renderer expects rather than re-reading the whole feed.
+          this._replaceComment(tempId, {
+            ...row,
+            reactions: [],
+            attachments: [],
+          });
+        } else {
+          // Failed (postService resolves rather than rejects on a refusal): take
+          // the row back out and hand the text back to the composer instead of
+          // losing what was typed.
+          this._replaceComment(tempId, null);
+          this._commentDraft = draft;
+          this._refreshPendingList("comment");
+          const back = this._descEditorEl("comment");
+          if (back) this._renderEditorContent(back, body);
+        }
+        if (this._detailId === taskId) this._refreshCommentList();
+        return;
+      }
+
       try {
         const created = await post();
-        row = Array.isArray(created) ? created[0] : created;
+        // The row doesn't exist until now — its id comes back on the create, and
+        // only then can the queued files be attached to it.
+        const row = Array.isArray(created) ? created[0] : created;
+        const newId = row && (row.id || row.comment_id);
+        let res = null;
+        if (newId) {
+          res = await this._linkCommentFiles(newId, draft, taskId, "comment");
+        } else {
+          this._discardCommentPending(draft);
+        }
+        if (newId && res && res.failed) this._handoffFailedLinks(newId, draft);
+        this._commentDraft = null;
+        await this._loadComments(taskId);
       } catch (err) {
         console.error("[tasks_panel] comment.create failed:", err);
       }
-      const newId = row && (row.id || row.comment_id);
-      if (newId) {
-        // A fresh comment has no reactions and no attachments — comment_create
-        // returns the row without those columns, so fill the shapes the
-        // renderer expects rather than re-reading the whole feed.
-        this._replaceComment(tempId, {
-          ...row,
-          reactions: [],
-          attachments: [],
-        });
-      } else {
-        // Failed (postService resolves rather than rejects on a refusal): take
-        // the row back out and hand the text back to the composer instead of
-        // losing what was typed.
-        this._replaceComment(tempId, null);
-        this._commentDraft = draft;
+      // Surgically slot in the new comment + clear the composer — no full
+      // _render() (which rebuilds the whole panel and feels like a reload).
+      if (this._detailId === taskId) {
+        this._refreshCommentList();
         this._refreshPendingList("comment");
-        const back = this._descEditorEl("comment");
-        if (back) this._renderEditorContent(back, body);
+        const ed = this._descEditorEl("comment");
+        if (ed) this._renderEditorContent(ed, "");
       }
-      if (this._detailId === taskId) this._refreshCommentList();
-      return;
-    }
-
-    try {
-      const created = await post();
-      // The row doesn't exist until now — its id comes back on the create, and
-      // only then can the queued files be attached to it.
-      const row = Array.isArray(created) ? created[0] : created;
-      const newId = row && (row.id || row.comment_id);
-      let res = null;
-      if (newId) {
-        res = await this._linkCommentFiles(newId, draft, taskId, "comment");
-      } else {
-        this._discardCommentPending(draft);
-      }
-      if (newId && res && res.failed) this._handoffFailedLinks(newId, draft);
-      this._commentDraft = null;
-      await this._loadComments(taskId);
-    } catch (err) {
-      console.error("[tasks_panel] comment.create failed:", err);
-    }
-    // Surgically slot in the new comment + clear the composer — no full
-    // _render() (which rebuilds the whole panel and feels like a reload).
-    if (this._detailId === taskId) {
-      this._refreshCommentList();
-      this._refreshPendingList("comment");
-      const ed = this._descEditorEl("comment");
-      if (ed) this._renderEditorContent(ed, "");
+    } finally {
+      this._commentSending = false;
+      this._markLoading("comment-composer", false);
     }
   }
 
   async _saveCommentEdit() {
     const id = this._editingCommentId;
-    if (!id || this._commentSaving) return;
+    if (!id || this._commentSaving || this._commentEditSending) return;
     const draft = this._commentEditDraft;
     const body = String((draft && draft.body) || "").trim();
     const pending = (draft && draft.pending_files) || [];
@@ -5523,6 +5534,10 @@ class __tasks_panel extends LetcBox {
       this.el &&
       this.el.querySelector(`.${this.fig.family}__comment-action--primary`);
     this._setControlBusy(saveBtn, true, { swapLabel: true });
+    // The editor itself goes quiet too: dimmed and out of reach, and Enter
+    // can't post the same edit again while this one is in flight.
+    this._commentEditSending = true;
+    this._markLoading("comment-edit-input", true);
     try {
       await this.postService({
         service: SERVICE.task.comment_update,
@@ -5549,6 +5564,8 @@ class __tasks_panel extends LetcBox {
       // forever. A re-fed row replaces the node anyway — clearing a detached
       // one is a no-op.
       this._setControlBusy(saveBtn, false, { swapLabel: true });
+      this._commentEditSending = false;
+      this._markLoading("comment-edit-input", false);
     }
     if (this._detailId === taskId) this._refreshCommentList();
   }
@@ -7871,6 +7888,15 @@ class __tasks_panel extends LetcBox {
     }
     el.dataset.loading = "0";
     if (swapLabel && el.dataset.label) el.textContent = el.dataset.label;
+  }
+
+  // data-loading on one named part of the panel (`${family}__${part}`) — the
+  // skin draws the busy state. Used where the busy element isn't the control
+  // that was clicked (the composer while a comment sends, the editor while an
+  // edit saves). A re-fed part replaces the node, so clearing it is a no-op.
+  _markLoading(part, busy) {
+    const el = this.el && this.el.querySelector(`.${this.fig.family}__${part}`);
+    if (el && el.dataset) el.dataset.loading = busy ? "1" : "0";
   }
 
   _isControlBusy(el) {

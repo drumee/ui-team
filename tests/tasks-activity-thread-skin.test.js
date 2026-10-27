@@ -59,16 +59,16 @@ test("replies sit under the root's text column, without the old left-border spin
   assert.match(declsFor(REPLY_ROW), /padding:16px 0/);
 });
 
-test("connector: purple trunk from under the root avatar, curved elbow into each reply", () => {
+test("connector: black trunk from under the root avatar, curved elbow into each reply", () => {
   const trunk = declsFor(`${P}__comment-thread[data-has-replies="1"]::before`);
   assert.match(trunk, /left:32px/);
   assert.match(trunk, /top:52px/);
-  assert.match(trunk, /--col-primary-20/);
+  assert.match(trunk, /var\(--normal-fg-10, ?#0b0a21\)/);
   // The elbow is the ::after so it paints OVER the last item's ::before mask
   // (QA 2026-10-27: with the mask on top, the start of the curve was erased).
   for (const sel of [`${REPLY_ROW}::after`, `${REPLYBOX}::after`]) {
     const d = declsFor(sel);
-    assert.match(d, /--col-primary-20/, sel);
+    assert.match(d, /var\(--normal-fg-10, ?#0b0a21\)/, sel);
     assert.match(d, /border-bottom-left-radius:12px/, sel);
   }
 });
