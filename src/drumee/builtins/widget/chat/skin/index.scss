@@ -1385,11 +1385,8 @@
   }
 
   // One avatar per incoming message: the img-based template avatar (which
-  // carries the username tooltip). Hide own avatar AND the duplicate
-  // UserProfile (Skeletons.UserProfile → .user-profile) that buildContent
-  // appends for share messages.
-  .widget-chatItem__profile.me,
-  .widget-chatItem__profile.user-profile {
+  // carries the username tooltip). Hide own avatar.
+  .widget-chatItem__profile.me {
     display: none !important;
   }
 
