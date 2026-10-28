@@ -372,8 +372,17 @@ class __media_interact extends media_core {
         this._bboxDirty = 1;
       };
     }
-    this.parent.off(_e.scroll, this._onParentScroll);
-    this.parent.on(_e.scroll, this._onParentScroll);
+    // A tile re-mounted by restart() (afterRename does that) can be without
+    // a parent for this pass: ui-core detaches it from its collection before
+    // the re-render and reattaches afterwards. Reading `.off` on undefined
+    // threw here, the rejection was never caught, and the renamed tile's
+    // mount stopped half-way -- the listing then looked empty until a
+    // reload (prod client_error after every rename since 2026-10-26).
+    // onBeforeDestroy already guards the same pair; mirror it.
+    if (this.parent && this.parent.off && this.parent.on) {
+      this.parent.off(_e.scroll, this._onParentScroll);
+      this.parent.on(_e.scroll, this._onParentScroll);
+    }
 
     if (this.mget(_a.file)) {
       return;
