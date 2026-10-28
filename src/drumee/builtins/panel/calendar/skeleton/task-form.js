@@ -37,6 +37,9 @@ function subtaskRow(ui, s, menu) {
     const current = list.find((o) => o.key === value);
     return Skeletons.Box.X({
       className: `${pfx}__subtask-cell`,
+      // Inert, or a click on the slot around the chip stops here and never
+      // reaches the row's cal-subtask-open. The chip keeps its own service.
+      active: 0,
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__subtask-chip`,
@@ -85,14 +88,20 @@ function subtaskRow(ui, s, menu) {
 
   return Skeletons.Box.X({
     className: `${pfx}__subtask`,
+    // A saved row opens that subtask's own detail in this modal, as a board
+    // row does (open-detail). Its name is inert so the click reaches the row;
+    // the chips and the × keep their own services. A row still being typed
+    // has no record to open.
+    ...(s.id ? { bubble: 0, service: "cal-subtask-open", uiHandler: [ui], calSubKey: key } : {}),
     attrOpt: {
       "data-key": key,
       "data-busy": s.busy ? "1" : "0",
       "data-error": s.error ? "1" : "0",
+      "data-openable": s.id ? "1" : "0",
     },
     kids: [
       s.id
-        ? Skeletons.Note({ className: `${pfx}__subtask-name`, content: s.title || "" })
+        ? Skeletons.Note({ className: `${pfx}__subtask-name`, content: s.title || "", active: 0 })
         : Skeletons.Entry({
             className: `${pfx}__subtask-input`,
             name: `subtask:${key}`,
@@ -109,6 +118,8 @@ function subtaskRow(ui, s, menu) {
       cell("status", STATUSES, s.status),
       Skeletons.Box.X({
         className: `${pfx}__subtask-end`,
+        // Inert for the same reason; the × keeps its own service.
+        active: 0,
         kids: [
           Skeletons.Button.Svg({
             className: `${pfx}__subtask-remove`,
@@ -257,9 +268,37 @@ module.exports = function (ui) {
       Skeletons.Box.X({
         className: `${pfx}__modal-head`,
         kids: [
-          Skeletons.Note({
-            className: `${pfx}__modal-title`,
-            content: editing ? draft.title || LOCALE.EDIT_PERSONAL_TASK : LOCALE.NEW_TASK,
+          Skeletons.Box.Y({
+            className: `${pfx}__modal-head-main`,
+            kids: [
+              // "Parent / child" above the heading, as the board's
+              // tasks-panel__detail-parent: only on a subtask opened from its
+              // parent's form, and only the parent's name is a link back.
+              form.parentRow
+                ? Skeletons.Box.X({
+                    className: `${pfx}__detail-parent`,
+                    kids: [
+                      Skeletons.Note({
+                        className: `${pfx}__detail-parent-title`,
+                        content: form.parentRow.title || "",
+                        bubble: 0,
+                        service: "cal-open-parent",
+                        uiHandler: [ui],
+                        attrOpt: { role: "button", tabindex: "0" },
+                      }),
+                      Skeletons.Note({ className: `${pfx}__detail-parent-sep`, content: "/" }),
+                      Skeletons.Note({
+                        className: `${pfx}__detail-parent-current`,
+                        content: draft.title || "",
+                      }),
+                    ],
+                  })
+                : null,
+              Skeletons.Note({
+                className: `${pfx}__modal-title`,
+                content: editing ? draft.title || LOCALE.EDIT_PERSONAL_TASK : LOCALE.NEW_TASK,
+              }),
+            ].filter(Boolean),
           }),
           Skeletons.Button.Svg({
             className: `${pfx}__modal-close`,
@@ -360,7 +399,7 @@ module.exports = function (ui) {
               }),
 
               field("FILES", taskFiles(ui)),
-            ],
+            ].filter(Boolean),
           }),
           Skeletons.Box.Y({
             className: `${pfx}__modal-col ${pfx}__modal-col--side`,

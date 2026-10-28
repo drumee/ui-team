@@ -1018,7 +1018,12 @@ class __calendar_main extends LetcBox {
 
   // ── forms ──────────────────────────────────────────────────────────────────
 
-  _openTaskForm(row) {
+  /**
+   * @param {Object} [row]            the task to edit; none for a new task
+   * @param {Object} [opts.parentRow] set when `row` is a subtask opened from
+   *   its parent's form: the "Parent / child" crumb leads back there
+   */
+  _openTaskForm(row, { parentRow = null } = {}) {
     this._closeMenus();
     // Both dates in YYYY-MM-DD from the start: every task.update writes both
     // columns, so the draft must always hold the row's own Start and End.
@@ -1060,6 +1065,7 @@ class __calendar_main extends LetcBox {
     this._form.doneKeys = [];
     this._form.subMenu = null;
     this._form.search = { seq: 0, timer: null, blurTimer: null, rows: [] };
+    this._form.parentRow = row ? parentRow : null;
     this._pendingDay = null;
     this._renderModal();
     this._loadDoneColumns(this._form);
@@ -1952,6 +1958,8 @@ class __calendar_main extends LetcBox {
         localKey: `id:${t.id}`,
         id: t.id,
         title: t.title || "",
+        // Kept for the subtask's own detail (_openSubtask).
+        description: t.description || "",
         status: t.status || "todo",
         priority: t.priority || "medium",
         due_date: dateOf(t.due_date),
@@ -1964,6 +1972,70 @@ class __calendar_main extends LetcBox {
       ...(form.draft.subtasks || []).filter((s) => !s.id || !ids.has(String(s.id))),
     ];
     this._renderSubtasks();
+  }
+
+  /**
+   * A saved subtask row was clicked: open that subtask's own detail in this
+   * modal, as a board row opens its child (open-detail). It is a task of the
+   * parent's own hub, so it inherits the parent's scope and write right.
+   *
+   * The parent's draft goes, as on the board; its pending uploads are dropped
+   * the way _closeForm drops them. A write the parent already made is carried
+   * over, so closing the subtask still reloads the calendar.
+   */
+  _openSubtask(key) {
+    const form = this._form;
+    if (!form || form.kind !== "task") return;
+    const s = (form.draft.subtasks || []).find((x) => x.localKey === key);
+    if (!s || !s.id) return;
+    const parent = form.row || {};
+    this._switchTaskForm(
+      {
+        kind: "task",
+        id: s.id,
+        hub_id: parent.hub_id,
+        scope: parent.scope,
+        can_write: parent.can_write,
+        title: s.title || "",
+        description: s.description || "",
+        status: s.status || "todo",
+        priority: s.priority || "medium",
+        due_date: s.due_date || "",
+        start_date: s.start_date || "",
+      },
+      // The "Parent / child" crumb's way back (_openParentTask).
+      { parentRow: form.row },
+    );
+  }
+
+  /** The subtask form's crumb: back to the parent it was opened from. */
+  _openParentTask() {
+    const form = this._form;
+    const parent = form && form.parentRow;
+    if (!parent) return;
+    this._switchTaskForm(parent);
+  }
+
+  /**
+   * Swap the open task form for another task's, in the same modal. Leaves the
+   * current form the way _closeForm leaves it (menu, search timers, pending
+   * uploads) without closing the modal, and carries a write it made over, so
+   * the eventual close still reloads the calendar.
+   */
+  _switchTaskForm(row, opts = {}) {
+    const form = this._form;
+    if (form) {
+      form.subMenu = null;
+      this._syncSubtaskMenuDismiss();
+      if (form.search) {
+        clearTimeout(form.search.timer);
+        clearTimeout(form.search.blurTimer);
+      }
+      this._cancelFormUploads(form);
+    }
+    const wrote = !!(form && form.wrote);
+    this._openTaskForm(row, opts);
+    if (wrote && this._form) this._form.wrote = true;
   }
 
   /** Names typed into rows not saved yet → the draft. Runs before every re-feed of the rows. */
@@ -3141,6 +3213,10 @@ class __calendar_main extends LetcBox {
         return this._commitSubtask(cmd.mget("calSubKey"));
       case "cal-subtask-remove":
         return this._removeSubtask(cmd.mget("calSubKey"));
+      case "cal-subtask-open":
+        return this._openSubtask(cmd.mget("calSubKey"));
+      case "cal-open-parent":
+        return this._openParentTask();
       case "cal-subtask-menu":
         return this._toggleSubtaskMenu(cmd.mget("calSubKey"), cmd.mget("calSubKind"));
       case "cal-subtask-set":
