@@ -4,6 +4,8 @@ const { EVENT: SPLIT_BODY_EVENT } = require("libs/split-body-signal");
 // Tells this tab's Personal Calendar a meeting changed: room.* pushes skip the
 // socket that wrote, so it would never hear of an edit made here.
 const { announceMeetingsChanged } = require("libs/meetings-changed");
+// The meeting modal footer's Schedule / Update and Delete spin while they write.
+const { withButtonBusy } = require("libs/button-busy");
 const {
   VIEW_STATES,
   isSectioned,
@@ -3011,10 +3013,10 @@ class __window_folder extends mfsInteract {
         return this._checkAvailability();
 
       case "meeting-modal-submit":
-        return this.submitMeetingModal();
+        return withButtonBusy(cmd.el, () => this.submitMeetingModal());
 
       case "meeting-modal-delete":
-        return this.deleteMeetingModal();
+        return withButtonBusy(cmd.el, () => this.deleteMeetingModal());
 
       case "meeting":
       case "webinar":

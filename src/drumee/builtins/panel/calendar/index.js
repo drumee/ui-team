@@ -32,6 +32,8 @@ const {
 } = require("./skeleton/helpers");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { onMeetingsChanged } = require("libs/meetings-changed");
+// The modal foot's action buttons spin while their write is in flight.
+const { withButtonBusy } = require("libs/button-busy");
 const { modalKids } = require("./skeleton");
 const { recipientChips } = require("./skeleton/meeting-form");
 const A = require("./attachments");
@@ -3150,20 +3152,22 @@ class __calendar_main extends LetcBox {
       case "cal-form-title":
         return;
 
+      // The modal foot's actions (Create / Update, Delete) spin while their
+      // write is in flight; Cancel (cal-close-form) never waits on anything.
       case "cal-submit-task":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
           return;
         }
-        return this._submitTask();
+        return withButtonBusy(cmd.el, () => this._submitTask());
       case "cal-delete-task":
-        return this._deleteTask();
+        return withButtonBusy(cmd.el, () => this._deleteTask());
       case "cal-delete-meeting":
-        return this._deleteMeeting();
+        return withButtonBusy(cmd.el, () => this._deleteMeeting());
       case "cal-submit-meeting":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
           return;
         }
-        return this._submitMeeting();
+        return withButtonBusy(cmd.el, () => this._submitMeeting());
 
       case "cal-copy-link": {
         const link = this._form && this._form.link;

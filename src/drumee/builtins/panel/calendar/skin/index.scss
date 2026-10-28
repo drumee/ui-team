@@ -2688,6 +2688,38 @@
         background: var(--overlay-bg-05);
       }
     }
+
+    // Its write is in flight (libs/button-busy): the label gives way to a
+    // spinner in the button's own ink, keeping the button's width.
+    &[data-loading="1"] {
+      position: relative;
+      cursor: progress;
+
+      .note-content {
+        visibility: hidden;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 14px;
+        height: 14px;
+        margin: -9px 0 0 -9px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: calendar-main-file-spin 0.8s linear infinite;
+      }
+    }
+  }
+
+  // While one action writes, the other actions stand down. Cancel (neutral)
+  // stays live.
+  &__modal-foot[data-busy="1"] > &__button:not(&__button--neutral):not([data-loading="1"]) {
+    pointer-events: none;
+    opacity: 0.5;
   }
 
   // ── narrow widths ─────────────────────────────────────────────────────────
