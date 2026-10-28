@@ -152,6 +152,12 @@ module.exports = function (ui) {
   // no service, so each kid keeps its own click.
   const nav = Skeletons.Box.X({
     className: `${pfx}__nav`,
+    // Up for every ‹ › / Today / view switch (index.js _navigate). The skin
+    // draws a spinner in place of "Today".
+    attrOpt: {
+      "data-loading": ui.isNavLoading() ? "1" : "0",
+      "aria-busy": ui.isNavLoading() ? "true" : "false",
+    },
     kids: [
       Skeletons.Button.Svg({
         className: `${pfx}__nav-arrow`,

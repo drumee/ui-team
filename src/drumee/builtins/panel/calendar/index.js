@@ -67,6 +67,10 @@ const AUDIENCE_KEYS = ["personal", "team"];
 // A parked calendar (desk keep-alive) revealed after this long re-reads its
 // window even if no push arrived meanwhile — a missed push is plausible by then.
 const PARKED_REFRESH_MS = 60 * 1000;
+// How long the ‹ Today › spinner stays up after a ‹ › click, at least. A
+// prefetched window redraws in a few dozen ms — too short to see — and the
+// spinner is the click's only feedback when the grid barely changes.
+const NAV_SPINNER_MIN_MS = 300;
 
 class __calendar_main extends LetcBox {
   initialize(opt = {}) {
@@ -183,6 +187,8 @@ class __calendar_main extends LetcBox {
       // failed calendar.list (_loadItems resolves either way). A reload's
       // screen restore waits on this (libs/items-ready).
       markItemsReady(this);
+      // So the first ‹ or › answers from cache.
+      this._prefetchNeighbours();
     });
   }
 
@@ -210,6 +216,7 @@ class __calendar_main extends LetcBox {
     this._loadItems().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
       this._render();
+      this._prefetchNeighbours();
     });
   }
 
@@ -336,6 +343,11 @@ class __calendar_main extends LetcBox {
     return !!this._loading;
   }
 
+  /** Is a ‹ › / Today / view switch still waiting on its window's rows? */
+  isNavLoading() {
+    return !!this._navLoading;
+  }
+
   /**
    * The rows the current view should draw: recurrence expanded into the visible
    * window, then the All / Task / Meeting filter and the Personal | Team toggle
@@ -380,11 +392,74 @@ class __calendar_main extends LetcBox {
    * onServerComplain and resolves undefined — so a non-list IS the error path.
    * Keep the rows already on screen rather than blanking a loaded calendar over
    * a transient failure, exactly as the tasks board does.
+   *
+   * `{ cached: true }` is the ‹ › / view-switch path (_navigate): a window
+   * already read (or being prefetched) is reused instead of paying another
+   * round trip. Every other caller — first paint, a live push, our own writes —
+   * wants the server's truth, so a plain load drops the cache first.
+   *
+   * A load overtaken by a newer one (fast ‹ ‹ ‹ clicks) leaves _items alone:
+   * applying it would draw one window's rows under another window's range.
    */
-  async _loadItems() {
+  async _loadItems({ cached = false } = {}) {
     const { from, to } = viewRange(this._view, this._cursor);
+    if (!cached) this._dropWindowCache();
+    const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
     this._loading = true;
+    const list = await this._fetchWindow(from, to, cached);
+    if (seq !== this._loadSeq) return;
+    this._loading = false;
+    this._loadedAt = Date.now();
 
+    if (!list) {
+      this._loadFailed = 1;
+      // DEV ONLY: ?calfixture=1 renders sample rows so the grids, chips,
+      // filters and forms can be reviewed while calendar.list is still
+      // unimplemented (it currently answers MODULE_NOT_FOUND). Required lazily
+      // so a normal session never loads it. Remove the flag and ./fixture.js
+      // together once the service lands.
+      if (this._useFixture()) {
+        this._items = require("./fixture")()
+          .map((r) => normalizeRow(r))
+          .filter(Boolean);
+        this._loadFailed = 0;
+      }
+      return;
+    }
+    this._loadFailed = 0;
+    this._items = list;
+  }
+
+  /**
+   * The normalized rows for [from, to], or null when the read failed.
+   *
+   * With `cached`, a window read less than PARKED_REFRESH_MS ago — or one
+   * whose read is still in flight (a neighbour prefetch the user just clicked
+   * onto) — is answered from _windows. Failures are never cached.
+   */
+  _fetchWindow(from, to, cached) {
+    const key = `${ymd(from)}|${ymd(to)}`;
+    if (!this._windows) this._windows = new Map();
+    const hit = this._windows.get(key);
+    if (cached && hit && (hit.pending || Date.now() - hit.at < PARKED_REFRESH_MS)) {
+      return hit.promise;
+    }
+    const gen = this._windowGen || 0;
+    const entry = { pending: true, at: 0 };
+    entry.promise = this._readWindow(from, to).then((list) => {
+      entry.pending = false;
+      entry.at = Date.now();
+      // Dropped meanwhile (a push or a write invalidated it), or failed.
+      if (!list || gen !== (this._windowGen || 0)) {
+        if (this._windows.get(key) === entry) this._windows.delete(key);
+      }
+      return list;
+    });
+    this._windows.set(key, entry);
+    return entry.promise;
+  }
+
+  async _readWindow(from, to) {
     const service =
       (SERVICE.calendar && SERVICE.calendar.list) || "calendar.list";
     let rows;
@@ -407,8 +482,6 @@ class __calendar_main extends LetcBox {
       this.warn && this.warn("[calendar] calendar.list failed", e);
       rows = null;
     }
-    this._loading = false;
-    this._loadedAt = Date.now();
 
     // Single-row collapse: a result set holding exactly one row answers `{...}`
     // where every other count answers `[...]`. This has already emptied a
@@ -422,23 +495,26 @@ class __calendar_main extends LetcBox {
     const isRow = (r) =>
       r && typeof r === "object" && (r.id != null || r.nid != null);
     const list = Array.isArray(rows) ? rows : isRow(rows) ? [rows] : null;
-    if (!list) {
-      this._loadFailed = 1;
-      // DEV ONLY: ?calfixture=1 renders sample rows so the grids, chips,
-      // filters and forms can be reviewed while calendar.list is still
-      // unimplemented (it currently answers MODULE_NOT_FOUND). Required lazily
-      // so a normal session never loads it. Remove the flag and ./fixture.js
-      // together once the service lands.
-      if (this._useFixture()) {
-        this._items = require("./fixture")()
-          .map((r) => normalizeRow(r))
-          .filter(Boolean);
-        this._loadFailed = 0;
-      }
-      return;
-    }
-    this._loadFailed = 0;
-    this._items = list.map((r) => normalizeRow(r)).filter(Boolean);
+    if (!list) return null;
+    return list.map((r) => normalizeRow(r)).filter(Boolean);
+  }
+
+  /** Forget every cached window, and orphan any read still in flight. */
+  _dropWindowCache() {
+    this._windowGen = (this._windowGen || 0) + 1;
+    if (this._windows) this._windows.clear();
+  }
+
+  /**
+   * Warm the windows one ‹ and one › away, so the arrows answer from cache.
+   * Fire-and-forget: a prefetch only fills _windows, never the screen.
+   */
+  _prefetchNeighbours() {
+    if (this._parked || (this.isDestroyed && this.isDestroyed())) return;
+    [-1, 1].forEach((d) => {
+      const { from, to } = viewRange(this._view, this._neighbour(d));
+      this._fetchWindow(from, to, true);
+    });
   }
 
   /** DEV ONLY — see _loadItems. */
@@ -608,11 +684,64 @@ class __calendar_main extends LetcBox {
   // ── navigation ─────────────────────────────────────────────────────────────
 
   _step(direction) {
+    this._cursor = this._neighbour(direction);
+    return this._navigate();
+  }
+
+  /** The cursor one ‹ (-1) or › (+1) away in the current view. */
+  _neighbour(direction) {
     const unit = this._view === "day" ? "day" : this._view === "week" ? "week" : "month";
     const anchor = day(this._cursor) || Dayjs();
-    this._cursor = ymd(anchor.add(direction, unit));
+    return ymd(anchor.add(direction, unit));
+  }
+
+  /**
+   * The cursor or the view moved: show the new window NOW, data second.
+   *
+   * This used to be _reload(), so every ‹ › waited a full calendar.list round
+   * trip with the old range still on screen. Now a cached window (the
+   * neighbours are prefetched) paints at once with no request at all; a miss
+   * paints the new range immediately over the rows already held — the grid
+   * only draws those that fall inside it — and repaints when the read lands.
+   *
+   * The ‹ Today › pill spins (isNavLoading) on every click, for the read if
+   * there is one and for at least NAV_SPINNER_MIN_MS either way. It goes off by
+   * re-stamping the pill, not by another page rebuild.
+   */
+  async _navigate() {
     this._closeMenus();
-    this._reload();
+    const key = `${this._view}:${this._cursor}`;
+    const started = Date.now();
+    this._navLoading = true;
+    const load = this._loadItems({ cached: true });
+    // A cache hit has already resolved, but awaiting is a microtask — paint
+    // the miss case before it, so the label and the grid move on the click.
+    const { from, to } = viewRange(this._view, this._cursor);
+    const hit = this._windows && this._windows.get(`${ymd(from)}|${ymd(to)}`);
+    if (!hit || hit.pending) this._render();
+    await load;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // Overtaken by another click: that one paints.
+    if (key !== `${this._view}:${this._cursor}`) return;
+    this._render();
+    this._prefetchNeighbours();
+    clearTimeout(this._navSpinnerTimer);
+    this._navSpinnerTimer = setTimeout(() => {
+      this._navSpinnerTimer = null;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      // A newer click owns the spinner now.
+      if (key !== `${this._view}:${this._cursor}`) return;
+      this._navLoading = false;
+      this._stampNavLoading();
+    }, Math.max(0, NAV_SPINNER_MIN_MS - (Date.now() - started)));
+  }
+
+  /** Mirror isNavLoading onto the pill on screen, without a rebuild. */
+  _stampNavLoading() {
+    const nav = this.el && this.el.querySelector(`.${this.fig.family}__nav`);
+    if (!nav) return;
+    nav.setAttribute("data-loading", this._navLoading ? "1" : "0");
+    nav.setAttribute("aria-busy", this._navLoading ? "true" : "false");
   }
 
   _closeMenus() {
@@ -2569,8 +2698,7 @@ class __calendar_main extends LetcBox {
       // day holding it. Same cursor-then-refetch path as ‹ and ›.
       case "cal-today":
         this._cursor = ymd(Dayjs());
-        this._closeMenus();
-        return this._reload();
+        return this._navigate();
 
       // Menu open/close is toolbar-only state — never repaint the grid for it.
       case "cal-toggle-view-menu":
@@ -2603,18 +2731,16 @@ class __calendar_main extends LetcBox {
       case "cal-pick-day": {
         const picked = day(cmd.mget("calDay"));
         if (picked) this._cursor = ymd(picked);
-        this._closeMenus();
-        // The fetch window moves with the cursor, so this is a refetch.
-        return this._reload();
+        // The fetch window moves with the cursor (cached when already read).
+        return this._navigate();
       }
 
       case "cal-set-view": {
         const next = cmd.mget("calView");
         if (VIEW_KEYS.includes(next)) this._view = next;
-        this._closeMenus();
-        // The window changes with the view, so this needs a refetch, not just
-        // a re-render.
-        return this._reload();
+        // The window changes with the view, so this needs a (cached) refetch,
+        // not just a re-render.
+        return this._navigate();
       }
 
       case "cal-set-filter": {
@@ -2657,8 +2783,7 @@ class __calendar_main extends LetcBox {
           this._cursor = target;
           this._view = "day";
         }
-        this._closeMenus();
-        return this._reload();
+        return this._navigate();
       }
 
       case "cal-open-item":
