@@ -24,6 +24,36 @@ const { ymd, itemsByDay } = require("./helpers");
  * @param {Array<Dayjs>} days  the cells to draw (7 for week, 1 for day)
  * @param {String} mode        "week" | "day"
  */
+/**
+ * A board cell's items. Week: one stack. Day: the meetings row over the task
+ * columns, each group drawn only when it has something in it. Exported so
+ * index.js can re-feed one cell's body (_dropItem) without the page.
+ */
+function bodyKids(ui, list, mode) {
+  const pfx = ui.fig.family;
+  if (mode !== "day") {
+    return list.map((row) => chip(ui, row, { board: 1 }));
+  }
+  const meetings = list.filter((r) => r.kind === "meeting");
+  const tasks = list.filter((r) => r.kind !== "meeting");
+  return [
+    meetings.length
+      ? Skeletons.Box.X({
+          className: `${pfx}__board-meetings`,
+          active: 0,
+          kids: meetings.map((row) => chip(ui, row, { board: 1 })),
+        })
+      : null,
+    tasks.length
+      ? Skeletons.Box.Y({
+          className: `${pfx}__board-tasks`,
+          active: 0,
+          kids: tasks.map((row) => chip(ui, row, { board: 1, detail: 1 })),
+        })
+      : null,
+  ].filter(Boolean);
+}
+
 module.exports = function (ui, days, mode) {
   const pfx = ui.fig.family;
   const isDay = mode === "day";
@@ -40,32 +70,6 @@ module.exports = function (ui, days, mode) {
       kidsOpt: { active: 0 },
       kids: [Skeletons.Note({ className: `${pfx}__day-add-ico`, content: "+" })],
     });
-
-  // Week: one stack. Day: the meetings row over the task columns, each group
-  // drawn only when it has something in it.
-  const body = (list) => {
-    if (!isDay) {
-      return list.map((row) => chip(ui, row, { board: 1 }));
-    }
-    const meetings = list.filter((r) => r.kind === "meeting");
-    const tasks = list.filter((r) => r.kind !== "meeting");
-    return [
-      meetings.length
-        ? Skeletons.Box.X({
-            className: `${pfx}__board-meetings`,
-            active: 0,
-            kids: meetings.map((row) => chip(ui, row, { board: 1 })),
-          })
-        : null,
-      tasks.length
-        ? Skeletons.Box.Y({
-            className: `${pfx}__board-tasks`,
-            active: 0,
-            kids: tasks.map((row) => chip(ui, row, { board: 1, detail: 1 })),
-          })
-        : null,
-    ].filter(Boolean);
-  };
 
   const cell = (d) => {
     const key = ymd(d);
@@ -93,7 +97,10 @@ module.exports = function (ui, days, mode) {
         Skeletons.Box.Y({
           className: `${pfx}__board-body`,
           active: 0,
-          kids: body(list),
+          // The one part per day index.js _dropItem re-feeds.
+          sys_pn: `cal-body-${key}`,
+          partHandler: ui,
+          kids: bodyKids(ui, list, mode),
         }),
       ],
     });
@@ -124,3 +131,5 @@ module.exports = function (ui, days, mode) {
     ],
   });
 };
+
+module.exports.bodyKids = bodyKids;
