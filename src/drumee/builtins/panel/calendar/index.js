@@ -555,6 +555,13 @@ class __calendar_main extends LetcBox {
     // height to set scrollTop against until the frame settles.
     _.defer(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
+      // ‹ Today › asked for today's cell: one shot, on the paint that has the
+      // rows (a miss paints once before they land, and the second paint would
+      // cut a smooth scroll short). Later repaints keep where this one went.
+      if (this._scrollTodayPending && !this._loading) {
+        this._scrollTodayPending = false;
+        if (this._scrollToToday()) return;
+      }
       this._restoreGridScroll(keep);
     });
   }
@@ -573,6 +580,25 @@ class __calendar_main extends LetcBox {
   _restoreGridScroll(keep) {
     const grid = this._gridEl();
     if (grid && keep != null) grid.scrollTop = keep;
+  }
+
+  /**
+   * Centre today's cell in the grid — the month square, or the week's column
+   * (the grid scrolls sideways on a phone). False when today is not drawn.
+   * Scrolls the grid alone: scrollIntoView would move the desk around it too.
+   */
+  _scrollToToday() {
+    const grid = this._gridEl();
+    const cell = grid && grid.querySelector('[data-today="1"]');
+    if (!cell) return false;
+    const g = grid.getBoundingClientRect();
+    const c = cell.getBoundingClientRect();
+    grid.scrollTo({
+      top: grid.scrollTop + c.top - g.top - (g.height - c.height) / 2,
+      left: grid.scrollLeft + c.left - g.left - (g.width - c.width) / 2,
+      behavior: "smooth",
+    });
+    return true;
   }
 
   /**
@@ -2698,6 +2724,9 @@ class __calendar_main extends LetcBox {
       // day holding it. Same cursor-then-refetch path as ‹ and ›.
       case "cal-today":
         this._cursor = ymd(Dayjs());
+        // Bring today's cell into view too — also when this range is already
+        // the one on screen and the grid was only scrolled away from it.
+        this._scrollTodayPending = true;
         return this._navigate();
 
       // Menu open/close is toolbar-only state — never repaint the grid for it.

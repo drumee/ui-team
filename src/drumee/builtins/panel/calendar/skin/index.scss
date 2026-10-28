@@ -819,8 +819,21 @@
     // Chips set their own cursor, so they keep theirs.
     cursor: pointer;
 
+    // Today's date sits in a brand circle, 24px for "7" and "28" alike; only
+    // a longer label ("Jun 1" on the 1st) stretches it. Same ink pair as the
+    // toolbar's active option.
     &[data-today="1"] .calendar-main__day-num {
-      color: var(--primary-40);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 24px;
+      padding: 0 3px;
+      box-sizing: border-box;
+      border-radius: 12px;
+      background: var(--primary-40);
+      color: var(--gray-white);
+      font-weight: 600;
     }
 
     &[data-outside="1"] .calendar-main__day-num {
