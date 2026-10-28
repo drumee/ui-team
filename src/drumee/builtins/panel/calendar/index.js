@@ -1022,8 +1022,10 @@ class __calendar_main extends LetcBox {
         draft: {
           title: "",
           description: "",
+          // Opened on a day (a cell's "+" menu or the board's column):
+          // Start and End both on it. End alone left Start blank.
           due_date: this._pendingDay || "",
-          start_date: "",
+          start_date: this._pendingDay || "",
           status: "todo",
           priority: "medium",
           files: [],
