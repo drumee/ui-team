@@ -23,6 +23,7 @@ const { captureCampaignArrival } = require('libs/campaign');
 const billingDeepLink = require('libs/billing-deep-link');
 const fileDeepLink = require('libs/file-deep-link');
 const windowTutorialIntent = require('libs/window-tutorial-intent');
+const locationUrl = require('libs/location-url');
 
 class drumee_router extends LetcBox {
   constructor(...args) {
@@ -381,6 +382,7 @@ class drumee_router extends LetcBox {
         kind = 'module_welcome';
       }
     }
+    if (kind === 'module_welcome' && this._deskStaysForSignedIn(name)) return true;
     this.debug("currentModule", moduleName(), this.currentModule)
     this.ensurePart('body').then(async (p) => {
       await Kind.waitFor(kind);
@@ -393,6 +395,54 @@ class drumee_router extends LetcBox {
       this.currentModule = p.children.last();
       this.currentKind = kind;
     })
+  }
+
+  /**
+   * A signed-in visitor whose desk is on screen keeps it when the address
+   * merely wanders back to the bare sign-in screen.
+   *
+   * How the address gets there: the browser's Back or Forward button, or a
+   * stale bookmark. The sign-in screen used to be fed in place of the desk,
+   * see that it is signed in, and send the visitor back to the desk — a full
+   * teardown and rebuild that landed on whatever workspace the tab remembered,
+   * without loading it (prod 2026-10-28: Back from a sub folder, an empty
+   * workspace with 7 folders in it). welcome._enterDesk now keeps the sign-in
+   * entry out of the history; this is the backstop for entries that are
+   * already there.
+   *
+   * ONLY the bare screen is held off: "#/welcome", "#/welcome/signin". A
+   * welcome address carrying anything else (an invite, contact_accept,
+   * return_to, back=, cross…) is a flow a signed-in visitor may legitimately
+   * be in, and routes as before.
+   *
+   * The address is put back on the visitor's location here rather than left
+   * on "#/welcome": libs/location-url refuses to write while the hash reads
+   * another module, and a reload on "#/welcome" would be the very bounce this
+   * prevents.
+   *
+   * @returns {Boolean} true when the desk was kept and nothing must be fed
+   */
+  _deskStaysForSignedIn(name) {
+    try {
+      if (name !== 'welcome') return false;
+      if (typeof Visitor === 'undefined' || !Visitor.isOnline()) return false;
+      if (this.currentKind !== 'module_desk') return false;
+      if (!this.currentModule || this.currentModule.isDestroyed()) return false;
+      const hash = String(location.hash || '');
+      if (hash.indexOf('?') >= 0 || hash.indexOf('=') >= 0) return false;
+      const args = Visitor.parseModuleArgs() || {};
+      if (Object.keys(args).length) return false;
+      const path = Visitor.parseModule() || [];
+      if (path.length > 1 && !/^(signin|login)$/i.test(String(path[1] || ''))) return false;
+      let back = '#/desk/wm/home';
+      try { back = locationUrl.currentHash() || back; } catch (e) { /* home */ }
+      history.replaceState(history.state, '', `${location.pathname}${location.search}${back}`);
+      try { locationUrl.settle(); } catch (e) { /* the address bar catches up later */ }
+      this.debug("signed in with the desk up: sign-in address ignored", hash);
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   /**
