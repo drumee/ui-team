@@ -472,8 +472,14 @@ class __calendar_main extends LetcBox {
         // entity — the same pair activity.list_task_assignments passes for a
         // user-scoped read.
         hub_id: Visitor.id,
-        from: ymd(from),
-        to: ymd(to),
+        // One day of slack each side. The server turns these dates into
+        // epochs in ITS timezone (calendar.js _epoch — UTC on stage), but a
+        // meeting is placed on the VIEWER's local day: 00:00 on the 2nd in
+        // UTC+7 is 17:00 on the 1st in UTC, so a Day view of the 2nd never
+        // got it back while the month window did. A day covers any UTC
+        // offset; getVisibleItems keeps only rows on the view's own days.
+        from: ymd(from.subtract(1, "day")),
+        to: ymd(to.add(1, "day")),
         // `kinds` is deliberately NOT sent: the server defaults to both, and an
         // array in a GET query string is a serialization risk for no gain —
         // the All / Task / Meeting filter is applied client-side over the
