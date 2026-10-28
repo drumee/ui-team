@@ -155,3 +155,35 @@ test("the Week board and the month cell keep their cards", () => {
     assert.equal(find(card, "chip-subtasks").length, 0);
   }
 });
+
+// ── skin: the Day card's rules follow the theme ─────────────────────────────
+// Its borders were black rgba literals, which all but vanish on the dark
+// theme. They must go through tokens that flip with it.
+const SKIN = require("node:fs").readFileSync(
+  path.join(DIR, "../skin/index.scss"),
+  "utf8",
+);
+const block = (sel) => {
+  const i = SKIN.indexOf(`${sel} {`);
+  assert.ok(i >= 0, `${sel} not found`);
+  let depth = 0;
+  for (let j = SKIN.indexOf("{", i); j < SKIN.length; j++) {
+    if (SKIN[j] === "{") depth++;
+    if (SKIN[j] === "}" && --depth === 0) return SKIN.slice(i, j + 1);
+  }
+  return "";
+};
+
+test("the Day card's borders are theme tokens, never black literals", () => {
+  for (const sel of ['&__chip[data-kind="task"][data-detail="1"]', "&__chip-subtasks"]) {
+    const css = block(sel);
+    assert.doesNotMatch(css, /border[^;]*rgba\(0,\s*0,\s*0/, `${sel} has a black literal border`);
+  }
+  assert.match(block('&__chip[data-kind="task"][data-detail="1"]'), /var\(--cal-card-rule\)/);
+  assert.match(block("&__chip-subtasks"), /var\(--border-muted\)/);
+});
+
+test("--cal-card-rule is flipped for the dark theme", () => {
+  assert.match(SKIN, /--cal-card-rule:\s*rgba\(0,\s*0,\s*0,\s*0\.2\)/);
+  assert.match(SKIN, /html\[data-theme="dark"\][^{]*\.calendar-main[^{]*\{[^}]*--cal-card-rule:\s*rgba\(255,\s*255,\s*255/);
+});

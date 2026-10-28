@@ -75,6 +75,9 @@
   // around them (__month), and the week/day board's the same way.
   // Bolder than the frames' 5% hairline; --border-default flips with the theme.
   --cal-month-line: 1px solid var(--border-default);
+  // The Day task card's rest rule (task-board/calendar): no theme token
+  // carries 20% ink, so it is ours, flipped for dark at the end of the file.
+  --cal-card-rule: rgba(0, 0, 0, 0.2);
   // The Day view's column: its meetings row and its task columns share it, so
   // both lay out the same number of equal columns at any width.
   --cal-board-col: 280px;
@@ -1300,10 +1303,10 @@
   // (844:92547). A 0.5px rule at rest; on hover the lifted card of 2069:181432.
   &__chip[data-kind="task"][data-detail="1"] {
     gap: 12px;
-    border: 0.5px solid rgba(0, 0, 0, 0.2);
+    border: 0.5px solid var(--cal-card-rule);
 
     &:hover {
-      border: 1px solid rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-muted);
       // The border grows by 0.5px; take it back off the padding so nothing
       // inside moves.
       padding: 11.5px;
@@ -1406,7 +1409,7 @@
     // 24px under the files: the frame's 12px block padding plus the card gap.
     margin-top: 12px;
     padding-top: 8px;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    border-top: 1px solid var(--border-muted);
   }
 
   &__chip-subtasks-lead {
@@ -3869,4 +3872,9 @@
     flex-basis: 300px;
     width: 300px;
   }
+}
+
+// The Day task card's rest rule on the dark theme: the same 20%, in white.
+html[data-theme="dark"] .calendar-main {
+  --cal-card-rule: rgba(255, 255, 255, 0.2);
 }
