@@ -11,11 +11,10 @@
 //         meetings side by side in a row, and the task cards packed into
 //         columns under them. The canvas scrolls, not the cell.
 //
-// The whole cell adds a task due that day (index.js "cal-day-add"), like the
-// month square, and its "+" opens the Task / Meeting menu for that day
-// ("cal-day-menu"); so every container in it is inert and only the chips and
-// the "+" keep a service of their own — see the note in skeleton/month.js
-// dayCell.
+// A click on the cell itself does nothing: adding a task or a meeting on the
+// day is its "+" menu ("cal-day-menu"). Every container in it is inert and
+// only the chips and the "+" keep a service of their own — see the note in
+// skeleton/month.js dayCell.
 const { chip } = require("./chip");
 const { ymd, itemsByDay } = require("./helpers");
 
@@ -83,10 +82,8 @@ module.exports = function (ui, days, mode) {
     });
     return Skeletons.Box.Y({
       className: `${pfx}__board-day`,
-      bubble: 0,
-      service: "cal-day-add",
-      uiHandler: [ui],
-      calDay: key,
+      // Inert: no click on the column opens the create popup.
+      active: 0,
       attrOpt: { "data-today": key === todayKey ? "1" : "0" },
       kids: [
         Skeletons.Box.X({

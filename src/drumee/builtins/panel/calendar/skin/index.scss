@@ -1477,9 +1477,6 @@
     gap: 10px;
     border-right: var(--cal-month-line);
     background: var(--normal-bg);
-    // The whole column adds a task that day.
-    cursor: pointer;
-    transition: background 0.12s ease-out;
 
     &:last-child {
       border-right: 0;
@@ -1496,10 +1493,6 @@
 
   // The hovered week column washes grey (2066:62175). Not the Day view's one
   // cell: that is the whole canvas.
-  &__grid[data-view="week"] &__board-day:hover {
-    background: var(--overlay-bg-05);
-  }
-
   // Week: the hover "+" left, the date right, on a 20px line. Day: the date
   // leads and the "+" follows it.
   &__board-head {
