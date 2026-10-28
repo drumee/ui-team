@@ -31,6 +31,7 @@ const {
   itemsByDay,
 } = require("./skeleton/helpers");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { onMeetingsChanged } = require("libs/meetings-changed");
 const { modalKids } = require("./skeleton");
 const { recipientChips } = require("./skeleton/meeting-form");
 const A = require("./attachments");
@@ -79,6 +80,9 @@ class __calendar_main extends LetcBox {
     super.initialize(opt);
     armItemsReady(this);
     this.declareHandlers();
+    // A meeting written from another screen in THIS tab: room.* pushes skip
+    // the writer's socket, so this is the only word that reaches us.
+    this._offMeetingsChanged = onMeetingsChanged(() => this._onMeetingsChanged());
 
     // Month, unless the entry point NAMED a view: the Daily Reminder card's
     // meetings tile asks for today in `day` view. Validated against VIEW_KEYS,
@@ -121,6 +125,7 @@ class __calendar_main extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    if (this._offMeetingsChanged) this._offMeetingsChanged();
     // The dropdown dismisser lives on `document`, so it outlives this widget
     // unless it is taken down here.
     this._unbindMenuDismiss();
@@ -678,6 +683,17 @@ class __calendar_main extends LetcBox {
       }
       this._reload();
     }, 250);
+  }
+
+  /**
+   * A meeting was booked, edited or removed elsewhere in this tab (a folder's
+   * "Meeting information" modal — libs/meetings-changed). Same answer as a
+   * room.* push: one debounced re-read, held while parked or while our own
+   * modal is open (_scheduleReload).
+   */
+  _onMeetingsChanged() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this._scheduleReload();
   }
 
   onWsMessage(svc, data, options = {}) {
