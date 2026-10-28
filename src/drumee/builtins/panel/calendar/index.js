@@ -850,6 +850,28 @@ class __calendar_main extends LetcBox {
   /** Open the menu under the clicked "+", or close it if that "+" owns it. */
   _toggleDayMenu(cmd) {
     const key = cmd && cmd.mget && cmd.mget("calDay");
+    this._toggleDayPopover(cmd, () => require("./skeleton/toolbar").dayMenu(this, key));
+  }
+
+  /**
+   * A month cell's "+N more": every visible item of that day, grouped by kind
+   * (skeleton/day-popover.js), in the same floating slot, laid OVER the cell
+   * rather than under the control — the cell is what it expands.
+   */
+  _toggleDayMore(cmd) {
+    const key = cmd && cmd.mget && cmd.mget("calDay");
+    const owner = cmd && cmd.el;
+    const cell = owner && owner.closest && owner.closest(`.${this.fig.family}__day`);
+    this._toggleDayPopover(cmd, () => require("./skeleton/day-popover")(this, key), cell || owner);
+  }
+
+  /**
+   * Open `build()` in the floating slot for the clicked control, or close it
+   * if that control owns it. `over`, when given, is the element the popover
+   * covers (see _placeDayMenu); otherwise it hangs under the control.
+   */
+  _toggleDayPopover(cmd, build, over) {
+    const key = cmd && cmd.mget && cmd.mget("calDay");
     const anchor = cmd && cmd.el;
     const same = this._dayMenu && this._dayMenu.anchor === anchor;
     this._closeDayMenu();
@@ -863,10 +885,11 @@ class __calendar_main extends LetcBox {
 
     const slot = _.isFunction(this.getPart) ? this.getPart("cal-day-menu") : null;
     if (!slot || (slot.isDestroyed && slot.isDestroyed()) || !slot.el) return;
-    this._dayMenu = { key, anchor, slot };
+    this._dayMenu = { key, anchor, slot, over: over || null };
     anchor.dataset.open = "1";
     slot.el.dataset.open = "1";
-    slot.feed(require("./skeleton/toolbar").dayMenu(this, key));
+    if (over) slot.el.dataset.over = "1";
+    slot.feed(build());
     this._placeDayMenu();
     // The rows are laid out after the feed: clamp once they have a size.
     requestAnimationFrame(() => this._placeDayMenu());
@@ -876,18 +899,32 @@ class __calendar_main extends LetcBox {
   /**
    * Under the "+", 4px below it and starting at its left edge; above it when
    * the viewport has no room below; never past the viewport's edges.
+   *
+   * Over a cell ("+N more"): centred on it, its top 8px above the cell's, a
+   * little wider than the cell (at least the skin's min-width), then pushed
+   * back inside the viewport.
    */
   _placeDayMenu() {
     const m = this._dayMenu;
     if (!m || !m.slot.el || !m.anchor.isConnected) return;
     const GAP = 4;
     const EDGE = 8;
-    const a = m.anchor.getBoundingClientRect();
     const el = m.slot.el;
-    const w = el.offsetWidth;
-    const h = el.offsetHeight;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    if (m.over && m.over.isConnected) {
+      const c = m.over.getBoundingClientRect();
+      el.style.width = `${Math.min(c.width + 2 * EDGE, vw - 2 * EDGE)}px`;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const left = c.left + (c.width - w) / 2;
+      el.style.left = `${Math.max(EDGE, Math.min(left, vw - w - EDGE))}px`;
+      el.style.top = `${Math.max(EDGE, Math.min(c.top - EDGE, vh - h - EDGE))}px`;
+      return;
+    }
+    const a = m.anchor.getBoundingClientRect();
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
     const below = a.bottom + GAP;
     const top = below + h <= vh - EDGE || a.top - GAP - h < EDGE ? below : a.top - GAP - h;
     el.style.top = `${Math.max(EDGE, top)}px`;
@@ -902,6 +939,8 @@ class __calendar_main extends LetcBox {
     if (m.anchor) delete m.anchor.dataset.open;
     if (m.slot && !(m.slot.isDestroyed && m.slot.isDestroyed()) && m.slot.el) {
       delete m.slot.el.dataset.open;
+      delete m.slot.el.dataset.over;
+      m.slot.el.style.width = "";
       m.slot.feed([]);
     }
   }
@@ -925,11 +964,18 @@ class __calendar_main extends LetcBox {
     const onKey = (ev) => {
       if (ev.key === "Escape") close();
     };
-    this._dayMenuDismiss = { onClick, onKey, close };
+    // Except a scroll inside the popover itself: the "+N more" list scrolls.
+    const onScroll = (ev) => {
+      const m = this._dayMenu;
+      const t = ev && ev.target;
+      if (m && m.slot.el && t && t.nodeType === 1 && m.slot.el.contains(t)) return;
+      close();
+    };
+    this._dayMenuDismiss = { onClick, onKey, onScroll, close };
     document.addEventListener("click", onClick, true);
     document.addEventListener("keydown", onKey, true);
     // Capture, so a scroll anywhere — the grid, a week column — counts.
-    document.addEventListener("scroll", close, true);
+    document.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", close);
   }
 
@@ -939,7 +985,7 @@ class __calendar_main extends LetcBox {
     this._dayMenuDismiss = null;
     document.removeEventListener("click", d.onClick, true);
     document.removeEventListener("keydown", d.onKey, true);
-    document.removeEventListener("scroll", d.close, true);
+    document.removeEventListener("scroll", d.onScroll, true);
     window.removeEventListener("resize", d.close);
   }
 
@@ -2806,7 +2852,15 @@ class __calendar_main extends LetcBox {
         this._pendingDay = cmd.mget("calDay");
         return this._openTaskForm(null);
 
-      case "cal-day-more": {
+      // "+N more" in a month cell: the day's items in a popover over the cell.
+      case "cal-day-more":
+        return this._toggleDayMore(cmd);
+      case "cal-day-more-close":
+        return this._closeDayMenu();
+
+      // The popover's date: that day in Day view.
+      case "cal-day-open": {
+        this._closeDayMenu();
         const target = cmd.mget("calDay");
         if (target) {
           this._cursor = target;
@@ -2815,10 +2869,18 @@ class __calendar_main extends LetcBox {
         return this._navigate();
       }
 
-      case "cal-open-item":
-        return this._openItem(cmd);
-      case "cal-remove-item":
-        return this._removeItem(cmd);
+      // From a cell or from the "+N more" popover. The popover closes once
+      // the item has been read off the chip — closing destroys the chip.
+      case "cal-open-item": {
+        const r = this._openItem(cmd);
+        this._closeDayMenu();
+        return r;
+      }
+      case "cal-remove-item": {
+        const r = this._removeItem(cmd);
+        this._closeDayMenu();
+        return r;
+      }
 
       case "cal-close-form":
         return this._closeForm();

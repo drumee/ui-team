@@ -574,6 +574,103 @@
     position: static;
   }
 
+  // "+N more" (skeleton/day-popover.js): laid over its month cell, so it is a
+  // little wider than one (index.js _placeDayMenu sets the width) but never
+  // narrower than this, and never taller than the viewport — the body scrolls.
+  &__page > &__day-menu-slot[data-over="1"] {
+    min-width: 260px;
+  }
+
+  // At most 320px tall, and never taller than the viewport; past that the
+  // body scrolls (&__more-body).
+  &__more {
+    width: 100%;
+    max-height: min(320px, calc(100vh - 16px));
+    max-height: min(320px, calc(100dvh - 16px));
+    box-sizing: border-box;
+    padding: 12px;
+    gap: 10px;
+    background: var(--normal-bg-elevated);
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.16);
+    cursor: default;
+  }
+
+  &__more-head {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  // The date, linking to Day view.
+  &__more-title {
+    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg));
+    font-weight: 600;
+    min-width: 0;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--primary-40);
+    }
+  }
+
+  // Button.Svg nests the sprite two divs deep (__container > .full.inner >
+  // svg), and those divs are what sit in the button — so the button is a flex
+  // box and every layer of the chain is pinned to the glyph's 12px, or the svg
+  // lands in the top-left corner of a 24px box.
+  &__more-close {
+    display: flex;
+    width: 24px;
+    height: 24px;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--normal-fg);
+
+    > div,
+    .inner,
+    svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+      flex: none;
+    }
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+  }
+
+  // The scroller. The bar stays inked at rest: nothing else in the popover
+  // says "there is more below". The gutter is reserved, so a list that grows
+  // past the cap does not reflow its chips narrower, and the bar never sits
+  // on top of them.
+  &__more-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 14px;
+    @include quiet-scroll($inked: true);
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+  }
+
+  // One per kind: "Meeting · 3", then its chips — the month cell's own.
+  &__more-group {
+    flex: 0 0 auto;
+    gap: var(--cal-gap);
+  }
+
+  &__more-group-label {
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--normal-fg-20));
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
   // 12/1.4 rows on 8px; the current choice and the hovered row take the
   // design's 10% brand wash and keep their ink — no bold, no brand text.
   &__menu-item {
@@ -767,7 +864,7 @@
 
   // The ruled frame. It must never shrink below its rows: with
   // `flex: 1 1 auto; min-height: 0` the scroller squeezed it to the visible
-  // height while the six rows (170px floors, growing to 2×) overflowed it, so
+  // height while the six rows (170px floors) overflowed it, so
   // its left rule stopped part-way down as soon as the grid scrolled. Now it
   // is as tall as the rows and at least the grid's height.
   //
@@ -787,8 +884,8 @@
     border-bottom: 0;
   }
 
-  // A row shares the grid's height like before, but also grows with its
-  // busiest cell, up to that cell's 2× cap (&__day max-height).
+  // A row shares the grid's height, never below the floor. A busy cell does
+  // not grow it: the cell shows what fits and "+N more" (skeleton/month.js).
   &__week-row {
     flex: 1 0 auto;
     min-height: var(--cal-cell-min);
@@ -805,17 +902,15 @@
   &__day {
     flex: 1 1 0;
     min-width: 0;
-    // A busy day grows to twice the row floor, then its body scrolls.
-    max-height: calc(2 * var(--cal-cell-min));
     padding: 12px;
     gap: 10px;
     border-right: var(--cal-month-line);
     border-bottom: var(--cal-month-line);
     overflow: hidden;
-    // The whole square adds a task (skeleton/month.js dayCell). The pointer
-    // and the "+" revealed on hover are the cue. There is deliberately no hover
-    // wash: the chips sit INSIDE the cell, so hovering one would light the
-    // square too and promise "click adds" over an item that opens instead.
+    // The whole square opens the day in Day view (skeleton/month.js dayCell).
+    // The pointer is the cue. There is deliberately no hover wash: the chips
+    // sit INSIDE the cell, so hovering one would light the square too and
+    // promise "click opens the day" over an item that opens itself instead.
     // Chips set their own cursor, so they keep theirs.
     cursor: pointer;
 
@@ -890,51 +985,30 @@
     user-select: none;
   }
 
-  // The cell's scroll container. Every item for the day renders — a busy day is
-  // read by scrolling here or by following the "+N" into Day view, never by
-  // being silently truncated (which is what the old `overflow: hidden` plus a
-  // four-item slice did).
-  //
-  // No `overscroll-behavior` on purpose: chaining is what makes a wheel over a
-  // busy cell scroll the cell and THEN carry on scrolling the month. `contain`
-  // would pin the month grid in place for as long as the pointer sat over a
-  // full cell, which reads as a frozen page.
+  // The day's items, cut to what stands whole at the row floor
+  // (skeleton/month.js fitCount) — the rest are behind "+N more". Clipped, not
+  // scrolled: a cell never grows and never hides an item without saying so.
   &__day-body {
     flex: 1 1 auto;
     min-height: 0;
     gap: var(--cal-gap);
-    // Scrolls by wheel / touch with no bar at all, even when hovered or
-    // overflowing — the cell's 2× growth shows most of a busy day already.
-    overflow-y: auto;
-    overflow-x: hidden;
-    scrollbar-width: none;
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
+    overflow: hidden;
   }
 
-  // Pinned to the bottom of the scroller, so the one affordance that leads to
-  // the full day is the one thing that can never scroll out of reach. It was
-  // previously the last child of a clipped stack — i.e. the first thing lost.
-  //
-  // The negative margin swallows the flex gap above it so its background covers
-  // that gap too; without it a chip stays visible in the sliver between the
-  // last gap and the footer. With the 10px gap that makes the footer 26px
-  // tall, which is the height skeleton/month.js reserves for it.
-  //
-  // Not rendered for now (SHOW_DAY_MORE in skeleton/month.js).
+  // The last line of a busy cell: "+N more", opening the day in Day view
+  // (index.js "cal-day-more"). 16px tall; with the gap above it, the 26px
+  // skeleton/month.js reserves for it.
   &__day-more {
     @include drumee.typo($size: 11px, $line: 16px, $color: var(--primary-40));
     font-weight: 600;
     flex: 0 0 auto;
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-    margin-top: calc(-1 * var(--cal-gap));
-    padding: var(--cal-gap) 0 0 4px;
-    background: var(--normal-bg);
+    align-self: flex-start;
+    padding-left: 4px;
     cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   // ── chips ─────────────────────────────────────────────────────────────────
@@ -1271,7 +1345,7 @@
     gap: 10px;
     border-right: var(--cal-month-line);
     background: var(--normal-bg);
-    // The whole column adds a task that day, as the month square does.
+    // The whole column adds a task that day.
     cursor: pointer;
     transition: background 0.12s ease-out;
 
