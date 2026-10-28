@@ -12,7 +12,7 @@
 // pill (folder + workspace name) and a personal one carries none, so in the
 // Team view, where both kinds of row are mixed, the pill is what tells a
 // workspace task from one this screen edits.
-const { priorityMeta, startLabel } = require("./helpers");
+const { priorityMeta, startLabel, subtaskCounts } = require("./helpers");
 // The folder glyph the breadcrumb and the workspace switcher draw, from its one
 // source. It returns an HTML string, hence Element + content.
 const folderArt = require("media/grid/template/folder");
@@ -58,6 +58,65 @@ function provenancePill(pfx, row) {
         content: row.origin_name,
         active: 0,
       }),
+    ],
+  });
+}
+
+// The Day view's card shows this many file pills, then "+N" (2069:181634).
+const FILES_SHOWN = 2;
+
+/**
+ * The Day card's attached files (2069:181634): paperclip pills, the first
+ * FILES_SHOWN of them, then "+N". Inert, every node: a click anywhere on the
+ * card opens the task. Null when there are none.
+ */
+function filesRow(pfx, row) {
+  const files = row.files || [];
+  if (!files.length) return null;
+  const more = files.length - FILES_SHOWN;
+  return Skeletons.Box.X({
+    className: `${pfx}__chip-files`,
+    active: 0,
+    kids: [
+      ...files.slice(0, FILES_SHOWN).map((f) =>
+        Skeletons.Box.X({
+          className: `${pfx}__chip-file`,
+          active: 0,
+          kids: [
+            Skeletons.Image.Svg({ ico: "app-attachment", className: `${pfx}__chip-file-ico`, active: 0 }),
+            Skeletons.Note({ className: `${pfx}__chip-file-name`, content: f.name, active: 0 }),
+          ],
+        }),
+      ),
+      more > 0
+        ? Skeletons.Note({ className: `${pfx}__chip-file-more`, content: `+${more}`, active: 0 })
+        : null,
+    ].filter(Boolean),
+  });
+}
+
+/**
+ * The Day card's footer (subtasks-desktop-board, 844:92547): icon,
+ * "Subtasks", done/total, caret. Display only — the calendar has no subtask
+ * list to expand; the card's click opens the task. Null with no subtasks.
+ */
+function subtasksFooter(pfx, row) {
+  const { done, total } = subtaskCounts(row);
+  if (!total) return null;
+  return Skeletons.Box.X({
+    className: `${pfx}__chip-subtasks`,
+    active: 0,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__chip-subtasks-lead`,
+        active: 0,
+        kids: [
+          Skeletons.Image.Svg({ ico: "ph-stack-simple", className: `${pfx}__chip-subtasks-ico`, active: 0 }),
+          Skeletons.Note({ className: `${pfx}__chip-subtasks-label`, content: LOCALE.SUBTASKS, active: 0 }),
+          Skeletons.Note({ className: `${pfx}__chip-subtasks-count`, content: `${done}/${total}`, active: 0 }),
+        ],
+      }),
+      Skeletons.Image.Svg({ ico: "caret-right", className: `${pfx}__chip-subtasks-caret`, active: 0 }),
     ],
   });
 }
@@ -154,9 +213,11 @@ function chip(ui, row, opt = {}) {
         ],
       }),
       // 2069:181433: the Day view's card carries the description under the
-      // name, then the pill.
+      // name, then the pill; 2069:181634 adds the files and the subtasks.
       detail ? desc : null,
       provenancePill(pfx, row),
+      detail ? filesRow(pfx, row) : null,
+      detail ? subtasksFooter(pfx, row) : null,
     ];
   }
 

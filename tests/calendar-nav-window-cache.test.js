@@ -23,8 +23,11 @@ const PARKED_REFRESH_MS = 60 * 1000;
 const NAV_SPINNER_MIN_MS = 0;
 const SERVICE = {};
 const Visitor = { id: "me" };
-const ymd = (v) => v;
-const viewRange = (view, cursor) => ({ from: `${view}-${cursor}`, to: "end" });
+// A window bound is its label; _readWindow's one-day timezone pad
+// (calendar-window-timezone-pad.test.js) is a no-op on it here.
+const bound = (k) => ({ k, subtract() { return this; }, add() { return this; } });
+const ymd = (v) => (v && v.k) || v;
+const viewRange = (view, cursor) => ({ from: bound(`${view}-${cursor}`), to: bound("end") });
 const normalizeRow = (r) => r;
 /* eslint-enable no-unused-vars */
 

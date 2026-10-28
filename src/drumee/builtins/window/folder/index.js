@@ -1,6 +1,11 @@
 const mfsInteract = require("../interact");
 const snap = require("../snap");
 const { EVENT: SPLIT_BODY_EVENT } = require("libs/split-body-signal");
+// Tells this tab's Personal Calendar a meeting changed: room.* pushes skip the
+// socket that wrote, so it would never hear of an edit made here.
+const { announceMeetingsChanged } = require("libs/meetings-changed");
+// The meeting modal footer's Schedule / Update and Delete spin while they write.
+const { withButtonBusy } = require("libs/button-busy");
 const {
   VIEW_STATES,
   isSectioned,
@@ -3008,10 +3013,10 @@ class __window_folder extends mfsInteract {
         return this._checkAvailability();
 
       case "meeting-modal-submit":
-        return this.submitMeetingModal();
+        return withButtonBusy(cmd.el, () => this.submitMeetingModal());
 
       case "meeting-modal-delete":
-        return this.deleteMeetingModal();
+        return withButtonBusy(cmd.el, () => this.deleteMeetingModal());
 
       case "meeting":
       case "webinar":
@@ -4981,6 +4986,7 @@ class __window_folder extends mfsInteract {
           // Keep the dialog open on a refusal instead of reporting a save that
           // never happened — the calendar would snap back on the next fetch.
           if (!this._mmSucceeded(res)) return fail();
+          announceMeetingsChanged();
           this._upsertLocalMeeting(nid, form);
           return this._mmLinkFiles(nid, st, form).then(finish);
         }, fail);
@@ -5006,6 +5012,7 @@ class __window_folder extends mfsInteract {
         }
         createdNid = node && (node.id || node.nid);
         if (!createdNid) return;
+        announceMeetingsChanged();
         // The meeting exists from here on. If anything after this fails and
         // the organizer presses again, that press edits this meeting — it
         // must not book a second one. Only while this modal is still the one
@@ -5059,6 +5066,7 @@ class __window_folder extends mfsInteract {
       // meeting came back on the next fetch, and its start-time reminder still
       // fired. Say so and keep the dialog open instead.
       if (!this._mmSucceeded(res)) return fail();
+      announceMeetingsChanged();
       this.closeMeetingModal();
       this._refreshSchedule();
     }, fail);

@@ -2572,7 +2572,7 @@ $theme-colors: (
   }
 
   // Quick-open card while its rows load: the spinner of the view-switch veil
-  // above, centred over the calendar, and a × in the card's own corner.
+  // above, centred over the calendar. No × (Escape leaves).
   &__quick-loading {
     position: absolute;
     inset: 0;
@@ -2590,15 +2590,6 @@ $theme-colors: (
       border-top-color: var(--primary-40, #5950ff);
       animation: tasks-panel-view-spin 0.7s linear infinite;
     }
-  }
-
-  &__quick-close {
-    position: absolute;
-    top: 24px;
-    right: 24px;
-    width: 32px;
-    height: 32px;
-    cursor: pointer;
   }
 
   // Quick-open card (Personal Calendar, Figma 1697:50129): the same card,
@@ -9444,9 +9435,11 @@ $theme-colors: (
     align-items: center;
     gap: 12px;
     padding: 8px;
-    border-radius: 12px;
-    border: 1px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    border-radius: 6px;
+    border: 1px solid var(--border-default);
     background: var(--normal-bg-100, #fff);
+    // The whole row opens the subtask (skeleton subRow), not only its title.
+    cursor: pointer;
     transition:
       border-color 0.15s,
       box-shadow 0.15s,

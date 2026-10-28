@@ -31,6 +31,9 @@ const {
   itemsByDay,
 } = require("./skeleton/helpers");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { onMeetingsChanged } = require("libs/meetings-changed");
+// The modal foot's action buttons spin while their write is in flight.
+const { withButtonBusy } = require("libs/button-busy");
 const { modalKids } = require("./skeleton");
 const { recipientChips } = require("./skeleton/meeting-form");
 const A = require("./attachments");
@@ -79,6 +82,9 @@ class __calendar_main extends LetcBox {
     super.initialize(opt);
     armItemsReady(this);
     this.declareHandlers();
+    // A meeting written from another screen in THIS tab: room.* pushes skip
+    // the writer's socket, so this is the only word that reaches us.
+    this._offMeetingsChanged = onMeetingsChanged(() => this._onMeetingsChanged());
 
     // Month, unless the entry point NAMED a view: the Daily Reminder card's
     // meetings tile asks for today in `day` view. Validated against VIEW_KEYS,
@@ -121,6 +127,7 @@ class __calendar_main extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    if (this._offMeetingsChanged) this._offMeetingsChanged();
     // The dropdown dismisser lives on `document`, so it outlives this widget
     // unless it is taken down here.
     this._unbindMenuDismiss();
@@ -472,8 +479,14 @@ class __calendar_main extends LetcBox {
         // entity — the same pair activity.list_task_assignments passes for a
         // user-scoped read.
         hub_id: Visitor.id,
-        from: ymd(from),
-        to: ymd(to),
+        // One day of slack each side. The server turns these dates into
+        // epochs in ITS timezone (calendar.js _epoch — UTC on stage), but a
+        // meeting is placed on the VIEWER's local day: 00:00 on the 2nd in
+        // UTC+7 is 17:00 on the 1st in UTC, so a Day view of the 2nd never
+        // got it back while the month window did. A day covers any UTC
+        // offset; getVisibleItems keeps only rows on the view's own days.
+        from: ymd(from.subtract(1, "day")),
+        to: ymd(to.add(1, "day")),
         // `kinds` is deliberately NOT sent: the server defaults to both, and an
         // array in a GET query string is a serialization risk for no gain —
         // the All / Task / Meeting filter is applied client-side over the
@@ -672,6 +685,17 @@ class __calendar_main extends LetcBox {
       }
       this._reload();
     }, 250);
+  }
+
+  /**
+   * A meeting was booked, edited or removed elsewhere in this tab (a folder's
+   * "Meeting information" modal — libs/meetings-changed). Same answer as a
+   * room.* push: one debounced re-read, held while parked or while our own
+   * modal is open (_scheduleReload).
+   */
+  _onMeetingsChanged() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this._scheduleReload();
   }
 
   onWsMessage(svc, data, options = {}) {
@@ -994,7 +1018,12 @@ class __calendar_main extends LetcBox {
 
   // ── forms ──────────────────────────────────────────────────────────────────
 
-  _openTaskForm(row) {
+  /**
+   * @param {Object} [row]            the task to edit; none for a new task
+   * @param {Object} [opts.parentRow] set when `row` is a subtask opened from
+   *   its parent's form: the "Parent / child" crumb leads back there
+   */
+  _openTaskForm(row, { parentRow = null } = {}) {
     this._closeMenus();
     // Both dates in YYYY-MM-DD from the start: every task.update writes both
     // columns, so the draft must always hold the row's own Start and End.
@@ -1036,6 +1065,7 @@ class __calendar_main extends LetcBox {
     this._form.doneKeys = [];
     this._form.subMenu = null;
     this._form.search = { seq: 0, timer: null, blurTimer: null, rows: [] };
+    this._form.parentRow = row ? parentRow : null;
     this._pendingDay = null;
     this._renderModal();
     this._loadDoneColumns(this._form);
@@ -1119,12 +1149,18 @@ class __calendar_main extends LetcBox {
     }
     // The modal goes first — the reload waits on the network.
     this._renderModal();
-    // Pushes that landed while the modal was open were held back
-    // (_scheduleReload), and the task modal saves subtask edits — and, after a
-    // failed subtask, the task itself — before its Update/Create is pressed.
-    // None of our own writes come back as a push (the server skips the
-    // sending socket), so a task form always reloads on its way out.
-    if (this._dirty || (form && form.kind === "task")) return this._reload();
+    // Closing alone never touches the page under the modal. It reloads only
+    // when something changed: a push that landed while the modal was open was
+    // held back (_scheduleReload), or the form itself wrote — the task modal
+    // saves subtasks and files before Update/Create is pressed (`form.wrote`,
+    // see _markFormWrote). None of our own writes come back as a push (the
+    // server skips the sending socket), so those need the reload.
+    if (this._dirty || (form && form.wrote)) return this._reload();
+  }
+
+  /** The open form has written to the server: its close must reload. */
+  _markFormWrote(form = this._form) {
+    if (form) form.wrote = true;
   }
 
   /**
@@ -1452,6 +1488,7 @@ class __calendar_main extends LetcBox {
       // Edit mode: the file is already on the task. Unlinked now, like the
       // Task tab's ✕, addressed with the ROW's hub.
       const row = form.row || {};
+      form.wrote = true;
       const res = await this.postService({
         service: (SERVICE.task && SERVICE.task.unlink_file) || "task.unlink_file",
         hub_id: row.hub_id || this._personalHub,
@@ -1761,6 +1798,7 @@ class __calendar_main extends LetcBox {
     const svc = (SERVICE.task && SERVICE.task.link_file) || "task.link_file";
     const failed = [];
     for (const file_nid of nids || []) {
+      this._markFormWrote();
       const res = await this.postService({ service: svc, hub_id, task_id, file_nid });
       if (!Array.isArray(res)) failed.push(file_nid);
     }
@@ -1920,6 +1958,8 @@ class __calendar_main extends LetcBox {
         localKey: `id:${t.id}`,
         id: t.id,
         title: t.title || "",
+        // Kept for the subtask's own detail (_openSubtask).
+        description: t.description || "",
         status: t.status || "todo",
         priority: t.priority || "medium",
         due_date: dateOf(t.due_date),
@@ -1932,6 +1972,70 @@ class __calendar_main extends LetcBox {
       ...(form.draft.subtasks || []).filter((s) => !s.id || !ids.has(String(s.id))),
     ];
     this._renderSubtasks();
+  }
+
+  /**
+   * A saved subtask row was clicked: open that subtask's own detail in this
+   * modal, as a board row opens its child (open-detail). It is a task of the
+   * parent's own hub, so it inherits the parent's scope and write right.
+   *
+   * The parent's draft goes, as on the board; its pending uploads are dropped
+   * the way _closeForm drops them. A write the parent already made is carried
+   * over, so closing the subtask still reloads the calendar.
+   */
+  _openSubtask(key) {
+    const form = this._form;
+    if (!form || form.kind !== "task") return;
+    const s = (form.draft.subtasks || []).find((x) => x.localKey === key);
+    if (!s || !s.id) return;
+    const parent = form.row || {};
+    this._switchTaskForm(
+      {
+        kind: "task",
+        id: s.id,
+        hub_id: parent.hub_id,
+        scope: parent.scope,
+        can_write: parent.can_write,
+        title: s.title || "",
+        description: s.description || "",
+        status: s.status || "todo",
+        priority: s.priority || "medium",
+        due_date: s.due_date || "",
+        start_date: s.start_date || "",
+      },
+      // The "Parent / child" crumb's way back (_openParentTask).
+      { parentRow: form.row },
+    );
+  }
+
+  /** The subtask form's crumb: back to the parent it was opened from. */
+  _openParentTask() {
+    const form = this._form;
+    const parent = form && form.parentRow;
+    if (!parent) return;
+    this._switchTaskForm(parent);
+  }
+
+  /**
+   * Swap the open task form for another task's, in the same modal. Leaves the
+   * current form the way _closeForm leaves it (menu, search timers, pending
+   * uploads) without closing the modal, and carries a write it made over, so
+   * the eventual close still reloads the calendar.
+   */
+  _switchTaskForm(row, opts = {}) {
+    const form = this._form;
+    if (form) {
+      form.subMenu = null;
+      this._syncSubtaskMenuDismiss();
+      if (form.search) {
+        clearTimeout(form.search.timer);
+        clearTimeout(form.search.blurTimer);
+      }
+      this._cancelFormUploads(form);
+    }
+    const wrote = !!(form && form.wrote);
+    this._openTaskForm(row, opts);
+    if (wrote && this._form) this._form.wrote = true;
   }
 
   /** Names typed into rows not saved yet → the draft. Runs before every re-feed of the rows. */
@@ -1998,6 +2102,7 @@ class __calendar_main extends LetcBox {
     const title = String(s.title || "").trim();
     if (!title) return Promise.resolve(true);
     s.busy = true;
+    form.wrote = true;
     s.pending = this.postService({
       service: (SERVICE.task && SERVICE.task.create) || "task.create",
       hub_id: (form.row && form.row.hub_id) || this._personalHub,
@@ -2050,6 +2155,7 @@ class __calendar_main extends LetcBox {
     if (!s || s.busy) return;
     if (s.id) {
       s.busy = true;
+      form.wrote = true;
       const res = await this.postService({
         service: (SERVICE.task && SERVICE.task.delete) || "task.delete",
         hub_id: (form.row && form.row.hub_id) || this._personalHub,
@@ -2091,6 +2197,7 @@ class __calendar_main extends LetcBox {
     if (!s.id) return;
     s.busy = true;
     const hub_id = (form.row && form.row.hub_id) || this._personalHub;
+    form.wrote = true;
     const res = await this.postService(
       field === "status"
         ? {
@@ -2279,6 +2386,9 @@ class __calendar_main extends LetcBox {
       (SERVICE.task && SERVICE.task.update_status) || "task.update_status";
     let hub_id = this._personalHub;
     let task_id = null;
+    // From here the form may stay open on a task that is already written (a
+    // subtask or a file failed after it): its close must reload.
+    form.wrote = true;
 
     if (!editing) {
       // Personal task: personal-hub scope, and no assignee_uids at all — a
@@ -3072,8 +3182,9 @@ class __calendar_main extends LetcBox {
         return this._renderRecipients();
       }
 
-      // The title Entry carries `service: "cal-submit-task"` so Enter commits.
-      // The base Entry reports through that same service on other statuses too
+      // The title Entry used to carry `service: "cal-submit-task"` so Enter
+      // committed (it now has its own no-op "cal-form-title"; only the button
+      // submits). The base Entry reports through its service on other statuses too
       // — "interactive" on every printable keyup when interactive:1 is set,
       // "cancel" on Escape — and a status that is not a commit must never
       // reach task.create. Typing the title used to create one task per
@@ -3102,25 +3213,37 @@ class __calendar_main extends LetcBox {
         return this._commitSubtask(cmd.mget("calSubKey"));
       case "cal-subtask-remove":
         return this._removeSubtask(cmd.mget("calSubKey"));
+      case "cal-subtask-open":
+        return this._openSubtask(cmd.mget("calSubKey"));
+      case "cal-open-parent":
+        return this._openParentTask();
       case "cal-subtask-menu":
         return this._toggleSubtaskMenu(cmd.mget("calSubKey"), cmd.mget("calSubKind"));
       case "cal-subtask-set":
         return this._setSubtaskValue(cmd.mget("calSubKey"), cmd.mget("calSubKind"), cmd.mget("calValue"));
 
+      // The title Entry's own reports (Enter's commit, Escape's cancel).
+      // Enter in the title saves nothing: only the Create / Update button
+      // submits (skeleton/task-form.js).
+      case "cal-form-title":
+        return;
+
+      // The modal foot's actions (Create / Update, Delete) spin while their
+      // write is in flight; Cancel (cal-close-form) never waits on anything.
       case "cal-submit-task":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
           return;
         }
-        return this._submitTask();
+        return withButtonBusy(cmd.el, () => this._submitTask());
       case "cal-delete-task":
-        return this._deleteTask();
+        return withButtonBusy(cmd.el, () => this._deleteTask());
       case "cal-delete-meeting":
-        return this._deleteMeeting();
+        return withButtonBusy(cmd.el, () => this._deleteMeeting());
       case "cal-submit-meeting":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
           return;
         }
-        return this._submitMeeting();
+        return withButtonBusy(cmd.el, () => this._submitMeeting());
 
       case "cal-copy-link": {
         const link = this._form && this._form.link;

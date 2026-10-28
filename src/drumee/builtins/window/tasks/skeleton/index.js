@@ -2157,8 +2157,9 @@ const make = function (ui) {
 
   // The quick-open card draws the detail card and the file input its Upload
   // needs, and nothing of the board around it. Until the card opens (the
-  // workspace's rows are still loading) it shows the panel's spinner and a ×,
-  // so the overlay is never blank and never a dead end.
+  // workspace's rows are still loading) it shows the panel's spinner, so the
+  // overlay is never blank. No ×: Escape still leaves (the calendar's
+  // _installFormKeys closes a card that is still loading).
   if (quickOpen) {
     return Skeletons.Box.Y({
       className: `${pfx}__root ${pfx}__root--quick`,
@@ -2166,18 +2167,7 @@ const make = function (ui) {
         detailWrapper(),
         !ui.isQuickLoading()
           ? null
-          : Skeletons.Box.Y({
-              className: `${pfx}__quick-loading`,
-              kids: [
-                Skeletons.Button.Svg({
-                  className: `${pfx}__quick-close`,
-                  ico: "cross",
-                  bubble: 0,
-                  service: "quick-open-cancel",
-                  uiHandler: [ui],
-                }),
-              ],
-            }),
+          : Skeletons.Box.Y({ className: `${pfx}__quick-loading` }),
         fileSelector(),
       ].filter(Boolean),
     });
@@ -4543,25 +4533,28 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
     const isDone = ui.isDoneStatus(t.status);
     const pm = metaOf(priorities, t.priority || "medium");
     const sm = metaOf(cols, t.status);
+    // The whole row is the way INTO the child (detail only), not just its
+    // title; the controls on it act on the row in place. ui-core binds a click
+    // to every widget not marked active:0 and stopPropagation()s before
+    // triggerHandlers, so the title and the slots are inert and let the click
+    // reach the row, while the chips, the assignee button and the × keep their
+    // own services. The create modal's rows have no open service.
     return Skeletons.Box.X({
       className: `${pfx}__subtask-row`,
       bubble: 0,
+      ...(svc.open ? { service: svc.open, uiHandler: [ui], taskId: t.id } : {}),
       attrOpt: { "data-done": isDone ? "1" : "0" },
       kids: [
-        // The title is the way INTO the child (detail only); the controls
-        // beside it act on the row in place.
         Skeletons.Note({
           className: `${pfx}__subtask-title`,
+          active: 0,
           content: t.title || "",
-          bubble: 0,
-          service: svc.open,
-          uiHandler: svc.open ? [ui] : null,
-          taskId: t.id,
         }),
         // Figma lays the row on a grid — title | 110 | 110 | 110 — so the
         // chips line up down the list; each sits at the start of its cell.
         Skeletons.Box.X({
           className: `${pfx}__subtask-cell`,
+          active: 0,
           kids: [
             chip(
               "priority",
@@ -4574,6 +4567,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
         }),
         Skeletons.Box.X({
           className: `${pfx}__subtask-cell`,
+          active: 0,
           kids: [
             chip(
               "status",
@@ -4586,6 +4580,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
         }),
         Skeletons.Box.X({
           className: `${pfx}__subtask-row-end`,
+          active: 0,
           kids: [
             assigneeButton(t),
             Skeletons.Button.Svg({

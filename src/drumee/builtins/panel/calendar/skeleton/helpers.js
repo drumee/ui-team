@@ -251,8 +251,30 @@ function normalizeRow(raw, fallbackKind) {
     row.due_date = dateOnly(content.due_date);
     row.start_date = dateOnly(content.start_date);
     row.all_day = true;
+    // What the Day view's card draws under the description (chip.js): the
+    // attached files, by display name, and the subtask rollup.
+    row.files = (Array.isArray(content.linked_files) ? content.linked_files : [])
+      .filter((f) => f && f.filename)
+      .map((f) => ({ nid: f.nid, name: fileName(f.filename, f.extension) }));
+    row.subtask_total = Number(content.subtask_total) || 0;
+    row.subtask_done = Number(content.subtask_done) || 0;
   }
   return row;
+}
+
+/** "spec_v1" + "docx" → "spec_v1.docx"; a name already ending in it stays. */
+function fileName(name, ext) {
+  const n = String(name);
+  if (!ext) return n;
+  const suffix = `.${ext}`;
+  return n.toLowerCase().endsWith(suffix.toLowerCase()) ? n : n + suffix;
+}
+
+/** A task's subtask rollup, done clamped into [0, total]. */
+function subtaskCounts(row) {
+  const total = Math.max(0, Number(row && row.subtask_total) || 0);
+  const done = Math.min(total, Math.max(0, Number(row && row.subtask_done) || 0));
+  return { done, total };
 }
 
 /**
@@ -425,6 +447,7 @@ module.exports = {
   priorityMeta,
   resolveStatus,
   normalizeRow,
+  subtaskCounts,
   rowStart,
   rowEnd,
   startLabel,

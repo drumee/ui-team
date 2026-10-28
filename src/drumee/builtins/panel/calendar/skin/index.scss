@@ -75,6 +75,9 @@
   // around them (__month), and the week/day board's the same way.
   // Bolder than the frames' 5% hairline; --border-default flips with the theme.
   --cal-month-line: 1px solid var(--border-default);
+  // The Day task card's rest rule (task-board/calendar): no theme token
+  // carries 20% ink, so it is ours, flipped for dark at the end of the file.
+  --cal-card-rule: rgba(0, 0, 0, 0.2);
   // The Day view's column: its meetings row and its task columns share it, so
   // both lay out the same number of equal columns at any width.
   --cal-board-col: 280px;
@@ -1294,21 +1297,151 @@
     }
   }
 
-  // The Day view's task card (2069:181433): the name wraps rather than
-  // ellipsizes, and the description sits under it in grey, 4px below.
+  // The Day view's task card (Figma 2066:180690, task-board/calendar): the
+  // name wraps rather than ellipsizes, the description sits under it in grey,
+  // then the attached files (2069:181634) and the "Subtasks" footer
+  // (844:92547). A 0.5px rule at rest; on hover the lifted card of 2069:181432.
   &__chip[data-kind="task"][data-detail="1"] {
-    gap: 8px;
+    gap: 12px;
+    border: 0.5px solid var(--cal-card-rule);
+
+    &:hover {
+      border: 1px solid var(--border-muted);
+      // The border grows by 0.5px; take it back off the padding so nothing
+      // inside moves.
+      padding: 11.5px;
+      box-shadow:
+        0 4px 2px rgba(12, 12, 13, 0.1),
+        0 4px 2px rgba(12, 12, 13, 0.05);
+    }
 
     .calendar-main__chip-title,
     .calendar-main__chip-title .note-content {
+      font-weight: 600;
       white-space: normal;
       overflow-wrap: anywhere;
     }
 
+    // 4px under the dot-and-name group, inside the same block as the frame.
     .calendar-main__chip-desc {
       @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-20));
+      margin-top: -8px;
       -webkit-line-clamp: 3;
     }
+
+    // Level with the dot, in the card's corner — not the board's 4px.
+    > .calendar-main__chip-remove {
+      top: 12px;
+      right: 12px;
+    }
+  }
+
+  // Paperclip pills, wrapping, 4px apart.
+  &__chip-files {
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  // 4px 8px on a 12/1.4 line: 24.8px tall. The name ellipsizes, so a long
+  // one cannot widen the card past its column.
+  &__chip-file,
+  &__chip-file-more {
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 4px 8px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    background: var(--overlay-bg-05);
+    overflow: hidden;
+  }
+
+  // Image.Svg nests its sprite (__container > .full.inner > svg): every layer
+  // is pinned to the glyph, or the svg stretches to the pill.
+  &__chip-file-ico,
+  &__chip-subtasks-ico,
+  &__chip-subtasks-caret {
+    display: flex;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    color: var(--normal-fg);
+
+    > div,
+    .inner,
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__chip-file-name,
+  &__chip-file-more {
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg));
+    font-weight: 400;
+  }
+
+  &__chip-file-name {
+    min-width: 0;
+
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__chip-file-more {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  // The footer: a hairline, 8px, then icon · "Subtasks" · done/total on the
+  // left and the caret on the right.
+  &__chip-subtasks {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    // 24px under the files: the frame's 12px block padding plus the card gap.
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-muted);
+  }
+
+  &__chip-subtasks-lead {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    max-width: 110px;
+  }
+
+  &__chip-subtasks-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg));
+    font-weight: 400;
+
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+
+  // Grey/20 badge, as the board's own strip draws it.
+  &__chip-subtasks-count {
+    flex: none;
+    padding: 0 4px;
+    border-radius: 4px;
+    background: var(--normal-bg-90);
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg));
+    font-weight: 400;
+    white-space: nowrap;
   }
 
   // ── week / day board (skeleton/board.js) ───────────────────────────────────
@@ -1344,9 +1477,6 @@
     gap: 10px;
     border-right: var(--cal-month-line);
     background: var(--normal-bg);
-    // The whole column adds a task that day.
-    cursor: pointer;
-    transition: background 0.12s ease-out;
 
     &:last-child {
       border-right: 0;
@@ -1363,10 +1493,6 @@
 
   // The hovered week column washes grey (2066:62175). Not the Day view's one
   // cell: that is the whole canvas.
-  &__grid[data-view="week"] &__board-day:hover {
-    background: var(--overlay-bg-05);
-  }
-
   // Week: the hover "+" left, the date right, on a 20px line. Day: the date
   // leads and the "+" follows it.
   &__board-head {
@@ -2562,6 +2688,38 @@
         background: var(--overlay-bg-05);
       }
     }
+
+    // Its write is in flight (libs/button-busy): the label gives way to a
+    // spinner in the button's own ink, keeping the button's width.
+    &[data-loading="1"] {
+      position: relative;
+      cursor: progress;
+
+      .note-content {
+        visibility: hidden;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 14px;
+        height: 14px;
+        margin: -9px 0 0 -9px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: calendar-main-file-spin 0.8s linear infinite;
+      }
+    }
+  }
+
+  // While one action writes, the other actions stand down. Cancel (neutral)
+  // stays live.
+  &__modal-foot[data-busy="1"] > &__button:not(&__button--neutral):not([data-loading="1"]) {
+    pointer-events: none;
+    opacity: 0.5;
   }
 
   // ── narrow widths ─────────────────────────────────────────────────────────
@@ -2910,6 +3068,56 @@
     font-weight: inherit;
   }
 
+  // ── "Parent / child" crumb (a subtask opened from its parent's form) ──────
+  // The board's tasks-panel__detail-parent: 14/20 ink, the parent's name the
+  // only link, ellipsized so a long name never widens the column.
+  // The head's left column: the crumb (a subtask only) over the heading. It
+  // takes the room the × leaves, so a long crumb ellipsizes instead of
+  // pushing the × out.
+  &__modal[data-form="task"] &__modal-head-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  &__modal[data-form="task"] &__detail-parent {
+    align-items: center;
+    align-self: flex-start;
+    gap: 6px;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  &__modal[data-form="task"] &__detail-parent-title,
+  &__modal[data-form="task"] &__detail-parent-current {
+    flex: 0 1 auto;
+    min-width: 0;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10));
+    font-weight: 400;
+
+    .note-content {
+      min-width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+
+  &__modal[data-form="task"] &__detail-parent-title {
+    cursor: pointer;
+    transition: color 0.15s;
+
+    &:hover {
+      color: var(--primary-50);
+      text-decoration: underline;
+    }
+  }
+
+  &__modal[data-form="task"] &__detail-parent-sep {
+    flex: none;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-20));
+  }
+
   // ── Start → End ────────────────────────────────────────────────────────────
   // Top-aligned, so the arrow can be put on the BOXES' centre line rather
   // than the middle of label + box — and stays there when End date's error
@@ -3082,11 +3290,21 @@
   &__modal[data-form="task"] &__subtask {
     align-items: center;
     gap: 8px;
-    padding: 6px;
+    padding: 6px 12px;
     box-sizing: border-box;
-    border: 1px solid var(--border-muted);
-    border-radius: 12px;
+    border: 1px solid var(--border-default);
+    border-radius: 6px;
     background: var(--normal-bg-elevated);
+    transition: background 0.12s ease-out;
+
+    // A saved row opens the subtask's own detail (index.js _openSubtask).
+    &[data-openable="1"] {
+      cursor: pointer;
+
+      &:hover {
+        background: var(--overlay-bg-05);
+      }
+    }
 
     &[data-busy="1"] {
       opacity: 0.6;
@@ -3101,7 +3319,7 @@
   &__modal[data-form="task"] &__subtask-name {
     flex: 1 1 auto;
     min-width: 0;
-    align-self: flex-start;
+    align-items: center;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3129,19 +3347,25 @@
     }
   }
 
+  // Every item of a row sits on the row's centre line, its contents centred
+  // in its slot.
   &__modal[data-form="task"] &__subtask-cell,
   &__modal[data-form="task"] &__subtask-end {
     flex: 0 0 96px;
     min-width: 0;
+    align-items: center;
+    justify-content: center;
   }
 
   &__modal[data-form="task"] &__subtask-cell {
     position: relative;
   }
 
+  // The × sits at the row's right edge, not centred in its slot.
   &__modal[data-form="task"] &__subtask-end {
     justify-content: flex-end;
   }
+
 
   &__modal[data-form="task"] &__subtask-remove {
     width: 16px;
@@ -3157,7 +3381,7 @@
     max-width: 100%;
     padding: 2px 10px;
     box-sizing: border-box;
-    border: 1px solid var(--border-muted);
+    border: 1px solid var(--border-default);
     border-radius: 16px;
     cursor: pointer;
 
@@ -3739,4 +3963,9 @@
     flex-basis: 300px;
     width: 300px;
   }
+}
+
+// The Day task card's rest rule on the dark theme: the same 20%, in white.
+html[data-theme="dark"] .calendar-main {
+  --cal-card-rule: rgba(255, 255, 255, 0.2);
 }
