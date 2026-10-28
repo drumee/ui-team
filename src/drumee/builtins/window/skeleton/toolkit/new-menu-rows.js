@@ -128,15 +128,16 @@ export function createRows(ui) {
       area: ui.mget(_a.area) || _a.personal,
       className: `${cnItem}--add-folder`,
     }),
-    // Note is temporarily hidden from the create list (2026-08). The add-note
-    // handler (window/core.js) and editor_markdown stay wired — uncomment this
-    // row to restore the option on BOTH surfaces.
-    // menuRow(ui, {
-    //   service: "add-note",
-    //   ico: "addmenu-note",
-    //   content: LOCALE.NOTE,
-    //   className: `${cnItem}--add-note`,
-    // }),
+    // Note (editor_markdown, window/core.js `add-note`) is offered on the dev
+    // platforms only, like the Casual rows below.
+    casual
+      ? menuRow(ui, {
+          service: "add-note",
+          ico: "addmenu-note",
+          content: LOCALE.NOTE,
+          className: `${cnItem}--add-note`,
+        })
+      : null,
     menuRow(ui, {
       service: "new-document",
       name: "document.docx",
