@@ -154,8 +154,8 @@ module.exports = function (ui) {
           className: `${pfx}__day-head`,
           active: 0,
           kids: [
-            // Right-packed: the hover-revealed "+" menu, then the date in
-            // the corner. A text glyph rather than the `plus` sprite: the
+            // The hover-revealed "+" menu on the left, the date in the right
+            // corner. A text glyph rather than the `plus` sprite: the
             // sprite symbol cannot be recoloured across the <use> boundary
             // and renders invisible (same reason as the board calendar).
             Skeletons.Box.X({
