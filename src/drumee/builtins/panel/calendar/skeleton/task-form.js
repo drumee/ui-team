@@ -296,10 +296,18 @@ module.exports = function (ui) {
                   // That turned each letter typed into the title into a
                   // `cal-submit-task`, so typing "abc" posted task.create three
                   // times and the user ended up with tasks "a", "ab" and "abc"
-                  // without ever pressing Enter. Enter alone still commits.
+                  // without ever pressing Enter.
+                  //
+                  // Enter does not submit either: it saved the task and closed
+                  // the modal under the user's hands (and the Enter that opened
+                  // the modal from a focused chip landed here and shut it again).
+                  // Only the Create / Update button submits. The Entry keeps a
+                  // service of its own, a no-op in index.js, so its commit and
+                  // cancel statuses are answered here and never fall through to
+                  // the window manager's catch-all.
                   preselect: 1,
                   mode: "commit",
-                  service: "cal-submit-task",
+                  service: "cal-form-title",
                   uiHandler: [ui],
                   partHandler: ui,
                 }),

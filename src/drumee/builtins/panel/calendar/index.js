@@ -3092,8 +3092,9 @@ class __calendar_main extends LetcBox {
         return this._renderRecipients();
       }
 
-      // The title Entry carries `service: "cal-submit-task"` so Enter commits.
-      // The base Entry reports through that same service on other statuses too
+      // The title Entry used to carry `service: "cal-submit-task"` so Enter
+      // committed (it now has its own no-op "cal-form-title"; only the button
+      // submits). The base Entry reports through its service on other statuses too
       // — "interactive" on every printable keyup when interactive:1 is set,
       // "cancel" on Escape — and a status that is not a commit must never
       // reach task.create. Typing the title used to create one task per
@@ -3126,6 +3127,12 @@ class __calendar_main extends LetcBox {
         return this._toggleSubtaskMenu(cmd.mget("calSubKey"), cmd.mget("calSubKind"));
       case "cal-subtask-set":
         return this._setSubtaskValue(cmd.mget("calSubKey"), cmd.mget("calSubKind"), cmd.mget("calValue"));
+
+      // The title Entry's own reports (Enter's commit, Escape's cancel).
+      // Enter in the title saves nothing: only the Create / Update button
+      // submits (skeleton/task-form.js).
+      case "cal-form-title":
+        return;
 
       case "cal-submit-task":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
