@@ -2364,12 +2364,12 @@ class __tasks_panel extends LetcBox {
         // rather than dismissing everything — there is one detail panel, so
         // closing the child used to take the parent with it. Read the target
         // first: _closeDetailSilently clears it.
-        const back = this._detailReturnTo;
+        const back = this._walkBackTarget();
         // Walking back is NAVIGATION, not a dismissal: the parent is drawn
         // into this same element in the same tick, so an exit here would fade
         // the child out underneath the parent arriving on top of it. Close it
         // instantly and let _openDetail play its own entrance.
-        if (back && this._tasks.some((t) => t.id === back)) {
+        if (back) {
           this._closeDetailSilently();
           // _openDetail renders on its own — a _renderDeferred() on top of it
           // would be a second full rebuild of the panel just painted.
@@ -2393,10 +2393,6 @@ class __tasks_panel extends LetcBox {
       case "quick-open-board":
         this._quickToBoard = 1;
         return this._closeDetailSilently(() => this._renderOverlays());
-
-      // Quick-open card only: the × shown while the card is still loading.
-      case "quick-open-cancel":
-        return this._quickOpenLeft();
 
       case "set-view": {
         const v = trigger.mget("viewMode");
@@ -4800,13 +4796,28 @@ class __tasks_panel extends LetcBox {
     }
 
     // Update on a child returns to the parent, exactly as its X does.
-    const back = this._detailReturnTo;
-    if (back && this._tasks.some((t) => t.id === back)) {
+    const back = this._walkBackTarget();
+    if (back) {
       this._closeDetailSilently();
       return this._openDetail(back);
     }
     // A saved task leaves the way the X does; only the overlay parts re-feed.
     this._closeDetailSilently(() => this._renderOverlays());
+  }
+
+  /**
+   * Where closing the open detail goes: the parent it was opened from (a child
+   * walks back there on the board), or null for a plain close.
+   *
+   * Always null in the Personal Calendar's quick-open card: closing a subtask
+   * there closes the card and its backdrop, as the calendar's user asked —
+   * the parent is one click away on the calendar, and the header's parent
+   * crumb still leads there on purpose.
+   */
+  _walkBackTarget() {
+    if (this._quickOpen) return null;
+    const back = this._detailReturnTo;
+    return back && this._tasks.some((t) => t.id === back) ? back : null;
   }
 
   // Render the detail panel immediately on click; refresh attachments async
@@ -4908,6 +4919,11 @@ class __tasks_panel extends LetcBox {
       task && Array.isArray(task.linked_files) && !task.linked_files.length;
     this._loading = { attachments: knownNoFiles ? 0 : 1, comments: 1, history: 1 };
     this._renderOverlays();
+    // A walk back from a child cut its backdrop out with an inline
+    // display:none (_dismissOverlay's instant path). The quick-open card
+    // repaints through _render's patcher, which keeps that element, so the
+    // parent was drawn into a hidden backdrop under the calendar's modal.
+    this._reviveOverlay("detail-backdrop");
     this._refreshAttachments(id).then(() => {
       if (this._detailId !== id) return;
       this._settleLoading("attachments", id);
@@ -10119,6 +10135,23 @@ class __tasks_panel extends LetcBox {
     el.dataset.closing = "1";
     this._cancelPendingExit();
     this._closingTimer = setTimeout(run, OVERLAY_EXIT_MS);
+  }
+
+  /**
+   * Undo a dismissal on a backdrop that is being shown again.
+   *
+   * _dismissOverlay leaves its mark on the ELEMENT — an inline display:none on
+   * the instant path, data-closing on the animated one. A re-feed builds a new
+   * element and drops both, but _render's patcher keeps the old one when the
+   * skeleton matches, and the mark survives into the next open.
+   *
+   * @param {String} cls  backdrop class suffix, e.g. "detail-backdrop"
+   */
+  _reviveOverlay(cls) {
+    const el = this.el && this.el.querySelector(`.${this.fig.family}__${cls}`);
+    if (!el) return;
+    if (el.style.display === "none") el.style.display = "";
+    delete el.dataset.closing;
   }
 
   /**
