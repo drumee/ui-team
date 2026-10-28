@@ -1579,9 +1579,21 @@ class __tasks_panel extends LetcBox {
     // No-op: same column and dropped onto itself / its own slot.
     if (sameColumn && (!afterEl || afterEl === card)) return;
 
+    // Into ANOTHER column the card lands on top, wherever it was dropped:
+    // task_update_status ranks it first there, so a mid-column drop would
+    // jump to the top on the next reload anyway. Reordering within a column
+    // still honours the drop slot.
+    if (!sameColumn && targetBody) {
+      afterEl = Array.from(
+        targetBody.querySelectorAll(".tasks-panel__task-card[data-tid]"),
+      ).find((el) => el !== card) || null;
+    }
+
     // Fall back to a full render if we can't locate the DOM nodes (defensive).
     if (!card || !targetBody) {
+      const idx = this._tasks.indexOf(task);
       task.status = status;
+      if (!sameColumn) this._toColumnTop(idx, true);
       this._render({ full: true });
     } else {
       const sourceBody = card.closest(".tasks-panel__column-body");
@@ -4537,7 +4549,9 @@ class __tasks_panel extends LetcBox {
     // and the flip (and its revert) must land on the live one.
     task = this._tasks.find((t) => t.id === id);
     if (!task || task.status !== originalStatus) return;
+    const place = this._taskPlace(id);
     task.status = next;
+    this._toColumnTop(place.index, true);
     this._refreshViewBody();
     try {
       const updated = await this.postService({
@@ -4562,11 +4576,13 @@ class __tasks_panel extends LetcBox {
         // Failed silently (postService never rejects): revert the
         // optimistic flip instead of leaving unsaved state on screen.
         task.status = originalStatus;
+        this._restoreTaskPlace(place);
         this._refreshViewBody();
       }
     } catch (err) {
       console.error("[tasks_panel] toggle-complete failed:", err);
       task.status = originalStatus;
+      this._restoreTaskPlace(place);
       this._refreshViewBody();
     }
   }
@@ -9999,10 +10015,55 @@ class __tasks_panel extends LetcBox {
     const normalized = this._normalizeTask(row);
     const idx = this._tasks.findIndex((t) => t.id === row.id);
     if (idx === -1) this._tasks.push(normalized);
-    else this._tasks[idx] = { ...this._tasks[idx], ...normalized };
+    else {
+      const moved =
+        normalized.status != null && normalized.status !== this._tasks[idx].status;
+      this._tasks[idx] = { ...this._tasks[idx], ...normalized };
+      // A server answer, a peer push or a parent rollup that changes the
+      // column: land on top of it, where task_update_status ranks it.
+      if (moved) this._toColumnTop(idx, !("rank" in normalized));
+    }
     // Replacing a row in place changes neither the array's identity nor its
     // length, so _childIndex's guard cannot see it — and it would keep handing
     // out the superseded object. Drop the cache here.
+    this._childIdx = null;
+  }
+
+  /**
+   * Move this._tasks[idx] — already carrying its NEW status — to the top of
+   * that column. getState() buckets this._tasks in array order, so "top" is
+   * "before the first task already in the column". `withRank` also gives it
+   * the rank the server will (min - 1), so the List view, which sorts by rank,
+   * agrees before the answer lands; a row that brought its own rank keeps it.
+   */
+  _toColumnTop(idx, withRank) {
+    if (idx < 0) return;
+    const [task] = this._tasks.splice(idx, 1);
+    const at = this._tasks.findIndex((t) => t.status === task.status);
+    if (withRank && at >= 0) {
+      const ranks = this._tasks
+        .filter((t) => t.status === task.status)
+        .map((t) => Number(t.rank) || 0);
+      task.rank = Math.min(...ranks) - 1;
+    }
+    this._tasks.splice(at < 0 ? this._tasks.length : at, 0, task);
+    this._childIdx = null;
+  }
+
+  // Where a task sits now, for undoing an optimistic column move that the
+  // server refused (see _restoreTaskPlace).
+  _taskPlace(id) {
+    const index = this._tasks.findIndex((t) => t.id === id);
+    return { id, index, rank: index < 0 ? undefined : this._tasks[index].rank };
+  }
+
+  _restoreTaskPlace(place) {
+    if (!place || place.index < 0) return;
+    const from = this._tasks.findIndex((t) => t.id === place.id);
+    if (from < 0) return;
+    const [task] = this._tasks.splice(from, 1);
+    task.rank = place.rank;
+    this._tasks.splice(Math.min(place.index, this._tasks.length), 0, task);
     this._childIdx = null;
   }
 
@@ -11910,7 +11971,9 @@ class __tasks_panel extends LetcBox {
     // to, and the server rollup is inert there too.
     if (!target || target.key === originalStatus) return;
 
+    const place = this._taskPlace(id);
     task.status = target.key;
+    this._toColumnTop(place.index, true);
     this._refreshSubtaskSection();
     try {
       const updated = await this.postService({
@@ -11936,11 +11999,13 @@ class __tasks_panel extends LetcBox {
         this._refreshViewBody();
       } else {
         task.status = originalStatus;
+        this._restoreTaskPlace(place);
         this._refreshSubtaskSection();
       }
     } catch (err) {
       console.error("[tasks_panel] subtask toggle failed:", err);
       task.status = originalStatus;
+      this._restoreTaskPlace(place);
       this._refreshSubtaskSection();
     }
   }

@@ -247,6 +247,9 @@ module.exports = {
     }
     const before = { id };
     for (const k of Object.keys(plan.local)) before[k] = task[k];
+    // A status edit moves the row to the top of its new column (_mergeTask);
+    // a refused write puts it back where it was, not on top of the old one.
+    const place = this._taskPlace(id);
     this._mergeTask({ id, ...plan.local });
     if (close) this._listEdit = null;
     this._listRepaint();
@@ -261,6 +264,7 @@ module.exports = {
     if (!row) {
       // Never leave an unsaved value on screen: back to the last good one.
       this._mergeTask(before);
+      this._restoreTaskPlace(place);
       this._repaintBoard();
       this._alertWriteFailed();
       return;
