@@ -16,6 +16,7 @@ const { stamp, reconcile } = require("./reconcile");
 const listInline = require("./list-inline");
 const listSubtask = require("./list-subtask");
 const completeParent = require("./complete-parent");
+const linkTip = require("./link-tip");
 const { killTaskToast } = require("./task-toast");
 const {
   markerRe,
@@ -8907,6 +8908,10 @@ class __tasks_panel extends LetcBox {
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     a.dataset.href = href; // serialize from this, not the browser-normalised href
+    // Hover shows the target: the label alone ("here", "the doc") hides where
+    // the link goes. An editor shows its own tip with an Edit button instead
+    // (link-tip.js), so the native one would double it there.
+    if (!editable) a.title = href;
     a.textContent = label;
     if (editable) {
       a.setAttribute("contenteditable", "false");
@@ -8923,8 +8928,10 @@ class __tasks_panel extends LetcBox {
         ev.preventDefault();
         // mailto: is handed to the mail client; window.open would additionally
         // leave a blank tab behind. safeUrl admits no other non-http scheme.
-        if (/^mailto:/i.test(href)) window.location.href = href;
-        else window.open(href, "_blank", "noopener");
+        // Read at click time: the Ctrl+K prompt edits the URL in place.
+        const url = a.dataset.href || href;
+        if (/^mailto:/i.test(url)) window.location.href = url;
+        else window.open(url, "_blank", "noopener");
       };
     }
     return a;
@@ -9055,6 +9062,9 @@ class __tasks_panel extends LetcBox {
     };
     editorEl.onpaste = (e) => this._onEditorPaste(e, scope, editorEl);
     this._wireInlineImageRemove(editorEl, scope);
+    if (editorEl.getAttribute("contenteditable") === "true") {
+      this._wireLinkTip(editorEl, scope);
+    }
   }
 
   // Clipboard image (screenshot / copied external image): upload it, then
@@ -9722,14 +9732,23 @@ class __tasks_panel extends LetcBox {
   }
 
   // Ctrl+K. Remembers the caret range up front — focusing the prompt's input
-  // blurs the editor and drops the live selection.
-  _openLinkPrompt(scope) {
+  // blurs the editor and drops the live selection. `link` is the hover tip's
+  // Edit (link-tip.js): that link, wherever the caret is.
+  _openLinkPrompt(scope, link) {
     const editorEl = this._descEditorEl(scope);
     if (!editorEl) return;
-    const sel = window.getSelection();
-    if (!sel || !sel.rangeCount || !editorEl.contains(sel.anchorNode)) return;
-    const range = sel.getRangeAt(0).cloneRange();
-    const anchor = this._closestLink(sel.anchorNode, editorEl);
+    this._hideLinkTip();
+    let range, anchor;
+    if (link && editorEl.contains(link)) {
+      range = document.createRange();
+      range.selectNode(link);
+      anchor = link;
+    } else {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount || !editorEl.contains(sel.anchorNode)) return;
+      range = sel.getRangeAt(0).cloneRange();
+      anchor = this._closestLink(sel.anchorNode, editorEl);
+    }
     const ref = {
       scope,
       range,
@@ -12210,5 +12229,7 @@ class __tasks_panel extends LetcBox {
 Object.assign(__tasks_panel.prototype, listSubtask);
 // Completing a parent with open subtasks asks first (complete-parent.js).
 Object.assign(__tasks_panel.prototype, completeParent);
+// Hover tip on an editor's links: URL + Edit (link-tip.js).
+Object.assign(__tasks_panel.prototype, linkTip);
 
 module.exports = __tasks_panel;

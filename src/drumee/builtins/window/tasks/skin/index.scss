@@ -3911,6 +3911,80 @@ $theme-colors: (
     }
   }
 
+  // The reply box's field had no positioning context, so the tip (and the
+  // link prompt) were placed against whatever ancestor happened to have one.
+  &__comment-reply-field {
+    position: relative;
+  }
+
+  // ── Link hover tip (link-tip.js) ──────────────────────────────────
+  // Same look as the __comment-action-ico flyover: dark pill, white 11px type,
+  // caret pointing at the link. Unlike that one it takes the pointer — the
+  // Edit button opens the Ctrl+K prompt on the hovered link.
+  &__link-tip {
+    position: absolute;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: min(320px, 100%);
+    padding: 4px 4px 4px 8px;
+    border-radius: 6px;
+    box-sizing: border-box;
+    background: var(--tooltip-bg, #1f1f28);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 500,
+      $line: 14px,
+      $color: var(--tooltip-fg, #ffffff)
+    );
+
+    &:not([data-open="1"]) {
+      display: none;
+    }
+
+    // Caret, positioned on the link by JS (--caret-x) since the body is
+    // clamped inside the field.
+    &::before {
+      content: "";
+      position: absolute;
+      left: var(--caret-x, 50%);
+      transform: translateX(-50%);
+      border: 4px solid transparent;
+    }
+
+    &[data-side="above"]::before {
+      top: 100%;
+      border-top-color: var(--tooltip-bg, #1f1f28);
+    }
+
+    &[data-side="below"]::before {
+      bottom: 100%;
+      border-bottom-color: var(--tooltip-bg, #1f1f28);
+    }
+  }
+
+  &__link-tip-url {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__link-tip-edit {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.12);
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.24);
+    }
+  }
+
   &__link-prompt-actions {
     justify-content: flex-end;
     gap: 8px;
