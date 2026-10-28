@@ -1119,12 +1119,18 @@ class __calendar_main extends LetcBox {
     }
     // The modal goes first — the reload waits on the network.
     this._renderModal();
-    // Pushes that landed while the modal was open were held back
-    // (_scheduleReload), and the task modal saves subtask edits — and, after a
-    // failed subtask, the task itself — before its Update/Create is pressed.
-    // None of our own writes come back as a push (the server skips the
-    // sending socket), so a task form always reloads on its way out.
-    if (this._dirty || (form && form.kind === "task")) return this._reload();
+    // Closing alone never touches the page under the modal. It reloads only
+    // when something changed: a push that landed while the modal was open was
+    // held back (_scheduleReload), or the form itself wrote — the task modal
+    // saves subtasks and files before Update/Create is pressed (`form.wrote`,
+    // see _markFormWrote). None of our own writes come back as a push (the
+    // server skips the sending socket), so those need the reload.
+    if (this._dirty || (form && form.wrote)) return this._reload();
+  }
+
+  /** The open form has written to the server: its close must reload. */
+  _markFormWrote(form = this._form) {
+    if (form) form.wrote = true;
   }
 
   /**
@@ -1452,6 +1458,7 @@ class __calendar_main extends LetcBox {
       // Edit mode: the file is already on the task. Unlinked now, like the
       // Task tab's ✕, addressed with the ROW's hub.
       const row = form.row || {};
+      form.wrote = true;
       const res = await this.postService({
         service: (SERVICE.task && SERVICE.task.unlink_file) || "task.unlink_file",
         hub_id: row.hub_id || this._personalHub,
@@ -1761,6 +1768,7 @@ class __calendar_main extends LetcBox {
     const svc = (SERVICE.task && SERVICE.task.link_file) || "task.link_file";
     const failed = [];
     for (const file_nid of nids || []) {
+      this._markFormWrote();
       const res = await this.postService({ service: svc, hub_id, task_id, file_nid });
       if (!Array.isArray(res)) failed.push(file_nid);
     }
@@ -1998,6 +2006,7 @@ class __calendar_main extends LetcBox {
     const title = String(s.title || "").trim();
     if (!title) return Promise.resolve(true);
     s.busy = true;
+    form.wrote = true;
     s.pending = this.postService({
       service: (SERVICE.task && SERVICE.task.create) || "task.create",
       hub_id: (form.row && form.row.hub_id) || this._personalHub,
@@ -2050,6 +2059,7 @@ class __calendar_main extends LetcBox {
     if (!s || s.busy) return;
     if (s.id) {
       s.busy = true;
+      form.wrote = true;
       const res = await this.postService({
         service: (SERVICE.task && SERVICE.task.delete) || "task.delete",
         hub_id: (form.row && form.row.hub_id) || this._personalHub,
@@ -2091,6 +2101,7 @@ class __calendar_main extends LetcBox {
     if (!s.id) return;
     s.busy = true;
     const hub_id = (form.row && form.row.hub_id) || this._personalHub;
+    form.wrote = true;
     const res = await this.postService(
       field === "status"
         ? {
@@ -2279,6 +2290,9 @@ class __calendar_main extends LetcBox {
       (SERVICE.task && SERVICE.task.update_status) || "task.update_status";
     let hub_id = this._personalHub;
     let task_id = null;
+    // From here the form may stay open on a task that is already written (a
+    // subtask or a file failed after it): its close must reload.
+    form.wrote = true;
 
     if (!editing) {
       // Personal task: personal-hub scope, and no assignee_uids at all — a
