@@ -7,13 +7,13 @@
 // same day-cell head with a hover "+", the same chip list with a "+N" that jumps
 // to that day. What is new here is that a cell holds BOTH tasks and meetings,
 // drawn as the frame's cards and chips (skeleton/chip.js), so its items are not
-// all one height and the "+N" below is counted from each item's own.
+// all one height and the "+N more" below is counted from each item's own.
 const { chip, hasPill } = require("./chip");
 const { ymd, day, itemsByDay } = require("./helpers");
 
-// A busy day renders EVERY item and the cell scrolls — skin/index.scss makes
-// __day-body the scroll container — and a "+N" footer, pinned to the bottom of
-// it, counts the items that do not stand whole above that footer.
+// A busy day draws the items that stand whole in its cell and a "+N more"
+// footer for the rest; the footer opens that day in the Day view. The cell
+// keeps the row's height — it neither grows nor scrolls.
 //
 // The count is made here, from the heights the skin gives each kind of item,
 // because CSS cannot ask whether a box overflows. Every item is one line of
@@ -24,7 +24,7 @@ const { ymd, day, itemsByDay } = require("./helpers");
 //                   12px padding top and bottom, the 20px date line, its 10px
 //                   gap and the 1px rule)
 //   gap        10   between items (--cal-gap)
-//   footer     26   the "+N" line, 16px, plus the gap it covers above itself
+//   footer     26   the "+N more" line, 16px, plus the gap above it
 //   meeting  24.8   the one-line chip: 4px padding around a 16.8px line
 //   task     52.4   the card: 12px padding, the 8px dot, 4px, the 14.4px name,
 //                   inside a 1px border
@@ -32,17 +32,8 @@ const { ymd, day, itemsByDay } = require("./helpers");
 //
 // Change any of these rules in the skin and this table goes stale silently.
 //
-// Exact at the floor, which is the height rows keep in any window up to about
-// 1240px tall (the grid gets 709px of a 900px window and needs 1050px for its
-// header and six rows). Above that it shares its extra height among the rows, so
-// a cell shows more than the floor would and "+N" can run ahead of what is
-// actually out of sight; nothing is ever hidden, so it still reads as "this
-// day runs past the fold".
-// The "+N" footer is hidden for now: the cell grows to 2× its floor and
-// scrolls instead (skin &__day). Flip to bring it back; `more` is still
-// counted either way for data-overflow.
-const SHOW_DAY_MORE = false;
-
+// Exact at the floor. A taller window shares its extra height among the rows,
+// so a cell has room to spare under its items; it never shows fewer than fit.
 const FIT = {
   body: 115,
   gap: 10,
@@ -90,13 +81,14 @@ module.exports = function (ui) {
 
   const dayBody = (list, key) => {
     if (!list.length) return null;
-    const kids = list.map((row) => chip(ui, row, { compact: 1 }));
-    const more = list.length - fitCount(list);
-    if (SHOW_DAY_MORE && more > 0) {
+    const shown = fitCount(list);
+    const kids = list.slice(0, shown).map((row) => chip(ui, row, { compact: 1 }));
+    const more = list.length - shown;
+    if (more > 0) {
       kids.push(
         Skeletons.Note({
           className: `${pfx}__day-more`,
-          content: `+${more}`,
+          content: `+${more} ${LOCALE.MORE}`,
           bubble: 0,
           service: "cal-day-more",
           uiHandler: [ui],
@@ -109,12 +101,6 @@ module.exports = function (ui) {
       // Inert: the empty space around the chips belongs to the cell's click
       // (see dayCell). The chips inside keep their own.
       active: 0,
-      // The cell scrolls, but at rest its scrollbar is transparent (see
-      // quiet-scroll) — so a busy day looked exactly like a truncated one and
-      // read as "I cannot get to the rest of these". CSS cannot ask whether a
-      // box overflows; the skeleton already knows, because it is the same
-      // comparison the "+N" is built from. Stamped here, inked in the skin.
-      attrOpt: { "data-overflow": more > 0 ? "1" : "0" },
       kids,
     });
   };
@@ -128,9 +114,9 @@ module.exports = function (ui) {
     // dates still dim, so the boundary reads both ways.
     const numText = d.date() === 1 ? d.format("MMM D") : d.format("D");
 
-    // The whole cell is the day's "add a task" target, not just its "+": a
-    // click anywhere in the square opens the create-task popup due that day,
-    // the same popup the week/day squares open (index.js "cal-day-add").
+    // The whole cell opens that day in the Day view (index.js "cal-day-open",
+    // the "+N more" popover's date does the same). Adding a task or a meeting
+    // on the day is the hover "+" menu's job.
     //
     // For that to work every CONTAINER inside the cell is inert (`active: 0`).
     // ui-core binds a click to every widget left at the default and calls
@@ -138,13 +124,13 @@ module.exports = function (ui) {
     // chip stack would swallow the click on its own area and the cell would
     // never hear it. The things that DO something keep their own service and
     // stay active, and that same stopPropagation keeps them from also firing
-    // the cell: a chip opens its item, "+N" opens the Day view, a chip's ×
+    // the cell: a chip opens its item, "+N more" opens the day's popover, a chip's ×
     // deletes, and the "+" opens the Task / Meeting menu for that day
     // (index.js "cal-day-menu").
     return Skeletons.Box.Y({
       className: `${pfx}__day`,
       bubble: 0,
-      service: "cal-day-add",
+      service: "cal-day-open",
       uiHandler: [ui],
       calDay: key,
       attrOpt: {
