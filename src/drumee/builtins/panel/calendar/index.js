@@ -28,6 +28,7 @@ const {
   day,
   ymd,
   dateOnly,
+  itemsByDay,
 } = require("./skeleton/helpers");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { modalKids } = require("./skeleton");
@@ -906,7 +907,9 @@ class __calendar_main extends LetcBox {
    */
   _placeDayMenu() {
     const m = this._dayMenu;
-    if (!m || !m.slot.el || !m.anchor.isConnected) return;
+    // Over a cell, the cell is what counts: a delete re-feeds its body, and
+    // the "+N more" that opened the popover may be gone with it.
+    if (!m || !m.slot.el || !(m.over || m.anchor).isConnected) return;
     const GAP = 4;
     const EDGE = 8;
     const el = m.slot.el;
@@ -2557,14 +2560,65 @@ class __calendar_main extends LetcBox {
     const hub_id = cmd.mget("itemHub") || this._personalHub;
     if (id == null) return;
 
+    let res;
     if (kind === "meeting") {
       const svc = (SERVICE.room && SERVICE.room.remove) || "room.remove";
-      await this.postService({ service: svc, hub_id, nid: cmd.mget("itemNid") || id });
+      res = await this.postService({ service: svc, hub_id, nid: cmd.mget("itemNid") || id });
     } else {
       const svc = (SERVICE.task && SERVICE.task.delete) || "task.delete";
-      await this.postService({ service: svc, hub_id, id });
+      res = await this.postService({ service: svc, hub_id, id });
     }
-    await this._reload();
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // postService never rejects: a refusal is {error}, a lost request
+    // undefined. The chip stays, since the item does.
+    if (!res || res.error) {
+      Wm.alert(LOCALE.ERROR_NETWORK);
+      return;
+    }
+    this._dropItem(kind, id);
+  }
+
+  /**
+   * Take a deleted item off the screen WITHOUT rebuilding the page: only the
+   * chip lists of the days that showed it are re-fed — several for a series —
+   * so a month cell's next item moves up and its "+N more" recounts, and an
+   * open "+N more" popover is re-fed in place. No refetch either: our own
+   * writes never come back as a push, and the server has already said yes.
+   *
+   * Falls back to a full render when a day's part cannot be found.
+   */
+  _dropItem(kind, id) {
+    const match = (r) => `${r.id}` === `${id}` && r.kind === kind;
+    const keys = new Set();
+    this.getVisibleItems().forEach((r) => {
+      if (!match(r)) return;
+      const s = rowStart(r);
+      if (s) keys.add(ymd(s));
+    });
+    this._items = this._items.filter((r) => !match(r));
+    // The other cached windows may hold it too; they are re-read on demand.
+    this._dropWindowCache();
+
+    const byDay = itemsByDay(this.getVisibleItems());
+    const month = this._view === "month";
+    for (const key of keys) {
+      const part = _.isFunction(this.getPart) ? this.getPart(`cal-body-${key}`) : null;
+      if (!part || (part.isDestroyed && part.isDestroyed()) || !part.el) {
+        return this._render();
+      }
+      const list = byDay[key] || [];
+      part.feed(
+        month
+          ? require("./skeleton/month").dayBodyKids(this, list, key)
+          : require("./skeleton/board").bodyKids(this, list, this._view),
+      );
+    }
+
+    const m = this._dayMenu;
+    if (m && m.over && keys.has(m.key)) {
+      m.slot.feed(require("./skeleton/day-popover")(this, m.key));
+      this._placeDayMenu();
+    }
   }
 
   /**
@@ -2876,11 +2930,9 @@ class __calendar_main extends LetcBox {
         this._closeDayMenu();
         return r;
       }
-      case "cal-remove-item": {
-        const r = this._removeItem(cmd);
-        this._closeDayMenu();
-        return r;
-      }
+      // The "+N more" popover stays open: _dropItem re-feeds it.
+      case "cal-remove-item":
+        return this._removeItem(cmd);
 
       case "cal-close-form":
         return this._closeForm();

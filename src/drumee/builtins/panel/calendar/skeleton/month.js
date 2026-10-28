@@ -70,6 +70,30 @@ function fitCount(list) {
   return n;
 }
 
+/**
+ * A month cell's items: those that fit, then "+N more" for the rest. Exported
+ * so index.js can re-feed one cell's body (_dropItem) without the page.
+ */
+function dayBodyKids(ui, list, key) {
+  const pfx = ui.fig.family;
+  const shown = fitCount(list);
+  const kids = list.slice(0, shown).map((row) => chip(ui, row, { compact: 1 }));
+  const more = list.length - shown;
+  if (more > 0) {
+    kids.push(
+      Skeletons.Note({
+        className: `${pfx}__day-more`,
+        content: `+${more} ${LOCALE.MORE}`,
+        bubble: 0,
+        service: "cal-day-more",
+        uiHandler: [ui],
+        calDay: key,
+      }),
+    );
+  }
+  return kids;
+}
+
 module.exports = function (ui) {
   const pfx = ui.fig.family;
   const anchor = day(ui.getCursor()) || Dayjs();
@@ -81,27 +105,15 @@ module.exports = function (ui) {
 
   const dayBody = (list, key) => {
     if (!list.length) return null;
-    const shown = fitCount(list);
-    const kids = list.slice(0, shown).map((row) => chip(ui, row, { compact: 1 }));
-    const more = list.length - shown;
-    if (more > 0) {
-      kids.push(
-        Skeletons.Note({
-          className: `${pfx}__day-more`,
-          content: `+${more} ${LOCALE.MORE}`,
-          bubble: 0,
-          service: "cal-day-more",
-          uiHandler: [ui],
-          calDay: key,
-        }),
-      );
-    }
     return Skeletons.Box.Y({
       className: `${pfx}__day-body`,
       // Inert: the empty space around the chips belongs to the cell's click
       // (see dayCell). The chips inside keep their own.
       active: 0,
-      kids,
+      // The one part per day index.js _dropItem re-feeds.
+      sys_pn: `cal-body-${key}`,
+      partHandler: ui,
+      kids: dayBodyKids(ui, list, key),
     });
   };
 
@@ -205,3 +217,5 @@ module.exports = function (ui) {
     kids: [weekdays, Skeletons.Box.Y({ className: `${pfx}__month`, kids: weeks })],
   });
 };
+
+module.exports.dayBodyKids = dayBodyKids;
