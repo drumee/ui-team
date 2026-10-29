@@ -71,10 +71,6 @@ const AUDIENCE_KEYS = ["personal", "team"];
 // A parked calendar (desk keep-alive) revealed after this long re-reads its
 // window even if no push arrived meanwhile — a missed push is plausible by then.
 const PARKED_REFRESH_MS = 60 * 1000;
-// How long the ‹ Today › spinner stays up after a ‹ › click, at least. A
-// prefetched window redraws in a few dozen ms — too short to see — and the
-// spinner is the click's only feedback when the grid barely changes.
-const NAV_SPINNER_MIN_MS = 300;
 
 class __calendar_main extends LetcBox {
   initialize(opt = {}) {
@@ -349,11 +345,6 @@ class __calendar_main extends LetcBox {
 
   isLoading() {
     return !!this._loading;
-  }
-
-  /** Is a ‹ › / Today / view switch still waiting on its window's rows? */
-  isNavLoading() {
-    return !!this._navLoading;
   }
 
   /**
@@ -754,16 +745,10 @@ class __calendar_main extends LetcBox {
    * neighbours are prefetched) paints at once with no request at all; a miss
    * paints the new range immediately over the rows already held — the grid
    * only draws those that fall inside it — and repaints when the read lands.
-   *
-   * The ‹ Today › pill spins (isNavLoading) on every click, for the read if
-   * there is one and for at least NAV_SPINNER_MIN_MS either way. It goes off by
-   * re-stamping the pill, not by another page rebuild.
    */
   async _navigate() {
     this._closeMenus();
     const key = `${this._view}:${this._cursor}`;
-    const started = Date.now();
-    this._navLoading = true;
     const load = this._loadItems({ cached: true });
     // A cache hit has already resolved, but awaiting is a microtask — paint
     // the miss case before it, so the label and the grid move on the click.
@@ -776,23 +761,6 @@ class __calendar_main extends LetcBox {
     if (key !== `${this._view}:${this._cursor}`) return;
     this._render();
     this._prefetchNeighbours();
-    clearTimeout(this._navSpinnerTimer);
-    this._navSpinnerTimer = setTimeout(() => {
-      this._navSpinnerTimer = null;
-      if (this.isDestroyed && this.isDestroyed()) return;
-      // A newer click owns the spinner now.
-      if (key !== `${this._view}:${this._cursor}`) return;
-      this._navLoading = false;
-      this._stampNavLoading();
-    }, Math.max(0, NAV_SPINNER_MIN_MS - (Date.now() - started)));
-  }
-
-  /** Mirror isNavLoading onto the pill on screen, without a rebuild. */
-  _stampNavLoading() {
-    const nav = this.el && this.el.querySelector(`.${this.fig.family}__nav`);
-    if (!nav) return;
-    nav.setAttribute("data-loading", this._navLoading ? "1" : "0");
-    nav.setAttribute("aria-busy", this._navLoading ? "true" : "false");
   }
 
   _closeMenus() {

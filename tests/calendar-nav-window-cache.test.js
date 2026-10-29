@@ -20,7 +20,6 @@ const CAL_SRC = fs.readFileSync(
 // itself", which is all the cache keying needs.
 /* eslint-disable no-unused-vars */
 const PARKED_REFRESH_MS = 60 * 1000;
-const NAV_SPINNER_MIN_MS = 0;
 const SERVICE = {};
 const Visitor = { id: "me" };
 // A window bound is its label; _readWindow's one-day timezone pad
@@ -47,13 +46,9 @@ function calendar() {
       return new Promise((resolve) => pending.push({ from: args.from, resolve }));
     },
     _render() {
-      this.renders.push({ cursor: this._cursor, items: this._items, loading: this._navLoading });
+      this.renders.push({ cursor: this._cursor, items: this._items });
     },
     _closeMenus() {},
-    stamps: [],
-    _stampNavLoading() {
-      this.stamps.push(this._navLoading);
-    },
     _useFixture: () => false,
     _neighbour(d) {
       const m = Number(this._cursor.slice(5, 7)) + d;
@@ -93,12 +88,7 @@ test("› after a load answers from the prefetched neighbour, with no new read",
   assert.deepEqual(self.renders[0], {
     cursor: "2026-11-01",
     items: [{ id: "month-2026-11-01" }],
-    loading: true, // even a cache hit spins the pill
   });
-  // ...and it goes off after the minimum, by re-stamping, not a rebuild.
-  await new Promise((r) => setTimeout(r, 5));
-  assert.deepEqual(self.stamps, [false]);
-  assert.equal(self.renders.length, 1);
 });
 
 test("a miss paints the new range at once, then again when the read lands", async () => {
@@ -107,7 +97,6 @@ test("a miss paints the new range at once, then again when the read lands", asyn
   // Painted on the click, before any answer.
   assert.equal(self.renders.length, 1);
   assert.equal(self.renders[0].cursor, "2026-09-01");
-  assert.equal(self.renders[0].loading, true);
   await answer();
   await nav;
   assert.equal(self.renders.length, 2);
@@ -123,9 +112,6 @@ test("an overtaken read never lands its rows under the newer window", async () =
   assert.equal(self._cursor, "2026-12-01");
   assert.deepEqual(self._items, [{ id: "month-2026-12-01" }]);
   assert.deepEqual(self.renders.at(-1).items, [{ id: "month-2026-12-01" }]);
-  // Only the last click turns the spinner off.
-  await new Promise((r) => setTimeout(r, 5));
-  assert.deepEqual(self.stamps, [false]);
 });
 
 test("a plain (push / write) load drops the cache, so › reads again", async () => {
@@ -164,4 +150,16 @@ test("a failed read is not cached", async () => {
   assert.equal(self._loadFailed, 1);
   await self._loadItems({ cached: true });
   assert.equal(reads.length, 2);
+});
+
+// The ‹ Today › pill has no loading spinner: navigation paints at once from
+// the cache (or the rows held), so there is nothing to wait on to show.
+test("the nav pill carries no loading state", () => {
+  const TOOLBAR = fs.readFileSync(
+    path.join(__dirname, "..", "src/drumee/builtins/panel/calendar/skeleton/toolbar.js"), "utf8");
+  const SKIN = fs.readFileSync(
+    path.join(__dirname, "..", "src/drumee/builtins/panel/calendar/skin/index.scss"), "utf8");
+  assert.doesNotMatch(CAL_SRC, /_navLoading|isNavLoading|_stampNavLoading|NAV_SPINNER_MIN_MS|_navSpinnerTimer/);
+  assert.doesNotMatch(TOOLBAR, /isNavLoading|"data-loading"/);
+  assert.doesNotMatch(SKIN, /&__nav\[data-loading/);
 });
