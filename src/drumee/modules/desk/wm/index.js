@@ -199,6 +199,69 @@ class __window_manager extends push {
    * @param {Object} [opts]
    * @param {Boolean} [opts.compact] the payload came from a compact `/o/` link
    */
+  /**
+   * Back / Forward landed on an address this desk wrote: open it in place.
+   *
+   * Until 2026-10 Back and Forward left the desk where it stood (the address
+   * was simply put back on the pane). Folder navigation now adds history
+   * entries, so Back has to mean "the folder I came from": the folder (or
+   * file) named by the hash is opened exactly like an Internal Link, in the
+   * docked pane, with no desk rebuild. A viewer standing on top would keep the
+   * address on its file and hide the folder, so it is closed the way its X
+   * closes it (closeAfterSave: edits are kept). Writes to the address bar are
+   * held until the pane stands on the followed entry — see libs/location-url.
+   */
+  _followHistory() {
+    const hash = String(location.hash || "");
+    const compact = parseCompactPath(Visitor.parseModule() || []);
+    if (!compact || !compact.hub_id) {
+      locationUrl.schedule();
+      return;
+    }
+    locationUrl.following(hash);
+    const opened = compact.filetype === _a.folder
+      ? (this._closeViewersForTraversal(), this._leaveScreenForTraversal(), this._openDesignationFolder(compact))
+      : this.openDesignationLink(compact, { compact: true });
+    Promise.resolve(opened).catch((e) => {
+      this.warn("history: could not open the entry", hash, e);
+      locationUrl.following(null);
+    });
+  }
+
+  /**
+   * A full-canvas screen (Inbox, Calendar, Settings…) covers the pane the
+   * folder is about to open in: leave it, as the screen's own X does.
+   */
+  _leaveScreenForTraversal() {
+    const desk = window.Desk;
+    if (!desk || (desk.isDestroyed && desk.isDestroyed())) return;
+    if (!_.isFunction(desk._mainScreenOnTop) || !desk._mainScreenOnTop()) return;
+    if (!_.isFunction(desk.closeSectionScreen)) return;
+    try {
+      desk.closeSectionScreen();
+    } catch (e) {
+      this.warn("history: could not leave the screen", e);
+    }
+  }
+
+  /** Close every player / editor on screen as its X button would (saving first). */
+  _closeViewersForTraversal() {
+    for (const layer of [this.windowsLayer, this.headlessLayer]) {
+      const views = layer && layer.children ? layer.children.toArray() : [];
+      for (const v of views) {
+        if (!v || (v.isDestroyed && v.isDestroyed())) continue;
+        if (!v.mget || v.mget(_a.kind) === "window_folder") continue;
+        if (!v.media) continue;
+        try {
+          if (_.isFunction(v.closeAfterSave)) v.closeAfterSave();
+          else if (_.isFunction(v.goodbye)) v.goodbye();
+        } catch (e) {
+          this.warn("history: could not close a viewer", e);
+        }
+      }
+    }
+  }
+
   async openDesignationLink(payload = {}, { compact = false } = {}) {
     if (compact && payload && payload.hub_id && payload.filetype === _a.folder) {
       return this._openDesignationFolder(payload);
@@ -561,6 +624,13 @@ class __window_manager extends push {
     // nothing remembered armed the file-deep-link relay instead (captureFromUrl)
     // — that one is opened below like any link, which also settles the relay.
     if (locationUrl.isMirrorEntry() && !fileDeepLink.peek()) {
+      // Back / Forward (a popstate just fired): every folder is its own entry
+      // now (libs/location-url), so the entry travelled to is OPENED — the
+      // folder the visitor came from — rather than the address being put back.
+      if (locationUrl.traversed()) {
+        this._followHistory();
+        return;
+      }
       locationUrl.schedule();
       return;
     }

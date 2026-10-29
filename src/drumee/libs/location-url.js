@@ -57,6 +57,60 @@ let _started = false;
 const _watched = typeof WeakSet === "function" ? new WeakSet() : null;
 
 /**
+ * ── Back and Forward move between FOLDERS ──────────────────────────────────
+ *
+ * Folder navigation ADDS a history entry (pushState) when the address moves
+ * from one folder to another, so the browser's Back button takes the visitor
+ * to the folder they came from and Forward brings them on again — what every
+ * user who pressed Back inside a sub folder expected (prod, 2026-10-28).
+ * Everything else still rewrites the current entry: the first write onto an
+ * entry this module did not make, the resting "home" hash, and a file open on
+ * top of a folder (the viewer's close puts the folder back on the same entry;
+ * an entry per file would make Back reopen the file just closed).
+ *
+ * A popstate seen this recently means the current hash arrived by Back /
+ * Forward, not by a click: wm.route() then OPENS that folder (`_followHistory`)
+ * instead of putting the address back on the pane. Until the pane stands on
+ * the followed hash nothing is written, or the pane's old position would be
+ * pushed on top of the entry just travelled to and Forward would be lost.
+ */
+const TRAVERSAL_MS = 1500;
+/** How long a followed entry may take to be reached before writes resume. */
+const FOLLOW_MS = 8000;
+let _popstateAt = 0;
+let _followHash = null;
+let _followUntil = 0;
+/** A follow ran out before the pane got there: the next write replaces. */
+let _followExpired = false;
+
+/** A compact folder hash: "#/desk/wm/o/<nid>/<hub_id>/folder". */
+function isFolderHash(hash) {
+  return /^#\/desk\/wm\/o\/[^/?&#]+\/[^/?&#]+\/folder$/.test(String(hash || ""));
+}
+
+/** Did the current hash arrive by Back / Forward (a popstate just fired)? */
+function traversed() {
+  return _popstateAt > 0 && Date.now() - _popstateAt < TRAVERSAL_MS;
+}
+
+/** wm.route() is opening the entry at `hash`: hold every write until the pane is there. */
+function following(hash) {
+  _followHash = String(hash || "") || null;
+  _followUntil = _followHash ? Date.now() + FOLLOW_MS : 0;
+  _followExpired = false;
+}
+
+/** The entry being followed, or null once reached / given up. */
+function followingHash() {
+  if (_followHash && Date.now() > _followUntil) {
+    _followHash = null;
+    _followUntil = 0;
+    _followExpired = true;
+  }
+  return _followHash;
+}
+
+/**
  * Is the current history entry one this module wrote, still showing the hash
  * it was written with?
  * @returns {Boolean}
@@ -249,15 +303,29 @@ function sync() {
     _retries = 0;
     const hash = currentHash();
     if (!hash) return false;
+    // Back / Forward in flight: the pane is on its way to the followed entry.
+    // Writing its old position now would push that on top of the entry just
+    // travelled to. Wait for it (the next breadcrumb event retries).
+    const followed = followingHash();
+    if (followed && hash !== followed) return false;
+    if (followed) following(null);
+    // A follow that ran out (the entry's folder could not be opened): the
+    // pane's position replaces that entry rather than being pushed on top.
+    const gaveUp = _followExpired;
+    _followExpired = false;
     if (hash === window.location.hash && isMirrorEntry()) return true;
     // Merge, never replace: the exit guards keep their own marker in
     // history.state (widget/*/exit-guard) and must find it again on popstate.
-    const state = Object.assign({}, window.history.state, { [MARK]: 1, hash });
-    window.history.replaceState(
-      state,
-      "",
-      `${window.location.pathname}${window.location.search}${hash}`,
-    );
+    const prev = window.history.state;
+    const entryHash = prev && prev[MARK] ? String(prev.hash || "") : null;
+    const state = Object.assign({}, prev, { [MARK]: 1, hash });
+    const url = `${window.location.pathname}${window.location.search}${hash}`;
+    // Folder to folder: a new entry, so Back returns to the folder left.
+    if (!gaveUp && entryHash && entryHash !== hash && isFolderHash(entryHash) && isFolderHash(hash)) {
+      window.history.pushState(state, "", url);
+    } else {
+      window.history.replaceState(state, "", url);
+    }
     return true;
   } catch (e) {
     console.warn("[location-url] could not update the address bar", e);
@@ -295,9 +363,16 @@ function start() {
   if (_started || typeof RADIO_BROADCAST === "undefined") return;
   _started = true;
   RADIO_BROADCAST.on("breadcrumb:content", () => schedule());
+  // Back / Forward announce themselves here; a hash assignment or a
+  // pushState does not land on an entry this module marked, so the two are
+  // told apart by isMirrorEntry() + traversed() in wm.route().
+  try {
+    window.addEventListener("popstate", () => { _popstateAt = Date.now(); });
+  } catch (e) { /* no window — not a browser */ }
 }
 
 module.exports = {
   MARK, DESK_STATE_KEY, HOME_HASH,
   isMirrorEntry, restsOnReload, currentHash, sync, schedule, hold, settle, start,
+  isFolderHash, traversed, following, followingHash,
 };

@@ -348,12 +348,18 @@ class drumee_router extends LetcBox {
     // new host opens it through wm.route() like any other arrival. This
     // origin's copy is dropped — the URL carries it from here.
     const fileHash = fileDeepLink.urlWantsFile() ? null : fileDeepLink.peek();
+    // The switch REPLACES this origin's entry instead of stacking the new host
+    // on top of it. The page being left is only a bounce (a return to it comes
+    // straight back here), and the history is the visitor's trail of folders
+    // (libs/location-url): Back past the first folder must leave the desk, not
+    // replay the bounce and land on the home grid (prod, 2026-10-28).
+    const target = `${location.protocol}//${host}${location.pathname}${location.search}`;
     if (fileHash && fileHash.charAt(0) === "#") {
       fileDeepLink.clear();
-      location.href = `${location.protocol}//${host}${location.pathname}${location.search}${fileHash}`;
+      location.replace(`${target}${fileHash}`);
       return true;
     }
-    location.host = host;
+    location.replace(`${target}${location.hash}`);
     return true;
   }
 
