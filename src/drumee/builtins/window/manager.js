@@ -1358,6 +1358,16 @@ class __window_manager extends mfsInteract {
         // lazy chunk can also fail to load — both land here, where waitFor
         // hands back null (or rejects) rather than throwing inside the try.
         this.warn(`No widget for kind=${app.kind}`, e);
+        // A chunk that 404s is not a file type without a player: the tab is
+        // running a build whose hashed chunks the last deploy replaced. Saying
+        // "There is currently no preview for this file type (jpg)" there sent
+        // users after a .jpg problem that did not exist (2026-10-28) — ask for
+        // the reload that actually fixes it.
+        if (e && (e.name === "ChunkLoadError" || e.code === "CSS_CHUNK_LOAD_FAILED")) {
+          if (_.isFunction(media.wait)) media.wait(0);
+          this._confirmReload();
+          return;
+        }
         this.showProperties(media);
       };
       Kind.waitFor(app.kind).then((widgetClass) => {
@@ -2096,16 +2106,33 @@ class __window_manager extends mfsInteract {
     ) {
       location.reload();
     } else {
-      this.confirm({
-        message: LOCALE.INFO_NEW_VERSION,
-        cancel: LOCALE.LATER,
-        cancel_action: _e.close,
-      })
-        .then(() => {
-          location.reload();
-        })
-        .catch(() => { });
+      this._confirmReload();
     }
+  }
+
+  /**
+   * Offer the reload that picks up the deployed build (Later / Yes).
+   *
+   * window_confirm is a lazy chunk too, so on a tab still running a replaced
+   * build it can 404 as well — and confirm() would then never show nor settle.
+   * Load it first; if even the prompt cannot be loaded, reload straight away,
+   * since nothing lazy in this tab can be trusted to work.
+   */
+  _confirmReload() {
+    Kind.waitFor("window_confirm").then(
+      () => {
+        this.confirm({
+          message: LOCALE.INFO_NEW_VERSION,
+          cancel: LOCALE.LATER,
+          cancel_action: _e.close,
+        })
+          .then(() => {
+            location.reload();
+          })
+          .catch(() => { });
+      },
+      () => location.reload(),
+    );
   }
 }
 __window_manager.initClass();
