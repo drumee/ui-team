@@ -287,22 +287,43 @@
     gap: 0;
   }
 
+  // ‹ at the left edge, the month in the middle, › at the right; all three
+  // on one centre line.
   &__range-head {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 8px;
   }
 
+  // The same 24px box as the ‹ › beside it, with the text's INK centred on
+  // it. Armin Grotesk sits its caps and digits high in a line box (ascent
+  // 13, descent 3, caps 11 tall): in a 20px line the label read ~1px above
+  // the arrows. A 23px line under 1px of top padding puts the baseline at
+  // 17.5px and the ink's middle at 12px, the arrows' centre line.
   &__range-month-label {
-    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg));
+    @include drumee.typo($size: 14px, $line: 23px, $color: var(--normal-fg));
     font-weight: 400;
     font-variant-numeric: tabular-nums;
+    height: 24px;
+    padding-top: 1px;
+    box-sizing: border-box;
+
+    // The ink is 11px tall, so its middle falls on a half pixel, and Chrome
+    // snaps the half-leading to a whole one: the last 0.5px is a nudge.
+    .note-content {
+      transform: translateY(0.5px);
+    }
   }
 
   // Same box as __nav-arrow, and for the same reason: the wrapper's size is
   // only half of it, the sprite <svg> inside carries the glyph and needs its
   // own — see the note there.
+  //
+  // Button.Svg nests the sprite two divs deep (__container > .full.inner >
+  // svg): the button is a flex box and every layer is pinned to the glyph,
+  // or the svg sits in the top-left corner of the 24px circle.
   &__range-nav {
+    display: flex;
     width: 24px;
     height: 24px;
     flex: 0 0 auto;
@@ -312,9 +333,13 @@
     cursor: pointer;
     color: var(--normal-fg);
 
+    > div,
+    .inner,
     svg {
+      display: block;
       width: 12px;
       height: 12px;
+      flex: none;
     }
 
     &:hover {
