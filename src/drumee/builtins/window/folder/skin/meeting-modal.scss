@@ -918,6 +918,21 @@ $field-bg: rgba(0, 0, 0, 0.05);
     opacity: 0.5;
   }
 
+  // View mode (skeleton viewOnly: a hosted meeting the viewer did not report):
+  // the fields are shown, not edited — the host also sets them read-only — and
+  // only Join is offered. A file chip still opens its file; its × is gone.
+  &__meeting-modal[data-view="1"] &__meeting-modal-body {
+    pointer-events: none;
+  }
+
+  &__meeting-modal[data-view="1"] &__meeting-modal-attach-chip {
+    pointer-events: auto;
+  }
+
+  &__meeting-modal[data-view="1"] &__meeting-modal-attach-chip-x {
+    display: none;
+  }
+
   // ── Pane too narrow for two sides: one 480px column again ───────────────
   // Wrap + full-basis columns rather than flex-direction: the body's
   // `.drumee-widget[data-flow=x]` direction rule out-weighs one class.

@@ -87,6 +87,7 @@ function host(opts) {
       this.sent.push(o);
     },
     _reportClosed: reportClosed,
+    _applyViewOnly() {},
   };
   return self;
 }

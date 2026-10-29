@@ -54,7 +54,7 @@ const BORROWED = [
 const HOST_OWN = [
   "initialize", "onDomRefresh", "onPartReady", "_load", "onUiEvent", "onBeforeDestroy", "_openFromList",
   "_reportClosed", "closeMeetingModal", "_refreshSchedule", "_upsertLocalMeeting",
-  "canUpload", "openContent",
+  "canUpload", "openContent", "meetingViewOnly", "_applyViewOnly",
 ];
 
 class __meeting_modal_host extends LetcBox {
@@ -150,6 +150,7 @@ class __meeting_modal_host extends LetcBox {
           occurrence: Number(this.mget("occurrence")) || null,
         }),
       )
+      .then(() => this._applyViewOnly())
       .catch((e) => {
         this.warn("meeting_modal_host: the modal failed to open", e);
         this._reportClosed();
@@ -189,6 +190,32 @@ class __meeting_modal_host extends LetcBox {
 
   /** The folder's Meet-tab cache; there is none here. */
   _upsertLocalMeeting() {}
+
+  /**
+   * The modal's view mode (skeleton meetingModal): the viewer did not report
+   * this meeting. may_write is the calendar row's can_write, which the server
+   * answers as created_by === caller.
+   */
+  meetingViewOnly() {
+    return !this.mget("may_write");
+  }
+
+  /**
+   * In view mode, once the modal is drawn: every field read-only (the skin
+   * already takes the clicks), the description not editable — so the
+   * keyboard cannot edit what the mouse cannot.
+   */
+  _applyViewOnly() {
+    if (!this.meetingViewOnly()) return;
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root) return;
+    root.querySelectorAll("input, textarea").forEach((el) => {
+      el.readOnly = true;
+    });
+    root.querySelectorAll("[contenteditable]").forEach((el) => {
+      el.setAttribute("contenteditable", "false");
+    });
+  }
 
   /** The folder reads the viewer's privilege; the calendar row's own answer. */
   canUpload() {
