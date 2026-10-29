@@ -258,7 +258,8 @@ class __editor_blocknote extends __player {
    */
   markConverting() {
     this._fromLegacy = 1;
-    if (!this._readOnly) this._setStatus("converting");
+    // A reader cannot save, so nothing will be upgraded: say nothing.
+    if (!this._readOnly && !this.isViewOnly()) this._setStatus("converting");
   }
 
   /**
@@ -274,8 +275,10 @@ class __editor_blocknote extends __player {
    * Called by blocknote_state on every real edit.
    */
   markDirty() {
-    if (this._readOnly) return;
+    if (this._readOnly || this.isViewOnly()) return;
     this._changed = 1;
+    // Counts edits, so a save in flight knows whether it holds the latest.
+    this._editGen = (this._editGen || 0) + 1;
     if (this._status !== "saving") this._setStatus("unsaved");
     if (this._timer) clearTimeout(this._timer);
     this._timer = setTimeout(() => {
@@ -322,6 +325,18 @@ class __editor_blocknote extends __player {
     if (this._readOnly || Visitor.inDmz) return false;
     if (!this.media) return true;
     return _.isFunction(this.media.canUpload) ? !!this.media.canUpload() : true;
+  }
+
+  /**
+   * An existing note this session may not write (the node's privilege has no
+   * write bit): the body opens read-only, as the markdown Note rendered its
+   * textarea readonly when !canUpload(). Typing into it would only autosave
+   * into a refusal and lose the text on close.
+   * @returns {Boolean}
+   */
+  isViewOnly() {
+    if (!this.media || !_.isFunction(this.media.canUpload)) return false;
+    return !this.media.canUpload();
   }
 
   /**
@@ -408,10 +423,19 @@ class __editor_blocknote extends __player {
   }
 
   /**
+   * The tab's beforeunload listener. Registered with addEventListener, where
+   * the return value is ignored: the browser asks "leave this page?" only when
+   * the event is cancelled (returnValue for older browsers).
+   * @param {BeforeUnloadEvent} [e]
    * @returns {String|undefined}
    */
-  checkUnsavedWork() {
-    if (this._changed && !this._readOnly) return LOCALE.CONFIRM_QUIT;
+  checkUnsavedWork(e) {
+    if (!this._changed || this._readOnly) return undefined;
+    if (e) {
+      e.preventDefault();
+      e.returnValue = LOCALE.CONFIRM_QUIT;
+    }
+    return LOCALE.CONFIRM_QUIT;
   }
 
   /**
@@ -580,6 +604,9 @@ class __editor_blocknote extends __player {
     return new Promise((resolve) => {
       this._closeWaiters = [...(this._closeWaiters || []), resolve];
       if (!this._saving) this.saveContent();
+      // The save in flight predates the latest edits: write once more before
+      // answering, or the window would close on the older content.
+      else if ((this._editGen || 0) !== this._savingGen) this._again = 1;
     });
   }
 
@@ -607,6 +634,8 @@ class __editor_blocknote extends __player {
       return;
     }
     if (!this._state) return this._settleClose(false);
+    // Taken with the content: the edits this save carries.
+    const gen = this._editGen || 0;
     const content = this._state.getContent();
     if (content == null) return this._settleClose(false);
 
@@ -622,6 +651,7 @@ class __editor_blocknote extends __player {
     const filename = this._noteName();
 
     this._saving = 1;
+    this._savingGen = gen;
     this._setStatus("saving");
     this.postService(
       {
@@ -655,8 +685,14 @@ class __editor_blocknote extends __player {
             `${data.filename || ""}`.replace(new RegExp(`\\.${EXT}$`), "");
           if (assigned) this._assignedName = assigned;
         }
-        this._changed = 0;
-        this._setStatus("saved");
+        // Edits made while this save was in flight are not in it: they stay
+        // unsaved, and their own autosave timer is still pending.
+        if ((this._editGen || 0) === gen) {
+          this._changed = 0;
+          this._setStatus("saved");
+        } else {
+          this._setStatus("unsaved");
+        }
         this._reflectInTarget(target, data);
         page.paint(this);
         if (this._afterSave) {
@@ -772,8 +808,10 @@ class __editor_blocknote extends __player {
         this._toggleFullscreen();
         break;
 
+      // Save first, as every other editor's X does (player/interact): a
+      // failed save keeps the note open and asks before dropping the edits.
       case _e.close:
-        this.goodbye();
+        this.closeAfterSave();
         break;
       default:
         // The page head — icon, cover, comments (./page).
