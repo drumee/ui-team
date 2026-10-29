@@ -200,33 +200,6 @@
     cursor: pointer;
     user-select: none;
     white-space: nowrap;
-    position: relative;
-  }
-
-  // Loading (index.js isNavLoading): "Today" gives way to a spinner of the same
-  // ink, centred on the word so the pill keeps its width and the arrows stay
-  // put and clickable. No delay: _navigate already holds it for a minimum
-  // time. ui-core's spinner ships no CSS; drawn here.
-  &__nav[data-loading="1"] &__today {
-    color: transparent;
-
-    .note-content {
-      color: transparent;
-    }
-
-    &::after {
-      content: "";
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 14px;
-      height: 14px;
-      margin: -9px 0 0 -9px;
-      border: 2px solid var(--normal-fg);
-      border-right-color: transparent;
-      border-radius: 50%;
-      animation: calendar-main-file-spin 0.8s linear infinite;
-    }
   }
 
   // The popup is a sibling of the label inside this box, so it anchors under
