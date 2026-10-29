@@ -867,6 +867,8 @@
     top: 0;
     z-index: 5;
     background: var(--normal-bg);
+    // The day names are labels, not controls.
+    cursor: default;
   }
 
   // Figma 1697:48528: short day names, centred, 14/1.2 in grey ink, 12px
