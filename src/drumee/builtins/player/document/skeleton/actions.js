@@ -171,13 +171,14 @@ module.exports = function (ui) {
 /**
  * The gear menu, as MenuItem data for the widget's folder-settings default.
  *
- * Default set, in both modes: Copy, Rename, Chat threads, Get info, Move to
- * trash — plus Share, but only for a file in an external workspace.
+ * Default set, in both modes: Download, Make a copy, Rename, Chat threads,
+ * Get info, Move to trash — plus Share, but only for a file in an external
+ * workspace.
  *
- * Preview mode adds the three export rows on top — Download, Download a PDF
- * version, Print. They are absent while editing because they serve the
- * server's info.pdf, which is not re-rendered on demand, so mid-edit they
- * would hand back a stale document.
+ * Preview mode adds two export rows under Download — Download a PDF version,
+ * Print. They are absent while editing because they serve the server's
+ * info.pdf, which is not re-rendered on demand, so mid-edit they would hand
+ * back a stale document.
  *
  * Edit ⇄ Preview is NOT here: it is the switch in the header (see above).
  *
@@ -196,18 +197,21 @@ module.exports.menu = function (ui) {
 
   const sections = [];
 
+  // Download is always offered, in both modes and whatever the grant: it
+  // serves the original file, not the stale info.pdf, and the handler sends
+  // a DMZ visitor without the download grant to request-access
+  // (_dmzGateDownload).
+  const exports_ = [
+    {
+      id: "download",
+      label: LOCALE.DOWNLOAD,
+      icon: "app-download",
+      service: _e.download,
+    },
+  ];
   // Preview-only: exporting the rendered document. See the header comment
   // for why these are not offered while the editor is open.
-  const exports_ = [];
   if (!isEditing) {
-    if (Visitor.inDmz || ui.canDownload()) {
-      exports_.push({
-        id: "download",
-        label: LOCALE.DOWNLOAD,
-        icon: "app-download",
-        service: _e.download,
-      });
-    }
     if (ext != _a.pdf) {
       exports_.push({
         id: "download-pdf",
@@ -223,7 +227,7 @@ module.exports.menu = function (ui) {
   // Copy / Rename / Chat threads read as one block.
   const naming = [];
   if (media && !Visitor.inDmz) {
-    naming.push({ id: "copy", label: LOCALE.COPY, icon: "apps-copy", service: _e.copy });
+    naming.push({ id: "copy", label: LOCALE.MAKE_A_COPY, icon: "apps-copy", service: _e.copy });
   }
   if (editable) {
     naming.push({
