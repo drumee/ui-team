@@ -441,8 +441,12 @@ module.exports = function (ui) {
           // Invite settings (the link's gate): given at booking, and for an
           // existing meeting read from its link (index.js _loadMeetingLink)
           // and saved back onto that same link on Update.
+          // Its own part: an edit form fills it when the link answers
+          // (index.js _renderMeetingInvite), without re-feeding the modal.
           Skeletons.Box.Y({
             className: `${pfx}__modal-col ${pfx}__modal-col--side`,
+            sys_pn: "meeting-invite",
+            partHandler: ui,
             kids: [field("INVITE", inviteBlock)],
           }),
         ],
@@ -538,3 +542,23 @@ module.exports.inviteLink = function (ui, link) {
 };
 
 module.exports.recipientChips = recipientChips;
+
+/**
+ * The Invite side's kids alone, for re-feeding that part (index.js
+ * _renderMeetingInvite). Taken from the whole form's build so the column is
+ * described in one place.
+ */
+module.exports.inviteSide = function (ui) {
+  const side = `${ui.fig.family}__modal-col--side`;
+  const find = (node) => {
+    if (!node || typeof node !== "object") return null;
+    if (String(node.className || "").split(/\s+/).includes(side)) return node;
+    for (const k of node.kids || []) {
+      const hit = find(k);
+      if (hit) return hit;
+    }
+    return null;
+  };
+  const col = find(module.exports(ui));
+  return (col && col.kids) || [];
+};

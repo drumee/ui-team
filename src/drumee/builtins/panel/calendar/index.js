@@ -1164,7 +1164,18 @@ class __calendar_main extends LetcBox {
       has_password: password_on,
     });
     form.linkInfo = { require_email, recipients: recipients.slice(), password_on };
-    this._renderModal();
+    // Only the Invite column: re-feeding the whole modal replayed its pop-in
+    // entrance, and the modal looked as if it opened twice.
+    this._renderMeetingInvite();
+  }
+
+  /** Re-feed the meeting form's Invite column alone (falls back to the modal). */
+  _renderMeetingInvite() {
+    const part = _.isFunction(this.getPart) ? this.getPart("meeting-invite") : null;
+    if (!part || (part.isDestroyed && part.isDestroyed()) || !part.el) {
+      return this._renderModal();
+    }
+    part.feed(require("./skeleton/meeting-form").inviteSide(this));
   }
 
   /**

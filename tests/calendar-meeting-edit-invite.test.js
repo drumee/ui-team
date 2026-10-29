@@ -25,7 +25,7 @@ const saveGate = eval(`(${sliceFunction(SRC, "async _saveMeetingGate(form, draft
 
 test("the Invite column is drawn in edit mode too", () => {
   assert.doesNotMatch(FORM, /editing\s*\?\s*null\s*:\s*Skeletons\.Box\.Y\(\{\s*className: `\$\{pfx\}__modal-col \$\{pfx\}__modal-col--side`/);
-  assert.match(FORM, /className: `\$\{pfx\}__modal-col \$\{pfx\}__modal-col--side`,\s*kids: \[field\("INVITE", inviteBlock\)\]/);
+  assert.match(FORM, /className: `\$\{pfx\}__modal-col \$\{pfx\}__modal-col--side`,[\s\S]{0,80}kids: \[field\("INVITE", inviteBlock\)\]/);
 });
 
 test("a set password shows as dots: leave it empty to keep it", () => {
@@ -45,7 +45,13 @@ function calendar(answer) {
       return Promise.resolve(answer);
     },
     _absorbFormText() {},
+    // The whole modal: built once on open. Re-feeding it replayed its
+    // pop-in entrance, which looked like the modal opening twice.
     _renderModal() {
+      this.modals = (this.modals || 0) + 1;
+    },
+    // Only the Invite column, filled when the link answers.
+    _renderMeetingInvite() {
       this.rendered++;
     },
     _personalHub: "me",
@@ -78,7 +84,8 @@ test("opening reads the meeting's link and fills the gate", async () => {
     { require_email: true, restrict: true, recipients: ["a@x.com", "@y.org"], password_on: true, has_password: true },
   );
   assert.deepEqual(form.linkInfo, { require_email: true, recipients: ["a@x.com", "@y.org"], password_on: true });
-  assert.equal(self.rendered, 1);
+  assert.equal(self.rendered, 1, "the Invite column is re-fed");
+  assert.equal(self.modals, undefined, "the modal is NOT re-fed (no second entrance)");
 });
 
 test("a form closed meanwhile is left alone", async () => {
@@ -153,4 +160,12 @@ test("the restrict-needs-an-email rule holds in edit mode too", () => {
 
 test("opening an edit form starts the link read", () => {
   assert.match(sliceFunction(SRC, "_openMeetingEdit(row)"), /this\._loadMeetingLink\(this\._form\);/);
+});
+
+test("the Invite column is its own part, fed from inviteSide", () => {
+  assert.match(FORM, /className: `\$\{pfx\}__modal-col \$\{pfx\}__modal-col--side`,\s*sys_pn: "meeting-invite",\s*partHandler: ui,/);
+  assert.match(FORM, /module\.exports\.inviteSide = /);
+  const r = sliceFunction(SRC, "_renderMeetingInvite()");
+  assert.match(r, /getPart\("meeting-invite"\)/);
+  assert.match(r, /\.inviteSide\(this\)/);
 });
