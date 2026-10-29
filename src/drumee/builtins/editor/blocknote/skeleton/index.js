@@ -57,6 +57,9 @@ function __skl_editor_blocknote(_ui_) {
         name: _a.filename,
         value: _ui_.mget(_a.filename) || "",
         placeholder: LOCALE.NOTE_NEW_PAGE,
+        // A reader cannot rename: a name they could type but not save would
+        // show, then vanish. In a share an attempt meets the gate instead.
+        readonly: _ui_.isViewOnly() ? 1 : 0,
         mode: "commit",
         service: "rename-note",
         uiHandler: [_ui_],

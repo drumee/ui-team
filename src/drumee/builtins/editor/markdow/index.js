@@ -5,22 +5,9 @@ const printJS = require("print-js");
 
 const REMINDER_ID = 'reminder_id';
 
-// Keys that mean "I am trying to change this text", used by _wireDmzEditGate to
-// decide whether a keystroke on a READONLY textarea is an edit attempt worth
-// gating. Deliberately narrow: arrows / Home / End / PageUp / PageDown / Tab /
-// Escape / F-keys / bare modifiers, and Ctrl-C / Ctrl-A / Ctrl-F, are all things a
-// view-only recipient legitimately does while READING, so they must never pop a
-// dialog. Ctrl/Cmd-V and Ctrl/Cmd-X are edit intent even though the key itself is
-// not printable; every other Ctrl/Cmd combo is not.
-const EDIT_INTENT_KEYS = new Set(['Enter', 'Backspace', 'Delete']);
-function _isEditIntentKey(e) {
-  if (!e) return false;
-  if (e.ctrlKey || e.metaKey) return /^[vx]$/i.test(e.key || '');
-  if (e.altKey) return false;
-  // A one-character key is a printable insert (letter, digit, punctuation, space).
-  if (typeof e.key === 'string' && e.key.length === 1) return true;
-  return EDIT_INTENT_KEYS.has(e.key);
-}
+// Which keystrokes on a READONLY textarea are an edit attempt worth gating, and
+// the gate itself — shared with editor/blocknote.
+const { isEditIntentKey, gateEdit } = require("libs/dmz-edit-gate");
 
 
 require("./skin");
@@ -236,32 +223,10 @@ class __editor_markdown extends __player {
       if (!t || !/^(TEXTAREA|INPUT)$/.test(t.tagName || '')) return;
       // Only for keys that actually mean "I am editing" — navigation, selection and
       // copy must stay usable for a view-only recipient who is legitimately reading.
-      if (!_isEditIntentKey(e)) return;
-      // Re-arm every time: the recipient must get the same answer whenever they try
-      // to edit, so dismissing the popup and typing again has to bring it back. What
-      // we must NOT do is re-fire while it is already on screen (a burst of keys, or
-      // a held key, would otherwise re-feed the overlay repeatedly), so skip while
-      // the sharebox's overlay is open — it re-arms itself when they close it.
-      // Compared against _a.open (what the sharebox writes) plus the literal, since
-      // dataset values are always strings and _a resolves keys at runtime.
-      const ov = desk.__signupOverlay;
-      const ovMode = ov && ov.el && ov.el.dataset ? ov.el.dataset.mode : null;
-      if (ovMode && (ovMode === _a.open || ovMode === 'open')) {
-        e.preventDefault();
-        return;
-      }
-      // Backstop for the case where that overlay cannot be inspected: never fire more
-      // than once per 800ms, so a fast typist still sees exactly one dialog.
-      const now = Date.now();
-      if (this._dmzEditGatedAt && (now - this._dmzEditGatedAt) < 800) {
-        e.preventDefault();
-        return;
-      }
-      if (!desk._gateInteraction(
-        desk.havePermission(_K.permission.write, desk.mget(_a.privilege))
-      )) return;
-      this._dmzEditGatedAt = now;
-      e.preventDefault();
+      if (!isEditIntentKey(e)) return;
+      // Re-arms every time, never re-fires while the gate is on screen (see
+      // libs/dmz-edit-gate).
+      if (gateEdit(desk, this)) e.preventDefault();
     }, true);
   }
 
