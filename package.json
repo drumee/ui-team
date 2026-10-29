@@ -75,6 +75,9 @@
     "webpack-manifest-plugin": "5.0.0"
   },
   "dependencies": {
+    "@blocknote/core": "^0.54.2",
+    "@blocknote/mantine": "^0.54.2",
+    "@blocknote/react": "^0.54.2",
     "@casualoffice/docs": "^1.4.2",
     "@casualoffice/sheets": "^0.20.0",
     "@drumee/ui-core": "^1.1.50",
@@ -86,6 +89,8 @@
     "@embedpdf/pdfium": "2.14.4",
     "@embedpdf/plugin-interaction-manager": "2.14.4",
     "@embedpdf/plugin-selection": "2.14.4",
+    "@mantine/core": "^8.3.18",
+    "@mantine/hooks": "^8.3.18",
     "@hocuspocus/provider": "^2.15.2",
     "@mediapipe/selfie_segmentation": "^0.1.1675465747",
     "@univerjs/core": "^0.25.1",

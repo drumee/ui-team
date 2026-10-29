@@ -44,13 +44,13 @@ const __icon_name = function (m) {
       break;
     case _a.note:
     case "drumee.note":
-      chartId = "raw-ab_notes";
+      chartId = "raw-note-sticky";
       m.imgCapable = false;
       break;
     case _a.web:
       if (m.dataType == "drumee.note") {
         m.imgCapable = false;
-        return { chartId: "raw-ab_notes", ext };
+        return { chartId: "raw-note-sticky", ext };
       }
     case _a.document:
     case _a.stylesheet:

@@ -471,13 +471,14 @@ class __file_switcher extends LetcBox {
   }
 
   /**
-   * "Document lite" / "Spreadsheet lite": a Casual editor window on a NEW
+   * "Note" / "Document lite" / "Spreadsheet lite": an editor window on a NEW
    * file in the listed folder — what the desk's "+ New" rows do from a
-   * folder window (window/core add-doc / add-sheet). The editor saves into
-   * that folder and carries this panel, so it reads like any other switch:
-   * this viewer is saved, the editor launched, this viewer closed.
+   * folder window (window/core add-blocknote / add-doc / add-sheet). The
+   * editor saves into that folder and carries this panel, so it reads like
+   * any other switch: this viewer is saved, the editor launched, this viewer
+   * closed.
    *
-   * @param {String} kind  editor_docs | editor_sheet
+   * @param {String} kind  editor_blocknote | editor_docs | editor_sheet
    */
   async createCasual(kind) {
     this.setCreateMenu(false);

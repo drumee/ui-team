@@ -67,7 +67,7 @@ module.exports = function nodeIconHtml(
       return require("builtins/media/grid/template/filetype/audio.txt").default;
     case _a.note:
     case "markdown":
-      return require("builtins/media/grid/template/filetype/note.txt").default;
+      return mediaGridPreview(model, "raw-note-sticky");
     default:
       return mediaGridPreview(model);
   }

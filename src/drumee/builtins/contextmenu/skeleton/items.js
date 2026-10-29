@@ -59,7 +59,7 @@ const __button = function (ui, trigger, k) {
           // kids are inert (active: 0) so clicks resolve to the row.
           kids: [
             { ico: 'addmenu-folder', label: LOCALE.WORKSPACE, service: 'new-workspace', iconClass: 'ico-workspace' },
-            { ico: 'addmenu-note', label: LOCALE.NOTE, service: 'new-note', iconClass: 'ico-note' },
+            { ico: 'raw-note-sticky', label: LOCALE.NOTE, service: 'new-note', iconClass: 'ico-note' },
             { ico: 'addmenu-document', label: LOCALE.DOCUMENT, service: 'new-document', name: 'document.docx', iconClass: 'ico-document' },
             { ico: 'addmenu-spreadsheet', label: LOCALE.SPREADSHEET, service: 'new-spreadsheet', name: 'spreadsheet.xlsx', iconClass: 'ico-spreadsheet' },
             { ico: 'addmenu-presentation', label: LOCALE.PRESENTATION, service: 'new-presentation', name: 'presentation.pptx', iconClass: 'ico-presentation' },

@@ -196,6 +196,12 @@ module.exports = {
   editor_note: function () {
     return import("./builtins/editor/note");
   },
+  editor_blocknote: function () {
+    return import("./builtins/editor/blocknote");
+  },
+  blocknote_state: function () {
+    return import("./builtins/editor/blocknote/state");
+  },
   // webpackPrefetch: the Casual editors weigh several MB (Univer, the .docx
   // layout engine); fetched lazily on first use they left a first-time
   // visitor staring at an empty window for as long as the download took.

@@ -12505,17 +12505,21 @@ class desk_module extends LetcBox {
         });
       }
 
-      case "new-note": {
+      // "Note" is now the Notion-style editor (Lexis, via Duy, 2026-09-18).
+      // `new-blocknote` stays as an alias so anything still dispatching the
+      // trial's own name keeps working.
+      case "new-note":
+      case "new-blocknote": {
         this.closeDeskNewMenu(cmd);
         // Note opens a local editor with no round-trip — the REST clamp
         // never sees it. Gate here so hard-lock / over_limit don't leave
-        // a writable markdown window on a read-only desk.
+        // a writable editor window on a read-only desk.
         if (require("libs/over-limit").guardWrite("write")) return;
         // A note is saved into the current workspace (media.save asks for the
         // write bit), so refuse here rather than open an editor that cannot save.
         if (this._guardWorkspaceWrite(LOCALE.PERMISSION_ACTION_CREATE_NOTE)) return;
         Wm.windowsLayer.append({
-          kind: "editor_markdown",
+          kind: "editor_blocknote",
           uiHandler: [this],
         });
         return;
