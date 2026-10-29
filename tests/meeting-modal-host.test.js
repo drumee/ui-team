@@ -151,11 +151,19 @@ test("destroying the host runs the folder's teardown, silently", () => {
 // stored meetings end before they start (an edit moved stime, not etime), and
 // room_list_scheduled's overlap test drops those from a tight window — on
 // stage that read as "That meeting no longer exists" for a live meeting.
-test("the load asks room.list for every meeting, uncached", () => {
+//
+// And the "whole hub" is asked for with EXPLICIT bounds. Omitting them does
+// not mean "everything" on the server: its database layer turns a null into
+// '' and the call fails — "Incorrect integer value: '' for column _stime",
+// call room_list_scheduled('', '') — which room.list swallows into an empty
+// list. That is what every chip got from a range-less request on stage.
+test("the load asks room.list for all time, explicitly, uncached", () => {
   const load = sliceFunction(HOST, "async _load()");
   const call = load.slice(load.indexOf("this.fetchService({"), load.indexOf("});", load.indexOf("this.fetchService({")));
-  assert.doesNotMatch(call, /stime|etime/);
+  assert.match(call, /stime: 0,/);
+  assert.match(call, /etime: ALL_TIME_END,/);
   assert.match(call, /_ts: Date\.now\(\)/);
+  assert.match(HOST, /const ALL_TIME_END = 2147483647;/);
 });
 
 // Whatever goes wrong opening the modal must not strand the calendar's

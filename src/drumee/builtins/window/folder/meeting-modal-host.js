@@ -19,6 +19,9 @@
 // Emits `meeting-host-closed` { wrote } exactly once, however the modal goes.
 const WindowFolder = require("./index");
 
+// room_list_scheduled's INT(11) ceiling: with stime 0 it is "all time".
+const ALL_TIME_END = 2147483647;
+
 const BORROWED = [
   // Called by the modal's skeleton (ui.meetingCreator), not by a method:
   // tests/meeting-modal-host.test.js checks the skeleton's ui.x() calls too.
@@ -109,12 +112,19 @@ class __meeting_modal_host extends LetcBox {
     // The hub's every meeting, not a window around the chip: some stored
     // meetings end before they start (an edit moved stime, not etime), and
     // room_list_scheduled's overlap test drops those from a tight window —
-    // the chip of a live meeting then said "no longer exists". No range sent
-    // at all (an undefined one would travel as the string "undefined"), and
-    // a cache-buster: a GET read right after an edit must not come stale.
+    // the chip of a live meeting then said "no longer exists".
+    //
+    // All time is asked for EXPLICITLY. Omitting the bounds does not mean
+    // "everything" on the server: its database layer turns a null into '',
+    // the call fails ("Incorrect integer value: '' for column _stime") and
+    // room.list swallows that into an empty list. stime 0 also keeps a
+    // meeting whose stored end is before its start (COALESCE(etime) >= 0).
+    // A cache-buster: a GET read right after an edit must not come stale.
     const rows = await this.fetchService({
       service: (SERVICE.room && SERVICE.room.list) || "room.list",
       hub_id,
+      stime: 0,
+      etime: ALL_TIME_END,
       _ts: Date.now(),
     });
     await home;
