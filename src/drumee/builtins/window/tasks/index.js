@@ -1260,7 +1260,17 @@ class __tasks_panel extends LetcBox {
         // Track the highlighted column instead of sweeping the whole panel —
         // dragover fires at pointer rate, so a per-event querySelectorAll
         // over a packed board is real work.
-        const next = colEl && root.contains(colEl) ? colEl : null;
+        // Over the board's gaps / padding (no [data-column] under the pointer)
+        // keep the last column lit: clearing it there made a drop that landed
+        // between two columns do nothing at all.
+        const inBoard =
+          e.target && e.target.closest && e.target.closest(".tasks-panel__main");
+        const next =
+          colEl && root.contains(colEl)
+            ? colEl
+            : inBoard
+              ? this._colDropEl
+              : null;
         if (this._colDropEl !== next) {
           if (this._colDropEl) this._colDropEl.classList.remove("is-col-drop");
           if (next) next.classList.add("is-col-drop");
@@ -1371,8 +1381,8 @@ class __tasks_panel extends LetcBox {
       // so it must not also land in the desk's upload path (the DMZ Wm binds
       // native `drop` too — modules/dmz/wm/index.js).
       if (isOurDrag()) e.stopPropagation();
-      // Column reorder drop → place the dragged column before/after the target
-      // depending on which half of it the pointer is over.
+      // Column reorder drop → the dragged column takes the outlined column's
+      // slot (see _reorderColumn).
       if (this._dragColKey) {
         e.preventDefault();
         const dragId = this._dragColKey;
@@ -1389,9 +1399,7 @@ class __tasks_panel extends LetcBox {
           .querySelectorAll(".tasks-panel__column.is-col-drop, .tasks-panel__column.is-col-dragging")
           .forEach((n) => n.classList.remove("is-col-drop", "is-col-dragging"));
         if (colEl && root.contains(colEl)) {
-          const rect = colEl.getBoundingClientRect();
-          const before = e.clientX < rect.left + rect.width / 2;
-          this._reorderColumn(dragId, colEl.dataset.column, before);
+          this._reorderColumn(dragId, colEl.dataset.column);
         }
         return;
       }
@@ -1457,6 +1465,9 @@ class __tasks_panel extends LetcBox {
 
     const onMove = (e) => {
       if (!main) return;
+      // Button already up but no mouseup reached us (a native drag swallowed
+      // it) — end the pan instead of scrolling a board nobody is holding.
+      if (!(e.buttons & 1)) return end();
       const dx = e.pageX - startX;
       // Small tolerance so a plain click isn't read as a (zero-length) pan.
       if (!moved && Math.abs(dx) < 3) return;
@@ -1489,10 +1500,13 @@ class __tasks_panel extends LetcBox {
       const board =
         e.target.closest && e.target.closest(".tasks-panel__main");
       if (!board || !root.contains(board)) return;
-      // Let card DnD and interactive controls keep the press.
+      // Let card / column DnD and interactive controls keep the press. A
+      // draggable column header must be excluded too: once its native drag
+      // starts the browser never delivers mouseup, so a pan armed here stayed
+      // armed — grabbing cursor stuck and every later mousemove scrolled x.
       if (
         e.target.closest(
-          ".tasks-panel__task-card, button, input, textarea, a, [contenteditable]",
+          ".tasks-panel__task-card, [draggable='true'], button, input, textarea, a, [contenteditable]",
         )
       )
         return;
@@ -1506,6 +1520,8 @@ class __tasks_panel extends LetcBox {
       document.addEventListener("mousemove", onMove, true);
       document.addEventListener("mouseup", end, true);
     });
+    // Any native drag taking over the press ends the pan — mouseup won't come.
+    root.addEventListener("dragstart", end, true);
   }
 
   // Lazily-created insertion placeholder shared across columns.
@@ -5144,18 +5160,20 @@ class __tasks_panel extends LetcBox {
     this._render();
   }
 
-  // Drag-reorder columns. dragId/targetKey are column keys; `before` says which
-  // side of the target to drop on. All columns (built-in + custom) are stored
-  // rows in _customColumns now, so any can move. Optimistic + persisted.
-  _reorderColumn(dragId, targetKey, before) {
+  // Drag-reorder columns. dragId/targetKey are column keys; the dragged column
+  // takes the target's slot — after it when moving right, before it when
+  // moving left — which is what the whole-column outline promises. (It used to
+  // pick the side from the pointer's half of the target, so the near half of
+  // a neighbour meant "where it already is" and the drop silently did
+  // nothing.) All columns (built-in + custom) are stored rows in
+  // _customColumns now, so any can move. Optimistic + persisted.
+  _reorderColumn(dragId, targetKey) {
     const cc = this._customColumns || [];
     const from = cc.findIndex((c) => String(c.id) === String(dragId));
-    if (from < 0) return; // unknown column — nothing to reorder
-    if (String(dragId) === String(targetKey)) return;
+    const to = cc.findIndex((c) => String(c.id) === String(targetKey));
+    // Unknown column, or dropped back on itself — nothing to reorder.
+    if (from < 0 || to < 0 || from === to) return;
     const [moved] = cc.splice(from, 1);
-    let to = cc.findIndex((c) => String(c.id) === String(targetKey));
-    if (to < 0) to = 0; // target not found → front (defensive; shouldn't happen)
-    else if (!before) to += 1;
     cc.splice(to, 0, moved);
     cc.forEach((c, i) => (c.position = i));
     this._render();
