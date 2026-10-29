@@ -1,0 +1,121 @@
+// tests/meeting-modal-host.test.js — meeting_modal_host: the folder's
+// "Meeting information" modal outside the folder (the Personal Calendar mounts
+// it for a meeting chip). It borrows the folder's own meeting methods, so
+// every this.x() those methods reach must be borrowed too, or be the host's
+// own, or ui-core's — otherwise a path (an upload, Join, a file chip) throws
+// only when someone takes it.
+//
+//   node --test tests/meeting-modal-host.test.js
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const { sliceFunction } = require("./helpers/slice-method");
+
+const DIR = path.join(__dirname, "../src/drumee/builtins/window/folder");
+const HOST = fs.readFileSync(path.join(DIR, "meeting-modal-host.js"), "utf8");
+const FOLDER =
+  fs.readFileSync(path.join(DIR, "index.js"), "utf8") +
+  fs.readFileSync(path.join(DIR, "meeting-desc-editor.js"), "utf8");
+
+const listOf = (name) => {
+  const at = HOST.indexOf(`const ${name} = [`);
+  assert.ok(at >= 0, `${name} not found`);
+  return eval(HOST.slice(HOST.indexOf("[", at), HOST.indexOf("];", at) + 1));
+};
+const BORROWED = listOf("BORROWED");
+const HOST_OWN = listOf("HOST_OWN");
+// ui-core / Backbone / Marionette, present on any LetcBox.
+const BASE = [
+  "mget", "mset", "fetchService", "postService", "ensurePart", "getPart",
+  "triggerHandlers", "warn", "isDestroyed", "feed", "trigger", "debug",
+  "declareHandlers", "listenTo", "listenToOnce", "stopListening", "uploadFile",
+];
+
+// Every method body in the folder (and its desc-editor mixin), by name.
+const DEFS = {};
+for (const m of FOLDER.matchAll(/^  (?:async )?([A-Za-z_$][\w$]*)\([^)]*\) \{$/gm)) {
+  DEFS[m[1]] = FOLDER.slice(m.index, FOLDER.indexOf("\n  }\n", m.index));
+}
+
+test("every borrowed method exists on the folder", () => {
+  for (const n of BORROWED) assert.ok(DEFS[n], n);
+});
+
+test("every this.x() a borrowed method calls is borrowed, the host's own, or ui-core's", () => {
+  const known = new Set([...BORROWED, ...HOST_OWN, ...BASE]);
+  const gaps = new Set();
+  for (const n of BORROWED) {
+    for (const c of DEFS[n].matchAll(/this\.([A-Za-z_$][\w$]*)\(/g)) {
+      if (!known.has(c[1])) gaps.add(`${n} → ${c[1]}`);
+    }
+  }
+  assert.deepEqual([...gaps], []);
+});
+
+test("the host keeps the folder's skin family", () => {
+  assert.match(HOST, /prototype\.figName = "window_folder"/);
+});
+
+// ── opening ─────────────────────────────────────────────────────────────────
+global.LOCALE = { MEETING_NOT_FOUND: "Meeting not found" };
+const said = [];
+global.Butler = { say: (m) => said.push(m) };
+const openFromList = eval(`(${sliceFunction(HOST, "_openFromList(rows)")})`);
+const reportClosed = eval(`(${sliceFunction(HOST, "_reportClosed()")})`);
+
+function host(opts) {
+  const self = {
+    opened: [],
+    sent: [],
+    mget: (k) => opts[k],
+    openMeetingModal(o) {
+      this.opened.push(o);
+    },
+    triggerHandlers(o) {
+      this.sent.push(o);
+    },
+    _reportClosed: reportClosed,
+  };
+  return self;
+}
+
+test("opening finds the record by nid; an occurrence joins its own start", () => {
+  const rows = [{ id: "m2", metadata: "{}" }, { id: "m1", metadata: "{}" }];
+  const h = host({ meeting_nid: "m1", occurrence: 1790874000 });
+  openFromList.call(h, rows);
+  assert.deepEqual(h.opened, [{ meeting: rows[1], occurrence: 1790874000 }]);
+});
+
+test("a single row (collapsed to an object) is found too", () => {
+  const row = { id: "m1", metadata: "{}" };
+  const h = host({ meeting_nid: "m1" });
+  openFromList.call(h, row);
+  assert.deepEqual(h.opened, [{ meeting: row, occurrence: null }]);
+});
+
+test("a missing record says so and reports the modal closed, unwritten", () => {
+  said.length = 0;
+  const h = host({ meeting_nid: "gone" });
+  openFromList.call(h, [{ id: "m1" }]);
+  assert.deepEqual(h.opened, []);
+  assert.deepEqual(said, ["Meeting not found"]);
+  assert.deepEqual(h.sent, [{ service: "meeting-host-closed", wrote: false }]);
+});
+
+// ── closing ─────────────────────────────────────────────────────────────────
+test("closing reports once, after the write that followed it", async () => {
+  /* eslint-disable no-unused-vars */
+  const WindowFolder = { prototype: { closeMeetingModal() {} } };
+  /* eslint-enable no-unused-vars */
+  const close = eval(`(${sliceFunction(HOST, "closeMeetingModal()")})`);
+  const refresh = eval(`(${sliceFunction(HOST, "_refreshSchedule()")})`);
+  const h = host({});
+  h.isDestroyed = () => false;
+  // The folder's save: closeMeetingModal() THEN _refreshSchedule().
+  close.call(h);
+  refresh.call(h);
+  close.call(h);
+  await new Promise((r) => setTimeout(r, 5));
+  assert.deepEqual(h.sent, [{ service: "meeting-host-closed", wrote: true }]);
+});
