@@ -1179,3 +1179,83 @@ test("with a mouse, a click in the gated body never gates (reading, selecting)",
     assert.deepEqual(sb.shown, []);
   });
 });
+
+// ── phone layout (Duy, 2026-10-29: "fit và responsive trên điện thoại") ──────
+// The page is laid out from the NOTE's own width (data-width), not the
+// screen's: on a tablet the sidebar and the File switcher leave the note a
+// phone's width while the viewport is wide.
+
+test("the note tags its root with its own width band, and follows it", () =>
+  withEditorGlobals(() => {
+    const Editor = loadEditor();
+    const ed = Object.create(Editor.prototype);
+    let width = 390;
+    // the page card, right of the File switcher's panel, is what is measured
+    const body = { getBoundingClientRect: () => ({ width }) };
+    ed.fig = { family: "editor-blocknote" };
+    let current = body;
+    const styles = {};
+    ed.el = {
+      dataset: {},
+      style: { setProperty: (k, v) => (styles[k] = v) },
+      getBoundingClientRect: () => ({ width: width + 250 }),
+      querySelector: (sel) => (sel === ".editor-blocknote__body" ? current : null),
+    };
+    let observed = null;
+    const watched = [];
+    const savedRO = global.ResizeObserver;
+    global.ResizeObserver = class {
+      constructor(fn) { observed = fn; }
+      observe(el) { watched.push(el); }
+      unobserve(el) { watched.splice(watched.indexOf(el), 1); }
+      disconnect() {}
+    };
+    try {
+      ed._observeOwnWidth();
+      assert.equal(ed.el.dataset.width, "phone", "390px of page in a 640px window is a phone's");
+      assert.deepEqual(watched, [ed.el, body], "the window and the page are both watched");
+      for (const [w, band] of [[650, "phone"], [651, "narrow"], [900, "narrow"], [901, "wide"], [1600, "wide"], [360, "phone"]]) {
+        width = w;
+        observed();
+        assert.equal(ed.el.dataset.width, band, `${w}px`);
+      }
+      width = 0;
+      observed();
+      assert.equal(ed.el.dataset.width, "phone", "a hidden note (0px) keeps its last band");
+      // the File switcher frame re-renders the page card: the observer moves to the new one
+      current = { getBoundingClientRect: () => ({ width: 1200 }) };
+      observed();
+      assert.equal(ed.el.dataset.width, "wide");
+      assert.deepEqual(watched, [ed.el, current], "the old card is let go, the new one watched");
+      assert.equal(styles["--note-page-width"], "1200px", "the page width is published for the skin");
+    } finally {
+      global.ResizeObserver = savedRO;
+    }
+    assert.match(readNote("index.js"), /this\._widthObserver\.disconnect\(\)/, "disconnected on destroy");
+  }));
+
+test("the phone and narrow layouts key off data-width, never the viewport", () => {
+  const skin = readNote("skin/index.scss");
+  assert.ok(!/@media \(max-width/.test(skin), "no viewport breakpoint left in the note's skin");
+  assert.match(skin, /\$note-phone: '\[data-width="phone"\]';/);
+  for (const sel of [
+    /&#\{\$note-phone\} &__head \{/,
+    /&#\{\$note-phone\} &__page-actions-row\.drumee-box \{\s*flex-wrap: wrap;/,
+    /\.editor-blocknote#\{\$note-phone\} \.blocknote-state \{\s*\.bn-editor \{\s*padding-inline: \$note-phone-pad;/,
+    /\.editor-blocknote#\{\$note-phone\} \.editor-blocknote-topbar\.drumee-topbar \{/,
+    /&__share \.editor-blocknote-topbar__share-label\.drumee-text \{\s*display: none;/,
+    // the cover popup is sized against the page, not the viewport
+    /width: min\(330px, calc\(var\(--note-page-width, 100vw\) - #\{2 \* \$note-phone-pad\}\)\);/,
+  ]) assert.match(skin, sel);
+  // Expand is hidden for a phone DEVICE only; a narrow desktop note keeps it
+  assert.match(skin, /\.editor-blocknote\[data-device="mobile"\][^{]*__fullscreen\.icon \{\s*display: none;/);
+  // a touch screen can reach the cover's Change / Remove
+  assert.match(skin, /@media \(hover: none\) \{\s*&__cover-controls\.drumee-box \{\s*display: flex;/);
+});
+
+test("a header button's extra class is added to its own, not spread over them", () => {
+  const top = readNote("skeleton/topbar.js");
+  assert.match(top, /\{ className = "", \.\.\.extra \} = \{\}\) => \(\{/);
+  assert.match(top, /className: `icon \$\{pfx\}__icon \$\{className\}`\.trim\(\),/);
+  assert.match(top, /className: `\$\{pfx\}__fullscreen`,/);
+});
