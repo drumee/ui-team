@@ -2605,10 +2605,24 @@ class __calendar_main extends LetcBox {
     const link = answer && answer.link;
 
     if (link) copyToClipboard(link);
+    // The meeting exists: put it on its own day now, in place — only that
+    // day's chip list is re-fed (_addItem), never the card opening below. It
+    // used to mark the page dirty, and the card's Done reloaded all of it.
+    this._addItem(
+      normalizeRow({
+        kind: "meeting",
+        id: nid,
+        nid,
+        hub_id: this._personalHub,
+        scope: "personal",
+        title,
+        description: draft.description || "",
+        stime,
+        etime: end,
+        can_write: 1,
+      }),
+    );
     this._form = { kind: "invite-link", link: link || "" };
-    // The new meeting reaches the grid when this card closes (_closeForm),
-    // not underneath it — a reload now would re-feed the card it just opened.
-    this._dirty = true;
     this._renderModal();
   }
 
@@ -2710,7 +2724,38 @@ class __calendar_main extends LetcBox {
     this._items = this._items.filter((r) => !match(r));
     // The other cached windows may hold it too; they are re-read on demand.
     this._dropWindowCache();
+    this._refeedDays(keys);
+  }
 
+  /**
+   * Put a just-created item on screen WITHOUT rebuilding the page: the row
+   * joins the held items and only the chip list of its own day is re-fed —
+   * the "New personal meeting" modal's create, whose server has already said
+   * yes. No refetch either: our own writes never come back as a push. A day
+   * outside the window on screen re-feeds nothing; the neighbour windows are
+   * dropped, so ‹ › re-reads them with the item in.
+   *
+   * @param {Object} row  a normalized calendar row (normalizeRow)
+   */
+  _addItem(row) {
+    if (!row) return;
+    this._items = [...this._items, row];
+    this._dropWindowCache();
+    const keys = new Set();
+    this.getVisibleItems().forEach((r) => {
+      if (`${r.id}` !== `${row.id}` || r.kind !== row.kind) return;
+      const s = rowStart(r);
+      if (s) keys.add(ymd(s));
+    });
+    this._refeedDays(keys);
+  }
+
+  /**
+   * Re-feed the chip lists of these days (YYYY-MM-DD) from the held items,
+   * and an open "+N more" popover on one of them. Falls back to one full
+   * repaint — still no refetch — when a day's part cannot be found.
+   */
+  _refeedDays(keys) {
     const byDay = itemsByDay(this.getVisibleItems());
     const month = this._view === "month";
     for (const key of keys) {

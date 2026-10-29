@@ -103,14 +103,15 @@ module.exports = function (ui) {
 
   const byDay = itemsByDay(ui.getVisibleItems());
 
+  // Drawn on an empty day too: it is the part index.js re-feeds when an item
+  // lands on or leaves this day (_refeedDays), so it must always be there.
   const dayBody = (list, key) => {
-    if (!list.length) return null;
     return Skeletons.Box.Y({
       className: `${pfx}__day-body`,
       // Inert: the empty space around the chips belongs to the cell's click
       // (see dayCell). The chips inside keep their own.
       active: 0,
-      // The one part per day index.js _dropItem re-feeds.
+      // The one part per day index.js _refeedDays re-feeds.
       sys_pn: `cal-body-${key}`,
       partHandler: ui,
       kids: dayBodyKids(ui, list, key),

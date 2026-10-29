@@ -36,10 +36,13 @@ const SKELETONS = {
   },
   "./skeleton/day-popover": (ui, key) => ({ popover: key }),
 };
-const dropItem = (() => {
+const [dropItem, refeedDays] = (() => {
   // eslint-disable-next-line no-unused-vars
   const require = (p) => SKELETONS[p];
-  return eval(`(${sliceFunction(CAL_SRC, "_dropItem(kind, id)")})`);
+  return [
+    eval(`(${sliceFunction(CAL_SRC, "_dropItem(kind, id)")})`),
+    eval(`(${sliceFunction(CAL_SRC, "_refeedDays(keys)")})`),
+  ];
 })();
 
 function calendar(items, view = "month", missing = []) {
@@ -63,6 +66,7 @@ function calendar(items, view = "month", missing = []) {
       this.drops++;
     },
     _placeDayMenu() {},
+    _refeedDays: refeedDays,
   };
   return { self, fed };
 }
