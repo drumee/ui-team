@@ -1,6 +1,11 @@
 const mfsInteract = require("../interact");
 const snap = require("../snap");
 const { EVENT: SPLIT_BODY_EVENT } = require("libs/split-body-signal");
+// Tells this tab's Personal Calendar a meeting changed: room.* pushes skip the
+// socket that wrote, so it would never hear of an edit made here.
+const { announceMeetingsChanged } = require("libs/meetings-changed");
+// The meeting modal footer's Schedule / Update and Delete spin while they write.
+const { withButtonBusy } = require("libs/button-busy");
 const {
   VIEW_STATES,
   isSectioned,
@@ -2219,12 +2224,92 @@ class __window_folder extends mfsInteract {
     if (menu.changeState) menu.changeState(0);
   }
 
+  /**
+   * The "Meeting information" modal's events: its buttons, invitee chips,
+   * recurrence, files and time pickers, plus Join. One method rather than
+   * cases in onUiEvent, so another host of the modal (the Personal Calendar's
+   * meeting_modal_host) routes the same events to the same code.
+   *
+   * @returns {{handled: boolean, result?: *}}
+   */
+  onMeetingModalEvent(service, cmd, args = {}) {
+    switch (service) {
+      case "join-meeting": {
+        // Join the workspace meeting room (from a calendar card or the editor).
+        // Which meeting rides along: an invitee early for it waits for its
+        // start (server lib/meeting-early). Read before closeMeetingModal,
+        // which forgets the editor's meeting.
+        const schedule_id = (cmd && cmd.mget && cmd.mget(_a.nid)) || this._mmEditNid || null;
+        // And which occurrence: a recurring series is indexed at its NEXT one
+        // as soon as one starts, so the row alone would hold this one back.
+        const schedule_at = (cmd && cmd.mget && cmd.mget("stime")) || this._mmOccurrenceAt || null;
+        this.closeMeetingModal();
+        return { handled: true, result: this._launchMeetingStandalone({ schedule_id, schedule_at }) };
+      }
+
+      case "close-meeting-modal":
+        return { handled: true, result: this.closeMeetingModal() };
+
+      // Fired by the invitee search Entry's `watch` on every keystroke.
+      case "mm-invitee-typed":
+        return { handled: true, result: this._filterInvitees((args && args.value) || "", { open: true }) };
+
+      case "mm-toggle-invitee-list":
+        return { handled: true, result: this._toggleInviteeList() };
+
+      case "mm-add-invitee":
+        return { handled: true, result: this._addInvitee(cmd) };
+
+      case "mm-remove-invitee":
+        return { handled: true, result: this._removeInvitee(cmd) };
+
+      case "mm-set-recur":
+        return { handled: true, result: this.setMeetingRecur(cmd) };
+
+      // Files section: the Search file Entry's `watch`, a search result, the
+      // Upload button, a pending chip's ✕.
+      case "mm-file-typed":
+        return { handled: true, result: this._mmSearchFiles((args && args.value) || "") };
+
+      case "mm-pick-file":
+        return { handled: true, result: this._mmPickFile(cmd) };
+
+      case "mm-upload-files":
+        return { handled: true, result: this._mmPickUploads() };
+
+      case "mm-remove-file":
+        return { handled: true, result: this._mmRemoveFile(cmd) };
+
+      case "mm-open-file":
+        return { handled: true, result: this._mmOpenFile(cmd) };
+
+      case "mm-set-ampm":
+        return { handled: true, result: this._setMeetingAmpm(cmd) };
+
+      // The meeting date changed — refresh the invitees' free/busy state.
+      case "mm-recheck-availability":
+        return { handled: true, result: this._checkAvailability() };
+
+      case "meeting-modal-submit":
+        return { handled: true, result: withButtonBusy(cmd.el, () => this.submitMeetingModal()) };
+
+      case "meeting-modal-delete":
+        return { handled: true, result: withButtonBusy(cmd.el, () => this.deleteMeetingModal()) };
+
+      default:
+        return { handled: false };
+    }
+  }
+
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     // File-thread access revocation: while a revoked thread is still on screen
     // (before OK / the 5-second timeout), refuse every action that would act on
     // it. The CSS blur is cosmetic — this is the guard. See file-thread-access.js.
     if (this._ftRevoked && this._ftIsRevokedService(service)) return;
+    // The meeting modal's events first (shared with meeting_modal_host).
+    const mm = this.onMeetingModalEvent(service, cmd, args);
+    if (mm.handled) return mm.result;
     switch (service) {
       // OK on the revocation notice — same finalizer the timeout uses.
       case "file-thread-revoked-ack":
@@ -2950,68 +3035,6 @@ class __window_folder extends mfsInteract {
         const meeting = (this._meetings || []).find((m) => m.id === nid);
         return this.openMeetingModal({ meeting, occurrence: cmd.mget && cmd.mget("stime") });
       }
-
-      case "join-meeting": {
-        // Join the workspace meeting room (from a calendar card or the editor).
-        // Which meeting rides along: an invitee early for it waits for its
-        // start (server lib/meeting-early). Read before closeMeetingModal,
-        // which forgets the editor's meeting.
-        const schedule_id = (cmd && cmd.mget && cmd.mget(_a.nid)) || this._mmEditNid || null;
-        // And which occurrence: a recurring series is indexed at its NEXT one
-        // as soon as one starts, so the row alone would hold this one back.
-        const schedule_at = (cmd && cmd.mget && cmd.mget("stime")) || this._mmOccurrenceAt || null;
-        this.closeMeetingModal();
-        return this._launchMeetingStandalone({ schedule_id, schedule_at });
-      }
-
-      case "close-meeting-modal":
-        return this.closeMeetingModal();
-
-      // Fired by the invitee search Entry's `watch` on every keystroke.
-      case "mm-invitee-typed":
-        return this._filterInvitees((args && args.value) || "", { open: true });
-
-      case "mm-toggle-invitee-list":
-        return this._toggleInviteeList();
-
-      case "mm-add-invitee":
-        return this._addInvitee(cmd);
-
-      case "mm-remove-invitee":
-        return this._removeInvitee(cmd);
-
-      case "mm-set-recur":
-        return this.setMeetingRecur(cmd);
-
-      // Files section: the Search file Entry's `watch`, a search result, the
-      // Upload button, a pending chip's ✕.
-      case "mm-file-typed":
-        return this._mmSearchFiles((args && args.value) || "");
-
-      case "mm-pick-file":
-        return this._mmPickFile(cmd);
-
-      case "mm-upload-files":
-        return this._mmPickUploads();
-
-      case "mm-remove-file":
-        return this._mmRemoveFile(cmd);
-
-      case "mm-open-file":
-        return this._mmOpenFile(cmd);
-
-      case "mm-set-ampm":
-        return this._setMeetingAmpm(cmd);
-
-      // The meeting date changed — refresh the invitees' free/busy state.
-      case "mm-recheck-availability":
-        return this._checkAvailability();
-
-      case "meeting-modal-submit":
-        return this.submitMeetingModal();
-
-      case "meeting-modal-delete":
-        return this.deleteMeetingModal();
 
       case "meeting":
       case "webinar":
@@ -4981,6 +5004,7 @@ class __window_folder extends mfsInteract {
           // Keep the dialog open on a refusal instead of reporting a save that
           // never happened — the calendar would snap back on the next fetch.
           if (!this._mmSucceeded(res)) return fail();
+          announceMeetingsChanged();
           this._upsertLocalMeeting(nid, form);
           return this._mmLinkFiles(nid, st, form).then(finish);
         }, fail);
@@ -5006,6 +5030,7 @@ class __window_folder extends mfsInteract {
         }
         createdNid = node && (node.id || node.nid);
         if (!createdNid) return;
+        announceMeetingsChanged();
         // The meeting exists from here on. If anything after this fails and
         // the organizer presses again, that press edits this meeting — it
         // must not book a second one. Only while this modal is still the one
@@ -5059,6 +5084,7 @@ class __window_folder extends mfsInteract {
       // meeting came back on the next fetch, and its start-time reminder still
       // fired. Say so and keep the dialog open instead.
       if (!this._mmSucceeded(res)) return fail();
+      announceMeetingsChanged();
       this.closeMeetingModal();
       this._refreshSchedule();
     }, fail);
@@ -6485,12 +6511,13 @@ class __window_folder extends mfsInteract {
   /**
    * One meeting by nid, ignoring the visible range.
    *
-   * `room_list_scheduled` treats a MISSING bound as "no bound"
-   * (`_stime IS NULL OR _etime IS NULL` → every scheduled node), and
-   * `room.list` reads both with `input.use(..., null)` — so the bounds are
-   * OMITTED here rather than sent empty. fetchService writes a plain scalar
-   * straight into the query string, so an undefined one would arrive as the
-   * four-character string "undefined" and cast to 0, matching nothing.
+   * The bounds are EXPLICIT and span every possible epoch (0 … INT max),
+   * never omitted. Omitted, they reached `room_list_scheduled`'s INT
+   * parameters as '' on stage, which MariaDB refuses (ERROR 1366), so every
+   * lookup came back empty and every deep link said MEETING_NOT_FOUND. (Sent
+   * as `undefined`, fetchService would write the string "undefined", which
+   * casts to 0 and matches nothing.) A full range returns every scheduled
+   * node, which is what a rangeless read was meant to do.
    *
    * Resolves null rather than rejecting: a failed lookup is answered with
    * MEETING_NOT_FOUND by the caller, which is the honest outcome either way.
@@ -6501,7 +6528,9 @@ class __window_folder extends mfsInteract {
   async _fetchMeetingById(nid) {
     const svc = (SERVICE.room && SERVICE.room.list) || "room.list";
     const rows = await Promise.resolve()
-      .then(() => this.fetchService(svc, { ...this._meetingScope() }))
+      .then(() =>
+        this.fetchService(svc, { stime: 0, etime: 2147483647, ...this._meetingScope() }),
+      )
       .catch(() => null);
     return (
       this._asMeetingRows(rows).find((m) => `${m.id}` === `${nid}`) || null

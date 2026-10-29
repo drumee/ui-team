@@ -1,0 +1,185 @@
+// tests/help-main-responsive-skin.test.js — the Get help screen (help_main)
+// reflows on tablet and phone. Its breakpoints are container queries on
+// help-main__ui (the screen sits beside the desk sidebar, so the viewport says
+// nothing about its width), and it stacks by wrapping: the framework owns
+// flex-direction on Box elements (ui-team CLAUDE.md), and the old
+// `flex-direction` overrides lost to `.box[data-flow]` and never applied.
+//
+//   node --test tests/help-main-responsive-skin.test.js
+//
+// Compiles the REAL skin with sass and reads the rules; headless Chromium is
+// the visual check (see the plan).
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const sass = require("sass");
+
+const ROOT = path.join(__dirname, "..");
+const SRC = path.join(ROOT, "src/drumee");
+const HELP = "builtins/widget/help/main";
+
+function compile(rel) {
+  return sass.compile(path.join(SRC, rel), {
+    loadPaths: [SRC, path.join(SRC, "skin"), path.join(ROOT, "skin")],
+    style: "compressed",
+    logger: sass.Logger.silent,
+  }).css;
+}
+
+const css = compile(`${HELP}/skin/index.scss`);
+
+// Declarations of every top-level rule (outside any at-rule) whose selector
+// list holds `sel`.
+function declsFor(sel) {
+  return rulesIn(stripBlocks(css), sel);
+}
+
+// Declarations of `sel` inside the @media / @container blocks whose prelude
+// starts with `prefix` (compressed spelling).
+function inMedia(prefix, sel) {
+  return inBlocks("media", prefix, sel);
+}
+
+function inContainer(prefix, sel) {
+  return inBlocks("container", prefix, sel);
+}
+
+function inBlocks(kind, prefix, sel) {
+  return blocks(css)
+    .filter((b) => b.kind === kind && b.prelude.startsWith(prefix))
+    .map((b) => rulesIn(b.body, sel))
+    .join(";");
+}
+
+function rulesIn(text, sel) {
+  // Compressed output drops the quotes around an identifier attribute value
+  // (mobile), but keeps them around one that starts with a digit ("0").
+  sel = sel.replace(/="([a-z_][\w-]*)"/gi, "=$1");
+  const out = [];
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let m;
+  while ((m = re.exec(text))) {
+    if (m[1].split(",").map((s) => s.trim()).includes(sel)) out.push(m[2]);
+  }
+  return out.join(";");
+}
+
+// Top-level at-rule blocks, found by brace matching.
+function blocks(text) {
+  const out = [];
+  const re = /@(media|container|keyframes|supports)([^{]*)\{/g;
+  let m;
+  while ((m = re.exec(text))) {
+    let depth = 1;
+    let i = re.lastIndex;
+    while (depth && i < text.length) {
+      if (text[i] === "{") depth++;
+      else if (text[i] === "}") depth--;
+      i++;
+    }
+    out.push({ kind: m[1], prelude: m[2].trim(), start: m.index, end: i, body: text.slice(re.lastIndex, i - 1) });
+    re.lastIndex = i;
+  }
+  return out;
+}
+
+function stripBlocks(text) {
+  let out = "";
+  let at = 0;
+  for (const b of blocks(text)) {
+    out += text.slice(at, b.start);
+    at = b.end;
+  }
+  return out + text.slice(at);
+}
+
+test("help-main__ui is the size container", () => {
+  const d = declsFor(".help-main__ui");
+  assert.match(d, /container-type:inline-size/);
+  assert.match(d, /container-name:help-main/);
+});
+
+test("no flex-direction on Box elements anywhere in the skin", () => {
+  assert.doesNotMatch(css, /help-main__(main|nav-list|feedback-row)\{[^}]*flex-direction/);
+});
+
+test("stacks below 800px by wrapping", () => {
+  const at = "help-main (max-width: 800px)";
+  const main = inContainer(at, ".help-main__main");
+  assert.match(main, /flex-wrap:wrap/);
+  assert.match(main, /align-content:flex-start/);
+  assert.match(main, /overflow-y:auto/);
+  assert.match(inContainer(at, ".help-main__nav-column"), /flex:0 0 100%/);
+  const content = inContainer(at, ".help-main__content");
+  assert.match(content, /flex:1 1 100%/);
+  assert.match(content, /height:auto/);
+});
+
+test("no viewport @media left except reduced-motion and the phone rail block", () => {
+  const preludes = blocks(css)
+    .filter((b) => b.kind === "media")
+    .map((b) => b.prelude);
+  for (const p of preludes) {
+    assert.ok(["(prefers-reduced-motion: reduce)", "(max-width: 650px)"].includes(p), p);
+  }
+});
+
+
+test("nav list is a wrapping row; one item per line on desktop", () => {
+  const nav = fs.readFileSync(path.join(SRC, HELP, "skeleton/nav.js"), "utf8");
+  assert.match(nav, /Skeletons\.Box\.X\(\{\s*className: `\$\{pfx\}-list`/);
+  assert.match(declsFor(".help-main__nav-list"), /flex-wrap:wrap/);
+  assert.match(declsFor(".help-main__nav-item"), /flex:0 0 100%/);
+});
+
+test("stacked nav chips wrap, so every chip — the active one included — stays on screen", () => {
+  // A sideways-scrolling strip came back scrolled to the left after each page
+  // switch (the widget re-renders), so in French — or English at 320px — the
+  // chip just tapped sat out of view with nothing lit.
+  const at = "help-main (max-width: 800px)";
+  const list = inContainer(at, ".help-main__nav-list");
+  assert.match(list, /flex-wrap:wrap/);
+  assert.doesNotMatch(list, /overflow-x:auto/);
+  const item = inContainer(at, ".help-main__nav-item");
+  assert.match(item, /flex:0 0 auto/);
+  assert.match(item, /white-space:nowrap/);
+});
+
+test("no rail clearance of its own: the desk body already reserves it", () => {
+  // desk/skin/mobile-rail.scss pads __body[data-device=mobile] by the rail's
+  // height, and this screen's slot sits inside it; a second padding left an
+  // empty 80px band at the page end.
+  assert.doesNotMatch(css, /help-main__main\{[^}]*padding-bottom:calc\(80px/);
+});
+
+test("inputs are 16px on phones", () => {
+  const at = "help-main (max-width: 440px)";
+  assert.match(inContainer(at, ".help-main__nav-search-input input"), /font-size:16px/);
+  assert.match(inContainer(at, ".help-main__faq-search-input input"), /font-size:16px/);
+});
+
+test("touch-sized nav chips and FAQ chips on phones", () => {
+  const at = "help-main (max-width: 440px)";
+  assert.match(inContainer(at, ".help-main__nav-item"), /min-height:44px/);
+  assert.match(inContainer(at, ".help-main__faq-chip"), /min-height:44px/);
+});
+
+test("on a phone the three nav chips fit: icons drop, labels stay", () => {
+  // Measured: with icons, Product tour / Self-hosting setup / FAQ need ~420px
+  // and FAQ sat off the right edge of a 390px phone.
+  const at = "help-main (max-width: 440px)";
+  assert.match(
+    inContainer(at, ".help-main__nav-list .help-main__nav-item .help-main__nav-item-ico"),
+    /display:none/,
+  );
+});
+
+test("the active nav row is primary with white text and icon", () => {
+  const active = '.help-main__nav-item[data-active="1"]';
+  assert.match(declsFor(active), /background:var\(--primary-40, ?#5950ff\)/);
+  assert.match(declsFor(`${active}:hover`), /background:var\(--primary-50, ?#433cc5\)/);
+  assert.match(declsFor(`${active} .help-main__nav-item-label`), /color:#fff/);
+  assert.match(declsFor(`${active} .help-main__nav-item-ico`), /color:#fff/);
+  assert.match(declsFor(`${active} .help-main__nav-item-ico svg`), /fill:currentColor/);
+});

@@ -11,8 +11,21 @@ import "@casualoffice/sheets/styles";
 // resolve, and the chart inserts INVISIBLY: the dialog closes and the sheet
 // stays empty ("click vào nó không chèn được chart").
 import "@univerjs/ui/facade";
+// Same story for two more facade mixins Casual's chrome calls but never
+// imports:
+//   - `FRange.setNumberFormat` (sheets-numfmt): Format → Number format, the
+//     toolbar's number-format list and Format cells → Number all go through
+//     it, and silently did nothing (a currency stayed "1234.5");
+//   - `FWorksheet.getFilter` (sheets-filter): Data → Toggle filter asks it
+//     whether a filter is on; without it every press ADDED the filter again,
+//     and it could never be taken off.
+import "@univerjs/sheets-numfmt/facade";
+import "@univerjs/sheets-filter/facade";
 import { contentUrl } from "builtins/editor/content-url";
 const pendingFocus = require("builtins/editor/pending-focus");
+const { attachMenuPolicy } = require("builtins/editor/menu-policy");
+// Casual Sheets chrome gates (see _wireMenus / _sheetExtensions).
+const SHEET_FEATURES = { branding: false };
 
 // Casual Sheets does NOT bundle Univer locale strings; it only forwards a
 // `locales` prop to Univer. Without it Univer's LocaleService is "not
@@ -282,6 +295,11 @@ class __sheet_state extends DrumeeMFS {
         // toolbar groups, formula bar, status bar, side panels). Default is
         // 'none' (bare grid) — that's why only the grid showed.
         chrome: "full",
+        // Help holds one Drumee row, "Contact us" (the support conversation),
+        // instead of Casual's About / View on GitHub (`branding`); its
+        // Keyboard shortcuts row has no dialog here and drops by itself.
+        features: SHEET_FEATURES,
+        extensions: this._sheetExtensions(),
         // Called with the raw Univer instance after plugins are registered
         // and BEFORE the workbook unit is created: the user set here becomes
         // the workbook owner (full permissions) and the author of comments.
@@ -333,6 +351,7 @@ class __sheet_state extends DrumeeMFS {
       },
       false
     );
+    this._wireMenus();
 
     // Univer inside can still under-measure right after mount in the animated
     // window; a few resize pulses make it re-read the now-real container size.
@@ -676,6 +695,12 @@ class __sheet_state extends DrumeeMFS {
   onBeforeDestroy() {
     this._destroyed = 1;
     try {
+      if (this._menuPolicy) this._menuPolicy();
+    } catch (e) {
+      /** already gone */
+    }
+    this._menuPolicy = null;
+    try {
       if (this._tabsBarObs) this._tabsBarObs.disconnect();
       if (this._tabsStripObs) this._tabsStripObs.disconnect();
       clearTimeout(this._tabsBarTimer);
@@ -717,6 +742,61 @@ class __sheet_state extends DrumeeMFS {
       /** already gone */
     }
     if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  /**
+   * Casual's menu bar, cut to what works in Drumee (builtins/editor/
+   * menu-policy; rows matched by their data-testid).
+   * Hidden:
+   *   - View → Show formulas: its command (sheet.command.set-show-formula)
+   *     is not registered in this build, the row did nothing;
+   *   - Data → Text to Columns: run without a delimiter, it split nothing.
+   * Answered by Drumee: View → Toggle gridlines. Casual's row always sends
+   * "hide" (it keeps no state), so a second press never brought the
+   * gridlines back; this one reads the sheet's state and flips it.
+   */
+  _wireMenus() {
+    if (this._menuPolicy || !this.el) return;
+    const HIDDEN = new Set(["cs-menuitem-show-formulas", "cs-menuitem-text-to-columns"]);
+    this._menuPolicy = attachMenuPolicy(this.el, {
+      key: (row) => row.getAttribute("data-testid") || "",
+      hidden: (key) => HIDDEN.has(key),
+      actions: {
+        "cs-menuitem-toggle-gridlines": () => this._toggleGridlines(),
+      },
+      // Casual's menubar buttons toggle on mousedown.
+      close: (trigger) =>
+        trigger.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })),
+    });
+  }
+
+  _sheetExtensions() {
+    if (!this._extensions) {
+      this._extensions = {
+        menu: [
+          {
+            menu: "help",
+            id: "contact-us",
+            label: LOCALE.CONTACT_US,
+            onClick: () => {
+              if (this.editor && this.editor.contactSupport) this.editor.contactSupport();
+            },
+          },
+        ],
+      };
+    }
+    return this._extensions;
+  }
+
+  _toggleGridlines() {
+    const api = this._apiHandle;
+    try {
+      const sheet = api && api.univer && api.univer.getActiveWorkbook().getActiveSheet();
+      if (!sheet || typeof sheet.setHiddenGridlines !== "function") return;
+      sheet.setHiddenGridlines(!sheet.hasHiddenGridLines());
+    } catch (e) {
+      this.warn("sheet: gridlines toggle failed", e);
+    }
   }
 
   /**

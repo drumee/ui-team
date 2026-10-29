@@ -11,21 +11,20 @@ const {
   settlePendingFiles,
 } = require("./detail-commit");
 const { restoreScroll } = require("./scroll-restore");
-const { titleTooLong, toggleUid } = require("./list-edit");
+const { titleTooLong, titleTaken, toggleUid } = require("./list-edit");
 const { stamp, reconcile } = require("./reconcile");
 const listInline = require("./list-inline");
 const listSubtask = require("./list-subtask");
 const completeParent = require("./complete-parent");
+const linkTip = require("./link-tip");
 const { killTaskToast } = require("./task-toast");
 const {
   markerRe,
-  contentTokenRe,
-  imgMarker,
-  linkMarker,
   linkifyTokens,
   safeUrl,
   uidsFromText,
 } = require("./mention-markers");
+const { parse, stringify, fromDom, toDom } = require("./rich-text");
 const {
   unfinishedPending,
   abandonedPending,
@@ -82,6 +81,24 @@ const COMMENT_SUBMIT_BY_SCOPE = {
   comment: "_submitComment",
   "comment-edit": "_saveCommentEdit",
   "comment-reply": "_submitReply",
+};
+
+// Format toolbar button (skeleton formatBar's data-format) → execCommand.
+// "link" has no command: it opens the Ctrl+K prompt.
+const FORMAT_COMMANDS = {
+  bold: "bold",
+  italic: "italic",
+  underline: "underline",
+  strike: "strikeThrough",
+  ul: "insertUnorderedList",
+  ol: "insertOrderedList",
+};
+
+// Ctrl/Cmd+Shift shortcuts, by e.code: Shift changes e.key ("8" → "*").
+const SHIFT_FORMAT_KEYS = {
+  KeyX: "strike",
+  Digit8: "ul",
+  Digit7: "ol",
 };
 
 // Scopes the file picker accepts, i.e. the drafts _draftForKey can queue a file
@@ -440,6 +457,10 @@ class __tasks_panel extends LetcBox {
     for (const cb of this._partWaiters || []) this.off(_e.part.ready, cb);
     this._partWaiters = null;
     this._closeCommentReactionsPicker();
+    if (this._onSelectionChange) {
+      document.removeEventListener("selectionchange", this._onSelectionChange);
+      this._onSelectionChange = null;
+    }
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
     if (this._assigneeBlurTimer) clearTimeout(this._assigneeBlurTimer);
@@ -1558,9 +1579,21 @@ class __tasks_panel extends LetcBox {
     // No-op: same column and dropped onto itself / its own slot.
     if (sameColumn && (!afterEl || afterEl === card)) return;
 
+    // Into ANOTHER column the card lands on top, wherever it was dropped:
+    // task_update_status ranks it first there, so a mid-column drop would
+    // jump to the top on the next reload anyway. Reordering within a column
+    // still honours the drop slot.
+    if (!sameColumn && targetBody) {
+      afterEl = Array.from(
+        targetBody.querySelectorAll(".tasks-panel__task-card[data-tid]"),
+      ).find((el) => el !== card) || null;
+    }
+
     // Fall back to a full render if we can't locate the DOM nodes (defensive).
     if (!card || !targetBody) {
+      const idx = this._tasks.indexOf(task);
       task.status = status;
+      if (!sameColumn) this._toColumnTop(idx, true);
       this._render({ full: true });
     } else {
       const sourceBody = card.closest(".tasks-panel__column-body");
@@ -2331,12 +2364,12 @@ class __tasks_panel extends LetcBox {
         // rather than dismissing everything — there is one detail panel, so
         // closing the child used to take the parent with it. Read the target
         // first: _closeDetailSilently clears it.
-        const back = this._detailReturnTo;
+        const back = this._walkBackTarget();
         // Walking back is NAVIGATION, not a dismissal: the parent is drawn
         // into this same element in the same tick, so an exit here would fade
         // the child out underneath the parent arriving on top of it. Close it
         // instantly and let _openDetail play its own entrance.
-        if (back && this._tasks.some((t) => t.id === back)) {
+        if (back) {
           this._closeDetailSilently();
           // _openDetail renders on its own — a _renderDeferred() on top of it
           // would be a second full rebuild of the panel just painted.
@@ -2350,16 +2383,16 @@ class __tasks_panel extends LetcBox {
       case "open-detail":
         return this._openDetail(trigger.mget("taskId"));
 
+      // Format toolbar above a description editor (skeleton formatBar).
+      case "desc-format":
+        return this._applyFormat(trigger.mget("formatScope"), trigger.mget("format"));
+
       // Quick-open card only (its footer's "Open in board"): leave the card the
       // way Cancel does, dropping unsaved edits, and let the host open the
       // workspace board on this task.
       case "quick-open-board":
         this._quickToBoard = 1;
         return this._closeDetailSilently(() => this._renderOverlays());
-
-      // Quick-open card only: the × shown while the card is still loading.
-      case "quick-open-cancel":
-        return this._quickOpenLeft();
 
       case "set-view": {
         const v = trigger.mget("viewMode");
@@ -2751,6 +2784,17 @@ class __tasks_panel extends LetcBox {
     // comment / comment-edit / comment-reply). Init each with its scope.
     if (typeof pn === "string" && pn.endsWith("-desc-editor")) {
       this._initDescEditor(child.el, pn.slice(0, -"-desc-editor".length));
+      return;
+    }
+    // Format toolbar ("<scope>-format-bar"): pressing a button must not take
+    // the focus — or the selection it formats — out of the editor. The click
+    // still reaches the service.
+    if (typeof pn === "string" && pn.endsWith("-format-bar")) {
+      child.el.addEventListener("mousedown", (e) => e.preventDefault());
+      if (!this._onSelectionChange) {
+        this._onSelectionChange = () => this._syncFormatBar();
+        document.addEventListener("selectionchange", this._onSelectionChange);
+      }
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
@@ -4106,6 +4150,9 @@ class __tasks_panel extends LetcBox {
       if (!titleTooLong(value)) {
         this._clearSubtaskTitleTooLong("detail-panel", this._subtaskDraft);
       }
+      if (!titleTaken(value, this.getSubtasks(this._detailId))) {
+        this._clearSubtaskTitleDuplicate("detail-panel", this._subtaskDraft);
+      }
       return;
     }
     // Same, for the creator inside the create modal — its draft is a different
@@ -4119,6 +4166,9 @@ class __tasks_panel extends LetcBox {
       }
       if (!titleTooLong(value)) {
         this._clearSubtaskTitleTooLong("create-modal", this._createSubtaskDraft);
+      }
+      if (!titleTaken(value, this.getPendingSubtasks())) {
+        this._clearSubtaskTitleDuplicate("create-modal", this._createSubtaskDraft);
       }
       return;
     }
@@ -4216,6 +4266,7 @@ class __tasks_panel extends LetcBox {
   }
 
   async _commitTask() {
+    this._flushDescEditor("create");
     this._captureCreateDraft();
     const draft = this._createDefaults || {};
     const title = String(draft.title || "").trim();
@@ -4494,7 +4545,9 @@ class __tasks_panel extends LetcBox {
     // and the flip (and its revert) must land on the live one.
     task = this._tasks.find((t) => t.id === id);
     if (!task || task.status !== originalStatus) return;
+    const place = this._taskPlace(id);
     task.status = next;
+    this._toColumnTop(place.index, true);
     this._refreshViewBody();
     try {
       const updated = await this.postService({
@@ -4519,16 +4572,19 @@ class __tasks_panel extends LetcBox {
         // Failed silently (postService never rejects): revert the
         // optimistic flip instead of leaving unsaved state on screen.
         task.status = originalStatus;
+        this._restoreTaskPlace(place);
         this._refreshViewBody();
       }
     } catch (err) {
       console.error("[tasks_panel] toggle-complete failed:", err);
       task.status = originalStatus;
+      this._restoreTaskPlace(place);
       this._refreshViewBody();
     }
   }
 
   async _commitDetail() {
+    this._flushDescEditor("detail");
     if (!this._detailId || !this._detailDraft) return;
     this._captureDetailDraft();
     const id = this._detailId;
@@ -4740,13 +4796,28 @@ class __tasks_panel extends LetcBox {
     }
 
     // Update on a child returns to the parent, exactly as its X does.
-    const back = this._detailReturnTo;
-    if (back && this._tasks.some((t) => t.id === back)) {
+    const back = this._walkBackTarget();
+    if (back) {
       this._closeDetailSilently();
       return this._openDetail(back);
     }
     // A saved task leaves the way the X does; only the overlay parts re-feed.
     this._closeDetailSilently(() => this._renderOverlays());
+  }
+
+  /**
+   * Where closing the open detail goes: the parent it was opened from (a child
+   * walks back there on the board), or null for a plain close.
+   *
+   * Always null in the Personal Calendar's quick-open card: closing a subtask
+   * there closes the card and its backdrop, as the calendar's user asked —
+   * the parent is one click away on the calendar, and the header's parent
+   * crumb still leads there on purpose.
+   */
+  _walkBackTarget() {
+    if (this._quickOpen) return null;
+    const back = this._detailReturnTo;
+    return back && this._tasks.some((t) => t.id === back) ? back : null;
   }
 
   // Render the detail panel immediately on click; refresh attachments async
@@ -4848,6 +4919,11 @@ class __tasks_panel extends LetcBox {
       task && Array.isArray(task.linked_files) && !task.linked_files.length;
     this._loading = { attachments: knownNoFiles ? 0 : 1, comments: 1, history: 1 };
     this._renderOverlays();
+    // A walk back from a child cut its backdrop out with an inline
+    // display:none (_dismissOverlay's instant path). The quick-open card
+    // repaints through _render's patcher, which keeps that element, so the
+    // parent was drawn into a hidden backdrop under the calendar's modal.
+    this._reviveOverlay("detail-backdrop");
     this._refreshAttachments(id).then(() => {
       if (this._detailId !== id) return;
       this._settleLoading("attachments", id);
@@ -5364,108 +5440,119 @@ class __tasks_panel extends LetcBox {
     // comment that is only an attachment is still worth posting.
     const pending = (draft && draft.pending_files) || [];
     if (!body && !pending.length) return;
-    const taskId = this._detailId;
-    const mention_uids = Array.isArray(draft.mention_uids)
-      ? draft.mention_uids
-      : [];
-    const post = () =>
-      this.postService({
-        service: SERVICE.task.comment_create,
-        hub_id: this._hubId,
-        task_id: taskId,
-        body,
-        mention_uids,
-      });
+    // One send at a time: the composer shows it is busy (send icon spins,
+    // field dims) until the server answers, and a second Enter meanwhile is
+    // ignored rather than posting twice.
+    if (this._commentSending) return;
+    this._commentSending = true;
+    this._markLoading("comment-composer", true);
+    try {
+      const taskId = this._detailId;
+      const mention_uids = Array.isArray(draft.mention_uids)
+        ? draft.mention_uids
+        : [];
+      const post = () =>
+        this.postService({
+          service: SERVICE.task.comment_create,
+          hub_id: this._hubId,
+          task_id: taskId,
+          body,
+          mention_uids,
+        });
 
-    if (!pending.length) {
-      const tempId = `pending-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}`;
-      const now = Math.floor(Date.now() / 1000);
-      this._comments = (this._comments || []).concat({
-        id: tempId,
-        task_id: taskId,
-        author_uid: Visitor.id,
-        parent_id: null,
-        body,
-        edited: 0,
-        ctime: now,
-        mtime: now,
-        reactions: [],
-        attachments: [],
-        // The skin dims the row and the actions are withheld: reacting to or
-        // deleting a comment the server has not acknowledged has no id to act
-        // on yet.
-        _pending: 1,
-      });
-      this._commentDraft = null;
-      this._refreshCommentList();
-      this._refreshPendingList("comment");
-      const ed = this._descEditorEl("comment");
-      if (ed) this._renderEditorContent(ed, "");
+      if (!pending.length) {
+        const tempId = `pending-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+        const now = Math.floor(Date.now() / 1000);
+        this._comments = (this._comments || []).concat({
+          id: tempId,
+          task_id: taskId,
+          author_uid: Visitor.id,
+          parent_id: null,
+          body,
+          edited: 0,
+          ctime: now,
+          mtime: now,
+          reactions: [],
+          attachments: [],
+          // The skin dims the row and the actions are withheld: reacting to or
+          // deleting a comment the server has not acknowledged has no id to act
+          // on yet.
+          _pending: 1,
+        });
+        this._commentDraft = null;
+        this._refreshCommentList();
+        this._refreshPendingList("comment");
+        const ed = this._descEditorEl("comment");
+        if (ed) this._renderEditorContent(ed, "");
 
-      let row = null;
+        let row = null;
+        try {
+          const created = await post();
+          row = Array.isArray(created) ? created[0] : created;
+        } catch (err) {
+          console.error("[tasks_panel] comment.create failed:", err);
+        }
+        const newId = row && (row.id || row.comment_id);
+        if (newId) {
+          // A fresh comment has no reactions and no attachments — comment_create
+          // returns the row without those columns, so fill the shapes the
+          // renderer expects rather than re-reading the whole feed.
+          this._replaceComment(tempId, {
+            ...row,
+            reactions: [],
+            attachments: [],
+          });
+        } else {
+          // Failed (postService resolves rather than rejects on a refusal): take
+          // the row back out and hand the text back to the composer instead of
+          // losing what was typed.
+          this._replaceComment(tempId, null);
+          this._commentDraft = draft;
+          this._refreshPendingList("comment");
+          const back = this._descEditorEl("comment");
+          if (back) this._renderEditorContent(back, body);
+        }
+        if (this._detailId === taskId) this._refreshCommentList();
+        return;
+      }
+
       try {
         const created = await post();
-        row = Array.isArray(created) ? created[0] : created;
+        // The row doesn't exist until now — its id comes back on the create, and
+        // only then can the queued files be attached to it.
+        const row = Array.isArray(created) ? created[0] : created;
+        const newId = row && (row.id || row.comment_id);
+        let res = null;
+        if (newId) {
+          res = await this._linkCommentFiles(newId, draft, taskId, "comment");
+        } else {
+          this._discardCommentPending(draft);
+        }
+        if (newId && res && res.failed) this._handoffFailedLinks(newId, draft);
+        this._commentDraft = null;
+        await this._loadComments(taskId);
       } catch (err) {
         console.error("[tasks_panel] comment.create failed:", err);
       }
-      const newId = row && (row.id || row.comment_id);
-      if (newId) {
-        // A fresh comment has no reactions and no attachments — comment_create
-        // returns the row without those columns, so fill the shapes the
-        // renderer expects rather than re-reading the whole feed.
-        this._replaceComment(tempId, {
-          ...row,
-          reactions: [],
-          attachments: [],
-        });
-      } else {
-        // Failed (postService resolves rather than rejects on a refusal): take
-        // the row back out and hand the text back to the composer instead of
-        // losing what was typed.
-        this._replaceComment(tempId, null);
-        this._commentDraft = draft;
+      // Surgically slot in the new comment + clear the composer — no full
+      // _render() (which rebuilds the whole panel and feels like a reload).
+      if (this._detailId === taskId) {
+        this._refreshCommentList();
         this._refreshPendingList("comment");
-        const back = this._descEditorEl("comment");
-        if (back) this._renderEditorContent(back, body);
+        const ed = this._descEditorEl("comment");
+        if (ed) this._renderEditorContent(ed, "");
       }
-      if (this._detailId === taskId) this._refreshCommentList();
-      return;
-    }
-
-    try {
-      const created = await post();
-      // The row doesn't exist until now — its id comes back on the create, and
-      // only then can the queued files be attached to it.
-      const row = Array.isArray(created) ? created[0] : created;
-      const newId = row && (row.id || row.comment_id);
-      let res = null;
-      if (newId) {
-        res = await this._linkCommentFiles(newId, draft, taskId, "comment");
-      } else {
-        this._discardCommentPending(draft);
-      }
-      if (newId && res && res.failed) this._handoffFailedLinks(newId, draft);
-      this._commentDraft = null;
-      await this._loadComments(taskId);
-    } catch (err) {
-      console.error("[tasks_panel] comment.create failed:", err);
-    }
-    // Surgically slot in the new comment + clear the composer — no full
-    // _render() (which rebuilds the whole panel and feels like a reload).
-    if (this._detailId === taskId) {
-      this._refreshCommentList();
-      this._refreshPendingList("comment");
-      const ed = this._descEditorEl("comment");
-      if (ed) this._renderEditorContent(ed, "");
+    } finally {
+      this._commentSending = false;
+      this._markLoading("comment-composer", false);
     }
   }
 
   async _saveCommentEdit() {
     const id = this._editingCommentId;
-    if (!id || this._commentSaving) return;
+    if (!id || this._commentSaving || this._commentEditSending) return;
     const draft = this._commentEditDraft;
     const body = String((draft && draft.body) || "").trim();
     const pending = (draft && draft.pending_files) || [];
@@ -5480,6 +5567,10 @@ class __tasks_panel extends LetcBox {
       this.el &&
       this.el.querySelector(`.${this.fig.family}__comment-action--primary`);
     this._setControlBusy(saveBtn, true, { swapLabel: true });
+    // The editor itself goes quiet too: dimmed and out of reach, and Enter
+    // can't post the same edit again while this one is in flight.
+    this._commentEditSending = true;
+    this._markLoading("comment-edit-input", true);
     try {
       await this.postService({
         service: SERVICE.task.comment_update,
@@ -5506,6 +5597,8 @@ class __tasks_panel extends LetcBox {
       // forever. A re-fed row replaces the node anyway — clearing a detached
       // one is a no-op.
       this._setControlBusy(saveBtn, false, { swapLabel: true });
+      this._commentEditSending = false;
+      this._markLoading("comment-edit-input", false);
     }
     if (this._detailId === taskId) this._refreshCommentList();
   }
@@ -7830,6 +7923,15 @@ class __tasks_panel extends LetcBox {
     if (swapLabel && el.dataset.label) el.textContent = el.dataset.label;
   }
 
+  // data-loading on one named part of the panel (`${family}__${part}`) — the
+  // skin draws the busy state. Used where the busy element isn't the control
+  // that was clicked (the composer while a comment sends, the editor while an
+  // edit saves). A re-fed part replaces the node, so clearing it is a no-op.
+  _markLoading(part, busy) {
+    const el = this.el && this.el.querySelector(`.${this.fig.family}__${part}`);
+    if (el && el.dataset) el.dataset.loading = busy ? "1" : "0";
+  }
+
   _isControlBusy(el) {
     return !!(el && el.dataset && el.dataset.loading === "1");
   }
@@ -8838,6 +8940,10 @@ class __tasks_panel extends LetcBox {
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     a.dataset.href = href; // serialize from this, not the browser-normalised href
+    // Hover shows the target: the label alone ("here", "the doc") hides where
+    // the link goes. An editor shows its own tip with an Edit button instead
+    // (link-tip.js), so the native one would double it there.
+    if (!editable) a.title = href;
     a.textContent = label;
     if (editable) {
       a.setAttribute("contenteditable", "false");
@@ -8854,102 +8960,101 @@ class __tasks_panel extends LetcBox {
         ev.preventDefault();
         // mailto: is handed to the mail client; window.open would additionally
         // leave a blank tab behind. safeUrl admits no other non-http scheme.
-        if (/^mailto:/i.test(href)) window.location.href = href;
-        else window.open(href, "_blank", "noopener");
+        // Read at click time: the Ctrl+K prompt edits the URL in place.
+        const url = a.dataset.href || href;
+        if (/^mailto:/i.test(url)) window.location.href = url;
+        else window.open(url, "_blank", "noopener");
       };
     }
     return a;
   }
 
-  // Render stored marker text into the editor as text nodes, chip spans,
-  // inline images, and links.
+  // Render stored text into the editor (or a posted body): marks as
+  // <b>/<i>/<u>/<s>, list lines as <ul>/<ol>, mentions as chips, inline
+  // images, and links — see rich-text.js for the grammar.
   _renderEditorContent(editorEl, markerText) {
     editorEl.textContent = "";
-    const text = String(markerText || "");
     const editable = editorEl.getAttribute("contenteditable") === "true";
-    const appendText = (str) => {
-      str.split("\n").forEach((part, i) => {
-        if (i > 0) editorEl.appendChild(document.createElement("br"));
-        if (!part) return;
-        // Read-only only: linkifying in an editor would turn every half-typed
-        // address into an atomic chip under the caret. There, Ctrl+K does it.
-        if (editable) {
-          editorEl.appendChild(document.createTextNode(part));
-          return;
-        }
-        linkifyTokens(part).forEach((tok) => {
-          editorEl.appendChild(
-            tok.url
-              ? this._makeLinkNode(tok.label, tok.url, false)
-              : document.createTextNode(tok.text),
-          );
-        });
-      });
-    };
-    const re = contentTokenRe();
-    let last = 0;
-    let m;
-    while ((m = re.exec(text))) {
-      if (m.index > last) appendText(text.slice(last, m.index));
-      if (m[2] != null) {
-        editorEl.appendChild(this._makeMentionChip(m[2], m[1]));
-      } else if (m[3] != null) {
-        editorEl.appendChild(
-          this._makeInlineImage(m[3], m[4], m[5], editable),
-        );
-      } else if (m[7] != null) {
-        // A rejected scheme renders as its label, never as a live href.
-        const href = safeUrl(m[7]);
-        editorEl.appendChild(
-          href
-            ? this._makeLinkNode(m[6], href, editable)
-            : document.createTextNode(m[6]),
-        );
-      }
-      last = re.lastIndex;
-    }
-    if (last < text.length) appendText(text.slice(last));
+    editorEl.appendChild(toDom(parse(markerText), document, this._richMakers(editable)));
   }
 
-  // Editor DOM → marker text. Chips become "[@Name](user:uid)"; <br>/<div>
-  // boundaries become newlines.
+  // Editor DOM → stored text (rich-text.js). The tags Ctrl+B / I / U and the
+  // toolbar leave become marks; <br>/<div> boundaries become newlines.
   _serializeEditor(editorEl) {
-    const chipClass = `${this.fig.family}__mention-chip`;
-    const imgClass = `${this.fig.family}__inline-img`;
-    let out = "";
-    const walk = (node) => {
-      node.childNodes.forEach((n) => {
-        if (n.nodeType === 3) {
-          out += n.textContent;
-        } else if (n.nodeType === 1) {
-          if (n.classList && n.classList.contains(chipClass)) {
-            const uid = n.dataset.uid;
-            const name = n.dataset.name || n.textContent.replace(/^@/, "");
-            out += `[@${name}](user:${uid})`;
-          } else if (n.classList && n.classList.contains(imgClass)) {
-            const w = parseInt(n.style.width, 10) || 0;
-            out += imgMarker(n.dataset.nid, n.dataset.hub, w || undefined);
-          } else if (n.tagName === "A") {
-            const href = safeUrl(n.dataset.href || n.getAttribute("href"));
-            const label = (n.textContent || "").trim();
-            if (!href || !label) walk(n);
-            // A link that reads as its own target needs no marker — read-only
-            // rendering re-links the bare URL anyway.
-            else if (label === href) out += label;
-            else out += linkMarker(label, href);
-          } else if (n.tagName === "BR") {
-            out += "\n";
-          } else if (n.tagName === "DIV") {
-            if (out && !out.endsWith("\n")) out += "\n";
-            walk(n);
-          } else {
-            walk(n);
-          }
-        }
-      });
+    return stringify(fromDom(editorEl, this._richOpt()));
+  }
+
+  // What fromDom needs to tell this panel's atoms from plain markup.
+  _richOpt() {
+    return {
+      chipClass: `${this.fig.family}__mention-chip`,
+      imgClass: `${this.fig.family}__inline-img`,
+      safeUrl,
     };
-    walk(editorEl);
-    return out;
+  }
+
+  // The nodes toDom draws atoms with. Bare URLs are linkified on read-only
+  // bodies only: in an editor that would turn every half-typed address into an
+  // atomic chip under the caret. There, Ctrl+K does it.
+  _richMakers(editable) {
+    return {
+      mention: (name, uid) => this._makeMentionChip(uid, name),
+      img: (nid, hub, width) => this._makeInlineImage(nid, hub, width, editable),
+      // A rejected scheme renders as its label, never as a live href.
+      link: (label, url) => {
+        const href = safeUrl(url);
+        return href ? this._makeLinkNode(label, href, editable) : document.createTextNode(label);
+      },
+      text: editable
+        ? (s) => [document.createTextNode(s)]
+        : (s) =>
+            linkifyTokens(s).map((tok) =>
+              tok.url ? this._makeLinkNode(tok.label, tok.url, false) : document.createTextNode(tok.text),
+            ),
+    };
+  }
+
+  // A format toolbar button / shortcut. The browser applies it (execCommand
+  // keeps it on the native undo stack); styleWithCSS off makes it leave the
+  // <b>/<i>/<u>/<s>/<ul>/<ol> tags fromDom reads, not inline styles. Saved to
+  // the draft at once rather than left to the input event.
+  _applyFormat(scope, format) {
+    const target = this._mentionTarget(scope);
+    const ed = target && this.el && this.el.querySelector(target.editorSelector);
+    if (!ed || ed.getAttribute("contenteditable") !== "true") return;
+    ed.focus();
+    if (format === "link") return this._openLinkPrompt(scope);
+    const cmd = FORMAT_COMMANDS[format];
+    if (!cmd) return;
+    document.execCommand("styleWithCSS", false, false);
+    document.execCommand(cmd);
+    this._onDescInput(scope, ed);
+    this._syncFormatBar();
+  }
+
+  // Light each toolbar button whose format is on under the caret; with the
+  // selection outside a bar's editor, none of its buttons is lit.
+  _syncFormatBar() {
+    if (!this.el) return;
+    const pfx = this.fig.family;
+    const sel = window.getSelection();
+    const node = sel && sel.rangeCount ? sel.anchorNode : null;
+    this.el.querySelectorAll(`.${pfx}__format-bar`).forEach((bar) => {
+      const field = bar.closest(`.${pfx}__desc-field`);
+      const ed = field && field.querySelector(`.${pfx}__desc-editor`);
+      const inside = !!(node && ed && ed.contains(node));
+      const elNode = node && (node.nodeType === 1 ? node : node.parentElement);
+      const link = inside && elNode && elNode.closest("a");
+      bar.querySelectorAll(`.${pfx}__format-btn`).forEach((btn) => {
+        const f = btn.dataset.format;
+        let on = false;
+        if (inside) {
+          on = f === "link" ? !!(link && ed.contains(link)) : !!document.queryCommandState(FORMAT_COMMANDS[f]);
+        }
+        if (on) btn.dataset.active = "1";
+        else delete btn.dataset.active;
+      });
+    });
   }
 
   _collectMentionUids(editorEl) {
@@ -8989,6 +9094,9 @@ class __tasks_panel extends LetcBox {
     };
     editorEl.onpaste = (e) => this._onEditorPaste(e, scope, editorEl);
     this._wireInlineImageRemove(editorEl, scope);
+    if (editorEl.getAttribute("contenteditable") === "true") {
+      this._wireLinkTip(editorEl, scope);
+    }
   }
 
   // Clipboard image (screenshot / copied external image): upload it, then
@@ -9087,49 +9195,31 @@ class __tasks_panel extends LetcBox {
   }
 
   // Clipboard payload → a fragment of what this editor can store: text, line
-  // breaks and links. Everything else collapses to its text, which is all the
-  // serializer would have kept anyway.
+  // breaks, links, bold / italic / underline / strike and lists, read by the
+  // same fromDom the serializer uses. Everything else collapses to its text,
+  // which is all the serializer would have kept anyway.
   _pasteFragment(html, plain) {
-    const frag = document.createDocumentFragment();
-    const addText = (str, collapse) => {
-      // HTML source whitespace is collapsed by the renderer; plain text is not.
-      const s = collapse ? String(str).replace(/[\t\r\n]+/g, " ") : String(str);
-      if (!s) return;
-      s.split("\n").forEach((part, i) => {
-        if (i > 0) frag.appendChild(document.createElement("br"));
-        if (part) frag.appendChild(document.createTextNode(part));
-      });
-    };
-    if (!html) {
-      addText(plain, false);
-      return frag;
-    }
-    const BLOCK = /^(?:DIV|P|LI|TR|H[1-6]|BLOCKQUOTE|SECTION|ARTICLE|UL|OL)$/;
+    // Plain text is taken literally: a pasted "**" is two stars, not bold.
+    const plainFrag = () =>
+      toDom(
+        String(plain || "")
+          .split("\n")
+          .map((v) => ({ t: "line", kids: v ? [{ t: "text", v }] : [] })),
+        document,
+        this._richMakers(true),
+      );
+    if (!html) return plainFrag();
     const doc = new DOMParser().parseFromString(html, "text/html");
-    const walk = (node) => {
-      node.childNodes.forEach((n) => {
-        if (n.nodeType === 3) return addText(n.textContent, true);
-        if (n.nodeType !== 1) return;
-        if (n.tagName === "A") {
-          const href = safeUrl(n.getAttribute("href"));
-          const label = (n.textContent || "").replace(/\s+/g, " ").trim();
-          if (href && label) frag.appendChild(this._makeLinkNode(label, href, true));
-          else addText(n.textContent, true);
-          return;
-        }
-        if (n.tagName === "BR") return frag.appendChild(document.createElement("br"));
-        if (n.tagName === "SCRIPT" || n.tagName === "STYLE") return;
-        if (BLOCK.test(n.tagName) && frag.lastChild) {
-          frag.appendChild(document.createElement("br"));
-        }
-        walk(n);
-      });
-    };
-    walk(doc.body);
+    // HTML source whitespace is collapsed by the renderer; fromDom would read
+    // its newlines as line breaks.
+    const tw = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      n.textContent = n.textContent.replace(/[\t\r\n]+/g, " ");
+    }
+    const frag = toDom(fromDom(doc.body, this._richOpt()), document, this._richMakers(true));
     // An HTML flavour that sanitises to nothing (wrapper-only markup) must not
     // swallow the paste — and _insertAtCaret would still drop the selection.
-    if (!frag.firstChild) addText(plain, false);
-    return frag;
+    return frag.firstChild ? frag : plainFrag();
   }
 
   // Drop a fragment where the caret is, then put the caret after it.
@@ -9382,15 +9472,30 @@ class __tasks_panel extends LetcBox {
     return this._uploadAttachment(file, "_inline");
   }
 
+  // Re-read a description editor into its draft. Update and Create save the
+  // draft, which _onDescInput fills on the editor's input event; a change that
+  // fired none (an open IME composition, an execCommand some browser did not
+  // report) would otherwise be saved as the text before it. Not _onDescInput
+  // itself: that would also run the mention popup logic at commit time.
+  _flushDescEditor(scope) {
+    const target = this._mentionTarget(scope);
+    const ed = target && this.el && this.el.querySelector(target.editorSelector);
+    if (!ed || ed.getAttribute("contenteditable") !== "true") return;
+    target.set(this._serializeEditor(ed), this._collectMentionUids(ed));
+  }
+
   _onDescInput(scope, editorEl) {
     // Browsers leave a stray <br> when the field is cleared, which defeats the
     // :empty placeholder — strip it back to truly empty. But an image-only
     // editor has no text content, so guard on chips AND inline images too,
     // otherwise a freshly pasted (text-less) image would be wiped here.
+    // A list just started on an empty editor (<ul><li><br></li></ul>) has no
+    // text either, and must not be wiped with it.
     if (
       !editorEl.textContent.trim() &&
       !editorEl.querySelector(`.${this.fig.family}__mention-chip`) &&
-      !editorEl.querySelector(`.${this.fig.family}__inline-img`)
+      !editorEl.querySelector(`.${this.fig.family}__inline-img`) &&
+      !editorEl.querySelector("ul, ol")
     ) {
       editorEl.innerHTML = "";
     }
@@ -9426,6 +9531,12 @@ class __tasks_panel extends LetcBox {
   }
 
   _onDescKeydown(e, scope) {
+    // Ctrl/Cmd+Shift+X / 8 / 7: strikethrough, bulleted, numbered list (B / I /
+    // U are the browser's own). Before the mention guard, like Ctrl+K.
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && SHIFT_FORMAT_KEYS[e.code]) {
+      e.preventDefault();
+      return this._applyFormat(scope, SHIFT_FORMAT_KEYS[e.code]);
+    }
     // Before the mention guard — Ctrl/Cmd+K works whether or not a mention
     // popup happens to be open.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "k" || e.key === "K")) {
@@ -9653,14 +9764,23 @@ class __tasks_panel extends LetcBox {
   }
 
   // Ctrl+K. Remembers the caret range up front — focusing the prompt's input
-  // blurs the editor and drops the live selection.
-  _openLinkPrompt(scope) {
+  // blurs the editor and drops the live selection. `link` is the hover tip's
+  // Edit (link-tip.js): that link, wherever the caret is.
+  _openLinkPrompt(scope, link) {
     const editorEl = this._descEditorEl(scope);
     if (!editorEl) return;
-    const sel = window.getSelection();
-    if (!sel || !sel.rangeCount || !editorEl.contains(sel.anchorNode)) return;
-    const range = sel.getRangeAt(0).cloneRange();
-    const anchor = this._closestLink(sel.anchorNode, editorEl);
+    this._hideLinkTip();
+    let range, anchor;
+    if (link && editorEl.contains(link)) {
+      range = document.createRange();
+      range.selectNode(link);
+      anchor = link;
+    } else {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount || !editorEl.contains(sel.anchorNode)) return;
+      range = sel.getRangeAt(0).cloneRange();
+      anchor = this._closestLink(sel.anchorNode, editorEl);
+    }
     const ref = {
       scope,
       range,
@@ -9911,10 +10031,55 @@ class __tasks_panel extends LetcBox {
     const normalized = this._normalizeTask(row);
     const idx = this._tasks.findIndex((t) => t.id === row.id);
     if (idx === -1) this._tasks.push(normalized);
-    else this._tasks[idx] = { ...this._tasks[idx], ...normalized };
+    else {
+      const moved =
+        normalized.status != null && normalized.status !== this._tasks[idx].status;
+      this._tasks[idx] = { ...this._tasks[idx], ...normalized };
+      // A server answer, a peer push or a parent rollup that changes the
+      // column: land on top of it, where task_update_status ranks it.
+      if (moved) this._toColumnTop(idx, !("rank" in normalized));
+    }
     // Replacing a row in place changes neither the array's identity nor its
     // length, so _childIndex's guard cannot see it — and it would keep handing
     // out the superseded object. Drop the cache here.
+    this._childIdx = null;
+  }
+
+  /**
+   * Move this._tasks[idx] — already carrying its NEW status — to the top of
+   * that column. getState() buckets this._tasks in array order, so "top" is
+   * "before the first task already in the column". `withRank` also gives it
+   * the rank the server will (min - 1), so the List view, which sorts by rank,
+   * agrees before the answer lands; a row that brought its own rank keeps it.
+   */
+  _toColumnTop(idx, withRank) {
+    if (idx < 0) return;
+    const [task] = this._tasks.splice(idx, 1);
+    const at = this._tasks.findIndex((t) => t.status === task.status);
+    if (withRank && at >= 0) {
+      const ranks = this._tasks
+        .filter((t) => t.status === task.status)
+        .map((t) => Number(t.rank) || 0);
+      task.rank = Math.min(...ranks) - 1;
+    }
+    this._tasks.splice(at < 0 ? this._tasks.length : at, 0, task);
+    this._childIdx = null;
+  }
+
+  // Where a task sits now, for undoing an optimistic column move that the
+  // server refused (see _restoreTaskPlace).
+  _taskPlace(id) {
+    const index = this._tasks.findIndex((t) => t.id === id);
+    return { id, index, rank: index < 0 ? undefined : this._tasks[index].rank };
+  }
+
+  _restoreTaskPlace(place) {
+    if (!place || place.index < 0) return;
+    const from = this._tasks.findIndex((t) => t.id === place.id);
+    if (from < 0) return;
+    const [task] = this._tasks.splice(from, 1);
+    task.rank = place.rank;
+    this._tasks.splice(Math.min(place.index, this._tasks.length), 0, task);
     this._childIdx = null;
   }
 
@@ -9970,6 +10135,23 @@ class __tasks_panel extends LetcBox {
     el.dataset.closing = "1";
     this._cancelPendingExit();
     this._closingTimer = setTimeout(run, OVERLAY_EXIT_MS);
+  }
+
+  /**
+   * Undo a dismissal on a backdrop that is being shown again.
+   *
+   * _dismissOverlay leaves its mark on the ELEMENT — an inline display:none on
+   * the instant path, data-closing on the animated one. A re-feed builds a new
+   * element and drops both, but _render's patcher keeps the old one when the
+   * skeleton matches, and the mark survives into the next open.
+   *
+   * @param {String} cls  backdrop class suffix, e.g. "detail-backdrop"
+   */
+  _reviveOverlay(cls) {
+    const el = this.el && this.el.querySelector(`.${this.fig.family}__${cls}`);
+    if (!el) return;
+    if (el.style.display === "none") el.style.display = "";
+    delete el.dataset.closing;
   }
 
   /**
@@ -11437,6 +11619,21 @@ class __tasks_panel extends LetcBox {
     this._focusSubtaskTitle(host);
   }
 
+  // A sibling already has this title. Same in-place flag as the two above.
+  _flagSubtaskTitleDuplicate(host, draft) {
+    if (draft) draft._titleDuplicate = true;
+    const card = this._subtaskCard(host);
+    if (card) card.dataset.titleDuplicate = "1";
+    this._focusSubtaskTitle(host);
+  }
+
+  _clearSubtaskTitleDuplicate(host, draft) {
+    if (!draft || !draft._titleDuplicate) return;
+    draft._titleDuplicate = false;
+    const card = this._subtaskCard(host);
+    if (card) card.dataset.titleDuplicate = "0";
+  }
+
   _clearSubtaskTitleTooLong(host, draft) {
     if (!draft || !draft._titleTooLong) return;
     draft._titleTooLong = false;
@@ -11596,6 +11793,9 @@ class __tasks_panel extends LetcBox {
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagSubtaskTitleTooLong("create-modal", draft);
     if (tooLong) return;
+    if (titleTaken(title, parentDraft.subtasks)) {
+      return this._flagSubtaskTitleDuplicate("create-modal", draft);
+    }
     if (!Array.isArray(parentDraft.subtasks)) parentDraft.subtasks = [];
     parentDraft.subtasks.push({
       // Local key, not a server id. Named `id` so the shared row skeleton can
@@ -11706,6 +11906,9 @@ class __tasks_panel extends LetcBox {
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagSubtaskTitleTooLong("detail-panel", draft);
     if (tooLong) return;
+    if (titleTaken(title, this.getSubtasks(parentId))) {
+      return this._flagSubtaskTitleDuplicate("detail-panel", draft);
+    }
 
     // _setControlBusy, NOT _setSubmitting: the latter raises the panel-wide
     // _submitting flag that gates commit-task / commit-detail, and creating a
@@ -11801,7 +12004,9 @@ class __tasks_panel extends LetcBox {
     // to, and the server rollup is inert there too.
     if (!target || target.key === originalStatus) return;
 
+    const place = this._taskPlace(id);
     task.status = target.key;
+    this._toColumnTop(place.index, true);
     this._refreshSubtaskSection();
     try {
       const updated = await this.postService({
@@ -11827,11 +12032,13 @@ class __tasks_panel extends LetcBox {
         this._refreshViewBody();
       } else {
         task.status = originalStatus;
+        this._restoreTaskPlace(place);
         this._refreshSubtaskSection();
       }
     } catch (err) {
       console.error("[tasks_panel] subtask toggle failed:", err);
       task.status = originalStatus;
+      this._restoreTaskPlace(place);
       this._refreshSubtaskSection();
     }
   }
@@ -11905,12 +12112,13 @@ class __tasks_panel extends LetcBox {
     return Array.isArray(this._taskActivity) ? this._taskActivity : [];
   }
 
-  // Pure visibility flip: data-active on the tabs, data-tab on the section (the
-  // skin hides whichever list the tab excludes). Neither list is re-fed — both
+  // Pure visibility flip over all | comments | history: data-active on the tabs,
+  // data-tab on the section (the skin hides whichever list the tab excludes;
+  // All excludes none). Neither list is re-fed — both
   // already hold their full content — so switching costs no rebuild and can't
   // drop the caret mid-comment.
   _switchActivityTab(tab) {
-    const next = ["comments", "history"].includes(tab) ? tab : "comments";
+    const next = ["all", "comments", "history"].includes(tab) ? tab : "comments";
     if (next === this._activityTab) return;
     this._activityTab = next;
     if (this.el) {
@@ -11922,9 +12130,9 @@ class __tasks_panel extends LetcBox {
       if (section) section.dataset.tab = next;
     }
     // Nothing fetched yet (the open-time load failed or is still in flight) —
-    // try again so History isn't permanently empty. Only a genuinely missing
+    // try again so History (and All, which shows it too) isn't permanently empty. Only a genuinely missing
     // change log costs a request; an already-loaded one is a pure toggle.
-    if (next === "history" && !this.getTaskHistory().length) {
+    if (next !== "comments" && !this.getTaskHistory().length) {
       const id = this._detailId;
       this._loadTaskHistory(id).then(() => {
         if (this._detailId === id && this.getTaskHistory().length) {
@@ -12119,5 +12327,7 @@ class __tasks_panel extends LetcBox {
 Object.assign(__tasks_panel.prototype, listSubtask);
 // Completing a parent with open subtasks asks first (complete-parent.js).
 Object.assign(__tasks_panel.prototype, completeParent);
+// Hover tip on an editor's links: URL + Edit (link-tip.js).
+Object.assign(__tasks_panel.prototype, linkTip);
 
 module.exports = __tasks_panel;

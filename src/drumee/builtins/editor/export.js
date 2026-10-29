@@ -65,4 +65,4 @@ async function downloadAsOffice(media) {
   return true;
 }
 
-module.exports = { downloadAsOffice, isCasualFile };
+module.exports = { downloadAsOffice, isCasualFile, saveBlob };

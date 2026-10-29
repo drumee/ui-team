@@ -83,3 +83,92 @@
     }
   }
 }
+
+// =====================================================================
+// The phone's bottom sheet — the desk's `__msheet` (modules/desk/skin/
+// mobile-sheets.scss), lifted out so every surface that used to float as a
+// centred card on a phone (Activity, Trash, the OTP gate, the desk's search
+// card, the invite popup) is drawn as the SAME sheet.
+//
+// Only the look lives here. Each caller keeps its own host, its own mobile
+// gate and its own open/close attribute, and supplies the transform that
+// parks it off-screen — that is why there is no `transform` below, and no
+// top/side padding (a sheet with a grabber wants less at the top).
+//
+// ONE height for every sheet, whatever it holds. A content-hugging
+// `max-height` made a sheet a different size for every list length; a fixed
+// height means the panel is the same box every time and only its CONTENT
+// moves.
+//
+// dvh, not vh: `vh` counts the strip behind a mobile browser's collapsing URL
+// bar, which would put the bottom padding — and the safe-area inset with it —
+// underneath that chrome. The vh line is the fallback for engines without
+// dvh; they drop the second declaration and keep the first.
+//
+// A landscape phone is ~380px tall, where 62dvh is barely three rows; those
+// viewports get almost the whole screen instead.
+//
+// `$z` — the caller's stacking slot, omitted when it already has one.
+// =====================================================================
+@mixin mobile-bottom-sheet($z: null) {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: auto;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  height: 62vh;
+  height: 62dvh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--normal-bg);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  @if $z {
+    z-index: $z;
+  }
+
+  @media (orientation: landscape) and (max-height: 480px) {
+    height: 88vh;
+    height: 88dvh;
+  }
+}
+
+// The pill at the top of the sheet. Declarations only, so the caller picks
+// the element: a real one (the desk's __msheet-grabber) or a pseudo
+// (`&::before`) on a surface whose skeleton has no slot for it. `content` and
+// `display` are no-ops on a real element.
+//
+// `--sheet-grabber` overrides the colour. --normal-bg-80 reads on a
+// --normal-bg ground in both themes, but in dark mode it is the same #333042
+// as --normal-bg-elevated, so a sheet on an elevated ground sets this to a
+// light tint or its pill disappears.
+@mixin mobile-bottom-sheet-grabber {
+  content: "";
+  display: block;
+  width: 36px;
+  height: 4px;
+  min-height: 4px;
+  border-radius: 999px;
+  background: var(--sheet-grabber, var(--normal-bg-80));
+  margin: 4px auto 10px;
+  flex: 0 0 auto;
+}
+
+// The sheet's ONE scroll region. It takes whatever is left under the grabber
+// (`flex: 1 1 auto`); `min-height: 0` lets it shrink below its content —
+// a flex child's default `min-height: auto` refuses to, which silently
+// defeats the overflow. overscroll-behavior: contain — flicking past the end
+// of the list must not hand the scroll to the page behind the sheet.
+@mixin mobile-bottom-sheet-scroller {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}

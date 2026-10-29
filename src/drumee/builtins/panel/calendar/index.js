@@ -28,9 +28,12 @@ const {
   day,
   ymd,
   dateOnly,
-  DAY_START_HOUR,
+  itemsByDay,
 } = require("./skeleton/helpers");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
+const { onMeetingsChanged } = require("libs/meetings-changed");
+// The modal foot's action buttons spin while their write is in flight.
+const { withButtonBusy } = require("libs/button-busy");
 const { modalKids } = require("./skeleton");
 const { recipientChips } = require("./skeleton/meeting-form");
 const A = require("./attachments");
@@ -46,6 +49,19 @@ const { rangeDisable } = require("./skeleton/date-field");
 // a day. Sending the instant itself back is refused outright (task.update fails).
 const dateOf = (v) => dateOnly(v) || "";
 
+// One "Restrict access" entry as the guest gate matches it (server dmz.js
+// _emailMatchesAllowed): an email address, or a domain written "@domain".
+// A bare "domain.tld" is taken as that domain. Lower-cased; anything else is
+// refused (null).
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const DOMAIN = /^@?([a-z0-9-]+\.)+[a-z]{2,}$/;
+function recipientEntry(raw) {
+  const v = String(raw || "").trim().toLowerCase();
+  if (EMAIL.test(v)) return v;
+  if (DOMAIN.test(v)) return v.startsWith("@") ? v : `@${v}`;
+  return null;
+}
+
 // task.search_files also lists folders and the hub root; a task links files.
 const NOT_ATTACHABLE = ["folder", "hub", "root", "schedule"];
 
@@ -55,6 +71,10 @@ const AUDIENCE_KEYS = ["personal", "team"];
 // A parked calendar (desk keep-alive) revealed after this long re-reads its
 // window even if no push arrived meanwhile — a missed push is plausible by then.
 const PARKED_REFRESH_MS = 60 * 1000;
+// How long the ‹ Today › spinner stays up after a ‹ › click, at least. A
+// prefetched window redraws in a few dozen ms — too short to see — and the
+// spinner is the click's only feedback when the grid barely changes.
+const NAV_SPINNER_MIN_MS = 300;
 
 class __calendar_main extends LetcBox {
   initialize(opt = {}) {
@@ -62,6 +82,9 @@ class __calendar_main extends LetcBox {
     super.initialize(opt);
     armItemsReady(this);
     this.declareHandlers();
+    // A meeting written from another screen in THIS tab: room.* pushes skip
+    // the writer's socket, so this is the only word that reaches us.
+    this._offMeetingsChanged = onMeetingsChanged(() => this._onMeetingsChanged());
 
     // Month, unless the entry point NAMED a view: the Daily Reminder card's
     // meetings tile asks for today in `day` view. Validated against VIEW_KEYS,
@@ -104,6 +127,7 @@ class __calendar_main extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    if (this._offMeetingsChanged) this._offMeetingsChanged();
     // The dropdown dismisser lives on `document`, so it outlives this widget
     // unless it is taken down here.
     this._unbindMenuDismiss();
@@ -137,6 +161,8 @@ class __calendar_main extends LetcBox {
       document.removeEventListener("keydown", this._formKeys, true);
       this._formKeys = null;
     }
+    // Its listeners live on `document` and `window`.
+    this._closeDayMenu();
     if (this._reloadTimer) {
       clearTimeout(this._reloadTimer);
       this._reloadTimer = null;
@@ -169,6 +195,8 @@ class __calendar_main extends LetcBox {
       // failed calendar.list (_loadItems resolves either way). A reload's
       // screen restore waits on this (libs/items-ready).
       markItemsReady(this);
+      // So the first ‹ or › answers from cache.
+      this._prefetchNeighbours();
     });
   }
 
@@ -196,6 +224,7 @@ class __calendar_main extends LetcBox {
     this._loadItems().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
       this._render();
+      this._prefetchNeighbours();
     });
   }
 
@@ -206,6 +235,7 @@ class __calendar_main extends LetcBox {
    */
   onPanelHidden() {
     this._parked = true;
+    this._closeDayMenu();
   }
 
   /**
@@ -321,6 +351,11 @@ class __calendar_main extends LetcBox {
     return !!this._loading;
   }
 
+  /** Is a ‹ › / Today / view switch still waiting on its window's rows? */
+  isNavLoading() {
+    return !!this._navLoading;
+  }
+
   /**
    * The rows the current view should draw: recurrence expanded into the visible
    * window, then the All / Task / Meeting filter and the Personal | Team toggle
@@ -365,48 +400,25 @@ class __calendar_main extends LetcBox {
    * onServerComplain and resolves undefined — so a non-list IS the error path.
    * Keep the rows already on screen rather than blanking a loaded calendar over
    * a transient failure, exactly as the tasks board does.
+   *
+   * `{ cached: true }` is the ‹ › / view-switch path (_navigate): a window
+   * already read (or being prefetched) is reused instead of paying another
+   * round trip. Every other caller — first paint, a live push, our own writes —
+   * wants the server's truth, so a plain load drops the cache first.
+   *
+   * A load overtaken by a newer one (fast ‹ ‹ ‹ clicks) leaves _items alone:
+   * applying it would draw one window's rows under another window's range.
    */
-  async _loadItems() {
+  async _loadItems({ cached = false } = {}) {
     const { from, to } = viewRange(this._view, this._cursor);
+    if (!cached) this._dropWindowCache();
+    const seq = (this._loadSeq = (this._loadSeq || 0) + 1);
     this._loading = true;
-
-    const service =
-      (SERVICE.calendar && SERVICE.calendar.list) || "calendar.list";
-    let rows;
-    try {
-      rows = await this.fetchService({
-        service,
-        // calendar.list is declared scope:"hub", so it needs a hub context even
-        // though it reads across every workspace. Visitor.id is the caller's own
-        // entity — the same pair activity.list_task_assignments passes for a
-        // user-scoped read.
-        hub_id: Visitor.id,
-        from: ymd(from),
-        to: ymd(to),
-        // `kinds` is deliberately NOT sent: the server defaults to both, and an
-        // array in a GET query string is a serialization risk for no gain —
-        // the All / Task / Meeting filter is applied client-side over the
-        // fetched window anyway (see getVisibleItems).
-      });
-    } catch (e) {
-      this.warn && this.warn("[calendar] calendar.list failed", e);
-      rows = null;
-    }
+    const list = await this._fetchWindow(from, to, cached);
+    if (seq !== this._loadSeq) return;
     this._loading = false;
     this._loadedAt = Date.now();
 
-    // Single-row collapse: a result set holding exactly one row answers `{...}`
-    // where every other count answers `[...]`. This has already emptied a
-    // calendar once in this product (room.list), so normalise every shape.
-    //
-    // Tested on id OR nid, and with `!= null` rather than truthiness: a raw
-    // meeting row is keyed by `nid` and carries no `id` at all, and an `id` of
-    // 0 is a legitimate key. `rows.id` alone therefore read a perfectly good
-    // single meeting as a failed request and drew "Try again" over an empty
-    // calendar — the exact failure this collapse handling exists to prevent.
-    const isRow = (r) =>
-      r && typeof r === "object" && (r.id != null || r.nid != null);
-    const list = Array.isArray(rows) ? rows : isRow(rows) ? [rows] : null;
     if (!list) {
       this._loadFailed = 1;
       // DEV ONLY: ?calfixture=1 renders sample rows so the grids, chips,
@@ -423,7 +435,100 @@ class __calendar_main extends LetcBox {
       return;
     }
     this._loadFailed = 0;
-    this._items = list.map((r) => normalizeRow(r)).filter(Boolean);
+    this._items = list;
+  }
+
+  /**
+   * The normalized rows for [from, to], or null when the read failed.
+   *
+   * With `cached`, a window read less than PARKED_REFRESH_MS ago — or one
+   * whose read is still in flight (a neighbour prefetch the user just clicked
+   * onto) — is answered from _windows. Failures are never cached.
+   */
+  _fetchWindow(from, to, cached) {
+    const key = `${ymd(from)}|${ymd(to)}`;
+    if (!this._windows) this._windows = new Map();
+    const hit = this._windows.get(key);
+    if (cached && hit && (hit.pending || Date.now() - hit.at < PARKED_REFRESH_MS)) {
+      return hit.promise;
+    }
+    const gen = this._windowGen || 0;
+    const entry = { pending: true, at: 0 };
+    entry.promise = this._readWindow(from, to).then((list) => {
+      entry.pending = false;
+      entry.at = Date.now();
+      // Dropped meanwhile (a push or a write invalidated it), or failed.
+      if (!list || gen !== (this._windowGen || 0)) {
+        if (this._windows.get(key) === entry) this._windows.delete(key);
+      }
+      return list;
+    });
+    this._windows.set(key, entry);
+    return entry.promise;
+  }
+
+  async _readWindow(from, to) {
+    const service =
+      (SERVICE.calendar && SERVICE.calendar.list) || "calendar.list";
+    let rows;
+    try {
+      rows = await this.fetchService({
+        service,
+        // calendar.list is declared scope:"hub", so it needs a hub context even
+        // though it reads across every workspace. Visitor.id is the caller's own
+        // entity — the same pair activity.list_task_assignments passes for a
+        // user-scoped read.
+        hub_id: Visitor.id,
+        // One day of slack each side. The server turns these dates into
+        // epochs in ITS timezone (calendar.js _epoch — UTC on stage), but a
+        // meeting is placed on the VIEWER's local day: 00:00 on the 2nd in
+        // UTC+7 is 17:00 on the 1st in UTC, so a Day view of the 2nd never
+        // got it back while the month window did. A day covers any UTC
+        // offset; getVisibleItems keeps only rows on the view's own days.
+        from: ymd(from.subtract(1, "day")),
+        to: ymd(to.add(1, "day")),
+        // `kinds` is deliberately NOT sent: the server defaults to both, and an
+        // array in a GET query string is a serialization risk for no gain —
+        // the All / Task / Meeting filter is applied client-side over the
+        // fetched window anyway (see getVisibleItems).
+      });
+    } catch (e) {
+      this.warn && this.warn("[calendar] calendar.list failed", e);
+      rows = null;
+    }
+
+    // Single-row collapse: a result set holding exactly one row answers `{...}`
+    // where every other count answers `[...]`. This has already emptied a
+    // calendar once in this product (room.list), so normalise every shape.
+    //
+    // Tested on id OR nid, and with `!= null` rather than truthiness: a raw
+    // meeting row is keyed by `nid` and carries no `id` at all, and an `id` of
+    // 0 is a legitimate key. `rows.id` alone therefore read a perfectly good
+    // single meeting as a failed request and drew "Try again" over an empty
+    // calendar — the exact failure this collapse handling exists to prevent.
+    const isRow = (r) =>
+      r && typeof r === "object" && (r.id != null || r.nid != null);
+    const list = Array.isArray(rows) ? rows : isRow(rows) ? [rows] : null;
+    if (!list) return null;
+    return list.map((r) => normalizeRow(r)).filter(Boolean);
+  }
+
+  /** Forget every cached window, and orphan any read still in flight. */
+  _dropWindowCache() {
+    this._windowGen = (this._windowGen || 0) + 1;
+    if (this._windows) this._windows.clear();
+  }
+
+  /**
+   * Warm the windows one ‹ and one › away, so the arrows answer from cache.
+   * Fire-and-forget: a prefetch only fills _windows, never the screen.
+   */
+  _prefetchNeighbours() {
+    if (this._parked || (this.isDestroyed && this.isDestroyed())) return;
+    [-1, 1].forEach((d) => {
+      const { from, to } = viewRange(this._view, this._neighbour(d));
+      this._fetchWindow(from, to, true);
+    });
   }
 
   /** DEV ONLY — see _loadItems. */
@@ -446,6 +551,9 @@ class __calendar_main extends LetcBox {
   }
 
   _render() {
+    // The page feed rebuilds the day-menu slot empty and the "+" it hangs
+    // from, so an open day menu has nothing left to point at.
+    this._closeDayMenu();
     // Which range the next paint draws. The scroll rules below key on it: the
     // same range re-fed is a repaint, a different one is a new screen.
     const key = `${this._view}:${this._cursor}`;
@@ -461,7 +569,14 @@ class __calendar_main extends LetcBox {
     // height to set scrollTop against until the frame settles.
     _.defer(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
-      this._placeHoursScroll(keep);
+      // ‹ Today › asked for today's cell: one shot, on the paint that has the
+      // rows (a miss paints once before they land, and the second paint would
+      // cut a smooth scroll short). Later repaints keep where this one went.
+      if (this._scrollTodayPending && !this._loading) {
+        this._scrollTodayPending = false;
+        if (this._scrollToToday()) return;
+      }
+      this._restoreGridScroll(keep);
     });
   }
 
@@ -471,45 +586,33 @@ class __calendar_main extends LetcBox {
   }
 
   /**
-   * The hour canvas draws all 24 hours (skeleton/hours.js — the frame the
-   * workspace Meet tab's schedule uses), so an unscrolled week/day grid opens
-   * on empty night hours. Two different jobs, and conflating them is how a
-   * grid either fights the user or strands them at midnight:
-   *
-   *   range CHANGED (view switch, next/prev, a day picked) → land on the
-   *     earliest timed item in view with one row of context above it, or on the
-   *     working hours when nothing is scheduled. Same rule, and the same
-   *     default hour, as window/folder/index.js _scrollScheduleIntoView.
-   *   range the SAME, page merely re-fed (a live push, a filter repaint, a
-   *     modal closing) → put the user back where they were. _render rebuilds
-   *     the whole page, so without this every push threw the grid to midnight.
-   *
-   * Month doesn't scroll by hour and is left alone in the first case.
+   * A page merely re-fed on the same range (a live push, a filter repaint, a
+   * modal closing) puts the user back where they were: _render rebuilds the
+   * whole page, so without this every push threw the grid back to the top. A
+   * new range (view switch, next/prev, a day picked) opens at the top.
    */
-  _placeHoursScroll(keep) {
+  _restoreGridScroll(keep) {
     const grid = this._gridEl();
-    if (!grid) return;
-    if (keep != null) {
-      grid.scrollTop = keep;
-      return;
-    }
-    if (grid.getAttribute("data-view") === "month") return;
+    if (grid && keep != null) grid.scrollTop = keep;
+  }
 
-    const hours = this.getVisibleItems()
-      .filter((row) => row.kind === "meeting" && row.stime)
-      .map((row) => fromEpoch(row.stime))
-      .filter(Boolean)
-      .map((d) => d.hour());
-    const hour = hours.length ? Math.min(...hours) : DAY_START_HOUR;
-
-    // Measured, not assumed: the row height is a token (--cal-hour-height) and
-    // the responsive block is free to change it.
-    const rule = grid.querySelector(`.${this.fig.family}__hour-rule`);
-    const rowH = (rule && rule.getBoundingClientRect().height) || 0;
-    if (!rowH) return;
-    // One row of context above the first item, clamped to the top. The header
-    // is sticky but in flow, so its height cancels out of the arithmetic.
-    grid.scrollTop = Math.max(0, (hour - 1) * rowH);
+  /**
+   * Centre today's cell in the grid — the month square, or the week's column
+   * (the grid scrolls sideways on a phone). False when today is not drawn.
+   * Scrolls the grid alone: scrollIntoView would move the desk around it too.
+   */
+  _scrollToToday() {
+    const grid = this._gridEl();
+    const cell = grid && grid.querySelector('[data-today="1"]');
+    if (!cell) return false;
+    const g = grid.getBoundingClientRect();
+    const c = cell.getBoundingClientRect();
+    grid.scrollTo({
+      top: grid.scrollTop + c.top - g.top - (g.height - c.height) / 2,
+      left: grid.scrollLeft + c.left - g.left - (g.width - c.width) / 2,
+      behavior: "smooth",
+    });
+    return true;
   }
 
   /**
@@ -584,6 +687,17 @@ class __calendar_main extends LetcBox {
     }, 250);
   }
 
+  /**
+   * A meeting was booked, edited or removed elsewhere in this tab (a folder's
+   * "Meeting information" modal — libs/meetings-changed). Same answer as a
+   * room.* push: one debounced re-read, held while parked or while our own
+   * modal is open (_scheduleReload).
+   */
+  _onMeetingsChanged() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this._scheduleReload();
+  }
+
   onWsMessage(svc, data, options = {}) {
     // Server pushes built with payload(data, {service}) arrive as a
     // `live.update` envelope whose FIRST arg is that envelope name — the real
@@ -621,11 +735,64 @@ class __calendar_main extends LetcBox {
   // ── navigation ─────────────────────────────────────────────────────────────
 
   _step(direction) {
+    this._cursor = this._neighbour(direction);
+    return this._navigate();
+  }
+
+  /** The cursor one ‹ (-1) or › (+1) away in the current view. */
+  _neighbour(direction) {
     const unit = this._view === "day" ? "day" : this._view === "week" ? "week" : "month";
     const anchor = day(this._cursor) || Dayjs();
-    this._cursor = ymd(anchor.add(direction, unit));
+    return ymd(anchor.add(direction, unit));
+  }
+
+  /**
+   * The cursor or the view moved: show the new window NOW, data second.
+   *
+   * This used to be _reload(), so every ‹ › waited a full calendar.list round
+   * trip with the old range still on screen. Now a cached window (the
+   * neighbours are prefetched) paints at once with no request at all; a miss
+   * paints the new range immediately over the rows already held — the grid
+   * only draws those that fall inside it — and repaints when the read lands.
+   *
+   * The ‹ Today › pill spins (isNavLoading) on every click, for the read if
+   * there is one and for at least NAV_SPINNER_MIN_MS either way. It goes off by
+   * re-stamping the pill, not by another page rebuild.
+   */
+  async _navigate() {
     this._closeMenus();
-    this._reload();
+    const key = `${this._view}:${this._cursor}`;
+    const started = Date.now();
+    this._navLoading = true;
+    const load = this._loadItems({ cached: true });
+    // A cache hit has already resolved, but awaiting is a microtask — paint
+    // the miss case before it, so the label and the grid move on the click.
+    const { from, to } = viewRange(this._view, this._cursor);
+    const hit = this._windows && this._windows.get(`${ymd(from)}|${ymd(to)}`);
+    if (!hit || hit.pending) this._render();
+    await load;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // Overtaken by another click: that one paints.
+    if (key !== `${this._view}:${this._cursor}`) return;
+    this._render();
+    this._prefetchNeighbours();
+    clearTimeout(this._navSpinnerTimer);
+    this._navSpinnerTimer = setTimeout(() => {
+      this._navSpinnerTimer = null;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      // A newer click owns the spinner now.
+      if (key !== `${this._view}:${this._cursor}`) return;
+      this._navLoading = false;
+      this._stampNavLoading();
+    }, Math.max(0, NAV_SPINNER_MIN_MS - (Date.now() - started)));
+  }
+
+  /** Mirror isNavLoading onto the pill on screen, without a rebuild. */
+  _stampNavLoading() {
+    const nav = this.el && this.el.querySelector(`.${this.fig.family}__nav`);
+    if (!nav) return;
+    nav.setAttribute("data-loading", this._navLoading ? "1" : "0");
+    nav.setAttribute("aria-busy", this._navLoading ? "true" : "false");
   }
 
   _closeMenus() {
@@ -635,6 +802,8 @@ class __calendar_main extends LetcBox {
 
   /** Open `name`, or close it if it is the one already open. */
   _toggleMenu(name) {
+    // One dropdown at a time, the day cell's "+" menu included.
+    this._closeDayMenu();
     this._openMenu = this._openMenu === name ? null : name;
     return this._renderToolbar();
   }
@@ -692,9 +861,169 @@ class __calendar_main extends LetcBox {
     this._menuDismiss = null;
   }
 
+  // ── a day cell's "+" menu ──────────────────────────────────────────────────
+  //
+  // The "+ New" dropdown's Task / Meeting rows, opened from a day cell's "+"
+  // and due that day. It is NOT a fifth toolbar menu: those live in the
+  // toolbar row and repaint with it, while this one hangs from a cell in the
+  // grid, and rebuilding the grid to open it would destroy the "+" that was
+  // clicked. So it is fed into one floating slot on the page (skeleton/index.js
+  // "cal-day-menu"), placed under the "+" in viewport coordinates, and closed by
+  // a click anywhere else, Escape, a scroll or a resize — any of which would
+  // leave it pointing at the wrong place.
+
+  /** Open the menu under the clicked "+", or close it if that "+" owns it. */
+  _toggleDayMenu(cmd) {
+    const key = cmd && cmd.mget && cmd.mget("calDay");
+    this._toggleDayPopover(cmd, () => require("./skeleton/toolbar").dayMenu(this, key));
+  }
+
+  /**
+   * A month cell's "+N more": every visible item of that day, grouped by kind
+   * (skeleton/day-popover.js), in the same floating slot, laid OVER the cell
+   * rather than under the control — the cell is what it expands.
+   */
+  _toggleDayMore(cmd) {
+    const key = cmd && cmd.mget && cmd.mget("calDay");
+    const owner = cmd && cmd.el;
+    const cell = owner && owner.closest && owner.closest(`.${this.fig.family}__day`);
+    this._toggleDayPopover(cmd, () => require("./skeleton/day-popover")(this, key), cell || owner);
+  }
+
+  /**
+   * Open `build()` in the floating slot for the clicked control, or close it
+   * if that control owns it. `over`, when given, is the element the popover
+   * covers (see _placeDayMenu); otherwise it hangs under the control.
+   */
+  _toggleDayPopover(cmd, build, over) {
+    const key = cmd && cmd.mget && cmd.mget("calDay");
+    const anchor = cmd && cmd.el;
+    const same = this._dayMenu && this._dayMenu.anchor === anchor;
+    this._closeDayMenu();
+    if (same || !key || !anchor) return;
+
+    // One dropdown at a time.
+    if (this._openMenu) {
+      this._closeMenus();
+      this._renderToolbar();
+    }
+
+    const slot = _.isFunction(this.getPart) ? this.getPart("cal-day-menu") : null;
+    if (!slot || (slot.isDestroyed && slot.isDestroyed()) || !slot.el) return;
+    this._dayMenu = { key, anchor, slot, over: over || null };
+    anchor.dataset.open = "1";
+    slot.el.dataset.open = "1";
+    if (over) slot.el.dataset.over = "1";
+    slot.feed(build());
+    this._placeDayMenu();
+    // The rows are laid out after the feed: clamp once they have a size.
+    requestAnimationFrame(() => this._placeDayMenu());
+    this._bindDayMenuDismiss();
+  }
+
+  /**
+   * Under the "+", 4px below it and starting at its left edge; above it when
+   * the viewport has no room below; never past the viewport's edges.
+   *
+   * Over a cell ("+N more"): centred on it, its top 8px above the cell's, a
+   * little wider than the cell (at least the skin's min-width), then pushed
+   * back inside the viewport.
+   */
+  _placeDayMenu() {
+    const m = this._dayMenu;
+    // Over a cell, the cell is what counts: a delete re-feeds its body, and
+    // the "+N more" that opened the popover may be gone with it.
+    if (!m || !m.slot.el || !(m.over || m.anchor).isConnected) return;
+    const GAP = 4;
+    const EDGE = 8;
+    const el = m.slot.el;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (m.over && m.over.isConnected) {
+      const c = m.over.getBoundingClientRect();
+      el.style.width = `${Math.min(c.width + 2 * EDGE, vw - 2 * EDGE)}px`;
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const left = c.left + (c.width - w) / 2;
+      el.style.left = `${Math.max(EDGE, Math.min(left, vw - w - EDGE))}px`;
+      el.style.top = `${Math.max(EDGE, Math.min(c.top - EDGE, vh - h - EDGE))}px`;
+      return;
+    }
+    const a = m.anchor.getBoundingClientRect();
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    const below = a.bottom + GAP;
+    const top = below + h <= vh - EDGE || a.top - GAP - h < EDGE ? below : a.top - GAP - h;
+    el.style.top = `${Math.max(EDGE, top)}px`;
+    el.style.left = `${Math.max(EDGE, Math.min(a.left, vw - w - EDGE))}px`;
+  }
+
+  _closeDayMenu() {
+    const m = this._dayMenu;
+    this._dayMenu = null;
+    this._unbindDayMenuDismiss();
+    if (!m) return;
+    if (m.anchor) delete m.anchor.dataset.open;
+    if (m.slot && !(m.slot.isDestroyed && m.slot.isDestroyed()) && m.slot.el) {
+      delete m.slot.el.dataset.open;
+      delete m.slot.el.dataset.over;
+      m.slot.el.style.width = "";
+      m.slot.feed([]);
+    }
+  }
+
+  _bindDayMenuDismiss() {
+    if (this._dayMenuDismiss) return;
+    const close = () => this._closeDayMenu();
+    // Capture phase, like the toolbar's: a click outside closes the menu
+    // before it reaches what it was aimed at. A click on the menu itself is
+    // left to its row's service, and one on the "+" that owns it to
+    // _toggleDayMenu, which closes it — closing here first would make that
+    // toggle open it again.
+    const onClick = (ev) => {
+      const m = this._dayMenu;
+      const t = ev && ev.target;
+      if (!m || !t || !t.closest) return;
+      if (m.slot.el && m.slot.el.contains(t)) return;
+      if (m.anchor.contains(t)) return;
+      close();
+    };
+    const onKey = (ev) => {
+      if (ev.key === "Escape") close();
+    };
+    // Except a scroll inside the popover itself: the "+N more" list scrolls.
+    const onScroll = (ev) => {
+      const m = this._dayMenu;
+      const t = ev && ev.target;
+      if (m && m.slot.el && t && t.nodeType === 1 && m.slot.el.contains(t)) return;
+      close();
+    };
+    this._dayMenuDismiss = { onClick, onKey, onScroll, close };
+    document.addEventListener("click", onClick, true);
+    document.addEventListener("keydown", onKey, true);
+    // Capture, so a scroll anywhere — the grid, a week column — counts.
+    document.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", close);
+  }
+
+  _unbindDayMenuDismiss() {
+    const d = this._dayMenuDismiss;
+    if (!d) return;
+    this._dayMenuDismiss = null;
+    document.removeEventListener("click", d.onClick, true);
+    document.removeEventListener("keydown", d.onKey, true);
+    document.removeEventListener("scroll", d.onScroll, true);
+    window.removeEventListener("resize", d.close);
+  }
+
   // ── forms ──────────────────────────────────────────────────────────────────
 
-  _openTaskForm(row) {
+  /**
+   * @param {Object} [row]            the task to edit; none for a new task
+   * @param {Object} [opts.parentRow] set when `row` is a subtask opened from
+   *   its parent's form: the "Parent / child" crumb leads back there
+   */
+  _openTaskForm(row, { parentRow = null } = {}) {
     this._closeMenus();
     // Both dates in YYYY-MM-DD from the start: every task.update writes both
     // columns, so the draft must always hold the row's own Start and End.
@@ -722,8 +1051,10 @@ class __calendar_main extends LetcBox {
         draft: {
           title: "",
           description: "",
+          // Opened on a day (a cell's "+" menu or the board's column):
+          // Start and End both on it. End alone left Start blank.
           due_date: this._pendingDay || "",
-          start_date: "",
+          start_date: this._pendingDay || "",
           status: "todo",
           priority: "medium",
           files: [],
@@ -734,6 +1065,7 @@ class __calendar_main extends LetcBox {
     this._form.doneKeys = [];
     this._form.subMenu = null;
     this._form.search = { seq: 0, timer: null, blurTimer: null, rows: [] };
+    this._form.parentRow = row ? parentRow : null;
     this._pendingDay = null;
     this._renderModal();
     this._loadDoneColumns(this._form);
@@ -743,8 +1075,13 @@ class __calendar_main extends LetcBox {
     }
   }
 
-  _openMeetingForm() {
+  /**
+   * The meeting form: a new personal meeting, or — given a personal meeting's
+   * calendar row — that meeting, prefilled, to update or delete.
+   */
+  _openMeetingForm(row) {
     this._closeMenus();
+    if (row) return this._openMeetingEdit(row);
     const base = day(this._pendingDay) || day(this._cursor) || Dayjs();
     this._form = {
       kind: "meeting",
@@ -765,6 +1102,121 @@ class __calendar_main extends LetcBox {
     this._renderModal();
   }
 
+  _openMeetingEdit(row) {
+    const start = fromEpoch(row.stime) || Dayjs();
+    const end = fromEpoch(row.etime) || start.add(30, "minute");
+    // The form's 12-hour clock parts, the inverse of _epochFor.
+    const clock = (d) => ({
+      hour: d.hour() % 12 || 12,
+      minute: String(d.minute()).padStart(2, "0"),
+      meridiem: d.hour() < 12 ? "AM" : "PM",
+    });
+    this._form = {
+      kind: "meeting",
+      mode: "edit",
+      row,
+      draft: {
+        title: row.title || "",
+        date: ymd(start),
+        start: clock(start),
+        end: clock(end),
+        require_email: false,
+        restrict: false,
+        recipients: [],
+        password_on: false,
+        has_password: false,
+        files: [],
+      },
+    };
+    this._pendingDay = null;
+    this._renderModal();
+    // The Invite column, as "New personal meeting" draws it, filled from the
+    // meeting's existing guest link.
+    this._loadMeetingLink(this._form);
+  }
+
+  /**
+   * Read an existing meeting's guest link gate (room.link_info) into the
+   * edit form's Invite column: require email, the allowed emails / @domains,
+   * and whether a password is set (never the password — the field stays
+   * empty and keeps it). What was read is kept as form.linkInfo, so Update
+   * re-grants only a gate that changed (_saveMeetingGate).
+   */
+  async _loadMeetingLink(form) {
+    const row = (form && form.row) || {};
+    const info = await this.fetchService({
+      service: (SERVICE.room && SERVICE.room.link_info) || "room.link_info",
+      hub_id: this._personalHub,
+      nid: row.nid || row.id,
+      _ts: Date.now(),
+    });
+    if (this._form !== form || !info || info.error) return;
+    const recipients = Array.isArray(info.allowed_emails) ? info.allowed_emails.slice() : [];
+    const require_email = !!Number(info.require_email) || recipients.length > 0;
+    const password_on = !!info.has_password;
+    // Keep what was typed meanwhile: the re-feed below rebuilds the inputs.
+    this._absorbFormText();
+    Object.assign(form.draft, {
+      require_email,
+      restrict: recipients.length > 0,
+      recipients,
+      password_on,
+      has_password: password_on,
+    });
+    form.linkInfo = { require_email, recipients: recipients.slice(), password_on };
+    // Only the Invite column: re-feeding the whole modal replayed its pop-in
+    // entrance, and the modal looked as if it opened twice.
+    this._renderMeetingInvite();
+  }
+
+  /** Re-feed the meeting form's Invite column alone (falls back to the modal). */
+  _renderMeetingInvite() {
+    const part = _.isFunction(this.getPart) ? this.getPart("meeting-invite") : null;
+    if (!part || (part.isDestroyed && part.isDestroyed()) || !part.el) {
+      return this._renderModal();
+    }
+    part.feed(require("./skeleton/meeting-form").inviteSide(this));
+  }
+
+  /**
+   * Save an edited gate onto the meeting's SAME guest link: room.public_link
+   * keeps the token for the meeting, so the URL already sent out still
+   * works. Nothing is re-granted when the gate did not change. A password
+   * left on but not retyped is kept (keep_password); a new one replaces it;
+   * switching it off clears it.
+   *
+   * @returns {Promise<boolean>} false when the server refused
+   */
+  async _saveMeetingGate(form, draft) {
+    const was = form.linkInfo;
+    // The link was never read (no answer): leave it exactly as it is.
+    if (!was) return true;
+    const recipients = draft.restrict ? (draft.recipients || []).slice() : [];
+    const require_email = !!draft.require_email || recipients.length > 0;
+    const password_on = !!draft.password_on;
+    const password = password_on && draft.password ? String(draft.password) : "";
+    if (
+      require_email === was.require_email &&
+      password_on === was.password_on &&
+      !password &&
+      JSON.stringify(recipients) === JSON.stringify(was.recipients)
+    ) {
+      return true;
+    }
+    const row = form.row || {};
+    const payload = {
+      service: (SERVICE.room && SERVICE.room.public_link) || "room.public_link",
+      hub_id: this._personalHub,
+      nid: row.nid || row.id,
+      require_email: require_email ? 1 : 0,
+      allowed_emails: recipients,
+    };
+    if (password) payload.password = password;
+    else if (password_on) payload.keep_password = 1;
+    const res = await this.postService(payload);
+    return !!res && !res.error;
+  }
+
   _closeForm() {
     // Whatever is still uploading has no task or meeting to join any more.
     this._cancelFormUploads(this._form);
@@ -783,12 +1235,18 @@ class __calendar_main extends LetcBox {
     }
     // The modal goes first — the reload waits on the network.
     this._renderModal();
-    // Pushes that landed while the modal was open were held back
-    // (_scheduleReload), and the task modal saves subtask edits — and, after a
-    // failed subtask, the task itself — before its Update/Create is pressed.
-    // None of our own writes come back as a push (the server skips the
-    // sending socket), so a task form always reloads on its way out.
-    if (this._dirty || (form && form.kind === "task")) return this._reload();
+    // Closing alone never touches the page under the modal. It reloads only
+    // when something changed: a push that landed while the modal was open was
+    // held back (_scheduleReload), or the form itself wrote — the task modal
+    // saves subtasks and files before Update/Create is pressed (`form.wrote`,
+    // see _markFormWrote). None of our own writes come back as a push (the
+    // server skips the sending socket), so those need the reload.
+    if (this._dirty || (form && form.wrote)) return this._reload();
+  }
+
+  /** The open form has written to the server: its close must reload. */
+  _markFormWrote(form = this._form) {
+    if (form) form.wrote = true;
   }
 
   /**
@@ -1000,7 +1458,7 @@ class __calendar_main extends LetcBox {
     const list = (this._form && this._form.draft.recipients) || [];
     const part = _.isFunction(this.getPart) ? this.getPart("form-recipient-chips") : null;
     if (!part || !part.el) return;
-    part.feed(recipientChips(this, list));
+    part.feed(recipientChips(this, list, this._form && this._form.recipientsExpanded));
     part.el.setAttribute("data-count", String(list.length));
   }
 
@@ -1008,7 +1466,7 @@ class __calendar_main extends LetcBox {
   //
   // Files upload the moment they are added (upload-progress window, the route
   // the Task tab takes) into the personal hub's hidden task folder; the commit
-  // only links the nids (_linkTaskFiles / _linkMeetingFiles). Every callback
+  // only links the nids (_linkTaskFiles). Every callback
   // checks it still belongs to the open form: the modal can close, or another
   // open, while bytes are in flight.
 
@@ -1116,6 +1574,7 @@ class __calendar_main extends LetcBox {
       // Edit mode: the file is already on the task. Unlinked now, like the
       // Task tab's ✕, addressed with the ROW's hub.
       const row = form.row || {};
+      form.wrote = true;
       const res = await this.postService({
         service: (SERVICE.task && SERVICE.task.unlink_file) || "task.unlink_file",
         hub_id: row.hub_id || this._personalHub,
@@ -1349,6 +1808,7 @@ class __calendar_main extends LetcBox {
       }
       if (hotkeys.isComposing(e) || hotkeys.inTextEntry(e.target)) return;
       claim();
+      if (form.kind === "meeting-info") return this._closeForm();
       if (form.kind === "task-quick-open") {
         const panel = this._quickPanel;
         // Still loading: there is no card, and no draft, to discard yet.
@@ -1387,7 +1847,8 @@ class __calendar_main extends LetcBox {
    * open modal. A paste into the title or description stays text.
    */
   _onPasteFiles(e) {
-    if (!this._form || (this._form.kind !== "task" && this._form.kind !== "meeting")) return;
+    // The task form only: the meeting form takes no attachments.
+    if (!this._form || this._form.kind !== "task") return;
     const t = e && e.target;
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
     const files = Array.from((e.clipboardData && e.clipboardData.files) || []);
@@ -1424,21 +1885,11 @@ class __calendar_main extends LetcBox {
     const svc = (SERVICE.task && SERVICE.task.link_file) || "task.link_file";
     const failed = [];
     for (const file_nid of nids || []) {
+      this._markFormWrote();
       const res = await this.postService({ service: svc, hub_id, task_id, file_nid });
       if (!Array.isArray(res)) failed.push(file_nid);
     }
     return failed;
-  }
-
-  async _linkMeetingFiles(nid, nids) {
-    if (!nids || !nids.length) return true;
-    const res = await this.postService({
-      service: (SERVICE.room && SERVICE.room.link_files) || "room.link_files",
-      hub_id: this._personalHub,
-      nid,
-      file_nids: nids,
-    });
-    return !!(res && Array.isArray(res.attachments));
   }
 
   /** Edit mode: the task's current files, as removable chips. */
@@ -1594,6 +2045,8 @@ class __calendar_main extends LetcBox {
         localKey: `id:${t.id}`,
         id: t.id,
         title: t.title || "",
+        // Kept for the subtask's own detail (_openSubtask).
+        description: t.description || "",
         status: t.status || "todo",
         priority: t.priority || "medium",
         due_date: dateOf(t.due_date),
@@ -1606,6 +2059,70 @@ class __calendar_main extends LetcBox {
       ...(form.draft.subtasks || []).filter((s) => !s.id || !ids.has(String(s.id))),
     ];
     this._renderSubtasks();
+  }
+
+  /**
+   * A saved subtask row was clicked: open that subtask's own detail in this
+   * modal, as a board row opens its child (open-detail). It is a task of the
+   * parent's own hub, so it inherits the parent's scope and write right.
+   *
+   * The parent's draft goes, as on the board; its pending uploads are dropped
+   * the way _closeForm drops them. A write the parent already made is carried
+   * over, so closing the subtask still reloads the calendar.
+   */
+  _openSubtask(key) {
+    const form = this._form;
+    if (!form || form.kind !== "task") return;
+    const s = (form.draft.subtasks || []).find((x) => x.localKey === key);
+    if (!s || !s.id) return;
+    const parent = form.row || {};
+    this._switchTaskForm(
+      {
+        kind: "task",
+        id: s.id,
+        hub_id: parent.hub_id,
+        scope: parent.scope,
+        can_write: parent.can_write,
+        title: s.title || "",
+        description: s.description || "",
+        status: s.status || "todo",
+        priority: s.priority || "medium",
+        due_date: s.due_date || "",
+        start_date: s.start_date || "",
+      },
+      // The "Parent / child" crumb's way back (_openParentTask).
+      { parentRow: form.row },
+    );
+  }
+
+  /** The subtask form's crumb: back to the parent it was opened from. */
+  _openParentTask() {
+    const form = this._form;
+    const parent = form && form.parentRow;
+    if (!parent) return;
+    this._switchTaskForm(parent);
+  }
+
+  /**
+   * Swap the open task form for another task's, in the same modal. Leaves the
+   * current form the way _closeForm leaves it (menu, search timers, pending
+   * uploads) without closing the modal, and carries a write it made over, so
+   * the eventual close still reloads the calendar.
+   */
+  _switchTaskForm(row, opts = {}) {
+    const form = this._form;
+    if (form) {
+      form.subMenu = null;
+      this._syncSubtaskMenuDismiss();
+      if (form.search) {
+        clearTimeout(form.search.timer);
+        clearTimeout(form.search.blurTimer);
+      }
+      this._cancelFormUploads(form);
+    }
+    const wrote = !!(form && form.wrote);
+    this._openTaskForm(row, opts);
+    if (wrote && this._form) this._form.wrote = true;
   }
 
   /** Names typed into rows not saved yet → the draft. Runs before every re-feed of the rows. */
@@ -1672,6 +2189,7 @@ class __calendar_main extends LetcBox {
     const title = String(s.title || "").trim();
     if (!title) return Promise.resolve(true);
     s.busy = true;
+    form.wrote = true;
     s.pending = this.postService({
       service: (SERVICE.task && SERVICE.task.create) || "task.create",
       hub_id: (form.row && form.row.hub_id) || this._personalHub,
@@ -1724,6 +2242,7 @@ class __calendar_main extends LetcBox {
     if (!s || s.busy) return;
     if (s.id) {
       s.busy = true;
+      form.wrote = true;
       const res = await this.postService({
         service: (SERVICE.task && SERVICE.task.delete) || "task.delete",
         hub_id: (form.row && form.row.hub_id) || this._personalHub,
@@ -1765,6 +2284,7 @@ class __calendar_main extends LetcBox {
     if (!s.id) return;
     s.busy = true;
     const hub_id = (form.row && form.row.hub_id) || this._personalHub;
+    form.wrote = true;
     const res = await this.postService(
       field === "status"
         ? {
@@ -1953,6 +2473,9 @@ class __calendar_main extends LetcBox {
       (SERVICE.task && SERVICE.task.update_status) || "task.update_status";
     let hub_id = this._personalHub;
     let task_id = null;
+    // From here the form may stay open on a task that is already written (a
+    // subtask or a file failed after it): its close must reload.
+    form.wrote = true;
 
     if (!editing) {
       // Personal task: personal-hub scope, and no assignee_uids at all — a
@@ -2070,6 +2593,16 @@ class __calendar_main extends LetcBox {
   async _submitMeeting() {
     const draft = this._absorbFormText();
     if (!this._validateRequired(draft)) return;
+    // "Restrict access" with nobody on the list would be an open link that
+    // looks restricted: refused until an address or domain is added.
+    if (
+      draft.require_email &&
+      draft.restrict &&
+      !(draft.recipients || []).length
+    ) {
+      if (typeof Butler !== "undefined") Butler.say(LOCALE.SECURE_SHARE_EMAIL_REQUIRED);
+      return;
+    }
     const title = String(draft.title || "").trim();
     if (!draft.date) return;
     if (!(await this._gateFiles(this._form))) return;
@@ -2116,6 +2649,10 @@ class __calendar_main extends LetcBox {
       return;
     }
 
+    if (this._form && this._form.mode === "edit") {
+      return this._updateMeeting(this._form, draft, title, stime, end);
+    }
+
     const bookSvc = (SERVICE.room && SERVICE.room.book) || "room.book";
     const linkSvc =
       (SERVICE.room && SERVICE.room.public_link) || "room.public_link";
@@ -2132,18 +2669,6 @@ class __calendar_main extends LetcBox {
       etime: end,
     };
 
-    // Invitees. The server ALREADY implements per-email invitation — a
-    // 'no_traversal' dmz grant plus real mail from the butler/external-meeting
-    // template (room.js _commit_invitation) — but that method currently has no
-    // caller, so `recipients` would be inert. The form therefore does not draw
-    // the "Require email" / "Restrict access" rows that set these flags, and
-    // this branch never runs today; once room.book (or a room.invite) is wired
-    // to that call, drawing the rows again (skeleton/meeting-form.js) is the
-    // only change needed here.
-    if (draft.require_email && draft.restrict && draft.recipients.length) {
-      payload.recipients = draft.recipients.map((email) => ({ email, name: email }));
-    }
-
     const node = await this.postService({ service: bookSvc, ...payload });
     const nid = node && (node.id || node.nid);
     if (!nid) {
@@ -2151,22 +2676,99 @@ class __calendar_main extends LetcBox {
       return;
     }
 
-    // Before public_link, which grants the link whatever is attached when it runs.
-    const linked = await this._linkMeetingFiles(nid, A.nidsToLink(draft.files));
-    if (!linked) this._showToast(LOCALE.CAL_FILES_NOT_ATTACHED, "error");
-
-    // Link + optional password. public_link accepts `password` today.
+    // Link + its gate: an optional password, and "Require email to view" with
+    // its optional "Restrict access" list — both enforced at the guest gate
+    // (server dmz.js), which matches addresses and "@domain" entries.
     const linkPayload = { service: linkSvc, hub_id: this._personalHub, nid };
     if (draft.password_on && draft.password) linkPayload.password = draft.password;
+    if (draft.require_email) {
+      linkPayload.require_email = 1;
+      if (draft.restrict && (draft.recipients || []).length) {
+        linkPayload.allowed_emails = draft.recipients;
+      }
+    }
     const answer = await this.postService(linkPayload);
     const link = answer && answer.link;
 
     if (link) copyToClipboard(link);
+    // The meeting exists: put it on its own day now, in place — only that
+    // day's chip list is re-fed (_addItem), never the card opening below. It
+    // used to mark the page dirty, and the card's Done reloaded all of it.
+    this._addItem(
+      normalizeRow({
+        kind: "meeting",
+        id: nid,
+        nid,
+        hub_id: this._personalHub,
+        scope: "personal",
+        title,
+        description: draft.description || "",
+        stime,
+        etime: end,
+        can_write: 1,
+      }),
+    );
     this._form = { kind: "invite-link", link: link || "" };
-    // The new meeting reaches the grid when this card closes (_closeForm),
-    // not underneath it — a reload now would re-feed the card it just opened.
-    this._dirty = true;
     this._renderModal();
+  }
+
+  /**
+   * Save an edited personal meeting. Two narrow room.update calls rather than
+   * one `flag: "all"`: "all" also rewrites the agenda (cleared unless resent)
+   * and the attendee list (replaced by whatever is sent), neither of which this
+   * form shows. "title" renames, "when" moves the date and both epochs; the
+   * recurrence, the agenda, the attendees and the attachments are kept.
+   */
+  async _updateMeeting(form, draft, title, stime, etime) {
+    const row = form.row || {};
+    const nid = row.nid || row.id;
+    const svc = (SERVICE.room && SERVICE.room.update) || "room.update";
+    const scope = { service: svc, hub_id: this._personalHub, nid };
+    const base = day(draft.date);
+    const renamed = title !== (row.title || "")
+      ? await this.postService({ ...scope, flag: "title", title })
+      : true;
+    const moved = await this.postService({
+      ...scope,
+      flag: "when",
+      date: base ? base.format("LLLL") : "",
+      stime,
+      etime,
+    });
+    // postService never rejects: a refusal (NOT_MEETING_OWNER) or a transport
+    // failure answers {error} or nothing.
+    if (!renamed || renamed.error || !moved || moved.error) {
+      Wm.alert(LOCALE.ERROR_NETWORK);
+      return;
+    }
+    // Then the Invite column: a changed gate, on the same link.
+    if (!(await this._saveMeetingGate(form, draft))) {
+      Wm.alert(LOCALE.ERROR_NETWORK);
+      return;
+    }
+    this._form = null;
+    await this._reload();
+  }
+
+  async _deleteMeeting() {
+    const row = (this._form && this._form.mode === "edit" && this._form.row) || null;
+    if (!row || this._submitting) return;
+    this._submitting = true;
+    try {
+      const res = await this.postService({
+        service: (SERVICE.room && SERVICE.room.remove) || "room.remove",
+        hub_id: this._personalHub,
+        nid: row.nid || row.id,
+      });
+      if (!res || res.error) {
+        Wm.alert(LOCALE.ERROR_NETWORK);
+        return;
+      }
+      this._form = null;
+      await this._reload();
+    } finally {
+      this._submitting = false;
+    }
   }
 
   async _removeItem(cmd) {
@@ -2175,14 +2777,96 @@ class __calendar_main extends LetcBox {
     const hub_id = cmd.mget("itemHub") || this._personalHub;
     if (id == null) return;
 
+    let res;
     if (kind === "meeting") {
       const svc = (SERVICE.room && SERVICE.room.remove) || "room.remove";
-      await this.postService({ service: svc, hub_id, nid: cmd.mget("itemNid") || id });
+      res = await this.postService({ service: svc, hub_id, nid: cmd.mget("itemNid") || id });
     } else {
       const svc = (SERVICE.task && SERVICE.task.delete) || "task.delete";
-      await this.postService({ service: svc, hub_id, id });
+      res = await this.postService({ service: svc, hub_id, id });
     }
-    await this._reload();
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // postService never rejects: a refusal is {error}, a lost request
+    // undefined. The chip stays, since the item does.
+    if (!res || res.error) {
+      Wm.alert(LOCALE.ERROR_NETWORK);
+      return;
+    }
+    this._dropItem(kind, id);
+  }
+
+  /**
+   * Take a deleted item off the screen WITHOUT rebuilding the page: only the
+   * chip lists of the days that showed it are re-fed — several for a series —
+   * so a month cell's next item moves up and its "+N more" recounts, and an
+   * open "+N more" popover is re-fed in place. No refetch either: our own
+   * writes never come back as a push, and the server has already said yes.
+   *
+   * Falls back to a full render when a day's part cannot be found.
+   */
+  _dropItem(kind, id) {
+    const match = (r) => `${r.id}` === `${id}` && r.kind === kind;
+    const keys = new Set();
+    this.getVisibleItems().forEach((r) => {
+      if (!match(r)) return;
+      const s = rowStart(r);
+      if (s) keys.add(ymd(s));
+    });
+    this._items = this._items.filter((r) => !match(r));
+    // The other cached windows may hold it too; they are re-read on demand.
+    this._dropWindowCache();
+    this._refeedDays(keys);
+  }
+
+  /**
+   * Put a just-created item on screen WITHOUT rebuilding the page: the row
+   * joins the held items and only the chip list of its own day is re-fed —
+   * the "New personal meeting" modal's create, whose server has already said
+   * yes. No refetch either: our own writes never come back as a push. A day
+   * outside the window on screen re-feeds nothing; the neighbour windows are
+   * dropped, so ‹ › re-reads them with the item in.
+   *
+   * @param {Object} row  a normalized calendar row (normalizeRow)
+   */
+  _addItem(row) {
+    if (!row) return;
+    this._items = [...this._items, row];
+    this._dropWindowCache();
+    const keys = new Set();
+    this.getVisibleItems().forEach((r) => {
+      if (`${r.id}` !== `${row.id}` || r.kind !== row.kind) return;
+      const s = rowStart(r);
+      if (s) keys.add(ymd(s));
+    });
+    this._refeedDays(keys);
+  }
+
+  /**
+   * Re-feed the chip lists of these days (YYYY-MM-DD) from the held items,
+   * and an open "+N more" popover on one of them. Falls back to one full
+   * repaint — still no refetch — when a day's part cannot be found.
+   */
+  _refeedDays(keys) {
+    const byDay = itemsByDay(this.getVisibleItems());
+    const month = this._view === "month";
+    for (const key of keys) {
+      const part = _.isFunction(this.getPart) ? this.getPart(`cal-body-${key}`) : null;
+      if (!part || (part.isDestroyed && part.isDestroyed()) || !part.el) {
+        return this._render();
+      }
+      const list = byDay[key] || [];
+      part.feed(
+        month
+          ? require("./skeleton/month").dayBodyKids(this, list, key)
+          : require("./skeleton/board").bodyKids(this, list, this._view),
+      );
+    }
+
+    const m = this._dayMenu;
+    if (m && m.over && keys.has(m.key)) {
+      m.slot.feed(require("./skeleton/day-popover")(this, m.key));
+      this._placeDayMenu();
+    }
   }
 
   /**
@@ -2241,6 +2925,27 @@ class __calendar_main extends LetcBox {
       return;
     }
     if (row.scope === "workspace" && row.kind === "task") return this._openQuickTask(row);
+    // A personal meeting is edited here, in this screen's own "personal
+    // meeting" form: it lives in the caller's own hub, which has no Meeting
+    // tab. The creator only (room.update / room.remove are creator-only), and
+    // never from one occurrence of a series, as for the task above.
+    if (row.kind === "meeting" && row.scope === "personal") {
+      if (!row.can_write) return;
+      if (occurrence) {
+        this.warn("calendar: an occurrence of a recurring item is not editable", id);
+        return;
+      }
+      return this._openMeetingForm(row);
+    }
+    // A workspace meeting chip, any view, opens that workspace folder's own
+    // "Meeting information" modal over the calendar (meeting_modal_host)
+    // instead of handing over to the workspace; ownership is the server's.
+    // An occurrence's row here is its SERIES' (it shares the id), so the
+    // start comes off the chip.
+    if (row.kind === "meeting") {
+      const at = Number(cmd.mget("itemStime")) || row.stime || 0;
+      return this._openMeetingInfo(row, { at, occurrence });
+    }
     // The occurrence's OWN start, so the workspace's Meeting tab anchors on
     // the date the user clicked rather than on the series origin.
     const stime = Number(cmd.mget("itemStime")) || 0;
@@ -2253,6 +2958,23 @@ class __calendar_main extends LetcBox {
    * its own handlers, its own Update, its own upload folder for the hub. The
    * panel says when the card has gone (task-quick-open-closed / -board).
    */
+  /**
+   * A meeting chip: the folder's "Meeting information" modal, hosted by
+   * meeting_modal_host in this page's modal slot (skeleton meetingInfo). The
+   * host loads the record itself and says when it has gone
+   * (meeting-host-closed).
+   *
+   * @param {Object} row         the calendar row (a series' row for an occurrence)
+   * @param {number} at          the clicked chip's start, epoch seconds
+   * @param {boolean} occurrence the chip is one occurrence of a series — Join
+   *   then joins THAT one
+   */
+  _openMeetingInfo(row, { at, occurrence = false } = {}) {
+    this._closeMenus();
+    this._form = { kind: "meeting-info", row, at, occurrence: occurrence ? at : 0 };
+    this._renderModal();
+  }
+
   _openQuickTask(row) {
     this._closeMenus();
     this._form = { kind: "task-quick-open", row };
@@ -2357,6 +3079,15 @@ class __calendar_main extends LetcBox {
       // task that is no longer on its board). Its writes carry this tab's
       // socket_id, so none of them comes back as a push: reload on both exits,
       // whatever was done, since comments, subtasks and files save at once.
+      // The meeting-info host's modal has gone (×, a save, a delete, Join, or a
+      // record no longer there). A write it made reloads on the close.
+      case "meeting-host-closed": {
+        const form = this._form;
+        if (!form || form.kind !== "meeting-info") return;
+        if (args && args.wrote) form.wrote = true;
+        return this._closeForm();
+      }
+
       case "task-quick-open-closed": {
         if (!this._form || this._form.kind !== "task-quick-open") return;
         return this._closeForm() || this._reload();
@@ -2377,8 +3108,10 @@ class __calendar_main extends LetcBox {
       // day holding it. Same cursor-then-refetch path as ‹ and ›.
       case "cal-today":
         this._cursor = ymd(Dayjs());
-        this._closeMenus();
-        return this._reload();
+        // Bring today's cell into view too — also when this range is already
+        // the one on screen and the grid was only scrolled away from it.
+        this._scrollTodayPending = true;
+        return this._navigate();
 
       // Menu open/close is toolbar-only state — never repaint the grid for it.
       case "cal-toggle-view-menu":
@@ -2411,18 +3144,16 @@ class __calendar_main extends LetcBox {
       case "cal-pick-day": {
         const picked = day(cmd.mget("calDay"));
         if (picked) this._cursor = ymd(picked);
-        this._closeMenus();
-        // The fetch window moves with the cursor, so this is a refetch.
-        return this._reload();
+        // The fetch window moves with the cursor (cached when already read).
+        return this._navigate();
       }
 
       case "cal-set-view": {
         const next = cmd.mget("calView");
         if (VIEW_KEYS.includes(next)) this._view = next;
-        this._closeMenus();
-        // The window changes with the view, so this needs a refetch, not just
-        // a re-render.
-        return this._reload();
+        // The window changes with the view, so this needs a (cached) refetch,
+        // not just a re-render.
+        return this._navigate();
       }
 
       case "cal-set-filter": {
@@ -2444,39 +3175,46 @@ class __calendar_main extends LetcBox {
       case "cal-toggle-new-menu":
         return this._toggleMenu("new");
 
+      // From "+ New", or from a day cell's "+" menu, whose rows name the day
+      // the form opens due on.
       case "cal-new-task":
-        return this._openTaskForm(null);
       case "cal-new-meeting":
-        return this._openMeetingForm();
+        if (cmd.mget("calDay")) this._pendingDay = cmd.mget("calDay");
+        this._closeDayMenu();
+        return service === "cal-new-task" ? this._openTaskForm(null) : this._openMeetingForm();
+
+      case "cal-day-menu":
+        return this._toggleDayMenu(cmd);
 
       case "cal-day-add":
         this._pendingDay = cmd.mget("calDay");
         return this._openTaskForm(null);
 
-      // A square on the week/day canvas → the create-TASK popup, due that
-      // day. It used to open the meeting form at that hour, which is what the
-      // Meet tab's cells do — but this calendar is where a user plans their
-      // own day, and a task is the thing they add most. The hour clicked is
-      // deliberately not used: a task's due_date is a calendar DATE with no
-      // time (see skeleton/hours.js), so the task lands in that day's all-day
-      // strip, which is where every task on this canvas lives. A meeting is
-      // still one click away in "+ New".
-      case "cal-slot-add":
-        this._pendingDay = cmd.mget("calDay");
-        return this._openTaskForm(null);
+      // "+N more" in a month cell: the day's items in a popover over the cell.
+      case "cal-day-more":
+        return this._toggleDayMore(cmd);
+      case "cal-day-more-close":
+        return this._closeDayMenu();
 
-      case "cal-day-more": {
+      // The popover's date: that day in Day view.
+      case "cal-day-open": {
+        this._closeDayMenu();
         const target = cmd.mget("calDay");
         if (target) {
           this._cursor = target;
           this._view = "day";
         }
-        this._closeMenus();
-        return this._reload();
+        return this._navigate();
       }
 
-      case "cal-open-item":
-        return this._openItem(cmd);
+      // From a cell or from the "+N more" popover. The popover closes once
+      // the item has been read off the chip — closing destroys the chip.
+      case "cal-open-item": {
+        const r = this._openItem(cmd);
+        this._closeDayMenu();
+        return r;
+      }
+      // The "+N more" popover stays open: _dropItem re-feeds it.
       case "cal-remove-item":
         return this._removeItem(cmd);
 
@@ -2583,16 +3321,29 @@ class __calendar_main extends LetcBox {
 
       case "cal-add-recipient": {
         if (!this._form) return;
+        // Only an Enter commits — the Entry also reports other statuses.
+        if (args && args.__inputStatus && args.__inputStatus !== _a.commit) return;
         const part = await this.ensurePart("form-recipient");
         const input = part && part.el && part.el.querySelector("input");
-        const value = input ? String(input.value || "").trim() : "";
-        if (!value) return;
+        const entry = recipientEntry(input ? input.value : "");
+        if (!entry) {
+          if (input && String(input.value || "").trim() && typeof Butler !== "undefined") {
+            Butler.say(LOCALE.ENTER_EMAIL_OR_DOMAIN);
+          }
+          return;
+        }
         const list = this._form.draft.recipients || [];
-        if (!list.includes(value)) list.push(value);
+        if (!list.includes(entry)) list.push(entry);
         this._form.draft.recipients = list;
         if (input) input.value = "";
         return this._renderRecipients();
       }
+
+      // "+N": show every allowed email / domain, so each can be removed.
+      case "cal-expand-recipients":
+        if (!this._form) return;
+        this._form.recipientsExpanded = true;
+        return this._renderRecipients();
 
       case "cal-remove-recipient": {
         if (!this._form) return;
@@ -2603,8 +3354,9 @@ class __calendar_main extends LetcBox {
         return this._renderRecipients();
       }
 
-      // The title Entry carries `service: "cal-submit-task"` so Enter commits.
-      // The base Entry reports through that same service on other statuses too
+      // The title Entry used to carry `service: "cal-submit-task"` so Enter
+      // committed (it now has its own no-op "cal-form-title"; only the button
+      // submits). The base Entry reports through its service on other statuses too
       // — "interactive" on every printable keyup when interactive:1 is set,
       // "cancel" on Escape — and a status that is not a commit must never
       // reach task.create. Typing the title used to create one task per
@@ -2633,23 +3385,37 @@ class __calendar_main extends LetcBox {
         return this._commitSubtask(cmd.mget("calSubKey"));
       case "cal-subtask-remove":
         return this._removeSubtask(cmd.mget("calSubKey"));
+      case "cal-subtask-open":
+        return this._openSubtask(cmd.mget("calSubKey"));
+      case "cal-open-parent":
+        return this._openParentTask();
       case "cal-subtask-menu":
         return this._toggleSubtaskMenu(cmd.mget("calSubKey"), cmd.mget("calSubKind"));
       case "cal-subtask-set":
         return this._setSubtaskValue(cmd.mget("calSubKey"), cmd.mget("calSubKind"), cmd.mget("calValue"));
 
+      // The title Entry's own reports (Enter's commit, Escape's cancel).
+      // Enter in the title saves nothing: only the Create / Update button
+      // submits (skeleton/task-form.js).
+      case "cal-form-title":
+        return;
+
+      // The modal foot's actions (Create / Update, Delete) spin while their
+      // write is in flight; Cancel (cal-close-form) never waits on anything.
       case "cal-submit-task":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
           return;
         }
-        return this._submitTask();
+        return withButtonBusy(cmd.el, () => this._submitTask());
       case "cal-delete-task":
-        return this._deleteTask();
+        return withButtonBusy(cmd.el, () => this._deleteTask());
+      case "cal-delete-meeting":
+        return withButtonBusy(cmd.el, () => this._deleteMeeting());
       case "cal-submit-meeting":
         if (args && args.__inputStatus && args.__inputStatus !== _a.commit) {
           return;
         }
-        return this._submitMeeting();
+        return withButtonBusy(cmd.el, () => this._submitMeeting());
 
       case "cal-copy-link": {
         const link = this._form && this._form.link;

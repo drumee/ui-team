@@ -97,10 +97,11 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
   return [];
 }
 
-const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
+const { toPlain } = require("../rich-text");
 // formatDue is aliased: `make` declares its own closure const of that name, and
 // the subtask builders below live at module scope where that one isn't visible.
 const {
+  newestFirst,
   mayCreateTask,
   subtaskStrip,
   assigneeUids,
@@ -213,7 +214,7 @@ const make = function (ui) {
   // via onPartReady; `scope` is "create" | "detail" so it targets the right
   // editor + dropdown.
   const descEditor = (scope) =>
-    mentionField(ui, scope, scope === "detail" && quickLocked ? { readOnly: true } : {});
+    mentionField(ui, scope, scope === "detail" && quickLocked ? { readOnly: true } : { formatBar: true });
 
   // ── Card pieces ───────────────────────────────────────────────
   // Title on the card is a plain Note: clicking it bubbles up to the card,
@@ -400,7 +401,7 @@ const make = function (ui) {
         task.description
           ? Skeletons.Note({
               className: `${pfx}__task-desc`,
-              content: stripMentionMarkers(task.description),
+              content: toPlain(task.description),
             })
           : null,
       ].filter(Boolean),
@@ -1107,8 +1108,9 @@ const make = function (ui) {
     });
 
     // Comments: flat feed (a re-feedable part) + an @-mention composer.
-    // Activity header: title + Comments / History tabs, which flip which of the
-    // two independently-fed lists below is visible. Comments is the default.
+    // Activity header: title + All / Comments / History tabs (Figma 944:107305),
+    // which flip which of the two independently-fed lists below is visible —
+    // All shows both. Comments is the default.
     const currentTab = ui.getActivityTab ? ui.getActivityTab() : "comments";
     const activityTab = (tab, label, icon) =>
       Skeletons.Box.X({
@@ -1151,8 +1153,9 @@ const make = function (ui) {
             Skeletons.Box.X({
               className: `${pfx}__activity-tabs`,
               kids: [
-                activityTab("comments", LOCALE.COMMENTS, "message"),
-                activityTab("history", LOCALE.HISTORY, "apps-clock"),
+                activityTab("all", LOCALE.ALL, null),
+                activityTab("comments", LOCALE.COMMENTS, "ph-chat-circle-dots"),
+                activityTab("history", LOCALE.HISTORY, "ph-arrow-counter-clockwise"),
               ],
             }),
           ],
@@ -1181,7 +1184,7 @@ const make = function (ui) {
               kids: [
                 ...composerTools(ui, "comment"),
                 Skeletons.Button.Svg({
-                  ico: "app-send",
+                  ico: "ph-paper-plane-right",
                   className: `${pfx}__composer-send`,
                   bubble: 0,
                   service: "comment-submit",
@@ -2154,8 +2157,9 @@ const make = function (ui) {
 
   // The quick-open card draws the detail card and the file input its Upload
   // needs, and nothing of the board around it. Until the card opens (the
-  // workspace's rows are still loading) it shows the panel's spinner and a ×,
-  // so the overlay is never blank and never a dead end.
+  // workspace's rows are still loading) it shows the panel's spinner, so the
+  // overlay is never blank. No ×: Escape still leaves (the calendar's
+  // _installFormKeys closes a card that is still loading).
   if (quickOpen) {
     return Skeletons.Box.Y({
       className: `${pfx}__root ${pfx}__root--quick`,
@@ -2163,18 +2167,7 @@ const make = function (ui) {
         detailWrapper(),
         !ui.isQuickLoading()
           ? null
-          : Skeletons.Box.Y({
-              className: `${pfx}__quick-loading`,
-              kids: [
-                Skeletons.Button.Svg({
-                  className: `${pfx}__quick-close`,
-                  ico: "cross",
-                  bubble: 0,
-                  service: "quick-open-cancel",
-                  uiHandler: [ui],
-                }),
-              ],
-            }),
+          : Skeletons.Box.Y({ className: `${pfx}__quick-loading` }),
         fileSelector(),
       ].filter(Boolean),
     });
@@ -2698,23 +2691,62 @@ function mentionDropdown(ui, scope) {
 function composerTools(ui, scope) {
   const pfx = ui.fig.family;
   return [
+    // One icon family (Phosphor, like the comment actions) so the paperclip,
+    // @ and send glyphs read at the same size in the same box.
     Skeletons.Button.Svg({
-      ico: "app-attachment",
+      ico: "ph-paperclip",
       className: `${pfx}__composer-ico`,
       bubble: 0,
       service: "pick-attachment",
       uiHandler: [ui],
       searchScope: scope,
     }),
-    Skeletons.Note({
-      className: `${pfx}__composer-at`,
-      content: "@",
+    Skeletons.Button.Svg({
+      ico: "ph-at",
+      className: `${pfx}__composer-ico`,
       bubble: 0,
       service: "comment-mention-insert",
       mentionScope: scope,
       uiHandler: [ui],
     }),
   ];
+}
+
+// Format toolbar over a description editor: B I U S | bulleted, numbered | link.
+// Each button posts "desc-format" with its format; the panel runs it on this
+// scope's editor (_applyFormat) and lights the active ones (_syncFormatBar).
+// Its sys_pn lets the panel keep a press from taking the editor's focus. A
+// null entry is a divider.
+function formatBar(ui, scope) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.X({
+    className: `${pfx}__format-bar`,
+    sys_pn: `${scope}-format-bar`,
+    partHandler: ui,
+    kids: [
+      ["bold", "FORMAT_BOLD"],
+      ["italic", "FORMAT_ITALIC"],
+      ["underline", "FORMAT_UNDERLINE"],
+      ["strike", "FORMAT_STRIKE"],
+      null,
+      ["ul", "FORMAT_BULLET_LIST"],
+      ["ol", "FORMAT_NUMBERED_LIST"],
+      null,
+      ["link", "FORMAT_LINK"],
+    ].map((b) =>
+      b
+        ? Skeletons.Note({
+            className: `${pfx}__format-btn`,
+            content: "",
+            service: "desc-format",
+            format: b[0],
+            formatScope: scope,
+            uiHandler: [ui],
+            attrOpt: { "data-format": b[0], title: LOCALE[b[1]] },
+          })
+        : Skeletons.Box.X({ className: `${pfx}__format-sep` }),
+    ),
+  });
 }
 
 // Reusable contenteditable mention editor. `scope` keys the panel's editor
@@ -2725,6 +2757,7 @@ function mentionField(ui, scope, opt = {}) {
   return Skeletons.Box.Y({
     className: opt.fieldClass || `${pfx}__desc-field`,
     kids: [
+      ...(opt.formatBar && !opt.readOnly ? [formatBar(ui, scope)] : []),
       Skeletons.Element({
         tagName: "div",
         className: opt.editorClass || `${pfx}__desc-editor`,
@@ -3532,7 +3565,7 @@ function buildCommentListContent(ui) {
               kids: [
                 ...composerTools(ui, "comment-reply"),
                 Skeletons.Button.Svg({
-                  ico: "app-send",
+                  ico: "ph-paper-plane-right",
                   className: `${pfx}__comment-reply-send`,
                   bubble: 0,
                   service: "comment-reply-submit",
@@ -3550,11 +3583,12 @@ function buildCommentListContent(ui) {
       ].filter(Boolean),
     });
 
-  // Each root + its replies (+ the open composer) form one thread group. The
-  // replies live in their own container so a continuous vertical spine (the
-  // container's left border, styled in the skin) can connect them to the root,
-  // with a curved elbow branching into each reply. Timestamped so threads keep
-  // a stable oldest-first order regardless of the order rows arrive in.
+  // Each root + its replies (+ the open composer) form one thread group, drawn
+  // as a single card (Figma 944:107305). The replies live in their own
+  // container, indented under the root's text column; the connector is the
+  // card's ::before trunk with a curved elbow into each reply (see the skin).
+  // Timestamped so threads keep a stable newest-first order regardless of the
+  // order rows arrive in.
   const out = [];
   roots.forEach((root) => {
     const showComposer = replyingToRootId === String(root.id);
@@ -3581,7 +3615,7 @@ function buildCommentListContent(ui) {
       );
     }
     out.push({
-      ts: Number(root.ctime) || 0,
+      ctime: root.ctime,
       node: Skeletons.Box.Y({
         className: `${pfx}__comment-thread`,
         attrOpt: { "data-has-replies": replyKids.length ? "1" : "0" },
@@ -3589,8 +3623,9 @@ function buildCommentListContent(ui) {
       }),
     });
   });
-  // Oldest first (comments arrive ASC, but don't depend on it).
-  return out.sort((a, b) => a.ts - b.ts).map((e) => e.node);
+  // Newest thread first, by its root's time (comments arrive ASC, but don't
+  // depend on it). Replies inside a thread stay in conversation order.
+  return newestFirst(out).map((e) => e.node);
 }
 
 // One change-log line: who, what, when. Project Health names the task after
@@ -3657,11 +3692,8 @@ function buildHistoryListContent(ui) {
       ],
     });
   };
-  // Oldest first — the activity proc returns newest-first.
-  return history
-    .slice()
-    .sort((a, b) => (Number(a.ctime) || 0) - (Number(b.ctime) || 0))
-    .map(historyBlock);
+  // Newest first, like the comment threads beside it.
+  return newestFirst(history).map(historyBlock);
 }
 
 function buildMentionItemsContent(ui, members) {
@@ -4501,25 +4533,28 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
     const isDone = ui.isDoneStatus(t.status);
     const pm = metaOf(priorities, t.priority || "medium");
     const sm = metaOf(cols, t.status);
+    // The whole row is the way INTO the child (detail only), not just its
+    // title; the controls on it act on the row in place. ui-core binds a click
+    // to every widget not marked active:0 and stopPropagation()s before
+    // triggerHandlers, so the title and the slots are inert and let the click
+    // reach the row, while the chips, the assignee button and the × keep their
+    // own services. The create modal's rows have no open service.
     return Skeletons.Box.X({
       className: `${pfx}__subtask-row`,
       bubble: 0,
+      ...(svc.open ? { service: svc.open, uiHandler: [ui], taskId: t.id } : {}),
       attrOpt: { "data-done": isDone ? "1" : "0" },
       kids: [
-        // The title is the way INTO the child (detail only); the controls
-        // beside it act on the row in place.
         Skeletons.Note({
           className: `${pfx}__subtask-title`,
+          active: 0,
           content: t.title || "",
-          bubble: 0,
-          service: svc.open,
-          uiHandler: svc.open ? [ui] : null,
-          taskId: t.id,
         }),
         // Figma lays the row on a grid — title | 110 | 110 | 110 — so the
         // chips line up down the list; each sits at the start of its cell.
         Skeletons.Box.X({
           className: `${pfx}__subtask-cell`,
+          active: 0,
           kids: [
             chip(
               "priority",
@@ -4532,6 +4567,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
         }),
         Skeletons.Box.X({
           className: `${pfx}__subtask-cell`,
+          active: 0,
           kids: [
             chip(
               "status",
@@ -4544,6 +4580,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
         }),
         Skeletons.Box.X({
           className: `${pfx}__subtask-row-end`,
+          active: 0,
           kids: [
             assigneeButton(t),
             Skeletons.Button.Svg({
@@ -4570,6 +4607,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
       attrOpt: {
         "data-title-missing": draft._titleMissing ? "1" : "0",
         "data-title-too-long": draft._titleTooLong ? "1" : "0",
+        "data-title-duplicate": draft._titleDuplicate ? "1" : "0",
       },
       bubble: 0,
       kids: [
@@ -4609,6 +4647,10 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
         Skeletons.Note({
           className: `${pfx}__subtask-title-too-long`,
           content: LOCALE.TASK_TITLE_TOO_LONG,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__subtask-title-duplicate`,
+          content: LOCALE.TASK_TITLE_DUPLICATE,
         }),
         Skeletons.Box.X({
           className: `${pfx}__subtask-card-chips`,

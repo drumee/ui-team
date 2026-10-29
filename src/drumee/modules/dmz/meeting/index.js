@@ -251,16 +251,26 @@ class __dmz_meeting extends LetcBox {
   }
 
   /**
-   * The password gate's Continue (or Enter in the field). A wrong password says
-   * so under the field; the right one goes on to the lobby.
+   * The gate's Continue (or Enter in a field): the email and/or the password
+   * the card asks for, sent together. A refusal says why under the fields; a
+   * pass goes on to the lobby.
    */
   async _submitPassword() {
     if (this._passwordBusy) return;
-    const entry = await this.ensurePart("ref-password");
     const error = await this.ensurePart("password-error");
+    const valueOf = (pn) => {
+      const part = this.getPart && this.getPart(pn);
+      return part && part.getData ? String(part.getData().value || "") : null;
+    };
+    // null when the card does not ask for it.
+    const email = valueOf("ref-email");
     // As typed: the calendar stores the password untrimmed.
-    const password = String((entry && entry.getData && entry.getData().value) || "");
-    if (!password) return;
+    const password = valueOf("ref-password");
+    if (email !== null && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      error.set({ content: LOCALE.INVALID_EMAIL });
+      return;
+    }
+    if (password !== null && !password) return;
     this._passwordBusy = true;
     let res;
     try {
@@ -268,14 +278,26 @@ class __dmz_meeting extends LetcBox {
         token: this.mget(_a.token),
         socker_id: Visitor.get(_a.socker_id),
         hub_id: "",
-        password,
+        ...(email !== null ? { email: email.trim() } : {}),
+        ...(password !== null ? { password } : {}),
       });
     } catch (e) {
       res = null;
     } finally {
       this._passwordBusy = false;
     }
-    if (res && res.is_verified) return this.loadWindowManager();
+    // In: a password accepted (is_verified), or an email-only gate passed —
+    // dmz.login then answers the session itself, on TICKET_OK, with no gate
+    // status.
+    if (res && (res.is_verified || (res.validity === "TICKET_OK" && !res.status))) {
+      return this.loadWindowManager();
+    }
+    if (res && res.status === "EMAIL_MISMATCH") {
+      return error.set({ content: LOCALE.SECURE_SHARE_EMAIL_MISMATCH });
+    }
+    if (res && res.status === "REQUIRED_EMAIL") {
+      return error.set({ content: LOCALE.INVALID_EMAIL });
+    }
     // Only a refused password says "wrong password"; any other failure (a
     // link served from the wrong area, say) must not tell the guest a right
     // password was wrong.
@@ -617,10 +639,10 @@ class __dmz_meeting extends LetcBox {
       return;
     }
 
-    // A password-protected link: the gate first. Once dmz.login accepts the
-    // password this session holds the link, and this method runs again for
-    // the lobby.
-    if (data.status === "REQUIRED_PASSWORD") {
+    // A gated link (an email, a password, or both): the gate first. Once
+    // dmz.login accepts them this session holds the link, and this method
+    // runs again for the lobby.
+    if (data.status === "REQUIRED_PASSWORD" || data.status === "REQUIRED_EMAIL") {
       lobby.feed(require("./skeleton/password")(this, data));
       return;
     }

@@ -59,7 +59,7 @@ module.exports = {
 
   /**
    * Move `kids` into `status` (the done column their parent just went to).
-   * One at a time: each write takes the next rank in that column.
+   * One at a time: each write lands on top of that column (task_update_status).
    * @returns {Promise<boolean>} whether every subtask landed
    */
   async _completeSubtasks(parentId, kids, status) {

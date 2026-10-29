@@ -22,7 +22,7 @@ const {
   priorityMeta,
   subtaskBadge,
 } = require("./helpers");
-const { stripMarkers } = require("../mention-markers");
+const { toPlain } = require("../rich-text");
 const { formatDateInput, monthGrid } = require("../list-edit");
 
 const MAX_FILES = 2; // file chips shown before collapsing to a "+N" chip
@@ -318,7 +318,7 @@ module.exports = function (ui) {
     cell(t, "description", [
       Skeletons.Note({
         className: `${pfx}__list-desc`,
-        content: stripMarkers(t.description || "").replace(/\s+/g, " ").trim(),
+        content: toPlain(t.description || "").replace(/\s+/g, " ").trim(),
       }),
     ]);
 
@@ -606,7 +606,9 @@ function textEditor(ui, edit, task, pfx) {
           content:
             edit.error === "too-long"
               ? LOCALE.TASK_TITLE_TOO_LONG
-              : LOCALE.TASK_TITLE_REQUIRED,
+              : edit.error === "duplicate"
+                ? LOCALE.TASK_TITLE_DUPLICATE
+                : LOCALE.TASK_TITLE_REQUIRED,
         })
       : null,
   ].filter(Boolean);

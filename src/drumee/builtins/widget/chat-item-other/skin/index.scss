@@ -13,16 +13,6 @@
 // =============================================================================
 // The marker sits on the row root, which is also the .widget-chatItem__ui element.
 .widget-chatItem--other {
-  // Single avatar per message. Every row renders as "other", so chat-item's
-  // buildContent appends its share-mode UserProfile (Skeletons.UserProfile →
-  // .user-profile) on top of the img-based template avatar — two avatars per row.
-  // Keep the template avatar (it sits left of the bubble and carries the username
-  // tooltip) and hide the duplicate. `.me` never appears here (no self-aligned
-  // rows), so only the .user-profile arm is needed.
-  .widget-chatItem__profile.user-profile {
-    display: none !important;
-  }
-
   // Reduce spacing to match the base chat-item (window chat panel) layout. The
   // base defaults (row margin-top 32px, avatar↔bubble gap 16px, content gap 8px)
   // leave the share chat looking loose; tighten them to the same values the

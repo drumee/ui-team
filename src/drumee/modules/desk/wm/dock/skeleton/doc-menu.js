@@ -1,4 +1,5 @@
 const button = require("./button");
+const { isDevDeployment } = require("builtins/window/skeleton/toolkit/new-menu-rows");
 /**
  *
  * @param {*} ui
@@ -15,11 +16,14 @@ function menu_items(ui) {
       area: _a.personal,
       filename: LOCALE.NEW_FOLDER,
     },
-    {
-      service: "add-note",
-      ico: "raw-note",
-      label: LOCALE.NOTE,
-    },
+    // Note: dev platforms only, as in the desk "+ New" menu.
+    isDevDeployment()
+      ? {
+          service: "add-note",
+          ico: "raw-note",
+          label: LOCALE.NOTE,
+        }
+      : null,
     {
       name: "document.docx",
       ico: "raw-documents_word",
@@ -35,7 +39,7 @@ function menu_items(ui) {
       ico: "raw-documents_powerpoint",
       label: LOCALE.PRESENTATION,
     },
-  ];
+  ].filter(Boolean);
 
   const renderItem = ({ name, ico, label, service, area, filename }) =>
     Skeletons.Box.G({

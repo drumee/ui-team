@@ -1,0 +1,29 @@
+// meeting_modal_host (../meeting-modal-host.js): the folder's "Meeting
+// information" modal outside a folder window. The modal's own rules come in
+// unchanged; this file only gives them what a folder window would have
+// provided around them.
+@use "./meeting-modal";
+
+.window-folder {
+  // The host covers the screen and centres the dialog. The calendar's modal
+  // wrapper behind it supplies the dim layer, so this one is transparent and
+  // only the dialog takes clicks.
+  &__meeting-host-dialog {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    // The folder's @container queries (meeting-modal.scss: 760px, 560px) are
+    // named window-folder-w — a folder window's body. Here the viewport-wide
+    // layer is that container, so the narrow layouts still apply.
+    container-type: inline-size;
+    container-name: window-folder-w;
+    pointer-events: none;
+
+    > * {
+      pointer-events: auto;
+    }
+  }
+}

@@ -1,4 +1,5 @@
 @use "mixins/drumee";
+@use "../../../editor/skin/phosphor" as ph;
 
 // ── Board colour system (Figma 2040-106090) ──────────────────────────────────
 // Every column carries a `theme` key from this 10-swatch palette. Column colour
@@ -2028,13 +2029,12 @@ $theme-colors: (
   &__create-modal &__modal-main {
     gap: 32px;
   }
-  // Detail sidebar: wider than create's, with the Figma purple accent rail.
+  // Detail sidebar: wider than create's. No rail on its left edge.
   &__detail-panel &__modal-side {
     flex-basis: 380px;
     width: 380px;
     padding: 0 24px;
     box-sizing: border-box;
-    border-left: 3px solid var(--col-primary-40, #5950ff);
     max-height: 100%;
     overflow-y: auto; // short windows: the sidebar scrolls on its own
   }
@@ -2572,7 +2572,7 @@ $theme-colors: (
   }
 
   // Quick-open card while its rows load: the spinner of the view-switch veil
-  // above, centred over the calendar, and a × in the card's own corner.
+  // above, centred over the calendar. No × (Escape leaves).
   &__quick-loading {
     position: absolute;
     inset: 0;
@@ -2590,15 +2590,6 @@ $theme-colors: (
       border-top-color: var(--primary-40, #5950ff);
       animation: tasks-panel-view-spin 0.7s linear infinite;
     }
-  }
-
-  &__quick-close {
-    position: absolute;
-    top: 24px;
-    right: 24px;
-    width: 32px;
-    height: 32px;
-    cursor: pointer;
   }
 
   // Quick-open card (Personal Calendar, Figma 1697:50129): the same card,
@@ -3460,7 +3451,7 @@ $theme-colors: (
     );
 
     &:focus {
-      border-color: var(--accent, #fa8540);
+      border-color: var(--col-primary-40, #5950ff);
     }
 
     // Placeholder for the empty editor.
@@ -3518,6 +3509,107 @@ $theme-colors: (
     max-height: 340px;
     min-height: min(200px, 26cqh);
     max-height: min(340px, 42cqh);
+  }
+
+  // Format toolbar over the description (skeleton formatBar): Phosphor glyphs
+  // from the Docs editor's set, lit while the format is on under the caret.
+  &__format-bar {
+    align-items: center;
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+
+  &__format-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--normal-fg-40, #65656c);
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    }
+
+    // Lit: the panel's primary fill (as its Create button), glyph in white —
+    // the glyph is a mask over currentColor. Hover keeps it lit.
+    &[data-active="1"],
+    &[data-active="1"]:hover {
+      background: var(--col-primary-40, #5950ff);
+      color: #fff;
+    }
+
+    &[data-format="bold"] { @include ph.ph("text-b", 16px); }
+    &[data-format="italic"] { @include ph.ph("text-italic", 16px); }
+    &[data-format="underline"] { @include ph.ph("text-underline", 16px); }
+    &[data-format="strike"] { @include ph.ph("text-strikethrough", 16px); }
+    &[data-format="ul"] { @include ph.ph("list-bullets", 16px); }
+    &[data-format="ol"] { @include ph.ph("list-numbers", 16px); }
+    &[data-format="link"] { @include ph.ph("link-simple-horizontal", 16px); }
+  }
+
+  &__format-sep {
+    width: 1px;
+    height: 16px;
+    margin: 0 4px;
+    background: var(--overlay-bg-10, rgba(0, 0, 0, 0.1));
+  }
+
+  // Rich text drawn by rich-text.js (the toolbar, Ctrl+B / I / U, or a stored
+  // "- " / "N. " line), in every editor and in posted comments.
+  //
+  // The app-wide reset (skin/lib/reset.scss) takes it all off again: li/ul
+  // lose their markers, b / i / em / s are `font: inherit`, and u loses its
+  // underline and turns #666. Each is put back here, scoped to these surfaces
+  // so the reset still holds everywhere else. The UA's 40px list indent and
+  // 1em margins are too much for a 16px box.
+  &__desc-editor,
+  &__comment-input,
+  &__comment-edit-input,
+  &__comment-reply-input,
+  &__comment-body {
+    ul,
+    ol {
+      margin: 4px 0;
+      padding-left: 20px;
+    }
+
+    ul {
+      list-style-type: disc;
+    }
+
+    ol {
+      list-style-type: decimal;
+    }
+
+    // The reset names li itself, so the item has to take its list's marker
+    // back explicitly.
+    li {
+      margin: 0;
+      list-style-type: inherit;
+    }
+
+    b,
+    strong {
+      font-weight: 700;
+    }
+
+    i,
+    em {
+      font-style: italic;
+    }
+
+    u {
+      text-decoration: underline;
+      color: inherit;
+    }
+
+    s,
+    strike {
+      text-decoration: line-through;
+    }
   }
 
   // The comment composer/edit/reply inputs are shorter than the description.
@@ -3810,6 +3902,80 @@ $theme-colors: (
     }
   }
 
+  // The reply box's field had no positioning context, so the tip (and the
+  // link prompt) were placed against whatever ancestor happened to have one.
+  &__comment-reply-field {
+    position: relative;
+  }
+
+  // ── Link hover tip (link-tip.js) ──────────────────────────────────
+  // Same look as the __comment-action-ico flyover: dark pill, white 11px type,
+  // caret pointing at the link. Unlike that one it takes the pointer — the
+  // Edit button opens the Ctrl+K prompt on the hovered link.
+  &__link-tip {
+    position: absolute;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: min(320px, 100%);
+    padding: 4px 4px 4px 8px;
+    border-radius: 6px;
+    box-sizing: border-box;
+    background: var(--tooltip-bg, #1f1f28);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 500,
+      $line: 14px,
+      $color: var(--tooltip-fg, #ffffff)
+    );
+
+    &:not([data-open="1"]) {
+      display: none;
+    }
+
+    // Caret, positioned on the link by JS (--caret-x) since the body is
+    // clamped inside the field.
+    &::before {
+      content: "";
+      position: absolute;
+      left: var(--caret-x, 50%);
+      transform: translateX(-50%);
+      border: 4px solid transparent;
+    }
+
+    &[data-side="above"]::before {
+      top: 100%;
+      border-top-color: var(--tooltip-bg, #1f1f28);
+    }
+
+    &[data-side="below"]::before {
+      bottom: 100%;
+      border-bottom-color: var(--tooltip-bg, #1f1f28);
+    }
+  }
+
+  &__link-tip-url {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__link-tip-edit {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.12);
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.24);
+    }
+  }
+
   &__link-prompt-actions {
     justify-content: flex-end;
     gap: 8px;
@@ -3964,15 +4130,17 @@ $theme-colors: (
     );
   }
 
+  // Figma 944:107305: the pills sit edge to edge.
   &__activity-tabs {
     align-items: center;
-    gap: 4px;
+    gap: 0;
   }
 
   &__activity-tab {
     align-items: center;
     gap: 4px;
-    padding: 6px 12px;
+    height: 35px;
+    padding: 9px 17.5px;
     border-radius: 71px;
     cursor: pointer;
     @include drumee.typo(
@@ -4039,6 +4207,21 @@ $theme-colors: (
   &__comments[data-tab="comments"] &__activity-section[data-kind="history"],
   &__comments[data-tab="history"] &__activity-section[data-kind="comments"] {
     display: none;
+  }
+
+  // All stacks both runs, so each gets its caption back — and an empty run is
+  // dropped when the other has content, rather than leaving its "No …" line
+  // under it. Both empty (or both still loading) keep both, so the tab never
+  // goes blank.
+  &__comments[data-tab="all"]:has(&__activity-section[data-kind="history"][data-empty="0"])
+    &__activity-section[data-kind="comments"][data-empty="1"],
+  &__comments[data-tab="all"]:has(&__activity-section[data-kind="comments"][data-empty="0"])
+    &__activity-section[data-kind="history"][data-empty="1"] {
+    display: none;
+  }
+
+  &__comments[data-tab="all"] &__section-label {
+    display: block;
   }
 
   // ── Change-log line (History tab) ─────────────────────────────────
@@ -4592,13 +4775,12 @@ $theme-colors: (
   }
 
   // Bordered comment card (Figma Activity: 1px border, radius 12, padding 16).
+  // No frame of its own: the thread around it is the card (Figma 944:107305).
   &__comment-row {
     gap: 12px;
     align-items: flex-start;
     min-width: 0; // let the body column shrink + wrap instead of overflowing
-    padding: 16px;
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
-    border-radius: 12px;
+    border-radius: 12px; // rounds __comment-drop-overlay's dashed frame
     // Anchors __comment-drop-overlay to this row while it is being edited.
     position: relative;
 
@@ -4631,9 +4813,9 @@ $theme-colors: (
 
   &__comment-author {
     @include drumee.typo(
-      $size: 16px,
+      $size: 14px,
       $weight: 600,
-      $line: 22px,
+      $line: 1.2,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
@@ -4642,7 +4824,7 @@ $theme-colors: (
     @include drumee.typo(
       $size: 12px,
       $weight: 400,
-      $line: 16px,
+      $line: 1.4,
       $color: var(--normal-fg-50, #65656c)
     );
   }
@@ -4676,12 +4858,26 @@ $theme-colors: (
       user-select: text !important;
       -webkit-user-select: text !important;
     }
+    // Smaller and lighter than Figma's 16px / 400 (QA 2026-10-27). The mixin
+    // never emits font-weight, hence the separate declaration; Armin Grotesk
+    // has no 300 face, so this renders with UltraLight (200).
     @include drumee.typo(
       $size: 14px,
-      $weight: 400,
-      $line: 20px,
+      $weight: 300,
+      $line: 1.4,
       $color: var(--normal-fg-10, #0b0a21)
     );
+    font-weight: 300;
+
+    // A posted mention reads as plain brand-purple text (Figma), not the
+    // editor's tag chip.
+    .tasks-panel__mention-chip {
+      padding: 0;
+      margin: 0;
+      background: none;
+      color: var(--col-primary-40, #5950ff);
+      font-weight: inherit;
+    }
   }
 
   // React bar and actions share one horizontal footer row.
@@ -4700,7 +4896,6 @@ $theme-colors: (
   &__comment-actions {
     align-items: center;
     gap: 8px;
-    margin-top: 2px;
   }
 
   &__comment-action {
@@ -4721,8 +4916,8 @@ $theme-colors: (
   // delete). Dimmed by default, accent on hover.
   &__comment-action-ico {
     position: relative; // anchors the hover highlight + flyover tooltip
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     cursor: pointer;
 
     // Soft rounded highlight behind the glyph on hover (no layout shift).
@@ -4740,8 +4935,8 @@ $theme-colors: (
     svg {
       position: relative;
       z-index: 1;
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       opacity: 0.55;
       transition: opacity 0.15s ease;
     }
@@ -4804,7 +4999,7 @@ $theme-colors: (
   &__comment-composer {
     align-items: center;
     gap: 12px;
-    padding-bottom: 12px;
+    padding: 12px 0;
     border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
 
     // The mention field grows between the avatar and the icon cluster.
@@ -4825,32 +5020,38 @@ $theme-colors: (
   &__composer-actions {
     flex: 0 0 auto;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
   }
 
+  // Paperclip and @ (composerTools) and send are one icon size per toolbar:
+  // 20px in a composer, 16px when the same tools sit among a comment's 16px
+  // action icons (edit mode).
   &__composer-ico {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-10, #0b0a21);
     opacity: 0.55;
     cursor: pointer;
+
+    svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
+    }
 
     &:hover {
       opacity: 1;
     }
   }
 
-  &__composer-at {
-    cursor: pointer;
-    opacity: 0.55;
-    @include drumee.typo(
-      $size: 16px,
-      $weight: 600,
-      $line: 20px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
+  &__comment-actions &__composer-ico {
+    width: 16px;
+    height: 16px;
 
-    &:hover {
-      opacity: 1;
+    svg {
+      width: 16px;
+      height: 16px;
     }
   }
 
@@ -4858,74 +5059,155 @@ $theme-colors: (
     flex: 0 0 20px;
     width: 20px;
     height: 20px;
+    color: var(--col-primary-30, #847eff);
     cursor: pointer;
 
     svg {
-      width: 18px;
-      height: 18px;
+      display: block;
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
     }
     &:hover {
       opacity: 0.8;
     }
   }
 
-  // A root comment and its replies form one thread group joined by a single
-  // vertical connector: it starts at the parent card's bottom border, runs down
-  // the replies container's left edge, branches into each reply with a curved
-  // elbow, and ends at the last reply's avatar. $spine-x is the root avatar's
-  // centre (16px card padding + 16px half of the 32px avatar).
-  $spine-x: 32px;
-  $spine-color: var(--border-strong, rgba(0, 0, 0, 0.15));
-
-  &__comment-thread {
-    gap: 0; // the connector starts flush with the parent card's bottom border
-  }
-
-  // Replies container carries the connector as its left border; its top sits at
-  // the parent's bottom border, padding-top restores the inter-card spacing, and
-  // its left edge aligns to the root avatar centre.
-  &__comment-thread-replies {
-    gap: 12px;
-    margin-left: $spine-x - 1px;
-    padding-left: 25px;
-    padding-top: 12px;
-    position: relative;
-    border-left: 1px solid $spine-color;
-  }
-
-  // Curved elbow branching from the connector into each reply / the composer,
-  // meeting the card at the avatar's vertical centre.
-  &__comment-thread-replies &__comment-row[data-reply="1"],
-  &__comment-thread-replies &__comment-replybox {
+  // While a comment is being sent: the send icon steps aside for a spinner
+  // (same recipe as __comment-action-ico) and the field dims out of reach.
+  &__comment-composer[data-loading="1"] &__composer-send {
+    pointer-events: none;
     position: relative;
 
-    &::before {
-      content: "";
-      position: absolute;
-      left: -25px; // back to the connector (= padding-left + border)
-      top: 0;
-      width: 25px;
-      height: 32px; // down to the avatar centre
-      border-bottom: 1px solid $spine-color;
-      border-bottom-left-radius: 12px;
+    svg {
+      visibility: hidden;
     }
-  }
 
-  // The last item terminates the connector: mask the vertical trunk below the
-  // elbow's curve so the line reads as curving into that item rather than
-  // trailing past it. The mask is kept narrow (trunk width only) so it never
-  // clips the elbow's rounded corner.
-  &__comment-thread-replies > &__comment-row[data-reply="1"]:last-child,
-  &__comment-thread-replies > &__comment-replybox:last-child {
     &::after {
       content: "";
       position: absolute;
-      left: -27px; // over the trunk (border sits ~2px right of here)
-      top: 22px; // just below where the curve meets the trunk
-      bottom: -8px; // past the container's bottom edge
-      width: 3px; // trunk only — clear of the rounded elbow
-      background: var(--normal-bg-elevated, #fff);
+      inset: 0;
+      margin: auto;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
+      border-top-color: var(--col-primary-40, #5950ff);
+      border-radius: 50%;
+      animation: tasks-panel-spin 0.7s linear infinite;
     }
+  }
+
+  &__comment-composer[data-loading="1"] &__comment-field,
+  &__comment-composer[data-loading="1"] &__composer-ico {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  // While an edit is being saved (Save shows "Loading…" beside it).
+  &__comment-edit-input[data-loading="1"] {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  // A root comment and its replies form ONE card (Figma 944:107305): the
+  // replies sit inside it under the root's text column, joined by a black
+  // (text-colour, so it inverts in dark mode) connector
+  // that drops from below the root avatar and bends into each reply's avatar
+  // with a rounded elbow. The trunk is the card's own ::before, so it starts
+  // under the avatar however tall the root grows; each reply / the open reply
+  // composer draws its elbow, and the last of them masks the trunk below its
+  // curve so the line ends there.
+  //   $spine-x  root avatar centre, from the card's padding edge (16 + 16)
+  //   $reply-x  reply indent = avatar 32 + column gap 12
+  //   $elbow-x  trunk position seen from a reply's own left edge
+  $spine-x: 32px;
+  $reply-x: 44px;
+  $elbow-x: $spine-x - 16px - $reply-x; // -28px
+  $spine-color: var(--normal-fg-10, #0b0a21);
+
+  &__comment-thread {
+    position: relative;
+    gap: 12px; // root's last row → first reply / composer (Figma column gap)
+    padding: 16px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
+    border-radius: 12px;
+  }
+
+  &__comment-thread[data-has-replies="1"]::before {
+    content: "";
+    position: absolute;
+    left: $spine-x;
+    top: 52px; // 16 padding + 32 avatar + 4 clear of it
+    bottom: 16px;
+    border-left: 1px solid $spine-color;
+    pointer-events: none;
+  }
+
+  &__comment-thread-replies {
+    gap: 0; // reply rows carry their own 16px top/bottom padding
+    margin-left: $reply-x;
+  }
+
+  &__comment-thread-replies &__comment-row[data-reply="1"] {
+    padding: 16px 0;
+  }
+
+  // The elbow: from the trunk down to the avatar's (or pill's) vertical
+  // centre, bending right. It is the ::after so it paints OVER the last
+  // item's ::before mask below — the other way round, the mask erased the
+  // start of the curve (QA 2026-10-27).
+  $elbow-r: 12px;
+
+  &__comment-thread-replies &__comment-row[data-reply="1"],
+  &__comment-thread-replies &__comment-replybox {
+    &::after {
+      content: "";
+      position: absolute;
+      left: $elbow-x;
+      top: 0;
+      width: 21px;
+      height: 32px; // row: 16 padding + 16 half avatar
+      border-left: 1px solid $spine-color;
+      border-bottom: 1px solid $spine-color;
+      border-bottom-left-radius: $elbow-r;
+      pointer-events: none;
+    }
+  }
+
+  &__comment-thread-replies &__comment-replybox::after {
+    height: 22px; // half the 44px pill
+  }
+
+  // The last item ends the trunk: a strip in the card's colour over the trunk
+  // only (3px), from where the curve leaves it (elbow height - radius) to the
+  // item's bottom — where the trunk itself stops (card padding). Any lower and
+  // it paints over the card's bottom border.
+  &__comment-thread-replies > &__comment-row[data-reply="1"]:last-child,
+  &__comment-thread-replies > &__comment-replybox:last-child {
+    &::before {
+      content: "";
+      position: absolute;
+      left: $elbow-x - 1px;
+      top: 32px - $elbow-r;
+      bottom: 0;
+      width: 3px;
+      background: var(--normal-bg-elevated, #fff);
+      pointer-events: none;
+    }
+  }
+
+  &__comment-thread-replies > &__comment-replybox:last-child::before {
+    top: 22px - $elbow-r;
+  }
+
+  // Replying to a child puts a "Replying to …" line (16px + 6px gap) above the
+  // pill: the elbow and the mask move down with the pill.
+  &__comment-thread-replies &__comment-replybox:has(> &__comment-replying-to)::after {
+    height: 44px;
+  }
+
+  &__comment-thread-replies > &__comment-replybox:last-child:has(> &__comment-replying-to)::before {
+    top: 44px - $elbow-r;
   }
 
   &__comment-replybox {
@@ -4940,7 +5222,7 @@ $theme-colors: (
   &__comment-reply-pill {
     align-items: center;
     gap: 12px;
-    padding: 8px 16px;
+    padding: 12px 16px;
     border-radius: 8px;
     background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
 
@@ -4956,7 +5238,7 @@ $theme-colors: (
   &__comment-reply-pill &__comment-reply-input {
     border: 0;
     background: transparent;
-    padding: 6px 0;
+    padding: 0;
     min-height: 20px;
     max-height: 140px;
     border-radius: 0;
@@ -4976,18 +5258,21 @@ $theme-colors: (
   &__comment-reply-tools {
     flex: 0 0 auto;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
   }
 
   &__comment-reply-send {
     flex: 0 0 20px;
     width: 20px;
     height: 20px;
+    color: var(--col-primary-30, #847eff);
     cursor: pointer;
 
     svg {
-      width: 18px;
-      height: 18px;
+      display: block;
+      width: 20px;
+      height: 20px;
+      fill: currentColor;
     }
 
     &:hover {
@@ -7194,7 +7479,8 @@ $theme-colors: (
       }
     }
   }
-  &__list-subcreate-row[data-toolong="1"] &__list-subcreate input {
+  &__list-subcreate-row[data-toolong="1"] &__list-subcreate input,
+  &__list-subcreate-row[data-duplicate="1"] &__list-subcreate input {
     border-bottom-color: #d74e49;
   }
   &__list-subcreate-row &__list-check[data-empty="1"] {
@@ -9149,9 +9435,11 @@ $theme-colors: (
     align-items: center;
     gap: 12px;
     padding: 8px;
-    border-radius: 12px;
-    border: 1px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    border-radius: 6px;
+    border: 1px solid var(--border-default);
     background: var(--normal-bg-100, #fff);
+    // The whole row opens the subtask (skeleton subRow), not only its title.
+    cursor: pointer;
     transition:
       border-color 0.15s,
       box-shadow 0.15s,
@@ -9582,7 +9870,8 @@ $theme-colors: (
   // the hide for the same reason as there: ui-core's data-flow rules give
   // every Note display:flex at higher specificity.
   &__subtask-title-missing,
-  &__subtask-title-too-long {
+  &__subtask-title-too-long,
+  &__subtask-title-duplicate {
     margin-top: -6px;
     @include drumee.typo(
       $size: 11px,
@@ -9592,12 +9881,14 @@ $theme-colors: (
   }
 
   &__subtask-card:not([data-title-missing="1"]) .tasks-panel__subtask-title-missing,
-  &__subtask-card:not([data-title-too-long="1"]) .tasks-panel__subtask-title-too-long {
+  &__subtask-card:not([data-title-too-long="1"]) .tasks-panel__subtask-title-too-long,
+  &__subtask-card:not([data-title-duplicate="1"]) .tasks-panel__subtask-title-duplicate {
     display: none !important;
   }
 
   &__subtask-card[data-title-missing="1"] .tasks-panel__subtask-card-title,
-  &__subtask-card[data-title-too-long="1"] .tasks-panel__subtask-card-title {
+  &__subtask-card[data-title-too-long="1"] .tasks-panel__subtask-card-title,
+  &__subtask-card[data-title-duplicate="1"] .tasks-panel__subtask-card-title {
     border-color: var(--error, #f6514b);
     box-shadow: 0 0 0 3px rgba(246, 81, 75, 0.15);
   }

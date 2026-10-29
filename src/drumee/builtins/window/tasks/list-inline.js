@@ -16,7 +16,7 @@
 // the editor that changed) — never _render(); see tasks-panel-render-paths.
 
 const { rowOf, ownedPatch } = require("./live-sync");
-const { contentTokenRe } = require("./mention-markers");
+const { hasRichContent } = require("./rich-text");
 const {
   TEXT_FIELDS,
   fieldPatch,
@@ -186,9 +186,9 @@ module.exports = {
     if (this._listEdit && this._listEdit.id === id && this._listEdit.field === field) {
       return this._closeListEdit();
     }
-    // A description holding mention chips or inline images cannot round-trip
-    // through a plain text box — hand it to the detail card's rich editor.
-    if (field === "description" && contentTokenRe().test(task.description || "")) {
+    // A description holding mention chips, inline images, formatting or lists
+    // cannot round-trip through a plain text box — hand it to the detail card's rich editor.
+    if (field === "description" && hasRichContent(task.description || "")) {
       this._closeListEdit({ silent: true });
       return this._openDetail(id);
     }
@@ -220,13 +220,14 @@ module.exports = {
   async _commitListField(id, field, value, { close = false } = {}) {
     let task = this.getTask(id);
     if (!task) return;
-    const plan = fieldPatch(task, field, value);
+    const siblings = task.parent_task_id ? this.getSubtasks(task.parent_task_id) : null;
+    const plan = fieldPatch(task, field, value, siblings);
     if (!plan) {
       if (close) this._closeListEdit();
       return;
     }
     if (plan.error) {
-      // An empty title: say so and stay in edit mode.
+      // An empty, too long or duplicate title: say so and stay in edit mode.
       if (this._listEdit) this._listEdit.error = plan.error;
       return this._listRepaint();
     }
@@ -246,6 +247,9 @@ module.exports = {
     }
     const before = { id };
     for (const k of Object.keys(plan.local)) before[k] = task[k];
+    // A status edit moves the row to the top of its new column (_mergeTask);
+    // a refused write puts it back where it was, not on top of the old one.
+    const place = this._taskPlace(id);
     this._mergeTask({ id, ...plan.local });
     if (close) this._listEdit = null;
     this._listRepaint();
@@ -260,6 +264,7 @@ module.exports = {
     if (!row) {
       // Never leave an unsaved value on screen: back to the last good one.
       this._mergeTask(before);
+      this._restoreTaskPlace(place);
       this._repaintBoard();
       this._alertWriteFailed();
       return;

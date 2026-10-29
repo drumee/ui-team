@@ -1,6 +1,6 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 const { isGrouped } = require("./file-group");
-const { menuRow, createRows } = require("./new-menu-rows");
+const { menuRow, createRows, isDevDeployment } = require("./new-menu-rows");
 const { iconsSkeleton, searchStatus } = require("./icons-skeleton");
 const { filesEmptyState, kindEmptyView } = require("./files-empty-state");
 const {
@@ -1623,9 +1623,12 @@ export function newFileMenu(ui, opt = {}) {
   ];
   // opt.items — optional whitelist of service names. When set, only those
   // menu items render (e.g. DMZ share passes ["add-folder"]).
+  // Note is offered on the dev platforms only (new-menu-rows isDevDeployment),
+  // like the Casual "lite" rows of the desk "+ New" menu.
+  const offered = allItems.filter((it) => it.service !== "add-note" || isDevDeployment());
   const menuItems = opt.items
-    ? allItems.filter((it) => opt.items.includes(it.service))
-    : allItems;
+    ? offered.filter((it) => opt.items.includes(it.service))
+    : offered;
   return Skeletons.Box.X({
     className: `${cnWindowBody}__buttons-container`,
     kids: [
