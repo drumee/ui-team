@@ -827,7 +827,7 @@ $theme-colors: (
     // min-width exceeds the panel, overflow-x below turns into a scrollbar.
     flex-wrap: nowrap;
     gap: 8px;
-    padding: 16px;
+    padding: 16px 12px; // Figma 873:228353 board-view
     box-sizing: border-box;
     overflow-x: auto;
     background-color: var(--normal-bg-elevated, #fff);
@@ -862,12 +862,12 @@ $theme-colors: (
     // overlay tint (2040-106090), keyed on `data-theme` so BOTH built-in and
     // custom columns are tinted (the old `data-column` rules never matched a
     // custom column's id, so custom boards showed no colour).
-    background-color: rgba(0, 0, 0, 0.05);
+    background-color: rgba(174, 174, 178, 0.1);
     box-sizing: border-box;
     overflow: hidden;
 
     @each $theme, $tint in (
-      "default": rgba(0, 0, 0, 0.05),
+      "default": rgba(174, 174, 178, 0.1),
       "orange": rgba(232, 161, 59, 0.15),
       "yellow": rgba(255, 225, 0, 0.15),
       "green": rgba(61, 222, 140, 0.15),
@@ -997,6 +997,7 @@ $theme-colors: (
       $line: 20px,
       $color: var(--normal-fg-10, #0b0a21)
     );
+    font-weight: 600;
   }
 
   // Title sits in a tinted pill (dot + label), radius 16, padding 4px 12px.
@@ -1015,6 +1016,11 @@ $theme-colors: (
       background-color: $tint;
     }
   }
+  // The board's green header pill matches its column wash (873:228353), not
+  // the app-wide green tint other chips use.
+  &__column[data-theme="green"] &__column-title-dot-group {
+    background-color: rgba(61, 222, 140, 0.15);
+  }
 
   &__column-count {
     align-items: center;
@@ -1029,6 +1035,7 @@ $theme-colors: (
       $line: 20px,
       $color: var(--normal-fg-50, #65656c)
     );
+    font-weight: 600;
   }
   @each $theme, $color in $theme-colors {
     &__column[data-theme="#{$theme}"] &__column-count-text {
@@ -1045,15 +1052,12 @@ $theme-colors: (
     gap: 12px;
     padding: 12px;
     border-radius: 12px;
-    // Transparent placeholder border: hover only recolors it. A border
-    // appearing on hover used to grow the card by 2px and relayout the
-    // whole column every time the pointer crossed a card.
-    border: 1px solid transparent;
+    // No border: hover lifts the card with a shadow (873:228353), which never
+    // changes its box — so crossing cards doesn't relayout the column.
     background-color: var(--normal-bg-elevated, #fff);
     cursor: pointer;
     transition:
       box-shadow 0.15s,
-      border-color 0.15s,
       transform 0.1s;
     user-select: none;
     // Perf: isolate each card's layout, and let offscreen cards skip layout
@@ -1063,10 +1067,12 @@ $theme-colors: (
     // the real height once a card has been rendered.
     contain: layout style;
     content-visibility: auto;
-    contain-intrinsic-size: auto 120px;
+    contain-intrinsic-size: auto 150px;
 
     &:hover {
-      border-color: var(--border-default);
+      box-shadow:
+        0 4px 2px rgba(12, 12, 13, 0.1),
+        0 4px 2px rgba(12, 12, 13, 0.05);
 
       .tasks-panel__task-remove {
         opacity: 1;
@@ -1117,10 +1123,17 @@ $theme-colors: (
     }
   }
 
-  // Title + description grouped tightly (Figma EL-6d1b5341: gap 4px).
+  // Title + description grouped tightly (Figma EL-6d1b5341: gap 4px), with the
+  // design's 24px of air below the block before files / pills (873:228353).
   &__task-head {
     align-items: stretch;
     gap: 4px;
+    padding-bottom: 24px;
+
+    // Nothing follows a bare title / description — don't pad a void.
+    &:last-child {
+      padding-bottom: 0;
+    }
   }
 
   &__task-card-row {
@@ -1128,26 +1141,37 @@ $theme-colors: (
     gap: 8px;
   }
 
+  // One line, ellipsised (873:228353). Clipped on the inner .note-content too,
+  // which is where the Note widget puts the text.
   &__task-title {
     @include drumee.typo(
-      $size: 12px,
+      $size: 14px,
       $weight: 600,
-      $line: 16px,
+      $line: 17px,
       $color: var(--normal-fg-10, #0b0a21)
     );
+    // typo() emits nothing for 600 — set the semibold itself.
+    font-weight: 600;
     flex: 1 1 auto;
     min-width: 0;
-    word-break: break-word;
+    overflow: hidden;
+
+    &,
+    .note-content {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 
-  // Description preview on the card — compact, muted, clamped to ~3 lines.
+  // Description preview on the card — muted, clamped to 2 lines.
   &__task-desc {
     overflow: hidden;
     margin: 0;
     @include drumee.typo(
-      $size: 10px,
+      $size: 12px,
       $weight: 400,
-      $line: 14px,
+      $line: 17px,
       $color: var(--normal-fg-50, #65656c)
     );
 
@@ -1155,66 +1179,24 @@ $theme-colors: (
     // clamp has to live there (clamping the outer wrapper never engages).
     .note-content {
       display: -webkit-box;
-      -webkit-line-clamp: 3;
+      -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
-      max-height: 42px;
+      max-height: 34px;
       overflow-wrap: anywhere; // break long unbroken tokens/URLs
       word-break: break-word;
     }
   }
 
+  // Avatar row — the avatars sit on the right (&__task-avatars margin-left).
   &__task-foot {
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-end;
     gap: 8px;
   }
 
-  // Card status pill (Figma 2040-106090: "● In Progress" bottom-left).
-  // data-theme drives the tint; the dot color is inline from the column.
-  &__task-status {
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 71px;
-    background: rgba(174, 174, 178, 0.16);
-
-    @each $theme, $tint in (
-      "orange": rgba(232, 161, 59, 0.14),
-      "yellow": rgba(239, 196, 67, 0.16),
-      "green": rgba(84, 182, 132, 0.14),
-      "cyan": rgba(101, 208, 234, 0.16),
-      "blue": rgba(113, 163, 244, 0.14),
-      "purple": rgba(89, 80, 255, 0.12),
-      "pink": rgba(255, 168, 220, 0.2),
-      "red": rgba(215, 78, 73, 0.12)
-    ) {
-      &[data-theme="#{$theme}"] {
-        background: $tint;
-      }
-    }
-  }
-
-  &__task-status-dot {
-    flex: 0 0 8px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-  }
-
-  &__task-status-label {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 16px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
-  }
-
   &__task-meta {
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
     min-width: 0;
@@ -1226,12 +1208,12 @@ $theme-colors: (
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    height: 24px;
+    height: 32px;
     padding: 2px 16px;
     border-radius: 100px;
     box-sizing: border-box;
     white-space: nowrap;
-    @include drumee.typo($size: 12px, $weight: 500, $line: 20px, $color: #fff);
+    @include drumee.typo($size: 14px, $weight: 400, $line: 17px, $color: #fff);
 
     &[data-priority="low"] {
       background: #54b684;
@@ -1266,9 +1248,9 @@ $theme-colors: (
   }
 
   &__task-file-ico {
-    width: 14px;
-    height: 14px;
-    flex: 0 0 14px;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
 
     svg {
       width: 100%;
@@ -1290,20 +1272,25 @@ $theme-colors: (
     min-width: 0;
   }
 
+  // "+N" is a chip of its own, like the files it stands for (873:228353).
   &__task-files-more {
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.05);
     @include drumee.typo(
       $size: 12px,
       $weight: 400,
       $line: 16px,
-      $color: var(--normal-fg-50, #65656c)
+      $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
   &__task-remove {
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    padding: 2px;
+    width: 16px;
+    height: 16px;
+    padding: 1px;
+    box-sizing: border-box;
     border-radius: 4px;
     color: var(--normal-fg-50, #84848c);
     opacity: 0;
@@ -1331,16 +1318,16 @@ $theme-colors: (
   &__task-due {
     display: inline-flex;
     align-items: center;
-    height: 24px;
+    height: 32px;
     padding: 2px 12px;
     border-radius: 100px;
     background: #f2f2f7;
     box-sizing: border-box;
     white-space: nowrap;
     @include drumee.typo(
-      $size: 12px,
+      $size: 14px,
       $weight: 400,
-      $line: 20px,
+      $line: 17px,
       $color: var(--normal-fg-20, #34343a)
     );
 
@@ -1351,11 +1338,12 @@ $theme-colors: (
   }
 
   // ── Add button — dashed "+ New task" box (Figma Frame 130) ────
+  // Left-aligned, hairline dash (873:228353).
   &__add-btn {
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     padding: 12px 16px;
-    border: 1px dashed #65656c;
+    border: 0.5px dashed #65656c;
     border-radius: 12px;
     background-color: transparent;
     cursor: pointer;
@@ -1372,7 +1360,7 @@ $theme-colors: (
 
   // The column's "New task" button: app-add before the label, same grey.
   &__add-btn {
-    gap: 6px;
+    gap: 4px;
   }
 
   &__add-ico {
@@ -1390,12 +1378,11 @@ $theme-colors: (
 
   &__add-label {
     @include drumee.typo(
-      $size: 11px,
+      $size: 10px,
       $weight: 400,
-      $line: 16px,
+      $line: 14px,
       $color: var(--normal-fg-50, #65656c)
     );
-    text-align: center;
   }
 
   // ── Drag-and-drop affordances ─────────────────────────────────
@@ -3078,7 +3065,7 @@ $theme-colors: (
     white-space: nowrap;
   }
 
-  // ── Card assignee avatars — overlapping 28px circles + "+N" chip ──
+  // ── Card assignee avatars — overlapping 32px circles (873:228353) + "+N" chip ──
   &__task-avatars {
     align-items: center;
     flex-shrink: 0;
@@ -3086,9 +3073,9 @@ $theme-colors: (
   }
 
   &__task-avatar {
-    flex: 0 0 28px;
-    width: 28px;
-    height: 28px;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     overflow: hidden;
     border: 2px solid #fff;
@@ -3101,9 +3088,9 @@ $theme-colors: (
   }
 
   &__task-avatar-more {
-    flex: 0 0 28px;
-    width: 28px;
-    height: 28px;
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
     margin-left: -8px;
     border-radius: 200px;
     border: 2px solid #fff;
@@ -3112,7 +3099,8 @@ $theme-colors: (
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    @include drumee.typo($size: 11px, $weight: 600, $line: 16px, $color: #433cc5);
+    @include drumee.typo($size: 12px, $weight: 600, $line: 14px, $color: #433cc5);
+    font-weight: 600;
   }
 
   // ── Priority pills (create + detail) ──────────────────────────
