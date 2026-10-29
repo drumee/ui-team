@@ -21,7 +21,12 @@ const gate = require("../src/drumee/libs/dmz-edit-gate.js");
 // The REAL sharebox methods, run against a stub `this`.
 const sbSrc = readFileSync(resolve(ROOT, "src/drumee/modules/dmz/sharebox/index.js"), "utf8");
 const gateFor = eval(`(${sliceFunction(sbSrc, "_gateFor(hasGrant)")})`);
-const gateInteraction = eval(`(${sliceFunction(sbSrc, "_gateInteraction(hasGrant)")})`);
+// The secure-share rebuild adds a `level` argument (the access a Request
+// Access popup asks for); accept either signature.
+const gateSig = sbSrc.includes("\n  _gateInteraction(hasGrant, level) {")
+  ? "_gateInteraction(hasGrant, level)"
+  : "_gateInteraction(hasGrant)";
+const gateInteraction = eval(`(${sliceFunction(sbSrc, gateSig)})`);
 
 function sharebox({ authenticated = true, uid = "u2", creator = "u1", write = false } = {}) {
   const shown = [];
