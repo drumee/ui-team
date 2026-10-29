@@ -10,6 +10,14 @@ const page = require("./page");
 // and fills the folder with duplicates of the same note.
 const AUTOSAVE_MS = 2500;
 
+// The note's OWN width bands, read by the skin as `data-width` on the root
+// (skin $note-phone / $note-narrow). Its own width, not the screen's: on a
+// tablet or a narrow desktop window the sidebar and the File switcher leave
+// the note a phone's width while the viewport is wide. 650px is the app's
+// mobile breakpoint; under 900px the page drops its 120px inset.
+const PHONE_MAX_WIDTH = 650;
+const NARROW_MAX_WIDTH = 900;
+
 /**
  * Notion-style Note, built on BlockNote.
  *
@@ -178,6 +186,43 @@ class __editor_blocknote extends __player {
   }
 
   /**
+   * Keep `data-width` (phone | narrow | wide) on the root in step with the
+   * width of the PAGE — the card holding the header and the body, right of
+   * the File switcher's panel, which sits inside this same window. The skin
+   * lays the page out from it. Covers every cause at once: a phone, the
+   * switcher panel, the sidebar, the window, Expand.
+   */
+  _observeOwnWidth() {
+    if (!this.el) return;
+    if (!this._widthObserver && typeof ResizeObserver !== "undefined") {
+      this._widthObserver = new ResizeObserver(() => this._applyOwnWidth());
+      // The window itself: a phone, the sidebar, the browser window, Expand.
+      this._widthObserver.observe(this.el);
+    }
+    this._applyOwnWidth();
+  }
+
+  /**
+   * Measure the page card and write the band. The card is looked up again
+   * every time and the observer moved onto it: the File switcher frame can
+   * re-render it, and an observer left on the old node would never fire
+   * again (the window's own size does not change when the panel opens).
+   */
+  _applyOwnWidth() {
+    if (!this.el) return;
+    const page = this.el.querySelector(`.${this.fig.family}__body`) || this.el;
+    if (this._widthObserver && page !== this.el && page !== this._widthPage) {
+      if (this._widthPage) this._widthObserver.unobserve(this._widthPage);
+      this._widthObserver.observe(page);
+      this._widthPage = page;
+    }
+    const width = page.getBoundingClientRect().width;
+    if (!width) return;
+    const band = width <= PHONE_MAX_WIDTH ? "phone" : width <= NARROW_MAX_WIDTH ? "narrow" : "wide";
+    if (this.el.dataset.width !== band) this.el.dataset.width = band;
+  }
+
+  /**
    * Opens docked to the workspace. `display()` is called by onPartReady with a
    * size the player base would otherwise fit the window to; that argument is
    * ignored on purpose — the workspace decides the geometry, nothing else.
@@ -191,6 +236,7 @@ class __editor_blocknote extends __player {
     }
     this._applyWorkspaceBounds();
     this._observeWorkspace();
+    this._observeOwnWidth();
     TweenMax.fromTo(this.$el, 0.35, { opacity: 0 }, { opacity: 1, ease: Expo.easeOut });
   }
 
@@ -215,6 +261,8 @@ class __editor_blocknote extends __player {
         Kind.waitFor(kind).then(() => {
           child.feed({ kind, media: this.media, editor: this });
           this._state = child.children.last();
+          // The page is laid out by now: band it from its final width.
+          this._applyOwnWidth();
         });
         break;
       }
@@ -832,6 +880,13 @@ class __editor_blocknote extends __player {
       /** already gone */
     }
     this._wsObserver = null;
+    try {
+      if (this._widthObserver) this._widthObserver.disconnect();
+    } catch (e) {
+      /** already gone */
+    }
+    this._widthObserver = null;
+    this._widthPage = null;
     if (this._timer) {
       clearTimeout(this._timer);
       this._timer = null;

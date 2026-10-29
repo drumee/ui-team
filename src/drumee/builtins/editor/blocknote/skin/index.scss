@@ -18,6 +18,15 @@ $note-inset: 120px;
 // side menu (drag handle and "+") needs — so the surface sits that much
 // further OUT for the text to line up with the title.
 $note-gutter: 54px;
+// The page edge in a phone-sized note, for the head and the text alike.
+$note-phone-pad: 20px;
+// The NOTE's own width, not the screen's: on a tablet or a narrow desktop
+// window the sidebar and the File switcher leave it a phone's width while
+// the viewport is wide. The editor writes `data-width` on its root from a
+// ResizeObserver (index.js _observeOwnWidth): phone ≤650px (the app's mobile
+// breakpoint), narrow ≤900px, wide beyond.
+$note-phone: '[data-width="phone"]';
+$note-narrow: ':is([data-width="narrow"], [data-width="phone"])';
 $note-hairline: rgba(0, 0, 0, 0.05);
 $note-hover: rgba(0, 0, 0, 0.05);
 $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
@@ -610,20 +619,97 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     box-sizing: border-box;
   }
 
-  @media (max-width: 900px) {
-    &__head {
-      padding-left: 24px;
-      padding-right: 24px;
-    }
+  // Narrow NOTE: the surface loses its inset and the text starts at
+  // BlockNote's own gutter, so the head takes that same gutter — title and
+  // text stay on one line (they sat 30px apart at 24px).
+  &#{$note-narrow} &__head {
+    padding-left: $note-gutter;
+    padding-right: $note-gutter;
+  }
 
-    &__surface {
-      padding-left: 0;
-      padding-right: 0;
-    }
+  &#{$note-narrow} &__surface {
+    padding-left: 0;
+    padding-right: 0;
+  }
 
-    &[data-cover="0"] &__cover-popup-wrapper {
-      left: 24px;
+  &#{$note-narrow}[data-cover="0"] &__cover-popup-wrapper {
+    left: $note-gutter;
+  }
+
+  // Phone-sized NOTE: no gutter for a drag handle a finger cannot use — the
+  // page edge is $note-phone-pad, head and text alike — and the head and
+  // title shrink to fit a 360-430px screen.
+  &#{$note-phone} &__header {
+    height: 56px;
+    min-height: 56px;
+  }
+
+  &#{$note-phone} &__head {
+    gap: 8px;
+    padding: 28px $note-phone-pad 0;
+  }
+
+  &#{$note-phone}[data-cover="1"] &__head {
+    padding-top: 16px;
+  }
+
+  // Three actions do not fit one line at 16px on every phone: they wrap.
+  &#{$note-phone} &__page-actions-row.drumee-box {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  &#{$note-phone} &__page-action-label {
+    font-size: 14px;
+  }
+
+  &#{$note-phone} &__title-input input {
+    font-size: 30px;
+    line-height: 36px;
+  }
+
+  &#{$note-phone} &__cover {
+    height: 120px;
+  }
+
+  &#{$note-phone} &__cover-popup-wrapper {
+    top: 112px;
+  }
+
+  &#{$note-phone}[data-cover="0"] &__cover-popup-wrapper {
+    left: $note-phone-pad;
+    top: 72px;
+  }
+
+  // Never wider than the screen, whatever opens it.
+  &#{$note-phone} &__cover-popup {
+    width: min(330px, calc(100vw - #{2 * $note-phone-pad}));
+  }
+
+  &#{$note-phone} &__surface {
+    padding-bottom: 40px;
+  }
+
+  // A touch screen has no hover: the cover's Change / Remove stay visible,
+  // or a cover could never be changed or removed there.
+  @media (hover: none) {
+    &__cover-controls.drumee-box {
+      display: flex;
     }
+  }
+}
+
+// BlockNote pads its editor by the side menu's 54px (its editor.css); in a
+// phone-sized note the text takes the page edge instead, and the side menu
+// (a hover drag handle and "+", which a finger cannot use — "/" inserts
+// blocks) is not drawn.
+.editor-blocknote#{$note-phone} .blocknote-state {
+  .bn-editor {
+    padding-inline: $note-phone-pad;
+  }
+
+  .bn-side-menu {
+    display: none;
   }
 }
 
@@ -704,6 +790,60 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   }
 }
 
+// Phone-sized note: same rules, one step smaller (the editor's __header
+// follows).
+.editor-blocknote#{$note-phone} .editor-blocknote-topbar.drumee-topbar {
+  .drumee-topbar__bar.drumee-topbar__bar {
+    height: 56px;
+    padding: 8px 8px 8px 12px;
+  }
+
+  .drumee-topbar__identity {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .drumee-topbar__filetype {
+    width: 32px;
+    height: 32px;
+  }
+
+  .drumee-topbar__filetype-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  .drumee-topbar__title {
+    font-size: 16px;
+  }
+
+  .drumee-topbar__actions {
+    height: 40px;
+
+    .icon {
+      width: 40px;
+      height: 40px;
+      padding: 8px;
+    }
+  }
+
+  .drumee-topbar__menu {
+    width: 40px;
+    height: 40px;
+  }
+
+  // Export's submenu: a phone has room on neither side of the gear menu
+  // (topbar/flip.js flipped it left, 22px off a 390px screen). It drops
+  // BELOW its row instead, right-aligned with it, over the rows beneath —
+  // flush, so moving from the row into it never leaves the pair.
+  .drumee-topbar__submenu.drumee-topbar__submenu,
+  .drumee-topbar__submenu.drumee-topbar__submenu[data-flip="left"] {
+    left: auto;
+    right: 0;
+    top: 100%;
+  }
+}
+
 .editor-blocknote-topbar {
   &__share {
     height: 40px;
@@ -755,6 +895,34 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
       color: var(--warning);
     }
   }
+}
+
+// Phone-sized note: its name needs the room. Share keeps its lock on the
+// same tint (a 40px round button), and the bar and its targets come down to
+// 40px.
+.editor-blocknote#{$note-phone} .editor-blocknote-topbar {
+  &__share.drumee-box {
+    width: 40px;
+    padding: 0;
+    margin-right: 4px;
+    justify-content: center;
+  }
+
+  // Paired with the Note's own class: drumee-text sets display: flex.
+  &__share .editor-blocknote-topbar__share-label.drumee-text {
+    display: none;
+  }
+
+  &__save-status {
+    margin-right: 8px;
+  }
+}
+
+// On a phone (the device, from ui-core's data-device) Expand goes: the note
+// already fills the screen. A narrow DESKTOP note keeps it — that is exactly
+// when the note is worth expanding.
+.editor-blocknote[data-device="mobile"] .editor-blocknote-topbar.drumee-topbar .drumee-topbar__actions .editor-blocknote-topbar__fullscreen.icon {
+  display: none;
 }
 
 // The player window sets user-select:none so its chrome can be dragged. That

@@ -51,11 +51,13 @@ function sharePill(ui) {
 
 function config(ui) {
   const pfx = `${ui.fig.family}-topbar`;
-  const icon = (service, ico, tooltips, extra = {}) => ({
+  // `className` in `extra` is ADDED to the button's own classes, not spread
+  // over them (which would drop `icon` and with it the 48px target).
+  const icon = (service, ico, tooltips, { className = "", ...extra } = {}) => ({
     type: "button",
     icon: ico,
     service,
-    className: `icon ${pfx}__icon ${extra.className || ""}`.trim(),
+    className: `icon ${pfx}__icon ${className}`.trim(),
     tooltips,
     ...extra,
   });
@@ -91,6 +93,8 @@ function config(ui) {
         icon("note-fullscreen", "ph-arrows-out-simple", LOCALE.FULL_SCREEN, {
           id: "note-fullscreen",
           partHandler: ui,
+          // named for the skin: a phone has no use for it (already full screen)
+          className: `${pfx}__fullscreen`,
         }),
         icon(_e.close, "ph-x", LOCALE.CLOSE),
       ],
