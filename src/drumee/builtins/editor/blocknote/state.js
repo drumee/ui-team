@@ -254,8 +254,9 @@ class __blocknote_state extends DrumeeMFS {
     const nid = node.nid || this.mget(_a.nid);
     const hub_id = node.hub_id || this.mget(_a.hub_id);
     if (!nid || !hub_id) return null;
-    const base = location.href.split("#")[0].replace(/\/+$/, "");
-    return `${base}/file/orig/${nid}/${hub_id}`;
+    // The shared builder: endpoint + file/orig, plus the share key a dmz
+    // visitor needs (without it the share host answers 404).
+    return require("../content-url").contentUrl(null, { nid, hub_id });
   }
 
   /**
@@ -312,7 +313,9 @@ class __blocknote_state extends DrumeeMFS {
       if (this.editor && this.editor.markDirty) this.editor.markDirty();
     });
 
-    this._editable = !opt.readOnly;
+    // Also read-only for a reader of the note (editor_blocknote.isViewOnly).
+    const viewOnly = !!(this.editor && this.editor.isViewOnly && this.editor.isViewOnly());
+    this._editable = !opt.readOnly && !viewOnly;
     this._root = createRoot(this.el);
     this._paint();
 

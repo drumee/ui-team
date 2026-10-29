@@ -852,3 +852,169 @@ test("a link to a .dnote (filetype note) opens the Note editor; a real legacy no
     restore();
   }
 });
+
+// ── review of #788 (Codex, 2026-10-29) ──────────────────────────────────────
+// The editor window itself, loaded for real with its framework base stubbed:
+// what it does with a save in flight, the X button, the tab's beforeunload,
+// and a reader's permissions.
+
+function loadEditor() {
+  const stubs = {
+    "player/interact": class {
+      constructor() { this._m = {}; }
+      mget(k) { return this._m[k]; }
+      mset(k, v) { if (typeof k === "object") Object.assign(this._m, k); else this._m[k] = v; }
+      warn() {}
+    },
+    "@drumee/ui-core/vendor": { TweenMax: {}, Expo: {} },
+    "builtins/player/widget/share": {},
+    "./page": { paint() {}, onPartReady() { return false; }, onUiEvent() { return false; }, destroy() {} },
+  };
+  const _load = Module._load;
+  Module._load = function (request, ...rest) {
+    if (Object.prototype.hasOwnProperty.call(stubs, request)) return stubs[request];
+    return _load.call(this, request, ...rest);
+  };
+  try {
+    return requireEsmish("src/drumee/builtins/editor/blocknote/index.js").default;
+  } finally {
+    Module._load = _load;
+  }
+}
+
+// An editor with an open note, a save we resolve by hand, and no DOM.
+function editorWithPendingSaves() {
+  const Editor = loadEditor();
+  const ed = Object.create(Editor.prototype);
+  ed._m = { nid: "n1" };
+  ed._state = { getContent: () => "content" };
+  ed._saveTarget = () => ({ target: null, pid: "p1", hub_id: "h1" });
+  ed._noteName = () => "Note";
+  ed._setStatus = (s) => { ed._status = s; };
+  const saves = [];
+  ed.postService = () => new Promise((resolve) => saves.push(resolve));
+  const flush = () => new Promise((r) => setImmediate(r));
+  const stopTimer = () => { clearTimeout(ed._timer); ed._timer = null; };
+  return { ed, saves, flush, stopTimer };
+}
+
+function withEditorGlobals(fn) {
+  const restore = installGlobals();
+  const saved = {};
+  for (const k of ["_", "_e", "SERVICE", "Visitor"]) saved[k] = global[k];
+  Object.assign(global._a, { nid: "nid", id: "id", position: "position", service: "service", name: "name", save: "save", hub_id: "hub_id" });
+  global._ = require("lodash");
+  global._e = { close: "close" };
+  global.SERVICE = { media: { save: "media.save" } };
+  global.Visitor = { inDmz: 0 };
+  return Promise.resolve()
+    .then(fn)
+    .finally(() => { Object.assign(global, saved); restore(); });
+}
+
+test("an edit made while a save is in flight is still unsaved when that save lands", () =>
+  withEditorGlobals(async () => {
+    const { ed, saves, flush, stopTimer } = editorWithPendingSaves();
+    ed.markDirty(); stopTimer();
+    ed.saveContent();                      // carries edit 1
+    ed.markDirty(); stopTimer();           // edit 2, typed during the request
+    saves[0]({ nid: "n1" }); await flush();
+    assert.equal(ed._changed, 1, "edit 2 is not in the file yet");
+    assert.equal(ed._status, "unsaved");
+    // with nothing typed during the request, the save clears it as before
+    ed.saveContent();
+    saves[1]({ nid: "n1" }); await flush();
+    assert.equal(ed._changed, 0);
+    assert.equal(ed._status, "saved");
+  }));
+
+test("closing during a save writes the newer edits before it lets the window go", () =>
+  withEditorGlobals(async () => {
+    const { ed, saves, flush, stopTimer } = editorWithPendingSaves();
+    ed.markDirty(); stopTimer();
+    ed.saveContent();
+    ed.markDirty(); stopTimer();
+    let answer;
+    ed.saveBeforeClose().then((ok) => (answer = ok));
+    saves[0]({ nid: "n1" }); await flush();
+    assert.equal(answer, undefined, "not answered on the older save");
+    assert.equal(saves.length, 2, "a second save carries the newer edits");
+    saves[1]({ nid: "n1" }); await flush();
+    assert.equal(answer, true);
+    assert.equal(ed._changed, 0);
+  }));
+
+test("closing during a save that already holds every edit adds no extra save", () =>
+  withEditorGlobals(async () => {
+    const { ed, saves, flush, stopTimer } = editorWithPendingSaves();
+    ed.markDirty(); stopTimer();
+    ed.saveContent();
+    let answer;
+    ed.saveBeforeClose().then((ok) => (answer = ok));
+    saves[0]({ nid: "n1" }); await flush();
+    assert.equal(answer, true);
+    assert.equal(saves.length, 1);
+  }));
+
+test("the note's X saves before it closes, like every other editor's", () =>
+  withEditorGlobals(() => {
+    const Editor = loadEditor();
+    const ed = Object.create(Editor.prototype);
+    const calls = [];
+    ed.closeAfterSave = () => calls.push("closeAfterSave");
+    ed.goodbye = () => calls.push("goodbye");
+    ed.onUiEvent({ get: (k) => (k === "service" ? "close" : undefined) });
+    assert.deepEqual(calls, ["closeAfterSave"]);
+  }));
+
+test("leaving the tab with unsaved edits cancels beforeunload (a returned string is ignored there)", () =>
+  withEditorGlobals(() => {
+    const Editor = loadEditor();
+    const ed = Object.create(Editor.prototype);
+    const ev = () => ({ prevented: 0, preventDefault() { this.prevented = 1; } });
+    let e = ev();
+    ed._changed = 1;
+    ed.checkUnsavedWork(e);
+    assert.equal(e.prevented, 1);
+    assert.equal(e.returnValue, "CONFIRM_QUIT");
+    for (const state of [{ _changed: 0 }, { _changed: 1, _readOnly: 1 }]) {
+      e = ev();
+      Object.assign(ed, state);
+      assert.equal(ed.checkUnsavedWork(e), undefined);
+      assert.equal(e.prevented, 0, `no prompt for ${JSON.stringify(state)}`);
+    }
+  }));
+
+test("a reader of the note gets a read-only body, and nothing of theirs is saved", () =>
+  withEditorGlobals(() => {
+    const Editor = loadEditor();
+    const ed = Object.create(Editor.prototype);
+    ed._setStatus = (s) => { ed._status = s; };
+    ed.media = { canUpload: () => false };
+    assert.equal(ed.isViewOnly(), true);
+    ed.markDirty();
+    assert.equal(ed._changed, undefined, "no edit is recorded");
+    assert.equal(ed._timer, undefined, "no autosave is armed");
+    ed.markConverting();
+    assert.equal(ed._status, undefined, "a reader is not told the note upgrades on save");
+    ed.media = { canUpload: () => true };
+    assert.equal(ed.isViewOnly(), false);
+    ed.media = null;
+    assert.equal(ed.isViewOnly(), false, "a brand-new note belongs to its author");
+    // the body follows it (blocknote_state mounts BlockNoteView with `editable`)
+    assert.match(readNote("state.js"), /this\._editable = !opt\.readOnly && !viewOnly;/);
+  }));
+
+test("a note written by a NEWER format version opens read-only instead of being rewritten", () => {
+  const raw = (v) => JSON.stringify({ app: "drumee.blocknote", version: v, blocks: [] });
+  assert.equal(fmt.parse(raw(fmt.VERSION + 1)).error, "newer-version");
+  assert.equal(fmt.parse(raw(fmt.VERSION)).error, undefined);
+  // a file with no version field is read as this one
+  assert.equal(fmt.parse(JSON.stringify({ app: "drumee.blocknote", blocks: [] })).error, undefined);
+});
+
+test("the content URL fallback goes through the shared builder that adds the share key", () => {
+  const st = readNote("state.js");
+  const fn = st.slice(st.indexOf("_sourceUrl() {"));
+  assert.match(fn.slice(0, fn.indexOf("\n  }\n")), /require\("\.\.\/content-url"\)\.contentUrl\(null, \{ nid, hub_id \}\)/);
+});

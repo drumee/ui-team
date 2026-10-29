@@ -126,6 +126,12 @@ function parse(content) {
   if (!data || data.app !== DATA_TYPE || !Array.isArray(data.blocks)) {
     return { error: "unrecognised" };
   }
+  // Written by a newer client: its blocks may mean things this one does not
+  // know, and an autosave here would rewrite them as this VERSION. Open it
+  // read-only instead. A missing version is read as this one.
+  if (typeof data.version === "number" && data.version > VERSION) {
+    return { error: "newer-version" };
+  }
   return {
     blocks: data.blocks,
     // A malformed decoration is dropped, never fatal: the text is what matters.
