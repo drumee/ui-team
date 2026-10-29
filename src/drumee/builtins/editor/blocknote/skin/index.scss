@@ -447,8 +447,6 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     height: 120px;
     overflow-y: auto;
     overflow-x: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-30) transparent;
   }
 
   &__emoji {
@@ -842,23 +840,6 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     min-height: 0;
     overflow-y: auto;
     padding-right: 12px;
-    // The Figma's 4px purple thumb. The standard properties win over the
-    // ::-webkit-scrollbar ones wherever both are supported.
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-30) transparent;
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--primary-30);
-      border-radius: 28px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
   }
 
   &__group {
