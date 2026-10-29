@@ -901,12 +901,14 @@ function editorWithPendingSaves() {
 function withEditorGlobals(fn) {
   const restore = installGlobals();
   const saved = {};
-  for (const k of ["_", "_e", "SERVICE", "Visitor"]) saved[k] = global[k];
+  for (const k of ["_", "_e", "SERVICE", "Visitor", "window"]) saved[k] = global[k];
   Object.assign(global._a, { nid: "nid", id: "id", position: "position", service: "service", name: "name", save: "save", hub_id: "hub_id" });
   global._ = require("lodash");
   global._e = { close: "close" };
   global.SERVICE = { media: { save: "media.save" } };
   global.Visitor = { inDmz: 0 };
+  // the desk: no share window manager
+  global.window = { Wm: { mget: () => null } };
   return Promise.resolve()
     .then(fn)
     .finally(() => { Object.assign(global, saved); restore(); });
@@ -1017,6 +1019,165 @@ test("the content URL fallback goes through the shared builder that adds the sha
   const st = readNote("state.js");
   const fn = st.slice(st.indexOf("_sourceUrl() {"));
   assert.match(fn.slice(0, fn.indexOf("\n  }\n")), /require\("\.\.\/content-url"\)\.contentUrl\(null, \{ nid, hub_id \}\)/);
+});
+
+// ── secure share (DMZ): the share's edit gate ───────────────────────────────
+
+function shareboxStub({ authenticated, write }) {
+  const shown = [];
+  return {
+    shown,
+    mget: (k) => ({ is_authenticated: authenticated, uid: "u2", creator_id: "u1", privilege: write ? 2 : 1 })[k],
+    havePermission: (bit, priv) => (priv & bit) === bit,
+    _gateFor(hasGrant) { return !authenticated ? "signup" : hasGrant ? null : "request"; },
+    _gateInteraction(hasGrant) { const g = this._gateFor(hasGrant); if (g) shown.push(g); return !!g; },
+  };
+}
+
+function fakeBody({ tagName = "DIV", hasInput = false } = {}) {
+  const listeners = {};
+  const attrs = {};
+  return {
+    tagName,
+    listeners,
+    attrs,
+    setAttribute: (k, v) => (attrs[k] = v),
+    hasAttribute: (k) => k in attrs,
+    querySelector: () => (hasInput ? {} : null),
+    addEventListener: (ev, fn) => (listeners[ev] = fn),
+  };
+}
+
+const keyEvent = (key) => ({
+  type: "keydown", key, prevented: 0, stopped: 0,
+  preventDefault() { this.prevented = 1; }, stopPropagation() { this.stopped = 1; },
+});
+
+function inShare(sb, fn, { touch = false } = {}) {
+  return withEditorGlobals(() => {
+    const savedK = global._K, savedWm = global.window;
+    global._K = { permission: { write: 2 } };
+    Object.assign(global._a, { privilege: "privilege", open: "open" });
+    global.window = {
+      Wm: sb ? { isDmz: 1, mget: (k) => (k === "desk" ? sb : null) } : { mget: () => null },
+      matchMedia: (q) => ({ matches: touch && q === "(hover: none)" }),
+    };
+    try { return fn(loadEditor()); } finally { global._K = savedK; global.window = savedWm; }
+  });
+}
+
+test("in a share, an anonymous visitor gets a read-only body and meets the sign-up gate on typing", () => {
+  const sb = shareboxStub({ authenticated: false, write: true });
+  return inShare(sb, (Editor) => {
+    const ed = Object.create(Editor.prototype);
+    // the creator's privilege, as a public share reports it to a guest
+    ed.media = { canUpload: () => true };
+    assert.equal(ed.isViewOnly(), true);
+    const body = fakeBody();
+    ed._wireShareEditGate(body);
+    assert.equal(body.attrs.tabindex, "-1", "focusable, so keystrokes reach the gate");
+    const reading = keyEvent("ArrowDown");
+    body.listeners.keydown(reading);
+    assert.equal(reading.prevented, 0);
+    assert.deepEqual(sb.shown, [], "reading never gates");
+    const typing = keyEvent("a");
+    body.listeners.keydown(typing);
+    assert.equal(typing.prevented, 1);
+    assert.deepEqual(sb.shown, ["signup"]);
+    const paste = { type: "paste", preventDefault() { this.prevented = 1; }, stopPropagation() {} };
+    ed._dmzEditGatedAt -= 1000;
+    body.listeners.paste(paste);
+    assert.equal(paste.prevented, 1, "a mouse paste is gated too");
+  });
+});
+
+test("in a share, a recipient holding the edit grant types as usual and is never gated", () => {
+  const sb = shareboxStub({ authenticated: true, write: true });
+  return inShare(sb, (Editor) => {
+    const ed = Object.create(Editor.prototype);
+    ed.media = { canUpload: () => true };
+    assert.equal(ed.isViewOnly(), false);
+    const body = fakeBody();
+    ed._wireShareEditGate(body);
+    const typing = keyEvent("a");
+    body.listeners.keydown(typing);
+    assert.equal(typing.prevented, 0);
+    assert.deepEqual(sb.shown, []);
+  });
+});
+
+test("on the desk nothing of the share gate is installed", () =>
+  inShare(null, (Editor) => {
+    const ed = Object.create(Editor.prototype);
+    ed.media = { canUpload: () => true };
+    assert.equal(ed.isViewOnly(), false);
+    const body = fakeBody();
+    ed._wireShareEditGate(body);
+    assert.deepEqual(body.listeners, {});
+    assert.deepEqual(body.attrs, {}, "the body is not made focusable");
+  }));
+
+test("in a share, the page title is read-only for a gated visitor and meets the gate too", () => {
+  const sb = shareboxStub({ authenticated: false, write: true });
+  return inShare(sb, (Editor) => {
+    const ed = Object.create(Editor.prototype);
+    ed.media = { canUpload: () => true };
+    ed.fig = { family: "editor-blocknote" };
+    const body = fakeBody();
+    const titleEl = fakeBody({ hasInput: true });
+    ed._state = { el: body };
+    ed.el = { querySelector: (sel) => (sel === ".editor-blocknote__title-input" ? titleEl : null) };
+    ed._wireShareEditGates();
+    assert.ok(body.listeners.keydown && titleEl.listeners.keydown, "body and title are both gated");
+    assert.equal(titleEl.attrs.tabindex, undefined, "an input is focusable already");
+    const typing = keyEvent("N");
+    titleEl.listeners.keydown(typing);
+    assert.equal(typing.prevented, 1);
+    assert.deepEqual(sb.shown, ["signup"]);
+    // and a rename that got through anyway is not applied
+    ed._m = { filename: "Old" };
+    ed.mget = (k) => ed._m[k];
+    ed.mset = (o) => Object.assign(ed._m, o);
+    ed.onUiEvent({ get: (k) => (k === "service" ? "rename-note" : undefined), getValue: () => "New" });
+    assert.equal(ed._m.filename, "Old");
+  });
+});
+
+test("the page title renders read-only for any reader (Entry's own readonly)", () => {
+  assert.match(readNote("skeleton/index.js"), /readonly: _ui_\.isViewOnly\(\) \? 1 : 0,/);
+});
+
+test("on a touch screen, a tap in the gated body meets the gate (a link still opens)", () => {
+  const sb = shareboxStub({ authenticated: false, write: true });
+  return inShare(sb, (Editor) => {
+    const ed = Object.create(Editor.prototype);
+    ed.media = { canUpload: () => true };
+    const body = fakeBody();
+    ed._wireShareEditGate(body);
+    const tap = (target) => ({ type: "click", target, prevented: 0, preventDefault() { this.prevented = 1; }, stopPropagation() {} });
+    const onLink = tap({ closest: (sel) => (sel === "a" ? {} : null) });
+    body.listeners.click(onLink);
+    assert.equal(onLink.prevented, 0);
+    assert.deepEqual(sb.shown, []);
+    const onText = tap({ closest: () => null });
+    body.listeners.click(onText);
+    assert.equal(onText.prevented, 1);
+    assert.deepEqual(sb.shown, ["signup"]);
+  }, { touch: true });
+});
+
+test("with a mouse, a click in the gated body never gates (reading, selecting)", () => {
+  const sb = shareboxStub({ authenticated: false, write: true });
+  return inShare(sb, (Editor) => {
+    const ed = Object.create(Editor.prototype);
+    ed.media = { canUpload: () => true };
+    const body = fakeBody();
+    ed._wireShareEditGate(body);
+    const click = { type: "click", target: { closest: () => null }, prevented: 0, preventDefault() { this.prevented = 1; }, stopPropagation() {} };
+    body.listeners.click(click);
+    assert.equal(click.prevented, 0);
+    assert.deepEqual(sb.shown, []);
+  });
 });
 
 // ── phone layout (Duy, 2026-10-29: "fit và responsive trên điện thoại") ──────
