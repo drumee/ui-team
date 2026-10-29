@@ -1418,6 +1418,10 @@ $theme-colors: (
 
   // ── Custom columns (add ghost / header menu) ─────────────────
   &__col-menu-btn {
+    // Hidden for now: the "⋮" trigger (rename / colour / done / delete) stays
+    // wired, so dropping this line brings it back. !important because
+    // `.drumee-widget[data-flow]{display:flex}` outranks a single class.
+    display: none !important;
     flex: 0 0 auto;
     padding: 0 6px;
     cursor: pointer;
