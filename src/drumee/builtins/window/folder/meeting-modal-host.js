@@ -55,6 +55,7 @@ const HOST_OWN = [
   "initialize", "onDomRefresh", "onPartReady", "_load", "onUiEvent", "onBeforeDestroy", "_openFromList",
   "_reportClosed", "closeMeetingModal", "_refreshSchedule", "_upsertLocalMeeting",
   "canUpload", "openContent", "meetingViewOnly", "_applyViewOnly",
+  "onRender", "_shedFolderClasses",
 ];
 
 class __meeting_modal_host extends LetcBox {
@@ -69,6 +70,27 @@ class __meeting_modal_host extends LetcBox {
       const { uploadFile } = require("@drumee/ui-essentials");
       this.uploadFile = uploadFile.bind(this);
     }
+  }
+
+  onRender() {
+    if (super.onRender) super.onRender();
+    this._shedFolderClasses();
+  }
+
+  /**
+   * figName "window_folder" lends the modal its skin family (its classes are
+   * built from fig.family), but ui-core's onRender also stamps THIS root with
+   * the fig classes — window, window-folder, window__item, window__ui,
+   * window-folder__ui — and the window skin then drew an empty folder window
+   * behind the "Meeting information" modal. The root takes them off and
+   * wears its own class.
+   */
+  _shedFolderClasses() {
+    if (!this.el) return;
+    this.el.classList.remove(
+      "window", "window-folder", "window__item", "window__ui", "window-folder__ui",
+    );
+    this.el.classList.add("meeting-modal-host");
   }
 
   onDomRefresh() {

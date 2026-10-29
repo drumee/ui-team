@@ -176,3 +176,26 @@ test("a failure opening the modal reports it closed", async () => {
   await openFromList.call(h, [{ id: "m1" }]);
   assert.deepEqual(h.sent, [{ service: "meeting-host-closed", wrote: false }]);
 });
+
+// figName "window_folder" lends the modal its skin family, but ui-core's
+// onRender also stamps the HOST's root with the fig classes — "window
+// window-folder window__item window__ui window-folder__ui" — so the window
+// skin drew an empty folder window behind the "Meeting information" modal on
+// the Personal Calendar. The host takes those classes off its own root.
+test("the host's root does not wear the folder window's classes", () => {
+  const shed = eval(`(${sliceFunction(HOST, "_shedFolderClasses()")})`);
+  const classes = new Set(["drumee-box", "window", "window-folder", "window__item", "window__ui", "window-folder__ui"]);
+  const self = {
+    el: {
+      classList: {
+        remove: (...c) => c.forEach((x) => classes.delete(x)),
+        add: (...c) => c.forEach((x) => classes.add(x)),
+      },
+    },
+  };
+  shed.call(self);
+  assert.deepEqual([...classes].sort(), ["drumee-box", "meeting-modal-host"]);
+  // On every render, after ui-core's own onRender stamped them.
+  const render = sliceFunction(HOST, "onRender()");
+  assert.ok(render.indexOf("super.onRender") < render.indexOf("this._shedFolderClasses()"));
+});
