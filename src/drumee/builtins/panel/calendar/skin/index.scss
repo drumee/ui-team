@@ -1600,7 +1600,8 @@
         .calendar-main__modal[data-form="task"],
         .calendar-main__modal[data-form="meeting"],
         .calendar-main__modal[data-form="invite-link"],
-        .calendar-main__modal[data-form="task-quick-open"]
+        .calendar-main__modal[data-form="task-quick-open"],
+        .calendar-main__modal[data-form="meeting-info"]
       ) {
       background: transparent;
       backdrop-filter: none;
@@ -1633,7 +1634,8 @@
           .calendar-main__modal[data-form="task"],
           .calendar-main__modal[data-form="meeting"],
           .calendar-main__modal[data-form="invite-link"],
-          .calendar-main__modal[data-form="task-quick-open"]
+          .calendar-main__modal[data-form="task-quick-open"],
+        .calendar-main__modal[data-form="meeting-info"]
         )
     )
     > :not(.calendar-main__modal-wrapper):not(.calendar-main__toast-slot) {
@@ -1676,6 +1678,20 @@
     // card (1697:50129) brings its own surface. The box fills the wrapper so
     // the board's absolutely placed backdrop has the whole page to centre its
     // card in.
+    // A meeting chip's "Meeting information" modal: the folder's own card,
+    // drawn and centred by meeting_modal_host's dialog layer
+    // (window/folder/skin/meeting-modal-host.scss). This box adds nothing.
+    &[data-form="meeting-info"] {
+      width: 0;
+      height: 0;
+      padding: 0;
+      overflow: visible;
+      background: none;
+      border: 0;
+      box-shadow: none;
+      animation: none;
+    }
+
     &[data-form="task-quick-open"] {
       width: 100%;
       height: 100%;

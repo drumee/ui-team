@@ -1722,6 +1722,7 @@ class __calendar_main extends LetcBox {
       }
       if (hotkeys.isComposing(e) || hotkeys.inTextEntry(e.target)) return;
       claim();
+      if (form.kind === "meeting-info") return this._closeForm();
       if (form.kind === "task-quick-open") {
         const panel = this._quickPanel;
         // Still loading: there is no card, and no draft, to discard yet.
@@ -2834,16 +2835,15 @@ class __calendar_main extends LetcBox {
       return;
     }
     if (row.scope === "workspace" && row.kind === "task") return this._openQuickTask(row);
-    // A personal meeting is edited here, in this screen's own meeting form: it
-    // lives in the caller's own hub, which has no Meeting tab to hand it to.
-    // The creator only (room.update / room.remove are creator-only), and never
-    // from one occurrence of a series, for the same reason as the task above.
-    if (row.scope === "personal" && row.kind === "meeting" && row.can_write) {
-      if (occurrence) {
-        this.warn("calendar: an occurrence of a recurring item is not editable", id);
-        return;
-      }
-      return this._openMeetingForm(row);
+    // Any meeting chip — personal or workspace, any view — opens the folder's
+    // own "Meeting information" modal over the calendar (meeting_modal_host).
+    // It replaces this screen's meeting form and the hand-off to the
+    // workspace for a chip; ownership is the server's (room.update / remove
+    // are creator-only). An occurrence's row here is its SERIES' (it shares
+    // the id), so the start comes off the chip.
+    if (row.kind === "meeting") {
+      const at = Number(cmd.mget("itemStime")) || row.stime || 0;
+      return this._openMeetingInfo(row, { at, occurrence });
     }
     // The occurrence's OWN start, so the workspace's Meeting tab anchors on
     // the date the user clicked rather than on the series origin.
@@ -2857,6 +2857,23 @@ class __calendar_main extends LetcBox {
    * its own handlers, its own Update, its own upload folder for the hub. The
    * panel says when the card has gone (task-quick-open-closed / -board).
    */
+  /**
+   * A meeting chip: the folder's "Meeting information" modal, hosted by
+   * meeting_modal_host in this page's modal slot (skeleton meetingInfo). The
+   * host loads the record itself and says when it has gone
+   * (meeting-host-closed).
+   *
+   * @param {Object} row         the calendar row (a series' row for an occurrence)
+   * @param {number} at          the clicked chip's start, epoch seconds
+   * @param {boolean} occurrence the chip is one occurrence of a series — Join
+   *   then joins THAT one
+   */
+  _openMeetingInfo(row, { at, occurrence = false } = {}) {
+    this._closeMenus();
+    this._form = { kind: "meeting-info", row, at, occurrence: occurrence ? at : 0 };
+    this._renderModal();
+  }
+
   _openQuickTask(row) {
     this._closeMenus();
     this._form = { kind: "task-quick-open", row };
@@ -2961,6 +2978,15 @@ class __calendar_main extends LetcBox {
       // task that is no longer on its board). Its writes carry this tab's
       // socket_id, so none of them comes back as a push: reload on both exits,
       // whatever was done, since comments, subtasks and files save at once.
+      // The meeting-info host's modal has gone (×, a save, a delete, Join, or a
+      // record no longer there). A write it made reloads on the close.
+      case "meeting-host-closed": {
+        const form = this._form;
+        if (!form || form.kind !== "meeting-info") return;
+        if (args && args.wrote) form.wrote = true;
+        return this._closeForm();
+      }
+
       case "task-quick-open-closed": {
         if (!this._form || this._form.kind !== "task-quick-open") return;
         return this._closeForm() || this._reload();

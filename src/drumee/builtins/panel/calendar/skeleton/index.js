@@ -23,6 +23,7 @@ function modalKids(ui) {
   if (form.kind === "meeting") return [meetingForm(ui)];
   if (form.kind === "task") return [taskForm(ui)];
   if (form.kind === "task-quick-open") return [quickOpen(ui, form.row)];
+  if (form.kind === "meeting-info") return [meetingInfo(ui, form)];
   return [];
 }
 
@@ -50,6 +51,34 @@ function quickOpen(ui, row) {
         scope_nid: row.nid,
         quick_open: 1,
         sys_pn: "quick-open-panel",
+        partHandler: ui,
+        uiHandler: [ui],
+      },
+    ],
+  });
+}
+
+// A meeting chip: the folder's own "Meeting information" modal, hosted by
+// meeting_modal_host (window/folder/meeting-modal-host.js). The box is this
+// page's modal, so the toast dodge (_modalEl) and the slot lift see it; the
+// card is drawn and styled by the folder's skin.
+function meetingInfo(ui, form) {
+  const pfx = ui.fig.family;
+  const row = form.row || {};
+  const span = Math.max(0, (row.etime || 0) - (row.stime || 0));
+  return Skeletons.Box.Y({
+    className: `${pfx}__modal`,
+    attrOpt: { "data-form": "meeting-info" },
+    kids: [
+      {
+        kind: "meeting_modal_host",
+        hub_id: row.hub_id,
+        meeting_nid: row.nid || row.id,
+        stime: form.at,
+        etime: form.at + span,
+        occurrence: form.occurrence,
+        may_write: !!row.can_write,
+        sys_pn: "meeting-host",
         partHandler: ui,
         uiHandler: [ui],
       },
