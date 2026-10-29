@@ -1033,8 +1033,10 @@ test("the note tags its root with its own width band, and follows it", () =>
     const body = { getBoundingClientRect: () => ({ width }) };
     ed.fig = { family: "editor-blocknote" };
     let current = body;
+    const styles = {};
     ed.el = {
       dataset: {},
+      style: { setProperty: (k, v) => (styles[k] = v) },
       getBoundingClientRect: () => ({ width: width + 250 }),
       querySelector: (sel) => (sel === ".editor-blocknote__body" ? current : null),
     };
@@ -1064,6 +1066,7 @@ test("the note tags its root with its own width band, and follows it", () =>
       observed();
       assert.equal(ed.el.dataset.width, "wide");
       assert.deepEqual(watched, [ed.el, current], "the old card is let go, the new one watched");
+      assert.equal(styles["--note-page-width"], "1200px", "the page width is published for the skin");
     } finally {
       global.ResizeObserver = savedRO;
     }
@@ -1080,6 +1083,8 @@ test("the phone and narrow layouts key off data-width, never the viewport", () =
     /\.editor-blocknote#\{\$note-phone\} \.blocknote-state \{\s*\.bn-editor \{\s*padding-inline: \$note-phone-pad;/,
     /\.editor-blocknote#\{\$note-phone\} \.editor-blocknote-topbar\.drumee-topbar \{/,
     /&__share \.editor-blocknote-topbar__share-label\.drumee-text \{\s*display: none;/,
+    // the cover popup is sized against the page, not the viewport
+    /width: min\(330px, calc\(var\(--note-page-width, 100vw\) - #\{2 \* \$note-phone-pad\}\)\);/,
   ]) assert.match(skin, sel);
   // Expand is hidden for a phone DEVICE only; a narrow desktop note keeps it
   assert.match(skin, /\.editor-blocknote\[data-device="mobile"\][^{]*__fullscreen\.icon \{\s*display: none;/);

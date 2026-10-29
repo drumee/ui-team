@@ -681,9 +681,10 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     top: 72px;
   }
 
-  // Never wider than the screen, whatever opens it.
+  // Never wider than the page, whatever opens it (--note-page-width: the
+  // page card as measured by the editor; the viewport is only the fallback).
   &#{$note-phone} &__cover-popup {
-    width: min(330px, calc(100vw - #{2 * $note-phone-pad}));
+    width: min(330px, calc(var(--note-page-width, 100vw) - #{2 * $note-phone-pad}));
   }
 
   &#{$note-phone} &__surface {

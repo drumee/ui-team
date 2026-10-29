@@ -220,6 +220,9 @@ class __editor_blocknote extends __player {
     if (!width) return;
     const band = width <= PHONE_MAX_WIDTH ? "phone" : width <= NARROW_MAX_WIDTH ? "narrow" : "wide";
     if (this.el.dataset.width !== band) this.el.dataset.width = band;
+    // The page's width for what has to fit inside it (the cover popup): the
+    // viewport (100vw) is wider than the page whenever the switcher is open.
+    this.el.style.setProperty("--note-page-width", `${Math.round(width)}px`);
   }
 
   /**
