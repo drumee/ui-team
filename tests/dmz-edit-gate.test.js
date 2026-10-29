@@ -119,6 +119,7 @@ test("both editors go through the shared gate", () => {
   const bn = readFileSync(resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"), "utf8");
   assert.match(bn, /require\("libs\/dmz-edit-gate"\)/);
   assert.match(bn, /if \(editWouldBeGated\(this\._shareDesk\(\)\)\) return true;/);
+  assert.match(bn, /this\._wireShareEditGates\(\);/);
   assert.match(bn, /this\._wireShareEditGate\(this\._state && this\._state\.el\);/);
-  assert.match(bn, /case "page-title": \{[\s\S]*?this\._wireShareEditGate\(child\.el\);/);
+  assert.match(bn, /this\._wireShareEditGate\(this\.el && this\.el\.querySelector\(`\.\$\{this\.fig\.family\}__title-input`\)\);/);
 });

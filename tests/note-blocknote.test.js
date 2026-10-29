@@ -1122,14 +1122,13 @@ test("in a share, the page title is read-only for a gated visitor and meets the 
   return inShare(sb, (Editor) => {
     const ed = Object.create(Editor.prototype);
     ed.media = { canUpload: () => true };
-    const input = { readOnly: false };
+    ed.fig = { family: "editor-blocknote" };
+    const body = fakeBody();
     const titleEl = fakeBody({ hasInput: true });
-    titleEl.querySelector = () => input;
-    let superCalled = 0;
-    Object.getPrototypeOf(Editor.prototype).onPartReady = () => superCalled++;
-    ed.onPartReady({ el: titleEl }, "page-title");
-    assert.equal(input.readOnly, true);
-    assert.equal(superCalled, 1);
+    ed._state = { el: body };
+    ed.el = { querySelector: (sel) => (sel === ".editor-blocknote__title-input" ? titleEl : null) };
+    ed._wireShareEditGates();
+    assert.ok(body.listeners.keydown && titleEl.listeners.keydown, "body and title are both gated");
     assert.equal(titleEl.attrs.tabindex, undefined, "an input is focusable already");
     const typing = keyEvent("N");
     titleEl.listeners.keydown(typing);
@@ -1142,6 +1141,10 @@ test("in a share, the page title is read-only for a gated visitor and meets the 
     ed.onUiEvent({ get: (k) => (k === "service" ? "rename-note" : undefined), getValue: () => "New" });
     assert.equal(ed._m.filename, "Old");
   });
+});
+
+test("the page title renders read-only for any reader (Entry's own readonly)", () => {
+  assert.match(readNote("skeleton/index.js"), /readonly: _ui_\.isViewOnly\(\) \? 1 : 0,/);
 });
 
 test("on a touch screen, a tap in the gated body meets the gate (a link still opens)", () => {

@@ -219,17 +219,8 @@ class __editor_blocknote extends __player {
         Kind.waitFor(kind).then(() => {
           child.feed({ kind, media: this.media, editor: this });
           this._state = child.children.last();
-          this._wireShareEditGate(this._state && this._state.el);
+          this._wireShareEditGates();
         });
-        break;
-      }
-      // The page title: read-only for a reader, as the body is — a rename
-      // they cannot save would only show and then vanish.
-      case "page-title": {
-        const input = child.el && child.el.querySelector("input");
-        if (input && this.isViewOnly()) input.readOnly = true;
-        this._wireShareEditGate(child.el);
-        super.onPartReady(child, pn);
         break;
       }
       default:
@@ -363,6 +354,15 @@ class __editor_blocknote extends __player {
    */
   _shareDesk() {
     return shareDesk(this._launchTarget, window.Wm);
+  }
+
+  /**
+   * The share's gate on the body and on the page title (skeleton: the title
+   * is rendered read-only for a reader, as the body is).
+   */
+  _wireShareEditGates() {
+    this._wireShareEditGate(this._state && this._state.el);
+    this._wireShareEditGate(this.el && this.el.querySelector(`.${this.fig.family}__title-input`));
   }
 
   /**
