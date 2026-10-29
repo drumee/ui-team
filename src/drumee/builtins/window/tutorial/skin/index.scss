@@ -52,6 +52,15 @@
     box-shadow: none;
   }
 
+  // The migrate tour, in a window, has no Files toolbar: its only job is the
+  // hero's import CTA, and the filter chips / search / + New above it are
+  // controls the step never lights. Scoped to this host so the desk's migrate
+  // tour keeps the pane as drawn. (0,3,0) beats `.drumee-widget[data-flow]`'s
+  // (0,2,0) display:flex on the Box.
+  &__ui[data-tour="migrate"] .tutorial__fp-toolbar {
+    display: none;
+  }
+
   // The layout already gets its size, its overflow and its opaque background
   // from `.tutorial-main__layout`. No radius override is needed: the content slot
   // inherits `border-radius: 12px` from `.tutorial-main__content`, which is correct.
