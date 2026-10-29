@@ -1176,128 +1176,6 @@ class desk_module extends LetcBox {
    * @returns {Boolean} whether this boot carried such a link
    */
   /**
-   * Run the in-window tour `?window_tutorial=<id>` asked for, if one did.
-   *
-   * THE DESK OWNS THIS, not the folder window, and that is the fix for a bug
-   * that made the URL do nothing at all. The read used to live in
-   * `__window_folder.buildContent`, which has two problems:
-   *
-   *   it reads too LATE   the hash is rewritten to `#/desk` during boot, so the
-   *                       arg set was always empty by then. The router now
-   *                       captures the intent from the URL early, the same way
-   *                       campaign and billing links are captured, and this
-   *                       consumes what it armed.
-   *   it reads too DEEP   buildContent only runs when a folder window mounts, so
-   *                       with nothing open — the home grid, an ordinary state
-   *                       (see the rail handlers' own `_hasWs` guards) — it was
-   *                       never called at all. That hit
-   *                       `?window_tutorial=workspace` hardest: the tour that
-   *                       teaches CREATING a workspace could not run for someone
-   *                       who had none open.
-   *
-   * So this opens a workspace when there is none, because a tour is drawn ON a
-   * folder window and there has to be one to draw on.
-   *
-   * `_railWorkspace()`, NOT `_activeWorkspace()`: the latter answers "which
-   * window is RAISED" and reports null while a workspace is open but unraised
-   * (boot, a re-feed, anything on top). Trusting it would open a SECOND,
-   * arbitrary workspace over the one already there — the exact fault
-   * `_railWorkspace` was written for.
-   *
-   * @returns {Promise<Boolean>} whether a tour was handed to a window
-   */
-  async _maybeRunWindowTutorial() {
-    const intent = require("libs/window-tutorial-intent");
-    if (!intent.has()) return false;
-
-    // WAIT FOR THE RESTORE FIRST, and this is not defensive tidying — without
-    // it the tour flashed up and vanished.
-    //
-    // loadDefault raises `_restoreInFlight`, feeds the skeleton — whose
-    // `overlay` part reaches onPartReady -> _afterHomeSettled -> here,
-    // synchronously — and only THEN calls _restoreDeskState(). So at this
-    // moment nothing is open yet: `_railWorkspace()` answered null, this opened
-    // rows[0] (an arbitrary workspace), mounted the tour on it, and the restore
-    // then opened the REMEMBERED workspace over the top. Destroying that folder
-    // window takes its overlay with it (__window_folder.onBeforeDestroy ->
-    // _closeTutorialOverlay), so the tour appeared, closed, and left a
-    // workspace behind.
-    //
-    // `_restoreInFlight` is the flag that exists to stop precisely this kind of
-    // interference — the comment on it in loadDefault describes an earlier race
-    // it was written for — so the honest fix is to respect it rather than to
-    // open a workspace into the middle of someone else's open.
-    const id = (w) => (w && w.mget ? `${w.mget(_a.hub_id)}/${w.mget(_a.nid)}` : String(w));
-    intent.trace("hook entered", { restoreInFlight: !!this._restoreInFlight });
-    await this._awaitRestoreSettled();
-
-    // WAIT FOR A PANE, NOT FOR A FLAG — this is the actual fix.
-    //
-    // `_restoreInFlight` is cleared by a TIMER (_clearRestoreInFlight(2500)),
-    // not by the workspace appearing, and `loadWorkspace` mounts its pane from
-    // inside a media.attributes fetch. So the flag routinely clears while the
-    // restore's own pane is still in flight, and `_railWorkspace()` answers null
-    // then — it needs Wm._findWorkspaceWindow to have mounted something.
-    //
-    // Peeking once there is what produced the reported fault: the hook opened a
-    // SECOND workspace, mounted the tour on it, and the restore's original pane
-    // then arrived and took the screen. Nothing was ever destroyed — which is
-    // why no teardown trace fired — the tour was simply left on the pane behind.
-    //
-    // So poll for the pane the restore is already bringing, and only open one if
-    // none is coming at all. `Wm._curWorkspace` is what says which it is: set
-    // means a pane is on its way and waiting is right; unset means nothing is
-    // coming and waiting would just be dead time before the tour.
-    let ws = await this._awaitRailWorkspace(this._workspaceIncoming() ? 8000 : 0);
-    intent.trace("after restore settled", {
-      found: id(ws), incoming: this._workspaceIncoming(),
-    });
-    // HOLD THE RESTORE FLAG ACROSS OUR OWN OPEN — this is the fix, and the desk
-    // documents the hazard itself at _restoreDeskState: "Keep the restore flag
-    // up across the open, or the breadcrumb's mount-time loadHome() fires
-    // Wm.reload() and wipes it."
-    //
-    // loadDefault raises the flag around its own _openDefaultWorkspace() for
-    // exactly that reason. This hook did the opposite: it WAITED for the flag to
-    // clear and then opened, so nothing suppressed loadHome() and Wm.reload()
-    // wiped the pane — and the tour mounted on it — a moment later, then
-    // repainted. That wipe does not route through Marionette's destroy, which is
-    // why no teardown ever fired and the tour appeared simply to vanish.
-    //
-    // Cleared only after the tour is mounted, on the same 2.5s delay loadDefault
-    // uses, and in a `finally` so an early return cannot leave the flag raised —
-    // a stuck flag would suppress loadHome for the rest of the session.
-    let held = false;
-    try {
-      if (!ws) {
-        this._restoreInFlight = true;
-        held = true;
-        await this._openDefaultWorkspace();
-        ws = await this._awaitRailWorkspace();
-        intent.trace("opened a default workspace", { found: id(ws), guarded: true });
-      }
-
-      // Consumed even when there is nothing to run it on. The intent belongs to
-      // THIS page load; leaving it armed would fire the tour at some unrelated
-      // later moment, and the warning below is what makes the failure visible
-      // instead of silent — which is what this whole bug was.
-      const req = intent.take();
-      if (!req) return false;
-      if (!ws || !_.isFunction(ws.showTutorial)) {
-        this.warn(
-          `[window-tutorial] "${req.tour}" was asked for, but no workspace could be opened to run it on`,
-        );
-        return false;
-      }
-      intent.trace("handing tour to window", { tour: req.tour, window: id(ws) });
-      this.mountWindowTutorial(ws, req.tour, req.opt);
-      return true;
-    } finally {
-      if (held) this._clearRestoreInFlight(ws ? 2500 : 0);
-    }
-  }
-
-  /**
    * Wait for the workspace pane to actually exist after opening one.
    *
    * `loadWorkspace` returns the instant it is CALLED and mounts the pane from
@@ -1367,12 +1245,12 @@ class desk_module extends LetcBox {
     // THE RAIL IS REAL beside an in-window tour — unlike the desk host, which
     // draws its own — so it has to show the tab the tour is about.
     //
-    // HERE, at the one place every route ends up, because there are three of
+    // HERE, at the one place every route ends up, because there are two of
     // them and only one had it: a rail click (which had already lit the row
-    // itself), the workspace tour's hand-off, which arrives on a different bus
-    // entirely (window-tutorial:mount, from the folder window's showTutorial),
-    // and a `?window_tutorial=` link. The last two would have left the rail on
-    // whatever was pressed last while a tour about another tab played over it.
+    // itself), and the workspace tour's hand-off, which arrives on a different
+    // bus entirely (window-tutorial:mount, from the folder window's
+    // showTutorial). The hand-off would have left the rail on whatever was
+    // pressed last while a tour about another tab played over it.
     //
     // _railHighlight ignores anything that is not one of the five tabs, so a
     // tour with no entry in the table simply leaves the rail alone.
@@ -2918,8 +2796,6 @@ class desk_module extends LetcBox {
   _bootTourComing() {
     try {
       if (this._postOnboardingTutorial) return true;
-      if (Visitor.parseModuleArgs().tutorial) return true;
-      if (require("libs/window-tutorial-intent").has()) return true;
       return !!require("libs/tutorial-tours").offerable("migrate", this);
     } catch (e) {
       return false;
@@ -4705,7 +4581,7 @@ class desk_module extends LetcBox {
       //
       // Deliberately NOT hung off `box.children.last()`: for a NESTED part that
       // read races the render and hands back a stale child — written up above
-      // _forcedTourId (2026-07-31), where it silently broke the tutorial chain.
+      // _showTutorial (2026-07-31), where it silently broke the tutorial chain.
       // Every way this edit can end is handled in _onWorkspaceRenameInput.
       _.defer(() => {
         const field = box.el && box.el.querySelector("textarea, input");
@@ -6736,8 +6612,6 @@ class desk_module extends LetcBox {
    * that belongs to a workspace just created would be lost. The chain owns that
    * moment; this is for every other boot.
    *
-   * A URL tour also wins: `?window_tutorial=` is a person asking by name.
-   *
    * Everything else is the seen-set's answer, as ever. `migrate` is
    * `mark_on: "success"`, so it keeps being offered until a folder is created,
    * files are uploaded, or the last step is reached — which is what makes this
@@ -6779,7 +6653,7 @@ class desk_module extends LetcBox {
    * the pane's place, the canvas is simply empty until the tour arrives.
    *
    * Asked with the same gates _maybeRunBootTour applies up front, so a user who
-   * finished the tour, a URL tour, or the post-onboarding tutorial (which
+   * finished the tour, or the post-onboarding tutorial (which
    * covers the desk itself) never get a hidden pane. Every way out releases it:
    * the tour's mount, a decline, the claim's release, a user navigation
    * (_navigated), and BOOT_TOUR_HOLD_MAX as the last resort.
@@ -6788,8 +6662,6 @@ class desk_module extends LetcBox {
     if (!this.el || !this.el.dataset) return;
     try {
       if (this._postOnboardingTutorial) return;
-      if (Visitor.parseModuleArgs().tutorial) return;
-      if (require("libs/window-tutorial-intent").has()) return;
       if (!require("libs/tutorial-tours").offerable("migrate", this)) return;
     } catch (e) {
       return;
@@ -6812,7 +6684,6 @@ class desk_module extends LetcBox {
   /** The body of _maybeRunBootTour; resolves whether the tour was asked for. */
   async _raiseBootTour() {
     if (this._tutorialWasAutomatic) return false;
-    if (require("libs/window-tutorial-intent").has()) return false;
     // ASKED BEFORE EITHER WAIT BELOW. `offerable` applies every gate a claim
     // would except single-flight, and takes no lock — so a user who finished
     // this tour long ago is not made to sit through _awaitRestoreSettled and
@@ -8559,27 +8430,8 @@ class desk_module extends LetcBox {
       }
 
       case "overlay":
-        // `?tutorial=reset` is a QA affordance, not a tour: it clears the
-        // seen-set so every contextual tour becomes triggerable again on this
-        // account. The server re-checks profile.devel, so this is only the
-        // client half. It deliberately does NOT mount anything.
-        if (Visitor.parseModuleArgs().tutorial === "reset") {
-          require("libs/tutorial-tours").reset(this);
-          setTimeout(() => {
-            this._afterHomeSettled();
-          }, 2000);
-          return;
-        }
-        if (
-          Visitor.parseModuleArgs().tutorial ||
-          this._postOnboardingTutorial
-        ) {
-          // Read BEFORE the flag is cleared: it is what tells the two ways into
-          // this branch apart, and only one of them should wait.
-          const postOnboarding = !!this._postOnboardingTutorial;
+        if (this._postOnboardingTutorial) {
           this._postOnboardingTutorial = false;
-          const explicit = !!Visitor.parseModuleArgs().tutorial;
-          const forced = this._forcedTourId();
           // NO DELAY COMING OUT OF THE WIZARD.
           //
           // The 2s here was never reasoned for the tutorial: `}, 2000)` is the
@@ -8596,22 +8448,14 @@ class desk_module extends LetcBox {
           // now warms that kind while the wizard is on screen, which is what
           // actually makes this immediate rather than merely earlier.
           //
-          // `?tutorial=` keeps the 2s. That path runs at COLD BOOT, where the
-          // desk is still restoring behind the overlay and there has been no
-          // wizard to warm anything during — a different situation with its own
-          // timing, and not the one being fixed.
-          //
           // ON A PHONE TOO. Finishing the wizard is the one moment the
           // workspace tour is owed whatever the `mobile_tours` rollout switch
           // says (libs/tutorial-tours allowPhone). It does not hand off to
           // migrate on a phone (_chainMigrateTour); the phone's other tours
           // come from their own taps (phoneGate). Harmless on a desktop.
-          if (postOnboarding) {
-            require("libs/tutorial-tours").allowPhone(["workspace"]);
-          }
-          const delay = postOnboarding ? 0 : 2000;
+          require("libs/tutorial-tours").allowPhone(["workspace"]);
           setTimeout(() => {
-            if (this._launchHomeTutorial(explicit, forced)) return;
+            if (this._launchHomeTutorial()) return;
             // Nothing mounted, and nothing is going to: the post-onboarding
             // tour was gated (already seen, mobile, or the switch is off in a
             // way that produced no tour). The 20s net below exists for a
@@ -8622,7 +8466,7 @@ class desk_module extends LetcBox {
             clearTimeout(this._homeSettledFallback);
             this._homeSettledFallback = null;
             this._afterHomeSettled();
-          }, delay);
+          }, 0);
           // Safety net. In this branch the ONLY route to _afterHomeSettled is
           // the "desk-tutorial" part becoming ready, so if desk_tutorial fails
           // to mount — kind not loaded, widget throws, part never signals —
@@ -8864,23 +8708,6 @@ class desk_module extends LetcBox {
    * framework's own reliable hand-off for a just-rendered child; use it
    * instead of leaning on the feed() return value.
    */
-  /**
-   * Which tour `?tutorial=` asked for.
-   *
-   * `?tutorial=1` (and anything unrecognised) keeps meaning the whole
-   * six-step tour, which is what it has always meant. A recognised tour id
-   * runs that tour on its own, which is the only way to reach one without
-   * performing its trigger — QA cannot otherwise test a tour twice.
-   *
-   * @returns {String} a tour id
-   */
-  _forcedTourId() {
-    const arg = Visitor.parseModuleArgs().tutorial;
-    const { TOURS } = require("desk/tutorial/tours");
-    if (typeof arg === "string" && TOURS[arg]) return arg;
-    return "full";
-  }
-
   _showTutorial(tourId, opt = {}) {
     const tour = tourId || "full";
     // MARK THE DESK FOR THE DURATION, the same way an in-window tour does.
@@ -8912,53 +8739,11 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * Force a tour onto the screen from the URL, for checking the UI.
-   *
-   *   #/desk?tutorial=share                 the share tour, from screen 1
-   *   #/desk?tutorial=share&screen=3        straight to its third screen
-   *   #/desk?tutorial=share&subject=workspace   its panel headed by a
-   *                                         workspace instead of a file
-   *   #/desk?tutorial=folder_task&step=2    straight to the tracker step
-   *   #/desk?tutorial=folder_task&step=2&screen=4   ...and its fourth view
-   *   #/desk?tutorial=1                     the whole six-step tour
-   *   #/desk?tutorial=reset                 clear the seen-set (devel only)
-   *
-   * `step` and `screen` are 1-based, matching what the badge shows, and are
-   * clamped — a nonsense value lands on a real screen rather than rendering
-   * nothing.
-   *
-   * These runs are PREVIEWS: they do not record the tour as seen, so the same
-   * URL works twice and the real contextual trigger stays armed. Without that,
-   * one look at `?tutorial=migrate` would kill the + New trigger for the
-   * account permanently, since a tour records itself on mount.
-   *
-   * @returns {Object} extra attributes for the tutorial widget
-   */
-  _forcedTourOpt() {
-    const args = Visitor.parseModuleArgs();
-    const opt = { preview: 1 };
-    if (args.step) opt.enter_at_step = args.step;
-    if (args.screen) opt.enter_at_screen = args.screen;
-    // What the tour is about, when only the trigger would normally know.
-    //
-    // The share panel's header is the case: opened over a workspace it shows a
-    // workspace (180:51964), and the trigger says so through fire()'s third
-    // argument (libs/tutorial-tours). A preview URL has no trigger, so without
-    // this the workspace header could not be looked at from a URL at all — it
-    // would need a fresh account and a real click on Manage access.
-    if (args.subject) opt.subject = args.subject;
-    return opt;
-  }
-
-  /**
    * Start whatever tutorial this boot owes the user, and say whether one is
    * actually on its way.
    *
-   * Three routes, and only the first two are unconditional:
+   * Two routes, and only the first is unconditional:
    *
-   *   explicit    `?tutorial=<id>` / `?tutorial=1`. A person typed this; it is
-   *               never gated on the seen-set, the mobile check or the kill
-   *               switch, because otherwise QA cannot reach a tour twice.
    *   switch off  the six-step tour, exactly as before this feature existed.
    *   otherwise   the post-onboarding `workspace` tour, gated like any other
    *               trigger — the whole point of a server-side flag is that a
@@ -8969,11 +8754,7 @@ class desk_module extends LetcBox {
    * @returns {Boolean} true when something was launched. False means no
    *   tutorial is coming and the caller must settle home itself.
    */
-  _launchHomeTutorial(explicit, forced) {
-    if (explicit) {
-      this._showTutorial(forced, this._forcedTourOpt());
-      return true;
-    }
+  _launchHomeTutorial() {
     const Tours = require("libs/tutorial-tours");
     if (!Tours.enabled()) {
       this._showTutorial("full");
@@ -9381,8 +9162,8 @@ class desk_module extends LetcBox {
    * desk, this walks the user through building the real thing, a workspace
    * with a file in it.
    *
-   * WHEN IT RUNS. Only after an AUTOMATIC product tour — the post-signup one,
-   * or `?tutorial=1`. That is the whole gate, and it is what makes the flow
+   * WHEN IT RUNS. Only after an AUTOMATIC product tour — the post-signup one.
+   * That is the whole gate, and it is what makes the flow
    * one-shot without a latch to store anywhere: the automatic tour happens once
    * per signup and nothing else re-triggers this. A user who leaves the flow
    * half-done does not get it again, which is the accepted cost of not keeping
@@ -9860,11 +9641,6 @@ class desk_module extends LetcBox {
     // the two are mutually exclusive in practice (a URL is either #/desk/billing
     // or a file link, never both).
     this._maybeOpenFileDeepLink();
-    // Same tier again, and for the same reason: `?window_tutorial=<id>` is an
-    // explicit request typed by a person, so it runs before the reward /
-    // LAUNCH30 flows rather than underneath them. A no-op unless the router
-    // armed one.
-    this._maybeRunWindowTutorial();
     // An ordinary boot lands on a workspace's Files tab, which is the surface
     // the migrate tour is about — so offer it there too, not only on a rail
     // press. Declines for almost every session; see the method.
