@@ -766,6 +766,12 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   width: 100%;
   overflow: visible;
 
+  // Focusable in a share (editor _wireShareEditGate) only so that keystrokes
+  // reach the edit gate; no focus ring around the page.
+  &:focus {
+    outline: none;
+  }
+
   * {
     user-select: text;
     -webkit-user-select: text;

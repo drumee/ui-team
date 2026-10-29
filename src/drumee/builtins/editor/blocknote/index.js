@@ -3,6 +3,7 @@ const { EXT, DATA_TYPE } = require("libs/blocknote-format");
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const share = require("builtins/player/widget/share");
 const page = require("./page");
+const { isEditIntentKey, shareDesk, editWouldBeGated, gateEdit } = require("libs/dmz-edit-gate");
 
 // How long after the last keystroke an untouched note writes itself back.
 // BlockNote fires onChange per keystroke, so every edit MUST go through this
@@ -75,6 +76,9 @@ class __editor_blocknote extends __player {
     // Where a new note gets written. Captured now, because by save time this
     // window is itself the active one.
     this.lastActiveWindow = Wm.getActiveWindow();
+    // A share's window manager passes itself (dmz/wm _newNote): the way to
+    // the share's edit gate (_shareDesk).
+    this._launchTarget = opt.target || null;
     // Launched from the Open-File Switcher ("Note" in its create menu): the
     // panel names the listed folder, and that folder wins (as editor/docs).
     // The active window may then be the viewer being switched away from —
@@ -215,6 +219,7 @@ class __editor_blocknote extends __player {
         Kind.waitFor(kind).then(() => {
           child.feed({ kind, media: this.media, editor: this });
           this._state = child.children.last();
+          this._wireShareEditGate(this._state);
         });
         break;
       }
@@ -335,8 +340,48 @@ class __editor_blocknote extends __player {
    * @returns {Boolean}
    */
   isViewOnly() {
+    // In a share the share decides: an anonymous visitor reports the creator's
+    // privilege (canUpload passes) yet the server refuses the write.
+    if (editWouldBeGated(this._shareDesk())) return true;
     if (!this.media || !_.isFunction(this.media.canUpload)) return false;
     return !this.media.canUpload();
+  }
+
+  /**
+   * The secure-share sharebox when this note is opened inside a share, else
+   * null (on the desk). In a share window.Wm is the share's window manager.
+   * @returns {Object|null}
+   */
+  _shareDesk() {
+    return shareDesk(this._launchTarget, window.Wm);
+  }
+
+  /**
+   * In a share, an attempt to edit a body the visitor may not write meets the
+   * share's gate — sign-up for an anonymous visitor, Request Access for a
+   * recipient without the edit grant — instead of nothing at all. The body is
+   * read-only for them (isViewOnly), so it is made focusable: a click in it
+   * focuses it and the keystrokes that mean "edit" reach this listener.
+   * Reading keys (arrows, copy, select-all…) never gate. A granted visitor is
+   * never gated and types as usual.
+   * @param {View} state the blocknote_state holding the body
+   */
+  _wireShareEditGate(state) {
+    const desk = this._shareDesk();
+    if (!desk || !state || !state.el || state._shareGateWired) return;
+    state._shareGateWired = 1;
+    if (!state.el.hasAttribute("tabindex")) state.el.setAttribute("tabindex", "-1");
+    const gate = (e) => {
+      if (e.type === "keydown" && !isEditIntentKey(e)) return;
+      if (!editWouldBeGated(desk)) return;
+      if (gateEdit(desk, this)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    for (const ev of ["keydown", "paste", "drop"]) {
+      state.el.addEventListener(ev, gate, true);
+    }
   }
 
   /**
