@@ -67,17 +67,14 @@ let broadcastHandler = null;
 global.RADIO_BROADCAST = { on: (ev, fn) => { if (ev === "breadcrumb:content") broadcastHandler = fn; } };
 
 // ── aliases ──────────────────────────────────────────────────────────────────
-let tutorialArmed = false;
 let hubArmed = false;
 const stub = (id, exports) => {
   require.cache[id] = { id, filename: id, loaded: true, exports };
   return id;
 };
-const TUTORIAL = stub("tutorial-stub", { armed: () => tutorialArmed });
 const HUB = stub("hub-stub", { has: () => hubArmed });
 const origResolve = Module._resolveFilename;
 Module._resolveFilename = function (req, ...rest) {
-  if (req === "libs/window-tutorial-intent") return TUTORIAL;
   if (req === "libs/hub-deep-link") return HUB;
   if (req.startsWith("libs/")) return path.join(SRC, `${req}.js`);
   if (req === "window/configs/application") return path.join(SRC, "builtins/window/configs/application.js");
@@ -124,7 +121,6 @@ function reset() {
   hist.writes = 0;
   area = "private";
   online = 1;
-  tutorialArmed = false;
   hubArmed = false;
   locationUrl.settle(); // clears the hold; its scheduled sync is harmless
   desk();
@@ -260,7 +256,6 @@ test("nothing is written while blocked", () => {
   const cases = {
     "signed out": () => { online = 0; },
     "dmz host": () => { area = "dmz"; },
-    "tour from URL": () => { tutorialArmed = true; },
     "routing a hash navigation": () => { locationUrl.hold(); },
     "desk-state restore": () => { desk({ restoring: true }); },
     "file relay armed": () => { fileDeepLink.arm("#/desk/wm/o/a/b/image"); },

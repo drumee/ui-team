@@ -82,13 +82,11 @@ const stub = (id, exports) => {
   require.cache[id] = { id, filename: id, loaded: true, exports };
   return id;
 };
-const TUTORIAL = stub("tutorial-stub", { armed: () => false });
 const HUB = stub("hub-stub", { has: () => false });
 const FILE = stub("file-stub", { peek: () => null });
 const OPEN_MEDIA = stub("open-media-stub", { CONTAINER_FILETYPES: ["folder", "hub", "private", "share"] });
 const origResolve = Module._resolveFilename;
 Module._resolveFilename = function (req, ...rest) {
-  if (req === "libs/window-tutorial-intent") return TUTORIAL;
   if (req === "libs/hub-deep-link") return HUB;
   if (req === "libs/file-deep-link") return FILE;
   if (req === "libs/open-media") return OPEN_MEDIA;
