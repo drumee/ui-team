@@ -535,10 +535,14 @@ class __activity_item extends LetcBox {
             return
 
           case 'access_request':
-            // Pending secure-share request (Figma 62). No server-side dismiss
-            // endpoint (it's resolved via approve/deny) — trash just snoozes the
-            // row for the session; the panel removes it and skips it on refresh.
-            this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
+            // Pending secure-share request (Figma 62). Trash removes it from the
+            // panel for good via secure_share.delete_request; the request stays
+            // pending. request_id is passed explicitly: item_key is built from
+            // hub_id here, not from the request.
+            this.triggerHandlers({
+              service: 'dismiss-activity', item_type, item_key,
+              request_id: this.mget('request_id'),
+            })
             return
 
           case 'share_open':

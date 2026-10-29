@@ -2821,10 +2821,33 @@ class __panel_activity extends LetcBox {
     }
 
     if (itemType === 'access_request') {
-      // Pending secure-share request: no server-side dismiss endpoint (resolved via
-      // approve/deny). Client-only — its key is tracked in _dismissedKeys above so
-      // refreshActivity skips it this session; it reappears only on a full reload.
-      if (!read && cmd && cmd.goodbye) cmd.goodbye();
+      // Pending secure-share request. Reading it changes nothing: it stays until
+      // it is approved or denied. The trash button used to be client-only, so
+      // the request came back on every reload while it stayed pending (Theo,
+      // prod 2026-10-29). secure_share.delete_request now hides it server-side
+      // (creator_deleted_at); the request itself stays pending.
+      //
+      // The item's own item_key is built from hub_id, not the request id, so it
+      // never matched refreshActivity's `access_request:<request_id>` filter.
+      // Record that key too, so a failed request still hides the row for the
+      // rest of the session, as before.
+      if (read) return;
+      const requestId = args.request_id
+        || (cmd && cmd.mget && (cmd.mget('request_id') || cmd.mget('key_id')));
+      if (requestId) {
+        this._dismissedKeys = this._dismissedKeys || new Set();
+        this._dismissedKeys.add(`access_request:${requestId}`);
+        try {
+          await this.postService({
+            service: (SERVICE.secure_share && SERVICE.secure_share.delete_request) || 'secure_share.delete_request',
+            hub_id: Visitor.id,
+            request_id: requestId,
+          });
+        } catch (e) {
+          this.warn('[activity] access_request delete failed', e);
+        }
+      }
+      if (cmd && cmd.goodbye) cmd.goodbye();
       return;
     }
 
