@@ -1124,11 +1124,86 @@ class __calendar_main extends LetcBox {
         restrict: false,
         recipients: [],
         password_on: false,
+        has_password: false,
         files: [],
       },
     };
     this._pendingDay = null;
     this._renderModal();
+    // The Invite column, as "New personal meeting" draws it, filled from the
+    // meeting's existing guest link.
+    this._loadMeetingLink(this._form);
+  }
+
+  /**
+   * Read an existing meeting's guest link gate (room.link_info) into the
+   * edit form's Invite column: require email, the allowed emails / @domains,
+   * and whether a password is set (never the password — the field stays
+   * empty and keeps it). What was read is kept as form.linkInfo, so Update
+   * re-grants only a gate that changed (_saveMeetingGate).
+   */
+  async _loadMeetingLink(form) {
+    const row = (form && form.row) || {};
+    const info = await this.fetchService({
+      service: (SERVICE.room && SERVICE.room.link_info) || "room.link_info",
+      hub_id: this._personalHub,
+      nid: row.nid || row.id,
+      _ts: Date.now(),
+    });
+    if (this._form !== form || !info || info.error) return;
+    const recipients = Array.isArray(info.allowed_emails) ? info.allowed_emails.slice() : [];
+    const require_email = !!Number(info.require_email) || recipients.length > 0;
+    const password_on = !!info.has_password;
+    // Keep what was typed meanwhile: the re-feed below rebuilds the inputs.
+    this._absorbFormText();
+    Object.assign(form.draft, {
+      require_email,
+      restrict: recipients.length > 0,
+      recipients,
+      password_on,
+      has_password: password_on,
+    });
+    form.linkInfo = { require_email, recipients: recipients.slice(), password_on };
+    this._renderModal();
+  }
+
+  /**
+   * Save an edited gate onto the meeting's SAME guest link: room.public_link
+   * keeps the token for the meeting, so the URL already sent out still
+   * works. Nothing is re-granted when the gate did not change. A password
+   * left on but not retyped is kept (keep_password); a new one replaces it;
+   * switching it off clears it.
+   *
+   * @returns {Promise<boolean>} false when the server refused
+   */
+  async _saveMeetingGate(form, draft) {
+    const was = form.linkInfo;
+    // The link was never read (no answer): leave it exactly as it is.
+    if (!was) return true;
+    const recipients = draft.restrict ? (draft.recipients || []).slice() : [];
+    const require_email = !!draft.require_email || recipients.length > 0;
+    const password_on = !!draft.password_on;
+    const password = password_on && draft.password ? String(draft.password) : "";
+    if (
+      require_email === was.require_email &&
+      password_on === was.password_on &&
+      !password &&
+      JSON.stringify(recipients) === JSON.stringify(was.recipients)
+    ) {
+      return true;
+    }
+    const row = form.row || {};
+    const payload = {
+      service: (SERVICE.room && SERVICE.room.public_link) || "room.public_link",
+      hub_id: this._personalHub,
+      nid: row.nid || row.id,
+      require_email: require_email ? 1 : 0,
+      allowed_emails: recipients,
+    };
+    if (password) payload.password = password;
+    else if (password_on) payload.keep_password = 1;
+    const res = await this.postService(payload);
+    return !!res && !res.error;
   }
 
   _closeForm() {
@@ -2510,7 +2585,6 @@ class __calendar_main extends LetcBox {
     // "Restrict access" with nobody on the list would be an open link that
     // looks restricted: refused until an address or domain is added.
     if (
-      this._form.mode !== "edit" &&
       draft.require_email &&
       draft.restrict &&
       !(draft.recipients || []).length
@@ -2653,6 +2727,11 @@ class __calendar_main extends LetcBox {
     // postService never rejects: a refusal (NOT_MEETING_OWNER) or a transport
     // failure answers {error} or nothing.
     if (!renamed || renamed.error || !moved || moved.error) {
+      Wm.alert(LOCALE.ERROR_NETWORK);
+      return;
+    }
+    // Then the Invite column: a changed gate, on the same link.
+    if (!(await this._saveMeetingGate(form, draft))) {
       Wm.alert(LOCALE.ERROR_NETWORK);
       return;
     }

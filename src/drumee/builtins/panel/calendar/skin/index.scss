@@ -3884,7 +3884,8 @@
   // (0,3,0) selectors: the body's Box.Y flow rule is (0,2,0). Each side takes
   // half; the right one's time row needs ~300px, which a 760px card leaves it.
   @media (min-width: 701px) {
-    &__modal[data-form="meeting"][data-mode="create"] {
+    // Both modes: "Meeting Information" (edit) has the Invite side too.
+    &__modal[data-form="meeting"] {
       width: min(760px, calc(100vw - 32px));
     }
 

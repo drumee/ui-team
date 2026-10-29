@@ -330,7 +330,9 @@ module.exports = function (ui) {
                 sys_pn: "form-password",
                 formItem: "password",
                 name: "password",
-                placeholder: LOCALE.PASSWORD,
+                // A password already set is never sent back: dots say there is
+                // one, and an empty field keeps it.
+                placeholder: draft.has_password ? "••••••••" : LOCALE.PASSWORD,
                 require: "any",
                 bubble: 0,
                 uiHandler: [ui],
@@ -381,9 +383,9 @@ module.exports = function (ui) {
       }),
 
       // Two sides: what and when — title, date, the time row — on the left;
-      // who — Invite — on the right. An existing meeting has no Invite, so
-      // its form is the left side alone. The skin stacks them on a narrow
-      // screen.
+      // who — Invite — on the right, in both modes (an existing meeting's
+      // Invite is read from its guest link). The skin stacks them on a
+      // narrow screen.
       Skeletons.Box.Y({
         className: `${pfx}__modal-body ${pfx}__modal-body--split`,
         kids: [
@@ -436,14 +438,13 @@ module.exports = function (ui) {
 
             ],
           }),
-          // Invite settings (the link's gate) are given when the link is made,
-          // at booking; an existing meeting keeps the link it has.
-          editing
-            ? null
-            : Skeletons.Box.Y({
-                className: `${pfx}__modal-col ${pfx}__modal-col--side`,
-                kids: [field("INVITE", inviteBlock)],
-              }),
+          // Invite settings (the link's gate): given at booking, and for an
+          // existing meeting read from its link (index.js _loadMeetingLink)
+          // and saved back onto that same link on Update.
+          Skeletons.Box.Y({
+            className: `${pfx}__modal-col ${pfx}__modal-col--side`,
+            kids: [field("INVITE", inviteBlock)],
+          }),
         ],
       }),
 
