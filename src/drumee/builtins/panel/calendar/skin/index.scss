@@ -287,6 +287,8 @@
     gap: 0;
   }
 
+  // ‹ at the left edge, the month in the middle, › at the right; all three
+  // on one centre line.
   &__range-head {
     align-items: center;
     justify-content: space-between;
@@ -302,7 +304,12 @@
   // Same box as __nav-arrow, and for the same reason: the wrapper's size is
   // only half of it, the sprite <svg> inside carries the glyph and needs its
   // own — see the note there.
+  //
+  // Button.Svg nests the sprite two divs deep (__container > .full.inner >
+  // svg): the button is a flex box and every layer is pinned to the glyph,
+  // or the svg sits in the top-left corner of the 24px circle.
   &__range-nav {
+    display: flex;
     width: 24px;
     height: 24px;
     flex: 0 0 auto;
@@ -312,9 +319,13 @@
     cursor: pointer;
     color: var(--normal-fg);
 
+    > div,
+    .inner,
     svg {
+      display: block;
       width: 12px;
       height: 12px;
+      flex: none;
     }
 
     &:hover {
