@@ -412,32 +412,7 @@ class __welcome_router extends LetcBox {
         break;
 
       case 'keep-current-connection':
-        return this._enterDesk(_K.module.desk);
-    }
-  }
-
-  /**
-   * Leave the sign-in screen for the desk WITHOUT leaving the sign-in screen
-   * behind in the browser history.
-   *
-   * `location.hash = …` ADDS a history entry, so after signing in the tab's
-   * history read [sign-in, desk]. Inside the desk nothing adds entries (folder
-   * navigation only rewrites the address with replaceState), so the browser's
-   * Back button, pressed anywhere in the desk, landed on the sign-in screen.
-   * For a signed-in visitor that screen bounces straight back into the desk,
-   * tearing it down and rebuilding it on the way, and the rebuilt desk came up
-   * on whatever workspace the tab remembered from its last unload, without
-   * loading it. Reported on prod 2026-10-28: Back inside a sub folder, and a
-   * workspace holding 7 folders rendered as empty until a reload.
-   *
-   * Replacing the entry makes Back do what it does on any other site: leave.
-   * Same-document replace fires hashchange, so the router still routes.
-   */
-  _enterDesk(hash) {
-    try {
-      location.replace(`${location.pathname}${location.search}${hash}`);
-    } catch (e) {
-      location.hash = hash;
+        return location.hash = _K.module.desk;
     }
   }
 
@@ -461,9 +436,8 @@ class __welcome_router extends LetcBox {
         RADIO_BROADCAST.trigger("workspace:refresh");
         // The reveal route is what the desk itself uses to open a workspace
         // (guest-join-open-workspace); `wm/hub/` was never a route.
-        this._enterDesk(
-          `#/desk/wm/reveal/?hub_id=${res.hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`,
-        );
+        location.hash =
+          `#/desk/wm/reveal/?hub_id=${res.hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
         return;
       }
       if (window.Wm && Wm.alert) {
@@ -473,7 +447,7 @@ class __welcome_router extends LetcBox {
         Wm.alert(msg);
       }
     }
-    this._enterDesk(_K.module.desk);
+    location.hash = _K.module.desk;
   }
 
   /**
