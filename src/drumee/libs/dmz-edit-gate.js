@@ -19,11 +19,24 @@
 const EDIT_INTENT_KEYS = new Set(["Enter", "Backspace", "Delete"]);
 
 /**
+ * A character typed through Alt / Option or AltGr (which browsers report as
+ * Ctrl+Alt): "@", "€", "{"… on many layouts. A plain letter or digit with Alt
+ * is a shortcut (Alt+F, Alt+1), not text, so it never counts.
+ * @param {KeyboardEvent} e
+ * @returns {Boolean}
+ */
+function isAltCharacter(e) {
+  if (!e.altKey || e.metaKey) return false;
+  return typeof e.key === "string" && e.key.length === 1 && !/^[a-z0-9]$/i.test(e.key);
+}
+
+/**
  * @param {KeyboardEvent} e
  * @returns {Boolean}
  */
 function isEditIntentKey(e) {
   if (!e) return false;
+  if (isAltCharacter(e)) return true;
   if (e.ctrlKey || e.metaKey) return /^[vx]$/i.test(e.key || "");
   if (e.altKey) return false;
   // A one-character key is a printable insert (letter, digit, punctuation, space).

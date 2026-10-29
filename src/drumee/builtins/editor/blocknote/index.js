@@ -219,8 +219,17 @@ class __editor_blocknote extends __player {
         Kind.waitFor(kind).then(() => {
           child.feed({ kind, media: this.media, editor: this });
           this._state = child.children.last();
-          this._wireShareEditGate(this._state);
+          this._wireShareEditGate(this._state && this._state.el);
         });
+        break;
+      }
+      // The page title: read-only for a reader, as the body is — a rename
+      // they cannot save would only show and then vanish.
+      case "page-title": {
+        const input = child.el && child.el.querySelector("input");
+        if (input && this.isViewOnly()) input.readOnly = true;
+        this._wireShareEditGate(child.el);
+        super.onPartReady(child, pn);
         break;
       }
       default:
@@ -357,32 +366,39 @@ class __editor_blocknote extends __player {
   }
 
   /**
-   * In a share, an attempt to edit a body the visitor may not write meets the
-   * share's gate — sign-up for an anonymous visitor, Request Access for a
-   * recipient without the edit grant — instead of nothing at all. The body is
-   * read-only for them (isViewOnly), so it is made focusable: a click in it
-   * focuses it and the keystrokes that mean "edit" reach this listener.
-   * Reading keys (arrows, copy, select-all…) never gate. A granted visitor is
-   * never gated and types as usual.
-   * @param {View} state the blocknote_state holding the body
+   * In a share, an attempt to edit what the visitor may not write — the body
+   * or the page title — meets the share's gate (sign-up for an anonymous
+   * visitor, Request Access for a recipient without the edit grant) instead
+   * of nothing at all. Both are read-only for them (isViewOnly). The body is
+   * made focusable, so a click in it and a key that means "edit" reach this
+   * listener; on a touch screen, which has no keys, a tap does (a link still
+   * opens). Reading keys (arrows, copy, select-all…) never gate. A granted
+   * visitor is never gated and types as usual.
+   * @param {HTMLElement} el the body (blocknote_state) or the title field
    */
-  _wireShareEditGate(state) {
+  _wireShareEditGate(el) {
     const desk = this._shareDesk();
-    if (!desk || !state || !state.el || state._shareGateWired) return;
-    state._shareGateWired = 1;
-    if (!state.el.hasAttribute("tabindex")) state.el.setAttribute("tabindex", "-1");
+    if (!desk || !el || el._shareGateWired) return;
+    el._shareGateWired = 1;
+    if (!/^(INPUT|TEXTAREA)$/.test(el.tagName || "") && !el.querySelector("input, textarea") &&
+      !el.hasAttribute("tabindex")) {
+      el.setAttribute("tabindex", "-1");
+    }
+    const touch = () => !!(window.matchMedia && window.matchMedia("(hover: none)").matches);
     const gate = (e) => {
       if (e.type === "keydown" && !isEditIntentKey(e)) return;
+      if (e.type === "click" && (!touch() || (e.target && e.target.closest && e.target.closest("a")))) return;
       if (!editWouldBeGated(desk)) return;
       if (gateEdit(desk, this)) {
         e.preventDefault();
         e.stopPropagation();
       }
     };
-    for (const ev of ["keydown", "paste", "drop"]) {
-      state.el.addEventListener(ev, gate, true);
+    for (const ev of ["keydown", "paste", "drop", "click"]) {
+      el.addEventListener(ev, gate, true);
     }
   }
+
 
   /**
    * The source MFS view acts on the node — Share and the file's chat thread
@@ -819,6 +835,8 @@ class __editor_blocknote extends __player {
           ""
         ).trim();
         if (!next || next === this.mget(_a.filename)) break;
+        // Belt and braces for the read-only title (onPartReady "page-title").
+        if (this._readOnly || this.isViewOnly()) break;
         // A filename is a path segment: refuse the separators outright rather
         // than letting the server mangle them.
         const safe = next.replace(/[\/\\]/g, "-");

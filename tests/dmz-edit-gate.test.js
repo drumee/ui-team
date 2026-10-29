@@ -76,7 +76,12 @@ test("only keys that mean editing are gated; reading keys never are", () => {
   assert.ok(k("v", { ctrlKey: true }) && k("x", { metaKey: true }), "paste and cut");
   for (const key of ["ArrowLeft", "Home", "PageDown", "Tab", "Escape", "F5", "Shift"]) assert.ok(!k(key), key);
   assert.ok(!k("c", { ctrlKey: true }) && !k("a", { ctrlKey: true }) && !k("f", { metaKey: true }), "copy / select all / find");
-  assert.ok(!k("a", { altKey: true }));
+  assert.ok(!k("a", { altKey: true }) && !k("1", { altKey: true }), "Alt+letter / digit is a shortcut");
+  // a character typed through Option (macOS) or AltGr (reported as Ctrl+Alt)
+  assert.ok(k("@", { altKey: true }), "Option/Alt character");
+  assert.ok(k("€", { ctrlKey: true, altKey: true }), "AltGr character");
+  assert.ok(k("{", { ctrlKey: true, altKey: true }));
+  assert.ok(!k("@", { metaKey: true, altKey: true }), "Cmd combos stay shortcuts");
 });
 
 test("the share's sharebox is found on its window manager, and nowhere else", () => {
@@ -114,5 +119,6 @@ test("both editors go through the shared gate", () => {
   const bn = readFileSync(resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"), "utf8");
   assert.match(bn, /require\("libs\/dmz-edit-gate"\)/);
   assert.match(bn, /if \(editWouldBeGated\(this\._shareDesk\(\)\)\) return true;/);
-  assert.match(bn, /this\._wireShareEditGate\(this\._state\);/);
+  assert.match(bn, /this\._wireShareEditGate\(this\._state && this\._state\.el\);/);
+  assert.match(bn, /case "page-title": \{[\s\S]*?this\._wireShareEditGate\(child\.el\);/);
 });
