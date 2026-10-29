@@ -1,8 +1,8 @@
 // tests/calendar-meeting-info-modal.test.js — on the Personal Calendar, a
-// meeting chip (any view, personal or workspace) opens the folder's own
-// "Meeting information" modal, hosted by meeting_modal_host in the calendar's
-// modal slot. It replaces the calendar's own meeting form and the hand-off to
-// the workspace for a meeting chip; "+ New → Meeting" keeps the calendar form.
+// WORKSPACE meeting chip (any view) opens the folder's own "Meeting
+// information" modal, hosted by meeting_modal_host in the calendar's modal
+// slot, instead of handing over to the workspace. A PERSONAL meeting chip
+// opens the calendar's own "personal meeting" form, as before.
 //
 //   node --test tests/calendar-meeting-info-modal.test.js
 const test = require("node:test");
@@ -38,18 +38,32 @@ const chipCmd = (row, extra = {}) => {
   return { mget: (k) => v[k] };
 };
 
-test("a personal or workspace meeting chip opens the meeting-info modal", () => {
-  for (const row of [personal, workspace]) {
-    const self = calendar();
-    openItem.call(self, chipCmd(row));
-    assert.deepEqual(self.calls, [["info", row.id, { at: row.stime, occurrence: false }]]);
-  }
+test("a workspace meeting chip opens the folder's meeting-info modal", () => {
+  const self = calendar();
+  openItem.call(self, chipCmd(workspace));
+  assert.deepEqual(self.calls, [["info", "m2", { at: workspace.stime, occurrence: false }]]);
 });
 
-test("an occurrence chip passes its own start, not the series'", () => {
+test("a personal meeting chip opens the calendar's own personal meeting form", () => {
   const self = calendar();
-  openItem.call(self, chipCmd(personal, { itemOccurrence: 1, itemStime: 9000 }));
-  assert.deepEqual(self.calls, [["info", "m1", { at: 9000, occurrence: true }]]);
+  openItem.call(self, chipCmd(personal));
+  assert.deepEqual(self.calls, [["form"]]);
+});
+
+test("a personal occurrence, or one the viewer may not edit, opens nothing", () => {
+  const occ = calendar();
+  openItem.call(occ, chipCmd(personal, { itemOccurrence: 1, itemStime: 9000 }));
+  assert.deepEqual(occ.calls, []);
+  const ro = calendar();
+  ro._items = [{ ...personal, can_write: false }];
+  openItem.call(ro, chipCmd(ro._items[0]));
+  assert.deepEqual(ro.calls, []);
+});
+
+test("a workspace occurrence chip passes its own start, not the series'", () => {
+  const self = calendar();
+  openItem.call(self, chipCmd(workspace, { itemOccurrence: 1, itemStime: 9000 }));
+  assert.deepEqual(self.calls, [["info", "m2", { at: 9000, occurrence: true }]]);
 });
 
 test("_openMeetingInfo stores the coordinates the host needs", () => {

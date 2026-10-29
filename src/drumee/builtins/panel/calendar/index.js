@@ -2835,12 +2835,23 @@ class __calendar_main extends LetcBox {
       return;
     }
     if (row.scope === "workspace" && row.kind === "task") return this._openQuickTask(row);
-    // Any meeting chip — personal or workspace, any view — opens the folder's
-    // own "Meeting information" modal over the calendar (meeting_modal_host).
-    // It replaces this screen's meeting form and the hand-off to the
-    // workspace for a chip; ownership is the server's (room.update / remove
-    // are creator-only). An occurrence's row here is its SERIES' (it shares
-    // the id), so the start comes off the chip.
+    // A personal meeting is edited here, in this screen's own "personal
+    // meeting" form: it lives in the caller's own hub, which has no Meeting
+    // tab. The creator only (room.update / room.remove are creator-only), and
+    // never from one occurrence of a series, as for the task above.
+    if (row.kind === "meeting" && row.scope === "personal") {
+      if (!row.can_write) return;
+      if (occurrence) {
+        this.warn("calendar: an occurrence of a recurring item is not editable", id);
+        return;
+      }
+      return this._openMeetingForm(row);
+    }
+    // A workspace meeting chip, any view, opens that workspace folder's own
+    // "Meeting information" modal over the calendar (meeting_modal_host)
+    // instead of handing over to the workspace; ownership is the server's.
+    // An occurrence's row here is its SERIES' (it shares the id), so the
+    // start comes off the chip.
     if (row.kind === "meeting") {
       const at = Number(cmd.mget("itemStime")) || row.stime || 0;
       return this._openMeetingInfo(row, { at, occurrence });
