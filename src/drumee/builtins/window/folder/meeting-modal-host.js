@@ -177,8 +177,11 @@ class __meeting_modal_host extends LetcBox {
   }
 
   onBeforeDestroy() {
-    // Uploads still running belong to a modal that is gone.
-    this._mmAbandonUploads();
+    // Escape, or any close the calendar makes, destroys the host without the
+    // folder's close: run its teardown now (invitee blur timer, uploads still
+    // running, the dialog), and report nothing — the calendar is the closer.
+    this._hostClosed = true;
+    WindowFolder.prototype.closeMeetingModal.call(this);
   }
 }
 

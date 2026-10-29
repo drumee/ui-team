@@ -119,3 +119,19 @@ test("closing reports once, after the write that followed it", async () => {
   await new Promise((r) => setTimeout(r, 5));
   assert.deepEqual(h.sent, [{ service: "meeting-host-closed", wrote: true }]);
 });
+
+// Escape (or any calendar-side close) destroys the host without the folder's
+// close: its timers (invitee blur) and uploads must still be torn down, and
+// nothing reported back — the calendar is the one closing.
+test("destroying the host runs the folder's teardown, silently", () => {
+  let folderClosed = 0;
+  /* eslint-disable no-unused-vars */
+  const WindowFolder = { prototype: { closeMeetingModal() { folderClosed++; } } };
+  /* eslint-enable no-unused-vars */
+  const destroy = eval(`(${sliceFunction(HOST, "onBeforeDestroy()")})`);
+  const h = host({});
+  destroy.call(h);
+  assert.equal(folderClosed, 1);
+  assert.equal(h._hostClosed, true);
+  assert.deepEqual(h.sent, []);
+});
