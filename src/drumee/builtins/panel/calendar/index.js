@@ -1124,11 +1124,97 @@ class __calendar_main extends LetcBox {
         restrict: false,
         recipients: [],
         password_on: false,
+        has_password: false,
         files: [],
       },
     };
     this._pendingDay = null;
     this._renderModal();
+    // The Invite column, as "New personal meeting" draws it, filled from the
+    // meeting's existing guest link.
+    this._loadMeetingLink(this._form);
+  }
+
+  /**
+   * Read an existing meeting's guest link gate (room.link_info) into the
+   * edit form's Invite column: require email, the allowed emails / @domains,
+   * and whether a password is set (never the password — the field stays
+   * empty and keeps it). What was read is kept as form.linkInfo, so Update
+   * re-grants only a gate that changed (_saveMeetingGate).
+   */
+  async _loadMeetingLink(form) {
+    const row = (form && form.row) || {};
+    const info = await this.fetchService({
+      service: (SERVICE.room && SERVICE.room.link_info) || "room.link_info",
+      hub_id: this._personalHub,
+      nid: row.nid || row.id,
+      _ts: Date.now(),
+    });
+    if (this._form !== form || !info || info.error) return;
+    const recipients = Array.isArray(info.allowed_emails) ? info.allowed_emails.slice() : [];
+    const require_email = !!Number(info.require_email) || recipients.length > 0;
+    const password_on = !!info.has_password;
+    // Keep what was typed meanwhile: the re-feed below rebuilds the inputs.
+    this._absorbFormText();
+    Object.assign(form.draft, {
+      require_email,
+      restrict: recipients.length > 0,
+      recipients,
+      password_on,
+      has_password: password_on,
+    });
+    form.linkInfo = { require_email, recipients: recipients.slice(), password_on };
+    // Only the Invite column: re-feeding the whole modal replayed its pop-in
+    // entrance, and the modal looked as if it opened twice.
+    this._renderMeetingInvite();
+  }
+
+  /** Re-feed the meeting form's Invite column alone (falls back to the modal). */
+  _renderMeetingInvite() {
+    const part = _.isFunction(this.getPart) ? this.getPart("meeting-invite") : null;
+    if (!part || (part.isDestroyed && part.isDestroyed()) || !part.el) {
+      return this._renderModal();
+    }
+    part.feed(require("./skeleton/meeting-form").inviteSide(this));
+  }
+
+  /**
+   * Save an edited gate onto the meeting's SAME guest link: room.public_link
+   * keeps the token for the meeting, so the URL already sent out still
+   * works. Nothing is re-granted when the gate did not change. A password
+   * left on but not retyped is kept (keep_password); a new one replaces it;
+   * switching it off clears it.
+   *
+   * @returns {Promise<boolean>} false when the server refused
+   */
+  async _saveMeetingGate(form, draft) {
+    const was = form.linkInfo;
+    // The link was never read (no answer): leave it exactly as it is.
+    if (!was) return true;
+    const recipients = draft.restrict ? (draft.recipients || []).slice() : [];
+    const require_email = !!draft.require_email || recipients.length > 0;
+    const password_on = !!draft.password_on;
+    const password = password_on && draft.password ? String(draft.password) : "";
+    if (
+      require_email === was.require_email &&
+      password_on === was.password_on &&
+      !password &&
+      JSON.stringify(recipients) === JSON.stringify(was.recipients)
+    ) {
+      return true;
+    }
+    const row = form.row || {};
+    const payload = {
+      service: (SERVICE.room && SERVICE.room.public_link) || "room.public_link",
+      hub_id: this._personalHub,
+      nid: row.nid || row.id,
+      require_email: require_email ? 1 : 0,
+      allowed_emails: recipients,
+    };
+    if (password) payload.password = password;
+    else if (password_on) payload.keep_password = 1;
+    const res = await this.postService(payload);
+    return !!res && !res.error;
   }
 
   _closeForm() {
@@ -1722,6 +1808,7 @@ class __calendar_main extends LetcBox {
       }
       if (hotkeys.isComposing(e) || hotkeys.inTextEntry(e.target)) return;
       claim();
+      if (form.kind === "meeting-info") return this._closeForm();
       if (form.kind === "task-quick-open") {
         const panel = this._quickPanel;
         // Still loading: there is no card, and no draft, to discard yet.
@@ -2509,7 +2596,6 @@ class __calendar_main extends LetcBox {
     // "Restrict access" with nobody on the list would be an open link that
     // looks restricted: refused until an address or domain is added.
     if (
-      this._form.mode !== "edit" &&
       draft.require_email &&
       draft.restrict &&
       !(draft.recipients || []).length
@@ -2605,10 +2691,24 @@ class __calendar_main extends LetcBox {
     const link = answer && answer.link;
 
     if (link) copyToClipboard(link);
+    // The meeting exists: put it on its own day now, in place — only that
+    // day's chip list is re-fed (_addItem), never the card opening below. It
+    // used to mark the page dirty, and the card's Done reloaded all of it.
+    this._addItem(
+      normalizeRow({
+        kind: "meeting",
+        id: nid,
+        nid,
+        hub_id: this._personalHub,
+        scope: "personal",
+        title,
+        description: draft.description || "",
+        stime,
+        etime: end,
+        can_write: 1,
+      }),
+    );
     this._form = { kind: "invite-link", link: link || "" };
-    // The new meeting reaches the grid when this card closes (_closeForm),
-    // not underneath it — a reload now would re-feed the card it just opened.
-    this._dirty = true;
     this._renderModal();
   }
 
@@ -2638,6 +2738,11 @@ class __calendar_main extends LetcBox {
     // postService never rejects: a refusal (NOT_MEETING_OWNER) or a transport
     // failure answers {error} or nothing.
     if (!renamed || renamed.error || !moved || moved.error) {
+      Wm.alert(LOCALE.ERROR_NETWORK);
+      return;
+    }
+    // Then the Invite column: a changed gate, on the same link.
+    if (!(await this._saveMeetingGate(form, draft))) {
       Wm.alert(LOCALE.ERROR_NETWORK);
       return;
     }
@@ -2710,7 +2815,38 @@ class __calendar_main extends LetcBox {
     this._items = this._items.filter((r) => !match(r));
     // The other cached windows may hold it too; they are re-read on demand.
     this._dropWindowCache();
+    this._refeedDays(keys);
+  }
 
+  /**
+   * Put a just-created item on screen WITHOUT rebuilding the page: the row
+   * joins the held items and only the chip list of its own day is re-fed —
+   * the "New personal meeting" modal's create, whose server has already said
+   * yes. No refetch either: our own writes never come back as a push. A day
+   * outside the window on screen re-feeds nothing; the neighbour windows are
+   * dropped, so ‹ › re-reads them with the item in.
+   *
+   * @param {Object} row  a normalized calendar row (normalizeRow)
+   */
+  _addItem(row) {
+    if (!row) return;
+    this._items = [...this._items, row];
+    this._dropWindowCache();
+    const keys = new Set();
+    this.getVisibleItems().forEach((r) => {
+      if (`${r.id}` !== `${row.id}` || r.kind !== row.kind) return;
+      const s = rowStart(r);
+      if (s) keys.add(ymd(s));
+    });
+    this._refeedDays(keys);
+  }
+
+  /**
+   * Re-feed the chip lists of these days (YYYY-MM-DD) from the held items,
+   * and an open "+N more" popover on one of them. Falls back to one full
+   * repaint — still no refetch — when a day's part cannot be found.
+   */
+  _refeedDays(keys) {
     const byDay = itemsByDay(this.getVisibleItems());
     const month = this._view === "month";
     for (const key of keys) {
@@ -2789,16 +2925,26 @@ class __calendar_main extends LetcBox {
       return;
     }
     if (row.scope === "workspace" && row.kind === "task") return this._openQuickTask(row);
-    // A personal meeting is edited here, in this screen's own meeting form: it
-    // lives in the caller's own hub, which has no Meeting tab to hand it to.
-    // The creator only (room.update / room.remove are creator-only), and never
-    // from one occurrence of a series, for the same reason as the task above.
-    if (row.scope === "personal" && row.kind === "meeting" && row.can_write) {
+    // A personal meeting is edited here, in this screen's own "personal
+    // meeting" form: it lives in the caller's own hub, which has no Meeting
+    // tab. The creator only (room.update / room.remove are creator-only), and
+    // never from one occurrence of a series, as for the task above.
+    if (row.kind === "meeting" && row.scope === "personal") {
+      if (!row.can_write) return;
       if (occurrence) {
         this.warn("calendar: an occurrence of a recurring item is not editable", id);
         return;
       }
       return this._openMeetingForm(row);
+    }
+    // A workspace meeting chip, any view, opens that workspace folder's own
+    // "Meeting information" modal over the calendar (meeting_modal_host)
+    // instead of handing over to the workspace; ownership is the server's.
+    // An occurrence's row here is its SERIES' (it shares the id), so the
+    // start comes off the chip.
+    if (row.kind === "meeting") {
+      const at = Number(cmd.mget("itemStime")) || row.stime || 0;
+      return this._openMeetingInfo(row, { at, occurrence });
     }
     // The occurrence's OWN start, so the workspace's Meeting tab anchors on
     // the date the user clicked rather than on the series origin.
@@ -2812,6 +2958,23 @@ class __calendar_main extends LetcBox {
    * its own handlers, its own Update, its own upload folder for the hub. The
    * panel says when the card has gone (task-quick-open-closed / -board).
    */
+  /**
+   * A meeting chip: the folder's "Meeting information" modal, hosted by
+   * meeting_modal_host in this page's modal slot (skeleton meetingInfo). The
+   * host loads the record itself and says when it has gone
+   * (meeting-host-closed).
+   *
+   * @param {Object} row         the calendar row (a series' row for an occurrence)
+   * @param {number} at          the clicked chip's start, epoch seconds
+   * @param {boolean} occurrence the chip is one occurrence of a series — Join
+   *   then joins THAT one
+   */
+  _openMeetingInfo(row, { at, occurrence = false } = {}) {
+    this._closeMenus();
+    this._form = { kind: "meeting-info", row, at, occurrence: occurrence ? at : 0 };
+    this._renderModal();
+  }
+
   _openQuickTask(row) {
     this._closeMenus();
     this._form = { kind: "task-quick-open", row };
@@ -2916,6 +3079,15 @@ class __calendar_main extends LetcBox {
       // task that is no longer on its board). Its writes carry this tab's
       // socket_id, so none of them comes back as a push: reload on both exits,
       // whatever was done, since comments, subtasks and files save at once.
+      // The meeting-info host's modal has gone (×, a save, a delete, Join, or a
+      // record no longer there). A write it made reloads on the close.
+      case "meeting-host-closed": {
+        const form = this._form;
+        if (!form || form.kind !== "meeting-info") return;
+        if (args && args.wrote) form.wrote = true;
+        return this._closeForm();
+      }
+
       case "task-quick-open-closed": {
         if (!this._form || this._form.kind !== "task-quick-open") return;
         return this._closeForm() || this._reload();

@@ -221,9 +221,14 @@ function chip(ui, row, opt = {}) {
     ];
   }
 
-  // Hover delete, personal + writable rows only. bubble:0 so it does not also
-  // open the item. A workspace row is deleted in its workspace, never here.
-  if (row.scope === "personal" && row.can_write && !isOccurrence) {
+  // Hover delete. bubble:0 so it does not also open the item. A personal row
+  // the viewer may write; and a workspace MEETING its reporter sees
+  // (calendar.list answers can_write = created_by === caller; room.remove is
+  // creator-only server-side). A workspace task is deleted on its board.
+  // Never an occurrence of a series.
+  const removable =
+    row.can_write && (row.scope === "personal" || row.kind === "meeting");
+  if (removable && !isOccurrence) {
     kids.push(
       Skeletons.Button.Svg({
         className: `${pfx}__chip-remove`,
