@@ -1842,6 +1842,20 @@ class __tasks_panel extends LetcBox {
         depth += 1;
       }
     }
+    // The framework fires a widget's `service` on a plain click too, not only
+    // on the Entry's Enter-commit (letc.js: el.onclick → triggerHandlers). A
+    // click that just places the caret in a commit-mode Entry must not submit:
+    // paste a title into the subtask creator, click to fix a typo, and the
+    // subtask was created. Only Enter or the card's own button commits.
+    if (
+      args &&
+      args.type === "click" &&
+      trigger &&
+      trigger.mget &&
+      trigger.mget(_a.mode) === _a.commit
+    ) {
+      return;
+    }
     // After the service has been resolved (the walk above is what turns a click
     // on a Note into its ancestor's service), before any case can act on it.
     if (this._refuseWhileRowBusy(service, trigger)) return;
@@ -2616,20 +2630,10 @@ class __tasks_panel extends LetcBox {
           args && args.value != null ? String(args.value) : this._colRenameDraft;
         return;
 
-      case "col-rename-submit": {
-        // The framework fires a widget's `service` on a plain click too, not
-        // only on the Entry's Enter-commit (letc.js: el.onclick → triggerHandlers).
-        // A bare click that just focuses the name-seeded input must not
-        // submit-and-close the popover — only Enter or the Rename button should.
-        const isEntryFocusClick =
-          args &&
-          args.type === "click" &&
-          trigger &&
-          trigger.mget &&
-          trigger.mget("name") === "col_rename";
-        if (isEntryFocusClick) return;
+      case "col-rename-submit":
+        // A focus click on the name input never gets here (commit-mode guard
+        // at the top); only Enter or the Rename button does.
         return this._renameColumn(trigger);
-      }
 
       case "col-theme-set":
         return this._themeColumn(trigger);
