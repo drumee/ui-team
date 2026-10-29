@@ -13,12 +13,16 @@
 //     this.x() that is neither borrowed, nor HOST_OWN, nor ui-core's;
 //   • the modal's events go to the folder's onMeetingModalEvent.
 //
-// Options: hub_id, meeting_nid, stime, etime (the chip's, epoch seconds),
-// occurrence (a recurring occurrence's own start, or 0), may_write.
+// Options: hub_id, meeting_nid, occurrence (a recurring occurrence's own
+// start, or 0), may_write. (stime / etime are the chip's, kept for context;
+// the record is looked up across the whole hub.)
 // Emits `meeting-host-closed` { wrote } exactly once, however the modal goes.
 const WindowFolder = require("./index");
 
 const BORROWED = [
+  // Called by the modal's skeleton (ui.meetingCreator), not by a method:
+  // tests/meeting-modal-host.test.js checks the skeleton's ui.x() calls too.
+  "meetingCreator",
   "_addInvitee", "_applyMeetingTileState", "_applyStartBtnState",
   "_awaitMeetingReady", "_checkAvailability", "_filterInvitees",
   "_installInviteeFocus", "_installMeetingFiles", "_launchMeetingStandalone",
@@ -102,15 +106,16 @@ class __meeting_modal_host extends LetcBox {
         });
       })
       .catch(() => {});
-    const stime = Number(this.mget("stime")) || 0;
-    const etime = Number(this.mget("etime")) || stime;
-    // room.list returns every recurring series whatever the range, so an
-    // occurrence's chip finds its series' record too.
+    // The hub's every meeting, not a window around the chip: some stored
+    // meetings end before they start (an edit moved stime, not etime), and
+    // room_list_scheduled's overlap test drops those from a tight window —
+    // the chip of a live meeting then said "no longer exists". No range sent
+    // at all (an undefined one would travel as the string "undefined"), and
+    // a cache-buster: a GET read right after an edit must not come stale.
     const rows = await this.fetchService({
       service: (SERVICE.room && SERVICE.room.list) || "room.list",
       hub_id,
-      stime: stime - 1,
-      etime: etime + 1,
+      _ts: Date.now(),
     });
     await home;
     if (this.isDestroyed && this.isDestroyed()) return;
@@ -126,10 +131,19 @@ class __meeting_modal_host extends LetcBox {
       if (typeof Butler !== "undefined") Butler.say(LOCALE.MEETING_NOT_FOUND);
       return this._reportClosed();
     }
-    return this.openMeetingModal({
-      meeting,
-      occurrence: Number(this.mget("occurrence")) || null,
-    });
+    // Whatever fails opening it must not strand the calendar's backdrop with
+    // no card on it: say it in the log, and hand the close back.
+    return Promise.resolve()
+      .then(() =>
+        this.openMeetingModal({
+          meeting,
+          occurrence: Number(this.mget("occurrence")) || null,
+        }),
+      )
+      .catch((e) => {
+        this.warn("meeting_modal_host: the modal failed to open", e);
+        this._reportClosed();
+      });
   }
 
   onUiEvent(cmd, args = {}) {

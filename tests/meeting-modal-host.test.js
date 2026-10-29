@@ -53,6 +53,17 @@ test("every this.x() a borrowed method calls is borrowed, the host's own, or ui-
   assert.deepEqual([...gaps], []);
 });
 
+// The modal's skeleton calls back into its host too (ui.meetingCreator…).
+// A gap there threw inside the skeleton on stage — "ui.meetingCreator is not
+// a function" — and left the calendar's backdrop with no card on it.
+test("every ui.x() the modal skeleton calls is borrowed or the host's own", () => {
+  const SKL = fs.readFileSync(path.join(DIR, "skeleton/meeting-modal.js"), "utf8");
+  const known = new Set([...BORROWED, ...HOST_OWN, ...BASE]);
+  const gaps = [...new Set([...SKL.matchAll(/\bui\.([A-Za-z_$][\w$]*)\(/g)].map((m) => m[1]))]
+    .filter((n) => !known.has(n));
+  assert.deepEqual(gaps, []);
+});
+
 test("the host keeps the folder's skin family", () => {
   assert.match(HOST, /prototype\.figName = "window_folder"/);
 });
@@ -80,17 +91,17 @@ function host(opts) {
   return self;
 }
 
-test("opening finds the record by nid; an occurrence joins its own start", () => {
+test("opening finds the record by nid; an occurrence joins its own start", async () => {
   const rows = [{ id: "m2", metadata: "{}" }, { id: "m1", metadata: "{}" }];
   const h = host({ meeting_nid: "m1", occurrence: 1790874000 });
-  openFromList.call(h, rows);
+  await openFromList.call(h, rows);
   assert.deepEqual(h.opened, [{ meeting: rows[1], occurrence: 1790874000 }]);
 });
 
-test("a single row (collapsed to an object) is found too", () => {
+test("a single row (collapsed to an object) is found too", async () => {
   const row = { id: "m1", metadata: "{}" };
   const h = host({ meeting_nid: "m1" });
-  openFromList.call(h, row);
+  await openFromList.call(h, row);
   assert.deepEqual(h.opened, [{ meeting: row, occurrence: null }]);
 });
 
@@ -134,4 +145,25 @@ test("destroying the host runs the folder's teardown, silently", () => {
   assert.equal(folderClosed, 1);
   assert.equal(h._hostClosed, true);
   assert.deepEqual(h.sent, []);
+});
+
+// The record is looked up across the whole hub, not by the chip's time: some
+// stored meetings end before they start (an edit moved stime, not etime), and
+// room_list_scheduled's overlap test drops those from a tight window — on
+// stage that read as "That meeting no longer exists" for a live meeting.
+test("the load asks room.list for every meeting, uncached", () => {
+  const load = sliceFunction(HOST, "async _load()");
+  const call = load.slice(load.indexOf("this.fetchService({"), load.indexOf("});", load.indexOf("this.fetchService({")));
+  assert.doesNotMatch(call, /stime|etime/);
+  assert.match(call, /_ts: Date\.now\(\)/);
+});
+
+// Whatever goes wrong opening the modal must not strand the calendar's
+// backdrop with nothing on it (stage: a skeleton TypeError did exactly that).
+test("a failure opening the modal reports it closed", async () => {
+  const h = host({ meeting_nid: "m1" });
+  h.warn = () => {};
+  h.openMeetingModal = () => Promise.reject(new TypeError("boom"));
+  await openFromList.call(h, [{ id: "m1" }]);
+  assert.deepEqual(h.sent, [{ service: "meeting-host-closed", wrote: false }]);
 });
