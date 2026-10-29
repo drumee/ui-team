@@ -412,7 +412,26 @@ class __welcome_router extends LetcBox {
         break;
 
       case 'keep-current-connection':
-        return location.hash = _K.module.desk;
+        return this._enterDesk(_K.module.desk);
+    }
+  }
+
+  /**
+   * Leave the sign-in screen for the desk by REPLACING its history entry.
+   *
+   * The browser history is the visitor's trail of folders (libs/location-url
+   * adds one entry per folder), and it has to start AT the desk: with the
+   * sign-in screen left underneath, Back from the first folder lands on it,
+   * and for a signed-in visitor that screen tears the desk down and rebuilds
+   * it on a remembered workspace it never loads (prod, 2026-10-28). Replacing
+   * the entry makes Back past the first folder simply leave, as on any site.
+   * Same-document replace fires hashchange, so the router still routes.
+   */
+  _enterDesk(hash) {
+    try {
+      location.replace(`${location.pathname}${location.search}${hash}`);
+    } catch (e) {
+      location.hash = hash;
     }
   }
 
@@ -436,8 +455,9 @@ class __welcome_router extends LetcBox {
         RADIO_BROADCAST.trigger("workspace:refresh");
         // The reveal route is what the desk itself uses to open a workspace
         // (guest-join-open-workspace); `wm/hub/` was never a route.
-        location.hash =
-          `#/desk/wm/reveal/?hub_id=${res.hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
+        this._enterDesk(
+          `#/desk/wm/reveal/?hub_id=${res.hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`,
+        );
         return;
       }
       if (window.Wm && Wm.alert) {
@@ -447,7 +467,7 @@ class __welcome_router extends LetcBox {
         Wm.alert(msg);
       }
     }
-    location.hash = _K.module.desk;
+    this._enterDesk(_K.module.desk);
   }
 
   /**
