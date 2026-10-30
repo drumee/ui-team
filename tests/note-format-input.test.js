@@ -79,3 +79,21 @@ test("the editor listens in CAPTURE, and only while the note is editable", () =>
   assert.match(call, /this\._editable && this\._editor\) applyFormatInput\(this\._editor, e\)/);
   assert.match(call, /\},\s*true\s*\)/);
 });
+
+// Round 3 (Duy on Edge, 2026-10-30): select, then Italic + Underline on the
+// selection toolbar — both buttons lit, the text unchanged. The marks were
+// there; the app-wide reset (@drumee/ui-styles lib/reset.css) strips the
+// browser's own look of <em>/<u>, which BlockNote relies on.
+test("the editor restates the look of italic, underline and strike over the app reset", () => {
+  const skin = readFileSync(resolve(DIR, "skin/index.scss"), "utf8");
+  const root = skin.indexOf("\n.blocknote-state {");
+  assert.ok(root >= 0);
+  const block = skin.slice(root, skin.indexOf("\n}", root));
+  const editor = block.slice(block.indexOf(".bn-editor {"));
+  assert.match(editor, /em,\s*i\s*\{\s*font-style: italic;/);
+  assert.match(editor, /u\s*\{\s*text-decoration-line: underline;/);
+  assert.match(editor, /s,\s*del,\s*strike\s*\{\s*text-decoration-line: line-through;/);
+  // The reset these answer, so the test speaks up if it ever goes away.
+  const reset = readFileSync(resolve(ROOT, "node_modules/@drumee/ui-styles/dist/css/lib/reset.css"), "utf8");
+  assert.match(reset, /a,\s*u\s*\{[^}]*text-decoration:\s*none/);
+});
