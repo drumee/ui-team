@@ -98,9 +98,13 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
       padding: 0 20px;
       align-items: flex-start;
     }
+    // Centred on name row + menu row: (34 + 26 - 32) / 2 = 14px from the
+    // header's top. Every Drumee box is `position: relative` (skin/lib/
+    // container), so the offset is taken from the BAR, which sits 8px
+    // down (the header's padding-top): 14 - 8.
     .drumee-topbar__actions {
       position: absolute;
-      top: 14px;
+      top: 6px;
       right: 16px;
     }
   }
