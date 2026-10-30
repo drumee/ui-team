@@ -24,6 +24,7 @@ import "@univerjs/sheets-filter/facade";
 import { contentUrl } from "builtins/editor/content-url";
 const pendingFocus = require("builtins/editor/pending-focus");
 const { attachMenuPolicy } = require("builtins/editor/menu-policy");
+const { revealWhenPainted, hideLoading } = require("builtins/editor/loading-reveal");
 // Casual Sheets chrome gates (see _wireMenus / _sheetExtensions).
 const SHEET_FEATURES = { branding: false };
 
@@ -312,7 +313,6 @@ class __sheet_state extends DrumeeMFS {
           // stays null in this version). Keep it for Save's live getSnapshot().
           this._apiHandle = api;
           this._ready = 1;
-          this._hideLoading();
           this._nudgeResize();
           this._setUniverUser(api);
           this._grantWorkbookPermissions(api);
@@ -340,7 +340,7 @@ class __sheet_state extends DrumeeMFS {
         },
         onError: (e) => {
           this.warn("CasualSheets error", e);
-          this._hideLoading();
+          hideLoading(this.el && this.el.closest(".editor-sheet"));
         },
       })
     );
@@ -696,7 +696,7 @@ class __sheet_state extends DrumeeMFS {
 
   onBeforeDestroy() {
     this._destroyed = 1;
-    clearTimeout(this._loadingFallback);
+    if (this._cancelReveal) this._cancelReveal();
     try {
       if (this._menuPolicy) this._menuPolicy();
     } catch (e) {
@@ -954,29 +954,18 @@ class __sheet_state extends DrumeeMFS {
     this.el.insertBefore(host, this.el.firstChild);
     this._host = host;
     // The loading skeleton (sheet/skeleton) stays over the editor until it
-    // is ready: removed here, it let Casual's first, half-styled render show
-    // (stray unstyled labels, a white flash). Never longer than 20s, so a
-    // mount that never reports ready cannot hide the sheet for good.
-    clearTimeout(this._loadingFallback);
-    this._loadingFallback = setTimeout(() => this._hideLoading(), 20000);
+    // has painted — Casual's chrome and grid in place and its icon font in.
+    // Lifted at onReady, it let Casual's half-built first render show: a
+    // blank sheet and the icon NAMES ("table", "pivot_table", …) spilling
+    // out at the right while Material Symbols still downloaded.
+    if (this._cancelReveal) this._cancelReveal();
+    this._cancelReveal = revealWhenPainted(this.el.closest(".editor-sheet"), {
+      painted: () =>
+        this._ready &&
+        host.querySelector('[data-testid="casual-sheets-toolbar"]') &&
+        host.querySelector("canvas"),
+    });
     return host;
-  }
-
-  /**
-   * Fade the window's loading skeleton out, once the grid has had a frame to
-   * paint underneath it.
-   */
-  _hideLoading() {
-    clearTimeout(this._loadingFallback);
-    const win = this.el && this.el.closest(".editor-sheet");
-    const loading = win && win.querySelector(".editor-loading");
-    if (!loading || loading.dataset.leaving) return;
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        loading.dataset.leaving = "1";
-        setTimeout(() => loading.remove(), 240);
-      })
-    );
   }
 }
 

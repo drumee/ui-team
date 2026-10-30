@@ -10,7 +10,7 @@ function loadingSkeleton() {
   const bones = (cls, n) =>
     Array.from({ length: n }, () => Skeletons.Box.X({ className: `${pfx}__bone ${cls}`, active: 0 }));
   return Skeletons.Box.Y({
-    className: `${pfx} ${pfx}--sheet`,
+    className: `${pfx} ${pfx}--skel ${pfx}--sheet`,
     dataset: { state: 1 },
     kidsOpt: { active: 0 },
     kids: [

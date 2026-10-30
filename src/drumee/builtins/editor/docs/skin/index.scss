@@ -3,6 +3,7 @@
 #   TYPE : Component style — Casual Docs (DocxEditor) window
 # ===================================================================**/
 @use "../../skin/file-viewer" as fv;
+@use "../../skin/loading";
 @use "../../skin/phosphor" as ph;
 
 // Material Symbols arrow_drop_down — the caret the Figma draws on every toolbar menu.
@@ -656,48 +657,149 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
   // chunk downloaded the window was see-through around a bare "Loading…".
   background: #fff;
 
-  // Loading state while the editor chunk downloads (docs/skeleton body): the
-  // office player's progress part, replicated — a 5px indeterminate bar in
-  // the primary colour under the header and a light centred label.
-  // docs_state._reactHost removes it when the editor mounts.
   &__body {
     position: relative;
   }
 
-  .editor-loading {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: auto;
-    min-height: 3px;
-    z-index: 2000;
-    justify-content: flex-start;
-    display: flex;
-    overflow: hidden;
+  // ── Loading skeleton (docs/skeleton loadingSkeleton) ──────────────────
+  // The document's own shape in the shared bones (editor/skin/loading): the
+  // 64px title bar (glyph, name, menu row; the action cluster floats over
+  // its right side), the toolbar pill, the page on its #f9fbfd canvas.
+  .editor-loading--docs {
+    --skel-canvas: #f9fbfd;
+    --skel-tool: #edf2fa;
+  }
 
-    &__bar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 3px;
-      width: 30%;
-      background-color: var(--primary-500, #4f46e5);
-      will-change: transform;
-      animation: editor-loading-indeterminate 1.4s ease-in-out infinite;
+  .editor-loading__titlebar {
+    flex: 0 0 var(--ed-titlebar-h);
+    align-items: center;
+    gap: 8px;
+    padding: 0 270px 0 8px;
+  }
+
+  .editor-loading__titlecol {
+    gap: 9px;
+    // Under Casual's name input (its 6px padding).
+    padding-left: 6px;
+  }
+
+  .editor-loading__menu {
+    gap: 14px;
+  }
+
+  .editor-loading__toolbar {
+    flex: 0 0 fv.$fv-tb-h;
+    align-items: center;
+    gap: 10px;
+    margin: 0 12px 6px;
+    padding: 0 14px;
+    border-radius: 24px;
+    background: var(--skel-tool);
+  }
+
+  .editor-loading__canvas {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: center;
+    background: var(--skel-canvas);
+  }
+
+  .editor-loading__ruler,
+  .editor-loading__page {
+    width: min(816px, calc(100% - 48px));
+    flex: none;
+  }
+
+  // The ruler: a hairline track with inch ticks.
+  .editor-loading__ruler {
+    height: 22px;
+    margin-top: 6px;
+    border-bottom: 1px solid var(--skel-line);
+    background: linear-gradient(to right, var(--skel-line) 1px, transparent 1px) 96px 12px / 96px 10px repeat-x;
+  }
+
+  .editor-loading__page {
+    flex: 1 1 auto;
+    gap: 14px;
+    margin-top: 16px;
+    padding: 64px 72px 0;
+    box-sizing: border-box;
+    background: #fff;
+    border: 1px solid #dadce0;
+    border-bottom: 0;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15);
+  }
+
+  .editor-loading--docs .editor-loading__bone {
+    &--glyph {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
     }
 
-    &__text {
-      position: absolute;
-      top: 10px;
-      left: 0;
+    &--name {
+      width: 168px;
+      height: 14px;
+    }
+
+    &--menu {
+      width: 30px;
+      height: 10px;
+    }
+
+    &--menu:nth-child(3n) {
+      width: 40px;
+    }
+
+    &--tool {
+      width: 18px;
+      height: 18px;
+    }
+
+    &--tool:nth-child(3) {
+      width: 40px;
+    }
+
+    &--tool:nth-child(4) {
+      width: 88px;
+    }
+
+    &--tool:nth-child(5) {
+      width: 56px;
+    }
+
+    // A heading, then paragraph lines of a page's natural ragged widths.
+    &--line {
+      height: 10px;
       width: 100%;
-      padding: 10px;
-      text-align: center;
-      justify-content: center;
-      font: 300 #{fv.$fv-font-ui}/15px var(--font-main);
-      color: var(--default-text-color, #5f6368);
     }
+
+    &--line:first-child {
+      width: 46%;
+      height: 18px;
+      margin-bottom: 10px;
+    }
+
+    &--line:nth-child(4n) {
+      width: 72%;
+    }
+
+    &--line:nth-child(4n + 1):not(:first-child) {
+      width: 88%;
+    }
+
+    &--line:nth-child(6) {
+      width: 54%;
+      margin-bottom: 14px;
+    }
+  }
+
+  .editor-loading--docs .editor-loading__card {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
 }
 

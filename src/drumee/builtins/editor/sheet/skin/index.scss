@@ -5,6 +5,7 @@
 @use 'mixins/drumee';
 @use '../../skin/topbar.scss';
 @use '../../skin/file-viewer' as fv;
+@use '../../skin/loading';
 @use '../../skin/phosphor' as ph;
 
 // The strip's glyphs are Material Symbols in the design (1393:3887: "Add",
@@ -611,35 +612,13 @@ body > div:has(> [class*="univer-popup"]) {
   }
 
   // ── Loading skeleton (sheet/skeleton loadingSkeleton) ─────────────────
-  // The sheet's own shape — menu row, toolbar pill, formula bar, grid —
-  // drawn in placeholder bones under a soft shimmer, with a centred
-  // "Loading…" card. It covers the body until sheet_state._hideLoading
-  // fades it out (data-leaving), so Casual's first, half-styled render
-  // never shows. Geometry mirrors the File viewer block below.
+  // The sheet's own shape — menu row, toolbar pill, formula bar, grid — in
+  // the shared bones (editor/skin/loading). Geometry mirrors the File
+  // viewer block below.
   .editor-loading--sheet {
-    --skel-bg: #ffffff;
-    --skel-bone: #eef0f3;
-    --skel-shine: rgba(255, 255, 255, 0.65);
-    --skel-line: #eceef1;
     --skel-head: #f8f9fa;
     --skel-tool: rgba(61, 222, 140, 0.1);
-    --skel-card: #ffffff;
-    --skel-text: #5f6368;
     --skel-accent: #54b684;
-
-    position: absolute;
-    inset: 0;
-    z-index: 2000;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: var(--skel-bg);
-    transition: opacity 0.22s ease;
-
-    &[data-leaving="1"] {
-      opacity: 0;
-      pointer-events: none;
-    }
   }
 
   .editor-loading__menu {
@@ -683,23 +662,7 @@ body > div:has(> [class*="univer-popup"]) {
       linear-gradient(var(--skel-head), var(--skel-head)) 0 0 / 46px 100% no-repeat;
   }
 
-  .editor-loading__bone {
-    position: relative;
-    flex: none;
-    overflow: hidden;
-    border-radius: 4px;
-    background: var(--skel-bone);
-
-    // One shine sweeps every bone in step.
-    &::after {
-      content: "";
-      position: absolute;
-      inset: 0;
-      transform: translateX(-100%);
-      background: linear-gradient(90deg, transparent, var(--skel-shine), transparent);
-      animation: editor-skel-shine 1.4s ease-in-out infinite;
-    }
-
+  .editor-loading--sheet .editor-loading__bone {
     &--menu {
       width: 34px;
       height: 10px;
@@ -738,32 +701,6 @@ body > div:has(> [class*="univer-popup"]) {
     }
   }
 
-  .editor-loading__card {
-    align-items: center;
-    gap: 10px;
-    padding: 10px 18px 10px 14px;
-    border-radius: 24px;
-    background: var(--skel-card);
-    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15), 0 4px 12px rgba(60, 64, 67, 0.12);
-  }
-
-  .editor-loading__spinner {
-    flex: none;
-    width: 16px;
-    height: 16px;
-    box-sizing: border-box;
-    border-radius: 50%;
-    border: 2px solid var(--skel-bone);
-    border-top-color: var(--skel-accent);
-    animation: editor-skel-spin 0.8s linear infinite;
-  }
-
-  .editor-loading__text {
-    font: 400 #{fv.$fv-font-ui}/16px var(--font-main);
-    color: var(--skel-text);
-    white-space: nowrap;
-  }
-
   &[data-theme="dark"] .editor-loading--sheet {
     --skel-bg: var(--sheet-dark-bg, #14161a);
     --skel-bone: #262a31;
@@ -773,25 +710,6 @@ body > div:has(> [class*="univer-popup"]) {
     --skel-tool: rgba(61, 222, 140, 0.08);
     --skel-card: #1f2329;
     --skel-text: #aab2c2;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .editor-loading__bone::after,
-    .editor-loading__spinner {
-      animation: none;
-    }
-  }
-}
-
-@keyframes editor-skel-shine {
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-@keyframes editor-skel-spin {
-  100% {
-    transform: rotate(360deg);
   }
 }
 
