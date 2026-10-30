@@ -1,5 +1,5 @@
 
-const { captureUtm } = require('libs/campaign');
+const { captureUtm, captureAttribution } = require('libs/campaign');
 const { arm: armHubDeepLink, clear: clearHubDeepLink } = require('libs/hub-deep-link');
 const contactInviteLink = require('libs/contact-invite-link');
 
@@ -31,6 +31,7 @@ class __welcome_router extends LetcBox {
     // before anything can navigate away; localStorage carries it across the
     // full page reload that signin triggers, so the desk sees it after auth.
     captureUtm();
+    captureAttribution();
     if (args.invite) {
       this._inviteToken = args.invite;
       RADIO_BROADCAST.once('user:signed:in', () => {

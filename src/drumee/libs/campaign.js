@@ -305,7 +305,61 @@ function campaignArrival(consume) {
   return v;
 }
 
+/**
+ * First-touch attribution for paid campaigns. Separate from drumee_utm, which
+ * must follow the LATEST link for the reward gate. This one keeps the FIRST for
+ * ATTRIBUTION_TTL_MS, the window an ad click is worth crediting.
+ *
+ * KEEP IN SYNC with signup/src/widgets/router/index.js captureAttribution and
+ * signin/src/widgets/form/index.js storedAttribution.
+ */
+const ATTRIBUTION_KEY = "drumee_attribution";
+const ATTRIBUTION_TTL_MS = 30 * 86400 * 1000;
+const ATTRIBUTION_FIELDS = {
+  offer: 32, utm_source: 100, utm_medium: 100, utm_campaign: 100, utm_content: 100,
+  utm_term: 100, gclid: 512, li_fat_id: 512, fbclid: 512,
+};
+
+function captureAttribution() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ATTRIBUTION_KEY) || "null");
+    if (stored && Date.now() - stored.at < ATTRIBUTION_TTL_MS) return;
+    const args = (typeof Visitor !== "undefined" && Visitor?.parseModuleArgs?.()) || {};
+    const search = new URLSearchParams(location.search);
+    const found = {};
+    for (const [k, max] of Object.entries(ATTRIBUTION_FIELDS)) {
+      const v = args[k] || search.get(k) || "";
+      if (v) found[k] = String(v).trim().slice(0, max);
+    }
+    if (Object.keys(found).length) {
+      localStorage.setItem(ATTRIBUTION_KEY, JSON.stringify({ ...found, at: Date.now() }));
+    }
+  } catch (e) { /* attribution never gets to break a page */ }
+}
+
+const OFFER_PENDING_KEY = "drumee_offer_pending";
+
+/**
+ * The billing screen a campaign signup should land on, once. The offer is read
+ * from either key: signup moves it to drumee_offer_pending when it spends the
+ * attribution, and an OAuth signup still has the attribution itself.
+ * @returns {Object|null} a billing preselect
+ */
+function takeOfferPreselect() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ATTRIBUTION_KEY) || "{}") || {};
+    const offer = localStorage.getItem(OFFER_PENDING_KEY) || stored.offer;
+    if (offer !== "team-1usd") return null;
+    localStorage.removeItem(OFFER_PENDING_KEY);
+    localStorage.removeItem(ATTRIBUTION_KEY);
+    return { plan: "team", cycle: "monthly", tab: "checkout", promo: "TEAM7FREE" };
+  } catch (e) {
+    return null;
+  }
+}
+
 module.exports = {
+  captureAttribution, takeOfferPreselect,
   captureUtm, captureCampaignArrival, campaignArrival, ARRIVAL_KEY,
   reportCampaignClick,
   REWARD_CAMPAIGN, PROMO_CAMPAIGN,
