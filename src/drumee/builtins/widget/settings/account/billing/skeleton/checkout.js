@@ -333,6 +333,35 @@ function promoCodeSection(ui) {
 }
 
 /**
+ * The offer line under the total for a fixed first-cycle price (TEAM1):
+ * "First month $1.00 · then $29.00/month · cancel anytime".
+ * @param {string} pfx - class prefix
+ * @param {Object} summary - calculateCheckoutSummary() result
+ * @returns {Object} Skeletons.Note
+ */
+function firstPaymentNote(pfx, summary) {
+  const content = summary.period === "month"
+    ? (LOCALE.PROMO_CODE_FIRST_MONTH
+      || "First month {0} · then {1}/month · cancel anytime").format(
+      summary.totalPrice,
+      summary.basePrice,
+    )
+    : (LOCALE.PROMO_CODE_FIRST_PAYMENT
+      || "First payment {0} · then {1}/{2} · cancel anytime").format(
+      summary.totalPrice,
+      summary.basePrice,
+      summary.period,
+    );
+  return Skeletons.Note({ className: `${pfx}-promo-after-note`, content });
+}
+
+// Label of the discount row: the code for a fixed amount, the % otherwise.
+function promoDiscountLabel(promo, amountOff) {
+  if (amountOff) return (LOCALE.PROMO_CODE_DISCOUNT_CODE || "Promo ({0})").format(promo.code);
+  return (LOCALE.PROMO_CODE_DISCOUNT || "Promo ({0}% off)").format(String(promo.percent_off || 0));
+}
+
+/**
  * Create right panel content (checkout summary) for dynamic updates
  * Display total price, breakdown items, and checkout button
  * @param {Object} ui - UI instance
@@ -347,6 +376,8 @@ function rightPanelContent(ui) {
   const promo = summary.promo || null;
   const hasDiscount = !!(summary.discountAmount);
   const trialDays = promo ? (parseInt(promo.trial_days, 10) || 0) : 0;
+  // Fixed first-cycle price (TEAM1: "$1 first month"), instead of a percent.
+  const amountOff = promo ? (Number.parseInt(promo.amount_off, 10) || 0) : 0;
 
   // How long the % actually lasts. Stripe only ever gets 'once' or
   // 'repeating' from _ensureStripeCoupon, so a percent discount ALWAYS
@@ -404,7 +435,8 @@ function rightPanelContent(ui) {
       // When the discount ends the price goes back up. Saying so is the
       // difference between an honest quote and one the first full invoice
       // contradicts.
-      hasDiscount
+      hasDiscount && amountOff ? firstPaymentNote(pfx, summary) : null,
+      hasDiscount && !amountOff
         ? Skeletons.Note({
             className: `${pfx}-promo-after-note`,
             content: discountedCycles > 1
@@ -448,10 +480,7 @@ function rightPanelContent(ui) {
                 kids: [
                   Skeletons.Note({
                     className: `${pfx}-breakdown-label`,
-                    content: (LOCALE.PROMO_CODE_DISCOUNT
-                      || "Promo ({0}% off)").format(
-                      String(promo.percent_off || 0),
-                    ),
+                    content: promoDiscountLabel(promo, amountOff),
                   }),
                   Skeletons.Note({
                     className: `${pfx}-breakdown-value`,

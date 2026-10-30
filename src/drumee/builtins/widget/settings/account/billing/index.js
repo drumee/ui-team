@@ -3,6 +3,8 @@ const {
   PROMO_YEARLY_PCT,
 } = require("libs/billing");
 const { copyToClipboard } = require("@drumee/ui-essentials");
+const { offerStatusMessage } = require("./offer-status");
+const { offerAttached } = require("libs/offer-link");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
@@ -371,6 +373,10 @@ class settings_billing extends LetcBox {
    * set in _applyDeepLink and nowhere else.
    */
   _autoApplyDeepLinkPromo() {
+    // A checkout link without a code still picks up a signup offer.
+    if (!this._deepLinkPromo && this.state.currentTab === TAB_CHECKOUT) {
+      return this._autoApplyPendingOffer();
+    }
     if (!this._deepLinkPromo || this._deepLinkPromoApplied) return;
     // The tab has settled by now; honour its verdict rather than overriding it.
     if (this.state.currentTab !== TAB_CHECKOUT) return;
@@ -1341,7 +1347,10 @@ class settings_billing extends LetcBox {
     // Preview only: Stripe recomputes the real invoice at checkout.
     const promo = checkout.promo || null;
     const pct = promo ? (parseInt(promo.percent_off, 10) || 0) : 0;
-    const discountAmount = pct > 0 ? (basePrice * pct) / 100 : 0;
+    const amountOff = promo ? (Number.parseInt(promo.amount_off, 10) || 0) / 100 : 0;
+    let discountAmount = 0;
+    if (amountOff > 0) discountAmount = Math.min(basePrice, amountOff);
+    else if (pct > 0) discountAmount = (basePrice * pct) / 100;
     const finalPrice = Math.max(0, basePrice - discountAmount);
 
     return {
@@ -1862,6 +1871,8 @@ class settings_billing extends LetcBox {
     if (inOrg && (status === "ORG_IDENT_REQUIRED" || status === "ALREADY_IN_OTHER_DOMAIN")) {
       return LOCALE.NOT_ORG_OWNER;
     }
+    const offerMessage = offerStatusMessage(status);
+    if (offerMessage) return offerMessage;
     switch (status) {
       case "IDENT_INVALID": return LOCALE.ORG_IDENT_INVALID;
       case "IDENT_NOT_AVAILABLE": return LOCALE.ORG_IDENT_TAKEN;
@@ -1919,6 +1930,7 @@ class settings_billing extends LetcBox {
     const checkout = this.state.checkout || (this.state.checkout = {});
     delete checkout.promo;
     delete checkout.promoError;
+    delete checkout.promoErrorStatus;
     if (!keepCode) checkout.promoCode = "";
   }
 
@@ -1937,6 +1949,12 @@ class settings_billing extends LetcBox {
     checkout.promoCode = code;
     delete checkout.promo;
     delete checkout.promoError;
+    delete checkout.promoErrorStatus;
+    // Applying again (the same code or another) undoes a Remove.
+    this._removedPromo = null;
+    // The cycle this preview is for: a toggle while it is in flight makes
+    // the answer stale (see below).
+    const cycle = checkout.billingCycle;
 
     if (!code) {
       checkout.promoError = LOCALE.PROMO_CODE_INVALID
@@ -1966,12 +1984,19 @@ class settings_billing extends LetcBox {
     const res = await this.postService(SERVICE.payment.preview_coupon, {
       promo_code: code,
       plan,
+      // A code may be locked to one billing cycle (TEAM1: monthly only).
+      period: checkout.billingCycle === "yearly" ? "year" : "month",
       hub_id: Visitor.id,
     }).catch(() => null);
+
+    // The shopper changed cycle while this was in flight: the answer is about
+    // the other cycle. Ask again for the one on screen.
+    if (checkout.billingCycle !== cycle) return this._applyPromoCode();
 
     const data = res || {};
     if (data.status && data.status !== "OK") {
       checkout.promoError = this._orgIdentError(data.status, data);
+      checkout.promoErrorStatus = data.status;
       this.updateRightPanel();
       return;
     }
@@ -1987,7 +2012,11 @@ class settings_billing extends LetcBox {
       partner: data.partner || "",
       kind: data.kind || "",
       plan_scope: data.plan_scope || "all",
+      period_scope: data.period_scope || "all",
       percent_off: parseInt(data.percent_off, 10) || 0,
+      // Fixed amount off, minor units (TEAM1: first month $1). Replaces
+      // percent_off when set.
+      amount_off: Number.parseInt(data.amount_off, 10) || 0,
       trial_days: parseInt(data.trial_days, 10) || 0,
       duration_months: parseInt(data.duration_months, 10) || 0,
     };
@@ -2026,6 +2055,66 @@ class settings_billing extends LetcBox {
     this.state.currentTab = TAB_CHECKOUT;
     this.tab = TAB_CHECKOUT;
     this.renderContent();
+    this._autoApplyPendingOffer().catch(() => {});
+  }
+
+  /**
+   * A code locked to the other billing cycle (TEAM1 on Yearly) is taken out
+   * of the field — the refusal stays on screen — so Proceed buys the yearly
+   * plan at the regular price instead of sending the code and being refused
+   * again. It is kept aside and comes back when the shopper returns to the
+   * cycle it is for.
+   */
+  _parkCycleLockedPromo() {
+    const co = this.state.checkout;
+    if (co.promoErrorStatus === "COUPON_PERIOD_MISMATCH" && co.promoCode) {
+      this._parkedPromo = co.promoCode;
+      co.promoCode = "";
+      this.updateRightPanel();
+    } else if (co.promo) {
+      this._parkedPromo = null;
+    }
+  }
+
+  /**
+   * Apply the offer code a signup link left for this account
+   * (?offer=TEAM1 → payment.offer_attach, see libs/offer-link), the way a
+   * campaign deep link's promo is applied: seed the field, then preview it.
+   *
+   * Only when the shopper has not chosen a code themselves (nor removed this
+   * one), and only on a plan / cycle the code is for — offering it on
+   * Business would show a code the server refuses. A checkout still sitting
+   * on Free (nothing to buy yet) moves to the code's plan. Asked of the
+   * server each time checkout opens or the plan changes, so a code that has
+   * since been used or has ended simply stops appearing.
+   */
+  async _autoApplyPendingOffer() {
+    const checkout = this.state.checkout || {};
+    // A code typed into the field is not in state until Apply.
+    const chosen = () => checkout.promo || checkout.promoCode
+      || String(this.__promoCodeInput?.getValue?.() || "").trim();
+    if (chosen() || this._deepLinkPromo || this._offerDeclined) return;
+    if (!SERVICE.payment?.offer_pending) return;
+    // Opened right after sign-in: the desk may still be handing the link's
+    // code to the server (libs/offer-link).
+    await offerAttached();
+    const res = await this.fetchService(SERVICE.payment.offer_pending, { hub_id: Visitor.id })
+      .catch(() => null);
+    if (res?.status !== "OK" || !res.code) return;
+    // The shopper may have typed a code or moved on while this was in flight.
+    if (chosen() || this.state.currentTab !== TAB_CHECKOUT) return;
+    const scope = res.plan_scope && res.plan_scope !== "all" ? res.plan_scope : "";
+    if (scope && (checkout.selectedPlan || "free") === "free") {
+      checkout.selectedPlan = scope;
+      checkout.storage = this.storage[scope] || 0;
+      checkout.seats = this.seats[scope] || 0;
+    }
+    if (scope && scope !== checkout.selectedPlan) return;
+    if (res.period_scope === "month") checkout.billingCycle = "monthly";
+    if (res.period_scope === "year") checkout.billingCycle = "yearly";
+    checkout.promoCode = res.code;
+    this.renderContent();
+    return this._applyPromoCode();
   }
 
   async _proceedToCheckout() {
@@ -2146,7 +2235,10 @@ class settings_billing extends LetcBox {
         && this.__promoCodeInput.getValue())
       || (checkout.promoCode) || "",
     ).trim();
-    if (promo_code) {
+    // A code the shopper Removed stays in the field (so it need not be
+    // retyped) but must not ride along: Remove means "buy without it".
+    const removed = !checkout.promo && promo_code === this._removedPromo;
+    if (promo_code && !removed) {
       checkout.promoCode = promo_code;
       payload.promo_code = promo_code;
     }
@@ -2613,6 +2705,7 @@ class settings_billing extends LetcBox {
           this.tab = TAB_CHECKOUT;
           this._armMotion();
           this.renderContent();
+          this._autoApplyPendingOffer().catch(() => {});
         }
         return false;
 
@@ -2627,7 +2720,11 @@ class settings_billing extends LetcBox {
           // Plan-scoped codes may no longer match — drop the preview so the
           // shopper re-Applies against the plan they are actually buying.
           this._clearPromoPreview(false);
+          // A code set aside for the other cycle belonged to the old plan.
+          this._parkedPromo = null;
           this.renderContent();
+          // A signup offer for the plan just picked (TEAM1 on Team).
+          this._autoApplyPendingOffer().catch(() => {});
         }
         return false;
 
@@ -2638,6 +2735,17 @@ class settings_billing extends LetcBox {
           // Keep the applied promo — percent_off still applies; only the
           // catalog base changes. Re-render so the discounted total updates.
           this.renderContent();
+          // Unless the code is locked to one cycle (TEAM1 is monthly only):
+          // ask the server again, so switching to yearly shows the refusal
+          // instead of a discount checkout would not honour — and switching
+          // back (the refused preview is gone, its error and code are not)
+          // brings the discount back.
+          const co = this.state.checkout;
+          const scope = co.promo?.period_scope;
+          if (this._parkedPromo && !co.promoCode) co.promoCode = this._parkedPromo;
+          if ((scope && scope !== "all") || (co.promoError && co.promoCode)) {
+            this._applyPromoCode().then(() => this._parkCycleLockedPromo()).catch(() => {});
+          }
         }
         return false;
 
@@ -2646,6 +2754,10 @@ class settings_billing extends LetcBox {
         return false;
 
       case "remove-promo-code":
+        // Removed on purpose: do not re-apply a signup offer behind their back,
+        // nor send it with the purchase (_proceedToCheckout).
+        this._offerDeclined = true;
+        this._removedPromo = String(this.state.checkout.promo?.code || this.state.checkout.promoCode || "").trim();
         this._clearPromoPreview(true);
         this.updateRightPanel();
         return false;

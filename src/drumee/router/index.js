@@ -21,6 +21,7 @@ require("./skin");
 const { getModule, moduleName } = require('./modules');
 const { captureCampaignArrival } = require('libs/campaign');
 const billingDeepLink = require('libs/billing-deep-link');
+const { captureOffer, offerHandoff } = require('libs/offer-link');
 const fileDeepLink = require('libs/file-deep-link');
 const windowTutorialIntent = require('libs/window-tutorial-intent');
 
@@ -53,6 +54,8 @@ class drumee_router extends LetcBox {
     // signin plugin replaces the hash, or a signed-out visitor loses the
     // destination the link named.
     billingDeepLink.captureFromUrl();
+    // And for a signup link's `?offer=CODE` (libs/offer-link).
+    captureOffer();
     // Same moment, same reason, for `?window_tutorial=<id>`: the hash is
     // rewritten to `#/desk` during boot, so anything that reads it later — the
     // folder window's buildContent used to — always parses an empty arg set and
@@ -353,7 +356,12 @@ class drumee_router extends LetcBox {
     // straight back here), and the history is the visitor's trail of folders
     // (libs/location-url): Back past the first folder must leave the desk, not
     // replay the bounce and land on the home grid (prod, 2026-10-28).
-    const target = `${location.protocol}//${host}${location.pathname}${location.search}`;
+    // A signup link's offer, stored on THIS origin, rides along (libs/offer-link).
+    const offer = offerHandoff();
+    const search = offer
+      ? `${location.search}${location.search ? "&" : "?"}${offer}`
+      : location.search;
+    const target = `${location.protocol}//${host}${location.pathname}${search}`;
     if (fileHash && fileHash.charAt(0) === "#") {
       fileDeepLink.clear();
       location.replace(`${target}${fileHash}`);
@@ -424,6 +432,7 @@ class drumee_router extends LetcBox {
     // Warm arrival for the billing link too — clicking it in a tab that
     // already runs the app never re-enters initialize().
     billingDeepLink.captureFromUrl();
+    captureOffer();
     // And for a tour asked for by pasting the URL into a tab that is already
     // running the app, where initialize() never runs again.
     windowTutorialIntent.captureFromUrl();

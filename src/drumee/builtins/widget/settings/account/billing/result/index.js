@@ -5,6 +5,8 @@
  * Receipt details (total, invoice number, date, card) come from
  * payment.checkout_result; every field degrades gracefully when absent.
  */
+const { offerStatusMessage } = require("../offer-status");
+
 class settings_billing_result extends LetcBox {
   initialize(opt = {}) {
     require("./skin");
@@ -24,6 +26,12 @@ class settings_billing_result extends LetcBox {
         session_id: this._sessionId,
       }).catch(() => null);
       if (this._receipt && this._receipt.status === "SESSION_NOT_FOUND") this._receipt = null;
+      // The bank wants the first payment confirmed (3DS): the server moved the
+      // purchase to a Stripe page that can show the challenge. Go there.
+      if (this._receipt?.status === "OFFER_ACTION_REQUIRED" && this._receipt.url) {
+        window.location.assign(this._receipt.url);
+        return;
+      }
       // A session that never got paid renders the failure shell instead.
       //
       // 'no_payment_required' is NOT such a session: Stripe reports it when
@@ -35,6 +43,10 @@ class settings_billing_result extends LetcBox {
       if (ps && ps !== "paid" && ps !== "no_payment_required") {
         this._result = "cancel";
       }
+      // An offer checkout (TEAM1) can be refused once the card is known —
+      // say why instead of a bare "payment failed".
+      this._failReason = offerStatusMessage(this._receipt?.status);
+      if (this._failReason) this._result = "cancel";
     }
     this.feed(require("./skeleton").default(this));
   }

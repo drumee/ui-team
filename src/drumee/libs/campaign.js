@@ -140,10 +140,19 @@ const ARRIVAL_KEY = "drumee_campaign_arrival";
  * removed; any other deep-link args on the hash are left exactly as they were.
  */
 function stripCampaignParams() {
+  stripUrlParams(PARAMS);
+}
+
+/**
+ * Remove the named params from the URL's query string AND from the query part
+ * of the hash, in place (replaceState). Shared with libs/offer-link.
+ * @param {Set<string>} names
+ */
+function stripUrlParams(names) {
   if (typeof history === "undefined" || !history.replaceState) return;
   try {
     const drop = (qs) =>
-      qs.split("&").filter((p) => p && !PARAMS.has(p.split("=")[0])).join("&");
+      qs.split("&").filter((p) => p && !names.has(p.split("=")[0])).join("&");
 
     const hash = location.hash || "";
     const qi = hash.indexOf("?");
@@ -167,7 +176,7 @@ function stripCampaignParams() {
     // boot and route, so a throw here would break navigation itself. The marker
     // is already stored by the caller, so the only cost of failing to tidy the
     // URL is that a later load of the same address counts as a fresh arrival.
-    console.warn("[campaign] could not strip the campaign params from the URL", e);
+    console.warn("[campaign] could not strip params from the URL", e);
   }
 }
 
@@ -309,4 +318,5 @@ module.exports = {
   captureUtm, captureCampaignArrival, campaignArrival, ARRIVAL_KEY,
   reportCampaignClick,
   REWARD_CAMPAIGN, PROMO_CAMPAIGN,
+  stripUrlParams,
 };

@@ -2,6 +2,7 @@ require("welcome/skin");
 require("builtins/window/confirm/skin");
 const { canUpgradePlan, needsAdminConsoleUpgrade } = require("libs/billing");
 const billingDeepLink = require("libs/billing-deep-link");
+const { attachOffer } = require("libs/offer-link");
 const {
   captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN,
 } = require("libs/campaign");
@@ -3020,6 +3021,10 @@ class desk_module extends LetcBox {
     // before onPartReady("overlay") gets to _maybeStartRewardFlow(), which it
     // does comfortably: that call is delayed 2s.
     captureUtm();
+    // A signup link's offer code (?offer=TEAM1) waits in localStorage until
+    // there is a session to hold it for; hand it to the server now, so the
+    // billing checkout applies it whenever this account gets there.
+    attachOffer(this.postService.bind(this));
     this.route();
     RADIO_BROADCAST.on("breadcrumb:content", this._updateAddmenu);
     // A workspace was just created (libs/create-workspace announces every
