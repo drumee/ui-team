@@ -81,6 +81,10 @@ class __editor_blocknote extends __player {
     this._page = { icon: "", cover: null };
     this._onBeforeUnload = this.checkUnsavedWork.bind(this);
     window.addEventListener("beforeunload", this._onBeforeUnload);
+    // Esc and the browser's own exit leave full screen without a click, so
+    // the Expand button follows the event, not its own clicks.
+    this._onFullscreenChange = this._syncFullscreenBtn.bind(this);
+    document.addEventListener("fullscreenchange", this._onFullscreenChange);
     // Where a new note gets written. Captured now, because by save time this
     // window is itself the active one.
     this.lastActiveWindow = Wm.getActiveWindow();
@@ -490,6 +494,26 @@ class __editor_blocknote extends __player {
     }
     if (this.el && this.el.requestFullscreen) {
       this.el.requestFullscreen().catch((e) => this.warn("editor_blocknote: fullscreen refused", e));
+    }
+  }
+
+  /**
+   * In full screen the Expand button turns into its way out: the shrink
+   * glyph and "Exit full screen" (tester, 2026-10-30). The same pattern as
+   * the folder window's _syncFullscreenBtn.
+   */
+  _syncFullscreenBtn() {
+    const btn = this.__noteFullscreen;
+    if (!btn || !btn.el || (btn.isDestroyed && btn.isDestroyed())) return;
+    const on = !!this.el && document.fullscreenElement === this.el;
+    const tip = on ? LOCALE.EXIT_FULLSCREEN : LOCALE.FULL_SCREEN;
+    btn.el.dataset.fullscreen = on ? "1" : "0";
+    if (_.isFunction(btn.setIcon)) btn.setIcon(on ? "ph-arrows-in-simple" : "ph-arrows-out-simple");
+    btn.mset(_a.tooltips, tip);
+    // ui-core builds the bubble once, from the first value.
+    if (btn.__tooltips && btn.__tooltips.el) {
+      btn.__tooltips.content = tip;
+      btn.__tooltips.el.innerHTML = tip;
     }
   }
 
@@ -945,6 +969,7 @@ class __editor_blocknote extends __player {
    */
   onBeforeDestroy() {
     window.removeEventListener("beforeunload", this._onBeforeUnload);
+    document.removeEventListener("fullscreenchange", this._onFullscreenChange);
     this._zoomed = false;
     try {
       if (this._wsObserver) this._wsObserver.disconnect();

@@ -981,6 +981,15 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     strike {
       text-decoration-line: line-through;
     }
+
+    // BlockNote draws a vertical guide line down each nested level (the
+    // block's ::before), which made a multi-level list look busy (tester,
+    // 2026-10-30). A level shows by its indent and its bullet only. The
+    // !important beats BlockNote's own rule, which nests :not(:has()) and
+    // out-specifies any selector from here.
+    .bn-block-group .bn-block-outer::before {
+      border-left: none !important;
+    }
   }
 
   // The empty-page hint, "Press '/' for commands" (Figma 16px, #84848c,
