@@ -1950,6 +1950,11 @@ class settings_billing extends LetcBox {
     delete checkout.promo;
     delete checkout.promoError;
     delete checkout.promoErrorStatus;
+    // Applying again (the same code or another) undoes a Remove.
+    this._removedPromo = null;
+    // The cycle this preview is for: a toggle while it is in flight makes
+    // the answer stale (see below).
+    const cycle = checkout.billingCycle;
 
     if (!code) {
       checkout.promoError = LOCALE.PROMO_CODE_INVALID
@@ -1983,6 +1988,10 @@ class settings_billing extends LetcBox {
       period: checkout.billingCycle === "yearly" ? "year" : "month",
       hub_id: Visitor.id,
     }).catch(() => null);
+
+    // The shopper changed cycle while this was in flight: the answer is about
+    // the other cycle. Ask again for the one on screen.
+    if (checkout.billingCycle !== cycle) return this._applyPromoCode();
 
     const data = res || {};
     if (data.status && data.status !== "OK") {
@@ -2226,7 +2235,10 @@ class settings_billing extends LetcBox {
         && this.__promoCodeInput.getValue())
       || (checkout.promoCode) || "",
     ).trim();
-    if (promo_code) {
+    // A code the shopper Removed stays in the field (so it need not be
+    // retyped) but must not ride along: Remove means "buy without it".
+    const removed = !checkout.promo && promo_code === this._removedPromo;
+    if (promo_code && !removed) {
       checkout.promoCode = promo_code;
       payload.promo_code = promo_code;
     }
@@ -2708,6 +2720,8 @@ class settings_billing extends LetcBox {
           // Plan-scoped codes may no longer match — drop the preview so the
           // shopper re-Applies against the plan they are actually buying.
           this._clearPromoPreview(false);
+          // A code set aside for the other cycle belonged to the old plan.
+          this._parkedPromo = null;
           this.renderContent();
           // A signup offer for the plan just picked (TEAM1 on Team).
           this._autoApplyPendingOffer().catch(() => {});
@@ -2740,8 +2754,10 @@ class settings_billing extends LetcBox {
         return false;
 
       case "remove-promo-code":
-        // Removed on purpose: do not re-apply a signup offer behind their back.
+        // Removed on purpose: do not re-apply a signup offer behind their back,
+        // nor send it with the purchase (_proceedToCheckout).
         this._offerDeclined = true;
+        this._removedPromo = String(this.state.checkout.promo?.code || this.state.checkout.promoCode || "").trim();
         this._clearPromoPreview(true);
         this.updateRightPanel();
         return false;
