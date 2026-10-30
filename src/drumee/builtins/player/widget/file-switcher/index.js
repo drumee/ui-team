@@ -97,7 +97,11 @@ class __file_switcher extends LetcBox {
     } catch (e) {
       n = {};
     }
-    return { ...p.model.toJSON(), ...n };
+    const own = p.model.toJSON();
+    // The image viewer's prev/next moves the player's model to another file;
+    // its media still describes the one it was opened on.
+    if (n.nid != null && own.nid != null && `${n.nid}` !== `${own.nid}`) return own;
+    return { ...own, ...n };
   }
 
   /** The doc-editor create service, when this endpoint has one. */
@@ -143,11 +147,22 @@ class __file_switcher extends LetcBox {
     const p = this.player;
     if (p && p.model && !this._following) {
       this._following = 1;
-      this.listenTo(p.model, `change:${_a.filename}`, (m, filename) => {
-        this.onPlayerRenamed(filename);
+      // One set() can both move to another file (image prev/next sets the
+      // whole node) and change the name: a new nid is a switch, not a rename.
+      this.listenTo(p.model, "change", (m) => {
+        if (m.hasChanged(_a.nid)) return this.onPlayerSwitched();
+        if (m.hasChanged(_a.filename)) this.onPlayerRenamed(m.get(_a.filename));
       });
       this.listenTo(p, "folder-changed", () => this.loadOthers());
     }
+  }
+
+  /** The player now shows another file: it heads Recently viewed, lit. */
+  onPlayerSwitched() {
+    if (this.isDestroyed()) return;
+    recent.remember(this.node());
+    this._recent = recent.read();
+    this.renderLists();
   }
 
   /** The open file was renamed: its rows (and the remembered entry) follow. */
