@@ -335,7 +335,8 @@ class __editor_blocknote extends __player {
     this._changed = 1;
     // Counts edits, so a save in flight knows whether it holds the latest.
     this._editGen = (this._editGen || 0) + 1;
-    if (this._status !== "saving") this._setStatus("unsaved");
+    // Saving / uploading stay on screen: their end puts the state right.
+    if (!["saving", "uploading"].includes(this._status)) this._setStatus("unsaved");
     if (this._timer) clearTimeout(this._timer);
     this._timer = setTimeout(() => {
       this._timer = null;
@@ -506,11 +507,13 @@ class __editor_blocknote extends __player {
   }
 
   /**
-   * @param {"saved"|"saving"|"unsaved"|"readonly"|"converting"} state
+   * @param {"saved"|"saving"|"unsaved"|"readonly"|"converting"|"uploading"} state
+   * @param {Number} [percent] how much of the cover is uploaded ("uploading")
    */
-  _setStatus(state) {
+  _setStatus(state, percent) {
     this._status = state;
     const labels = {
+      uploading: `${LOCALE.UPLOADING_PERCENT}`.replace("{0}", percent || 0),
       saved: LOCALE.ALL_CHANGES_SAVED,
       saving: LOCALE.SAVING,
       unsaved: LOCALE.UNSAVED_CHANGES,

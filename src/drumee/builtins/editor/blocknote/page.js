@@ -391,11 +391,25 @@ function uploadCover(ui, file) {
     ui._coverUpload = null;
     landed();
   };
-  ui._setStatus("saving");
+  ui._setStatus("uploading", 0);
   // The shared uploader, on a context of its own: called on the window it
   // would wire the window's upload hooks (onUploadEnd & co., which the MFS
   // base implements for a file tile) to a request that is not about it.
-  const ctx = { get: () => null, verbose: () => {}, warn: (...a) => ui.warn(...a) };
+  // Its one hook, onUploadProgress, shows how far the upload is: a big image
+  // takes a while, and closing waits for it.
+  let shown = 0;
+  const ctx = {
+    get: () => null,
+    verbose: () => {},
+    warn: (...a) => ui.warn(...a),
+    onUploadProgress: (e) => {
+      if (!e || !e.lengthComputable || !e.total) return;
+      const percent = Math.min(99, Math.floor((e.loaded * 100) / e.total));
+      if (percent === shown || ui.isDestroyed()) return;
+      shown = percent;
+      ui._setStatus("uploading", percent);
+    },
+  };
   let xhr;
   try {
     xhr = uploadFile.call(ctx, file, { hub_id: dest.hub_id, nid: dest.pid });
@@ -429,6 +443,8 @@ function uploadCover(ui, file) {
       return;
     }
     if (ui._localCover) ui._localCover.nid = `${nid}`;
+    // Uploaded; the note itself is written next.
+    ui._setStatus("saving");
     ui._reflectInTarget(dest.target, data, { adopt: false });
     ui.updatePage({ cover: { nid: `${nid}`, hub_id: `${data.hub_id || dest.hub_id}` } });
     settle();
