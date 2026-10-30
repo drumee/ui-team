@@ -29,6 +29,19 @@ const { trackDeskCanvas } = require('libs/desk-canvas');
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { ownWorkspaceName } = require('libs/workspace-label');
 
+// The folder-chat topic a pushed message was posted in (channel.post stores it
+// as metadata._topic_id, JSON on the push). "" for # General or none.
+function chatTopicOf(opt = {}) {
+  try {
+    let md = opt.metadata;
+    if (typeof md === 'string') md = JSON.parse(md);
+    const id = md && md._topic_id;
+    return id ? `${id}` : '';
+  } catch (e) {
+    return '';
+  }
+}
+
 class __panel_activity extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -2620,7 +2633,19 @@ class __panel_activity extends LetcBox {
           // folder on its Chat tab so the notification lands in the conversation
           // it came from — matching the Mentions-tab item. Hub-level posts have
           // no nid and fall through to the workspace root via wm/channel.
-          url = `${url}/open/?hub_id=${hub_id}&nid=${nid}&filetype=folder&activeTab=${_a.chat}&message_id=${message_id}&ts=${now}`
+          //
+          // "reveal", not "open" (Duy 2026-10-30): "open" launched the legacy
+          // floating window and never reached the message. "reveal" docks the
+          // workspace like the feed's chat row and then brings the message
+          // into view and flashes it (Wm.openNotificationLocation →
+          // openChatMessage) — in its topic, which the chat would otherwise
+          // leave out, and in the live call's chat when it was written there
+          // (from_meeting, stamped by the server on the push).
+          url = `${url}/reveal/?hub_id=${hub_id}&nid=${nid}&filetype=folder&pid=0&activeTab=${_a.chat}&message_id=${message_id}`
+          const topicId = chatTopicOf(opt);
+          if (topicId) url += `&topic_id=${encodeURIComponent(topicId)}`
+          if (opt.from_meeting) url += `&from_meeting=1`
+          url += `&ts=${now}`
         } else {
           url = `${url}/channel/?hub_id=${hub_id}&nid=${nid}&ts=${now}`
         }

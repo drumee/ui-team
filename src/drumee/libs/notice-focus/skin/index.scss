@@ -1,0 +1,20 @@
+// The flash a notification's Open leaves on what it pointed at — a chat
+// message, a task comment, a task description (libs/notice-focus).
+//
+// Global, not nested under a family: it lands on chat items in the folder
+// chat AND in a call's chat panel, and on task detail rows — surfaces owned by
+// different widgets. It ships with the helper that sets the attribute, so no
+// caller can flash an element without the rule that shows it. (The chat's own
+// scrollToMessage sets `data-highlighted`, which no stylesheet ever styled.)
+[data-notice-focus="1"] {
+  background-color: rgba(89, 80, 255, 0.1); // Figma Overlay/brand
+  box-shadow: inset 3px 0 0 var(--primary-purple-40, #5950ff);
+  border-radius: 8px;
+  transition: background-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-notice-focus="1"] {
+    transition: none;
+  }
+}

@@ -1023,9 +1023,12 @@ class __window_manager extends push {
       filetype,
       activeTab,
       open_task_id,
+      open_task_focus,
       open_meeting_nid,
       open_meeting_stime,
       topic_id,
+      message_id,
+      from_meeting,
     } = args;
     if (!hub_id) {
       this.warn("openNotificationLocation: missing hub_id", args);
@@ -1154,15 +1157,31 @@ class __window_manager extends push {
     // alongside it — a caller that sends both gets the deep link, which is the
     // more specific request.
     if (open_task_id && _.isFunction(win.openTaskDeepLink)) {
-      win.openTaskDeepLink(open_task_id);
+      // open_task_focus: where in the task the mention is (description or a
+      // comment) — the panel scrolls to it and flashes it.
+      win.openTaskDeepLink(open_task_id, open_task_focus || null);
     } else if (open_meeting_nid && _.isFunction(win.openMeetingDeepLink)) {
       win.openMeetingDeepLink(open_meeting_nid, open_meeting_stime);
     } else if (activeTab && _.isFunction(win.showFolderTab)) {
       win.showFolderTab(activeTab);
       // A folder-chat notification names the topic its message is in: the
       // chat opens on # General, which leaves topic messages out.
+      let topic = null;
       if (activeTab === _a.chat && topic_id && _.isFunction(win.openChatTopic)) {
-        win.openChatTopic(topic_id);
+        topic = win.openChatTopic(topic_id);
+      }
+      // …and the message itself: brought into view and flashed, once its
+      // topic is on screen. from_meeting=1 (a message written in a call's chat)
+      // joins that call instead while it is live — see openChatMessage.
+      if (activeTab === _a.chat && message_id && _.isFunction(win.openChatMessage)) {
+        Promise.resolve(topic)
+          .catch(() => null)
+          .then(() =>
+            win.openChatMessage(message_id, {
+              fromMeeting: !!(from_meeting && `${from_meeting}` !== "0"),
+            }),
+          )
+          .catch((e) => this.warn("openNotificationLocation: chat message focus failed", e));
       }
     }
     // Keep the rail agreeing with the screen. loadWorkspace does not touch it

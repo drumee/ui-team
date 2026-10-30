@@ -18,7 +18,10 @@
 // which is chat, and never a task or a meeting.
 //
 // Open lands where the matching Notification Center row lands
-// (widget/item/index.js), so the two can never disagree.
+// (widget/item/index.js), so the two can never disagree — and then goes one
+// step further (Duy 2026-10-30): a task opens ON the mentioned comment or
+// description (open_task_focus), and a chat message is brought into view and
+// flashed (Wm.openNotificationLocation → window_folder.openChatMessage).
 
 const { showNoticeToast, plainMessage, mentionsMe } = require("./chat-toast");
 const { meetingDeepLink } = require("./widget/item/meeting-link");
@@ -35,11 +38,14 @@ function senderOf(options = {}, data = {}) {
   };
 }
 
-function taskUrl(data, ts) {
+// `focus` ('description' | 'comment:<id>', from the server) opens the task
+// card ON the mention rather than at its top.
+function taskUrl(data, ts, focus = null) {
   const nid = data.nid != null && `${data.nid}` !== "0" ? data.nid : 0;
   const taskId = data.task_id || data.id;
   let url = `#/desk/wm/reveal/?hub_id=${data.hub_id}&nid=${nid}&filetype=folder&pid=0&activeTab=${_a.task}`;
   if (taskId) url += `&open_task_id=${taskId}`;
+  if (taskId && focus) url += `&open_task_focus=${encodeURIComponent(focus)}`;
   return `${url}&ts=${ts}`;
 }
 
@@ -63,6 +69,8 @@ function noticeFor(service, data, options = {}, host = null) {
         model: {
           ...sender,
           ico: "noti-plus-circle",
+          // The task's folder, or its workspace — named by the server.
+          folder_name: options.folder_name,
           line: `${LOCALE.TASK_ASSIGNED_ACTION}${data.title || ""}`,
         },
         url: taskUrl(data, ts),
@@ -74,9 +82,10 @@ function noticeFor(service, data, options = {}, host = null) {
         model: {
           ...sender,
           ico: "noti-at",
+          folder_name: options.folder_name,
           line: `${LOCALE.TASK_MENTION_ACTION}${data.title || ""}`,
         },
-        url: taskUrl(data, ts),
+        url: taskUrl(data, ts, options.focus),
       };
 
     case "room.mention": {

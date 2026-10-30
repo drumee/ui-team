@@ -2,6 +2,7 @@ const { uploadFile } = require("@drumee/ui-essentials");
 const { isTaskViewAllowed, canUpgradePlan } = require("libs/billing");
 const { keepListThroughClick } = require("libs/pick-guard");
 const readCache = require("libs/read-cache");
+const { focusWhenReady } = require("libs/notice-focus");
 const { resolveZone } = require("./drop-zones");
 const { rowOf, ownedPatch, applyLabelOps, longestList, peerPatch } = require("./live-sync");
 const {
@@ -267,6 +268,9 @@ class __tasks_panel extends LetcBox {
     // Deep-link target from a task mention/assignment notification (forwarded by
     // the folder window). Consumed once after the initial load in onDomRefresh.
     this._openTaskId = this.mget("open_task_id") || null;
+    // Where in that task the notification points: 'description' or
+    // 'comment:<id>' (see _focusDetailOn). Consumed with _openTaskId.
+    this._openTaskFocus = this.mget("open_task_focus") || null;
     // Mounted by the Personal Calendar as a quick-open card: only that task's
     // detail card is drawn, and the host is told when it goes (_quickOpenLeft).
     // Off for the board itself, which never sets quick_open.
@@ -779,9 +783,11 @@ class __tasks_panel extends LetcBox {
     // board. It still refuses to open a task belonging to another folder.
     if (this._openTaskId) {
       const id = this._openTaskId;
+      const focus = this._openTaskFocus;
       this._openTaskId = null;
+      this._openTaskFocus = null;
       // The rows just landed, so no second fetch unless the task is missing.
-      this.openTaskById(id, { loaded: true });
+      this.openTaskById(id, { loaded: true, focus });
     }
   }
 
@@ -790,12 +796,13 @@ class __tasks_panel extends LetcBox {
   // notification click (folder already open) has to reach the detail this way.
   // Called by the folder window's openTaskDeepLink. `loaded` is the mount-time
   // path's word that the rows have only just been fetched.
-  async openTaskById(id, { loaded = false } = {}) {
+  async openTaskById(id, { loaded = false, focus = null } = {}) {
     if (!id) return;
     // Not rendered yet: hand it back to the mount-time path, which opens the
     // detail as soon as the first load lands.
     if (!this.el) {
       this._openTaskId = id;
+      this._openTaskFocus = focus;
       return;
     }
     // The board routinely PREDATES the task the notification points at: the
@@ -833,7 +840,11 @@ class __tasks_panel extends LetcBox {
     // pass a loose test here and then find no task there, rendering the detail
     // panel with a null draft.
     const task = seek();
-    if (task) return this._openDetail(task.id);
+    if (task) {
+      const opened = this._openDetail(task.id);
+      if (focus) this._focusDetailOn(focus, task.id);
+      return opened;
+    }
     // The board switched to, the detail never opened, and nothing said why —
     // which from the Personal Calendar reads as "the chip is not clickable"
     // rather than "that task is not on this board". It happens when the
@@ -4751,6 +4762,31 @@ class __tasks_panel extends LetcBox {
 
   // Render the detail panel immediately on click; refresh attachments async
   // so the panel doesn't feel laggy waiting on get_linked_files.
+  /**
+   * Bring the part of an open task card a notification points at into view
+   * and flash it (Duy 2026-10-30): a task has several places to be mentioned
+   * in, and landing on the card alone left the reader hunting for it.
+   *
+   * @param {string} focus  'description' | 'comment:<id>'
+   * @param {*}      taskId the card this was asked for — a card the user has
+   *                        since replaced is left alone
+   */
+  _focusDetailOn(focus, taskId) {
+    const pfx = this.fig.family;
+    const m = /^comment:(.+)$/.exec(`${focus || ""}`);
+    const sel = m
+      ? `.${pfx}__detail-panel .${pfx}__comment-row[data-comment-id="${CSS.escape(m[1])}"]`
+      : focus === "description"
+        ? `.${pfx}__detail-panel .${pfx}__desc-field`
+        : null;
+    if (!sel) return null;
+    // Comments arrive after the card (comment_list), hence the wait.
+    return focusWhenReady(() => {
+      if (!this.el || this._detailId !== taskId) return null;
+      return this.el.querySelector(sel);
+    });
+  }
+
   _openDetail(id) {
     if (!id) return;
     const task = this._tasks.find((t) => t.id === id);

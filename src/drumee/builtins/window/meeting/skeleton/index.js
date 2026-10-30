@@ -171,6 +171,9 @@ function meetingSidePanel(_ui_) {
               ? _ui_.mget(_a.home_id) || teamChatNid
               : undefined,
             ownpath: isTeamChannel ? _ui_.mget(_a.ownpath) : undefined,
+            // Posts from here are marked as written during the call — see
+            // widget_chat's channel.post and panel/activity's chat pop-up.
+            from_meeting: isTeamChannel ? 1 : 0,
             placeholder: LOCALE.TYPE_MESSAGE + "...",
             no_emoji: false,
             send_icon: "raw-send-chat",
