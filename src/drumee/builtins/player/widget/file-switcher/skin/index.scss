@@ -362,6 +362,14 @@
         width: 30px;
       }
 
+      // The thumbnail itself sits smaller, centred in the 30px box; glyph
+      // rows (also in a .preview-container) keep the full size.
+      .preview-content {
+        border-radius: 4px;
+        height: 20px;
+        width: 20px;
+      }
+
       // Paint the glyph the row's text colour: `lib/svg.scss` only sets
       // `fill: currentcolor` for .svg-wrapper / .drumee-picto, so a
       // .preview-icon left alone takes the SVG default of black — wrong in

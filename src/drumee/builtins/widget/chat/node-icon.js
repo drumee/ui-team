@@ -46,15 +46,21 @@ module.exports = function nodeIconHtml(
   { area, prefix = "node-icon-", thumbnail = false } = {},
 ) {
   let url = previewUrl(node);
+  // A thin row (a remembered file, a task attachment) carries no capability;
+  // an image's vignette is served all the same, so only an explicit "-"
+  // capability keeps the glyph.
+  let vignette = false;
   if (!url && thumbnail && node.filetype === _a.image && node.nid && node.hub_id) {
     url = vignetteUrl(node);
+    vignette = true;
   }
+  const capable = vignette && node.capability == null ? 1 : isImgCapable(node);
   const model = {
     ...node,
     _id: node._id || node.id || node.nid,
     area: node.area || area,
     role: node.filetype === _a.folder ? "mention" : node.role || "desk",
-    imgCapable: url ? isImgCapable(node) : 0,
+    imgCapable: url ? capable : 0,
     url,
     widgetId: _.uniqueId(prefix),
     isAttachment: 1,

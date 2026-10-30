@@ -45,6 +45,12 @@ function remember(node = {}) {
   if (!nid || !hub_id) return;
   const rest = read().filter((r) => r.nid !== nid);
   const entry = { nid, hub_id, pid, filename, ext, filetype, area };
+  // The row's thumbnail (chat/node-icon) needs these when the folder listing
+  // can't supply them — a task attachment's /__chat__/__task__ folder is
+  // never listed.
+  for (const k of ["capability", "mtime", "ctime", "md5Hash"]) {
+    if (node[k] != null) entry[k] = node[k];
+  }
   const dataType = dataTypeOf(node);
   if (dataType) entry.dataType = dataType;
   write([entry, ...rest]);
