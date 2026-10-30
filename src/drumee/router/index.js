@@ -21,6 +21,7 @@ require("./skin");
 const { getModule, moduleName } = require('./modules');
 const { captureCampaignArrival } = require('libs/campaign');
 const billingDeepLink = require('libs/billing-deep-link');
+const { captureOffer } = require('libs/offer-link');
 const fileDeepLink = require('libs/file-deep-link');
 const windowTutorialIntent = require('libs/window-tutorial-intent');
 
@@ -58,6 +59,8 @@ class drumee_router extends LetcBox {
     // folder window's buildContent used to — always parses an empty arg set and
     // does nothing, silently.
     windowTutorialIntent.captureFromUrl();
+    // And for a signup link's `?offer=CODE` (libs/offer-link).
+    captureOffer();
     localStorage.main_domain = bootstrap().main_domain;
     this._buffer = [];
     this._loaded = {
@@ -427,6 +430,7 @@ class drumee_router extends LetcBox {
     // And for a tour asked for by pasting the URL into a tab that is already
     // running the app, where initialize() never runs again.
     windowTutorialIntent.captureFromUrl();
+    captureOffer();
     let page = /^\/.*(.+)\.htm?/;
     if (page.test(location.pathname) || page.test(Host.get(_a.homepage))) {
       this.loadBootstrap();

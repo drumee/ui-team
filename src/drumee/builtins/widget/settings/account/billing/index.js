@@ -3,6 +3,7 @@ const {
   PROMO_YEARLY_PCT,
 } = require("libs/billing");
 const { copyToClipboard } = require("@drumee/ui-essentials");
+const { offerStatusMessage } = require("./offer-status");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
@@ -377,6 +378,10 @@ class settings_billing extends LetcBox {
    * set in _applyDeepLink and nowhere else.
    */
   _autoApplyDeepLinkPromo() {
+    // A checkout link without a code still picks up a signup offer.
+    if (!this._deepLinkPromo && this.state.currentTab === TAB_CHECKOUT) {
+      return this._autoApplyPendingOffer();
+    }
     if (!this._deepLinkPromo || this._deepLinkPromoApplied) return;
     // The tab has settled by now; honour its verdict rather than overriding it.
     if (this.state.currentTab !== TAB_CHECKOUT) return;
@@ -1351,7 +1356,10 @@ class settings_billing extends LetcBox {
     // Preview only: Stripe recomputes the real invoice at checkout.
     const promo = checkout.promo || null;
     const pct = promo ? (parseInt(promo.percent_off, 10) || 0) : 0;
-    const discountAmount = pct > 0 ? (basePrice * pct) / 100 : 0;
+    const amountOff = promo ? (parseInt(promo.amount_off, 10) || 0) / 100 : 0;
+    const discountAmount = amountOff > 0
+      ? Math.min(basePrice, amountOff)
+      : (pct > 0 ? (basePrice * pct) / 100 : 0);
     const finalPrice = Math.max(0, basePrice - discountAmount);
 
     return {
@@ -1872,6 +1880,8 @@ class settings_billing extends LetcBox {
     if (inOrg && (status === "ORG_IDENT_REQUIRED" || status === "ALREADY_IN_OTHER_DOMAIN")) {
       return LOCALE.NOT_ORG_OWNER;
     }
+    const offerMessage = offerStatusMessage(status);
+    if (offerMessage) return offerMessage;
     switch (status) {
       case "IDENT_INVALID": return LOCALE.ORG_IDENT_INVALID;
       case "IDENT_NOT_AVAILABLE": return LOCALE.ORG_IDENT_TAKEN;
@@ -1976,6 +1986,8 @@ class settings_billing extends LetcBox {
     const res = await this.postService(SERVICE.payment.preview_coupon, {
       promo_code: code,
       plan,
+      // A code may be locked to one billing cycle (TEAM1: monthly only).
+      period: checkout.billingCycle === "yearly" ? "year" : "month",
       hub_id: Visitor.id,
     }).catch(() => null);
 
@@ -1997,7 +2009,11 @@ class settings_billing extends LetcBox {
       partner: data.partner || "",
       kind: data.kind || "",
       plan_scope: data.plan_scope || "all",
+      period_scope: data.period_scope || "all",
       percent_off: parseInt(data.percent_off, 10) || 0,
+      // Fixed amount off, minor units (TEAM1: first month $1). Replaces
+      // percent_off when set.
+      amount_off: parseInt(data.amount_off, 10) || 0,
       trial_days: parseInt(data.trial_days, 10) || 0,
       duration_months: parseInt(data.duration_months, 10) || 0,
     };
@@ -2036,6 +2052,35 @@ class settings_billing extends LetcBox {
     this.state.currentTab = TAB_CHECKOUT;
     this.tab = TAB_CHECKOUT;
     this.renderContent();
+    this._autoApplyPendingOffer();
+  }
+
+  /**
+   * Apply the offer code a signup link left for this account
+   * (?offer=TEAM1 → payment.offer_attach, see libs/offer-link), the way a
+   * campaign deep link's promo is applied: seed the field, then preview it.
+   *
+   * Only when the shopper has not chosen a code themselves, and only on a
+   * plan / cycle the code is for — offering it on Business would show a code
+   * the server refuses. Asked of the server each time checkout opens, so a
+   * code that has since been used or has ended simply stops appearing.
+   */
+  async _autoApplyPendingOffer() {
+    const checkout = this.state.checkout || {};
+    if (checkout.promo || checkout.promoCode || this._deepLinkPromo) return;
+    if (!SERVICE.payment || !SERVICE.payment.offer_pending) return;
+    const res = await this.fetchService(SERVICE.payment.offer_pending, { hub_id: Visitor.id })
+      .catch(() => null);
+    if (!res || res.status !== "OK" || !res.code) return;
+    // The shopper may have typed a code or moved on while this was in flight.
+    if (checkout.promo || checkout.promoCode || this.state.currentTab !== TAB_CHECKOUT) return;
+    const plan = checkout.selectedPlan || "team";
+    if (res.plan_scope && res.plan_scope !== "all" && res.plan_scope !== plan) return;
+    if (res.period_scope === "month") checkout.billingCycle = "monthly";
+    if (res.period_scope === "year") checkout.billingCycle = "yearly";
+    checkout.promoCode = res.code;
+    this.renderContent();
+    return this._applyPromoCode();
   }
 
   async _proceedToCheckout() {
@@ -2623,6 +2668,7 @@ class settings_billing extends LetcBox {
           this.tab = TAB_CHECKOUT;
           this._armMotion();
           this.renderContent();
+          this._autoApplyPendingOffer();
         }
         return false;
 
@@ -2648,6 +2694,11 @@ class settings_billing extends LetcBox {
           // Keep the applied promo — percent_off still applies; only the
           // catalog base changes. Re-render so the discounted total updates.
           this.renderContent();
+          // Unless the code is locked to one cycle (TEAM1 is monthly only):
+          // ask the server again, so switching to yearly shows the refusal
+          // instead of a discount checkout would not honour.
+          const scope = this.state.checkout.promo && this.state.checkout.promo.period_scope;
+          if (scope && scope !== "all") this._applyPromoCode();
         }
         return false;
 

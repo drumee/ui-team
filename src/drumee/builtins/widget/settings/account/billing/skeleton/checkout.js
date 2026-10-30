@@ -353,6 +353,8 @@ function rightPanelContent(ui) {
   const offerOn = !!offer && !hasDiscount && !isFreePlan
     && ui.state?.checkout?.selectedPlan === offer.plan && summary.period === offer.period;
   const offerFirst = offerOn ? `$${(offer.first_invoice / 100).toFixed(2)}` : "";
+  // Fixed first-cycle price (TEAM1: "$1 first month"), instead of a percent.
+  const amountOff = promo ? (parseInt(promo.amount_off, 10) || 0) : 0;
 
   // How long the % actually lasts. Stripe only ever gets 'once' or
   // 'repeating' from _ensureStripeCoupon, so a percent discount ALWAYS
@@ -421,7 +423,24 @@ function rightPanelContent(ui) {
       // When the discount ends the price goes back up. Saying so is the
       // difference between an honest quote and one the first full invoice
       // contradicts.
-      hasDiscount
+      hasDiscount && amountOff
+        ? Skeletons.Note({
+            className: `${pfx}-promo-after-note`,
+            content: summary.period === "month"
+              ? (LOCALE.PROMO_CODE_FIRST_MONTH
+                || "First month {0} · then {1}/month · cancel anytime").format(
+                summary.totalPrice,
+                summary.basePrice,
+              )
+              : (LOCALE.PROMO_CODE_FIRST_PAYMENT
+                || "First payment {0} · then {1}/{2} · cancel anytime").format(
+                summary.totalPrice,
+                summary.basePrice,
+                summary.period,
+              ),
+          })
+        : null,
+      hasDiscount && !amountOff
         ? Skeletons.Note({
             className: `${pfx}-promo-after-note`,
             content: discountedCycles > 1
@@ -465,10 +484,12 @@ function rightPanelContent(ui) {
                 kids: [
                   Skeletons.Note({
                     className: `${pfx}-breakdown-label`,
-                    content: (LOCALE.PROMO_CODE_DISCOUNT
-                      || "Promo ({0}% off)").format(
-                      String(promo.percent_off || 0),
-                    ),
+                    content: amountOff
+                      ? (LOCALE.PROMO_CODE_DISCOUNT_CODE || "Promo ({0})").format(promo.code)
+                      : (LOCALE.PROMO_CODE_DISCOUNT
+                        || "Promo ({0}% off)").format(
+                        String(promo.percent_off || 0),
+                      ),
                   }),
                   Skeletons.Note({
                     className: `${pfx}-breakdown-value`,

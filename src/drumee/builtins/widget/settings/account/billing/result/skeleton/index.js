@@ -138,7 +138,7 @@ function billing_result(ui) {
         ? (LOCALE.CYCLE_STARTS_SUBTITLE || "Your {0} plan starts on {1}.").format(periodLabel, startsAt)
         : ok
           ? (LOCALE.PAYMENT_SUCCESS_TEXT || "Upgraded successfully. You are now in {0} plan.").format(planName || LOCALE.TEAM)
-          : LOCALE.PAYMENT_FAILURE_TEXT || "Your payment could not be processed.",
+          : ui._failReason || LOCALE.PAYMENT_FAILURE_TEXT || "Your payment could not be processed.",
     }),
   ];
 
