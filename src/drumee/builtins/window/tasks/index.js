@@ -3,6 +3,7 @@ const { isTaskViewAllowed, canUpgradePlan } = require("libs/billing");
 const { keepListThroughClick } = require("libs/pick-guard");
 const readCache = require("libs/read-cache");
 const { focusWhenReady } = require("libs/notice-focus");
+const { announceTaskWrite } = require("libs/tasks-changed");
 const { resolveZone } = require("./drop-zones");
 const { rowOf, ownedPatch, applyLabelOps, longestList, peerPatch } = require("./live-sync");
 const {
@@ -1127,7 +1128,17 @@ class __tasks_panel extends LetcBox {
         const sid = typeof Visitor !== "undefined" && Visitor.get && Visitor.get(_a.socket_id);
         if (sid) args[0] = { ...a0, socket_id: sid };
       }
-      return original(...args);
+      // ...which is also why a Personal Calendar in THIS tab never hears it:
+      // tell it here, once the write has landed (libs/tasks-changed).
+      const name = typeof a0 === "string" ? a0 : (a0 && a0.service) || "";
+      return Promise.resolve(original(...args)).then((res) => {
+        try {
+          announceTaskWrite(name, res);
+        } catch (e) {
+          /* a listener's failure must not fail the write */
+        }
+        return res;
+      });
     };
   }
 
