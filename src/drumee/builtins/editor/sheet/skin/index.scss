@@ -51,6 +51,15 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
   // "Loading…" — because the only opaque background lived on .sheet-state.
   // The window root carries `.editor-sheet` (not `__ui`).
   background-color: #ffffff;
+
+  // Rendered before display() (onPartReady) sizes it, the window showed a
+  // narrow, half-laid-out header — Share and the icons piled on the title —
+  // before the loading skeleton. Invisible until display() stamps
+  // data-ready, whose fade-in (inline opacity) then takes over.
+  &:not([data-ready="1"]) {
+    opacity: 0;
+    pointer-events: none;
+  }
   &[data-theme="dark"] {
     background-color: var(--sheet-dark-bg, #14161a);
   }
