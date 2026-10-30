@@ -29,9 +29,10 @@ module.exports = function (ui) {
           Skeletons.Note({ className: `${pfx}__cover-upload-label`, content: LOCALE.UPLOAD_FILE }),
         ],
       }),
+      // Skeletons.FileSelector forces its own part name, "fileselector", over
+      // any sys_pn given here — ../page reaches it by that name.
       Skeletons.FileSelector({
         className: `${pfx}__cover-file`,
-        sys_pn: "cover-file",
         accept: "image/*",
         bubble: 0,
         partHandler: ui,

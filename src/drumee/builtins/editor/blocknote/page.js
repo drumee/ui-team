@@ -326,6 +326,16 @@ function openCoverPopup(ui) {
   });
 }
 
+/**
+ * The <input type=file> of the cover popup's FileSelector part, if it is up.
+ * @param {View} part
+ * @returns {HTMLInputElement|null}
+ */
+function coverInput(part) {
+  if (!part || !part.el || (part.isDestroyed && part.isDestroyed())) return null;
+  return part.el.tagName === "INPUT" ? part.el : part.el.querySelector("input[type=file]");
+}
+
 function closeCoverPopup(ui) {
   if (ui._onPaste) {
     document.removeEventListener("paste", ui._onPaste, true);
@@ -547,16 +557,19 @@ function onPartReady(ui, child, pn) {
       });
       return true;
 
-    case "cover-file": {
-      const input = child.el.tagName === "INPUT" ? child.el : child.el.querySelector("input");
-      if (input) {
-        input.addEventListener("change", () => {
-          const file = input.files && input.files[0];
-          if (file) uploadCover(ui, file);
-        });
-      }
+    // The cover popup's file input. The name is ui-core's, not ours: the
+    // FileSelector skeleton overwrites sys_pn with it. The listener sits on
+    // the wrapper — the <input> is written in the widget's own onDomRefresh,
+    // which may not have run yet — and `change` bubbles up to it.
+    case "fileselector":
+      child.el.addEventListener("change", (e) => {
+        const input = e.target;
+        const file = input && input.files && input.files[0];
+        if (file) uploadCover(ui, file);
+        // Picking the same image again must fire `change` again.
+        if (input) input.value = "";
+      });
       return true;
-    }
 
     case "comment-entry":
       return true;
@@ -617,12 +630,18 @@ function onUiEvent(ui, cmd, service) {
       ui.updatePage({ cover: null });
       return true;
 
-    case "pick-cover-file":
-      ui.ensurePart("cover-file").then((p) => {
-        const input = p && p.el && (p.el.tagName === "INPUT" ? p.el : p.el.querySelector("input"));
-        if (input) input.click();
+    // Synchronously while the popup is up, inside the click: a browser opens
+    // its file picker only during the user's gesture, and a click() deferred
+    // past it is dropped without a word (Safari is the strictest).
+    case "pick-cover-file": {
+      const input = coverInput(ui.__fileselector);
+      if (input) input.click();
+      else ui.ensurePart("fileselector").then((p) => {
+        const late = coverInput(p);
+        if (late) late.click();
       });
       return true;
+    }
 
     case "add-comment":
       ui._commentsOpen = 1;
