@@ -334,3 +334,100 @@ test("closing the note lets go of the local copy", () => {
     URL.revokeObjectURL = revoke;
   }
 });
+
+// Round 5 (Duy, 2026-10-30): with a 20 MB cover still uploading ("Saving…"),
+// closing the note and opening it again showed no cover. The upload is the
+// cover's only way into the note, so the window's close now waits for it.
+test("the upload is pending until it lands, then the cover is in the note", () => {
+  const page = loadPage();
+  const part = fileSelectorPart();
+  let saved = null;
+  const ui = fakeUi({
+    __fileselector: part,
+    _reflectInTarget() {},
+    updatePage: (change) => {
+      // The cover is in the page by the time the close is let through.
+      assert.ok(ui._coverUpload);
+      saved = change;
+    },
+  });
+  page.onUiEvent(ui, {}, "add-cover");
+  uploads.length = 0;
+  pick(part, png());
+  const pending = ui._coverUpload;
+  assert.ok(pending instanceof Promise);
+  const { xhr } = uploads[0];
+  Object.assign(xhr, { readyState: 4, status: 200, responseText: JSON.stringify({ data: { nid: "n7", hub_id: "hub1" } }) });
+  xhr.done();
+  assert.ok(saved);
+  assert.strictEqual(ui._coverUpload, null);
+  page.destroy(ui);
+  return pending;
+});
+
+test("a failed upload does not hold the close", () => {
+  const page = loadPage();
+  const part = fileSelectorPart();
+  const prevWm = global.Wm;
+  const prevLocale = global.LOCALE;
+  global.Wm = { alert() {} };
+  global.LOCALE = {};
+  try {
+    const ui = fakeUi({ __fileselector: part, isDestroyed: () => true });
+    page.onUiEvent(ui, {}, "add-cover");
+    uploads.length = 0;
+    pick(part, png());
+    const pending = ui._coverUpload;
+    const { xhr } = uploads[0];
+    Object.assign(xhr, { readyState: 4, status: 500, responseText: "" });
+    xhr.done();
+    assert.strictEqual(ui._coverUpload, null);
+    return pending;
+  } finally {
+    global.Wm = prevWm;
+    global.LOCALE = prevLocale;
+  }
+});
+
+{
+  const { sliceFunction } = require("./helpers/slice-method");
+  const INDEX = resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js");
+  const SRC = require("node:fs").readFileSync(INDEX, "utf8");
+  const saveBeforeClose = eval(`(${sliceFunction(SRC, "saveBeforeClose()")})`);
+  const checkUnsavedWork = eval(`(${sliceFunction(SRC, "checkUnsavedWork(e)")})`);
+
+  test("closing the note waits for the cover upload, then saves it", async () => {
+    let landed;
+    const saves = [];
+    const self = {
+      _coverUpload: new Promise((r) => (landed = r)),
+      saveBeforeClose,
+      saveContent() {
+        saves.push(1);
+        this._saving = 0;
+        this._changed = 0;
+        this._closeWaiters.forEach((r) => r(true));
+      },
+    };
+    let closed = null;
+    const done = self.saveBeforeClose().then((ok) => (closed = ok));
+    await tick();
+    assert.strictEqual(closed, null); // still open while the cover uploads
+    assert.strictEqual(saves.length, 0);
+    // The upload landed: the cover went into the page (updatePage → dirty).
+    self._coverUpload = null;
+    self._changed = 1;
+    landed();
+    await done;
+    assert.strictEqual(saves.length, 1);
+    assert.strictEqual(closed, true);
+  });
+
+  test("leaving the tab mid-upload asks first", () => {
+    global.LOCALE = { CONFIRM_QUIT: "quit?" };
+    const e = { preventDefault() { e.prevented = 1; } };
+    assert.strictEqual(checkUnsavedWork.call({ _coverUpload: Promise.resolve() }, e), "quit?");
+    assert.strictEqual(e.prevented, 1);
+    assert.strictEqual(checkUnsavedWork.call({}), undefined);
+  });
+}
