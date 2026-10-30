@@ -26,6 +26,12 @@ class settings_billing_result extends LetcBox {
         session_id: this._sessionId,
       }).catch(() => null);
       if (this._receipt && this._receipt.status === "SESSION_NOT_FOUND") this._receipt = null;
+      // The bank wants the first payment confirmed (3DS): the server moved the
+      // purchase to a Stripe page that can show the challenge. Go there.
+      if (this._receipt?.status === "OFFER_ACTION_REQUIRED" && this._receipt.url) {
+        window.location.assign(this._receipt.url);
+        return;
+      }
       // A session that never got paid renders the failure shell instead.
       //
       // 'no_payment_required' is NOT such a session: Stripe reports it when
