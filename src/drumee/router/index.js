@@ -21,7 +21,7 @@ require("./skin");
 const { getModule, moduleName } = require('./modules');
 const { captureCampaignArrival } = require('libs/campaign');
 const billingDeepLink = require('libs/billing-deep-link');
-const { captureOffer } = require('libs/offer-link');
+const { captureOffer, offerHandoff } = require('libs/offer-link');
 const fileDeepLink = require('libs/file-deep-link');
 const windowTutorialIntent = require('libs/window-tutorial-intent');
 
@@ -356,7 +356,12 @@ class drumee_router extends LetcBox {
     // straight back here), and the history is the visitor's trail of folders
     // (libs/location-url): Back past the first folder must leave the desk, not
     // replay the bounce and land on the home grid (prod, 2026-10-28).
-    const target = `${location.protocol}//${host}${location.pathname}${location.search}`;
+    // A signup link's offer, stored on THIS origin, rides along (libs/offer-link).
+    const offer = offerHandoff();
+    const search = offer
+      ? `${location.search}${location.search ? "&" : "?"}${offer}`
+      : location.search;
+    const target = `${location.protocol}//${host}${location.pathname}${search}`;
     if (fileHash && fileHash.charAt(0) === "#") {
       fileDeepLink.clear();
       location.replace(`${target}${fileHash}`);

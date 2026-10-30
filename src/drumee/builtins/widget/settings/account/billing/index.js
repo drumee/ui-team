@@ -4,6 +4,7 @@ const {
 } = require("libs/billing");
 const { copyToClipboard } = require("@drumee/ui-essentials");
 const { offerStatusMessage } = require("./offer-status");
+const { offerAttached } = require("libs/offer-link");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
@@ -2050,22 +2051,35 @@ class settings_billing extends LetcBox {
    * (?offer=TEAM1 → payment.offer_attach, see libs/offer-link), the way a
    * campaign deep link's promo is applied: seed the field, then preview it.
    *
-   * Only when the shopper has not chosen a code themselves, and only on a
-   * plan / cycle the code is for — offering it on Business would show a code
-   * the server refuses. Asked of the server each time checkout opens, so a
-   * code that has since been used or has ended simply stops appearing.
+   * Only when the shopper has not chosen a code themselves (nor removed this
+   * one), and only on a plan / cycle the code is for — offering it on
+   * Business would show a code the server refuses. A checkout still sitting
+   * on Free (nothing to buy yet) moves to the code's plan. Asked of the
+   * server each time checkout opens or the plan changes, so a code that has
+   * since been used or has ended simply stops appearing.
    */
   async _autoApplyPendingOffer() {
     const checkout = this.state.checkout || {};
-    if (checkout.promo || checkout.promoCode || this._deepLinkPromo) return;
+    // A code typed into the field is not in state until Apply.
+    const chosen = () => checkout.promo || checkout.promoCode
+      || String(this.__promoCodeInput?.getValue?.() || "").trim();
+    if (chosen() || this._deepLinkPromo || this._offerDeclined) return;
     if (!SERVICE.payment?.offer_pending) return;
+    // Opened right after sign-in: the desk may still be handing the link's
+    // code to the server (libs/offer-link).
+    await offerAttached();
     const res = await this.fetchService(SERVICE.payment.offer_pending, { hub_id: Visitor.id })
       .catch(() => null);
     if (res?.status !== "OK" || !res.code) return;
     // The shopper may have typed a code or moved on while this was in flight.
-    if (checkout.promo || checkout.promoCode || this.state.currentTab !== TAB_CHECKOUT) return;
-    const plan = checkout.selectedPlan || "team";
-    if (res.plan_scope && res.plan_scope !== "all" && res.plan_scope !== plan) return;
+    if (chosen() || this.state.currentTab !== TAB_CHECKOUT) return;
+    const scope = res.plan_scope && res.plan_scope !== "all" ? res.plan_scope : "";
+    if (scope && (checkout.selectedPlan || "free") === "free") {
+      checkout.selectedPlan = scope;
+      checkout.storage = this.storage[scope] || 0;
+      checkout.seats = this.seats[scope] || 0;
+    }
+    if (scope && scope !== checkout.selectedPlan) return;
     if (res.period_scope === "month") checkout.billingCycle = "monthly";
     if (res.period_scope === "year") checkout.billingCycle = "yearly";
     checkout.promoCode = res.code;
@@ -2674,6 +2688,8 @@ class settings_billing extends LetcBox {
           // shopper re-Applies against the plan they are actually buying.
           this._clearPromoPreview(false);
           this.renderContent();
+          // A signup offer for the plan just picked (TEAM1 on Team).
+          this._autoApplyPendingOffer().catch(() => {});
         }
         return false;
 
@@ -2686,9 +2702,14 @@ class settings_billing extends LetcBox {
           this.renderContent();
           // Unless the code is locked to one cycle (TEAM1 is monthly only):
           // ask the server again, so switching to yearly shows the refusal
-          // instead of a discount checkout would not honour.
-          const scope = this.state.checkout.promo?.period_scope;
-          if (scope && scope !== "all") this._applyPromoCode().catch(() => {});
+          // instead of a discount checkout would not honour — and switching
+          // back (the refused preview is gone, its error and code are not)
+          // brings the discount back.
+          const co = this.state.checkout;
+          const scope = co.promo?.period_scope;
+          if ((scope && scope !== "all") || (co.promoError && co.promoCode)) {
+            this._applyPromoCode().catch(() => {});
+          }
         }
         return false;
 
@@ -2697,6 +2718,8 @@ class settings_billing extends LetcBox {
         return false;
 
       case "remove-promo-code":
+        // Removed on purpose: do not re-apply a signup offer behind their back.
+        this._offerDeclined = true;
         this._clearPromoPreview(true);
         this.updateRightPanel();
         return false;

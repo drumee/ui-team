@@ -12,6 +12,8 @@
  * Read at boot, before the signin/signup plugins rewrite the hash, like the
  * campaign markers (libs/campaign) and the billing link (libs/billing-deep-link).
  */
+const { stripUrlParams } = require("libs/campaign");
+
 const KEY = "drumee_offer";
 // What yp.mkt_coupon.code stores (ascii, 64 chars). Anything else is dropped.
 const SHAPE = /^[A-Za-z0-9_-]{1,64}$/;
@@ -39,8 +41,26 @@ function captureOffer() {
   const code = readUrlOffer();
   if (code) {
     try { localStorage.setItem(KEY, code); } catch (e) { /* private mode */ }
+    // Taken off the URL once stored: every later route re-reads the URL, and a
+    // param left there would re-arm the offer after it has been attached — for
+    // whoever signs in next on this browser too.
+    stripUrlParams(new Set(["offer"]));
   }
   return code;
+}
+
+/**
+ * For the router's switch to another host (changeHost): localStorage is per
+ * origin, so the stored offer has to travel on the URL, where captureOffer
+ * picks it up again on the other side. This origin's copy is dropped.
+ * @returns {string} "offer=CODE" to add to the query string, or ""
+ */
+function offerHandoff() {
+  let code = "";
+  try { code = localStorage.getItem(KEY) || ""; } catch (e) { return ""; }
+  if (!SHAPE.test(code)) return "";
+  try { localStorage.removeItem(KEY); } catch (e) { }
+  return `offer=${encodeURIComponent(code)}`;
 }
 
 /**
@@ -51,7 +71,21 @@ function captureOffer() {
  * @param {Function} post  (service, params) => Promise, e.g. a view's postService
  * @returns {Promise<string>} the code now held for the account, '' if none
  */
-async function attachOffer(post) {
+// The attach in flight, so the billing checkout can wait for it before asking
+// for the pending offer — opened right after sign-in it would otherwise ask
+// first and find nothing.
+let attaching = Promise.resolve("");
+
+function attachOffer(post) {
+  attaching = doAttach(post).catch(() => "");
+  return attaching;
+}
+
+function offerAttached() {
+  return attaching;
+}
+
+async function doAttach(post) {
   let code = "";
   try { code = localStorage.getItem(KEY) || ""; } catch (e) { return ""; }
   if (!SHAPE.test(code)) return "";
@@ -68,4 +102,4 @@ async function attachOffer(post) {
   return res.status === "OK" ? res.code || code : "";
 }
 
-module.exports = { captureOffer, attachOffer };
+module.exports = { captureOffer, attachOffer, offerAttached, offerHandoff };
