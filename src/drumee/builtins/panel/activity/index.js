@@ -17,6 +17,8 @@ const { VIEW_FILTERS, buttonLabel: viewFilterLabel } = require('./skeleton/view-
 // Round 3 Phase 2: the real-time chat card. Built to Figma
 // (58208:83650) — see chat-toast.js for the measurements and the rules.
 const { showChatToast, killChatToast } = require('./chat-toast');
+// Mention / task-assignment pop-ups, on the chat card's shell and slot.
+const { toastNotice } = require('./notice-toast');
 // Which chats the user muted. Read once here and refreshed from every
 // mute_set — never per message. Suppresses the card, the OS notification and
 // its sound; the server leaves muted chats out of the feed and the counts.
@@ -26,6 +28,20 @@ require('./skin');
 const { trackDeskCanvas } = require('libs/desk-canvas');
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { ownWorkspaceName } = require('libs/workspace-label');
+
+// The folder-chat topic a pushed message was posted in (channel.post stores it
+// as metadata._topic_id, JSON on the push). "" for # General or none.
+function chatTopicOf(opt = {}) {
+  try {
+    let md = opt.metadata;
+    if (typeof md === 'string') md = JSON.parse(md);
+    const id = md && md._topic_id;
+    return id ? `${id}` : '';
+  } catch (e) {
+    // Unreadable metadata: no topic, so the chat opens on # General.
+    return '';
+  }
+}
 
 class __panel_activity extends LetcBox {
   constructor(...args) {
@@ -2327,6 +2343,9 @@ class __panel_activity extends LetcBox {
     if (!_.isArray(data)) {
       data = [data]
     }
+    // Decides for itself whether this push raises a pop-up (most do not);
+    // the feed refresh below is unchanged either way.
+    toastNotice(this, options.service, data[0], options);
     switch (options.service) {
       case "conference.start":
         this._addMeetingNotification(data[0] || data);
@@ -2393,6 +2412,9 @@ class __panel_activity extends LetcBox {
       // Same debounced refresh as the chat/channel mention path — refreshActivity now
       // also pulls channel.list_notifications, where task mentions live.
       case "task.mention":
+      // "<A> mentioned you in <meeting>" (server room._notify_mentions) — a
+      // meeting_notice row, refreshed like the task mention above.
+      case "room.mention":
       // "<A> edited / commented on <your file>" (server-team
       // lib/file-owner-notify pushes it to the owner only).
       case "activity.file_owner":
@@ -2612,7 +2634,19 @@ class __panel_activity extends LetcBox {
           // folder on its Chat tab so the notification lands in the conversation
           // it came from — matching the Mentions-tab item. Hub-level posts have
           // no nid and fall through to the workspace root via wm/channel.
-          url = `${url}/open/?hub_id=${hub_id}&nid=${nid}&filetype=folder&activeTab=${_a.chat}&message_id=${message_id}&ts=${now}`
+          //
+          // "reveal", not "open" (Duy 2026-10-30): "open" launched the legacy
+          // floating window and never reached the message. "reveal" docks the
+          // workspace like the feed's chat row and then brings the message
+          // into view and flashes it (Wm.openNotificationLocation →
+          // openChatMessage) — in its topic, which the chat would otherwise
+          // leave out, and in the live call's chat when it was written there
+          // (from_meeting, stamped by the server on the push).
+          url = `${url}/reveal/?hub_id=${hub_id}&nid=${nid}&filetype=folder&pid=0&activeTab=${_a.chat}&message_id=${message_id}`
+          const topicId = chatTopicOf(opt);
+          if (topicId) url += `&topic_id=${encodeURIComponent(topicId)}`
+          if (opt.from_meeting) url += `&from_meeting=1`
+          url += `&ts=${now}`
         } else {
           url = `${url}/channel/?hub_id=${hub_id}&nid=${nid}&ts=${now}`
         }

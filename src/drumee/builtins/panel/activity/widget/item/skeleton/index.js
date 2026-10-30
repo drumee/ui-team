@@ -388,6 +388,20 @@ function getActivityMeta(ui, data) {
           folder: data.folder_name,
         };
 
+      case 'mention':
+        // "{author} mentioned you in {meeting}" — named in the meeting's
+        // description (server room._notify_mentions, Lexis 2026-10-29).
+        return {
+          before: LOCALE.MENTIONED_YOU_IN_ACTION,
+          label: meetingName,
+          after: '',
+          colorClass: 'mention',
+          badge: 'mention',
+          ico: 'noti-at',
+          tone: BADGE.brand,
+          folder: data.folder_name,
+        };
+
       default:
         // 'invite' — Duy 2026-08-21: this replaces the "uploaded <meeting>" row
         // an invitee used to get, and it names the organizer.

@@ -56,6 +56,12 @@ const CHAT_TOAST_MS = 30000;
 // The confirmation is an acknowledgement, not a message to read — Figma gives
 // it a single line and it goes on its own.
 const CHAT_CONFIRM_MS = 2000;
+// How long a notice card (mention / assignment) holds the slot against a chat
+// card. Chat cards reach the slot through the panel's 1 s debounce, so one can
+// land just AFTER a notice while being about an EARLIER message — e.g. the
+// root card a new file thread posts right before the comment that mentions
+// you. Without the hold, that stale card would replace the mention.
+const NOTICE_HOLD_MS = 1500;
 
 const { isPopupMuted, setMute, workspaceCount } = require("./mute");
 
@@ -161,6 +167,33 @@ function senderLabel(model = {}) {
   );
 }
 
+// Mentions travel inside the message as markers — a person
+// "[@Full Name](user:uid)", a file "[@file.pdf](mention:HUB:NID)". The card
+// prints plain text, so they are read back as "@Name" the way the chat itself
+// shows them; printed raw they read as markup.
+const MENTION_MARKER = /\[@([^\]]+)\]\((?:user|mention):[^)]*\)/g;
+
+function plainMessage(text = "") {
+  return String(text || "").replace(MENTION_MARKER, "@$1");
+}
+
+/**
+ * Whether this message @-mentions the viewer. `mention_ids` arrives as an
+ * array on a P2P push and as the stored JSON string on a workspace one.
+ */
+function mentionsMe(model = {}) {
+  try {
+    let ids = model.mention_ids;
+    if (!ids || typeof Visitor === "undefined") return false;
+    if (typeof ids === "string") ids = JSON.parse(ids);
+    if (!Array.isArray(ids)) return false;
+    return ids.some((id) => id != null && String(id) === String(Visitor.id));
+  } catch (e) {
+    // Unreadable mention_ids: the message reads as an ordinary one.
+    return false;
+  }
+}
+
 /**
  * Clear the live card and its timer. Safe to call when there is none.
  */
@@ -194,7 +227,10 @@ function killChatToast(host) {
 function buildCard(model, url, replacing) {
   const pfx = "panel-activity-toast";
   const chip = folderLabel(model);
-  const message = String(model.message || "").trim();
+  const mentioned = mentionsMe(model);
+  let message = plainMessage(model.message).trim();
+  // Being named is the news, so it is said before the message itself.
+  if (mentioned) message = message ? `${LOCALE.MENTIONED_YOU}: ${message}` : LOCALE.MENTIONED_YOU;
 
   const titleRow = Skeletons.Box.X({
     className: `${pfx}__title-row`,
@@ -251,7 +287,7 @@ function buildCard(model, url, replacing) {
       }),
       Skeletons.Box.X({
         className: `${pfx}__badge`,
-        kids: [Skeletons.Image.Svg({ ico: "noti-chats-circle" })],
+        kids: [Skeletons.Image.Svg({ ico: mentioned ? "noti-at" : "noti-chats-circle" })],
       }),
     ],
   });
@@ -289,6 +325,87 @@ function buildCard(model, url, replacing) {
           Skeletons.Note({ className: `${pfx}__mute`, content: LOCALE.MUTE }),
           Skeletons.Note({ className: `${pfx}__open`, content: LOCALE.OPEN }),
         ],
+      }),
+    ],
+  });
+}
+
+/**
+ * A notice card — "<sender> assigned you to <task>", "<sender> mentioned you
+ * in <task / meeting / file>" (Lexis 2026-10-29: the chat pop-up, extended to
+ * mentions anywhere and to task assignment).
+ *
+ * The chat card's own shell, row for row, so the two read as one family: the
+ * avatar with a badge saying what happened, the sender with the location chip,
+ * one line, "Just now". Only Open in the actions — Mute is a CHAT setting,
+ * and a task or a meeting is not something it silences.
+ *
+ * @param {object} model { author_id, firstname, lastname, fullname, line,
+ *                         folder_name, ico }
+ */
+function buildNoticeCard(model, url, replacing) {
+  const pfx = "panel-activity-toast";
+  const chip = model.folder_name ? String(model.folder_name) : "";
+  const sender =
+    model.fullname || model.firstname || model.lastname || model.email || LOCALE.SOMEONE || "";
+  return Skeletons.Box.Y({
+    className: pfx,
+    attrOpt: {
+      "data-replace": replacing ? "1" : "0",
+      "data-url": String(url || ""),
+    },
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__head`,
+        kids: [
+          Skeletons.Box.Y({
+            className: `${pfx}__avatar-wrap`,
+            kids: [
+              Skeletons.UserProfile({
+                className: `${pfx}__avatar`,
+                id: model.author_id,
+                firstname: model.firstname || sender,
+                lastname: model.lastname,
+                type: "thumb",
+              }),
+              Skeletons.Box.X({
+                className: `${pfx}__badge`,
+                kids: [Skeletons.Image.Svg({ ico: model.ico || "noti-at" })],
+              }),
+            ],
+          }),
+          Skeletons.Box.Y({
+            className: `${pfx}__body`,
+            kids: [
+              Skeletons.Box.X({
+                className: `${pfx}__title-row`,
+                kids: [
+                  Skeletons.Note({ className: `${pfx}__sender`, content: esc(sender) }),
+                  // Same always-rendered chip as the chat card, hidden by
+                  // data-empty when there is no name to show.
+                  Skeletons.Note({
+                    className: `${pfx}__chip`,
+                    content: chip ? esc(chip) : "",
+                    attrOpt: { "data-empty": chip ? "0" : "1" },
+                  }),
+                ],
+              }),
+              // Task titles, meeting titles and file names are user input,
+              // and Note renders its content as markup.
+              Skeletons.Note({ className: `${pfx}__message`, content: esc(model.line || "") }),
+              Skeletons.Note({ className: `${pfx}__time`, content: LOCALE.JUST_NOW }),
+            ],
+          }),
+          Skeletons.Button.Svg({
+            className: `${pfx}__close`,
+            ico: _a.cross,
+          }),
+        ],
+      }),
+      Skeletons.Box.X({
+        className: `${pfx}__actions`,
+        // A Note, not a Button — see buildCard.
+        kids: [Skeletons.Note({ className: `${pfx}__open`, content: LOCALE.OPEN })],
       }),
     ],
   });
@@ -461,6 +578,10 @@ function showChatToast(host, model = {}, url = "") {
     // guards so that a mute can never mask one of the cheaper structural
     // reasons not to show a card.
     if (isPopupMuted(model)) return;
+    // A notice card that only just landed wins over a chat card — see
+    // NOTICE_HOLD_MS. The message is still in the Notification Center.
+    const current = host._chatToast;
+    if (current && current._noticeAt && Date.now() - current._noticeAt < NOTICE_HOLD_MS) return;
 
     // Replace, never stack: the previous card goes before the new one lands,
     // and the 30 s timer starts again from this message.
@@ -474,6 +595,34 @@ function showChatToast(host, model = {}, url = "") {
     toast._chatModel = model;
   } catch (e) {
     if (host && host.warn) host.warn("chat toast failed", e);
+  }
+}
+
+/**
+ * Show (or replace) a notice card. It takes the chat card's slot, timer and
+ * click delegate: one card at a time, whichever arrived last, so a mention
+ * and a message can never pile up in the same corner.
+ *
+ * The same guards as a chat card, except mute (a chat setting, see
+ * buildNoticeCard): nothing while the Notification Center is open, nothing
+ * the viewer did themselves.
+ *
+ * @param {object}   model  see buildNoticeCard
+ * @param {string}   url    hash Open navigates to
+ * @param {function} onOpen optional — replaces the hash navigation, for a
+ *                          target a link cannot reach (a file's thread)
+ */
+function showNoticeToast(host, model = {}, url = "", onOpen = null) {
+  try {
+    if (!host || !model) return;
+    if (host.activityState) return;
+    if (model.author_id && model.author_id == Visitor.id) return;
+    const toast = mountCard(host, (replacing) => buildNoticeCard(model, url, replacing), CHAT_TOAST_MS);
+    if (toast && _.isFunction(onOpen)) toast._onOpen = onOpen;
+    if (toast) toast._noticeAt = Date.now();
+    return toast;
+  } catch (e) {
+    if (host && host.warn) host.warn("notice toast failed", e);
   }
 }
 
@@ -543,8 +692,15 @@ function bindCardClicks(host, toast) {
       if (t.closest(`.panel-activity-toast__open`)) {
         e.stopPropagation();
         const href = toast.el.getAttribute("data-url");
+        const onOpen = toast._onOpen;
         killChatToast(host);
-        if (href) location.hash = href;
+        if (_.isFunction(onOpen)) {
+          try {
+            onOpen();
+          } catch (err) {
+            if (href) location.hash = href;
+          }
+        } else if (href) location.hash = href;
         return;
       }
       if (t.closest(`.panel-activity-toast__mute`)) {
@@ -625,7 +781,10 @@ async function applyMute(host, hubId, from) {
 
 module.exports = {
   showChatToast,
+  showNoticeToast,
   killChatToast,
+  plainMessage,
+  mentionsMe,
   folderLabel,
   senderLabel,
   resolveChipLater,
@@ -635,4 +794,5 @@ module.exports = {
   applyMute,
   CHAT_TOAST_MS,
   CHAT_CONFIRM_MS,
+  NOTICE_HOLD_MS,
 };

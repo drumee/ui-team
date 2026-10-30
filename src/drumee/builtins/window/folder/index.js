@@ -23,6 +23,7 @@ const {
   showSeatLimitReached,
 } = require("libs/billing");
 const readCache = require("libs/read-cache");
+const { focusChatMessage } = require("libs/notice-focus");
 const CDHost = require("./chat-details-host");
 const FilesSearch = require("./files-search");
 const ChatSearchHighlight = require("./chat-search-highlight");
@@ -78,6 +79,16 @@ const NOT_ATTACHABLE = ["folder", "hub", "root", "schedule"];
 // The migrate tour has been raised by a phone's "Migrate from Google Drive"
 // tap this session (see "launch-gdrive-migration").
 let _phoneMigrateRaised = false;
+
+// A named part of `view`, or null when it has not mounted within `ms` — a part
+// that is never rendered (no chat right) must not hold a deep link forever.
+function partWithin(view, name, ms = 8000) {
+  if (!view || !_.isFunction(view.ensurePart)) return Promise.resolve(null);
+  return Promise.race([
+    Promise.resolve(view.ensurePart(name)).catch(() => null),
+    new Promise((r) => setTimeout(() => r(null), ms)),
+  ]);
+}
 
 class __window_folder extends mfsInteract {
   constructor(...args) {
@@ -5308,7 +5319,8 @@ class __window_folder extends mfsInteract {
       if (this._meetingScanDone) return;
       this._meetingScanDone = 1;
       if (this.isDestroyed && this.isDestroyed()) return;
-      this._refreshMeetingActiveState();
+      // Never rejects (it catches its own failure); the catch is for the lint.
+      this._refreshMeetingActiveState().catch(() => {});
     };
     this._runMeetingScan = run;
     if (typeof window.requestIdleCallback === "function") {
@@ -5325,11 +5337,12 @@ class __window_folder extends mfsInteract {
   _refreshMeetingActiveState() {
     const svc = (SERVICE.channel && SERVICE.channel.messages) || "channel.messages";
     const hub_id = this.mget(_a.hub_id);
-    if (!hub_id) return;
+    if (!hub_id) return Promise.resolve();
     const api = { service: svc, hub_id, order: "desc" };
     const roomNid = this._meetingRoomNid();
     if (roomNid) api.nid = roomNid;
-    Promise.resolve()
+    // Returned so a caller can wait for the answer (openChatMessage).
+    return Promise.resolve()
       .then(() => this.fetchService(api))
       .then((rows) => {
         if (!Array.isArray(rows)) return;
@@ -6416,11 +6429,17 @@ class __window_folder extends mfsInteract {
   // ALREADY open: show the Task tab and open that task's detail. The mount-time
   // `open_task_id` (read in the tasks panel's initialize) only ever fires on a
   // fresh mount, so a panel that is already mounted has to be told directly.
-  openTaskDeepLink(task_id) {
+  //
+  // `focus` ('description' | 'comment:<id>') is where in that task the
+  // notification points; the panel scrolls to it and flashes it.
+  openTaskDeepLink(task_id, focus = null) {
     const mounted = this._taskPanelMounted;
     // Not mounted yet → the panel picks the id up from the model as it mounts,
     // exactly like a freshly launched window does.
-    if (task_id && !mounted) this.mset("open_task_id", task_id);
+    if (task_id && !mounted) {
+      this.mset("open_task_id", task_id);
+      this.mset("open_task_focus", focus || null);
+    }
     const shown = this.showFolderTab(_a.task);
     // showFolderTab returns early when the Task tab is ALREADY the active one,
     // so the panel would keep the scope it was mounted with — the workspace
@@ -6433,12 +6452,77 @@ class __window_folder extends mfsInteract {
     return Promise.resolve(shown).then(() => {
       const p = this._taskPanel;
       if (p && !(p.isDestroyed && p.isDestroyed()) && _.isFunction(p.openTaskById)) {
-        p.openTaskById(task_id);
+        p.openTaskById(task_id, { focus });
       }
       // Consumed: a later remount of the panel (a workspace switch rebuilds
       // the window) must not reopen this task out of the blue.
-      if (!mounted) this.mset("open_task_id", null);
+      if (!mounted) {
+        this.mset("open_task_id", null);
+        this.mset("open_task_focus", null);
+      }
     });
+  }
+
+  /**
+   * Deep link to one chat message — a chat pop-up's Open, a chat row: bring it
+   * into view and flash it (Duy 2026-10-30: the click used to land on the chat
+   * and leave the reader to find the message). Called once the Chat tab, and
+   * the message's topic, are on screen.
+   *
+   * `fromMeeting`: the message was written in a call's chat panel. While that
+   * call is still live, Open takes the reader INTO it and shows the message
+   * in the call's chat, where the conversation is happening. A call that has
+   * ended, or whose state cannot be read, falls back to the folder chat —
+   * launching the meeting window then would START a new call, not join one.
+   */
+  async openChatMessage(message_id, { fromMeeting = false } = {}) {
+    if (!message_id) return null;
+    if (fromMeeting) {
+      const meeting = await this._joinLiveMeeting();
+      if (meeting) {
+        if (_.isFunction(meeting._switchPanelTab)) meeting._switchPanelTab("chat");
+        // No chat right ⇒ the call has no chat pane and the part never
+        // mounts; the race keeps that from waiting forever.
+        const chat = await partWithin(meeting, "meeting-chat-widget");
+        return focusChatMessage(chat, message_id);
+      }
+    }
+    const chat = await partWithin(this, "folder-chat");
+    return focusChatMessage(chat, message_id);
+  }
+
+  /**
+   * Join this folder's call if, and only if, it is live. Resolves to its
+   * window_meeting, or null — for a call that is not live, or when the user is
+   * already in ANOTHER call (that is theirs to leave, not a pop-up's).
+   */
+  async _joinLiveMeeting() {
+    const hubId = `${this.mget(_a.hub_id) || ""}`;
+    const callOf = () => {
+      const w = Wm.getItemByKind("window_meeting");
+      return w && !w.isDestroyed() && `${w.mget(_a.hub_id) || ""}` === hubId ? w : null;
+    };
+    const mine = callOf();
+    if (mine) {
+      // Already in it: just bring it up.
+      if (_.isFunction(mine.raise)) mine.raise();
+      return mine;
+    }
+    const other = Wm.getItemByKind("window_meeting") || Wm.getItemByKind("window_connect");
+    if (other && !other.isDestroyed()) return null;
+    try {
+      await this._refreshMeetingActiveState();
+    } catch (e) {
+      return null;
+    }
+    if (!this._meetingActive || (this.isDestroyed && this.isDestroyed())) return null;
+    this._launchMeetingStandalone();
+    for (let i = 0; i < 50; i++) {
+      const w = callOf();
+      if (w) return w;
+      await new Promise((r) => setTimeout(r, 200));
+    }
+    return null;
   }
 
   /**
@@ -6872,6 +6956,7 @@ class __window_folder extends mfsInteract {
               // Deep-link from a task mention/assignment notification: the tasks
               // panel opens this task's detail once its list has loaded.
               open_task_id: this.mget("open_task_id"),
+              open_task_focus: this.mget("open_task_focus"),
               // sys_pn + partHandler let the window grab a reference (for the
               // tab-bar filter button) and re-scope the panel on navigation.
               sys_pn: "folder-task-panel",
