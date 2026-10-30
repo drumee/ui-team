@@ -487,6 +487,11 @@ class __calendar_main extends LetcBox {
         // array in a GET query string is a serialization risk for no gain —
         // the All / Task / Meeting filter is applied client-side over the
         // fetched window anyway (see getVisibleItems).
+        //
+        // GETs are HTTP-cached: a live reload (task.* push, tasks-changed)
+        // must not be answered with the rows from before the write. The ‹ ›
+        // window cache (_fetchWindow) still saves the round trips.
+        _ts: Date.now(),
       });
     } catch (e) {
       this.warn && this.warn("[calendar] calendar.list failed", e);

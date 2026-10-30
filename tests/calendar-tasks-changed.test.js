@@ -72,3 +72,25 @@ test("initialize subscribes and onBeforeDestroy unsubscribes", () => {
   assert.match(sliceFunction(SRC, "initialize(opt = {})"), /this\._offTasksChanged = onTasksChanged\(/);
   assert.match(sliceFunction(SRC, "onBeforeDestroy()"), /this\._offTasksChanged\(\)/);
 });
+
+// A live reload must see the write: fetchService GETs are HTTP-cached, so the
+// calendar.list re-read carries a fresh cache-buster every time.
+test("calendar.list reads carry a fresh _ts", async () => {
+  const readWindow = new Function(
+    "Visitor", "SERVICE", "ymd",
+    `return ${sliceFunction(SRC, "async _readWindow(from, to)")}`,
+  )({ id: "me" }, {}, (d) => d.v);
+  const sent = [];
+  const host = {
+    fetchService: async (arg) => { sent.push(arg); return []; },
+    warn: () => {},
+  };
+  const day = (v) => ({ v, subtract: () => day(v), add: () => day(v) });
+  await readWindow.call(host, day("2026-10-01"), day("2026-10-31")).catch(() => {});
+  await new Promise((r) => setTimeout(r, 2));
+  await readWindow.call(host, day("2026-10-01"), day("2026-10-31")).catch(() => {});
+  assert.strictEqual(sent.length, 2);
+  assert.strictEqual(sent[0].service, "calendar.list");
+  assert.strictEqual(typeof sent[0]._ts, "number");
+  assert.notStrictEqual(sent[0]._ts, sent[1]._ts);
+});
