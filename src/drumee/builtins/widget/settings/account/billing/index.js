@@ -1346,10 +1346,10 @@ class settings_billing extends LetcBox {
     // Preview only: Stripe recomputes the real invoice at checkout.
     const promo = checkout.promo || null;
     const pct = promo ? (parseInt(promo.percent_off, 10) || 0) : 0;
-    const amountOff = promo ? (parseInt(promo.amount_off, 10) || 0) / 100 : 0;
-    const discountAmount = amountOff > 0
-      ? Math.min(basePrice, amountOff)
-      : (pct > 0 ? (basePrice * pct) / 100 : 0);
+    const amountOff = promo ? (Number.parseInt(promo.amount_off, 10) || 0) / 100 : 0;
+    let discountAmount = 0;
+    if (amountOff > 0) discountAmount = Math.min(basePrice, amountOff);
+    else if (pct > 0) discountAmount = (basePrice * pct) / 100;
     const finalPrice = Math.max(0, basePrice - discountAmount);
 
     return {
@@ -2003,7 +2003,7 @@ class settings_billing extends LetcBox {
       percent_off: parseInt(data.percent_off, 10) || 0,
       // Fixed amount off, minor units (TEAM1: first month $1). Replaces
       // percent_off when set.
-      amount_off: parseInt(data.amount_off, 10) || 0,
+      amount_off: Number.parseInt(data.amount_off, 10) || 0,
       trial_days: parseInt(data.trial_days, 10) || 0,
       duration_months: parseInt(data.duration_months, 10) || 0,
     };
@@ -2042,7 +2042,7 @@ class settings_billing extends LetcBox {
     this.state.currentTab = TAB_CHECKOUT;
     this.tab = TAB_CHECKOUT;
     this.renderContent();
-    this._autoApplyPendingOffer();
+    this._autoApplyPendingOffer().catch(() => {});
   }
 
   /**
@@ -2058,10 +2058,10 @@ class settings_billing extends LetcBox {
   async _autoApplyPendingOffer() {
     const checkout = this.state.checkout || {};
     if (checkout.promo || checkout.promoCode || this._deepLinkPromo) return;
-    if (!SERVICE.payment || !SERVICE.payment.offer_pending) return;
+    if (!SERVICE.payment?.offer_pending) return;
     const res = await this.fetchService(SERVICE.payment.offer_pending, { hub_id: Visitor.id })
       .catch(() => null);
-    if (!res || res.status !== "OK" || !res.code) return;
+    if (res?.status !== "OK" || !res.code) return;
     // The shopper may have typed a code or moved on while this was in flight.
     if (checkout.promo || checkout.promoCode || this.state.currentTab !== TAB_CHECKOUT) return;
     const plan = checkout.selectedPlan || "team";
@@ -2658,7 +2658,7 @@ class settings_billing extends LetcBox {
           this.tab = TAB_CHECKOUT;
           this._armMotion();
           this.renderContent();
-          this._autoApplyPendingOffer();
+          this._autoApplyPendingOffer().catch(() => {});
         }
         return false;
 
@@ -2687,8 +2687,8 @@ class settings_billing extends LetcBox {
           // Unless the code is locked to one cycle (TEAM1 is monthly only):
           // ask the server again, so switching to yearly shows the refusal
           // instead of a discount checkout would not honour.
-          const scope = this.state.checkout.promo && this.state.checkout.promo.period_scope;
-          if (scope && scope !== "all") this._applyPromoCode();
+          const scope = this.state.checkout.promo?.period_scope;
+          if (scope && scope !== "all") this._applyPromoCode().catch(() => {});
         }
         return false;
 
