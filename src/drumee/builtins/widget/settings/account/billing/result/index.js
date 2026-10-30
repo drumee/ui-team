@@ -5,6 +5,8 @@
  * Receipt details (total, invoice number, date, card) come from
  * payment.checkout_result; every field degrades gracefully when absent.
  */
+const { offerStatusMessage } = require("../offer-status");
+
 class settings_billing_result extends LetcBox {
   initialize(opt = {}) {
     require("./skin");
@@ -35,6 +37,9 @@ class settings_billing_result extends LetcBox {
       if (ps && ps !== "paid" && ps !== "no_payment_required") {
         this._result = "cancel";
       }
+      // An offer checkout (TEAM1) can be refused once the card is known —
+      // say why instead of a bare "payment failed".
+      this._failReason = offerStatusMessage(this._receipt && this._receipt.status);
     }
     this.feed(require("./skeleton").default(this));
   }
