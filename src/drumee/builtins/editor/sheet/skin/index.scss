@@ -4,7 +4,7 @@
 # ===================================================================**/
 @use 'mixins/drumee';
 @use '../../skin/topbar.scss';
-@use '../../skin/file-viewer';
+@use '../../skin/file-viewer' as fv;
 @use '../../skin/phosphor' as ph;
 
 // The strip's glyphs are Material Symbols in the design (1393:3887: "Add",
@@ -80,12 +80,12 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
   .file-switcher__stage > .editor__header.container {
     position: relative;
     width: 100%;
-    height: 42px;
-    min-height: 42px;
+    height: 34px;
+    min-height: 34px;
     border: 0;
     z-index: 200;
     background-color: #fff;
-    padding: 12px 0 0;
+    padding: 8px 0 0;
     box-sizing: border-box;
 
     &[data-header="0"] {
@@ -100,8 +100,8 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
     }
     .drumee-topbar__actions {
       position: absolute;
-      top: 12px;
-      right: 20px;
+      top: 14px;
+      right: 16px;
     }
   }
 
@@ -134,20 +134,20 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
     gap: 10px;
     min-width: 0;
   }
-  // 36px sheet glyph (Figma 1319:176155), centred on name + menu rows.
+  // 32px sheet glyph, centred on name + menu rows.
   .drumee-topbar__filetype {
-    width: 36px;
-    height: 36px;
-    flex: 0 0 36px;
-    margin-top: 5px;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    margin-top: 6px;
     background-color: transparent;
     .drumee-topbar__filetype-icon {
-      width: 28px;
-      height: 28px;
+      width: 24px;
+      height: 24px;
     }
   }
   .drumee-topbar__identity {
-    gap: 12px;
+    gap: 10px;
     align-items: flex-start;
   }
 
@@ -159,7 +159,7 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
     font-weight: 400;
     line-height: 22px;
     color: #0b0a21;
-    padding: 2px 8px;
+    padding: 1px 6px;
     border-radius: 6px;
     border: 1px solid transparent;
     max-width: 46ch;
@@ -179,7 +179,7 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
     font-weight: 400;
     line-height: 22px;
     color: #0b0a21;
-    padding: 2px 8px;
+    padding: 1px 6px;
     border-radius: 6px;
     border: 1px solid var(--active-border, #5950ff);
     background: var(--normal-bg, #ffffff);
@@ -487,8 +487,8 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
 }
 
 .editor-sheet__avatar {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   border: 2px solid #fff;
   margin-left: -7px;
@@ -496,7 +496,7 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
   align-items: center;
   justify-content: center;
   color: #fff;
-  font: 600 11px/1 var(--font-main);
+  font: 600 10px/1 var(--font-main);
   letter-spacing: 0.02em;
   box-sizing: border-box;
 
@@ -518,7 +518,7 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
   border: 1px solid #e3e6ea;
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
-  font: 14px/1.3 var(--font-main);
+  font: #{fv.$fv-font-ui}/1.3 var(--font-main);
   color: #1f2328;
 }
 
@@ -621,7 +621,7 @@ body > div:has(> [class*="univer-popup"]) {
       position: absolute;
       top: 0;
       left: 0;
-      height: 5px;
+      height: 3px;
       width: 30%;
       background-color: var(--primary-500, #4f46e5);
       will-change: transform;
@@ -636,7 +636,7 @@ body > div:has(> [class*="univer-popup"]) {
       padding: 10px;
       text-align: center;
       justify-content: center;
-      font: 300 14px/15px var(--font-main);
+      font: 300 #{fv.$fv-font-ui}/15px var(--font-main);
       color: var(--default-text-color, #5f6368);
     }
   }
@@ -653,18 +653,20 @@ body > div:has(> [class*="univer-popup"]) {
 // sheet-tab bar with the active tab on the green tint.
 .editor-sheet[data-theme="light"] .sheet-state {
   [data-testid="cs-menubar"] {
-    height: 30px;
-    // Casual's own inline padding (2px 6px) — the row starts under the name.
-    padding: 0 20px 8px 68px !important;
-    gap: 16px;
+    height: 26px;
+    box-sizing: border-box;
+    // Casual's own inline padding (2px 6px) — the row starts under the name
+    // (its buttons' 7px padding puts "File" under the name's text).
+    padding: 0 20px 2px 62px !important;
+    gap: 2px;
     border: 0;
     background: #fff !important;
     align-items: flex-start;
 
     button {
       font: 400 14px/1.2 var(--font-main);
-      color: #34343a;
-      padding: 3px 0;
+      color: fv.$fv-g-ink;
+      padding: 2px 7px;
       height: auto;
       min-height: 0;
       border-radius: 4px;
@@ -672,18 +674,18 @@ body > div:has(> [class*="univer-popup"]) {
       &:hover,
       &[data-state="open"],
       &[aria-expanded="true"] {
-        color: #0b0a21;
-        background: transparent;
+        color: fv.$fv-g-ink;
+        background: fv.$fv-g-hover;
       }
     }
   }
 
   [data-testid="casual-sheets-toolbar"] {
     box-sizing: border-box;
-    height: 44px;
-    margin: 0 20px 12px;
-    padding: 6px 16px;
-    gap: 8px;
+    height: fv.$fv-tb-h;
+    margin: 0 12px 6px;
+    padding: 2px 8px !important;
+    gap: 2px !important;
     border: 0;
     border-radius: 40px;
     background: rgba(61, 222, 140, 0.1) !important;
@@ -714,6 +716,17 @@ body > div:has(> [class*="univer-popup"]) {
       display: none !important;
     }
 
+    // Casual's icon buttons are 30x30 and its selects 26px, all INLINE.
+    button[style*="width: 30px"] {
+      width: fv.$fv-tb-btn !important;
+      height: fv.$fv-tb-btn !important;
+    }
+
+    select {
+      height: 24px !important;
+      font-size: fv.$fv-font-ui !important;
+    }
+
     // Whatever still overflows a narrow window scrolls, without a bar.
     overflow-x: auto;
     scrollbar-width: none;
@@ -724,19 +737,21 @@ body > div:has(> [class*="univer-popup"]) {
   }
 
   [data-testid="casual-sheets-formula-bar"] {
-    height: 40px;
-    padding: 4px 20px;
+    height: 30px;
+    box-sizing: border-box;
+    padding: 2px 12px !important;
+    font-size: fv.$fv-font-ui;
     border: 0;
     background: #fff !important;
     font-family: var(--font-main);
   }
 
   [data-testid="casual-sheets-tabs"] {
-    height: 40px !important;
-    min-height: 40px;
+    height: 36px !important;
+    min-height: 36px;
     box-sizing: border-box;
-    padding: 0 20px 0 48px !important;
-    gap: 24px;
+    padding: 0 12px 0 40px !important;
+    gap: 8px !important;
     border: 0;
     border-top: 1px solid rgba(0, 0, 0, 0.05);
     background: #fff !important;
@@ -766,11 +781,11 @@ body > div:has(> [class*="univer-popup"]) {
     }
 
     [data-testid="cs-tab-add"] {
-      @include ms-glyph($ms-add);
+      @include ms-glyph($ms-add, 20px);
     }
 
     .editor-sheet__sheets-list {
-      @include ms-glyph($ms-menu);
+      @include ms-glyph($ms-menu, 20px);
     }
 
     // The open tab's caret (Material "Arrow drop down"): Casual's Rename /
@@ -781,47 +796,50 @@ body > div:has(> [class*="univer-popup"]) {
       vertical-align: middle;
       color: inherit;
       cursor: pointer;
-      @include ms-glyph($ms-arrow-drop-down);
+      @include ms-glyph($ms-arrow-drop-down, 20px);
     }
 
     button[aria-selected="true"],
     button[data-active="true"] {
-      height: 40px !important;
+      height: 36px !important;
       padding: 0 12px !important;
       border: 0 !important;
       border-radius: 0 !important;
       background: rgba(61, 222, 140, 0.15) !important;
       color: #54b684 !important;
-      font-size: 16px;
+      font-size: fv.$fv-font-ui !important;
+      font-weight: 500 !important;
     }
   }
 
+  // Casual already draws it 24px; only the text steps down.
   [data-testid="casual-sheets-status-bar"] {
     border: 0;
     background: #fff !important;
-    color: #65656c;
+    color: #5f6368;
     font-family: var(--font-main);
+    font-size: 11px !important;
   }
 }
 
 // ── Figma parity pass (user review 2026-10-23): Phosphor toolbar glyphs ─────
 .editor-sheet[data-theme="light"] .sheet-state [data-testid="casual-sheets-toolbar"] {
-  [data-testid="cs-undo"] { @include ph.ph("arrow-u-up-left", 20px, true); }
-  [data-testid="cs-redo"] { @include ph.ph("arrow-u-up-right", 20px, true); }
-  [data-testid="cs-format-painter"] { @include ph.ph("paint-roller", 20px, true); }
-  [data-testid="cs-bold"] { @include ph.ph("text-b", 20px, true); }
-  [data-testid="cs-italic"] { @include ph.ph("text-italic", 20px, true); }
-  [data-testid="cs-underline"] { @include ph.ph("text-underline", 20px, true); }
-  [data-testid="cs-strikethrough"] { @include ph.ph("text-strikethrough", 20px, true); }
-  [data-testid="cs-align-left"] { @include ph.ph("text-align-left", 20px, true); }
-  [data-testid="cs-align-center"] { @include ph.ph("text-align-center", 20px, true); }
-  [data-testid="cs-align-right"] { @include ph.ph("text-align-right", 20px, true); }
-  [data-testid="cs-color-text"] { @include ph.ph("text-a-underline", 20px, true); }
-  [data-testid="cs-color-fill"] { @include ph.ph("paint-bucket", 20px, true); }
-  [data-testid="cs-autosum-button"] { @include ph.ph("sigma", 20px, true); }
+  [data-testid="cs-undo"] { @include ph.ph("arrow-u-up-left", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-redo"] { @include ph.ph("arrow-u-up-right", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-format-painter"] { @include ph.ph("paint-roller", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-bold"] { @include ph.ph("text-b", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-italic"] { @include ph.ph("text-italic", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-underline"] { @include ph.ph("text-underline", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-strikethrough"] { @include ph.ph("text-strikethrough", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-align-left"] { @include ph.ph("text-align-left", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-align-center"] { @include ph.ph("text-align-center", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-align-right"] { @include ph.ph("text-align-right", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-color-text"] { @include ph.ph("text-a-underline", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-color-fill"] { @include ph.ph("paint-bucket", fv.$fv-tb-glyph, true); }
+  [data-testid="cs-autosum-button"] { @include ph.ph("sigma", fv.$fv-tb-glyph, true); }
 
   button {
-    color: #0b0a21;
+    color: fv.$fv-g-muted;
   }
 }
 
@@ -834,11 +852,11 @@ body > div:has(> [class*="univer-popup"]) {
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-  font: 400 14px/1.2 var(--font-main);
+  font: 400 #{fv.$fv-font-ui}/1.2 var(--font-main);
   color: #0b0a21;
 
   &-item {
-    padding: 8px 12px;
+    padding: 6px 12px;
     border-radius: 6px;
     cursor: pointer;
 
@@ -858,6 +876,6 @@ body > div:has(> [class*="univer-popup"]) {
 // header buttons. It goes under the toolbar pill instead, right-aligned like
 // the design's dropdowns.
 .editor-sheet .sheet-state [data-testid="cs-find-replace"] {
-  top: 82px !important;
-  right: 20px !important;
+  top: 66px !important;
+  right: 12px !important;
 }
