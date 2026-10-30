@@ -2,7 +2,7 @@
 #   FILE : /src/drumee/builtins/editor/docs/skin
 #   TYPE : Component style — Casual Docs (DocxEditor) window
 # ===================================================================**/
-@use "../../skin/file-viewer";
+@use "../../skin/file-viewer" as fv;
 @use "../../skin/phosphor" as ph;
 
 // Material Symbols arrow_drop_down — the caret the Figma draws on every toolbar menu.
@@ -40,6 +40,10 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 // a ⋮ menu per row. The column is 0 wide until the gear row opens it, so the
 // editor keeps the whole window when tabs are not in use.
 .editor-docs {
+  // One height for Casual's title bar AND the Drumee action cluster floated
+  // over it: two literals drifted apart, and the actions sat off-centre.
+  --ed-titlebar-h: 64px;
+
   &__row {
     width: 100%;
     flex: 1 1 auto;
@@ -77,57 +81,62 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     transition: width 0.15s ease, flex-basis 0.15s ease;
   }
 
+  // Google Docs' rail metrics: 14px/500 head, 32px pill rows, 13px names,
+  // the active row in Docs' #d3e3fd.
   &[data-tabs="open"] &__tabs-slot {
-    width: 260px;
-    flex: 0 0 260px;
-    border-right: 1px solid #e3e6ea;
-    background: #f8f9fb;
+    width: 220px;
+    flex: 0 0 220px;
+    background: #fff;
   }
 
   &__tabs {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 8px 8px 12px;
-    font: 400 14px/1.3 var(--font-main);
-    color: #1f2328;
-  }
-
-  &__tabs-top {
-    display: flex;
-    padding: 4px 4px 8px;
+    padding: 4px 8px 12px 4px;
+    font: 400 #{fv.$fv-font-ui}/1.3 var(--font-main);
+    color: fv.$fv-g-ink;
   }
 
   &__tabs-close,
   &__tabs-add {
-    width: 32px;
-    height: 32px;
+    width: fv.$fv-tb-btn;
+    height: fv.$fv-tb-btn;
+    flex: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     cursor: pointer;
-    color: #5f6368;
+    color: fv.$fv-g-muted;
 
     &:hover {
-      background: rgba(15, 23, 42, 0.06);
+      background: fv.$fv-g-hover;
     }
+  }
+
+  &__tabs-add {
+    @include ph.ph("plus", fv.$fv-tb-glyph, true);
+  }
+
+  &__tabs-close {
+    @include ph.ph("x", fv.$fv-tb-glyph, true);
   }
 
   &__tabs-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 4px 0 12px;
+    gap: 4px;
+    padding: 10px 0 8px 12px;
   }
 
   &__tabs-title {
-    font-size: 15px;
-    font-weight: 500;
+    flex: 1 1 auto;
+    font: 500 14px/1.2 var(--font-main);
+    color: fv.$fv-g-ink;
   }
 
   &__tabs-list {
-    margin-top: 8px;
     overflow-y: auto;
     flex: 1 1 auto;
     min-height: 0;
@@ -137,24 +146,32 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     position: relative;
     display: flex;
     align-items: center;
-    gap: 10px;
-    height: 40px;
-    padding: 0 8px 0 12px;
-    border-radius: 20px;
+    gap: 6px;
+    height: fv.$fv-row-h;
+    margin-bottom: 2px;
+    padding: 0 4px 0 12px;
+    border-radius: 16px;
     cursor: pointer;
     user-select: none;
 
     &:hover {
-      background: rgba(15, 23, 42, 0.05);
+      background: fv.$fv-g-hover;
     }
 
     &.is-active {
-      background: #d7e3fc;
-      color: #0b57d0;
+      background: #d3e3fd;
+      color: #041e49;
+      font-weight: 500;
 
       .editor-docs__tab-glyph {
-        color: #0b57d0;
+        color: #041e49;
       }
+    }
+
+    // ⋮ only where it is wanted: the hovered row and the open one.
+    &:hover .editor-docs__tab-more,
+    &.is-active .editor-docs__tab-more {
+      visibility: visible;
     }
 
     // The tab being opened: its co-editing room may take a moment, and a row
@@ -222,30 +239,31 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    color: #5f6368;
-    font-size: 16px;
-    line-height: 1;
+    color: fv.$fv-g-muted;
+    font-size: 0;
+    visibility: hidden;
+    @include ph.ph("dots-three-vertical", 16px);
 
     &:hover {
-      background: rgba(15, 23, 42, 0.1);
+      background: rgba(68, 71, 70, 0.12);
     }
   }
 
   &__tab-menu {
     position: absolute;
     z-index: 30000;
-    min-width: 160px;
-    padding: 6px 0;
+    min-width: 148px;
+    padding: 4px 0;
     background: #fff;
-    border: 1px solid #e3e6ea;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-    font: 400 14px/1.3 var(--font-main);
-    color: #1f2328;
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.3);
+    font: 400 #{fv.$fv-font-ui}/1.3 var(--font-main);
+    color: fv.$fv-g-ink;
   }
 
   &__tab-menu-item {
-    padding: 8px 16px;
+    padding: 6px 12px;
     cursor: pointer;
 
     &:hover {
@@ -358,7 +376,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     margin-right: 0;
   }
   [data-testid="presence-cluster"] {
-    gap: 10px;
+    gap: 4px;
 
     // Casual's 1px separator before its (hidden) Share button.
     > span:empty {
@@ -380,7 +398,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
       background: transparent;
       border: 0;
       outline: none;
-      padding: 2px 8px;
+      padding: 1px 6px;
       border-radius: 6px;
       min-width: 160px;
       max-width: 46ch;
@@ -482,7 +500,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
   .ep-root [role="combobox"][data-state="closed"] {
     visibility: visible !important;
     height: auto !important;
-    min-height: 2rem;
+    min-height: fv.$fv-tb-btn;
     width: auto !important;
     margin: 0 !important;
     z-index: auto !important;
@@ -598,7 +616,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     right: 0;
     left: auto;
     width: auto;
-    height: 75px;
+    height: var(--ed-titlebar-h);
     min-height: 0;
     padding: 0 10px 0 0;
     border: 0;
@@ -662,7 +680,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
       position: absolute;
       top: 0;
       left: 0;
-      height: 5px;
+      height: 3px;
       width: 30%;
       background-color: var(--primary-500, #4f46e5);
       will-change: transform;
@@ -677,7 +695,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
       padding: 10px;
       text-align: center;
       justify-content: center;
-      font: 300 14px/15px var(--font-main);
+      font: 300 #{fv.$fv-font-ui}/15px var(--font-main);
       color: var(--default-text-color, #5f6368);
     }
   }
@@ -701,17 +719,24 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
   // Casual paints its title bar, toolbar wrapper and status bar with
   // --doc-chrome, and the ground around the page with --doc-bg: the design
   // has them all white, the paper drawn by a hairline instead of a shadow.
+  // Google Docs grounds the paper on #f9fbfd (ruler included) and lifts it
+  // with a hairline + a faint shadow.
   --doc-chrome: #ffffff;
-  --doc-bg: #ffffff;
+  --doc-bg: #f9fbfd;
 
   .paged-editor__pages {
-    background: #fff;
+    background: #f9fbfd;
+  }
+
+  .docx-horizontal-ruler,
+  .docx-vertical-ruler {
+    background-color: #f9fbfd !important;
   }
 
   .layout-page {
-    border: 1px solid #c7c7c7;
+    border: 1px solid #dadce0;
     border-bottom: 0;
-    box-shadow: none !important;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15) !important;
   }
 
   .ep-root {
@@ -735,10 +760,11 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     align-content: center;
     align-items: center;
     column-gap: 0;
-    row-gap: 6px;
-    height: 75px;
+    row-gap: 2px;
+    height: var(--ed-titlebar-h);
     box-sizing: border-box;
-    padding: 8px 350px 8px 8px;
+    // Share pill (~90) + 8 + 4 x 32 + 4 x 4 gaps + 10 edge + 16 before the avatar.
+    padding: 6px 270px 6px 8px;
     border: 0;
     background: #fff;
 
@@ -746,7 +772,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     > .editor-docs__collab-name {
       grid-column: 1;
       grid-row: 1;
-      padding-left: 40px;
+      padding-left: 36px;
     }
 
     // Row 2: Casual's column — its menu row has 4px of its own (px-1), so
@@ -755,7 +781,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     > .flex-col {
       grid-column: 1 / span 2;
       grid-row: 2;
-      padding: 0 0 0 36px !important;
+      padding: 0 0 0 32px !important;
       overflow: visible;
     }
 
@@ -770,16 +796,16 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 
     button[aria-haspopup="menu"] {
       font: 400 14px/1.2 var(--font-main);
-      color: #34343a;
-      padding: 3px 8px;
+      color: fv.$fv-g-ink;
+      padding: 2px 7px;
       border-radius: 4px;
       height: auto;
       min-height: 0;
 
       &:hover,
       &[data-state="open"] {
-        background: #f2f2f7;
-        color: #0b0a21;
+        background: fv.$fv-g-hover;
+        color: fv.$fv-g-ink;
       }
     }
   }
@@ -795,65 +821,125 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     padding: 4px;
     box-sizing: border-box;
     border-radius: 6px;
 
     svg {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       display: block;
     }
   }
 
-  // Formatting bar: a pill on Overlay/blue, 40px, 16px in from the card.
+  // Formatting bar: Google Docs' 36px pill on #edf2fa, 28px buttons with
+  // 18px glyphs, 12px in from the card.
   .ep-root [data-testid="formatting-bar"] {
-    margin: 0 16px 10px !important;
-    padding: 6px 8px !important;
-    min-height: 40px;
-    gap: 4px;
-    background: rgba(113, 163, 244, 0.1) !important;
-    border-radius: 100px;
-    color: #0b0a21;
+    margin: 0 12px 6px !important;
+    padding: 2px 6px !important;
+    min-height: fv.$fv-tb-h;
+    box-sizing: border-box;
+    gap: 2px;
+    background: #edf2fa !important;
+    border-radius: 24px;
+    color: fv.$fv-g-muted;
+    font-size: fv.$fv-font-ui;
+    // Narrow windows overflow the bar: scroll it, but without the native
+    // bar and its arrows drawn under the pill.
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
 
     > div {
-      border-color: #d1d1d6 !important;
+      border-color: #c7c7c7 !important;
     }
 
     button {
-      color: #0b0a21;
+      color: fv.$fv-g-muted;
       border-radius: 4px;
+    }
+
+    // Casual's icon buttons are 32x32 INLINE; Docs' are 28.
+    button[style*="width: 32px"] {
+      width: fv.$fv-tb-btn !important;
+      height: fv.$fv-tb-btn !important;
+      padding: 0 !important;
+    }
+
+    // Every Phosphor glyph (ph mixin, 20px default) at the Docs 18px.
+    button::before {
+      width: fv.$fv-tb-glyph !important;
+      height: fv.$fv-tb-glyph !important;
+    }
+
+    [role="combobox"],
+    button[aria-haspopup] {
+      font-size: fv.$fv-font-ui;
+    }
+  }
+
+  // The bar's scroll wrapper paints the same native scrollbar.
+  .ep-root :has(> [data-testid="formatting-bar"]) {
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 
   // The comments / history / outline rail: Casual floats it at the right
-  // edge; the design has it at the LEFT of the page, 48px tiles.
+  // edge; the design has it at the LEFT of the page — a small floating
+  // card like Docs' outline button. Casual styles the card and its 32px
+  // tiles inline, hence the !important.
   [data-testid="panel-rail"] {
     left: 8px !important;
     right: auto !important;
-    padding: 12px 8px;
-    border: 0;
-    background: #fff;
+    width: auto !important;
+    box-sizing: border-box;
+    padding: 4px !important;
+    gap: 2px !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.1) !important;
 
     button {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      color: #0b0a21;
+      border-radius: 8px !important;
+
+      &:not([aria-pressed="true"]) {
+        color: fv.$fv-g-muted !important;
+      }
+
+      &:hover {
+        background: fv.$fv-g-hover !important;
+      }
 
       svg {
-        width: 24px;
-        height: 24px;
+        width: fv.$fv-btn-glyph;
+        height: fv.$fv-btn-glyph;
       }
     }
   }
 
+  // Casual sizes it inline (28px, 12px): Docs has no status bar at all, so
+  // keep it as a quiet 24px footer.
   [data-testid="status-bar"] {
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-    color: #65656c;
-    font-family: var(--font-main);
+    height: 24px !important;
+    box-sizing: border-box;
+    padding: 0 12px !important;
+    gap: 12px !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    color: #5f6368;
+    font: 400 11px/1 var(--font-main) !important;
+
+    .docx-status-zoom-btn {
+      width: 20px;
+      height: 20px;
+    }
   }
 
   // Version history keeps its snapshots in this browser only (no co-editor
@@ -966,7 +1052,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     }
 
     button {
-      color: #0b0a21;
+      color: fv.$fv-g-muted;
     }
   }
 }
@@ -994,21 +1080,21 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 // styles its outline inline, hence the !important.
 .editor-docs .docs-state nav.docx-outline-nav {
   left: 60px !important;
-  width: 212px !important;
+  width: 200px !important;
   padding: 8px 8px 16px 0 !important;
   font-family: var(--font-main) !important;
 
   // Head: no list glyph, the title, the X.
   > div:first-child {
-    padding: 16px 0 16px 16px !important;
-    gap: 18px !important;
+    padding: 10px 0 8px 12px !important;
+    gap: 8px !important;
 
     > svg {
       display: none !important;
     }
 
     > span {
-      font: 400 16px/1.2 var(--font-main) !important;
+      font: 500 14px/1.2 var(--font-main) !important;
       color: #34343a !important;
     }
 
@@ -1052,12 +1138,12 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 
     .docx-outline-heading-btn {
       box-sizing: border-box;
-      height: 36px !important;
-      padding: 8px 16px !important;
+      height: 28px !important;
+      padding: 4px 12px !important;
       border: 0 !important;
       border-radius: 100px !important;
       background: transparent !important;
-      font: 400 14px/1.2 var(--font-main) !important;
+      font: 400 #{fv.$fv-font-ui}/1.2 var(--font-main) !important;
       color: #34343a !important;
 
       &:hover {
@@ -1073,71 +1159,6 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     // A heading with children: the group pill (Figma "Headings 1 ▾").
     > div:has(> button[aria-expanded]) > .docx-outline-heading-btn {
       background: rgba(113, 163, 244, 0.1) !important;
-    }
-  }
-}
-
-.editor-docs {
-  &[data-tabs="open"] &__tabs-slot {
-    width: 236px;
-    flex: 0 0 236px;
-    border-right: 0;
-    background: #fff;
-  }
-
-  &__tabs {
-    padding: 8px 8px 16px 0;
-    color: #34343a;
-  }
-
-  &__tabs-head {
-    padding: 16px 0 16px 16px;
-    gap: 8px;
-  }
-
-  &__tabs-title {
-    flex: 1 1 auto;
-    font: 400 16px/1.2 var(--font-main);
-    color: #34343a;
-  }
-
-  &__tabs-add,
-  &__tabs-close {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    color: #34343a;
-  }
-
-  &__tabs-add {
-    @include ph.ph("plus", 20px, true);
-  }
-
-  &__tabs-close {
-    @include ph.ph("x", 20px, true);
-  }
-
-  &__tabs-list {
-    margin-top: 0;
-  }
-
-  &__tab-row {
-    height: 36px;
-    gap: 8px;
-    margin-bottom: 4px;
-    padding: 0 8px 0 16px;
-    border-radius: 100px;
-    font: 400 14px/1.2 var(--font-main);
-    color: #34343a;
-
-    &:hover {
-      background: #f2f2f7;
-    }
-
-    &.is-active {
-      background: rgba(113, 163, 244, 0.1);
-      color: #34343a;
-      font-weight: 500;
     }
   }
 }
@@ -1166,7 +1187,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     border: 0;
     border-radius: 6px;
     background: none;
-    color: #0b0a21;
+    color: fv.$fv-g-muted;
     cursor: pointer;
 
     &:hover {
@@ -1200,7 +1221,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
   border: 0;
   border-radius: 6px;
   background: none;
-  color: #0b0a21;
+  color: fv.$fv-g-muted;
   cursor: pointer;
   @include ph.ph("printer", 20px, true);
 
