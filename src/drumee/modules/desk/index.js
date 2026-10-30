@@ -3,7 +3,7 @@ require("builtins/window/confirm/skin");
 const { canUpgradePlan, needsAdminConsoleUpgrade } = require("libs/billing");
 const billingDeepLink = require("libs/billing-deep-link");
 const {
-  captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN,
+  captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN, takeOfferPreselect,
 } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
 const contactInviteLink = require("libs/contact-invite-link");
@@ -1128,7 +1128,14 @@ class desk_module extends LetcBox {
     // refusal permanent, so a wrong-account sign-in destroyed a link written
     // for somebody else, who then signed in and found nothing.
     const preselect = billingDeepLink.peek();
-    if (!preselect) return false;
+    if (!preselect) {
+      // A campaign signup goes straight to the trial it was promised, once.
+      const offered = canUpgradePlan() && takeOfferPreselect();
+      if (!offered) return false;
+      this._restoreInFlight = false;
+      this.openBillingPage(offered);
+      return true;
+    }
     // Addressed to somebody else. A campaign CTA carries an opaque marker for
     // the recipient it was written for (analytics-server _recipientTag), and a
     // mail gets forwarded, screenshotted, and opened on machines already signed
