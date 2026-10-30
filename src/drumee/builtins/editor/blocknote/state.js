@@ -13,6 +13,7 @@ import Callout from "./callout";
 import { getNoteSlashItems, NoteSlashMenu } from "./slash-menu";
 
 const { xhRequest } = require("@drumee/ui-essentials");
+const { applyFormatInput } = require("./format-input");
 
 /**
  * BlockNote's own UI — the "/" menu, the drag handle menus, the selection
@@ -323,6 +324,15 @@ class __blocknote_state extends DrumeeMFS {
     // window's own contextmenu handler would otherwise swallow right-clicks
     // inside the editor. Both are handled in skin/ and here respectively.
     this.el.addEventListener("contextmenu", (e) => e.stopPropagation(), false);
+    // ...and what that native menu formats goes through BlockNote (./format-input).
+    // Capture: ahead of ProseMirror, which lets these through to the browser.
+    this.el.addEventListener(
+      "beforeinput",
+      (e) => {
+        if (this._editable && this._editor) applyFormatInput(this._editor, e);
+      },
+      true
+    );
   }
 
   /**
