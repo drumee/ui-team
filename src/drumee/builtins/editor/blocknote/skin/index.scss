@@ -84,6 +84,13 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     border-radius: 8px;
     border: 1px solid $note-hairline;
     box-sizing: border-box;
+    // The resting level of a window that is not the active one, as the
+    // players have (player/skin `.player__ui`). The topbar rule above only
+    // lifts the ACTIVE editor to 10000; without a base the note dropped to
+    // `auto` the moment another window took the focus — Share's
+    // window_secure_share does — and sank under the workspace window
+    // (z 1000) it was opened from, until that window closed again.
+    z-index: 1000;
 
     &[data-device="mobile"] {
       width: 100vw;
