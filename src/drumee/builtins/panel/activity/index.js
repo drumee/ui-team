@@ -17,6 +17,8 @@ const { VIEW_FILTERS, buttonLabel: viewFilterLabel } = require('./skeleton/view-
 // Round 3 Phase 2: the real-time chat card. Built to Figma
 // (58208:83650) — see chat-toast.js for the measurements and the rules.
 const { showChatToast, killChatToast } = require('./chat-toast');
+// Mention / task-assignment pop-ups, on the chat card's shell and slot.
+const { toastNotice } = require('./notice-toast');
 // Which chats the user muted. Read once here and refreshed from every
 // mute_set — never per message. Suppresses the card, the OS notification and
 // its sound; the server leaves muted chats out of the feed and the counts.
@@ -2327,6 +2329,9 @@ class __panel_activity extends LetcBox {
     if (!_.isArray(data)) {
       data = [data]
     }
+    // Decides for itself whether this push raises a pop-up (most do not);
+    // the feed refresh below is unchanged either way.
+    toastNotice(this, options.service, data[0], options);
     switch (options.service) {
       case "conference.start":
         this._addMeetingNotification(data[0] || data);
@@ -2393,6 +2398,9 @@ class __panel_activity extends LetcBox {
       // Same debounced refresh as the chat/channel mention path — refreshActivity now
       // also pulls channel.list_notifications, where task mentions live.
       case "task.mention":
+      // "<A> mentioned you in <meeting>" (server room._notify_mentions) — a
+      // meeting_notice row, refreshed like the task mention above.
+      case "room.mention":
       // "<A> edited / commented on <your file>" (server-team
       // lib/file-owner-notify pushes it to the owner only).
       case "activity.file_owner":

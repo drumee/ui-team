@@ -980,4 +980,9 @@ class __activity_item extends LetcBox {
 
 }
 
+// The mention pop-up's Open lands on a file comment exactly as this row does
+// (panel/activity/notice-toast.js). Reached through Kind.waitFor, not a
+// require, so the toast never pulls this widget in on its own.
+__activity_item.openFileOwnerActivity = openFileOwnerActivity;
+
 module.exports = __activity_item;
