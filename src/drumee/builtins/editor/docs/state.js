@@ -15,6 +15,7 @@ const liveComments = require("./live-comments");
 const pendingFocus = require("builtins/editor/pending-focus");
 // Casual's menu bar, cut to what works in Drumee (see _wireMenus).
 const { attachMenuPolicy } = require("builtins/editor/menu-policy");
+const { revealWhenPainted, hideLoading } = require("builtins/editor/loading-reveal");
 const { saveBlob } = require("builtins/editor/export");
 const chrome = require("builtins/editor/chrome");
 // A room counts as changed for this long after its last update: covers the
@@ -212,6 +213,19 @@ class __docs_state extends DrumeeMFS {
   _doMount() {
     if (this._mounted || this._destroyed || !this.el) return;
     this._mounted = 1;
+    // The loading skeleton (docs/skeleton) covers the editor until a page
+    // has painted and the icon font is in — both shells (the co-editing one
+    // never goes through _reactHost).
+    this._cancelReveal = revealWhenPainted(this.el.closest(".editor-docs"), {
+      painted: () => {
+        const pages = this.el && this.el.querySelector(".paged-editor__pages");
+        return (
+          this.el.querySelector('[data-testid="title-bar"]') &&
+          pages &&
+          pages.getBoundingClientRect().height > 40
+        );
+      },
+    });
     if (this._collab) return this._doMountCollab();
     this._loading = 1;
     console.log("[DOCS] _doMount start, hasBuffer=", !!this._pendingBuffer);
@@ -315,8 +329,10 @@ class __docs_state extends DrumeeMFS {
         onReportBug: () => {
           if (this.editor && this.editor.contactSupport) this.editor.contactSupport();
         },
-        onError: (e) =>
-          console.error("[DOCS] onError", e && (e.message || e), e && e.stack),
+        onError: (e) => {
+          console.error("[DOCS] onError", e && (e.message || e), e && e.stack);
+          hideLoading(this.el && this.el.closest(".editor-docs"));
+        },
         author:
           (typeof Visitor !== "undefined" &&
             Visitor.get &&
@@ -1058,10 +1074,6 @@ class __docs_state extends DrumeeMFS {
     // visible area and the new-doc window looked empty.
     this.el.insertBefore(host, this.el.firstChild);
     this._host = host;
-    // The window's "Loading…" label (docs/skeleton) has done its job.
-    const win = this.el.closest(".editor-docs");
-    const loading = win && win.querySelector(".editor-loading");
-    if (loading) loading.remove();
     return host;
   }
 
@@ -1298,8 +1310,10 @@ class __docs_state extends DrumeeMFS {
           this._tidyCollabChrome();
           if (editor && editor.setPeers) editor.setPeers(state ? state.peers : []);
         },
-        onError: (e) =>
-          console.error("[DOCS] collab onError", e && (e.message || e), e && e.stack),
+        onError: (e) => {
+          console.error("[DOCS] collab onError", e && (e.message || e), e && e.stack);
+          hideLoading(this.el && this.el.closest(".editor-docs"));
+        },
       })
       );
     };
@@ -1611,6 +1625,7 @@ class __docs_state extends DrumeeMFS {
     }
     console.log("[DOCS] onBeforeDestroy (state) called");
     this._destroyed = 1;
+    if (this._cancelReveal) this._cancelReveal();
     if (this._saveTimer) {
       clearTimeout(this._saveTimer);
       this._saveTimer = null;

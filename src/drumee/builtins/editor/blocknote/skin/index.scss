@@ -763,23 +763,24 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   }
 
   .drumee-topbar__actions {
-    gap: 0;
-    height: 48px;
+    gap: 4px;
+    height: 32px;
 
-    // Download, gear, Expand, Close: 48px targets, 24px glyphs (Figma).
+    // Download, gear, Expand, Close: 32px round targets, 20px glyphs (the
+    // compact File viewer cluster of the docs / sheet editors).
     .icon {
-      width: 48px;
-      height: 48px;
-      padding: 12px;
+      width: 32px;
+      height: 32px;
+      padding: 6px;
       box-sizing: border-box;
       color: var(--normal-fg-800);
-      border-radius: 8px;
+      border-radius: 50%;
 
       @include note-tooltip(below);
 
       svg {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
       }
 
       &:hover {
@@ -792,9 +793,12 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     }
   }
 
-  .drumee-topbar__menu {
-    width: 48px;
-    height: 48px;
+  // The Expand trigger's wrapper too: left at the widget's 24px, the 32px
+  // trigger overflowed it and sat 4px below its neighbours.
+  .drumee-topbar__menu,
+  .drumee-topbar__snap-wrapper {
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -826,18 +830,20 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   }
 
   .drumee-topbar__actions {
-    height: 40px;
+    gap: 2px;
+    height: 36px;
 
     .icon {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       padding: 8px;
     }
   }
 
-  .drumee-topbar__menu {
-    width: 40px;
-    height: 40px;
+  .drumee-topbar__menu,
+  .drumee-topbar__snap-wrapper {
+    width: 36px;
+    height: 36px;
   }
 
   // Export's submenu: a phone has room on neither side of the gear menu
@@ -854,12 +860,12 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
 
 .editor-blocknote-topbar {
   &__share {
-    height: 40px;
-    padding: 0 20px;
-    gap: 8px;
-    margin-right: 16px;
+    height: 32px;
+    padding: 0 14px;
+    gap: 6px;
+    margin-right: 8px;
     align-items: center;
-    border-radius: 40px;
+    border-radius: 32px;
     background-color: var(--primary-10);
     cursor: pointer;
 
@@ -869,29 +875,29 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   }
 
   &__share-icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     color: var(--normal-fg-10);
     pointer-events: none;
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
     }
   }
 
   &__share-label {
     pointer-events: none;
     white-space: nowrap;
-    @include drumee.typo($line: 19.2px, $size: 16px, $color: var(--normal-fg-10));
-    font-weight: 600;
+    @include drumee.typo($line: 16.8px, $size: 14px, $color: var(--normal-fg-10));
+    font-weight: 500;
   }
 
   // Autosave is silent while all is well.
   &__save-status {
     align-self: center;
     white-space: nowrap;
-    margin-right: 16px;
+    margin-right: 8px;
     @include drumee.typo($line: 16px, $size: 12px, $color: var(--normal-fg-20));
 
     &[data-state="saved"] {
@@ -910,7 +916,8 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
 // 40px.
 .editor-blocknote#{$note-phone} .editor-blocknote-topbar {
   &__share.drumee-box {
-    width: 40px;
+    width: 36px;
+    height: 36px;
     padding: 0;
     margin-right: 4px;
     justify-content: center;

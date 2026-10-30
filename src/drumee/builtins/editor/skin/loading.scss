@@ -1,0 +1,122 @@
+/** ================================================================== *
+#   FILE : /src/drumee/builtins/editor/skin/loading.scss
+#   TYPE : Shared skin — the loading skeleton of the Casual Docs / Casual
+#          Sheets windows (each editor's skeleton draws its own layout
+#          from these bones; builtins/editor/loading-reveal lifts it).
+# ===================================================================**/
+
+.editor-docs,
+.editor-sheet {
+  // The cover: over the whole body, the editor's own shape in placeholder
+  // bones under one soft shimmer, a centred "Loading…" card on top.
+  .editor-loading--skel {
+    --skel-bg: #ffffff;
+    --skel-bone: #eef0f3;
+    --skel-shine: rgba(255, 255, 255, 0.65);
+    --skel-line: #eceef1;
+    --skel-card: #ffffff;
+    --skel-text: #5f6368;
+    --skel-accent: var(--primary-500, #4f46e5);
+
+    position: absolute;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+    background: var(--skel-bg);
+    transition: opacity 0.22s ease;
+
+    &[data-leaving="1"] {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  .editor-loading__bone {
+    position: relative;
+    flex: none;
+    overflow: hidden;
+    border-radius: 4px;
+    background: var(--skel-bone);
+
+    // One shine sweeps every bone in step.
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, var(--skel-shine), transparent);
+      animation: editor-skel-shine 1.4s ease-in-out infinite;
+    }
+  }
+
+  .editor-loading__card {
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px 10px 14px;
+    border-radius: 24px;
+    background: var(--skel-card);
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15), 0 4px 12px rgba(60, 64, 67, 0.12);
+  }
+
+  .editor-loading__spinner {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 2px solid var(--skel-bone);
+    border-top-color: var(--skel-accent);
+    animation: editor-skel-spin 0.8s linear infinite;
+  }
+
+  .editor-loading__card .editor-loading__text {
+    position: static;
+    width: auto;
+    padding: 0;
+    font: 400 13px/16px var(--font-main);
+    color: var(--skel-text);
+    white-space: nowrap;
+  }
+
+  // The Drumee header (Share + actions) hangs below its own row, over the
+  // body: while the cover is up it must stay above it, or the cover cut
+  // the buttons in half.
+  &:has(.editor-loading--skel) .editor__header.container.drumee-topbar {
+    z-index: 2100;
+  }
+
+  // Casual's chrome icons are Material Symbols ligatures: until the font is
+  // in, each one is its NAME ("table", "pivot_table", "history"…) in a
+  // fallback face, and nothing bounds the span. Keep every glyph in its
+  // 1em box, and invisible until loading-reveal marks the font ready.
+  .material-symbols-outlined {
+    max-width: 1em;
+    overflow: hidden;
+  }
+
+  &:not([data-icons="ready"]) .material-symbols-outlined {
+    visibility: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .editor-loading__bone::after,
+    .editor-loading__spinner {
+      animation: none;
+    }
+  }
+}
+
+@keyframes editor-skel-shine {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes editor-skel-spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
