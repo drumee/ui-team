@@ -227,8 +227,8 @@ class __window_secure_share extends mfsInteract {
       // scale are restated at 1 to CANCEL those defaults; without them the
       // panel would slide and shrink at once.
       //
-      // Only when embedded, or floating from a player — that dock slid in from
-      // the right too. Any other standalone window keeps the shrink.
+      // Only when embedded; floating from a player closes at once (below).
+      // Any other standalone window keeps the shrink.
       // Delegates rather than `break`s: only `default:` reaches
       // super.onUiEvent, so breaking out of the switch here would leave the
       // floating window's close button doing nothing at all.
@@ -240,7 +240,11 @@ class __window_secure_share extends mfsInteract {
         if (this._column) {
           return this.triggerHandlers({ service: "close-secure-share-view" });
         }
-        if (this._embedded || this._floating) {
+        // Floating from a player or the Note: gone on the spot, no slide-out
+        // (Duy, 2026-10-30 — the panel flying sideways before it vanished read
+        // as lag). The slide-IN stays (skin). The embedded drawer keeps its slide.
+        if (this._floating) return this.selfDestroy({ now: 1 });
+        if (this._embedded) {
           // `timeout` is NOT optional here, and 0 would not do.
           //
           // goodbye's own `timeout: 2` lives in a PARAMETER DEFAULT, so it
