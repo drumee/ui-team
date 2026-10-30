@@ -7735,6 +7735,13 @@ class __tasks_panel extends LetcBox {
   // Find an attachment record by nid across committed + both pending drafts
   // (to read its origin hub_id — a dragged file may live in another hub).
   _findAttachmentRecord(fileNid) {
+    const l = this._findAttachmentList(fileNid);
+    return l ? l.find((a) => (a.file_nid || a.nid) === fileNid) : null;
+  }
+
+  // The list (task attachments, a pending draft, one comment's files) that
+  // holds fileNid — the set an opened image pages through.
+  _findAttachmentList(fileNid) {
     const lists = [
       this._attachments[this._detailId],
       this._detailDraft && this._detailDraft.pending_files,
@@ -7747,10 +7754,28 @@ class __tasks_panel extends LetcBox {
     ];
     for (const l of lists) {
       if (!Array.isArray(l)) continue;
-      const r = l.find((a) => (a.file_nid || a.nid) === fileNid);
-      if (r) return r;
+      if (l.some((a) => (a.file_nid || a.nid) === fileNid)) return l;
     }
     return null;
+  }
+
+  // The image viewer's prev/next set for an image opened from here. Its own
+  // folder listing can't serve: uploads live in /__chat__/__task__, which
+  // mfs_list_by filters out, and a linked file's folder holds other images
+  // than the task's. Pending entries without a node yet are skipped.
+  _imageSiblings(fileNid, hub) {
+    const l = this._findAttachmentList(fileNid) || [];
+    return l
+      .filter((a) => (a.file_nid || a.nid) && (a.filetype || a.category) === _a.image)
+      .map((a) => ({
+        nid: a.file_nid || a.nid,
+        hub_id: a.hub_id || hub,
+        filename: a.filename,
+        filetype: _a.image,
+        ext: a.extension || a.ext,
+        // Cache key for the viewer's slide URL (getImageUrls reads ptime).
+        ptime: a.mtime || a.ctime,
+      }));
   }
 
   /**
@@ -7866,6 +7891,7 @@ class __tasks_panel extends LetcBox {
         trigger: media,
         radio: _a.on,
       };
+      if (fType === _a.image) preset.siblings = this._imageSiblings(fileNid, hub);
       let app = application(fType, preset);
       if (_.isEmpty(app) || !app.kind) app = { ...app, kind: "props_viewer", media };
       app.style = Wm.getWindowPosition(media);
