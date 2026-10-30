@@ -382,6 +382,7 @@ function uploadCover(ui, file) {
   const dest = ui._saveTarget();
   if (!dest) return;
   closeCoverPopup(ui);
+  showLocalCover(ui, file);
   ui._setStatus("saving");
   // The shared uploader, on a context of its own: called on the window it
   // would wire the window's upload hooks (onUploadEnd & co., which the MFS
@@ -395,6 +396,7 @@ function uploadCover(ui, file) {
     xhr = null;
   }
   if (!xhr) {
+    dropLocalCover(ui);
     ui._setStatus(ui._changed ? "unsaved" : "saved");
     Wm.alert(LOCALE.NOTE_COVER_FAILED);
     return;
@@ -411,13 +413,60 @@ function uploadCover(ui, file) {
     }
     const nid = data && (data.nid || data.id);
     if (!nid) {
+      dropLocalCover(ui);
       ui._setStatus(ui._changed ? "unsaved" : "saved");
       Wm.alert(LOCALE.NOTE_COVER_FAILED);
       return;
     }
+    if (ui._localCover) ui._localCover.nid = `${nid}`;
     ui._reflectInTarget(dest.target, data, { adopt: false });
     ui.updatePage({ cover: { nid: `${nid}`, hub_id: `${data.hub_id || dest.hub_id}` } });
   });
+}
+
+/**
+ * Show the picked image as the cover at once, from the computer's own copy,
+ * while it uploads. Without it the banner stayed empty for the whole upload,
+ * then fetched back the very bytes just sent (a 4 MB PNG: ~10 s up, then
+ * ~2-7 s down). The copy also serves the cover once uploaded (coverSrc), so
+ * this session never downloads it; the next opening reads the server's.
+ * @param {View} ui
+ * @param {File} file
+ */
+function showLocalCover(ui, file) {
+  dropLocalCover(ui, { repaint: false });
+  ui._localCover = { url: URL.createObjectURL(file), nid: null };
+  if (ui.el) ui.el.dataset.cover = "1";
+  // No Change / Remove until the upload has made it a cover.
+  paintSlot(ui, "page-cover", `local|${ui._localCover.url}`, () =>
+    require("./skeleton/cover")(ui, { nid: null }, false)
+  );
+}
+
+/**
+ * Forget the local copy; repaint, unless asked not to, so a failed upload
+ * puts back the cover the note had.
+ * @param {View} ui
+ * @param {{repaint?: Boolean}} [opt]
+ */
+function dropLocalCover(ui, opt = {}) {
+  const local = ui._localCover;
+  if (!local) return;
+  ui._localCover = null;
+  URL.revokeObjectURL(local.url);
+  if (opt.repaint !== false) paint(ui);
+}
+
+/**
+ * The image a cover shows: the local copy while it is being, or has just
+ * been, uploaded in this window; the server's original otherwise.
+ * @param {View} ui
+ * @param {{nid: String, hub_id: String}} cover
+ */
+function coverSrc(ui, cover) {
+  const local = ui._localCover;
+  if (local && local.nid === cover.nid) return local.url;
+  return coverUrl(cover);
 }
 
 /**
@@ -681,6 +730,7 @@ function onUiEvent(ui, cmd, service) {
 function destroy(ui) {
   disarmOutsideClose(ui);
   closeCoverPopup(ui);
+  dropLocalCover(ui, { repaint: false });
 }
 
-module.exports = { paint, onPartReady, onUiEvent, destroy, coverUrl, plainText };
+module.exports = { paint, onPartReady, onUiEvent, destroy, coverUrl, coverSrc, plainText };

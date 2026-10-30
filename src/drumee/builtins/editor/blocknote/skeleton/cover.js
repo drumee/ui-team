@@ -12,12 +12,12 @@
  */
 module.exports = function (ui, cover, editable) {
   const pfx = ui.fig.family;
-  const { coverUrl } = require("../page");
+  const { coverSrc } = require("../page");
   const kids = [
     Skeletons.Element({
       tagName: "img",
       className: `${pfx}__cover-image`,
-      attribute: { src: coverUrl(cover), alt: "", draggable: "false" },
+      attribute: { src: coverSrc(ui, cover), alt: "", draggable: "false" },
     }),
   ];
   if (editable) {
