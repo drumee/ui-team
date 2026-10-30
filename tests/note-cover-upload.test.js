@@ -45,7 +45,7 @@ function loadPage() {
       return {
         uploadFile(file, params) {
           const xhr = { addEventListener: (_, fn) => (xhr.done = fn) };
-          uploads.push({ file, params, xhr });
+          uploads.push({ file, params, xhr, ctx: this });
           return xhr;
         },
       };
@@ -429,5 +429,64 @@ test("a failed upload does not hold the close", () => {
     assert.strictEqual(checkUnsavedWork.call({ _coverUpload: Promise.resolve() }, e), "quit?");
     assert.strictEqual(e.prevented, 1);
     assert.strictEqual(checkUnsavedWork.call({}), undefined);
+  });
+}
+
+// Round 6 (Duy, 2026-10-30): show how far the cover upload is, in the note's
+// save status, instead of a bare "Saving…" for a minute.
+test("the save status shows the cover upload's percentage", () => {
+  const page = loadPage();
+  const part = fileSelectorPart();
+  const states = [];
+  const ui = fakeUi({
+    __fileselector: part,
+    isDestroyed: () => false,
+    _setStatus: (s, p) => states.push(p === undefined ? s : `${s} ${p}`),
+    _reflectInTarget() {},
+    updatePage() {},
+  });
+  page.onUiEvent(ui, {}, "add-cover");
+  uploads.length = 0;
+  states.length = 0;
+  pick(part, png());
+  // The shared uploader wires `onUploadProgress` of the context it runs on.
+  const ctx = uploads[0].ctx;
+  ctx.onUploadProgress({ lengthComputable: true, loaded: 25, total: 100 });
+  ctx.onUploadProgress({ lengthComputable: true, loaded: 25, total: 100 }); // same %: not repainted
+  ctx.onUploadProgress({ lengthComputable: false });
+  ctx.onUploadProgress({ lengthComputable: true, loaded: 100, total: 100 }); // sent, server not answered yet
+  const { xhr } = uploads[0];
+  Object.assign(xhr, { readyState: 4, status: 200, responseText: JSON.stringify({ data: { nid: "n7", hub_id: "hub1" } }) });
+  xhr.done();
+  assert.deepStrictEqual(states, ["uploading 0", "uploading 25", "uploading 99", "saving"]);
+  page.destroy(ui);
+});
+
+{
+  const { sliceFunction } = require("./helpers/slice-method");
+  const SRC = require("node:fs").readFileSync(resolve(ROOT, "src/drumee/builtins/editor/blocknote/index.js"), "utf8");
+  const markDirty = eval(`(${sliceFunction(SRC, "markDirty()")})`);
+
+  test("typing during the upload keeps the percentage on screen", () => {
+    for (const [status, expected] of [["uploading", []], ["saving", []], ["saved", ["unsaved"]]]) {
+      const set = [];
+      global.AUTOSAVE_MS = 0; // a module constant of index.js
+      const self = { _status: status, isViewOnly: () => false, _setStatus: (s) => set.push(s), saveContent() {} };
+      const realTimeout = global.setTimeout;
+      global.setTimeout = () => 0;
+      try {
+        markDirty.call(self);
+      } finally {
+        global.setTimeout = realTimeout;
+      }
+      assert.deepStrictEqual(set, expected, status);
+    }
+  });
+
+  test("every language has the upload percentage label", () => {
+    for (const lang of ["en", "fr", "es", "ru", "zh", "km"]) {
+      const table = require(resolve(ROOT, `locale/${lang}.json`));
+      assert.match(table.UPLOADING_PERCENT || "", /\{0\}%/, lang);
+    }
   });
 }

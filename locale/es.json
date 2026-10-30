@@ -3317,6 +3317,7 @@
   "NOTE_COVER_SIZE_HINT": "Las imágenes de más de 1500 píxeles de ancho funcionan mejor.",
   "NOTE_COVER_NOT_IMAGE": "Elige un archivo de imagen.",
   "NOTE_COVER_FAILED": "No se pudo subir la imagen de portada.",
+  "UPLOADING_PERCENT": "Subiendo... {0}%",
   "NOTE_ADD_A_COMMENT": "Añade un comentario...",
   "NOTE_COMMENT_FAILED": "No se pudo publicar tu comentario.",
   "NOTE_MENTION": "Mencionar a alguien",

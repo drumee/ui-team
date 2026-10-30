@@ -3316,6 +3316,7 @@
   "NOTE_COVER_SIZE_HINT": "រូបភាពទទឹងលើស 1500 ភីកសែលល្អបំផុត។",
   "NOTE_COVER_NOT_IMAGE": "សូមជ្រើសរើសឯកសាររូបភាព។",
   "NOTE_COVER_FAILED": "មិនអាចផ្ទុករូបក្របឡើងបានទេ។",
+  "UPLOADING_PERCENT": "កំពុងផ្ទុកឡើង... {0}%",
   "NOTE_ADD_A_COMMENT": "បន្ថែមមតិ...",
   "NOTE_COMMENT_FAILED": "មិនអាចបង្ហោះមតិរបស់អ្នកបានទេ។",
   "NOTE_MENTION": "លើកឈ្មោះនរណាម្នាក់",
