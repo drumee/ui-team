@@ -1930,6 +1930,7 @@ class settings_billing extends LetcBox {
     const checkout = this.state.checkout || (this.state.checkout = {});
     delete checkout.promo;
     delete checkout.promoError;
+    delete checkout.promoErrorStatus;
     if (!keepCode) checkout.promoCode = "";
   }
 
@@ -1948,6 +1949,7 @@ class settings_billing extends LetcBox {
     checkout.promoCode = code;
     delete checkout.promo;
     delete checkout.promoError;
+    delete checkout.promoErrorStatus;
 
     if (!code) {
       checkout.promoError = LOCALE.PROMO_CODE_INVALID
@@ -1985,6 +1987,7 @@ class settings_billing extends LetcBox {
     const data = res || {};
     if (data.status && data.status !== "OK") {
       checkout.promoError = this._orgIdentError(data.status, data);
+      checkout.promoErrorStatus = data.status;
       this.updateRightPanel();
       return;
     }
@@ -2044,6 +2047,24 @@ class settings_billing extends LetcBox {
     this.tab = TAB_CHECKOUT;
     this.renderContent();
     this._autoApplyPendingOffer().catch(() => {});
+  }
+
+  /**
+   * A code locked to the other billing cycle (TEAM1 on Yearly) is taken out
+   * of the field — the refusal stays on screen — so Proceed buys the yearly
+   * plan at the regular price instead of sending the code and being refused
+   * again. It is kept aside and comes back when the shopper returns to the
+   * cycle it is for.
+   */
+  _parkCycleLockedPromo() {
+    const co = this.state.checkout;
+    if (co.promoErrorStatus === "COUPON_PERIOD_MISMATCH" && co.promoCode) {
+      this._parkedPromo = co.promoCode;
+      co.promoCode = "";
+      this.updateRightPanel();
+    } else if (co.promo) {
+      this._parkedPromo = null;
+    }
   }
 
   /**
@@ -2707,8 +2728,9 @@ class settings_billing extends LetcBox {
           // brings the discount back.
           const co = this.state.checkout;
           const scope = co.promo?.period_scope;
+          if (this._parkedPromo && !co.promoCode) co.promoCode = this._parkedPromo;
           if ((scope && scope !== "all") || (co.promoError && co.promoCode)) {
-            this._applyPromoCode().catch(() => {});
+            this._applyPromoCode().then(() => this._parkCycleLockedPromo()).catch(() => {});
           }
         }
         return false;
