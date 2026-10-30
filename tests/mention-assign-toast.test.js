@@ -331,7 +331,9 @@ test("chat pop-up Open docks the workspace and targets the message (reveal, topi
 
 test("Wm hands the message and the task focus to the folder window", () => {
   const src = read("src/drumee/modules/desk/wm/index.js");
-  assert.match(src, /win\.openTaskDeepLink\(open_task_id, open_task_focus \|\| null\)/);
+  // parseModuleArgs leaves hash values URL-encoded ("comment%3A<id>")
+  assert.match(src, /focus = open_task_focus \? decodeURIComponent\(`\$\{open_task_focus\}`\) : null;/);
+  assert.match(src, /win\.openTaskDeepLink\(open_task_id, focus\);/);
   assert.match(src, /win\.openChatMessage\(message_id, \{\s*fromMeeting: !!\(from_meeting && `\$\{from_meeting\}` !== "0"\),/);
 });
 

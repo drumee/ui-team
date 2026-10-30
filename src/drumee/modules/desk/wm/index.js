@@ -1158,8 +1158,16 @@ class __window_manager extends push {
     // more specific request.
     if (open_task_id && _.isFunction(win.openTaskDeepLink)) {
       // open_task_focus: where in the task the mention is (description or a
-      // comment) — the panel scrolls to it and flashes it.
-      win.openTaskDeepLink(open_task_id, open_task_focus || null);
+      // comment) — the panel scrolls to it and flashes it. Decoded here:
+      // Visitor.parseModuleArgs hands hash values over still URL-encoded, so
+      // "comment:<id>" arrives as "comment%3A<id>".
+      let focus = null;
+      try {
+        focus = open_task_focus ? decodeURIComponent(`${open_task_focus}`) : null;
+      } catch (e) {
+        focus = null;
+      }
+      win.openTaskDeepLink(open_task_id, focus);
     } else if (open_meeting_nid && _.isFunction(win.openMeetingDeepLink)) {
       win.openMeetingDeepLink(open_meeting_nid, open_meeting_stime);
     } else if (activeTab && _.isFunction(win.showFolderTab)) {
