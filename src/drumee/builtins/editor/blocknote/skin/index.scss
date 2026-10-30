@@ -953,6 +953,29 @@ $note-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     -webkit-user-select: text;
   }
 
+  // BlockNote draws italic, underline and strike as bare <em>, <u>, <s> and
+  // leaves their look to the browser defaults — which the app-wide reset
+  // (@drumee/ui-styles lib/reset.css: `em { font-style: inherit }`,
+  // `a, u { text-decoration: none }`) wipes out. The marks were applied and
+  // the toolbar showed them on, but the text looked unchanged (tester,
+  // 2026-10-30). Restated here, for the editor only.
+  .bn-editor {
+    em,
+    i {
+      font-style: italic;
+    }
+
+    u {
+      text-decoration-line: underline;
+    }
+
+    s,
+    del,
+    strike {
+      text-decoration-line: line-through;
+    }
+  }
+
   // The empty-page hint, "Press '/' for commands" (Figma 16px, #84848c,
   // upright). BlockNote draws it as the block's ::after, styled by
   // `.bn-block-content:has(.ProseMirror-trailingBreak:only-child):after`
