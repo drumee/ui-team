@@ -39,7 +39,7 @@ class settings_billing_result extends LetcBox {
       }
       // An offer checkout (TEAM1) can be refused once the card is known —
       // say why instead of a bare "payment failed".
-      this._failReason = offerStatusMessage(this._receipt && this._receipt.status);
+      this._failReason = offerStatusMessage(this._receipt?.status);
     }
     this.feed(require("./skeleton").default(this));
   }

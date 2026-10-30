@@ -55,7 +55,7 @@ async function attachOffer(post) {
   let code = "";
   try { code = localStorage.getItem(KEY) || ""; } catch (e) { return ""; }
   if (!SHAPE.test(code)) return "";
-  const svc = typeof SERVICE !== "undefined" && SERVICE.payment && SERVICE.payment.offer_attach;
+  const svc = typeof SERVICE !== "undefined" && SERVICE.payment?.offer_attach;
   if (!svc) return "";
   let res;
   try {
@@ -63,7 +63,7 @@ async function attachOffer(post) {
   } catch (e) {
     return "";
   }
-  if (!res || !res.status) return "";
+  if (!res?.status) return "";
   try { localStorage.removeItem(KEY); } catch (e) { }
   return res.status === "OK" ? res.code || code : "";
 }
