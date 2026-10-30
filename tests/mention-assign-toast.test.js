@@ -358,7 +358,7 @@ test("meeting chat marks its posts; widget_chat forwards the mark", () => {
 test("tasks panel: focus survives the mount-time path and targets the right element", () => {
   const src = read("src/drumee/builtins/window/tasks/index.js");
   assert.match(src, /this\._openTaskFocus = this\.mget\("open_task_focus"\) \|\| null;/);
-  assert.match(src, /this\.openTaskById\(id, \{ loaded: true, focus \}\);/);
+  assert.match(src, /this\.openTaskById\(id, \{ loaded: true, focus \}\)\.catch\(/);
   assert.match(src, /__comment-row\[data-comment-id="\$\{CSS\.escape\(m\[1\]\)\}"\]/);
   assert.match(src, /__detail-panel \.\$\{pfx\}__desc-field/);
   const folder = read("src/drumee/builtins/window/folder/index.js");

@@ -808,7 +808,9 @@ class __tasks_panel extends LetcBox {
       this._openTaskId = null;
       this._openTaskFocus = null;
       // The rows just landed, so no second fetch unless the task is missing.
-      this.openTaskById(id, { loaded: true, focus });
+      this.openTaskById(id, { loaded: true, focus }).catch((e) =>
+        this.warn("tasks: deep-linked task failed to open", e),
+      );
     }
   }
 
@@ -4865,11 +4867,12 @@ class __tasks_panel extends LetcBox {
   _focusDetailOn(focus, taskId) {
     const pfx = this.fig.family;
     const m = /^comment:(.+)$/.exec(`${focus || ""}`);
-    const sel = m
-      ? `.${pfx}__detail-panel .${pfx}__comment-row[data-comment-id="${CSS.escape(m[1])}"]`
-      : focus === "description"
-        ? `.${pfx}__detail-panel .${pfx}__desc-field`
-        : null;
+    let sel = null;
+    if (m) {
+      sel = `.${pfx}__detail-panel .${pfx}__comment-row[data-comment-id="${CSS.escape(m[1])}"]`;
+    } else if (focus === "description") {
+      sel = `.${pfx}__detail-panel .${pfx}__desc-field`;
+    }
     if (!sel) return null;
     // Comments arrive after the card (comment_list), hence the wait.
     return focusWhenReady(() => {

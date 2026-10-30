@@ -189,6 +189,7 @@ function mentionsMe(model = {}) {
     if (!Array.isArray(ids)) return false;
     return ids.some((id) => id != null && String(id) === String(Visitor.id));
   } catch (e) {
+    // Unreadable mention_ids: the message reads as an ordinary one.
     return false;
   }
 }

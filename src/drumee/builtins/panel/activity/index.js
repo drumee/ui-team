@@ -38,6 +38,7 @@ function chatTopicOf(opt = {}) {
     const id = md && md._topic_id;
     return id ? `${id}` : '';
   } catch (e) {
+    // Unreadable metadata: no topic, so the chat opens on # General.
     return '';
   }
 }

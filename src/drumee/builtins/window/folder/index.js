@@ -5319,7 +5319,8 @@ class __window_folder extends mfsInteract {
       if (this._meetingScanDone) return;
       this._meetingScanDone = 1;
       if (this.isDestroyed && this.isDestroyed()) return;
-      this._refreshMeetingActiveState();
+      // Never rejects (it catches its own failure); the catch is for the lint.
+      this._refreshMeetingActiveState().catch(() => {});
     };
     this._runMeetingScan = run;
     if (typeof window.requestIdleCallback === "function") {
@@ -5336,7 +5337,7 @@ class __window_folder extends mfsInteract {
   _refreshMeetingActiveState() {
     const svc = (SERVICE.channel && SERVICE.channel.messages) || "channel.messages";
     const hub_id = this.mget(_a.hub_id);
-    if (!hub_id) return;
+    if (!hub_id) return Promise.resolve();
     const api = { service: svc, hub_id, order: "desc" };
     const roomNid = this._meetingRoomNid();
     if (roomNid) api.nid = roomNid;
