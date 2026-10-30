@@ -383,6 +383,14 @@ function uploadCover(ui, file) {
   if (!dest) return;
   closeCoverPopup(ui);
   showLocalCover(ui, file);
+  // Until it lands the cover is not in the note: closing the window waits on
+  // this (saveBeforeClose), or the cover went with the window.
+  let landed;
+  ui._coverUpload = new Promise((resolve) => (landed = resolve));
+  const settle = () => {
+    ui._coverUpload = null;
+    landed();
+  };
   ui._setStatus("saving");
   // The shared uploader, on a context of its own: called on the window it
   // would wire the window's upload hooks (onUploadEnd & co., which the MFS
@@ -396,6 +404,7 @@ function uploadCover(ui, file) {
     xhr = null;
   }
   if (!xhr) {
+    settle();
     dropLocalCover(ui);
     ui._setStatus(ui._changed ? "unsaved" : "saved");
     Wm.alert(LOCALE.NOTE_COVER_FAILED);
@@ -413,6 +422,7 @@ function uploadCover(ui, file) {
     }
     const nid = data && (data.nid || data.id);
     if (!nid) {
+      settle();
       dropLocalCover(ui);
       ui._setStatus(ui._changed ? "unsaved" : "saved");
       Wm.alert(LOCALE.NOTE_COVER_FAILED);
@@ -421,6 +431,7 @@ function uploadCover(ui, file) {
     if (ui._localCover) ui._localCover.nid = `${nid}`;
     ui._reflectInTarget(dest.target, data, { adopt: false });
     ui.updatePage({ cover: { nid: `${nid}`, hub_id: `${data.hub_id || dest.hub_id}` } });
+    settle();
   });
 }
 

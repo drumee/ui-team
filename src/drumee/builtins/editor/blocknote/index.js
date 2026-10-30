@@ -542,7 +542,7 @@ class __editor_blocknote extends __player {
    * @returns {String|undefined}
    */
   checkUnsavedWork(e) {
-    if (!this._changed || this._readOnly) return undefined;
+    if ((!this._changed && !this._coverUpload) || this._readOnly) return undefined;
     if (e) {
       e.preventDefault();
       e.returnValue = LOCALE.CONFIRM_QUIT;
@@ -712,6 +712,9 @@ class __editor_blocknote extends __player {
    */
   saveBeforeClose() {
     if (this._readOnly) return Promise.resolve(true);
+    // A cover still uploading is not in the note yet: wait for it, then save
+    // the note with it (./page uploadCover).
+    if (this._coverUpload) return this._coverUpload.then(() => this.saveBeforeClose());
     if (!this._changed && !this._saving) return Promise.resolve(true);
     return new Promise((resolve) => {
       this._closeWaiters = [...(this._closeWaiters || []), resolve];
