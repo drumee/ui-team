@@ -18,6 +18,15 @@ const PAGE = resolve(ROOT, "src/drumee/builtins/editor/blocknote/page.js");
 const POPUP = resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/cover-popup.js");
 const SKELETON = resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/index.js");
 
+// Just enough of ui-core's Skeletons for the cover banner to be built;
+// fakeUi() puts it back, as one test swaps in its own.
+const node = (kind) => (opt) => ({ kind, ...opt });
+const SKELETONS = {
+  Element: node("element"),
+  Note: node("note"),
+  Box: { X: node("box"), Y: node("box") },
+};
+
 const uploads = [];
 // libs/over-limit is a webpack alias; page.js requires it lazily, at the
 // click, so the stub has to outlive loadPage().
@@ -35,8 +44,9 @@ function loadPage() {
     if (req === "@drumee/ui-essentials") {
       return {
         uploadFile(file, params) {
-          uploads.push({ file, params });
-          return { addEventListener() {} };
+          const xhr = { addEventListener: (_, fn) => (xhr.done = fn) };
+          uploads.push({ file, params, xhr });
+          return xhr;
         },
       };
     }
@@ -72,7 +82,9 @@ function fileSelectorPart() {
 }
 
 function fakeUi(extra = {}) {
+  global.Skeletons = SKELETONS;
   return {
+    fig: { family: "editor-blocknote" },
     _saveTarget: () => ({ hub_id: "hub1", pid: "folder1", target: null }),
     _setStatus() {},
     _withNode: (fn) => fn(),
@@ -81,6 +93,10 @@ function fakeUi(extra = {}) {
     ensurePart: () => new Promise(() => {}), // never resolves, like a missing part
     ...extra,
   };
+}
+
+function png() {
+  return new File(["x"], "a.png", { type: "image/png" });
 }
 
 function pick(part, file) {
@@ -163,7 +179,7 @@ test("picking an image uploads it next to the note", () => {
   const ui = fakeUi({ __fileselector: part });
   assert.strictEqual(page.onPartReady(ui, part, "fileselector"), true);
   page.onUiEvent(ui, {}, "add-cover");
-  const file = { name: "a.png", type: "image/png" };
+  const file = png();
   uploads.length = 0;
   pick(part, file);
   assert.strictEqual(uploads.length, 1);
@@ -181,7 +197,7 @@ test("a brand-new note is saved first, after the pick, then uploads", () => {
   assert.strictEqual(part.input.clicks, 1);
   assert.strictEqual(afterSave, null);
   uploads.length = 0;
-  pick(part, { name: "a.png", type: "image/png" });
+  pick(part, png());
   assert.strictEqual(uploads.length, 0);
   afterSave();
   assert.strictEqual(uploads.length, 1);
@@ -210,4 +226,111 @@ test("the cover is read from the app endpoint, whatever the page URL looks like"
   const src = require("node:fs").readFileSync(PAGE, "utf8");
   const body = src.slice(src.indexOf("function coverUrl"), src.indexOf("function coverUrl") + 200);
   assert.doesNotMatch(body, /location\.href/);
+});
+
+// Round 4 (Duy, 2026-10-30): a 4 MB cover "loads for a very long time". The
+// banner stayed empty for the whole upload, then downloaded back the bytes it
+// had just sent. The picked image now shows at once, from the computer's copy,
+// and keeps serving the cover in this window once uploaded.
+function coverPart() {
+  const part = { fed: [], isDestroyed: () => false };
+  part.feed = (content) => part.fed.push(content);
+  return part;
+}
+
+function srcOf(skeleton) {
+  const img = skeleton.kids.find((k) => k.tagName === "img");
+  return img.attribute.src;
+}
+
+const tick = () => new Promise((r) => setImmediate(r));
+
+test("the picked image shows as the cover before the upload ends", async () => {
+  const page = loadPage();
+  const part = fileSelectorPart();
+  const banner = coverPart();
+  const ui = fakeUi({ __fileselector: part, ensurePart: async (pn) => (pn === "page-cover" ? banner : null) });
+  page.onUiEvent(ui, {}, "add-cover");
+  uploads.length = 0;
+  pick(part, png());
+  await tick();
+  assert.strictEqual(uploads.length, 1);
+  assert.strictEqual(banner.fed.length, 1);
+  assert.match(srcOf(banner.fed[0]), /^blob:/);
+  // No Change / Remove on a cover that is not one yet.
+  assert.strictEqual(banner.fed[0].kids.length, 1);
+  page.destroy(ui);
+});
+
+test("once uploaded, the cover keeps the local copy — no download", async () => {
+  const page = loadPage();
+  const part = fileSelectorPart();
+  let saved = null;
+  const ui = fakeUi({
+    __fileselector: part,
+    ensurePart: async () => coverPart(),
+    _reflectInTarget() {},
+    updatePage: (change) => (saved = change),
+  });
+  page.onUiEvent(ui, {}, "add-cover");
+  uploads.length = 0;
+  pick(part, png());
+  const { xhr } = uploads[0];
+  Object.assign(xhr, { readyState: 4, status: 200, responseText: JSON.stringify({ data: { nid: "n7", hub_id: "hub1" } }) });
+  xhr.done();
+  assert.deepStrictEqual(saved, { cover: { nid: "n7", hub_id: "hub1" } });
+  assert.match(page.coverSrc(ui, saved.cover), /^blob:/);
+  // Any other cover is read from the server, as before.
+  const prev = global.bootstrap;
+  global.bootstrap = () => ({ endpoint: "/-/" });
+  try {
+    assert.strictEqual(page.coverSrc(ui, { nid: "n8", hub_id: "hub1" }), "/-/file/orig/n8/hub1");
+  } finally {
+    global.bootstrap = prev;
+  }
+  page.destroy(ui);
+});
+
+test("a failed upload lets go of the local copy", () => {
+  const page = loadPage();
+  const part = fileSelectorPart();
+  const revoked = [];
+  const revoke = URL.revokeObjectURL;
+  const prevWm = global.Wm;
+  const prevLocale = global.LOCALE;
+  URL.revokeObjectURL = (u) => revoked.push(u);
+  global.Wm = { alert() {} };
+  global.LOCALE = {};
+  try {
+    const ui = fakeUi({ __fileselector: part, el: { dataset: {} }, isDestroyed: () => true });
+    page.onUiEvent(ui, {}, "add-cover");
+    uploads.length = 0;
+    pick(part, png());
+    const url = ui._localCover.url;
+    assert.strictEqual(ui.el.dataset.cover, "1");
+    const { xhr } = uploads[0];
+    Object.assign(xhr, { readyState: 4, status: 500, responseText: "" });
+    xhr.done();
+    assert.strictEqual(ui._localCover, null);
+    assert.deepStrictEqual(revoked, [url]);
+  } finally {
+    URL.revokeObjectURL = revoke;
+    global.Wm = prevWm;
+    global.LOCALE = prevLocale;
+  }
+});
+
+test("closing the note lets go of the local copy", () => {
+  const page = loadPage();
+  const revoked = [];
+  const revoke = URL.revokeObjectURL;
+  URL.revokeObjectURL = (u) => revoked.push(u);
+  try {
+    const ui = fakeUi({ _localCover: { url: "blob:x", nid: "n7" } });
+    page.destroy(ui);
+    assert.deepStrictEqual(revoked, ["blob:x"]);
+    assert.strictEqual(ui._localCover, null);
+  } finally {
+    URL.revokeObjectURL = revoke;
+  }
 });
