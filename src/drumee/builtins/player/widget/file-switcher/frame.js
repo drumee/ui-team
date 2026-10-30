@@ -7,6 +7,13 @@
  * meaning the root is returned as is: mobile (no room), the DMZ (a share
  * page has no desk to browse), or a node without a parent folder.
  */
+// The frame's own layout (frame width, the stage's flex:1) lives in the
+// switcher skin. The panel is a lazy kind, so loaded only from index.js the
+// skin arrived with the panel's chunk — until then the stage shrank to its
+// content and the player's header (title, Share, icons) piled up at the
+// left. Load it with the frame, which renders in the player's first paint.
+require("./skin");
+
 function enabled(ui) {
   if (Visitor.isMobile && Visitor.isMobile()) return false;
   if (Visitor.inDmz) return false;
