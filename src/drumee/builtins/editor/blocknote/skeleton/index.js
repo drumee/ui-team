@@ -83,6 +83,16 @@ function __skl_editor_blocknote(_ui_) {
         kids: [
           slot("page-cover", "cover-slot"),
           Skeletons.Wrapper.Y({ className: `${pfx}__cover-popup-wrapper`, name: "cover-popup" }),
+          // The cover's file picker, mounted for the window's lifetime so both
+          // "Add cover" and the popup's Upload open it inside the click.
+          // Skeletons.FileSelector forces its own part name, "fileselector",
+          // over any sys_pn given here — ../page reaches it by that name.
+          Skeletons.FileSelector({
+            className: `${pfx}__cover-file`,
+            accept: "image/*",
+            bubble: 0,
+            partHandler: _ui_,
+          }),
         ],
       }),
       head,

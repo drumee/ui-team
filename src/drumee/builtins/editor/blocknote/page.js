@@ -336,6 +336,27 @@ function coverInput(part) {
   return part.el.tagName === "INPUT" ? part.el : part.el.querySelector("input[type=file]");
 }
 
+/**
+ * Open the OS file picker for a cover — the same path as the folder's
+ * "+ New → From device" (Wm.handleUpload): refuse while the org is read-only,
+ * then FileSelector.open() inside the user's click. A browser opens its file
+ * picker only during the gesture, and a click() deferred past it is dropped
+ * without a word (Safari is the strictest), so this never waits on anything.
+ *
+ * A brand-new note has no node yet; it is saved once a file is picked, not
+ * before the picker opens.
+ * @param {View} ui
+ */
+function pickCoverFile(ui) {
+  if (require("libs/over-limit").guardWrite("write")) return;
+  const selector = ui.__fileselector;
+  if (!coverInput(selector)) return;
+  selector.open((e) => {
+    const file = e.target && e.target.files && e.target.files[0];
+    if (file) ui._withNode(() => uploadCover(ui, file));
+  });
+}
+
 function closeCoverPopup(ui) {
   if (ui._onPaste) {
     document.removeEventListener("paste", ui._onPaste, true);
@@ -560,18 +581,10 @@ function onPartReady(ui, child, pn) {
       });
       return true;
 
-    // The cover popup's file input. The name is ui-core's, not ours: the
-    // FileSelector skeleton overwrites sys_pn with it. The listener sits on
-    // the wrapper — the <input> is written in the widget's own onDomRefresh,
-    // which may not have run yet — and `change` bubbles up to it.
+    // The cover's file input (skeleton/index). The name is ui-core's, not
+    // ours: the FileSelector skeleton overwrites sys_pn with it. Nothing to
+    // wire — pickCoverFile hands the picked file over through open().
     case "fileselector":
-      child.el.addEventListener("change", (e) => {
-        const input = e.target;
-        const file = input && input.files && input.files[0];
-        if (file) uploadCover(ui, file);
-        // Picking the same image again must fire `change` again.
-        if (input) input.value = "";
-      });
       return true;
 
     case "comment-entry":
@@ -623,7 +636,14 @@ function onUiEvent(ui, cmd, service) {
       renderEmojis(ui);
       return true;
 
+    // Add cover goes straight to the file picker, like "+ New → From device";
+    // the popup (paste, size hint) is kept for changing a cover already there.
     case "add-cover":
+      if (!ui.canEditNote()) return true;
+      closePopups(ui);
+      pickCoverFile(ui);
+      return true;
+
     case "change-cover":
       if (ui.canEditNote()) ui._withNode(() => openCoverPopup(ui));
       return true;
@@ -633,18 +653,10 @@ function onUiEvent(ui, cmd, service) {
       ui.updatePage({ cover: null });
       return true;
 
-    // Synchronously while the popup is up, inside the click: a browser opens
-    // its file picker only during the user's gesture, and a click() deferred
-    // past it is dropped without a word (Safari is the strictest).
-    case "pick-cover-file": {
-      const input = coverInput(ui.__fileselector);
-      if (input) input.click();
-      else ui.ensurePart("fileselector").then((p) => {
-        const late = coverInput(p);
-        if (late) late.click();
-      });
+    // The popup's Upload: the same picker, synchronously inside the click.
+    case "pick-cover-file":
+      pickCoverFile(ui);
       return true;
-    }
 
     case "add-comment":
       ui._commentsOpen = 1;
