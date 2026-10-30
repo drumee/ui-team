@@ -2937,6 +2937,9 @@ class __widget_chat extends LetcBox {
         }
         // …and topic_id to a folder chat topic (metadata._topic_id).
         this._withTopic(api);
+        // Written in a live call's chat panel (window/meeting): the server
+        // marks the push so a recipient's pop-up can bring them into the call.
+        if (this.mget("from_meeting")) api.from_meeting = 1;
         break;
 
       case _a.privateRoom:

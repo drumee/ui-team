@@ -295,3 +295,110 @@ test("the item widget exposes its file-comment opener for the pop-up", () => {
   const src = read("src/drumee/builtins/panel/activity/widget/item/index.js");
   assert.match(src, /__activity_item\.openFileOwnerActivity = openFileOwnerActivity;/);
 });
+
+// ---------------------------------------------------------------- round 2 (Duy 10-30)
+test("task notices carry the folder/workspace chip from the server", () => {
+  const a = noticeFor("task.assigned", { hub_id: "h1", task_id: 1, title: "T" }, { ...SENDER, folder_name: "Design" });
+  assert.strictEqual(a.model.folder_name, "Design");
+  const m = noticeFor("task.mention", { hub_id: "h1", task_id: 1, title: "T" }, { ...SENDER, kind: "mention", folder_name: "Acme" });
+  assert.strictEqual(m.model.folder_name, "Acme");
+  appended.length = 0;
+  toastNotice(host(), "task.mention", { hub_id: "h1", task_id: 1, title: "T" }, { ...SENDER, kind: "mention", folder_name: "Acme" });
+  const chip = find(appended[0].tree, (n) => n.className === "panel-activity-toast__chip");
+  assert.strictEqual(chip.content, "Acme");
+  assert.strictEqual(chip.attrOpt["data-empty"], "0");
+});
+
+test("task mention opens the card ON the mention (comment or description)", () => {
+  const d = { hub_id: "h1", nid: "f1", task_id: 7, title: "T" };
+  const c = noticeFor("task.mention", d, { ...SENDER, kind: "mention", focus: "comment:abc123" });
+  assert.match(c.url, /open_task_id=7&open_task_focus=comment%3Aabc123&ts=\d+$/);
+  const desc = noticeFor("task.mention", d, { ...SENDER, kind: "mention", focus: "description" });
+  assert.match(desc.url, /open_task_focus=description&/);
+  const none = noticeFor("task.mention", d, { ...SENDER, kind: "mention" });
+  assert.doesNotMatch(none.url, /open_task_focus/);
+});
+
+test("chat pop-up Open docks the workspace and targets the message (reveal, topic, call)", () => {
+  const src = read("src/drumee/builtins/panel/activity/index.js");
+  const at = src.indexOf("} else if (nid) {");
+  const body = src.slice(at, src.indexOf("} else {", at));
+  assert.match(body, /\/reveal\/\?hub_id=\$\{hub_id\}&nid=\$\{nid\}&filetype=folder&pid=0&activeTab=\$\{_a\.chat\}&message_id=\$\{message_id\}/);
+  assert.doesNotMatch(body, /\/open\/\?/);
+  assert.match(body, /if \(topicId\) url \+= `&topic_id=\$\{encodeURIComponent\(topicId\)\}`/);
+  assert.match(body, /if \(opt\.from_meeting\) url \+= `&from_meeting=1`/);
+});
+
+test("Wm hands the message and the task focus to the folder window", () => {
+  const src = read("src/drumee/modules/desk/wm/index.js");
+  assert.match(src, /win\.openTaskDeepLink\(open_task_id, open_task_focus \|\| null\)/);
+  assert.match(src, /win\.openChatMessage\(message_id, \{\s*fromMeeting: !!\(from_meeting && `\$\{from_meeting\}` !== "0"\),/);
+});
+
+test("folder window: a call is joined only when it is live and no other call is up", () => {
+  const src = read("src/drumee/builtins/window/folder/index.js");
+  const at = src.indexOf("  async _joinLiveMeeting() {");
+  const body = src.slice(at, src.indexOf("\n  }\n", at));
+  // other call → no join; then the live check BEFORE launching
+  const other = body.indexOf('Wm.getItemByKind("window_connect")');
+  const live = body.indexOf("await this._refreshMeetingActiveState();");
+  const gate = body.indexOf("if (!this._meetingActive");
+  const launch = body.indexOf("this._launchMeetingStandalone();");
+  assert.ok(other > 0 && other < live && live < gate && gate < launch, "order: other call, live check, gate, launch");
+  assert.match(src, /\/\/ Returned so a caller can wait for the answer \(openChatMessage\)\.\n\s*return Promise\.resolve\(\)/);
+});
+
+test("meeting chat marks its posts; widget_chat forwards the mark", () => {
+  assert.match(read("src/drumee/builtins/window/meeting/skeleton/index.js"), /from_meeting: isTeamChannel \? 1 : 0,/);
+  assert.match(read("src/drumee/builtins/widget/chat/index.js"), /if \(this\.mget\("from_meeting"\)\) api\.from_meeting = 1;/);
+});
+
+test("tasks panel: focus survives the mount-time path and targets the right element", () => {
+  const src = read("src/drumee/builtins/window/tasks/index.js");
+  assert.match(src, /this\._openTaskFocus = this\.mget\("open_task_focus"\) \|\| null;/);
+  assert.match(src, /this\.openTaskById\(id, \{ loaded: true, focus \}\);/);
+  assert.match(src, /__comment-row\[data-comment-id="\$\{CSS\.escape\(m\[1\]\)\}"\]/);
+  assert.match(src, /__detail-panel \.\$\{pfx\}__desc-field/);
+  const folder = read("src/drumee/builtins/window/folder/index.js");
+  assert.match(folder, /open_task_focus: this\.mget\("open_task_focus"\),/);
+});
+
+// ---------------------------------------------------------------- libs/notice-focus
+test("notice-focus: waits for the target, scrolls ITS scroller, flashes, then clears", async () => {
+  const Module = require("node:module");
+  const realLoad = Module._load;
+  Module._load = function (request, ...rest) {
+    // The stylesheet is webpack's to load, not node's.
+    if (/\.scss$/.test(request)) return {};
+    return realLoad.call(this, request, ...rest);
+  };
+  global.window = global.window || {};
+  window.matchMedia = () => ({ matches: false });
+  const scrolled = [];
+  const scroller = {
+    parentElement: null, scrollHeight: 1000, clientHeight: 200, scrollTop: 0,
+    getBoundingClientRect: () => ({ top: 100, height: 200 }),
+    scrollTo: (o) => scrolled.push(o),
+  };
+  global.getComputedStyle = (el) => ({ overflowY: el === scroller ? "auto" : "visible" });
+  global.document = { body: {} };
+  const attrs = {};
+  const el = {
+    isConnected: true, parentElement: scroller,
+    getBoundingClientRect: () => ({ top: 700, height: 40 }),
+    setAttribute: (k, v) => { attrs[k] = v; },
+    removeAttribute: (k) => { delete attrs[k]; },
+  };
+  let calls = 0;
+  const nf = require(resolve(ROOT, "src/drumee/libs/notice-focus/index.js"));
+  Module._load = realLoad;
+  const got = await nf.focusWhenReady(() => (++calls < 3 ? null : el), { timeout: 2000 });
+  assert.strictEqual(got, el);
+  assert.ok(calls >= 3, "polled until present");
+  assert.strictEqual(attrs["data-notice-focus"], "1");
+  // centre: offset 700-100+0 = 600, minus (200-40)/2 = 80 → 520
+  assert.deepStrictEqual(scrolled[0], { top: 520, behavior: "smooth" });
+  assert.strictEqual(await nf.focusWhenReady(() => null, { timeout: 0 }), null);
+  await new Promise((r) => setTimeout(r, 2600));
+  assert.strictEqual(attrs["data-notice-focus"], undefined, "flash clears");
+});
