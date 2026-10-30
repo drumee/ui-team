@@ -312,6 +312,7 @@ class __sheet_state extends DrumeeMFS {
           // stays null in this version). Keep it for Save's live getSnapshot().
           this._apiHandle = api;
           this._ready = 1;
+          this._hideLoading();
           this._nudgeResize();
           this._setUniverUser(api);
           this._grantWorkbookPermissions(api);
@@ -339,6 +340,7 @@ class __sheet_state extends DrumeeMFS {
         },
         onError: (e) => {
           this.warn("CasualSheets error", e);
+          this._hideLoading();
         },
       })
     );
@@ -694,6 +696,7 @@ class __sheet_state extends DrumeeMFS {
 
   onBeforeDestroy() {
     this._destroyed = 1;
+    clearTimeout(this._loadingFallback);
     try {
       if (this._menuPolicy) this._menuPolicy();
     } catch (e) {
@@ -950,11 +953,30 @@ class __sheet_state extends DrumeeMFS {
     host.className = "sheet-state__react-host";
     this.el.insertBefore(host, this.el.firstChild);
     this._host = host;
-    // The window's "Loading…" label (sheet/skeleton) has done its job.
-    const win = this.el.closest(".editor-sheet");
-    const loading = win && win.querySelector(".editor-loading");
-    if (loading) loading.remove();
+    // The loading skeleton (sheet/skeleton) stays over the editor until it
+    // is ready: removed here, it let Casual's first, half-styled render show
+    // (stray unstyled labels, a white flash). Never longer than 20s, so a
+    // mount that never reports ready cannot hide the sheet for good.
+    clearTimeout(this._loadingFallback);
+    this._loadingFallback = setTimeout(() => this._hideLoading(), 20000);
     return host;
+  }
+
+  /**
+   * Fade the window's loading skeleton out, once the grid has had a frame to
+   * paint underneath it.
+   */
+  _hideLoading() {
+    clearTimeout(this._loadingFallback);
+    const win = this.el && this.el.closest(".editor-sheet");
+    const loading = win && win.querySelector(".editor-loading");
+    if (!loading || loading.dataset.leaving) return;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        loading.dataset.leaving = "1";
+        setTimeout(() => loading.remove(), 240);
+      })
+    );
   }
 }
 
