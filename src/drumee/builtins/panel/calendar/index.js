@@ -32,6 +32,7 @@ const {
 } = require("./skeleton/helpers");
 const { armItemsReady, markItemsReady } = require("libs/items-ready");
 const { onMeetingsChanged } = require("libs/meetings-changed");
+const { onTasksChanged } = require("libs/tasks-changed");
 // The modal foot's action buttons spin while their write is in flight.
 const { withButtonBusy } = require("libs/button-busy");
 const { modalKids } = require("./skeleton");
@@ -81,6 +82,9 @@ class __calendar_main extends LetcBox {
     // A meeting written from another screen in THIS tab: room.* pushes skip
     // the writer's socket, so this is the only word that reaches us.
     this._offMeetingsChanged = onMeetingsChanged(() => this._onMeetingsChanged());
+    // Same for a task written from the Tasks panel in THIS tab (create form,
+    // detail panel's Assignee/dates): task.* pushes skip the writer's socket.
+    this._offTasksChanged = onTasksChanged(() => this._onTasksChanged());
 
     // Month, unless the entry point NAMED a view: the Daily Reminder card's
     // meetings tile asks for today in `day` view. Validated against VIEW_KEYS,
@@ -124,6 +128,7 @@ class __calendar_main extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     if (this._offMeetingsChanged) this._offMeetingsChanged();
+    if (this._offTasksChanged) this._offTasksChanged();
     // The dropdown dismisser lives on `document`, so it outlives this widget
     // unless it is taken down here.
     this._unbindMenuDismiss();
@@ -685,6 +690,17 @@ class __calendar_main extends LetcBox {
    * modal is open (_scheduleReload).
    */
   _onMeetingsChanged() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this._scheduleReload();
+  }
+
+  /**
+   * A task was created or edited from the Tasks panel in this tab
+   * (libs/tasks-changed) — e.g. its user assigned themselves. Same answer as
+   * a task.* push: one debounced re-read (_scheduleReload), which also
+   * coalesces the detail panel's parallel update + update_assignee.
+   */
+  _onTasksChanged() {
     if (this.isDestroyed && this.isDestroyed()) return;
     this._scheduleReload();
   }
