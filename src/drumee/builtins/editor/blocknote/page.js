@@ -404,10 +404,13 @@ function uploadCover(ui, file) {
  * rendition (`slide`) is 1024px wide, and the banner spans the window — it
  * came out visibly soft. The popup asks for images wider than 1500px for the
  * same reason.
+ *
+ * Built by the shared editor/content-url (the app's endpoint), never from
+ * location: the app also answers at the bare host (`https://team.drumee.in/#…`,
+ * no `/-/`) and with a query, and a location-built URL 404'd in both.
  */
 function coverUrl(cover) {
-  const base = location.href.split("#")[0].replace(/\/+$/, "");
-  return `${base}/file/orig/${cover.nid}/${cover.hub_id}`;
+  return require("../content-url").contentUrl(null, { nid: cover.nid, hub_id: cover.hub_id });
 }
 
 // ---------------------------------------------------------------------------

@@ -47,3 +47,18 @@ test("the shared share widget is untouched by this fix: players still float the 
   const share = read("src/drumee/builtins/player/widget/share/index.js");
   assert.match(share, /service: "secure-share", floating: 1/);
 });
+
+// Round 2 (Duy, 2026-10-30): closing the floating panel slid it sideways
+// before it vanished. It now goes on the spot; the folder's embedded drawer
+// keeps its slide.
+test("closing the floating secure-share panel has no slide-out", () => {
+  const src = read("src/drumee/builtins/window/secure-share/index.js");
+  const at = src.indexOf("case _e.close:");
+  const body = src.slice(at, src.indexOf("return super.onUiEvent", at));
+  assert.match(body, /if \(this\._floating\) return this\.selfDestroy\(\{ now: 1 \}\);/);
+  // The slide (xPercent tween) is reached only by the embedded drawer.
+  const floatAt = body.indexOf("this._floating");
+  const embAt = body.indexOf("if (this._embedded)");
+  const slideAt = body.indexOf("xPercent: 100");
+  assert.ok(floatAt > 0 && embAt > floatAt && slideAt > embAt);
+});
