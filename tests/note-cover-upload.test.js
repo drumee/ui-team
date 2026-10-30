@@ -128,3 +128,23 @@ test("the old part name is gone from the page module", () => {
   const src = require("node:fs").readFileSync(PAGE, "utf8");
   assert.doesNotMatch(src, /"cover-file"/);
 });
+
+// Round 2 (Duy, 2026-10-30): the cover uploaded but showed as a broken image.
+// The app also answers at the bare host (`https://team.drumee.in/#/…`, no
+// `/-/`), and a URL built from location then pointed at `/file/orig/…` — 404.
+test("the cover is read from the app endpoint, whatever the page URL looks like", () => {
+  const page = loadPage();
+  const prev = global.bootstrap;
+  try {
+    global.bootstrap = () => ({ endpoint: "/-/" });
+    assert.strictEqual(page.coverUrl({ nid: "n1", hub_id: "h1" }), "/-/file/orig/n1/h1");
+    // A dmz visitor's share key rides along, as on every other file read.
+    global.bootstrap = () => ({ endpoint: "/-/", keysel: "k9" });
+    assert.strictEqual(page.coverUrl({ nid: "n1", hub_id: "h1" }), "/-/file/orig/n1/h1?keysel=k9");
+  } finally {
+    global.bootstrap = prev;
+  }
+  const src = require("node:fs").readFileSync(PAGE, "utf8");
+  const body = src.slice(src.indexOf("function coverUrl"), src.indexOf("function coverUrl") + 200);
+  assert.doesNotMatch(body, /location\.href/);
+});
