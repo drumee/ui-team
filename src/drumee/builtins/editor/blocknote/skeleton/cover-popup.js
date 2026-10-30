@@ -29,14 +29,8 @@ module.exports = function (ui) {
           Skeletons.Note({ className: `${pfx}__cover-upload-label`, content: LOCALE.UPLOAD_FILE }),
         ],
       }),
-      // Skeletons.FileSelector forces its own part name, "fileselector", over
-      // any sys_pn given here — ../page reaches it by that name.
-      Skeletons.FileSelector({
-        className: `${pfx}__cover-file`,
-        accept: "image/*",
-        bubble: 0,
-        partHandler: ui,
-      }),
+      // The file input itself is not here: it stays mounted in the cover row
+      // (./index) so "Add cover" can open it without this popup.
       Skeletons.Box.Y({
         className: `${pfx}__cover-hints`,
         kids: [

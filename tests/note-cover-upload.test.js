@@ -1,4 +1,6 @@
 // Add cover ▸ Upload file opens the computer's file picker (tester, 2026-10-30).
+// Round 3 (2026-10-30): Add cover itself opens the picker, the way the
+// folder's "+ New → From device" does (Wm.handleUpload → FileSelector.open).
 //
 // Skeletons.FileSelector (ui-core) writes its own part name, "fileselector",
 // over the sys_pn it is given. The cover popup named its input "cover-file",
@@ -14,8 +16,19 @@ const { resolve } = require("node:path");
 const ROOT = resolve(__dirname, "..");
 const PAGE = resolve(ROOT, "src/drumee/builtins/editor/blocknote/page.js");
 const POPUP = resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/cover-popup.js");
+const SKELETON = resolve(ROOT, "src/drumee/builtins/editor/blocknote/skeleton/index.js");
 
 const uploads = [];
+// libs/over-limit is a webpack alias; page.js requires it lazily, at the
+// click, so the stub has to outlive loadPage().
+const overLimit = { locked: false, guardWrite: () => overLimit.locked };
+{
+  const orig = Module._load;
+  Module._load = function (req, ...rest) {
+    if (req === "libs/over-limit") return overLimit;
+    return orig.call(this, req, ...rest);
+  };
+}
 function loadPage() {
   const orig = Module._load;
   Module._load = function (req, ...rest) {
@@ -37,30 +50,45 @@ function loadPage() {
   }
 }
 
-// An <input type=file> inside the FileSelector's wrapper <div>.
+// ui-core's FileSelector: an <input type=file> inside a wrapper <div>, and
+// open(handler), which clears the input, arms onchange and clicks it.
 function fileSelectorPart() {
-  const input = { tagName: "INPUT", value: "C:\\fakepath\\a.png", files: [], clicks: 0 };
+  const input = { tagName: "INPUT", value: "C:\\fakepath\\a.png", files: [], clicks: 0, onchange: null };
   input.click = () => input.clicks++;
-  const listeners = {};
   const el = {
     tagName: "DIV",
     querySelector: (sel) => (/input/.test(sel) ? input : null),
-    addEventListener: (type, fn) => (listeners[type] = fn),
   };
-  return { el, input, listeners, isDestroyed: () => false };
+  const part = { el, input, isDestroyed: () => false };
+  part.open = (handler) => {
+    input.onchange = (e) => {
+      handler(e);
+      input.onchange = null;
+    };
+    input.value = "";
+    input.click();
+  };
+  return part;
 }
 
 function fakeUi(extra = {}) {
   return {
     _saveTarget: () => ({ hub_id: "hub1", pid: "folder1", target: null }),
     _setStatus() {},
+    _withNode: (fn) => fn(),
+    canEditNote: () => true,
     warn() {},
     ensurePart: () => new Promise(() => {}), // never resolves, like a missing part
     ...extra,
   };
 }
 
-test("the popup's FileSelector carries no sys_pn of its own (ui-core overwrites it)", () => {
+function pick(part, file) {
+  part.input.files = [file];
+  part.input.onchange({ target: part.input });
+}
+
+test("the cover popup carries no FileSelector; the editor's cover row does", () => {
   global.LOCALE = new Proxy({}, { get: (_t, k) => String(k) });
   const seen = [];
   global.Skeletons = {
@@ -71,57 +99,92 @@ test("the popup's FileSelector carries no sys_pn of its own (ui-core overwrites 
   };
   delete require.cache[POPUP];
   require(POPUP)({ fig: { family: "editor-blocknote" }, page: () => ({}) });
-  assert.strictEqual(seen.length, 1);
-  assert.strictEqual(seen[0].sys_pn, undefined);
-  assert.strictEqual(seen[0].accept, "image/*");
+  assert.strictEqual(seen.length, 0);
+  const src = require("node:fs").readFileSync(SKELETON, "utf8");
+  const sel = src.slice(src.indexOf("Skeletons.FileSelector("));
+  assert.match(sel.slice(0, 200), /accept: "image\/\*"/);
+  // ui-core overwrites any sys_pn with "fileselector".
+  assert.doesNotMatch(sel.slice(0, 200), /sys_pn/);
 });
 
-test("Upload file clicks the input at once, inside the user's click", () => {
+for (const service of ["add-cover", "pick-cover-file"]) {
+  test(`${service} opens the file picker at once, inside the user's click`, () => {
+    const page = loadPage();
+    const part = fileSelectorPart();
+    const ui = fakeUi({ __fileselector: part });
+    assert.strictEqual(page.onUiEvent(ui, {}, service), true);
+    // Synchronous: a click() deferred past the gesture opens no picker.
+    assert.strictEqual(part.input.clicks, 1);
+    assert.strictEqual(part.input.value, "", "the same file can be picked again");
+  });
+}
+
+test("add-cover opens no popup on the way", () => {
   const page = loadPage();
   const part = fileSelectorPart();
-  const ui = fakeUi({ __fileselector: part });
-  assert.strictEqual(page.onUiEvent(ui, {}, "pick-cover-file"), true);
-  // Synchronous: a click() deferred past the gesture opens no picker.
-  assert.strictEqual(part.input.clicks, 1);
+  const asked = [];
+  const ui = fakeUi({ __fileselector: part, ensurePart: (pn) => (asked.push(pn), new Promise(() => {})) });
+  page.onUiEvent(ui, {}, "add-cover");
+  assert.ok(!ui._coverPopup);
+  assert.ok(!asked.includes("fileselector"));
 });
 
-test("Upload file falls back to the part once it is ready", async () => {
+test("a reader's add-cover opens nothing", () => {
   const page = loadPage();
   const part = fileSelectorPart();
-  let asked;
-  const ui = fakeUi({ ensurePart: (pn) => ((asked = pn), Promise.resolve(part)) });
-  page.onUiEvent(ui, {}, "pick-cover-file");
-  await Promise.resolve();
-  await Promise.resolve();
-  assert.strictEqual(asked, "fileselector");
-  assert.strictEqual(part.input.clicks, 1);
+  const ui = fakeUi({ __fileselector: part, canEditNote: () => false });
+  assert.strictEqual(page.onUiEvent(ui, {}, "add-cover"), true);
+  assert.strictEqual(part.input.clicks, 0);
 });
 
-test("a stale part from a closed popup is not clicked", () => {
+test("while the org is read-only the picker stays shut", () => {
+  const page = loadPage();
+  const part = fileSelectorPart();
+  overLimit.locked = true;
+  try {
+    page.onUiEvent(fakeUi({ __fileselector: part }), {}, "add-cover");
+  } finally {
+    overLimit.locked = false;
+  }
+  assert.strictEqual(part.input.clicks, 0);
+});
+
+test("a destroyed part is not clicked", () => {
   const page = loadPage();
   const part = fileSelectorPart();
   part.isDestroyed = () => true;
-  let asked;
-  const ui = fakeUi({ __fileselector: part, ensurePart: (pn) => ((asked = pn), new Promise(() => {})) });
-  page.onUiEvent(ui, {}, "pick-cover-file");
+  page.onUiEvent(fakeUi({ __fileselector: part }), {}, "add-cover");
   assert.strictEqual(part.input.clicks, 0);
-  assert.strictEqual(asked, "fileselector");
 });
 
-test("picking an image uploads it next to the note, and the same file can be picked again", () => {
+test("picking an image uploads it next to the note", () => {
   const page = loadPage();
   const part = fileSelectorPart();
-  const ui = fakeUi();
+  const ui = fakeUi({ __fileselector: part });
   assert.strictEqual(page.onPartReady(ui, part, "fileselector"), true);
-  assert.ok(part.listeners.change, "a change listener is attached to the part");
+  page.onUiEvent(ui, {}, "add-cover");
   const file = { name: "a.png", type: "image/png" };
-  part.input.files = [file];
   uploads.length = 0;
-  part.listeners.change({ target: part.input });
+  pick(part, file);
   assert.strictEqual(uploads.length, 1);
   assert.strictEqual(uploads[0].file, file);
   assert.deepStrictEqual(uploads[0].params, { hub_id: "hub1", nid: "folder1" });
-  assert.strictEqual(part.input.value, "");
+});
+
+test("a brand-new note is saved first, after the pick, then uploads", () => {
+  const page = loadPage();
+  const part = fileSelectorPart();
+  let afterSave = null;
+  const ui = fakeUi({ __fileselector: part, _withNode: (fn) => (afterSave = fn) });
+  page.onUiEvent(ui, {}, "add-cover");
+  // The picker opened before any save — the gesture is not spent waiting.
+  assert.strictEqual(part.input.clicks, 1);
+  assert.strictEqual(afterSave, null);
+  uploads.length = 0;
+  pick(part, { name: "a.png", type: "image/png" });
+  assert.strictEqual(uploads.length, 0);
+  afterSave();
+  assert.strictEqual(uploads.length, 1);
 });
 
 test("the old part name is gone from the page module", () => {
