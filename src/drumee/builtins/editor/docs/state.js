@@ -673,9 +673,9 @@ class __docs_state extends DrumeeMFS {
 
   /**
    * The formatting bar scrolls sideways when the window is narrower than its
-   * buttons (Casual's `overflow-x: auto`), but its scrollbar is hidden (the
-   * skin) and a mouse wheel only scrolls vertically, so the buttons past the
-   * edge could not be reached. Over the bar of the pane on screen: the wheel
+   * buttons (Casual's `overflow-x: auto`, a thin scrollbar in the skin), but
+   * a mouse wheel only scrolls vertically, so the buttons past the edge were
+   * hard to reach. Over the bar of the pane on screen: the wheel
    * scrolls it sideways, and a ‹ / › at each clipped end (an overlay in this
    * view, never inside Casual's React-owned bar) pages it.
    */
@@ -724,7 +724,8 @@ class __docs_state extends DrumeeMFS {
         b.hidden = !(visible && show);
         b.style.top = `${r.top - o.top}px`;
         b.style.left = `${left}px`;
-        b.style.height = `${r.height}px`;
+        // Above the scrollbar, which stays reachable under the strips.
+        b.style.height = `${bar.clientHeight}px`;
       }
     };
     const onWheel = (e) => {

@@ -950,12 +950,31 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     border-radius: 24px;
     color: fv.$fv-g-muted;
     font-size: fv.$fv-font-ui;
-    // Narrow windows overflow the bar: scroll it, but without the native
-    // bar and its arrows drawn under the pill.
-    scrollbar-width: none;
-
+    // Narrow windows overflow the bar: it scrolls sideways (wheel, the
+    // ‹ / › strips, or this thin scrollbar along the pill's bottom — kept
+    // clear of its rounded ends, shown only while the bar overflows).
     &::-webkit-scrollbar {
-      display: none;
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      margin: 0 18px;
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-radius: 3px;
+      background: rgba(68, 71, 70, 0.28);
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(68, 71, 70, 0.45);
+    }
+
+    // Engines without ::-webkit-scrollbar (Firefox).
+    @supports not selector(::-webkit-scrollbar) {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(68, 71, 70, 0.28) transparent;
     }
 
     > div {
@@ -1439,8 +1458,8 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 }
 
 // ── Formatting bar overflow (docs_state._wireToolbarScroll) ───────────────
-// A narrow window clips the bar's last buttons. Its native scrollbar is
-// hidden, so each clipped end gets a ‹ / › strip over it: the pill's own
+// A narrow window clips the bar's last buttons. Besides its thin scrollbar,
+// each clipped end gets a ‹ / › strip over it (above the scrollbar): the pill's own
 // colour fading in over the buttons, a chevron on a hover circle. JS shows
 // a strip only while that side has hidden buttons, and sizes it to the bar.
 .editor-docs .editor-docs__tb-scroll {
