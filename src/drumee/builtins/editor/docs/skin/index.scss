@@ -1331,3 +1331,97 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     background: rgba(0, 0, 0, 0.05);
   }
 }
+
+// ── Toolbar dropdowns (zoom, paragraph style, font) & tooltips ─────────────
+// Casual's Radix Selects portal their list to <body>, inside their own
+// `.ep-root`, so the editor-scoped fixes above never reach it, and Drumee's
+// global utilities win there: `.absolute` also pins top:0/left:0 (the ✓ sat
+// on its own line above the label) and the pixel-scale `.p-1 / .px-2 /
+// .px-3 / .py-1` (!important) collapsed every row's padding. Redrawn as
+// Google Docs' menus: white card, soft shadow, 32px rows, the check at the
+// left, a grey highlight instead of the focus ring.
+.ep-root [role="listbox"] {
+  min-width: 140px !important;
+  max-height: min(400px, var(--radix-select-content-available-height, 400px)) !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.3) !important;
+
+  [data-radix-select-viewport] {
+    padding: 6px 0 !important;
+  }
+
+  [role="option"] {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box;
+    min-height: 32px;
+    padding: 4px 16px 4px 36px !important;
+    white-space: nowrap;
+    border-radius: 0 !important;
+    font: 400 14px/1.3 var(--font-main);
+    color: fv.$fv-g-ink;
+    cursor: pointer;
+    outline: none !important;
+    box-shadow: none !important;
+
+    &[data-highlighted],
+    &:hover {
+      background: #f1f3f4 !important;
+    }
+
+    &[data-disabled] {
+      color: #9aa0a6;
+    }
+
+    // The ✓ (Casual's "absolute right-2" span): at the left, centred.
+    > .absolute {
+      position: absolute !important;
+      top: 50% !important;
+      left: 12px !important;
+      right: auto !important;
+      width: 16px !important;
+      height: 16px !important;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: fv.$fv-g-ink;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  // Group labels ("Sans Serif", "Serif", …).
+  [role="group"] > :not([role="option"]) {
+    padding: 8px 16px 4px 36px !important;
+    font: 500 11px/1.3 var(--font-main);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #5f6368;
+  }
+
+  // Separators between the groups.
+  [data-radix-select-viewport] > [aria-hidden="true"] {
+    height: 1px;
+    margin: 6px 0 !important;
+    background: #e3e3e3;
+  }
+}
+
+// Toolbar tooltips ("Align Left (Ctrl+L)"): Google's dark, compact chip.
+.ep-root [role="tooltip"] {
+  padding: 4px 8px !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: rgba(60, 64, 67, 0.92) !important;
+  box-shadow: none !important;
+  font: 500 12px/16px var(--font-main) !important;
+  color: #fff !important;
+  letter-spacing: 0.01em;
+}
