@@ -1,10 +1,16 @@
 .window-media-details {
+  // The calendar's task card (calendar-main__modal): a hairline border, its
+  // deep two-layer shadow and pop-in; a 6px radius. The page behind is faded
+  // by a real layer (&__backdrop, laid by _openBackdrop), not a spread
+  // shadow: that one caught no click, so a click outside raised the window
+  // under it over the card.
   background: var(--normal-bg-elevated, #fff);
-  border: 1px solid var(--border-default, #d6d6dc);
-  border-radius: var(--corner-radius-2);
-  // The desk scrim (--overlay-bg) around the card, drawn as a spread shadow:
-  // the background dims, and nothing is laid over it to catch clicks.
-  box-shadow: var(--shadow-main), 0 0 0 100vmax var(--overlay-bg);
+  border: 1px solid var(--border-muted, rgba(0, 0, 0, 0.08));
+  border-radius: 6px;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 1px 11px rgba(0, 0, 0, 0.13);
+  animation: window-media-details-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
   overflow: hidden;
 
   // `.window__ui` (window/skin/window.scss) floors every window at
@@ -96,5 +102,35 @@
     // token when it genuinely cannot fit.
     overflow-wrap: anywhere;
     word-break: normal;
+  }
+}
+
+// The calendar task card's backdrop (calendar-main__modal-wrapper with a
+// task form): no scrim, no blur — the page under the card shows at 20%
+// (calendar-main__page > * { opacity: .2 } on the white desk), i.e. white at
+// 80% over it. The sidebar and top bar sit outside the windows layer and stay
+// as they are, as in the calendar. A sibling of the window in the windows
+// layer (_openBackdrop sets its z-index); a click on it closes the card.
+.window-media-details__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.8);
+  animation: window-media-details-fade-in 0.15s ease;
+}
+
+@keyframes window-media-details-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes window-media-details-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
