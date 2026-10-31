@@ -114,7 +114,54 @@ class __window_media_details extends mfsInteract {
   async onDomRefresh() {
     await this.refresh();
     this.raise();
+    this._openBackdrop();
     this.setupInteract();
+  }
+
+  /**
+   * A real backdrop under the card, in the calendar modal's glass style.
+   *
+   * The dimming used to be a 100vmax spread shadow on the card itself, so
+   * nothing was laid over the page: a click "outside" landed on the window
+   * underneath, which raises itself when pressed — the card went behind it
+   * instead of closing. This layer sits between the card and every other
+   * window (same windows layer, just above the highest of them), takes the
+   * press so nothing behind can raise, and closes the card.
+   */
+  _openBackdrop() {
+    const el = this.el;
+    const layer = el && el.parentElement;
+    if (!layer || this._backdrop || this.isDestroyed()) return;
+    let top = 0;
+    for (const w of layer.children) {
+      if (w === el) continue;
+      const z = parseInt(getComputedStyle(w).zIndex, 10);
+      if (z > top) top = z;
+    }
+    const backdrop = document.createElement('div');
+    backdrop.className = `${this.fig.family}__backdrop`;
+    backdrop.style.zIndex = String(top + 1);
+    el.style.zIndex = String(top + 2);
+    const swallow = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    backdrop.addEventListener('mousedown', swallow);
+    backdrop.addEventListener('pointerdown', swallow);
+    backdrop.addEventListener('click', (e) => {
+      swallow(e);
+      this.goodbye();
+    });
+    layer.insertBefore(backdrop, el);
+    this._backdrop = backdrop;
+  }
+
+  onBeforeDestroy() {
+    if (this._backdrop) {
+      this._backdrop.remove();
+      this._backdrop = null;
+    }
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**
