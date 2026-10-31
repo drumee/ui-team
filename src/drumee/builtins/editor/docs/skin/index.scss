@@ -321,6 +321,8 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 }
 
 .docs-state {
+  // The positioning context of the toolbar's scroll arrows (docs_state).
+  position: relative;
   user-select: text;
   -webkit-user-select: text;
   width: 100%;
@@ -1434,4 +1436,82 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
   font: 500 12px/16px var(--font-main) !important;
   color: #fff !important;
   letter-spacing: 0.01em;
+}
+
+// ── Formatting bar overflow (docs_state._wireToolbarScroll) ───────────────
+// A narrow window clips the bar's last buttons. Its native scrollbar is
+// hidden, so each clipped end gets a ‹ / › strip over it: the pill's own
+// colour fading in over the buttons, a chevron on a hover circle. JS shows
+// a strip only while that side has hidden buttons, and sizes it to the bar.
+.editor-docs .editor-docs__tb-scroll {
+  --tb-bg: #edf2fa;
+  --tb-hover: rgba(68, 71, 70, 0.12);
+
+  position: absolute;
+  z-index: 5;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0 6px;
+  border: 0;
+  box-sizing: border-box;
+  color: fv.$fv-g-muted;
+  cursor: pointer;
+  @include ph.ph("caret-right", 18px, true);
+
+  &::before {
+    position: relative;
+    z-index: 1;
+  }
+
+  // The hover circle, behind the chevron.
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    transition: background-color 0.12s ease;
+  }
+
+  &:hover::after {
+    background: var(--tb-hover);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  &--next {
+    justify-content: flex-end;
+    border-radius: 0 24px 24px 0;
+    background: linear-gradient(to right, rgba(237, 242, 250, 0), var(--tb-bg) 45%);
+
+    &::before {
+      right: 5px;
+    }
+
+    &::after {
+      right: 1px;
+    }
+  }
+
+  &--prev {
+    justify-content: flex-start;
+    border-radius: 24px 0 0 24px;
+    background: linear-gradient(to left, rgba(237, 242, 250, 0), var(--tb-bg) 45%);
+
+    &::before {
+      left: 5px;
+      transform: rotate(180deg);
+    }
+
+    &::after {
+      left: 1px;
+    }
+  }
 }

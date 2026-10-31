@@ -408,6 +408,7 @@ class __docs_state extends DrumeeMFS {
         const bar = root.querySelector('[data-testid="title-bar"]');
         if (bar) this._decorateTitleBar(bar, null);
         this._wirePrintButton();
+        this._wireToolbarScroll();
       } catch (e) {
         /** editor gone */
       }
@@ -530,6 +531,7 @@ class __docs_state extends DrumeeMFS {
         }
         this._wireCollabUndo();
         this._wirePrintButton();
+        this._wireToolbarScroll();
       } catch (e) {
         /** editor gone */
       }
@@ -667,6 +669,91 @@ class __docs_state extends DrumeeMFS {
       this.printDocument();
     });
     paint.parentElement.insertBefore(b, paint);
+  }
+
+  /**
+   * The formatting bar scrolls sideways when the window is narrower than its
+   * buttons (Casual's `overflow-x: auto`), but its scrollbar is hidden (the
+   * skin) and a mouse wheel only scrolls vertically, so the buttons past the
+   * edge could not be reached. Over the bar of the pane on screen: the wheel
+   * scrolls it sideways, and a ‹ / › at each clipped end (an overlay in this
+   * view, never inside Casual's React-owned bar) pages it.
+   */
+  _wireToolbarScroll() {
+    const host = this._activeHost() || this.el;
+    const bar = host && host.querySelector('[data-testid="formatting-bar"]');
+    if (!bar || bar === this._scrollBar) {
+      if (this._syncToolbarScroll) this._syncToolbarScroll();
+      return;
+    }
+    if (this._unwireToolbarScroll) this._unwireToolbarScroll();
+    this._scrollBar = bar;
+
+    const make = (dir) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `editor-docs__tb-scroll editor-docs__tb-scroll--${dir < 0 ? "prev" : "next"}`;
+      b.hidden = true;
+      b.setAttribute("aria-hidden", "true");
+      b.tabIndex = -1;
+      b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        bar.scrollBy({ left: dir * Math.max(120, bar.clientWidth * 0.6), behavior: "smooth" });
+      });
+      this.el.appendChild(b);
+      return b;
+    };
+    const prev = make(-1);
+    const next = make(1);
+
+    const sync = () => {
+      if (!bar.isConnected || !this.el) return;
+      const max = bar.scrollWidth - bar.clientWidth;
+      const showPrev = max > 1 && bar.scrollLeft > 1;
+      const showNext = max > 1 && bar.scrollLeft < max - 1;
+      // Hidden panes (a tab in the background) have no box: no arrows.
+      const r = bar.getBoundingClientRect();
+      const o = this.el.getBoundingClientRect();
+      const visible = r.width > 0 && r.height > 0;
+      for (const [b, show, left] of [
+        [prev, showPrev, r.left - o.left],
+        [next, showNext, r.right - o.left - 44],
+      ]) {
+        b.hidden = !(visible && show);
+        b.style.top = `${r.top - o.top}px`;
+        b.style.left = `${left}px`;
+        b.style.height = `${r.height}px`;
+      }
+    };
+    const onWheel = (e) => {
+      if (bar.scrollWidth <= bar.clientWidth) return;
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return; // a trackpad's own sideways swipe
+      e.preventDefault();
+      bar.scrollLeft += e.deltaY;
+    };
+    bar.addEventListener("wheel", onWheel, { passive: false });
+    bar.addEventListener("scroll", sync, { passive: true });
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(sync) : null;
+    if (ro) {
+      ro.observe(bar);
+      ro.observe(this.el);
+    }
+    window.addEventListener("resize", sync);
+    this._syncToolbarScroll = sync;
+    this._unwireToolbarScroll = () => {
+      bar.removeEventListener("wheel", onWheel);
+      bar.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+      if (ro) ro.disconnect();
+      prev.remove();
+      next.remove();
+      this._scrollBar = null;
+      this._syncToolbarScroll = null;
+      this._unwireToolbarScroll = () => {};
+    };
+    sync();
   }
 
   /** Casual's print (its own preview / layout), the browser's as a fallback. */
@@ -1642,6 +1729,7 @@ class __docs_state extends DrumeeMFS {
       }
       clearTimeout(this._glyphTimer);
       clearInterval(this._veilPoll);
+      if (this._unwireToolbarScroll) this._unwireToolbarScroll();
       if (this._root) this._root.unmount();
       if (this._host) {
         this._host.remove();
