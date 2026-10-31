@@ -3,7 +3,7 @@ require("builtins/window/confirm/skin");
 const { canUpgradePlan, needsAdminConsoleUpgrade } = require("libs/billing");
 const billingDeepLink = require("libs/billing-deep-link");
 const {
-  captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN, takeOfferPreselect,
+  captureUtm, campaignArrival, REWARD_CAMPAIGN, PROMO_CAMPAIGN, takeOfferPreselect, offerPending,
 } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
 const contactInviteLink = require("libs/contact-invite-link");
@@ -8576,6 +8576,11 @@ class desk_module extends LetcBox {
             this._afterHomeSettled();
           }, 2000);
           return;
+        }
+        // A campaign signup came for the offer, and the post-home chain that
+        // opens it waits for the workspace tour to end. Offer first.
+        if (this._postOnboardingTutorial && offerPending()) {
+          this._postOnboardingTutorial = false;
         }
         if (
           Visitor.parseModuleArgs().tutorial ||

@@ -348,6 +348,16 @@ function captureAttribution() {
 
 const OFFER_PENDING_KEY = "drumee_offer_pending";
 
+/** Whether a campaign signup is still owed its billing screen. Reads, never consumes. */
+function offerPending() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ATTRIBUTION_KEY) || "{}") || {};
+    return (localStorage.getItem(OFFER_PENDING_KEY) || stored.offer) === "team-1usd";
+  } catch (e) {
+    return false;
+  }
+}
+
 /**
  * The billing screen a campaign signup should land on, once. The offer is read
  * from either key: signup moves it to drumee_offer_pending when it spends the
@@ -369,7 +379,7 @@ function takeOfferPreselect() {
 }
 
 module.exports = {
-  captureAttribution, takeOfferPreselect,
+  captureAttribution, takeOfferPreselect, offerPending,
   captureUtm, captureCampaignArrival, campaignArrival, ARRIVAL_KEY,
   reportCampaignClick,
   REWARD_CAMPAIGN, PROMO_CAMPAIGN,
