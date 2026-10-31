@@ -559,41 +559,29 @@ module.exports = function meetingModal(ui, opt = {}) {
     attrOpt: { "data-nid": (m && m.nid) || "", "data-view": viewOnly ? "1" : "0" },
     kids: [
       header,
-      // Two sides: what the meeting is about on the left, when and with whom
-      // on the right. A narrow pane stacks them (meeting-modal.scss).
-      Skeletons.Box.X({
+      Skeletons.Box.Y({
         className: `${pfx}-body`,
         kids: [
-          Skeletons.Box.Y({
-            className: `${pfx}-col ${pfx}-col--main`,
+          field(LOCALE.TITLE, title),
+          field(LOCALE.DESCRIPTION_AGENDA, description),
+          field(LOCALE.FILES, files),
+          field(LOCALE.DATE, date),
+          Skeletons.Box.X({
+            className: `${pfx}-row ${pfx}-time-row`,
             kids: [
-              field(LOCALE.TITLE, title),
-              field(LOCALE.DESCRIPTION_AGENDA, description),
-              field(LOCALE.FILES, files),
+              field(LOCALE.ENTER_TIME, timePicker(ui, pfx, "stime", m && m.stime_hm)),
+              Skeletons.Image.Svg({ ico: "arrow-right", className: `${pfx}-time-arrow` }),
+              field(LOCALE.END_TIME, timePicker(ui, pfx, "etime", m && m.etime_hm)),
             ],
           }),
-          Skeletons.Box.Y({
-            className: `${pfx}-col ${pfx}-col--side`,
+          Skeletons.Box.X({
+            className: `${pfx}-row`,
             kids: [
-              field(LOCALE.DATE, date),
-              Skeletons.Box.X({
-                className: `${pfx}-row ${pfx}-time-row`,
-                kids: [
-                  field(LOCALE.START_TIME, timePicker(ui, pfx, "stime", m && m.stime_hm)),
-                  Skeletons.Image.Svg({ ico: "arrow-right", className: `${pfx}-time-arrow` }),
-                  field(LOCALE.END_TIME, timePicker(ui, pfx, "etime", m && m.etime_hm)),
-                ],
-              }),
-              Skeletons.Box.X({
-                className: `${pfx}-row`,
-                kids: [
-                  field(LOCALE.INVITEES, invitees),
-                  field(LOCALE.CREATED_BY, creatorChip(ui, pfx, m)),
-                ],
-              }),
-              field(LOCALE.REPEAT, recur),
+              field(LOCALE.INVITEES, invitees),
+              field(LOCALE.CREATED_BY, creatorChip(ui, pfx, m)),
             ],
           }),
+          field(LOCALE.REPEAT, recur),
         ],
       }),
       // The modal's one messaging surface: free/busy, a missing title, a save

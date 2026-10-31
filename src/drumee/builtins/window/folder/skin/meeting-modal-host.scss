@@ -15,7 +15,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    // The folder's @container queries (meeting-modal.scss: 760px, 560px) are
+    // The folder's @container query (meeting-modal.scss: 560px) is
     // named window-folder-w — a folder window's body. Here the viewport-wide
     // layer is that container, so the narrow layouts still apply.
     container-type: inline-size;
