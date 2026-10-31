@@ -361,7 +361,8 @@ function takeOfferPreselect() {
     if (offer !== "team-1usd") return null;
     localStorage.removeItem(OFFER_PENDING_KEY);
     localStorage.removeItem(ATTRIBUTION_KEY);
-    return { plan: "team", cycle: "monthly", tab: "checkout", promo: "TEAM7FREE" };
+    // The redeem box, not the checkout tab: the trial needs no card.
+    return { plan: "team", cycle: "monthly", redeem: "TEAM7FREE" };
   } catch (e) {
     return null;
   }

@@ -347,6 +347,12 @@ function rightPanelContent(ui) {
   const promo = summary.promo || null;
   const hasDiscount = !!(summary.discountAmount);
   const trialDays = promo ? (parseInt(promo.trial_days, 10) || 0) : 0;
+  // A campaign's first invoice. Stripe allows one discount, so a percent code
+  // takes priority over it, on the server as well as here.
+  const offer = ui._offer || null;
+  const offerOn = !!offer && !hasDiscount && !isFreePlan
+    && ui.state?.checkout?.selectedPlan === offer.plan && summary.period === offer.period;
+  const offerFirst = offerOn ? `$${(offer.first_invoice / 100).toFixed(2)}` : "";
 
   // How long the % actually lasts. Stripe only ever gets 'once' or
   // 'repeating' from _ensureStripeCoupon, so a percent discount ALWAYS
@@ -382,15 +388,26 @@ function rightPanelContent(ui) {
             : null,
           Skeletons.Note({
             className: `${pfx}-total-price-amount`,
-            content: summary.totalPrice,
+            content: offerOn ? offerFirst : summary.totalPrice,
           }),
           Skeletons.Note({
             className: `${pfx}-total-price-period`,
-            content: `/${summary.period}`,
+            content: offerOn ? (LOCALE.OFFER_FIRST_MONTH || " first month") : `/${summary.period}`,
           }),
         ].filter(Boolean),
       }),
-      trialDays > 0
+      offerOn
+        ? Skeletons.Note({
+            className: `${pfx}-promo-trial-note`,
+            content: trialDays > 0
+              ? (LOCALE.OFFER_TRIAL_NOTE || "{0} days free, then {1} for your first month, then {2}/{3}").format(
+                String(trialDays), offerFirst, summary.basePrice, summary.period,
+              )
+              : (LOCALE.OFFER_NOTE || "{0} for your first month, then {1}/{2}").format(
+                offerFirst, summary.basePrice, summary.period,
+              ),
+          })
+        : trialDays > 0
         ? Skeletons.Note({
             className: `${pfx}-promo-trial-note`,
             content: (LOCALE.PROMO_CODE_TRIAL_NOTE

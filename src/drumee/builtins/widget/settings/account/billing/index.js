@@ -305,8 +305,14 @@ class settings_billing extends LetcBox {
     const intent = opt.intent != null ? String(opt.intent).toLowerCase() : "";
     // `intent` joins the guard for the same reason `promo` did -- an
     // intent-only open carries none of the other three.
-    if (!plan && !cycle && !tab && !promo && !intent) return;
+    // A free-period code to redeem without a card, same shape check as `promo`.
+    const rawRedeem = opt.redeem != null ? String(opt.redeem).trim() : "";
+    const redeem = /^[A-Za-z0-9_-]{1,64}$/.test(rawRedeem) ? rawRedeem : null;
+    if (!plan && !cycle && !tab && !promo && !intent && !redeem) return;
     this._upgradeIntent = intent === "upgrade";
+    if (redeem) {
+      this.state.redeem = { ...(this.state.redeem || {}), open: true, code: redeem, plan: plan || "team" };
+    }
 
     if (cycle) {
       this.state.plansTab.cycle = cycle;
@@ -910,7 +916,11 @@ class settings_billing extends LetcBox {
     // 2026-09-08). The prices need no such wait: _catPrice already renders
     // from its offline fallback map until the catalog lands.
     const catalogRead = this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
-      .then((d) => (d && d.plans) || null)
+      .then((d) => {
+        // The campaign price this caller would get, decided by the server.
+        this._offer = (d && d.offer) || null;
+        return (d && d.plans) || null;
+      })
       .catch(() => null);
     await this._loadSubscription();
     if (this.isDestroyed()) return;
