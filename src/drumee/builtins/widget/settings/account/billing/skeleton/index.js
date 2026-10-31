@@ -187,6 +187,16 @@ function subscriptionBanner(ui) {
             : (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when))
           : (LOCALE.CURRENT_PLAN_BANNER || "You are on the {0} plan").format(planLabel),
       }),
+      ui._offer && !ui._hasPaidSub
+        ? Skeletons.Note({
+            className: `${fig}-action`,
+            content: (LOCALE.OFFER_ADD_CARD || "Add a card to keep your plan: {0} for your first month")
+              .format(`$${(ui._offer.first_invoice / 100).toFixed(2)}`),
+            service: "offer-add-card",
+            uiHandler: [ui],
+            bubble: false,
+          })
+        : null,
       // Only offer Cancel when something can actually be cancelled. The
       // banner itself renders off the QUOTA so it appears on first paint,
       // before the subscription mirror lands — but a quota is not a

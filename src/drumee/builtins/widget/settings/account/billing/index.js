@@ -2781,6 +2781,14 @@ class settings_billing extends LetcBox {
         this._redeemCode();
         return false;
 
+      // The free period is running: this is how it becomes the offer's plan.
+      case "offer-add-card":
+        this.state.checkout.billingCycle = "monthly";
+        delete this.state.checkout.promoCode;
+        delete this.state.checkout.promo;
+        this._enterCheckoutFor("team");
+        return false;
+
     }
   }
 
