@@ -210,12 +210,43 @@ class __docs_state extends DrumeeMFS {
   /**
    *
    */
+  /**
+   * One menu on "@". Casual opens TWO there: the people list (mentions,
+   * at the caret) and its smart-chip menu (a single item, Date) just behind
+   * it — it read as a duplicated menu, and the smart-chip menu's keys sit
+   * on window (capture), before the people list's on document, so Enter
+   * put in a date chip instead of the person. Mentions are the "@" feature
+   * here: the smart-chip menu is closed as soon as it opens, through its
+   * own Escape. Dispatched on `window` alone, that Escape reaches only
+   * window listeners — not the people list (document), not the editor.
+   * Closed that way it stays closed for that "@"; the skin hides it in the
+   * meantime so it never flashes.
+   */
+  _wireSmartChipGuard() {
+    if (this._chipObs || !this.el) return;
+    const menu = () => this.el && this.el.querySelector('[data-testid="smart-chip-menu"]');
+    // Its key listener is added in an effect, after the menu is in the DOM:
+    // retry until the menu has gone (or give up after ~300ms).
+    const dismiss = (tries) => {
+      this._chipTimer = null;
+      if (this._destroyed || !menu() || tries > 10) return;
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+      this._chipTimer = setTimeout(() => dismiss(tries + 1), 30);
+    };
+    this._chipObs = new MutationObserver(() => {
+      if (this._chipTimer || !menu()) return;
+      this._chipTimer = setTimeout(() => dismiss(0), 0);
+    });
+    this._chipObs.observe(this.el, { childList: true, subtree: true });
+  }
+
   _doMount() {
     if (this._mounted || this._destroyed || !this.el) return;
     this._mounted = 1;
     // The loading skeleton (docs/skeleton) covers the editor until a page
     // has painted and the icon font is in — both shells (the co-editing one
     // never goes through _reactHost).
+    this._wireSmartChipGuard();
     this._cancelReveal = revealWhenPainted(this.el.closest(".editor-docs"), {
       painted: () => {
         const pages = this.el && this.el.querySelector(".paged-editor__pages");
@@ -1714,6 +1745,8 @@ class __docs_state extends DrumeeMFS {
     console.log("[DOCS] onBeforeDestroy (state) called");
     this._destroyed = 1;
     if (this._cancelReveal) this._cancelReveal();
+    if (this._chipObs) this._chipObs.disconnect();
+    clearTimeout(this._chipTimer);
     if (this._saveTimer) {
       clearTimeout(this._saveTimer);
       this._saveTimer = null;

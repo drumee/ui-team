@@ -1534,3 +1534,9 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     }
   }
 }
+
+// Casual's smart-chip menu (Date), opened on "@" next to the people list:
+// docs_state._wireSmartChipGuard closes it at once; never let it flash.
+.docs-state [data-testid="smart-chip-menu"] {
+  display: none !important;
+}
