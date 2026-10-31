@@ -1372,6 +1372,16 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
       background: #f1f3f4 !important;
     }
 
+    // Casual's react.css rings every focused option (`.ep-root [role=option]
+    // :focus-visible { outline: 2px solid var(--doc-primary) !important;
+    // outline-offset: 2px }`): outside the full-width row, the card clipped
+    // its sides and left a teal line above and below. The grey highlight
+    // already marks the keyboard row.
+    &:focus,
+    &:focus-visible {
+      outline: none !important;
+    }
+
     &[data-disabled] {
       color: #9aa0a6;
     }
