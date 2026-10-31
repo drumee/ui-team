@@ -321,6 +321,8 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 }
 
 .docs-state {
+  // The positioning context of the toolbar's scroll arrows (docs_state).
+  position: relative;
   user-select: text;
   -webkit-user-select: text;
   width: 100%;
@@ -948,12 +950,31 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     border-radius: 24px;
     color: fv.$fv-g-muted;
     font-size: fv.$fv-font-ui;
-    // Narrow windows overflow the bar: scroll it, but without the native
-    // bar and its arrows drawn under the pill.
-    scrollbar-width: none;
-
+    // Narrow windows overflow the bar: it scrolls sideways (wheel, the
+    // ‹ / › strips, or this thin scrollbar along the pill's bottom — kept
+    // clear of its rounded ends, shown only while the bar overflows).
     &::-webkit-scrollbar {
-      display: none;
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      margin: 0 18px;
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-radius: 3px;
+      background: rgba(68, 71, 70, 0.28);
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(68, 71, 70, 0.45);
+    }
+
+    // Engines without ::-webkit-scrollbar (Firefox).
+    @supports not selector(::-webkit-scrollbar) {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(68, 71, 70, 0.28) transparent;
     }
 
     > div {
@@ -1329,5 +1350,187 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 
   &:hover {
     background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+// ── Toolbar dropdowns (zoom, paragraph style, font) & tooltips ─────────────
+// Casual's Radix Selects portal their list to <body>, inside their own
+// `.ep-root`, so the editor-scoped fixes above never reach it, and Drumee's
+// global utilities win there: `.absolute` also pins top:0/left:0 (the ✓ sat
+// on its own line above the label) and the pixel-scale `.p-1 / .px-2 /
+// .px-3 / .py-1` (!important) collapsed every row's padding. Redrawn as
+// Google Docs' menus: white card, soft shadow, 32px rows, the check at the
+// left, a grey highlight instead of the focus ring.
+.ep-root [role="listbox"] {
+  min-width: 140px !important;
+  max-height: min(400px, var(--radix-select-content-available-height, 400px)) !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.3) !important;
+
+  [data-radix-select-viewport] {
+    padding: 6px 0 !important;
+  }
+
+  [role="option"] {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box;
+    min-height: 32px;
+    padding: 4px 16px 4px 36px !important;
+    white-space: nowrap;
+    border-radius: 0 !important;
+    font: 400 14px/1.3 var(--font-main);
+    color: fv.$fv-g-ink;
+    cursor: pointer;
+    outline: none !important;
+    box-shadow: none !important;
+
+    &[data-highlighted],
+    &:hover {
+      background: #f1f3f4 !important;
+    }
+
+    // Casual's react.css rings every focused option (`.ep-root [role=option]
+    // :focus-visible { outline: 2px solid var(--doc-primary) !important;
+    // outline-offset: 2px }`): outside the full-width row, the card clipped
+    // its sides and left a teal line above and below. The grey highlight
+    // already marks the keyboard row.
+    &:focus,
+    &:focus-visible {
+      outline: none !important;
+    }
+
+    &[data-disabled] {
+      color: #9aa0a6;
+    }
+
+    // The ✓ (Casual's "absolute right-2" span): at the left, centred.
+    > .absolute {
+      position: absolute !important;
+      top: 50% !important;
+      left: 12px !important;
+      right: auto !important;
+      width: 16px !important;
+      height: 16px !important;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: fv.$fv-g-ink;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  // Group labels ("Sans Serif", "Serif", …).
+  [role="group"] > :not([role="option"]) {
+    padding: 8px 16px 4px 36px !important;
+    font: 500 11px/1.3 var(--font-main);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #5f6368;
+  }
+
+  // Separators between the groups.
+  [data-radix-select-viewport] > [aria-hidden="true"] {
+    height: 1px;
+    margin: 6px 0 !important;
+    background: #e3e3e3;
+  }
+}
+
+// Toolbar tooltips ("Align Left (Ctrl+L)"): Google's dark, compact chip.
+.ep-root [role="tooltip"] {
+  padding: 4px 8px !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: rgba(60, 64, 67, 0.92) !important;
+  box-shadow: none !important;
+  font: 500 12px/16px var(--font-main) !important;
+  color: #fff !important;
+  letter-spacing: 0.01em;
+}
+
+// ── Formatting bar overflow (docs_state._wireToolbarScroll) ───────────────
+// A narrow window clips the bar's last buttons. Besides its thin scrollbar,
+// each clipped end gets a ‹ / › strip over it (above the scrollbar): the pill's own
+// colour fading in over the buttons, a chevron on a hover circle. JS shows
+// a strip only while that side has hidden buttons, and sizes it to the bar.
+.editor-docs .editor-docs__tb-scroll {
+  --tb-bg: #edf2fa;
+  --tb-hover: rgba(68, 71, 70, 0.12);
+
+  position: absolute;
+  z-index: 5;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0 6px;
+  border: 0;
+  box-sizing: border-box;
+  color: fv.$fv-g-muted;
+  cursor: pointer;
+  @include ph.ph("caret-right", 18px, true);
+
+  &::before {
+    position: relative;
+    z-index: 1;
+  }
+
+  // The hover circle, behind the chevron.
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    transition: background-color 0.12s ease;
+  }
+
+  &:hover::after {
+    background: var(--tb-hover);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  &--next {
+    justify-content: flex-end;
+    border-radius: 0 24px 24px 0;
+    background: linear-gradient(to right, rgba(237, 242, 250, 0), var(--tb-bg) 45%);
+
+    &::before {
+      right: 5px;
+    }
+
+    &::after {
+      right: 1px;
+    }
+  }
+
+  &--prev {
+    justify-content: flex-start;
+    border-radius: 24px 0 0 24px;
+    background: linear-gradient(to left, rgba(237, 242, 250, 0), var(--tb-bg) 45%);
+
+    &::before {
+      left: 5px;
+      transform: rotate(180deg);
+    }
+
+    &::after {
+      left: 1px;
+    }
   }
 }
