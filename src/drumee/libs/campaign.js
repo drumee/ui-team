@@ -261,6 +261,9 @@ function reportCampaignClick(utm) {
 }
 
 function captureCampaignArrival() {
+  // First, and regardless of the campaign test below: the strip further down
+  // takes the UTM tags off the URL before any module gets to read them.
+  captureAttribution();
   const campaign = readUrlMarkers().utm_campaign;
   if (!campaign) return;
   try {
@@ -315,6 +318,9 @@ function campaignArrival(consume) {
  */
 const ATTRIBUTION_KEY = "drumee_attribution";
 const ATTRIBUTION_TTL_MS = 30 * 86400 * 1000;
+// What says where a visitor came from. `offer` alone does not: a visit with no
+// source must not block the ad click that follows it.
+const ATTRIBUTION_SOURCES = ["utm_source", "utm_campaign", "gclid", "li_fat_id", "fbclid"];
 const ATTRIBUTION_FIELDS = {
   offer: 32, utm_source: 100, utm_medium: 100, utm_campaign: 100, utm_content: 100,
   utm_term: 100, gclid: 512, li_fat_id: 512, fbclid: 512,
@@ -323,7 +329,8 @@ const ATTRIBUTION_FIELDS = {
 function captureAttribution() {
   try {
     const stored = JSON.parse(localStorage.getItem(ATTRIBUTION_KEY) || "null");
-    if (stored && Date.now() - stored.at < ATTRIBUTION_TTL_MS) return;
+    const fresh = stored && Date.now() - stored.at < ATTRIBUTION_TTL_MS;
+    if (fresh && ATTRIBUTION_SOURCES.some((k) => stored[k])) return;
     const args = (typeof Visitor !== "undefined" && Visitor?.parseModuleArgs?.()) || {};
     const search = new URLSearchParams(location.search);
     const found = {};
@@ -331,8 +338,10 @@ function captureAttribution() {
       const v = args[k] || search.get(k) || "";
       if (v) found[k] = String(v).trim().slice(0, max);
     }
+    if (fresh && !ATTRIBUTION_SOURCES.some((k) => found[k])) return;
     if (Object.keys(found).length) {
-      localStorage.setItem(ATTRIBUTION_KEY, JSON.stringify({ ...found, at: Date.now() }));
+      const offer = found.offer || (fresh && stored.offer);
+      localStorage.setItem(ATTRIBUTION_KEY, JSON.stringify({ ...found, ...(offer ? { offer } : {}), at: Date.now() }));
     }
   } catch (e) { /* attribution never gets to break a page */ }
 }
