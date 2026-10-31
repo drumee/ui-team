@@ -1,12 +1,12 @@
 .window-media-details {
-  // The calendar's task card (calendar-main__modal): 12px radius, a hairline
-  // border, its deep two-layer shadow and pop-in. The page behind is faded
+  // The calendar's task card (calendar-main__modal): a hairline border, its
+  // deep two-layer shadow and pop-in; a 6px radius. The page behind is faded
   // by a real layer (&__backdrop, laid by _openBackdrop), not a spread
   // shadow: that one caught no click, so a click outside raised the window
   // under it over the card.
   background: var(--normal-bg-elevated, #fff);
   border: 1px solid var(--border-muted, rgba(0, 0, 0, 0.08));
-  border-radius: 12px;
+  border-radius: 6px;
   box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.25),
     0 1px 11px rgba(0, 0, 0, 0.13);
