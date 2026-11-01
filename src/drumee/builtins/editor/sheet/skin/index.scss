@@ -582,6 +582,17 @@ body > div:has(> [class*="univer-popup"]) {
   z-index: 60000;
 }
 
+// The cell context menu's submenus (Paste Special, Clear, Insert, Freeze…)
+// are each a `body > div[data-u-context-menu-submenu]`, all drawn at the same
+// spot beside the menu. Moving down the list opens the next one at once, but
+// the one being left stays up ~300ms more (its pointer-grace close), so two
+// lists sat on top of each other and the menu read as lagging. Only the
+// newest — the row under the pointer, already on top — is shown; the stale
+// one is still closed by Univer's own timer.
+body > div[data-u-context-menu-submenu]:has(~ div[data-u-context-menu-submenu]) {
+  display: none !important;
+}
+
 // Univer's popup chrome inherits no font from Drumee — match the desk.
 [data-u-comp="rect-popup"],
 [data-u-comp="cell-popup"] {
