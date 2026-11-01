@@ -1,4 +1,6 @@
 {
+  "MERGE_CELLS": "Merge cells",
+  "UNMERGE_CELLS": "Unmerge cells",
   "TAB": "Tab",
   "NEW_TAB": "New tab",
   "DOCUMENT_TABS": "Document tabs",
