@@ -172,6 +172,16 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
   .drumee-topbar__identity {
     gap: 10px;
     align-items: flex-start;
+    // The identity is as tall as its glyph (6px margin + 32px = 38px) and
+    // spans the header's width, so it hung 12px into the 34px header's
+    // neighbour — the menu bar row — over the top half of File / Edit /
+    // View…: only the lower half of a label took the pointer and the click.
+    // The row itself catches nothing; the glyph and the title still do.
+    pointer-events: none;
+
+    > * {
+      pointer-events: auto;
+    }
   }
 
   // Demo/Google-Sheets document title: 16px regular, quiet until hovered,
