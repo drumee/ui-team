@@ -786,14 +786,16 @@ body > div[data-u-context-menu-submenu]:has(~ div[data-u-context-menu-submenu]) 
 
     // The design's bar is shorter than Casual's: clipboard (keyboard and the
     // context menu have it), the font-size steppers (the size box stays),
-    // merge, and the trailing Format Cells / chart / pivot (all under the
-    // Format and Insert menus) are left out, with the divider before them.
+    // and the trailing Format Cells / chart / pivot (all under the Format and
+    // Insert menus) are left out, with the divider before them.
+    // Merge / Unmerge stay: Casual offers them ONLY here — no menu and no
+    // context-menu row has them — so hiding the group removed merging cells
+    // from the editor altogether.
     // Casual wraps a group in a <span>, and puts the size steppers and the
     // trailing Format Cells / chart / pivot buttons straight in the bar.
     // NOTE: one selector list, no nested :has() — an invalid selector would
     // void the whole rule.
     > span:has(> [data-testid="cs-paste"]),
-    > span:has(> [data-testid="cs-merge"]),
     > button[aria-label="Increase font size"],
     > button[aria-label="Decrease font size"],
     > button[aria-label="Format Cells…"],
