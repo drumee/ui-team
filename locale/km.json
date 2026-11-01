@@ -1,4 +1,6 @@
 {
+  "MERGE_CELLS": "បញ្ចូលក្រឡាចូលគ្នា",
+  "UNMERGE_CELLS": "បំបែកក្រឡា",
   "TAB": "Tab",
   "NEW_TAB": "New tab",
   "DOCUMENT_TABS": "Document tabs",

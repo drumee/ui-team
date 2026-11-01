@@ -775,8 +775,31 @@ class __sheet_state extends DrumeeMFS {
 
   _sheetExtensions() {
     if (!this._extensions) {
+      // Merge / Unmerge, also in Format (as Google Sheets has them): Casual
+      // offers them only as toolbar buttons. Same commands as those buttons.
+      const run = (command) => (api) => {
+        try {
+          if (api && api.executeCommand) api.executeCommand(command);
+        } catch (e) {
+          this.warn("sheet: " + command + " failed", e);
+        }
+      };
       this._extensions = {
         menu: [
+          {
+            menu: "format",
+            id: "merge-cells",
+            label: LOCALE.MERGE_CELLS || "Merge cells",
+            icon: "cell_merge",
+            onClick: run("sheet.command.add-worksheet-merge-all"),
+          },
+          {
+            menu: "format",
+            id: "unmerge-cells",
+            label: LOCALE.UNMERGE_CELLS || "Unmerge cells",
+            icon: "splitscreen_vertical_add",
+            onClick: run("sheet.command.remove-worksheet-merge"),
+          },
           {
             menu: "help",
             id: "contact-us",

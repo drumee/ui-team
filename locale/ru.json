@@ -1,4 +1,6 @@
 {
+  "MERGE_CELLS": "Объединить ячейки",
+  "UNMERGE_CELLS": "Отменить объединение ячеек",
   "TAB": "Tab",
   "NEW_TAB": "New tab",
   "DOCUMENT_TABS": "Document tabs",

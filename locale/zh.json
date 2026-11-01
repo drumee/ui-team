@@ -1,4 +1,6 @@
 {
+  "MERGE_CELLS": "合并单元格",
+  "UNMERGE_CELLS": "取消合并单元格",
   "TAB": "Tab",
   "NEW_TAB": "New tab",
   "DOCUMENT_TABS": "Document tabs",

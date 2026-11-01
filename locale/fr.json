@@ -1,4 +1,6 @@
 {
+  "MERGE_CELLS": "Fusionner les cellules",
+  "UNMERGE_CELLS": "Annuler la fusion des cellules",
   "TAB": "Onglet",
   "NEW_TAB": "Nouvel onglet",
   "DOCUMENT_TABS": "Onglets du document",
