@@ -1086,3 +1086,194 @@ body > div[data-u-context-menu-submenu]:has(~ div[data-u-context-menu-submenu]) 
     }
   }
 }
+
+// ── Menu bar dropdowns (Edit, View, Insert, Format, Data) ─────────────────
+// Casual styles the menu bar and its menus inline (hence !important): the
+// open menu's button sat in a teal box with teal text, and the menus were a
+// bordered card of 30px rounded pills with a barely-visible hover — unlike
+// the toolbar's font / size dropdowns. Drawn as those: the open button on a
+// grey wash, a white card with the soft two-layer shadow, 32px full-width
+// rows in 14px, a #f1f3f4 highlight; one line per row (the 220px card used to
+// wrap "Paste formatting only"). Submenus are menus too and follow.
+.editor-sheet .sheet-state [data-testid="cs-menubar"] {
+  --mb-bg: #ffffff;
+  --mb-ink: #{fv.$fv-g-ink};
+  --mb-muted: #5f6368;
+  --mb-hover: #f1f3f4;
+  --mb-line: #e3e3e3;
+  --mb-open: #{fv.$fv-g-hover};
+  --mb-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.3);
+
+  > button[aria-expanded="true"],
+  > div > button[aria-expanded="true"],
+  > button[style*="cs-chrome-active"],
+  > div > button[style*="cs-chrome-active"] {
+    background: var(--mb-open) !important;
+    color: var(--mb-ink) !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  [role="menu"] {
+    width: max-content !important;
+    min-width: 200px !important;
+    // No max height: the card cannot scroll (Casual keeps it overflow:visible
+    // so its submenus open beside it), it fits its rows.
+    padding: 6px 0 !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: var(--mb-bg) !important;
+    box-shadow: var(--mb-shadow) !important;
+  }
+
+  // Plain, checkable (Bold, Italic…) and radio rows alike.
+  [role="menu"] [role^="menuitem"] {
+    box-sizing: border-box;
+    // The menu is a flex column: keep every row at its full height.
+    flex: none !important;
+    height: 32px !important;
+    gap: 12px !important;
+    padding: 0 16px 0 14px !important;
+    border-radius: 0 !important;
+    color: var(--mb-ink) !important;
+    font: 400 14px/1.3 var(--font-main) !important;
+    white-space: nowrap;
+    outline: none !important;
+
+    // Casual highlights a row by swapping its inline background to the
+    // hover token (mouse and keyboard alike).
+    &:hover,
+    &:focus-visible,
+    &[style*="cs-chrome-hover"] {
+      background: var(--mb-hover) !important;
+    }
+
+    &:disabled,
+    &[aria-disabled="true"] {
+      color: #9aa0a6 !important;
+      background: transparent !important;
+    }
+
+    // The shortcut (Ctrl+Z…), pushed right by its inline margin-left:auto —
+    // keyed on that, so a row with no shortcut keeps its label as is.
+    > [style*="margin-left: auto"] {
+      padding-left: 24px !important;
+      color: var(--mb-muted) !important;
+      font-size: 12px !important;
+    }
+  }
+
+  [role="menu"] [role="separator"] {
+    flex: none !important;
+    margin: 6px 0 !important;
+    background: var(--mb-line) !important;
+  }
+}
+
+.editor-sheet[data-theme="dark"] .sheet-state [data-testid="cs-menubar"] {
+  --mb-bg: #1f2329;
+  --mb-ink: #e3e6eb;
+  --mb-muted: #aab2c2;
+  --mb-hover: #2a2f36;
+  --mb-line: #3a3f47;
+  --mb-open: rgba(255, 255, 255, 0.08);
+  --mb-shadow: 0 2px 6px 2px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+// ── Toolbar popovers: Borders, text / fill colour ─────────────────────────
+// Casual opens them `position: absolute` under their button, inside the
+// toolbar — which scrolls sideways on a narrow window (overflow-x: auto, so
+// it clips vertically too): the Borders list opened INSIDE the green pill,
+// a strip one row high. Pinned to the button with CSS anchor positioning
+// instead, `position: fixed` escapes the toolbar, and the popover drops
+// below it like the font / size dropdowns, in their card. `anchor-scope`
+// keeps two open sheets from anchoring to each other's buttons. Engines
+// without anchor positioning keep Casual's placement.
+@supports (anchor-name: --a) {
+  .editor-sheet .sheet-state {
+    anchor-scope: --cs-borders, --cs-colors;
+  }
+
+  .editor-sheet .sheet-state [data-testid="casual-sheets-toolbar"] {
+    [data-testid="cs-borders"] {
+      anchor-name: --cs-borders;
+    }
+
+    [data-testid="cs-color-picker"] {
+      anchor-name: --cs-colors;
+    }
+
+    [data-testid="cs-borders-popover"],
+    [data-testid="cs-color-popover"] {
+      position: fixed !important;
+      top: anchor(bottom) !important;
+      left: anchor(left) !important;
+      margin-top: 6px !important;
+      z-index: 60000 !important;
+    }
+
+    [data-testid="cs-borders-popover"] {
+      position-anchor: --cs-borders;
+    }
+
+    [data-testid="cs-color-popover"] {
+      position-anchor: --cs-colors;
+    }
+  }
+}
+
+.editor-sheet .sheet-state [data-testid="casual-sheets-toolbar"] {
+  --tp-bg: #ffffff;
+  --tp-ink: #{fv.$fv-g-ink};
+  --tp-hover: #f1f3f4;
+  --tp-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.3);
+
+  [data-testid="cs-borders-popover"],
+  [data-testid="cs-color-popover"] {
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: var(--tp-bg) !important;
+    box-shadow: var(--tp-shadow) !important;
+  }
+
+  [data-testid="cs-borders-popover"] {
+    min-width: 200px !important;
+    padding: 6px 0 !important;
+
+    [role="menuitem"] {
+      box-sizing: border-box;
+      flex: none !important;
+      height: 32px !important;
+      gap: 12px !important;
+      padding: 0 16px 0 14px !important;
+      border-radius: 0 !important;
+      color: var(--tp-ink) !important;
+      font: 400 14px/1.3 var(--font-main) !important;
+      white-space: nowrap;
+
+      &:hover,
+      &[style*="cs-chrome-hover"] {
+        background: var(--tp-hover) !important;
+      }
+    }
+  }
+
+  [data-testid="cs-color-popover"] {
+    padding: 10px !important;
+  }
+
+  // The button of the open popover: the menu bar's grey wash, not Casual's
+  // inline teal box.
+  [data-testid="cs-borders"] > button[aria-expanded="true"],
+  [data-testid="cs-color-picker"] button[aria-expanded="true"] {
+    background: rgba(68, 71, 70, 0.12) !important;
+    color: var(--tp-ink) !important;
+  }
+}
+
+.editor-sheet[data-theme="dark"] .sheet-state [data-testid="casual-sheets-toolbar"] {
+  --tp-bg: #1f2329;
+  --tp-ink: #e3e6eb;
+  --tp-hover: #2a2f36;
+  --tp-shadow: 0 2px 6px 2px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
