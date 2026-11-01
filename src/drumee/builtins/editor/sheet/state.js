@@ -820,8 +820,30 @@ class __sheet_state extends DrumeeMFS {
           this.warn("sheet: " + command + " failed", e);
         }
       };
+      // File: Casual Sheets' own two rows are both off here (About needs
+      // its branding, Properties a dialog this host does not provide), so
+      // Casual dropped the whole menu and the bar began at Edit — unlike the
+      // docs editor. It gets the file's actions instead, the gear menu's
+      // (editor/chrome), answered by the window like the gear's rows.
+      const fileRow = (id, label, icon, service) => ({
+        menu: "file",
+        id,
+        label,
+        icon,
+        onClick: () => {
+          const editor = this.editor;
+          if (!editor || (editor.isDestroyed && editor.isDestroyed())) return;
+          editor.onUiEvent({ get: () => service, mget: () => service }, { service });
+        },
+      });
       this._extensions = {
         menu: [
+          fileRow("make-copy", LOCALE.MAKE_A_COPY, "content_copy", _a.duplicate),
+          fileRow("rename", LOCALE.RENAME, "drive_file_rename_outline", "direct-rename"),
+          fileRow("download", LOCALE.DOWNLOAD, "download", _e.download),
+          fileRow("share", LOCALE.SHARE, "share", "secure-share"),
+          fileRow("get-info", LOCALE.GET_INFO, "info", "info"),
+          fileRow("move-to-trash", LOCALE.MOVE_TO_TRASH, "delete", _e.remove),
           {
             menu: "format",
             id: "merge-cells",
