@@ -1179,3 +1179,101 @@ body > div[data-u-context-menu-submenu]:has(~ div[data-u-context-menu-submenu]) 
   --mb-open: rgba(255, 255, 255, 0.08);
   --mb-shadow: 0 2px 6px 2px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.5);
 }
+
+// ── Toolbar popovers: Borders, text / fill colour ─────────────────────────
+// Casual opens them `position: absolute` under their button, inside the
+// toolbar — which scrolls sideways on a narrow window (overflow-x: auto, so
+// it clips vertically too): the Borders list opened INSIDE the green pill,
+// a strip one row high. Pinned to the button with CSS anchor positioning
+// instead, `position: fixed` escapes the toolbar, and the popover drops
+// below it like the font / size dropdowns, in their card. `anchor-scope`
+// keeps two open sheets from anchoring to each other's buttons. Engines
+// without anchor positioning keep Casual's placement.
+@supports (anchor-name: --a) {
+  .editor-sheet .sheet-state {
+    anchor-scope: --cs-borders, --cs-colors;
+  }
+
+  .editor-sheet .sheet-state [data-testid="casual-sheets-toolbar"] {
+    [data-testid="cs-borders"] {
+      anchor-name: --cs-borders;
+    }
+
+    [data-testid="cs-color-picker"] {
+      anchor-name: --cs-colors;
+    }
+
+    [data-testid="cs-borders-popover"],
+    [data-testid="cs-color-popover"] {
+      position: fixed !important;
+      top: anchor(bottom) !important;
+      left: anchor(left) !important;
+      margin-top: 6px !important;
+      z-index: 60000 !important;
+    }
+
+    [data-testid="cs-borders-popover"] {
+      position-anchor: --cs-borders;
+    }
+
+    [data-testid="cs-color-popover"] {
+      position-anchor: --cs-colors;
+    }
+  }
+}
+
+.editor-sheet .sheet-state [data-testid="casual-sheets-toolbar"] {
+  --tp-bg: #ffffff;
+  --tp-ink: #{fv.$fv-g-ink};
+  --tp-hover: #f1f3f4;
+  --tp-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.3);
+
+  [data-testid="cs-borders-popover"],
+  [data-testid="cs-color-popover"] {
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: var(--tp-bg) !important;
+    box-shadow: var(--tp-shadow) !important;
+  }
+
+  [data-testid="cs-borders-popover"] {
+    min-width: 200px !important;
+    padding: 6px 0 !important;
+
+    [role="menuitem"] {
+      box-sizing: border-box;
+      flex: none !important;
+      height: 32px !important;
+      gap: 12px !important;
+      padding: 0 16px 0 14px !important;
+      border-radius: 0 !important;
+      color: var(--tp-ink) !important;
+      font: 400 14px/1.3 var(--font-main) !important;
+      white-space: nowrap;
+
+      &:hover,
+      &[style*="cs-chrome-hover"] {
+        background: var(--tp-hover) !important;
+      }
+    }
+  }
+
+  [data-testid="cs-color-popover"] {
+    padding: 10px !important;
+  }
+
+  // The button of the open popover: the menu bar's grey wash, not Casual's
+  // inline teal box.
+  [data-testid="cs-borders"] > button[aria-expanded="true"],
+  [data-testid="cs-color-picker"] button[aria-expanded="true"] {
+    background: rgba(68, 71, 70, 0.12) !important;
+    color: var(--tp-ink) !important;
+  }
+}
+
+.editor-sheet[data-theme="dark"] .sheet-state [data-testid="casual-sheets-toolbar"] {
+  --tp-bg: #1f2329;
+  --tp-ink: #e3e6eb;
+  --tp-hover: #2a2f36;
+  --tp-shadow: 0 2px 6px 2px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.5);
+}
