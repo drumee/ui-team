@@ -845,7 +845,22 @@ body > div[data-u-context-menu-submenu]:has(~ div[data-u-context-menu-submenu]) 
     border-top: 1px solid rgba(0, 0, 0, 0.05);
     background: #fff !important;
     font-family: var(--font-main);
-    align-items: center;
+    // Casual sets `align-items: stretch` inline: the 28px "+" and ≡ sat at
+    // the top of the 36px strip, 4px above the tab names. Every item on one
+    // centre line.
+    align-items: center !important;
+
+    // The tabs: one height, and none of Casual's inline 2px top border (it
+    // is transparent on every tab but the active one, and pushed each name
+    // 1px down), names centred in the tab.
+    button[role="tab"] {
+      display: inline-flex !important;
+      align-items: center;
+      // The strip's own height, under its 1px top hairline.
+      height: 100% !important;
+      border: 0 !important;
+      box-sizing: border-box;
+    }
 
     // "+" then the all-sheets ≡ first, as in the design ([+] [≡] [Sheet1 ▾]):
     // 24px Material glyphs, 24px apart (the strip's gap).
@@ -890,7 +905,7 @@ body > div[data-u-context-menu-submenu]:has(~ div[data-u-context-menu-submenu]) 
 
     button[aria-selected="true"],
     button[data-active="true"] {
-      height: 36px !important;
+      height: 100% !important;
       padding: 0 12px !important;
       border: 0 !important;
       border-radius: 0 !important;
