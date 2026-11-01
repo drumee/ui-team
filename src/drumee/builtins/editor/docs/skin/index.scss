@@ -1540,3 +1540,12 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 .docs-state [data-testid="smart-chip-menu"] {
   display: none !important;
 }
+
+// The floating "Format selection" bar, closed while the menu bar is in use
+// (docs_state._wireFormatBarDismiss).
+.docs-state[data-format-bar="hidden"] {
+  [data-testid="desktop-format-bar"],
+  [data-testid="mobile-format-bar"] {
+    display: none !important;
+  }
+}

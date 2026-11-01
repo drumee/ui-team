@@ -240,6 +240,47 @@ class __docs_state extends DrumeeMFS {
     this._chipObs.observe(this.el, { childList: true, subtree: true });
   }
 
+  /**
+   * Close the floating "Format selection" bar (bold / italic / colours,
+   * shown over a text selection) when the menu bar is used. The menu bar's
+   * buttons keep the editor's focus and selection, so the bar stayed up over
+   * File / Edit / Format… menus. A press on the menu bar hides it (the skin
+   * keys on data-format-bar); the next press in the document or key typed in
+   * the editor brings it back for the selection that follows. Keys moving
+   * through an open menu do not count.
+   */
+  _wireFormatBarDismiss() {
+    const el = this.el;
+    if (!el || this._formatBarOff) return;
+    const hide = () => {
+      el.dataset.formatBar = "hidden";
+    };
+    const show = () => {
+      if (el.dataset.formatBar) delete el.dataset.formatBar;
+    };
+    const onPointer = (e) => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (t.closest('[data-testid="title-bar"] button[aria-haspopup="menu"]')) hide();
+      else if (t.closest(".paged-editor__pages")) show();
+    };
+    const onKey = (e) => {
+      if (!el.dataset.formatBar) return;
+      const t = e.target;
+      // Arrow keys / Enter in an open menu, or a key in the title bar.
+      if (document.querySelector('[role="menu"][data-state="open"]')) return;
+      if (t && t.closest && t.closest('[data-testid="title-bar"]')) return;
+      show();
+    };
+    el.addEventListener("pointerdown", onPointer, true);
+    el.addEventListener("keydown", onKey, true);
+    this._formatBarOff = () => {
+      el.removeEventListener("pointerdown", onPointer, true);
+      el.removeEventListener("keydown", onKey, true);
+      this._formatBarOff = null;
+    };
+  }
+
   _doMount() {
     if (this._mounted || this._destroyed || !this.el) return;
     this._mounted = 1;
@@ -247,6 +288,7 @@ class __docs_state extends DrumeeMFS {
     // has painted and the icon font is in — both shells (the co-editing one
     // never goes through _reactHost).
     this._wireSmartChipGuard();
+    this._wireFormatBarDismiss();
     this._cancelReveal = revealWhenPainted(this.el.closest(".editor-docs"), {
       painted: () => {
         const pages = this.el && this.el.querySelector(".paged-editor__pages");
@@ -1746,6 +1788,7 @@ class __docs_state extends DrumeeMFS {
     this._destroyed = 1;
     if (this._cancelReveal) this._cancelReveal();
     if (this._chipObs) this._chipObs.disconnect();
+    if (this._formatBarOff) this._formatBarOff();
     clearTimeout(this._chipTimer);
     if (this._saveTimer) {
       clearTimeout(this._saveTimer);
