@@ -313,6 +313,7 @@ class __sheet_state extends DrumeeMFS {
           // stays null in this version). Keep it for Save's live getSnapshot().
           this._apiHandle = api;
           this._ready = 1;
+          this._addMergeToContextMenu(api);
           this._nudgeResize();
           this._setUniverUser(api);
           this._grantWorkbookPermissions(api);
@@ -771,6 +772,41 @@ class __sheet_state extends DrumeeMFS {
       close: (trigger) =>
         trigger.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })),
     });
+  }
+
+  /**
+   * Merge cells / Unmerge cells in the cell right-click menu, next to Insert
+   * and Delete. That menu is Univer's, not Casual's chrome, and carries no
+   * merge row: Univer only puts merging in its ribbon, which Casual replaces,
+   * so the right-click menu offered no way to merge. Added through Univer's
+   * menu facade (@univerjs/ui/facade, imported above), running the same
+   * commands as the toolbar buttons, with Univer's own merge icons.
+   */
+  _addMergeToContextMenu(api) {
+    const univer = api && api.univer;
+    if (this._mergeMenuAdded || !univer || typeof univer.createMenu !== "function") return;
+    this._mergeMenuAdded = 1;
+    const rows = [
+      {
+        id: "drumee.sheet.context-merge-cells",
+        title: LOCALE.MERGE_CELLS || "Merge cells",
+        icon: "MergeAllIcon",
+        action: "sheet.command.add-worksheet-merge-all",
+      },
+      {
+        id: "drumee.sheet.context-unmerge-cells",
+        title: LOCALE.UNMERGE_CELLS || "Unmerge cells",
+        icon: "CancelMergeIcon",
+        action: "sheet.command.remove-worksheet-merge",
+      },
+    ];
+    for (const row of rows) {
+      try {
+        univer.createMenu(row).appendTo("contextMenu.mainArea|contextMenu.layout");
+      } catch (e) {
+        this.warn("sheet: context menu " + row.id + " not added", e);
+      }
+    }
   }
 
   _sheetExtensions() {
