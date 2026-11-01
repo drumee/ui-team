@@ -511,6 +511,11 @@ class __sheet_state extends DrumeeMFS {
         // changes here; the id is set early via the Casual hook when present.
         const cur = um.getCurrentUser ? um.getCurrentUser() : null;
         const keepId = cur && cur.userID ? cur.userID : "Owner";
+        // Nothing to change (the early hook already set this user): setting
+        // it again fires Univer's currentUser$, which rebuilds every
+        // permission point and re-runs its async authorisation — leaving the
+        // workbook read-only until the points are granted again.
+        if (cur && cur.userID === keepId && cur.name === me.name) return;
         um.setCurrentUser({ userID: keepId, name: me.name, avatar: "" });
       }
     } catch (e) {
@@ -547,6 +552,37 @@ class __sheet_state extends DrumeeMFS {
         return -1;
       }
     };
+    // Keep them granted. Univer re-creates and re-authorises its points
+    // asynchronously (a user change, a collab unit swap), and for our
+    // non-"Owner" user that lands them back at false AFTER the grants above:
+    // for about a second after onReady, editing a cell raised "The range is
+    // protected, and you do not have edit permission". Every workbook point
+    // that is added or updated as false is set back to true at once (an
+    // update to true re-emits and is ignored, so this cannot loop).
+    try {
+      const inj = api && api.univer && api.univer._injector;
+      const ps = inj && inj.get(IPermissionService);
+      if (ps && ps.permissionPointUpdate$ && !this._permissionSub) {
+        this._permissionSub = ps.permissionPointUpdate$.subscribe((point) => {
+          const id = point && String(point.id || "");
+          if (!id || !id.startsWith("1.")) return;
+          const v = point.value && typeof point.value === "object" ? point.value.value : point.value;
+          if (v === true) return;
+          const wb = api.univer.getActiveWorkbook();
+          if (!wb || !id.endsWith(`_${wb.getId()}`)) return;
+          // Not from inside the emission that reported it.
+          Promise.resolve().then(() => {
+            try {
+              ps.updatePermissionPoint(id, true);
+            } catch (e) {
+              /** point gone */
+            }
+          });
+        });
+      }
+    } catch (e) {
+      this.warn("sheet_state: permission watch failed", e);
+    }
     try {
       const wb = api.univer.getActiveWorkbook();
       if (wb) grant(wb.getId());
@@ -721,6 +757,14 @@ class __sheet_state extends DrumeeMFS {
         /** already gone */
       }
       this._unitAddedSub = null;
+    }
+    if (this._permissionSub) {
+      try {
+        this._permissionSub.unsubscribe();
+      } catch (e) {
+        /** already gone */
+      }
+      this._permissionSub = null;
     }
     if (this._collabHandle) {
       try {
