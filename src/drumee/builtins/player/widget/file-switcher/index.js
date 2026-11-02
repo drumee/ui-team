@@ -80,6 +80,15 @@ class __file_switcher extends LetcBox {
     this._folder = [];
     this._recent = [];
     this._loadingOthers = false;
+    // The player's File → New (editor/chrome createNew) creates through this
+    // panel, so a new file replaces the open one instead of stacking on it.
+    const p = this.player;
+    if (p) p._fileSwitcher = this;
+  }
+
+  onBeforeDestroy() {
+    const p = this.player;
+    if (p && p._fileSwitcher === this) p._fileSwitcher = null;
   }
 
   /** The player this panel sits in. */

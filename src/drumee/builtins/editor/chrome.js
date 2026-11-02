@@ -307,19 +307,42 @@ function toastCopied(node) {
 
 /**
  * File → New: a new, blank file of the same kind, saved into the current
- * file's folder (what the Files panel's "Document lite / Spreadsheet lite"
- * rows do), opened in its own editor window.
+ * file's folder. It REPLACES this editor, as a switch in the Files panel
+ * does: launched on its own, the new window stacked over this one and the
+ * user had to close twice to get back to the folder.
+ *
+ * With the Files panel, its own create (switcher createCasual: "Document
+ * lite / Spreadsheet lite") does it — save, launch, close — and keeps the
+ * panel's folder and scroll. Without it (phone, DMZ), the same by hand.
  *
  * @param {View} ui      the editor window
  * @param {String} kind  editor_docs | editor_sheet
  */
-function createNew(ui, kind) {
+async function createNew(ui, kind) {
+  if (!ui || ui.isDestroyed()) return null;
+  const sw = ui._fileSwitcher;
+  if (sw && !sw.isDestroyed() && _.isFunction(sw.createCasual)) return sw.createCasual(kind);
   if (require("libs/over-limit").guardWrite("write")) return null;
-  const pid = ui && ui.mget(_a.pid);
-  const hub_id = ui && ui.mget(_a.hub_id);
-  const opt = { kind, uiHandler: [ui] };
+  if (_.isFunction(ui.saveBeforeClose)) {
+    let ok;
+    try {
+      ok = await ui.saveBeforeClose();
+    } catch (e) {
+      ok = false;
+    }
+    // The editor has said why; it stays open with its edits.
+    if (ok === false || ui.isDestroyed()) return null;
+  }
+  const pid = ui.mget(_a.pid);
+  const hub_id = ui.mget(_a.hub_id);
+  // The folder window this editor was opened from outlives it: the new
+  // editor saves into it and refreshes it, not into a closed editor.
+  const target = ui.target && !ui.target.isDestroyed() ? ui.target : undefined;
+  const opt = { kind, target, uiHandler: [target || Wm] };
   if (pid && hub_id) opt.folder = { nid: pid, hub_id };
-  return Wm.launch(opt, { explicit: 1 });
+  const w = Wm.launch(opt, { explicit: 1 });
+  if (w && !ui.isDestroyed()) ui.goodbye();
+  return w;
 }
 
 module.exports = { gearMenu, topbarConfig, handleService, adoptNode, nodeOf, ensureNode, createNew, PRESETS };
