@@ -61,4 +61,9 @@ function forget(nid) {
   write(read().filter((r) => r.nid !== nid));
 }
 
-module.exports = { read, remember, forget };
+/** Merge `patch` into a remembered row, keeping its place in the list. */
+function update(nid, patch = {}) {
+  write(read().map((r) => (r.nid === nid ? { ...r, ...patch } : r)));
+}
+
+module.exports = { read, remember, forget, update };

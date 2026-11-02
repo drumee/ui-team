@@ -1180,8 +1180,11 @@ body > div[data-u-context-menu-submenu]:has(~ div[data-u-context-menu-submenu]) 
     }
 
     // The shortcut (Ctrl+Z…), pushed right by its inline margin-left:auto —
-    // keyed on that, so a row with no shortcut keeps its label as is.
-    > [style*="margin-left: auto"] {
+    // keyed on that, so a row with no shortcut keeps its label as is. Not
+    // the submenu arrow (menu-policy's svg, also margin-left:auto): under
+    // the global border-box reset the 24px padding swallowed its 16px box
+    // and the Export ▸ arrow drew at zero width.
+    > [style*="margin-left: auto"]:not([data-menu-policy-arrow]) {
       padding-left: 24px !important;
       color: var(--mb-muted) !important;
       font-size: 12px !important;

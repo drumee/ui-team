@@ -80,6 +80,15 @@ class __file_switcher extends LetcBox {
     this._folder = [];
     this._recent = [];
     this._loadingOthers = false;
+    // The player's File → New (editor/chrome createNew) creates through this
+    // panel, so a new file replaces the open one instead of stacking on it.
+    const p = this.player;
+    if (p) p._fileSwitcher = this;
+  }
+
+  onBeforeDestroy() {
+    const p = this.player;
+    if (p && p._fileSwitcher === this) p._fileSwitcher = null;
   }
 
   /** The player this panel sits in. */
@@ -170,7 +179,8 @@ class __file_switcher extends LetcBox {
     if (!filename || this.isDestroyed()) return;
     const node = this.node();
     const { nid } = node;
-    if (!nid) return;
+    // Unsaved: nothing remembered yet, its row is drawn from the player.
+    if (!nid) return this.renderLists();
     for (const list of [this._recent, this._folder]) {
       for (const n of list) {
         if (n.nid === nid) n.filename = filename;
@@ -209,6 +219,49 @@ class __file_switcher extends LetcBox {
       (f) => f && f.nid && !CONTAINER_FILETYPES.includes(f.filetype)
         && !isScheduleNode(f) && !(hidden && hidden.test(String(f.filename || "")))
     ).map((f) => ({ hub_id, ...f }));
+    // Only a listing that came back can say a remembered file is missing.
+    if (data) this.checkRecents();
+    this.renderLists();
+  }
+
+  /**
+   * Recently viewed is this browser's own list (recent.js): a file trashed
+   * or moved elsewhere (the folder window, another tab, another member)
+   * never told it, so its row stayed under this folder for as long as the
+   * folder was listed. A row the fresh listing lacks is asked about once,
+   * hidden meanwhile: gone → forgotten; moved → refiled under its new
+   * folder. Absence alone is not proof: the listing is its first page only.
+   * Trash keeps the node in place, same folder, flagged status "deleted"
+   * (mfs_pre_trash_next) — its attributes still answer — so that flag is
+   * "gone" as much as an empty reply.
+   */
+  async checkRecents() {
+    const { nid: open } = this.node();
+    const listed = new Set(this._folder.map((f) => f.nid));
+    if (!this._checking) this._checking = new Set();
+    const doubtful = this._recent.filter(
+      (n) => n.nid !== open && n.pid && this.inScope(n)
+        && !listed.has(n.nid) && !this._checking.has(n.nid)
+    );
+    if (!doubtful.length) return;
+    for (const n of doubtful) this._checking.add(n.nid);
+    const replies = await Promise.all(doubtful.map((n) =>
+      this.fetchService(
+        { service: SERVICE.media.attributes, nid: n.nid, hub_id: n.hub_id },
+        { async: 1 },
+      ).then((node) => ({ n, node }), () => ({ n, failed: 1 }))
+    ));
+    for (const { n } of replies) this._checking.delete(n.nid);
+    if (this.isDestroyed()) return;
+    for (const { n, node, failed } of replies) {
+      // Unreachable is not gone: the row stays.
+      if (failed) continue;
+      if (!node || !node.nid || node.status === "deleted") recent.forget(n.nid);
+      else if (node.pid && String(node.pid) !== String(n.pid)) {
+        recent.update(n.nid, { pid: node.pid, hub_id: node.hub_id || n.hub_id });
+      }
+    }
+    this._recent = recent.read();
     this.renderLists();
   }
 
@@ -234,7 +287,8 @@ class __file_switcher extends LetcBox {
   }
 
   renderLists() {
-    const { nid } = this.node();
+    const node = this.node();
+    const { nid } = node;
     // A remembered row is a thin copy (recent.js); the folder listing has the
     // fresh name and the metadata (the Casual marker of the early `.json`
     // sheets), so a recent that is also listed takes the listing's fields.
@@ -245,19 +299,37 @@ class __file_switcher extends LetcBox {
     const recents = this._recent
       .map(fresh)
       .filter((n) => (n.nid === nid || this.inScope(n)) && this.match(n))
+      .filter((n) => !(this._checking && this._checking.has(n.nid)))
       .slice(0, MAX_RECENT);
+    // A new file (File → New, "Spreadsheet lite"…) has no nid until its
+    // first save, so recent.remember skipped it and the file on the stage
+    // had no row until then. It heads the list, lit, from the start; the
+    // save's nid makes it a remembered row (onPlayerSwitched). Its row opens
+    // nothing: switchTo ignores the open file.
+    if (!nid && node.filename && this.match(node)) {
+      recents.unshift({ ...node, nid: undefined });
+      if (recents.length > MAX_RECENT) recents.pop();
+    }
     // The whole folder, as the folder's own Group view lists it, the open
     // file included: nothing moves when a file is opened (user's call,
     // 2026-10-19). A recently viewed file shows in both; the open file is lit
     // once, under Recently viewed, so no currentNid here.
     const others = this._folder.filter((n) => this.match(n));
     const empty = this._query ? LOCALE.NO_FILE_RESULTS : LOCALE.NO_FILES_YET;
-    this.ensurePart("recent-list").then((p) => {
-      p.feed(skeleton.rows(this, recents, "recent", empty, nid));
-    });
     // Only while nothing is known yet: a folder handed over by the previous
     // panel is drawn at once and refreshed in place.
     const loading = this._loadingOthers && !this._folder.length;
+    // Recently viewed waits for the listing too: until it is in, the rows are
+    // thin remembered copies (stale names, files trashed since — see
+    // checkRecents) that would change under the user. As many placeholders
+    // as rows, so the real ones replace them without a jump.
+    this.ensurePart("recent-list").then((p) => {
+      p.feed(
+        loading
+          ? skeleton.loadingRows(this, Math.max(1, recents.length))
+          : skeleton.rows(this, recents, "recent", empty, nid)
+      );
+    });
     this.ensurePart("other-list").then((p) => {
       p.feed(
         loading

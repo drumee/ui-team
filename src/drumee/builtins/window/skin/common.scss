@@ -145,37 +145,39 @@
     gap: var(--spacer-4);
   }
 
-  &__label-button {
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacer-3) var(--spacer-6);
-    color: var(--normal-fg-10);
-    background-color: var(--normal-bg-90);
-    border-radius: var(--corner-radius-2);
-    font-size: 14px;
-    display: flex;
-    gap: var(--spacer-2);
+  // A "+ Add new" row while what it opens is on its way (window/core
+  // _addNewLoading): the menu stays open, the clicked row ends in a spinner
+  // and the other rows are disabled until the window is up.
+  &__dropdown-menu__items[data-busy="1"] {
+    pointer-events: none;
 
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-
-    &:hover {
-      color: var(--normal-fg-20);
-    }
-
-    &.primary {
-      color: var(--normal-fg-10);
-      background-color: var(--normal-bg-90);
-    }
-
-    &.secondary {
-      color: var(--neutral-900);
-      background-color: var(--primary-400);
+    .window-button__dropdown-menu__item:not([data-loading="1"]) {
+      opacity: 0.4;
     }
   }
+
+  &__dropdown-menu__item[data-loading="1"] {
+    cursor: progress;
+
+    &::after {
+      content: "";
+      flex: 0 0 14px;
+      width: 14px;
+      height: 14px;
+      box-sizing: border-box;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: window-button-spin 0.7s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &::after {
+        animation-duration: 2s;
+      }
+    }
+  }
+
 
   &__icon-button {
     display: flex;
@@ -579,4 +581,10 @@
   font-size: 14px;
   line-height: 20px;
   font-weight: 400;
+}
+
+@keyframes window-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

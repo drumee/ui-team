@@ -33,7 +33,9 @@ class __editor_sheet extends __player {
         privilege: _K.privilege.owner,
       });
       // Google-Sheets style default name; the server suffixes duplicates.
-      this.model.atLeast({ filename: LOCALE.UNTITLED_SPREADSHEET });
+      // The kind travels with the name: the Files panel draws the unsaved
+      // file's row (icon by extension) before the first save gives it a nid.
+      this.model.atLeast({ filename: LOCALE.UNTITLED_SPREADSHEET, ext: "usheet" });
     }
     // Save target: the folder window the sheet is created in (markdown editor
     // does the same). Opened-from-file saves replace in place and ignore it.
@@ -260,6 +262,14 @@ class __editor_sheet extends __player {
     this._wireTitleRename();
     this._wireHotkeys();
     this.applyTheme(this.savedTheme());
+    // A new sheet is created at once, before Casual/Univer has loaded: the
+    // server picks its name (Untitled spreadsheet(1) when the folder has an
+    // Untitled spreadsheet) and the title shows it while the loading cover
+    // is still up, instead of the default name for the first seconds.
+    if (!this.media && !this.mget(_a.nid) && !this._createdNew) {
+      this._createdNew = 1;
+      this.saveContent();
+    }
   }
 
   /**
@@ -410,12 +420,22 @@ class __editor_sheet extends __player {
    *
    */
   saveContent() {
-    if (!this._sheet || !this._sheet.getSnapshot) return;
     // Reentrancy guard: autosave + Ctrl+S can overlap; a second save racing the
     // create→adopt-nid→replace sequence would spawn a duplicate file.
     if (this._saving) return;
-    let snapshot = this._sheet.getSnapshot();
-    if (!snapshot) return;
+    let snapshot =
+      this._sheet && this._sheet.getSnapshot ? this._sheet.getSnapshot() : null;
+    if (!snapshot) {
+      // Casual is not up yet. A file on disk has nothing new to write (the
+      // create's follow-up replace lands here): the create was the save.
+      if (this.mget(_a.nid)) {
+        if (this._saveState === "saving") this.setSaveStatus("saved");
+        return;
+      }
+      // A new sheet is created as an empty workbook — it opens blank, as
+      // sheet_state reads `{}` — and its content follows on the next save.
+      snapshot = {};
+    }
     this._saving = 1;
     this.setSaveStatus("saving");
     const content = JSON.stringify(snapshot);
@@ -521,9 +541,14 @@ class __editor_sheet extends __player {
         // Adopt the saved node so the next Save REPLACES this file instead of
         // creating a duplicate, and refresh the title bar with the real name.
         this.mset(data);
-        this.ensurePart("ref-window-name").then((p) => {
-          if (p && p.set) p.set({ content: savedName });
-        }).catch(() => {});
+        // The server's name (it suffixes duplicates: "Untitled
+        // spreadsheet(1)"). This header's title is the "player-title" part
+        // (update_name) — the "ref-window-name" set here before is not in it,
+        // so the title kept the name asked for while Recently viewed (the
+        // model) showed the real one.
+        const ext = this.mget(_a.ext) || "usheet";
+        const shown = String(savedName || "").replace(new RegExp(`\\.${ext}$`), "");
+        if (shown) this.update_name(_a.filename, shown);
         // media.save CREATES an empty node — inline content is only persisted on
         // a replace-save. So after adopting the new nid, save once more (now a
         // replace) to actually write the content; otherwise the file reopens
