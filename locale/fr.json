@@ -1,4 +1,6 @@
 {
+  "SHEET_EXPORT_XLSX": "Exporter au format Excel (.xlsx)",
+  "SHEET_EXPORT_CSV": "Exporter au format CSV",
   "MERGE_CELLS": "Fusionner les cellules",
   "UNMERGE_CELLS": "Annuler la fusion des cellules",
   "TAB": "Onglet",

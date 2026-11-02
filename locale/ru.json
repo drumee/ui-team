@@ -1,4 +1,6 @@
 {
+  "SHEET_EXPORT_XLSX": "Экспорт в Excel (.xlsx)",
+  "SHEET_EXPORT_CSV": "Экспорт в CSV",
   "MERGE_CELLS": "Объединить ячейки",
   "UNMERGE_CELLS": "Отменить объединение ячеек",
   "TAB": "Tab",

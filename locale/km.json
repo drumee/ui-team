@@ -1,4 +1,6 @@
 {
+  "SHEET_EXPORT_XLSX": "នាំចេញជា Excel (.xlsx)",
+  "SHEET_EXPORT_CSV": "នាំចេញជា CSV",
   "MERGE_CELLS": "បញ្ចូលក្រឡាចូលគ្នា",
   "UNMERGE_CELLS": "បំបែកក្រឡា",
   "TAB": "Tab",

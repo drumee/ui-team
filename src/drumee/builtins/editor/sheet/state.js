@@ -23,6 +23,7 @@ import "@univerjs/sheets-numfmt/facade";
 import "@univerjs/sheets-filter/facade";
 import { contentUrl } from "builtins/editor/content-url";
 const pendingFocus = require("builtins/editor/pending-focus");
+const { saveBlob } = require("builtins/editor/export");
 const { attachMenuPolicy } = require("builtins/editor/menu-policy");
 const { revealWhenPainted, hideLoading } = require("builtins/editor/loading-reveal");
 // Casual Sheets chrome gates (see _wireMenus / _sheetExtensions).
@@ -853,6 +854,88 @@ class __sheet_state extends DrumeeMFS {
     }
   }
 
+  /** Base name for exported / printed files: the document's name. */
+  _exportName() {
+    const raw = (this.editor && this.editor.mget(_a.filename)) || this.mget(_a.filename) || "Spreadsheet";
+    return String(raw).replace(/<.+>/, "").replace(/\.usheet$/i, "").trim() || "Spreadsheet";
+  }
+
+  /** The sheet in view: its name and its used range as displayed text. */
+  _activeSheetCells() {
+    const api = this._apiHandle;
+    const ws = api && api.univer && api.univer.getActiveWorkbook().getActiveSheet();
+    if (!ws) return null;
+    const rows = ws.getDataRange().getDisplayValues();
+    return { name: ws.getSheetName(), rows };
+  }
+
+  /** File → Export as Excel: the LIVE workbook (unsaved edits included). */
+  async _exportXlsx() {
+    try {
+      const data = this.getSnapshot();
+      if (!data) return;
+      const { workbookDataToXlsx } = await import("@casualoffice/sheets/xlsx");
+      const blob = await workbookDataToXlsx(data);
+      saveBlob(blob, `${this._exportName()}.xlsx`);
+    } catch (e) {
+      this.warn("sheet: export as xlsx failed", e);
+    }
+  }
+
+  /** File → Export as CSV: the sheet in view, as Excel opens it (UTF-8 BOM). */
+  _exportCsv() {
+    try {
+      const sheet = this._activeSheetCells();
+      if (!sheet) return;
+      const cell = (v) => {
+        const t = v == null ? "" : String(v);
+        return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+      };
+      const csv = sheet.rows.map((r) => r.map(cell).join(",")).join("\r\n");
+      const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+      saveBlob(blob, `${this._exportName()} - ${sheet.name}.csv`);
+    } catch (e) {
+      this.warn("sheet: export as csv failed", e);
+    }
+  }
+
+  /**
+   * File → Print: the sheet in view as a plain table (its displayed values),
+   * printed from a hidden frame — Casual Sheets has no print of its own.
+   */
+  _printSheet() {
+    try {
+      const sheet = this._activeSheetCells();
+      if (!sheet) return;
+      const esc = (v) =>
+        String(v == null ? "" : v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      const body = sheet.rows.map((r) => `<tr>${r.map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`).join("");
+      const title = esc(`${this._exportName()} - ${sheet.name}`);
+      const frame = document.createElement("iframe");
+      frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+      document.body.appendChild(frame);
+      const doc = frame.contentDocument;
+      doc.open();
+      doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>
+        body{font:11pt Arial,sans-serif;margin:12mm}h1{font-size:13pt;margin:0 0 8px}
+        table{border-collapse:collapse}td{border:1px solid #c7c7c7;padding:3px 6px;white-space:pre-wrap;vertical-align:top}
+      </style></head><body><h1>${title}</h1><table>${body}</table></body></html>`);
+      doc.close();
+      const done = () => setTimeout(() => frame.remove(), 1000);
+      frame.contentWindow.onafterprint = done;
+      setTimeout(() => {
+        try {
+          frame.contentWindow.focus();
+          frame.contentWindow.print();
+        } finally {
+          setTimeout(done, 60000);
+        }
+      }, 50);
+    } catch (e) {
+      this.warn("sheet: print failed", e);
+    }
+  }
+
   _sheetExtensions() {
     if (!this._extensions) {
       // Merge / Unmerge, also in Format (as Google Sheets has them): Casual
@@ -866,9 +949,11 @@ class __sheet_state extends DrumeeMFS {
       };
       // File: Casual Sheets' own two rows are both off here (About needs
       // its branding, Properties a dialog this host does not provide), so
-      // Casual dropped the whole menu and the bar began at Edit — unlike the
-      // docs editor. It gets the file's actions instead, the gear menu's
-      // (editor/chrome), answered by the window like the gear's rows.
+      // Casual dropped the whole menu. It mirrors the docs editor's File
+      // (Save, Make a copy, Print, Export as …) with the sheet's means: the
+      // window's save and copy, a printout of the sheet in view, and the
+      // live workbook exported as Excel or CSV. Rename / Share / Get info /
+      // Trash stay in the gear menu, as in docs.
       const fileRow = (id, label, icon, service) => ({
         menu: "file",
         id,
@@ -882,12 +967,38 @@ class __sheet_state extends DrumeeMFS {
       });
       this._extensions = {
         menu: [
+          {
+            menu: "file",
+            id: "save",
+            label: LOCALE.SAVE || "Save",
+            icon: "save",
+            shortcut: "Ctrl+S",
+            onClick: () => {
+              if (this.editor && typeof this.editor.saveContent === "function") this.editor.saveContent();
+            },
+          },
           fileRow("make-copy", LOCALE.MAKE_A_COPY, "content_copy", _a.duplicate),
-          fileRow("rename", LOCALE.RENAME, "drive_file_rename_outline", "direct-rename"),
-          fileRow("download", LOCALE.DOWNLOAD, "download", _e.download),
-          fileRow("share", LOCALE.SHARE, "share", "secure-share"),
-          fileRow("get-info", LOCALE.GET_INFO, "info", "info"),
-          fileRow("move-to-trash", LOCALE.MOVE_TO_TRASH, "delete", _e.remove),
+          {
+            menu: "file",
+            id: "print",
+            label: LOCALE.PRINT || "Print",
+            icon: "print",
+            onClick: () => this._printSheet(),
+          },
+          {
+            menu: "file",
+            id: "export-xlsx",
+            label: LOCALE.SHEET_EXPORT_XLSX || "Export as Excel (.xlsx)",
+            icon: "download",
+            onClick: () => this._exportXlsx(),
+          },
+          {
+            menu: "file",
+            id: "export-csv",
+            label: LOCALE.SHEET_EXPORT_CSV || "Export as CSV",
+            icon: "download",
+            onClick: () => this._exportCsv(),
+          },
           {
             menu: "format",
             id: "merge-cells",

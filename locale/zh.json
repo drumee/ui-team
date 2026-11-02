@@ -1,4 +1,6 @@
 {
+  "SHEET_EXPORT_XLSX": "导出为 Excel (.xlsx)",
+  "SHEET_EXPORT_CSV": "导出为 CSV",
   "MERGE_CELLS": "合并单元格",
   "UNMERGE_CELLS": "取消合并单元格",
   "TAB": "Tab",
