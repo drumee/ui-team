@@ -305,12 +305,20 @@ class __file_switcher extends LetcBox {
     // once, under Recently viewed, so no currentNid here.
     const others = this._folder.filter((n) => this.match(n));
     const empty = this._query ? LOCALE.NO_FILE_RESULTS : LOCALE.NO_FILES_YET;
-    this.ensurePart("recent-list").then((p) => {
-      p.feed(skeleton.rows(this, recents, "recent", empty, nid));
-    });
     // Only while nothing is known yet: a folder handed over by the previous
     // panel is drawn at once and refreshed in place.
     const loading = this._loadingOthers && !this._folder.length;
+    // Recently viewed waits for the listing too: until it is in, the rows are
+    // thin remembered copies (stale names, files trashed since — see
+    // checkRecents) that would change under the user. As many placeholders
+    // as rows, so the real ones replace them without a jump.
+    this.ensurePart("recent-list").then((p) => {
+      p.feed(
+        loading
+          ? skeleton.loadingRows(this, Math.max(1, recents.length))
+          : skeleton.rows(this, recents, "recent", empty, nid)
+      );
+    });
     this.ensurePart("other-list").then((p) => {
       p.feed(
         loading
