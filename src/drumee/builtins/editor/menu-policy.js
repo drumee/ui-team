@@ -98,22 +98,49 @@ function attachMenuPolicy(root, policy = {}) {
     }
   };
 
+  // The arrow at the end of a row that opens a submenu — ours (Export ▸) and
+  // Casual's own (Casual Docs draws none; Casual Sheets draws its
+  // chevron_right, kept as is).
+  // Checked by element, not by a flag: a React re-render of the row drops
+  // the arrow but keeps the row.
+  const ensureArrow = (row) => {
+    if (row.querySelector(":scope > [data-menu-policy-arrow]")) return;
+    const last = row.lastElementChild;
+    if (last && last !== row.firstElementChild && /chevron|›|▸/.test(last.textContent || "")) return;
+    // Casual Docs' own arrow: a text-less <span style="margin-left:auto">
+    // holding a 16px svg, already at the end of the row — kept as is (a
+    // second arrow split the free space with it, so it sat by the label).
+    if (
+      last &&
+      last !== row.firstElementChild &&
+      last.tagName === "SPAN" &&
+      !(last.textContent || "").trim() &&
+      last.children.length === 1 &&
+      last.firstElementChild.tagName.toLowerCase() === "svg"
+    ) {
+      return;
+    }
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 -960 960 960");
+    // Casual Docs' arrow size.
+    svg.setAttribute("width", "16");
+    svg.setAttribute("height", "16");
+    svg.setAttribute("fill", "currentColor");
+    svg.setAttribute("aria-hidden", "true");
+    svg.style.cssText = "margin-left:auto;flex:none";
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", CHEVRON);
+    svg.appendChild(path);
+    svg.dataset.menuPolicyArrow = "1";
+    row.appendChild(svg);
+  };
+
   const markParent = (row) => {
     if (row.dataset.menuPolicyParent) return;
     row.dataset.menuPolicyParent = "1";
     row.setAttribute("aria-haspopup", "menu");
     row.setAttribute("aria-expanded", "false");
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("viewBox", "0 -960 960 960");
-    svg.setAttribute("width", "18");
-    svg.setAttribute("height", "18");
-    svg.setAttribute("fill", "currentColor");
-    svg.setAttribute("aria-hidden", "true");
-    svg.style.cssText = "margin-left:auto;flex:none;opacity:.7";
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", CHEVRON);
-    svg.appendChild(path);
-    row.appendChild(svg);
+    ensureArrow(row);
   };
 
   const openPanel = (row) => {
@@ -232,7 +259,9 @@ function attachMenuPolicy(root, policy = {}) {
       }
     }
     for (const row of menu.querySelectorAll(ROW)) {
-      if (!row.dataset.menuPolicySubRow && submenus[keyOf(row)]) markParent(row);
+      if (row.dataset.menuPolicySubRow) continue;
+      if (submenus[keyOf(row)]) markParent(row);
+      else if (row.getAttribute("aria-haspopup") === "menu") ensureArrow(row);
     }
     if (menu.dataset.menuPolicySub) return;
     tidy(menu);

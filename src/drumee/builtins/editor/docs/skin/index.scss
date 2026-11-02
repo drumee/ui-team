@@ -898,7 +898,9 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
       padding: 0 !important;
     }
 
-    button[aria-haspopup="menu"] {
+    // The menu bar's buttons only (File, Edit…): a dropdown row that opens a
+    // submenu (Export ▸, Casual's own) carries aria-haspopup too.
+    button[aria-haspopup="menu"]:not([role="menuitem"]) {
       font: 400 14px/1.2 var(--font-main);
       color: fv.$fv-g-ink;
       padding: 2px 7px;
@@ -1087,8 +1089,9 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 // Phosphor glyphs, no strike / caps / super-sub / clear-format buttons.
 .editor-docs .docs-state {
   [data-testid="title-bar"] {
-    // The Figma menu row has no carets.
-    button[aria-haspopup="menu"] svg {
+    // The Figma menu row has no carets — the menu bar's buttons, not the
+    // dropdown rows: those keep their icon and their submenu arrow.
+    button[aria-haspopup="menu"]:not([role="menuitem"]) svg {
       display: none !important;
     }
 
