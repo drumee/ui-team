@@ -772,7 +772,10 @@ $field-bg: rgba(0, 0, 0, 0.05);
     margin-top: -8px;
     @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: #c2681f);
 
-    &:empty {
+    // Not :empty — a Note never is (its inner .note-content), so the blank
+    // line held its slot until the first write emptied it for real and the
+    // card shrank. _mmBanner stamps data-filled with the text.
+    &:not([data-filled="1"]) {
       display: none;
     }
   }

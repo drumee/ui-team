@@ -600,6 +600,8 @@ module.exports = function meetingModal(ui, opt = {}) {
         sys_pn: "mm-availability",
         partHandler: ui,
         content: "",
+        // Shown on a written line only (_mmBanner): a Note is never :empty.
+        attrOpt: { "data-filled": "0" },
       }),
       Skeletons.Box.X({ className: `${pfx}-footer`, kids: footerKids }),
     ],
