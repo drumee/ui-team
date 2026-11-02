@@ -8158,15 +8158,8 @@ class __tasks_panel extends LetcBox {
     this._fileSearch.hasMore = false;
 
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
-    // A single character is too short to be a useful search — clear until the
-    // user types more or clears the field entirely (empty → list all below).
-    if (query.length === 1) {
-      const hadResults = (this._fileSearch.results || []).length > 0;
-      this._fileSearch.results = [];
-      if (hadResults) this._refreshFileSearchDropdown(scope);
-      return;
-    }
-    // Empty query lists all files; >= 2 chars searches. Both hit the server
+    // Empty query lists all files; any other query searches, a single
+    // character included — a file can be named "2.png". Both hit the server
     // (debounced) and page 1 replaces whatever was shown.
     this._fileSearchTimer = setTimeout(() => {
       this._runFileSearch(query, scope);

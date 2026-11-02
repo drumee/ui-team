@@ -86,7 +86,7 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
       }),
     ];
   }
-  if (query.length >= 2) {
+  if (query.length) {
     return [
       Skeletons.Note({
         className: `${pfx}__file-search-empty`,
@@ -698,7 +698,7 @@ const make = function (ui) {
         }),
       ];
     }
-    if (query && query.length >= 2) {
+    if (query) {
       return [
         Skeletons.Note({
           className: `${pfx}__file-search-empty`,

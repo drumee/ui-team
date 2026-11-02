@@ -354,8 +354,6 @@ module.exports = {
     edit.query = q;
     if (edit.field === "files") {
       if (this._listSearchTimer) clearTimeout(this._listSearchTimer);
-      // One letter is too short to be useful — same rule as the card's search.
-      if (q.length === 1) return;
       this._listSearchTimer = setTimeout(() => this._runListFileSearch(q), 250);
       return;
     }
