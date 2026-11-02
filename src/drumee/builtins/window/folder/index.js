@@ -4622,8 +4622,7 @@ class __window_folder extends mfsInteract {
       // real busy warning still wins: that is new information, not a stale
       // blank. The notice is dropped by the next submit.
       if (!txt && this._mmCapNotice) return;
-      const el = root.querySelector(`.${this.fig.family}__meeting-modal-availability`);
-      if (el) el.textContent = txt || "";
+      this._mmBanner(txt);
     };
     const dateYmd = val('[name="mm-date"]');
     const sHm = val('[name="mm-stime"]');
@@ -4804,13 +4803,19 @@ class __window_folder extends mfsInteract {
   }
 
   // Inline warning line inside the schedule modal (shared with the free/busy
-  // banner — it is the modal's one messaging surface).
+  // banner — it is the modal's one messaging surface). The line is a Note,
+  // never CSS-:empty (its inner .note-content), so it shows on data-filled:
+  // hiding on :empty let the first blank write here delete that inner div and
+  // collapse the line, and the card shrank 6px just after it opened.
   _mmBanner(txt) {
     const root = this.dialogWrapper && this.dialogWrapper.el;
     const el =
       root &&
       root.querySelector(`.${this.fig.family}__meeting-modal-availability`);
-    if (el) el.textContent = txt || "";
+    if (!el) return;
+    const inner = el.querySelector(".note-content") || el;
+    inner.textContent = txt || "";
+    el.dataset.filled = txt ? "1" : "0";
   }
 
   // Did a room.* call actually go through? A rejected call does NOT reject the
