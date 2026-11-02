@@ -435,6 +435,17 @@
     font-weight: 400;
   }
 
+  // Armin Grotesk's line box is bottom-heavy (ascent 12 / descent 6 at 13px),
+  // so a 15.6px line centred on the icons puts the cap-height ink 2px above
+  // their centre (measured headless). Relative offset, so the 32px buttons
+  // keep their size — the address-book's optical-center does the same.
+  &__view-label,
+  &__filter-label,
+  &__new-label {
+    position: relative;
+    top: 2px;
+  }
+
   // ≡ — the funnel's three lines sit 4px from the label. The sprite is cropped
   // to the lines themselves (13x7), so it is centred in a 15px box rather
   // than stretched to fill it.
