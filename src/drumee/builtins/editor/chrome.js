@@ -266,7 +266,12 @@ function handleService(ui, cmd, args = {}) {
         }
         let ret;
         try {
-          ret = node.onUiEvent(cmd, args);
+          // Make a copy copies the open file — not the desk selection the
+          // tile's own menu row would copy — and says when it is made.
+          ret =
+            service === _a.duplicate && _.isFunction(node.duplicateInPlace)
+              ? node.duplicateInPlace().then((ok) => ok && toastCopied(node))
+              : node.onUiEvent(cmd, args);
         } catch (e) {
           ui.warn(`editor chrome: ${service} failed`, e);
           return;
@@ -281,6 +286,23 @@ function handleService(ui, cmd, args = {}) {
       });
       return true;
   }
+}
+
+/**
+ * The desk's confirmation toast (libs/toast, slot `desk-toast`) once a copy
+ * is made: the editor window has no slot of its own, and the desk's sits
+ * above every window layer.
+ *
+ * @param {View} node  the copied file's tile
+ */
+function toastCopied(node) {
+  const desk = window.Desk;
+  if (!desk || !_.isFunction(desk.getPart)) return;
+  const name = node.mget(_a.filename) || "";
+  require("libs/toast").showToast(desk, {
+    part: desk.getPart("desk-toast"),
+    message: name ? LOCALE.COPY_CREATED.format(name) : LOCALE.COPY_CREATED_PLAIN,
+  });
 }
 
 /**

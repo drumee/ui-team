@@ -967,6 +967,8 @@ class __media_interact extends media_core {
   /**
    * Create a copy beside this media item. The live update owns grid insertion so the
    * HTTP response and WebSocket broadcast cannot add the same copy twice.
+   * Resolves true once the copy is made, false when it failed (already
+   * alerted) — the editors' File → Make a copy toasts on true.
    */
   duplicateInPlace() {
     // A WORKSPACE is not a node, so Make a copy on one is not a node copy. It
@@ -998,11 +1000,16 @@ class __media_interact extends media_core {
       .then((data) => {
         if (data && data.error) {
           const message = data.reason || data.error.message || data.error;
-          return Wm.alert(message || LOCALE.TRY_AGAIN);
+          Wm.alert(message || LOCALE.TRY_AGAIN);
+          return false;
         }
         Wm.unselect && Wm.unselect();
+        return true;
       })
-      .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
+      .catch((e) => {
+        Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
+        return false;
+      });
   }
 
   /**

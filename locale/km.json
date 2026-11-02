@@ -1537,6 +1537,8 @@
   "VIEW_HISTORY": "មើលប្រវត្តិ",
   "ORGANIZE": "រៀបចំ",
   "MAKE_A_COPY": "ធ្វើច្បាប់ចម្លង",
+  "COPY_CREATED": "បានបង្កើតច្បាប់ចម្លងនៃ {0}",
+  "COPY_CREATED_PLAIN": "បានបង្កើតច្បាប់ចម្លង",
   "LINK_TO_TASK_TRACKER": "ភ្ជាប់ទៅកម្មវិធីតាមដានការងារ",
   "SEND_LINK_BY_EMAIL": "ផ្ញើតំណភ្ជាប់តាមអ៊ីមែល",
   "ADD_MEMBERS": "បន្ថែមសមាជិក",

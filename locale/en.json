@@ -268,6 +268,8 @@
   "DELETE_WORKSPACE_WARNING": "Deleting removes this workspace and everything in it - files, folders, chat and meetings - for every member. It cannot be undone.",
   "ORGANIZE": "Organize",
   "MAKE_A_COPY": "Make a copy",
+  "COPY_CREATED": "A copy of {0} was created",
+  "COPY_CREATED_PLAIN": "A copy was created",
   "LINK_TO_TASK_TRACKER": "Link to task tracker",
   "MUSICS": "Musics",
   "MY_ACCOUNT": "My account",

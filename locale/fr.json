@@ -1539,6 +1539,8 @@
   "VIEW_HISTORY": "Voir l'historique",
   "ORGANIZE": "Organiser",
   "MAKE_A_COPY": "Faire une copie",
+  "COPY_CREATED": "Une copie de {0} a été créée",
+  "COPY_CREATED_PLAIN": "Une copie a été créée",
   "LINK_TO_TASK_TRACKER": "Lier au suivi des tâches",
   "SEND_LINK_BY_EMAIL": "Envoyer le lien par email",
   "ADD_MEMBERS": "Ajouter des membres",
