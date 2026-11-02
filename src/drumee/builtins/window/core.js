@@ -1170,24 +1170,31 @@ class __window_core extends __utils {
   }
 
   /**
-   * "+ Add new" (toolkit addNewMenu): the menu closes on click, and what a
-   * row opens can take seconds — an editor's lazy chunk, or euroffice
-   * new_doc + node_info — so the click looked dead (aw.spinner() draws
-   * nothing in this app: ui-core injects its markup with no styles). The
-   * trigger shows a spinner (data-loading, window skin common.scss) until a
-   * new window is in the pool, `pending` resolves false or rejects (nothing
-   * will open), or ADD_NEW_LOADING_MAX_MS passed.
+   * "+ Add new" (toolkit addNewMenu): what a row opens can take seconds —
+   * an editor's lazy chunk, or euroffice new_doc + node_info — and the menu
+   * used to close at once, so the click looked dead. The menu now stays open
+   * (ui-core's _closeItems is a no-op while `brake` is set; this runs before
+   * the click bubbles up to close it), the clicked row ends in a spinner and
+   * the others are disabled (data-loading / data-busy, window skin
+   * common.scss), until a new window is in the pool, `pending` resolves false
+   * or rejects (nothing will open), or ADD_NEW_LOADING_MAX_MS passed; then
+   * the menu closes.
    *
+   * @param {View} cmd  the clicked row
    * @param {Promise|false} [pending]  false: refused before anything started
    * @param {Boolean} [expectWindow]  false: done once `pending` resolves
    *                                  (the folder form is a modal, not a window)
    * @returns `pending`, for the caller to return
    */
-  _addNewLoading(pending, expectWindow = true) {
+  _addNewLoading(cmd, pending, expectWindow = true) {
     if (pending === false) return pending;
-    const btn = this.el && this.el.querySelector(`.${this.fig.group}-button__label-button`);
-    if (!btn) return pending;
-    const token = (this._addNewToken = (this._addNewToken || 0) + 1);
+    const row = cmd && cmd.el;
+    const list = row && row.parentElement;
+    const menu = cmd && _.isFunction(cmd.getParentByKind)
+      ? cmd.getParentByKind(KIND.menu.topic)
+      : null;
+    // Only this dropdown's rows: the same services come from other menus.
+    if (!list || !menu || !/__dropdown-menu__item\b/.test(row.className)) return pending;
     const before = new Set();
     let pool = null;
     try {
@@ -1196,12 +1203,20 @@ class __window_core extends __utils {
     } catch (e) {
       pool = null;
     }
-    btn.dataset.loading = 1;
+    row.dataset.loading = 1;
+    list.dataset.busy = 1;
+    menu.brake = true;
     let poll = null;
+    let settled = 0;
     const done = () => {
+      if (settled) return;
+      settled = 1;
       clearInterval(poll);
       clearTimeout(cap);
-      if (this._addNewToken === token) delete btn.dataset.loading;
+      delete row.dataset.loading;
+      delete list.dataset.busy;
+      menu.brake = false;
+      if (!menu.isDestroyed()) menu._closeItems();
     };
     const cap = setTimeout(done, ADD_NEW_LOADING_MAX_MS);
     if (expectWindow && pool) {
@@ -1523,7 +1538,7 @@ class __window_core extends __utils {
       // Routes via Wm.launch({ explicit: 1 }) so Kind.waitFor resolves
       // the lazy-loaded bundle before mounting.
       case "add-folder":
-        this._addNewLoading(Kind.waitFor("folder_form"), false);
+        this._addNewLoading(cmd, Kind.waitFor("folder_form"), false);
         Kind.waitFor("folder_form").then(() => {
           if (Wm && Wm.__wrapperModal) {
             Wm.__wrapperModal.feed({
@@ -1540,7 +1555,7 @@ class __window_core extends __utils {
         // opening an existing file. New-note path uses getCurrentMedia()
         // which reads from `this.target = Wm.getActiveWindow()`.
         if (require("libs/over-limit").guardWrite("write")) return;
-        this._addNewLoading();
+        this._addNewLoading(cmd);
         return Wm.launch(
           { kind: "editor_blocknote", uiHandler: [this] },
           { explicit: 1 }
@@ -1550,7 +1565,7 @@ class __window_core extends __utils {
       // Note. Both names now open the same thing.
       case "add-blocknote":
         if (require("libs/over-limit").guardWrite("write")) return;
-        this._addNewLoading();
+        this._addNewLoading(cmd);
         return Wm.launch(
           { kind: "editor_blocknote", uiHandler: [this] },
           { explicit: 1 }
@@ -1560,7 +1575,7 @@ class __window_core extends __utils {
         if (require("libs/over-limit").guardWrite("write")) return;
         // IN-APP: open the spreadsheet as a desk window (PO's call). The
         // standalone #/sheet tab route still exists for later.
-        this._addNewLoading();
+        this._addNewLoading(cmd);
         return Wm.launch(
           { kind: "editor_sheet", uiHandler: [this] },
           { explicit: 1 }
@@ -1569,14 +1584,14 @@ class __window_core extends __utils {
       case "add-doc":
         if (require("libs/over-limit").guardWrite("write")) return;
         // Casual Docs (native DocxEditor) as a desk window.
-        this._addNewLoading();
+        this._addNewLoading(cmd);
         return Wm.launch(
           { kind: "editor_docs", uiHandler: [this] },
           { explicit: 1 }
         );
 
       case "new-document":
-        return this._addNewLoading(this.newDocument(cmd));
+        return this._addNewLoading(cmd, this.newDocument(cmd));
 
       default:
         if (lastClick.shiftKey || lastClick.altKey || lastClick.ctrlKey) {
