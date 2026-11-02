@@ -358,10 +358,8 @@ class drumee_router extends LetcBox {
     // replay the bounce and land on the home grid (prod, 2026-10-28).
     // A signup link's offer, stored on THIS origin, rides along (libs/offer-link).
     const offer = offerHandoff();
-    const search = offer
-      ? `${location.search}${location.search ? "&" : "?"}${offer}`
-      : location.search;
-    const target = `${location.protocol}//${host}${location.pathname}${search}`;
+    const offerArg = offer ? `${location.search ? "&" : "?"}${offer}` : "";
+    const target = `${location.protocol}//${host}${location.pathname}${location.search}${offerArg}`;
     if (fileHash && fileHash.charAt(0) === "#") {
       fileDeepLink.clear();
       location.replace(`${target}${fileHash}`);
