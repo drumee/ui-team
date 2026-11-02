@@ -228,9 +228,11 @@ class __file_switcher extends LetcBox {
    * or moved elsewhere (the folder window, another tab, another member)
    * never told it, so its row stayed under this folder for as long as the
    * folder was listed. A row the fresh listing lacks is asked about once,
-   * hidden meanwhile: gone (trash takes it out of `media`, so its
-   * attributes come back empty) → forgotten; moved → refiled under its new
+   * hidden meanwhile: gone → forgotten; moved → refiled under its new
    * folder. Absence alone is not proof: the listing is its first page only.
+   * Trash keeps the node in place, same folder, flagged status "deleted"
+   * (mfs_pre_trash_next) — its attributes still answer — so that flag is
+   * "gone" as much as an empty reply.
    */
   async checkRecents() {
     const { nid: open } = this.node();
@@ -253,7 +255,7 @@ class __file_switcher extends LetcBox {
     for (const { n, node, failed } of replies) {
       // Unreachable is not gone: the row stays.
       if (failed) continue;
-      if (!node || !node.nid) recent.forget(n.nid);
+      if (!node || !node.nid || node.status === "deleted") recent.forget(n.nid);
       else if (node.pid && String(node.pid) !== String(n.pid)) {
         recent.update(n.nid, { pid: node.pid, hub_id: node.hub_id || n.hub_id });
       }
