@@ -1,6 +1,7 @@
 // "Schedule a meeting" modal (Figma component set 1693:140137 — blank
 // 1693:140138, filled 1693:140255, information 1693:140389) — create / edit a
-// scheduled meeting via room.book/update/remove, one 600px column. Invitees are
+// scheduled meeting via room.book/update/remove, in two sides (title,
+// description, files | date, time, invitees, creator, repeat). Invitees are
 // workspace members chosen by typing a name (type-to-search → suggestions →
 // removable chips); recurrence lives in ui._mmRecur; the Files section (search,
 // Upload, chips) reads ui._mmState. Rendered into the folder window's
@@ -559,29 +560,36 @@ module.exports = function meetingModal(ui, opt = {}) {
     attrOpt: { "data-nid": (m && m.nid) || "", "data-view": viewOnly ? "1" : "0" },
     kids: [
       header,
-      Skeletons.Box.Y({
+      // Two sides: what the meeting is about on the left, when / who on the
+      // right. A narrow pane stacks them (container query in the skin).
+      Skeletons.Box.X({
         className: `${pfx}-body`,
         kids: [
-          field(LOCALE.TITLE, title),
-          field(LOCALE.DESCRIPTION_AGENDA, description),
-          field(LOCALE.FILES, files),
-          field(LOCALE.DATE, date),
-          Skeletons.Box.X({
-            className: `${pfx}-row ${pfx}-time-row`,
+          Skeletons.Box.Y({
+            className: `${pfx}-col ${pfx}-col-main`,
             kids: [
-              field(LOCALE.ENTER_TIME, timePicker(ui, pfx, "stime", m && m.stime_hm)),
-              Skeletons.Image.Svg({ ico: "arrow-right", className: `${pfx}-time-arrow` }),
-              field(LOCALE.END_TIME, timePicker(ui, pfx, "etime", m && m.etime_hm)),
+              field(LOCALE.TITLE, title),
+              field(LOCALE.DESCRIPTION_AGENDA, description),
+              field(LOCALE.FILES, files),
             ],
           }),
-          Skeletons.Box.X({
-            className: `${pfx}-row`,
+          Skeletons.Box.Y({
+            className: `${pfx}-col ${pfx}-col-side`,
             kids: [
+              field(LOCALE.DATE, date),
+              Skeletons.Box.X({
+                className: `${pfx}-row ${pfx}-time-row`,
+                kids: [
+                  field(LOCALE.START_TIME, timePicker(ui, pfx, "stime", m && m.stime_hm)),
+                  Skeletons.Image.Svg({ ico: "arrow-right", className: `${pfx}-time-arrow` }),
+                  field(LOCALE.END_TIME, timePicker(ui, pfx, "etime", m && m.etime_hm)),
+                ],
+              }),
               field(LOCALE.INVITEES, invitees),
               field(LOCALE.CREATED_BY, creatorChip(ui, pfx, m)),
+              field(LOCALE.REPEAT, recur),
             ],
           }),
-          field(LOCALE.REPEAT, recur),
         ],
       }),
       // The modal's one messaging surface: free/busy, a missing title, a save
