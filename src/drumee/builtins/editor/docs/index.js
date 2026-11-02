@@ -46,7 +46,9 @@ class __editor_docs extends __player {
       });
       // Google-Docs style default name; the server suffixes duplicates
       // ("Untitled document(1)"), so no timestamp is needed.
-      this.model.atLeast({ filename: LOCALE.UNTITLED_DOCUMENT });
+      // The kind travels with the name: the Files panel draws the unsaved
+      // file's row (icon by extension) before the first save gives it a nid.
+      this.model.atLeast({ filename: LOCALE.UNTITLED_DOCUMENT, ext: "udoc" });
     } else {
       // Reopen: adopt the file's identity onto the WINDOW model so every save
       // REPLACES it in place. Without this the window has no nid, so each save

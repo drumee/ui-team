@@ -33,7 +33,9 @@ class __editor_sheet extends __player {
         privilege: _K.privilege.owner,
       });
       // Google-Sheets style default name; the server suffixes duplicates.
-      this.model.atLeast({ filename: LOCALE.UNTITLED_SPREADSHEET });
+      // The kind travels with the name: the Files panel draws the unsaved
+      // file's row (icon by extension) before the first save gives it a nid.
+      this.model.atLeast({ filename: LOCALE.UNTITLED_SPREADSHEET, ext: "usheet" });
     }
     // Save target: the folder window the sheet is created in (markdown editor
     // does the same). Opened-from-file saves replace in place and ignore it.

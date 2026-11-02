@@ -179,7 +179,8 @@ class __file_switcher extends LetcBox {
     if (!filename || this.isDestroyed()) return;
     const node = this.node();
     const { nid } = node;
-    if (!nid) return;
+    // Unsaved: nothing remembered yet, its row is drawn from the player.
+    if (!nid) return this.renderLists();
     for (const list of [this._recent, this._folder]) {
       for (const n of list) {
         if (n.nid === nid) n.filename = filename;
@@ -286,7 +287,8 @@ class __file_switcher extends LetcBox {
   }
 
   renderLists() {
-    const { nid } = this.node();
+    const node = this.node();
+    const { nid } = node;
     // A remembered row is a thin copy (recent.js); the folder listing has the
     // fresh name and the metadata (the Casual marker of the early `.json`
     // sheets), so a recent that is also listed takes the listing's fields.
@@ -299,6 +301,15 @@ class __file_switcher extends LetcBox {
       .filter((n) => (n.nid === nid || this.inScope(n)) && this.match(n))
       .filter((n) => !(this._checking && this._checking.has(n.nid)))
       .slice(0, MAX_RECENT);
+    // A new file (File → New, "Spreadsheet lite"…) has no nid until its
+    // first save, so recent.remember skipped it and the file on the stage
+    // had no row until then. It heads the list, lit, from the start; the
+    // save's nid makes it a remembered row (onPlayerSwitched). Its row opens
+    // nothing: switchTo ignores the open file.
+    if (!nid && node.filename && this.match(node)) {
+      recents.unshift({ ...node, nid: undefined });
+      if (recents.length > MAX_RECENT) recents.pop();
+    }
     // The whole folder, as the folder's own Group view lists it, the open
     // file included: nothing moves when a file is opened (user's call,
     // 2026-10-19). A recently viewed file shows in both; the open file is lit
