@@ -355,6 +355,7 @@ class __sheet_state extends DrumeeMFS {
           this._setUniverUser(api);
           this._grantWorkbookPermissions(api);
           this._decorateTabsBar();
+          this._createIfNew();
           // Belt-and-suspenders for reopen: force-load the saved snapshot once
           // the editor is ready. `initialData` can race the workbook creation
           // and leave a reopened file blank ("mở lại không load nội dung").
@@ -1176,6 +1177,21 @@ class __sheet_state extends DrumeeMFS {
     } catch (e) {
       this.warn("sheet: gridlines toggle failed", e);
     }
+  }
+
+  /**
+   * A new sheet is created on disk as soon as it is ready, as Google Sheets
+   * does. Saves only ran from the edit autosave (4s after a change) or an
+   * explicit Save, so a new sheet had no node: it was missing from the
+   * folder's files panel and Recently viewed until something was typed and
+   * saved, and a blank one never landed at all. Once: a reopen has a nid.
+   */
+  _createIfNew() {
+    const ed = this.editor;
+    if (this._createdNew || this.media || !ed || ed.mget(_a.nid)) return;
+    if (typeof ed.saveContent !== "function") return;
+    this._createdNew = 1;
+    ed.saveContent();
   }
 
   /**
