@@ -1005,6 +1005,11 @@ class __docs_state extends DrumeeMFS {
       "Email as attachment\u2026",
       "Version history",
       "Properties",
+      // Grouped under File → Export ▸ (extra + submenus, below).
+      "Export as PDF",
+      "Export as ODT",
+      "Export as Markdown",
+      "Export as Plain Text",
       "Theme: match system",
       "Theme: light",
       "Theme: dark",
@@ -1061,15 +1066,15 @@ class __docs_state extends DrumeeMFS {
       extra: (menu) => {
         // File → Rename, right below Make a copy: a clone of that row (same
         // look), its label and its Material icon (the "edit" pencil) swapped.
-        if (menu.getAttribute("aria-label") === "File") {
-          // Anywhere in the menu: the row goes next to Make a copy, which need
-          // not be a direct child, and the policy re-runs this on every
-          // mutation — a :scope> check missed it and inserted rows forever.
-          if (menu.querySelector(".editor-docs__file-rename")) return;
-          const copy = [...menu.querySelectorAll(ROW_ENABLED)].find((r) =>
-            /Make a copy/.test(r.textContent || "")
-          );
-          if (!copy) return;
+        // Each looked up anywhere in the menu: a row goes next to another,
+        // which need not be a direct child, and the policy re-runs this on
+        // every mutation — a :scope> check missed it and inserted rows
+        // forever.
+        const copy =
+          menu.getAttribute("aria-label") === "File" && !menu.querySelector(".editor-docs__file-rename")
+            ? [...menu.querySelectorAll(ROW_ENABLED)].find((r) => /Make a copy/.test(r.textContent || ""))
+            : null;
+        if (copy) {
           const row = copy.cloneNode(true);
           row.classList.add("editor-docs__file-rename");
           const label = row.querySelector("span");
@@ -1088,8 +1093,30 @@ class __docs_state extends DrumeeMFS {
             row.style.backgroundColor = "transparent";
           });
           copy.after(row);
-          return;
         }
+        // File → Export ▸ in place of the three "Export as …" rows: a clone
+        // of the PDF row (its download icon), the format list in a submenu.
+        if (menu.getAttribute("aria-label") === "File" && !menu.querySelector(".editor-docs__file-export")) {
+          const pdf = [...menu.querySelectorAll('[role="menuitem"]')].find(
+            (r) => (r.textContent || "").trim() === "Export as PDF"
+          );
+          if (pdf) {
+            const row = pdf.cloneNode(true);
+            row.classList.add("editor-docs__file-export");
+            row.disabled = false;
+            const label = row.querySelector("span");
+            if (label) label.textContent = LOCALE.EXPORT || "Export";
+            row.addEventListener("mouseover", () => {
+              row.style.backgroundColor = "var(--doc-hover, #f3f4f6)";
+            });
+            row.addEventListener("mouseout", () => {
+              row.style.backgroundColor = "transparent";
+            });
+            const box = pdf.parentElement && pdf.parentElement !== menu ? pdf.parentElement : pdf;
+            box.before(row);
+          }
+        }
+        if (menu.getAttribute("aria-label") === "File") return;
         if (menu.getAttribute("aria-label") !== "Help") return;
         if (menu.querySelector(":scope > .editor-docs__help-contact")) return;
         const like = menu.querySelector(ROW_ENABLED);
@@ -1109,6 +1136,14 @@ class __docs_state extends DrumeeMFS {
         });
         menu.appendChild(row);
       },
+      submenus: {
+        [LOCALE.EXPORT || "Export"]: () => [
+          { label: LOCALE.FORMAT_PDF || "PDF document (.pdf)", run: () => this.printDocument() },
+          { label: LOCALE.FORMAT_ODT || "OpenDocument (.odt)", run: () => this._exportAs("odt") },
+          { label: LOCALE.FORMAT_MD || "Markdown (.md)", run: () => this._exportAs("md") },
+        ],
+      },
+      rowHover: "var(--doc-hover, #f3f4f6)",
       // The menubar button toggles its dropdown.
       close: (trigger) => trigger.click(),
     });

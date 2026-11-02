@@ -1,6 +1,10 @@
 {
-  "SHEET_EXPORT_XLSX": "导出为 Excel (.xlsx)",
-  "SHEET_EXPORT_CSV": "导出为 CSV",
+  "EXPORT": "导出",
+  "FORMAT_PDF": "PDF 文档 (.pdf)",
+  "FORMAT_ODT": "OpenDocument (.odt)",
+  "FORMAT_MD": "Markdown (.md)",
+  "FORMAT_XLSX": "Microsoft Excel (.xlsx)",
+  "FORMAT_CSV": "逗号分隔值 (.csv)",
   "MERGE_CELLS": "合并单元格",
   "UNMERGE_CELLS": "取消合并单元格",
   "TAB": "Tab",

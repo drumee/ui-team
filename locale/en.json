@@ -1,6 +1,10 @@
 {
-  "SHEET_EXPORT_XLSX": "Export as Excel (.xlsx)",
-  "SHEET_EXPORT_CSV": "Export as CSV",
+  "EXPORT": "Export",
+  "FORMAT_PDF": "PDF document (.pdf)",
+  "FORMAT_ODT": "OpenDocument (.odt)",
+  "FORMAT_MD": "Markdown (.md)",
+  "FORMAT_XLSX": "Microsoft Excel (.xlsx)",
+  "FORMAT_CSV": "Comma-separated values (.csv)",
   "MERGE_CELLS": "Merge cells",
   "UNMERGE_CELLS": "Unmerge cells",
   "TAB": "Tab",

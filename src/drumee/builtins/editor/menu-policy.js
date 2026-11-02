@@ -29,6 +29,13 @@
  *   action(key)    the same as a function (null: Casual's own handler runs)
  *   enabled(key)   true to enable a row Casual left disabled
  *   extra(menu)    adds Drumee rows to a dropdown when it opens
+ *   submenus       { [key]: (row) => [{ label, icon?, run }] } rows that
+ *                  open a side panel of rows on hover (Export ▸): neither
+ *                  SDK takes a submenu from a host. The panel is a
+ *                  role="menu" inside the dropdown, so the skins style it as
+ *                  Casual's own submenus and a press in it is "inside".
+ *   rowHover       background of a hovered panel row (docs paints its rows'
+ *                  hover inline; sheets' skin does it in CSS)
  *   close(trigger) closes the dropdown the trigger opened
  * @returns {Function} detach
  */
@@ -75,6 +82,127 @@ function attachMenuPolicy(root, policy = {}) {
     if (last === "sep" && lastSep) lastSep.style.display = "none";
   };
 
+  // ── Submenus ─────────────────────────────────────────────────────────
+  const submenus = policy.submenus || {};
+  const CHEVRON =
+    "M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z"; // Material chevron_right
+  let open = null; // { row, panel }
+  let closeTimer = null;
+
+  const closePanel = () => {
+    clearTimeout(closeTimer);
+    if (open) {
+      open.panel.remove();
+      open.row.setAttribute("aria-expanded", "false");
+      open = null;
+    }
+  };
+
+  const markParent = (row) => {
+    if (row.dataset.menuPolicyParent) return;
+    row.dataset.menuPolicyParent = "1";
+    row.setAttribute("aria-haspopup", "menu");
+    row.setAttribute("aria-expanded", "false");
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 -960 960 960");
+    svg.setAttribute("width", "18");
+    svg.setAttribute("height", "18");
+    svg.setAttribute("fill", "currentColor");
+    svg.setAttribute("aria-hidden", "true");
+    svg.style.cssText = "margin-left:auto;flex:none;opacity:.7";
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", CHEVRON);
+    svg.appendChild(path);
+    row.appendChild(svg);
+  };
+
+  const openPanel = (row) => {
+    if (open && open.row === row) return;
+    closePanel();
+    const items = (submenus[keyOf(row)] || (() => []))(row) || [];
+    if (!items.length) return;
+    const menu = row.closest(MENU);
+    if (!menu) return;
+    const panel = document.createElement("div");
+    panel.setAttribute("role", "menu");
+    panel.dataset.menuPolicySub = "1";
+    // The host dropdown's own card (Casual docs paints it inline).
+    const cs = getComputedStyle(menu);
+    panel.style.cssText = [
+      "position:absolute",
+      "z-index:1",
+      `min-width:${Math.max(160, Math.round(menu.getBoundingClientRect().width * 0.8))}px`,
+      `background:${cs.backgroundColor}`,
+      `border:${cs.border}`,
+      `border-radius:${cs.borderRadius}`,
+      `box-shadow:${cs.boxShadow}`,
+      `padding:${cs.padding}`,
+      "display:flex",
+      "flex-direction:column",
+    ].join(";");
+    for (const it of items) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("role", "menuitem");
+      b.dataset.menuPolicySubRow = "1";
+      b.style.cssText = row.style.cssText;
+      b.style.backgroundColor = "transparent";
+      if (it.icon) b.appendChild(it.icon);
+      const label = document.createElement("span");
+      label.textContent = it.label;
+      b.appendChild(label);
+      b._menuPolicyRun = it.run;
+      if (policy.rowHover) {
+        b.addEventListener("mouseover", () => {
+          b.style.backgroundColor = policy.rowHover;
+        });
+        b.addEventListener("mouseout", () => {
+          b.style.backgroundColor = "transparent";
+        });
+      }
+      panel.appendChild(b);
+    }
+    // Beside the row, its top on the row's top; on the left when the right
+    // has no room.
+    const mr = menu.getBoundingClientRect();
+    const rr = row.getBoundingClientRect();
+    panel.style.top = `${rr.top - mr.top + menu.scrollTop - parseFloat(cs.paddingTop || 0)}px`;
+    menu.appendChild(panel);
+    const pw = panel.getBoundingClientRect().width;
+    const right = mr.right + pw <= window.innerWidth - 8;
+    panel.style.left = right ? `${mr.width - 4}px` : `${-pw + 4}px`;
+    panel.addEventListener("mouseenter", () => clearTimeout(closeTimer));
+    panel.addEventListener("mouseleave", () => {
+      closeTimer = setTimeout(closePanel, 200);
+    });
+    row.setAttribute("aria-expanded", "true");
+    open = { row, panel };
+  };
+
+  // Hover opens / switches, leaving both the row and its panel closes.
+  const onOver = (e) => {
+    const row = e.target && e.target.closest && e.target.closest(ROW);
+    if (!row || !root.contains(row) || row.dataset.menuPolicySubRow) return;
+    if (submenus[keyOf(row)]) {
+      clearTimeout(closeTimer);
+      markParent(row);
+      openPanel(row);
+    } else if (open && row !== open.row) {
+      closePanel();
+    }
+  };
+  const onOut = (e) => {
+    if (!open) return;
+    const row = e.target && e.target.closest && e.target.closest(ROW);
+    if (row !== open.row) return;
+    const to = e.relatedTarget;
+    if (to && (open.row.contains(to) || open.panel.contains(to))) return;
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(closePanel, 200);
+  };
+  root.addEventListener("mouseover", onOver, true);
+  root.addEventListener("mouseout", onOut, true);
+
   const enable = (row) => {
     row.disabled = false;
     row.removeAttribute("aria-disabled");
@@ -103,6 +231,10 @@ function attachMenuPolicy(root, policy = {}) {
         /** dropdown gone */
       }
     }
+    for (const row of menu.querySelectorAll(ROW)) {
+      if (!row.dataset.menuPolicySubRow && submenus[keyOf(row)]) markParent(row);
+    }
+    if (menu.dataset.menuPolicySub) return;
     tidy(menu);
   };
 
@@ -141,6 +273,32 @@ function attachMenuPolicy(root, policy = {}) {
   const onPress = (e) => {
     const row = e.target && e.target.closest && e.target.closest(ROW);
     if (!row || !root.contains(row)) return;
+    // A submenu parent opens its panel instead of closing the dropdown.
+    if (!row.dataset.menuPolicySubRow && submenus[keyOf(row)]) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.type === "click") {
+        markParent(row);
+        openPanel(row);
+      }
+      return;
+    }
+    // A panel row: run it, then close the dropdown like a rerouted row.
+    if (row.dataset.menuPolicySubRow) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.type !== "click") return;
+      const run = row._menuPolicyRun;
+      const trigger = triggerOf(row);
+      closePanel();
+      try {
+        if (trigger && policy.close) policy.close(trigger);
+      } catch (err) {
+        /** menu already gone */
+      }
+      if (run) run(row);
+      return;
+    }
     const act = actionOf(keyOf(row), row);
     if (!act) return;
     e.preventDefault();
@@ -159,7 +317,10 @@ function attachMenuPolicy(root, policy = {}) {
 
   return () => {
     obs.disconnect();
+    closePanel();
     for (const ev of EVENTS) root.removeEventListener(ev, onPress, true);
+    root.removeEventListener("mouseover", onOver, true);
+    root.removeEventListener("mouseout", onOut, true);
   };
 }
 

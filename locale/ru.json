@@ -1,6 +1,10 @@
 {
-  "SHEET_EXPORT_XLSX": "Экспорт в Excel (.xlsx)",
-  "SHEET_EXPORT_CSV": "Экспорт в CSV",
+  "EXPORT": "Экспорт",
+  "FORMAT_PDF": "Документ PDF (.pdf)",
+  "FORMAT_ODT": "OpenDocument (.odt)",
+  "FORMAT_MD": "Markdown (.md)",
+  "FORMAT_XLSX": "Microsoft Excel (.xlsx)",
+  "FORMAT_CSV": "Значения через запятую (.csv)",
   "MERGE_CELLS": "Объединить ячейки",
   "UNMERGE_CELLS": "Отменить объединение ячеек",
   "TAB": "Tab",

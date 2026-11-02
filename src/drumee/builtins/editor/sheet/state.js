@@ -133,6 +133,41 @@ const EN_US_LOCALE = mergeLocaleBundles(
 // Snapshot format is Univer's IWorkbookData — the SAME JSON the previous Univer
 // editor saved, so existing .json sheets still open.
 
+/** RFC 4180 CSV → rows of strings (quotes, doubled quotes, CRLF / LF). */
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let q = false;
+  const s = String(text || "").replace(/^\ufeff/, "");
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) {
+      if (ch === '"') {
+        if (s[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else q = false;
+      } else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && s[i + 1] === "\n") i++;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else cell += ch;
+  }
+  if (cell !== "" || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows;
+}
+
 class __sheet_state extends DrumeeMFS {
   /**
    *
@@ -814,6 +849,13 @@ class __sheet_state extends DrumeeMFS {
       actions: {
         "cs-menuitem-toggle-gridlines": () => this._toggleGridlines(),
       },
+      // File → Export ▸, as the docs editor's.
+      submenus: {
+        "cs-menuitem-ext-export": () => [
+          { label: LOCALE.FORMAT_XLSX || "Microsoft Excel (.xlsx)", run: () => this._exportXlsx() },
+          { label: LOCALE.FORMAT_CSV || "Comma-separated values (.csv)", run: () => this._exportCsv() },
+        ],
+      },
       // Casual's menubar buttons toggle on mousedown.
       close: (trigger) =>
         trigger.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })),
@@ -868,6 +910,90 @@ class __sheet_state extends DrumeeMFS {
     if (!ws) return null;
     const rows = ws.getDataRange().getDisplayValues();
     return { name: ws.getSheetName(), rows };
+  }
+
+  /**
+   * File → Import: pick an .xlsx or .csv and add its sheet(s) to this
+   * spreadsheet as new tabs — nothing that is already here is touched.
+   * An .xlsx keeps values, formulas, styles, merges, column widths and row
+   * heights (Casual's own reader, its styles inlined since their ids belong
+   * to the other workbook); a .csv becomes one sheet of values.
+   */
+  _importFile() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept =
+      ".xlsx,.xlsm,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    input.style.display = "none";
+    input.addEventListener("change", () => {
+      const file = input.files && input.files[0];
+      input.remove();
+      if (file) this._importInto(file);
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+
+  async _importInto(file) {
+    const api = this._apiHandle;
+    const wb = api && api.univer && api.univer.getActiveWorkbook();
+    if (!wb) return;
+    const base = String(file.name || "Imported").replace(/\.[^.]+$/, "") || "Imported";
+    const taken = new Set(wb.getSheets().map((ws) => ws.getSheetName()));
+    const uniqueName = (name) => {
+      let n = String(name || base).slice(0, 80);
+      if (!taken.has(n)) return taken.add(n), n;
+      for (let i = 2; ; i++) {
+        const c = `${n} (${i})`;
+        if (!taken.has(c)) return taken.add(c), c;
+      }
+    };
+    try {
+      let first = null;
+      if (/\.csv$/i.test(file.name || "") || /csv/.test(file.type || "")) {
+        const rows = parseCsv(await file.text());
+        const cellData = {};
+        rows.forEach((r, ri) => {
+          r.forEach((v, ci) => {
+            if (v === "") return;
+            const n = Number(v);
+            (cellData[ri] = cellData[ri] || {})[ci] = {
+              v: v.trim() !== "" && !Number.isNaN(n) && /^[-+.\d]/.test(v.trim()) ? n : v,
+            };
+          });
+        });
+        const cols = rows.reduce((m, r) => Math.max(m, r.length), 0);
+        first = wb.insertSheet(uniqueName(base), {
+          sheet: { cellData, rowCount: Math.max(1000, rows.length + 50), columnCount: Math.max(26, cols + 5) },
+        });
+      } else {
+        const { xlsxToWorkbookData } = await import("@casualoffice/sheets/xlsx");
+        const imported = await xlsxToWorkbookData(await file.arrayBuffer());
+        // IWorkbookData of the picked file.
+        const data = imported || {};
+        const styles = data.styles || {};
+        const order = data.sheetOrder || Object.keys(data.sheets || {});
+        for (const id of order) {
+          const sheet = data.sheets && data.sheets[id];
+          if (!sheet) continue;
+          const cellData = {};
+          for (const [r, row] of Object.entries(sheet.cellData || {})) {
+            for (const [c, cell] of Object.entries(row || {})) {
+              if (!cell) continue;
+              const out = { ...cell };
+              if (typeof out.s === "string") out.s = styles[out.s] || undefined;
+              (cellData[r] = cellData[r] || {})[c] = out;
+            }
+          }
+          const { id: _drop, name, ...rest } = sheet;
+          const ws = wb.insertSheet(uniqueName(name), { sheet: { ...rest, cellData } });
+          if (!first) first = ws;
+        }
+      }
+      if (first && typeof first.activate === "function") first.activate();
+    } catch (e) {
+      this.warn("sheet: import failed", e);
+    }
   }
 
   /** File → Export as Excel: the LIVE workbook (unsaved edits included). */
@@ -951,10 +1077,11 @@ class __sheet_state extends DrumeeMFS {
       // File: Casual Sheets' own two rows are both off here (About needs
       // its branding, Properties a dialog this host does not provide), so
       // Casual dropped the whole menu. It mirrors the docs editor's File
-      // (New, Save, Make a copy, Rename, Print, Export as …, with its icons)
-      // with the sheet's means: a new sheet in this folder, the window's
-      // save, copy and inline rename, a printout of the sheet in view, and
-      // the live workbook exported as Excel or CSV. Share / Get info / Trash
+      // (New, Save, Make a copy, Rename, Print, Export ▸, with its icons)
+      // with the sheet's means: a new sheet in this folder, Import (another
+      // file's sheets added as tabs), the window's save, copy and inline
+      // rename, a printout of the sheet in view, and the live workbook
+      // exported as Excel or CSV. Share / Get info / Trash
       // stay in the gear menu, as in docs.
       const fileRow = (id, label, icon, service) => ({
         menu: "file",
@@ -979,6 +1106,13 @@ class __sheet_state extends DrumeeMFS {
           },
           {
             menu: "file",
+            id: "import",
+            label: LOCALE.IMPORT || "Import",
+            icon: "file_upload",
+            onClick: () => this._importFile(),
+          },
+          {
+            menu: "file",
             id: "save",
             label: LOCALE.SAVE || "Save",
             icon: "file_download",
@@ -996,19 +1130,14 @@ class __sheet_state extends DrumeeMFS {
             icon: "print",
             onClick: () => this._printSheet(),
           },
+          // Export ▸ Excel / CSV: the submenu is the menu policy's
+          // (_wireMenus), Casual's extensions take no submenu.
           {
             menu: "file",
-            id: "export-xlsx",
-            label: LOCALE.SHEET_EXPORT_XLSX || "Export as Excel (.xlsx)",
+            id: "export",
+            label: LOCALE.EXPORT || "Export",
             icon: "file_download",
-            onClick: () => this._exportXlsx(),
-          },
-          {
-            menu: "file",
-            id: "export-csv",
-            label: LOCALE.SHEET_EXPORT_CSV || "Export as CSV",
-            icon: "file_download",
-            onClick: () => this._exportCsv(),
+            onClick: () => {},
           },
           {
             menu: "format",

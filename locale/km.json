@@ -1,6 +1,10 @@
 {
-  "SHEET_EXPORT_XLSX": "នាំចេញជា Excel (.xlsx)",
-  "SHEET_EXPORT_CSV": "នាំចេញជា CSV",
+  "EXPORT": "នាំចេញ",
+  "FORMAT_PDF": "ឯកសារ PDF (.pdf)",
+  "FORMAT_ODT": "OpenDocument (.odt)",
+  "FORMAT_MD": "Markdown (.md)",
+  "FORMAT_XLSX": "Microsoft Excel (.xlsx)",
+  "FORMAT_CSV": "តម្លៃបំបែកដោយក្បៀស (.csv)",
   "MERGE_CELLS": "បញ្ចូលក្រឡាចូលគ្នា",
   "UNMERGE_CELLS": "បំបែកក្រឡា",
   "TAB": "Tab",
