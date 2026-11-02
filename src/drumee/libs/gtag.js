@@ -1,6 +1,6 @@
 /**
  * Google tag (gtag.js) — the Google Ads tag AW-18350168481 and the GA4
- * property G-9123HGZ86W.
+ * property G-9123HGZ86W — plus the Google Tag Manager container GTM-W3QPF63L.
  *
  * The document itself is not ours to edit: the app boots into a shell served
  * by the backend, and this repo builds bundles, not HTML (there is no
@@ -29,8 +29,10 @@
  * reporting fills with activity no campaign of ours produced. That guard
  * matters more with GA4 in the picture than it did with Ads alone — Ads only
  * hears about conversions, GA4 measures ordinary use of a product whose whole
- * promise is that your data stays yours. Stage (drumee.in) is excluded by the
- * same rule, which is the point — test signups are not conversions.
+ * promise is that your data stays yours. GTM raises the stakes once more: the
+ * container loads marketing's Meta Pixel, so off our hosts it would hand
+ * someone else's users to Meta. Stage (drumee.in) is excluded by the same
+ * rule, which is the point — test signups are not conversions.
  */
 
 const TAG_ID = "AW-18350168481";
@@ -60,6 +62,21 @@ const GA4_ID = "G-9123HGZ86W";
 // able to diff the two implementations line for line is worth more than the
 // choice itself.
 const SRC = `https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`;
+
+/**
+ * Google Tag Manager — the same container drumee.com loads, owned by
+ * marketing. Today it holds one tag, the Meta Pixel, and that tag listens to
+ * every event on `window.dataLayer`, translating GA4 names into Meta's
+ * (page_view -> PageView, sign_up -> CompleteRegistration, begin_checkout ->
+ * InitiateCheckout, purchase -> Purchase). So the events this app already
+ * sends through event() below reach Meta without any call site knowing Meta
+ * exists, and the pixel id lives in GTM, not in this bundle.
+ *
+ * Kept in step with drumee.com's index.html and loby's account-created.html,
+ * the SSO signup page that never loads this bundle.
+ */
+const GTM_ID = "GTM-W3QPF63L";
+const GTM_SRC = `https://www.googletagmanager.com/gtm.js?id=${GTM_ID}`;
 
 // drumee.com and every subdomain of it (workspaces are `<ident>.drumee.com`).
 // Anchored both ends: a lookalike host such as `drumee.com.evil.net` must not
@@ -142,6 +159,16 @@ function install() {
   // that runs this is inside the document — but fall back rather than throw if
   // that ever stops being true.
   (document.head || document.documentElement).appendChild(el);
+
+  // GTM shares the queue: its start marker is pushed like any other command,
+  // and the container replays everything already on it when it lands — the
+  // first page_view above included.
+  dataLayer.push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+  const gtm = document.createElement("script");
+  gtm.async = true;
+  gtm.src = GTM_SRC;
+  gtm.setAttribute(MARKER, GTM_ID);
+  (document.head || document.documentElement).appendChild(gtm);
   return true;
 }
 
@@ -209,4 +236,4 @@ function pageView(path, title) {
   return true;
 }
 
-module.exports = { install, event, pageView, isEnabled, TAG_ID, GA4_ID };
+module.exports = { install, event, pageView, isEnabled, TAG_ID, GA4_ID, GTM_ID };
