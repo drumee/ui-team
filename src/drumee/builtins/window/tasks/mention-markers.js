@@ -8,7 +8,7 @@ const MARKER_SOURCE = "\\[@([^\\]]+)\\]\\(user:([^)]+)\\)";
 const IMG_MARKER_SOURCE =
   "!\\[img\\]\\(file:([^)|@]+)(?:@([^)|]+))?(?:\\|(\\d+))?\\)";
 
-// Hyperlink whose text differs from its target, stored as "[label](link:URL)".
+// Hyperlink, stored as "[label](link:URL)" — also when the label is the URL.
 // A bare URL needs no marker — read-only surfaces auto-link it (linkifyTokens),
 // which is also what makes links already stored as plain text clickable.
 const LINK_MARKER_SOURCE = "\\[([^\\]]+)\\]\\(link:([^)\\s]+)\\)";

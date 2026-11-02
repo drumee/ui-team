@@ -375,7 +375,9 @@ function fromDom(root, { chipClass, imgClass, safeUrl }) {
         const href = safeUrl(n.dataset.href || n.getAttribute("href"));
         const label = (n.textContent || "").trim();
         if (!href || !label) return walk(n, type, m);
-        if (label === href) return add(type, { t: "text", v: label }, m);
+        // Kept as a link even when its text IS the URL: stored as bare text it
+        // came back as plain text in the editor (which never auto-links), so
+        // a pasted URL linked with Ctrl+K lost its link on the next open.
         return add(type, { t: "link", label, url: href }, m);
       }
       if (tag === "BR") return brk(type);

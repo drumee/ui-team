@@ -9134,8 +9134,7 @@ class __tasks_panel extends LetcBox {
       const field = bar.closest(`.${pfx}__desc-field`);
       const ed = field && field.querySelector(`.${pfx}__desc-editor`);
       const inside = !!(node && ed && ed.contains(node));
-      const elNode = node && (node.nodeType === 1 ? node : node.parentElement);
-      const link = inside && elNode && elNode.closest("a");
+      const link = inside && this._linkAtRange(sel.getRangeAt(0), ed);
       bar.querySelectorAll(`.${pfx}__format-btn`).forEach((btn) => {
         const f = btn.dataset.format;
         let on = false;
@@ -9635,6 +9634,13 @@ class __tasks_panel extends LetcBox {
       this._closeMention();
       return this._openLinkPrompt(scope);
     }
+    if (
+      (e.key === "Backspace" || e.key === "Delete") &&
+      !e.ctrlKey && !e.metaKey && !e.altKey &&
+      this._deleteLinkBeside(scope, e.key === "Backspace")
+    ) {
+      return e.preventDefault();
+    }
     const ref = this._mention;
     const mentionOpen = !!ref && ref.scope === scope;
     // A bare Enter posts on the comment surfaces; Shift+Enter keeps its newline,
@@ -9854,6 +9860,70 @@ class __tasks_panel extends LetcBox {
     return null;
   }
 
+  // The link a selection is on. An editor link is contenteditable=false, so
+  // the caret never lands INSIDE it (_closestLink alone never finds one): it
+  // sits in the text beside it, or on the editor between child nodes. So a
+  // selection counts when it covers part of a link, and a caret when it
+  // touches a link's edge.
+  _linkAtRange(range, editorEl) {
+    const inside = this._closestLink(range.startContainer, editorEl);
+    if (inside) return inside;
+    const isLink = (n) => (n && n.nodeType === 1 && n.tagName === "A" ? n : null);
+    if (!range.collapsed) {
+      for (const a of editorEl.querySelectorAll("a")) {
+        if (range.intersectsNode(a)) return a;
+      }
+      return null;
+    }
+    const { startContainer: c, startOffset: o } = range;
+    if (c.nodeType === 3) {
+      if (o === 0 && isLink(c.previousSibling)) return c.previousSibling;
+      if (o === c.length && isLink(c.nextSibling)) return c.nextSibling;
+      return null;
+    }
+    return isLink(c.childNodes[o - 1]) || isLink(c.childNodes[o]);
+  }
+
+  // Backspace / Delete on a link. Chrome won't delete a contenteditable=false
+  // node that ends its line: Backspace just adds and drops a <br> after it, so
+  // the caret is stuck behind the link and the link can never be erased. The
+  // link the key would eat is removed here instead. `back` is Backspace.
+  _deleteLinkBeside(scope, back) {
+    const editorEl = this._descEditorEl(scope);
+    const sel = window.getSelection();
+    if (!editorEl || !sel || !sel.rangeCount || !sel.isCollapsed) return false;
+    const { startContainer: c, startOffset: o } = sel.getRangeAt(0);
+    if (!editorEl.contains(c)) return false;
+    // An empty text node or the placeholder <br> Chrome leaves is not what the
+    // key deletes: look through it.
+    const skip = (n) =>
+      n && ((n.nodeType === 3 && !n.length) || (back && n.tagName === "BR" && !n.nextSibling));
+    let n;
+    if (c.nodeType === 3) {
+      if (back ? o > 0 : o < c.length) return false;
+      n = back ? c.previousSibling : c.nextSibling;
+    } else {
+      const kids = c.childNodes;
+      n = back ? kids[Math.min(o, kids.length) - 1] : kids[o];
+    }
+    while (skip(n)) n = back ? n.previousSibling : n.nextSibling;
+    if (!n || n.nodeType !== 1 || n.tagName !== "A") return false;
+    const parent = n.parentNode;
+    const at = document.createRange();
+    at.setStartBefore(n);
+    at.collapse(true);
+    n.remove();
+    // A line the link was alone on keeps its height.
+    if (!parent.textContent && !parent.querySelector("br, img") && parent !== editorEl) {
+      parent.appendChild(document.createElement("br"));
+    }
+    sel.removeAllRanges();
+    sel.addRange(at);
+    this._hideLinkTip();
+    this._onDescInput(scope, editorEl);
+    return true;
+  }
+
   // Ctrl+K. Remembers the caret range up front — focusing the prompt's input
   // blurs the editor and drops the live selection. `link` is the hover tip's
   // Edit (link-tip.js): that link, wherever the caret is.
@@ -9870,7 +9940,7 @@ class __tasks_panel extends LetcBox {
       const sel = window.getSelection();
       if (!sel || !sel.rangeCount || !editorEl.contains(sel.anchorNode)) return;
       range = sel.getRangeAt(0).cloneRange();
-      anchor = this._closestLink(sel.anchorNode, editorEl);
+      anchor = this._linkAtRange(range, editorEl);
     }
     const ref = {
       scope,
