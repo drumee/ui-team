@@ -366,6 +366,8 @@ class __docs_state extends DrumeeMFS {
     // (controlled) `documentName` without remounting the editor.
     const renderSingle = () => this._root.render(
       createElement(DocxEditor, {
+        // File → New (Casual shows the row once this is given).
+        onNew: () => chrome.createNew(this.editor, "editor_docs"),
         ref: this._ref,
         ...docProps,
         // Match the docs.casualoffice.org demo: show the horizontal ruler.
@@ -1025,6 +1027,10 @@ class __docs_state extends DrumeeMFS {
         if (this.editor && this.editor.contactSupport) this.editor.contactSupport();
       },
       "Make a copy": () => chrome.handleService(this.editor, null, { service: _a.duplicate }),
+      // Drumee's row (extra, below): the title's inline rename.
+      [LOCALE.RENAME]: () => {
+        if (this.editor && this.editor.renameFromChrome) this.editor.renameFromChrome();
+      },
       Paste: () => this._pasteFromClipboard(),
       Print: () => this.printDocument(),
       "Export as PDF": () => this.printDocument(),
@@ -1053,6 +1059,37 @@ class __docs_state extends DrumeeMFS {
       enabled: (key) => live() && ((key === "Undo" && stack("undo")) || (key === "Redo" && stack("redo"))),
       // Help → "Contact us" (the support conversation), styled as Casual's rows.
       extra: (menu) => {
+        // File → Rename, right below Make a copy: a clone of that row (same
+        // look), its label and its Material icon (the "edit" pencil) swapped.
+        if (menu.getAttribute("aria-label") === "File") {
+          // Anywhere in the menu: the row goes next to Make a copy, which need
+          // not be a direct child, and the policy re-runs this on every
+          // mutation — a :scope> check missed it and inserted rows forever.
+          if (menu.querySelector(".editor-docs__file-rename")) return;
+          const copy = [...menu.querySelectorAll(ROW_ENABLED)].find((r) =>
+            /Make a copy/.test(r.textContent || "")
+          );
+          if (!copy) return;
+          const row = copy.cloneNode(true);
+          row.classList.add("editor-docs__file-rename");
+          const label = row.querySelector("span");
+          if (label) label.textContent = LOCALE.RENAME;
+          const path = row.querySelector("svg path");
+          if (path) {
+            path.setAttribute(
+              "d",
+              "M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"
+            );
+          }
+          row.addEventListener("mouseover", () => {
+            row.style.backgroundColor = "var(--doc-hover, #f3f4f6)";
+          });
+          row.addEventListener("mouseout", () => {
+            row.style.backgroundColor = "transparent";
+          });
+          copy.after(row);
+          return;
+        }
         if (menu.getAttribute("aria-label") !== "Help") return;
         if (menu.querySelector(":scope > .editor-docs__help-contact")) return;
         const like = menu.querySelector(ROW_ENABLED);
@@ -1419,6 +1456,7 @@ class __docs_state extends DrumeeMFS {
       prunePanes();
       pane.root.render(
       createElement(CasualEditor, {
+        onNew: () => chrome.createNew(this.editor, "editor_docs"),
         ref: pane.ref,
         fileSource,
         docId: room,

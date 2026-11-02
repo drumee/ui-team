@@ -283,4 +283,21 @@ function handleService(ui, cmd, args = {}) {
   }
 }
 
-module.exports = { gearMenu, topbarConfig, handleService, adoptNode, nodeOf, ensureNode, PRESETS };
+/**
+ * File → New: a new, blank file of the same kind, saved into the current
+ * file's folder (what the Files panel's "Document lite / Spreadsheet lite"
+ * rows do), opened in its own editor window.
+ *
+ * @param {View} ui      the editor window
+ * @param {String} kind  editor_docs | editor_sheet
+ */
+function createNew(ui, kind) {
+  if (require("libs/over-limit").guardWrite("write")) return null;
+  const pid = ui && ui.mget(_a.pid);
+  const hub_id = ui && ui.mget(_a.hub_id);
+  const opt = { kind, uiHandler: [ui] };
+  if (pid && hub_id) opt.folder = { nid: pid, hub_id };
+  return Wm.launch(opt, { explicit: 1 });
+}
+
+module.exports = { gearMenu, topbarConfig, handleService, adoptNode, nodeOf, ensureNode, createNew, PRESETS };

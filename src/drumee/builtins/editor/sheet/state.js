@@ -24,6 +24,7 @@ import "@univerjs/sheets-filter/facade";
 import { contentUrl } from "builtins/editor/content-url";
 const pendingFocus = require("builtins/editor/pending-focus");
 const { saveBlob } = require("builtins/editor/export");
+const chrome = require("builtins/editor/chrome");
 const { attachMenuPolicy } = require("builtins/editor/menu-policy");
 const { revealWhenPainted, hideLoading } = require("builtins/editor/loading-reveal");
 // Casual Sheets chrome gates (see _wireMenus / _sheetExtensions).
@@ -950,10 +951,11 @@ class __sheet_state extends DrumeeMFS {
       // File: Casual Sheets' own two rows are both off here (About needs
       // its branding, Properties a dialog this host does not provide), so
       // Casual dropped the whole menu. It mirrors the docs editor's File
-      // (Save, Make a copy, Print, Export as …) with the sheet's means: the
-      // window's save and copy, a printout of the sheet in view, and the
-      // live workbook exported as Excel or CSV. Rename / Share / Get info /
-      // Trash stay in the gear menu, as in docs.
+      // (New, Save, Make a copy, Rename, Print, Export as …, with its icons)
+      // with the sheet's means: a new sheet in this folder, the window's
+      // save, copy and inline rename, a printout of the sheet in view, and
+      // the live workbook exported as Excel or CSV. Share / Get info / Trash
+      // stay in the gear menu, as in docs.
       const fileRow = (id, label, icon, service) => ({
         menu: "file",
         id,
@@ -969,15 +971,24 @@ class __sheet_state extends DrumeeMFS {
         menu: [
           {
             menu: "file",
+            id: "new",
+            label: LOCALE.NEW || "New",
+            icon: "note_add",
+            shortcut: "Ctrl+N",
+            onClick: () => chrome.createNew(this.editor, "editor_sheet"),
+          },
+          {
+            menu: "file",
             id: "save",
             label: LOCALE.SAVE || "Save",
-            icon: "save",
+            icon: "file_download",
             shortcut: "Ctrl+S",
             onClick: () => {
               if (this.editor && typeof this.editor.saveContent === "function") this.editor.saveContent();
             },
           },
           fileRow("make-copy", LOCALE.MAKE_A_COPY, "content_copy", _a.duplicate),
+          fileRow("rename", LOCALE.RENAME, "edit", "direct-rename"),
           {
             menu: "file",
             id: "print",
@@ -989,14 +1000,14 @@ class __sheet_state extends DrumeeMFS {
             menu: "file",
             id: "export-xlsx",
             label: LOCALE.SHEET_EXPORT_XLSX || "Export as Excel (.xlsx)",
-            icon: "download",
+            icon: "file_download",
             onClick: () => this._exportXlsx(),
           },
           {
             menu: "file",
             id: "export-csv",
             label: LOCALE.SHEET_EXPORT_CSV || "Export as CSV",
-            icon: "download",
+            icon: "file_download",
             onClick: () => this._exportCsv(),
           },
           {
