@@ -10,6 +10,8 @@ const PAGE_SIZE = 45;
 // how often it re-checks a list still fetching (see _syncRowSelectAll).
 const ROW_SELECT_MIN_SPIN = 300;
 const ROW_FETCH_POLL = 500;
+// "+ Add new" spinner cap: a launch that never shows a window still lets go.
+const ADD_NEW_LOADING_MAX_MS = 15000;
 const __utils = require("./utils");
 
 const { TweenLite, TimelineMax, TweenMax } = require("@drumee/ui-core/vendor");
@@ -1168,6 +1170,57 @@ class __window_core extends __utils {
   }
 
   /**
+   * "+ Add new" (toolkit addNewMenu): the menu closes on click, and what a
+   * row opens can take seconds — an editor's lazy chunk, or euroffice
+   * new_doc + node_info — so the click looked dead (aw.spinner() draws
+   * nothing in this app: ui-core injects its markup with no styles). The
+   * trigger shows a spinner (data-loading, window skin common.scss) until a
+   * new window is in the pool, `pending` resolves false or rejects (nothing
+   * will open), or ADD_NEW_LOADING_MAX_MS passed.
+   *
+   * @param {Promise|false} [pending]  false: refused before anything started
+   * @param {Boolean} [expectWindow]  false: done once `pending` resolves
+   *                                  (the folder form is a modal, not a window)
+   * @returns `pending`, for the caller to return
+   */
+  _addNewLoading(pending, expectWindow = true) {
+    if (pending === false) return pending;
+    const btn = this.el && this.el.querySelector(`.${this.fig.group}-button__label-button`);
+    if (!btn) return pending;
+    const token = (this._addNewToken = (this._addNewToken || 0) + 1);
+    const before = new Set();
+    let pool = null;
+    try {
+      pool = Wm.getWindowsPool();
+      pool.children.each((c) => before.add(c));
+    } catch (e) {
+      pool = null;
+    }
+    btn.dataset.loading = 1;
+    let poll = null;
+    const done = () => {
+      clearInterval(poll);
+      clearTimeout(cap);
+      if (this._addNewToken === token) delete btn.dataset.loading;
+    };
+    const cap = setTimeout(done, ADD_NEW_LOADING_MAX_MS);
+    if (expectWindow && pool) {
+      poll = setInterval(() => {
+        if (this.isDestroyed()) return done();
+        const fresh = pool.children.find((c) => !before.has(c) && !c.isDestroyed());
+        if (fresh) done();
+      }, 120);
+    }
+    Promise.resolve(pending).then(
+      (r) => {
+        if (r === false || !expectWindow || !pool) done();
+      },
+      done,
+    );
+    return pending;
+  }
+
+  /**
    *
    */
 
@@ -1175,7 +1228,7 @@ class __window_core extends __utils {
     // Over-limit / hard_lock: refuse before euroffice.new_doc — the plugin's
     // own error path surfaces a generic "network error" over the clamp's
     // OVER_LIMIT_READ_ONLY, which is the wrong message for a lock.
-    if (require("libs/over-limit").guardWrite("write")) return;
+    if (require("libs/over-limit").guardWrite("write")) return false;
 
     // Resolve the editor namespace dynamically from `doc_editor`
     // sysconf (the viewer at player/document/index.js does the same).
@@ -1190,7 +1243,7 @@ class __window_core extends __utils {
         LOCALE.FEATURE_NOT_AVAILABLE
         || "Document editor is not configured on this endpoint."
       );
-      return;
+      return false;
     }
 
     const aw = Wm.getActiveWindow() || this;
@@ -1203,7 +1256,9 @@ class __window_core extends __utils {
     // timeout arg — spinner(state, timeout) DELAYS the spinner by timeout
     // instead of auto-clearing it; the resolve/reject paths below clear it.
     aw.spinner(1);
-    this.postService(service, { nid, hub_id, name })
+    // Resolves false when nothing will open (the "+ Add new" spinner stops
+    // there; otherwise it stops once the editor window is up).
+    return this.postService(service, { nid, hub_id, name })
       .then((data) => {
         aw.spinner(0);
         if (!data || !data.nid) {
@@ -1212,7 +1267,7 @@ class __window_core extends __utils {
           if (!require("libs/permission-denied").saidRecently()) {
             Wm.alert(LOCALE.ERROR_NETWORK);
           }
-          return;
+          return false;
         }
         // The new file opens in its editor right away: in a busy folder the
         // grid gives no cue where the created file landed, so waiting for
@@ -1289,6 +1344,7 @@ class __window_core extends __utils {
             : LOCALE.ERROR_NETWORK,
         );
         if (this.onServerError) this.onServerError(e);
+        return false;
       });
   }
 
@@ -1467,6 +1523,7 @@ class __window_core extends __utils {
       // Routes via Wm.launch({ explicit: 1 }) so Kind.waitFor resolves
       // the lazy-loaded bundle before mounting.
       case "add-folder":
+        this._addNewLoading(Kind.waitFor("folder_form"), false);
         Kind.waitFor("folder_form").then(() => {
           if (Wm && Wm.__wrapperModal) {
             Wm.__wrapperModal.feed({
@@ -1483,6 +1540,7 @@ class __window_core extends __utils {
         // opening an existing file. New-note path uses getCurrentMedia()
         // which reads from `this.target = Wm.getActiveWindow()`.
         if (require("libs/over-limit").guardWrite("write")) return;
+        this._addNewLoading();
         return Wm.launch(
           { kind: "editor_blocknote", uiHandler: [this] },
           { explicit: 1 }
@@ -1492,6 +1550,7 @@ class __window_core extends __utils {
       // Note. Both names now open the same thing.
       case "add-blocknote":
         if (require("libs/over-limit").guardWrite("write")) return;
+        this._addNewLoading();
         return Wm.launch(
           { kind: "editor_blocknote", uiHandler: [this] },
           { explicit: 1 }
@@ -1501,6 +1560,7 @@ class __window_core extends __utils {
         if (require("libs/over-limit").guardWrite("write")) return;
         // IN-APP: open the spreadsheet as a desk window (PO's call). The
         // standalone #/sheet tab route still exists for later.
+        this._addNewLoading();
         return Wm.launch(
           { kind: "editor_sheet", uiHandler: [this] },
           { explicit: 1 }
@@ -1509,13 +1569,14 @@ class __window_core extends __utils {
       case "add-doc":
         if (require("libs/over-limit").guardWrite("write")) return;
         // Casual Docs (native DocxEditor) as a desk window.
+        this._addNewLoading();
         return Wm.launch(
           { kind: "editor_docs", uiHandler: [this] },
           { explicit: 1 }
         );
 
       case "new-document":
-        return this.newDocument(cmd);
+        return this._addNewLoading(this.newDocument(cmd));
 
       default:
         if (lastClick.shiftKey || lastClick.altKey || lastClick.ctrlKey) {

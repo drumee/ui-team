@@ -145,6 +145,36 @@
     gap: var(--spacer-4);
   }
 
+  // "+ Add new" while what a menu row opens is on its way (window/core
+  // _addNewLoading): the plus becomes a spinner of its size, the button
+  // inert. The button is the Image.Svg widget itself — <svg> then label.
+  &__label-button[data-loading="1"] {
+    cursor: progress;
+    pointer-events: none;
+
+    > svg {
+      display: none;
+    }
+
+    &::before {
+      content: "";
+      flex: 0 0 14px;
+      width: 14px;
+      height: 14px;
+      box-sizing: border-box;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: window-button-spin 0.7s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &::before {
+        animation-duration: 2s;
+      }
+    }
+  }
+
   &__label-button {
     cursor: pointer;
     align-items: center;
@@ -579,4 +609,10 @@
   font-size: 14px;
   line-height: 20px;
   font-weight: 400;
+}
+
+@keyframes window-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
