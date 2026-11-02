@@ -136,11 +136,11 @@ function attachMenuPolicy(root, policy = {}) {
   };
 
   const markParent = (row) => {
+    ensureArrow(row);
     if (row.dataset.menuPolicyParent) return;
     row.dataset.menuPolicyParent = "1";
     row.setAttribute("aria-haspopup", "menu");
     row.setAttribute("aria-expanded", "false");
-    ensureArrow(row);
   };
 
   const openPanel = (row) => {
