@@ -1013,7 +1013,12 @@ class __calendar_main extends LetcBox {
    *   its parent's form: the "Parent / child" crumb leads back there
    */
   _openTaskForm(row, { parentRow = null } = {}) {
-    this._closeMenus();
+    // Opened from "+ New": the dropdown has to come off the screen too —
+    // _renderModal() below repaints the modal only.
+    if (this._openMenu) {
+      this._closeMenus();
+      this._renderToolbar();
+    }
     // Both dates in YYYY-MM-DD from the start: every task.update writes both
     // columns, so the draft must always hold the row's own Start and End.
     if (row) {
@@ -1069,7 +1074,11 @@ class __calendar_main extends LetcBox {
    * calendar row — that meeting, prefilled, to update or delete.
    */
   _openMeetingForm(row) {
-    this._closeMenus();
+    // See _openTaskForm.
+    if (this._openMenu) {
+      this._closeMenus();
+      this._renderToolbar();
+    }
     if (row) return this._openMeetingEdit(row);
     const base = day(this._pendingDay) || day(this._cursor) || Dayjs();
     this._form = {
