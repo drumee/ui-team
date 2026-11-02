@@ -218,6 +218,47 @@ class __file_switcher extends LetcBox {
       (f) => f && f.nid && !CONTAINER_FILETYPES.includes(f.filetype)
         && !isScheduleNode(f) && !(hidden && hidden.test(String(f.filename || "")))
     ).map((f) => ({ hub_id, ...f }));
+    // Only a listing that came back can say a remembered file is missing.
+    if (data) this.checkRecents();
+    this.renderLists();
+  }
+
+  /**
+   * Recently viewed is this browser's own list (recent.js): a file trashed
+   * or moved elsewhere (the folder window, another tab, another member)
+   * never told it, so its row stayed under this folder for as long as the
+   * folder was listed. A row the fresh listing lacks is asked about once,
+   * hidden meanwhile: gone (trash takes it out of `media`, so its
+   * attributes come back empty) → forgotten; moved → refiled under its new
+   * folder. Absence alone is not proof: the listing is its first page only.
+   */
+  async checkRecents() {
+    const { nid: open } = this.node();
+    const listed = new Set(this._folder.map((f) => f.nid));
+    if (!this._checking) this._checking = new Set();
+    const doubtful = this._recent.filter(
+      (n) => n.nid !== open && n.pid && this.inScope(n)
+        && !listed.has(n.nid) && !this._checking.has(n.nid)
+    );
+    if (!doubtful.length) return;
+    for (const n of doubtful) this._checking.add(n.nid);
+    const replies = await Promise.all(doubtful.map((n) =>
+      this.fetchService(
+        { service: SERVICE.media.attributes, nid: n.nid, hub_id: n.hub_id },
+        { async: 1 },
+      ).then((node) => ({ n, node }), () => ({ n, failed: 1 }))
+    ));
+    for (const { n } of replies) this._checking.delete(n.nid);
+    if (this.isDestroyed()) return;
+    for (const { n, node, failed } of replies) {
+      // Unreachable is not gone: the row stays.
+      if (failed) continue;
+      if (!node || !node.nid) recent.forget(n.nid);
+      else if (node.pid && String(node.pid) !== String(n.pid)) {
+        recent.update(n.nid, { pid: node.pid, hub_id: node.hub_id || n.hub_id });
+      }
+    }
+    this._recent = recent.read();
     this.renderLists();
   }
 
@@ -254,6 +295,7 @@ class __file_switcher extends LetcBox {
     const recents = this._recent
       .map(fresh)
       .filter((n) => (n.nid === nid || this.inScope(n)) && this.match(n))
+      .filter((n) => !(this._checking && this._checking.has(n.nid)))
       .slice(0, MAX_RECENT);
     // The whole folder, as the folder's own Group view lists it, the open
     // file included: nothing moves when a file is opened (user's call,
