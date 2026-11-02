@@ -167,6 +167,10 @@
     padding: 9px 18px;
     border-radius: 71px;
     background: var(--overlay-bg-05);
+    // Paging is a burst of clicks; the browser reads it as a double/triple
+    // click and, finding no text under the arrow, selects the nearest text
+    // it can — the weekday header.
+    user-select: none;
   }
 
   // caret-left/right, never arrow-left (a 40x22 viewBox that draws a long
@@ -842,6 +846,7 @@
     background: var(--normal-bg);
     // The day names are labels, not controls.
     cursor: default;
+    user-select: none;
   }
 
   // Figma 1697:48528: short day names, centred, 14/1.2 in grey ink, 12px
