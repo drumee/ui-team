@@ -213,7 +213,7 @@
   }
 
   // "June, 2026 ▾". The negative margin gives the hover wash room to breathe
-  // without moving the label off the 12px the design puts after the pill.
+  // without moving the label's text: it starts the row, 12px before the pill.
   &__range {
     align-items: center;
     gap: 4px;
@@ -799,8 +799,8 @@
       flex: 1 1 0;
     }
 
-    // The 264px mini calendar hangs from the row's start, under the Today
-    // pill, instead of from the label beside it: from there it ran past the
+    // The 264px mini calendar hangs from the row's start (the label leads
+    // the row) instead of from the label's own box: from there it ran past the
     // page's right edge on a narrow pane (measured: 22px cut at a 480px
     // window, 112px at 390, the › month button with it). The left group
     // becomes its positioning box and the label's box steps aside.
@@ -933,18 +933,10 @@
     // Chips set their own cursor, so they keep theirs.
     cursor: pointer;
 
-    // Today's date sits in a brand circle, 24px for "7" and "28" alike; only
-    // a longer label ("Jun 1" on the 1st) stretches it. Same ink pair as the
-    // toolbar's active option.
+    // Today's date sits in a brand circle — the same 24px box every date
+    // draws (see __day-num), filled. Same ink pair as the toolbar's active
+    // option.
     &[data-today="1"] .calendar-main__day-num {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 24px;
-      height: 24px;
-      padding: 0 3px;
-      box-sizing: border-box;
-      border-radius: 12px;
       background: var(--primary-40);
       color: var(--gray-white);
       font-weight: 600;
@@ -973,11 +965,31 @@
     gap: 10px;
   }
 
-  // Top-right, 14/1.2 regular in grey ink — "7", or "Jun 1" on the first.
+  // Top-right, 14px regular in grey ink. Every date — today's or not — sits
+  // in the same 24px square with the number centred in it on both axes, so
+  // the digits of one column line up on one x from cell to cell, and today's
+  // circle (above) is just this box filled. It overhangs the 20px head by
+  // 2px each way, inside the cell's 12px padding.
   &__day-num {
-    @include drumee.typo($size: 14px, $line: 1.2, $color: var(--normal-fg-20));
+    @include drumee.typo($size: 14px, $line: 24px, $color: var(--normal-fg-20));
     font-weight: 400;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    box-sizing: border-box;
+    border-radius: 50%;
+    text-align: center;
+
+    // ui-core's Note wraps the text in .note-content; centre that box too.
+    > .note-content {
+      line-height: 24px;
+      text-align: center;
+    }
   }
 
   // Figma 1693:180987: a 20px circle on the 5% wash, revealed when the cell

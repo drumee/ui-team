@@ -370,7 +370,8 @@ module.exports = function (ui) {
   return [
     Skeletons.Box.X({
       className: `${pfx}__toolbar-left`,
-      kids: [nav, label],
+      // The range label first, then the ‹ Today › pill.
+      kids: [label, nav],
     }),
     Skeletons.Box.X({
       className: `${pfx}__toolbar-right`,
