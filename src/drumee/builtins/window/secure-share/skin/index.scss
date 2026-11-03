@@ -1647,3 +1647,13 @@
     &:hover { background: var(--normal-bg-70, #ececf2); }
   }
 }
+
+// The floating panel's outside-click layer (index.js _openBackdrop): a
+// transparent sibling under the panel in the windows layer that takes the
+// press so the player behind cannot raise over the panel, and closes it.
+// No veil — the panel opened over an undimmed player and still does.
+.window-secure-share__backdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+}

@@ -280,14 +280,53 @@ class __sheet_state extends DrumeeMFS {
 
     // Ignore the onChange bursts fired while the initial snapshot loads, so a
     // freshly opened sheet isn't marked dirty before the user touches it.
+    //
+    // This was a flat 1500ms from mount. On the first open after a page
+    // reload Casual's chunks, Univer and the icon font are all cold, so
+    // onReady — and with it loadSnapshot, the permission grants and the
+    // first co-editing sync, each of which fires onChange — lands well past
+    // that window, and the header came up "Unsaved changes" as the skeleton
+    // lifted. Warm, the second open fit inside it and showed nothing.
+    //
+    // So the quiet period now ends on what actually happened instead of on
+    // the clock: no sooner than onReady, then only once the workbook has
+    // been still for LOAD_SETTLE_MS (each load-time change restarts that
+    // wait). The user's first real input in the sheet ends it at once, so
+    // an edit made right after the reveal is never swallowed.
+    const LOAD_SETTLE_MS = 1500;
+    const USER_INPUT = ["keydown", "pointerdown", "paste", "drop"];
     this._loading = 1;
-    setTimeout(() => {
+    let settleTimer = null;
+    const endLoading = () => {
+      clearTimeout(settleTimer);
+      settleTimer = null;
+      if (!this._loading) return;
       this._loading = 0;
-    }, 1500);
+      for (const t of USER_INPUT) this.el && this.el.removeEventListener(t, onUserInput, true);
+    };
+    // Armed by onReady once its setup (snapshot, permissions, co-editing
+    // attach) is through; load-time changes before that only wait.
+    let setupDone = false;
+    const settleLater = () => {
+      if (!this._loading || !setupDone) return;
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(endLoading, LOAD_SETTLE_MS);
+    };
+    const onUserInput = (e) => {
+      if (e.isTrusted && this._ready) endLoading();
+    };
+    for (const t of USER_INPUT) this.el.addEventListener(t, onUserInput, true);
+    this._settleLoad = () => {
+      setupDone = true;
+      settleLater();
+    };
 
     const onChange = (snap) => {
       if (snap) this._snapshot = snap;
-      if (this._loading) return;
+      if (this._loading) {
+        settleLater();
+        return;
+      }
       if (this.editor) {
         this.editor._changed = 1;
         // Header label → "Unsaved changes" until the next save.
@@ -373,9 +412,17 @@ class __sheet_state extends DrumeeMFS {
           }
           // Co-editing (Casual Sheets server behind /-/<ep>/sheets/): join
           // the room named after the file nid once the server answers.
-          this._maybeAttachCollab(api);
+          // The load-settle wait (see _doMount) starts once that attach is
+          // done or known not to happen: its first sync writes the room's
+          // state into the workbook, and that is not an edit either.
+          const collab = this._maybeAttachCollab(api);
           // A "<A> commented on <file>" click opens the file ON that comment.
           this._focusPendingComment(api);
+          Promise.resolve(collab)
+            .catch(() => {})
+            .then(() => {
+              if (this._settleLoad) this._settleLoad();
+            });
         },
         onError: (e) => {
           this.warn("CasualSheets error", e);

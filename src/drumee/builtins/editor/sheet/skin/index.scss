@@ -37,6 +37,19 @@ $ms-arrow-drop-down: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/20
   }
 }
 
+
+// Casual Sheets' icons come from the sheet's own self-hosted Material Symbols
+// instance (../icon-font.js: 333 KB, fetched as the window opens) instead of
+// the 4.28 MB variable font Casual requests from Google after Univer has
+// loaded. Its Icon component sets the family INLINE, hence !important. Also
+// the two places Casual portals icons out of the window: its dialogs and the
+// sheet-tab menu. Keep the family name in step with icon-font.js FAMILY.
+.editor-sheet .material-symbols-outlined,
+[data-testid="cs-dialog-backdrop"] .material-symbols-outlined,
+[data-testid="cs-tab-menu"] .material-symbols-outlined {
+  font-family: "Material Symbols Sheet" !important;
+}
+
 .sheet {
   &__ui {
     width: 100%;
