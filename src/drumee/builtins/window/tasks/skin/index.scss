@@ -1451,6 +1451,9 @@ $theme-colors: (
     width: 24px;
     height: 24px;
     padding: 4px;
+    // An Image.Svg button carries no data-flow, so nothing made it flex and
+    // the centring below did nothing: the glyph sat top-left of the box.
+    display: flex;
     justify-content: center;
     align-items: center;
     box-sizing: border-box;
