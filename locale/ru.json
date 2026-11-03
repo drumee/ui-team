@@ -20,6 +20,8 @@
   "MIGRATE_FROM_GDRIVE": "Перенести из Google Drive",
   "TASK_COMMENTED_ACTION": "оставил(а) комментарий к ",
   "FILE_EDITED_ACTION": "отредактировал(а) ",
+  "HUB_INVITE_ACCEPTED_ACTION": "принял(а) ваше приглашение в ",
+  "HUB_INVITE_DECLINED_ACTION": "отклонил(а) ваше приглашение в ",
   "TASK_PRIORITY_ACTION": "изменил(а) приоритет ",
   "TASK_PRIORITY_TO": " на ",
   "TASK_MOVED_ACTION": " перемещено",

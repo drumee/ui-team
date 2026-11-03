@@ -20,6 +20,8 @@
   "MIGRATE_FROM_GDRIVE": "从 Google Drive 迁移",
   "TASK_COMMENTED_ACTION": "评论了： ",
   "FILE_EDITED_ACTION": "编辑了 ",
+  "HUB_INVITE_ACCEPTED_ACTION": "已接受您的工作区邀请：",
+  "HUB_INVITE_DECLINED_ACTION": "已拒绝您的工作区邀请：",
   "TASK_PRIORITY_ACTION": "更改了优先级： ",
   "TASK_PRIORITY_TO": " → ",
   "TASK_MOVED_ACTION": " 已移动",

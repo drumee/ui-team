@@ -20,6 +20,8 @@
   "MIGRATE_FROM_GDRIVE": "Migrer depuis Google Drive",
   "TASK_COMMENTED_ACTION": "a commenté ",
   "FILE_EDITED_ACTION": "a modifié ",
+  "HUB_INVITE_ACCEPTED_ACTION": "a accepté votre invitation à ",
+  "HUB_INVITE_DECLINED_ACTION": "a refusé votre invitation à ",
   "TASK_PRIORITY_ACTION": "a changé la priorité de ",
   "TASK_PRIORITY_TO": " en ",
   "TASK_MOVED_ACTION": " a été déplacée",

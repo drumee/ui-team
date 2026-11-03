@@ -92,6 +92,12 @@ function isFileOwnerCategory(category) {
   return category === 'file_edited' || category === 'file_commented';
 }
 
+// "<invitee> accepted / declined your invitation to <workspace>", addressed to
+// the admin who sent it (server-team lib/hub-invite-answer-notify).
+function isHubInviteAnswerCategory(category) {
+  return category === 'hub_invite_accepted' || category === 'hub_invite_declined';
+}
+
 /**
  * Click on a file-owner row: land on the file in its folder (the docked
  * workspace, scrolled to, selected and flashed — the reveal every file
@@ -389,6 +395,9 @@ class __activity_item extends LetcBox {
       // the server stamps with its own category; read and removed by its id
       // like every other contact_activity row.
       : isFileOwnerCategory(opt.category) ? 'contact_invite'
+      // Same for an answered workspace invitation: a contact_activity row,
+      // read and removed by its id.
+      : isHubInviteAnswerCategory(opt.category) ? 'contact_invite'
       : opt.category
       || (opt.event === 'hub.invite_received' ? 'hub_invite'
         : opt.event === 'task_assigned' ? 'contact_invite'
@@ -531,6 +540,8 @@ class __activity_item extends LetcBox {
           case 'contact_refused':
           case 'file_edited':
           case 'file_commented':
+          case 'hub_invite_accepted':
+          case 'hub_invite_declined':
             this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
             return
 
@@ -886,6 +897,17 @@ class __activity_item extends LetcBox {
 
       case 'contact_refused':
         this.triggerHandlers({ service: 'read-activity', item_type, item_key })
+        break;
+
+      // An answered workspace invitation opens that workspace, exactly like the
+      // invitation row itself (case hub_invite above), and is read by its id.
+      case 'hub_invite_accepted':
+      case 'hub_invite_declined':
+        this.triggerHandlers({ service: 'read-activity', hub_id, item_type, item_key })
+        if (hub_id) {
+          location.hash = `#/desk/wm/reveal/?hub_id=${hub_id}&nid=0&filetype=folder&pid=0&ts=${ts}`;
+          this.triggerHandlers({ service: 'close-activity-panel' })
+        }
         break;
 
       case 'access_request':
