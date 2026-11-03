@@ -107,6 +107,10 @@ class __window_secure_share extends mfsInteract {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    if (this._backdrop) {
+      this._backdrop.remove();
+      this._backdrop = null;
+    }
   }
 
   onWsMessage(svc, data, options = {}) {
@@ -139,7 +143,48 @@ class __window_secure_share extends mfsInteract {
     // (otherwise the panel renders at the cascade spot — offset/overflowing).
     this._applyRightDock();
     this.raise();
+    if (this._floating) this._openBackdrop();
     this.setupInteract();
+  }
+
+  /**
+   * Floating panel (opened from a player's Share row): a press outside it
+   * closes it.
+   *
+   * Without a layer of its own, a press "outside" landed on the player window
+   * underneath, which raises itself when pressed — the panel went BEHIND the
+   * player instead of closing. Same fix as window/media-details: a transparent
+   * layer in the same windows layer, just above every other window and under
+   * this one, takes the press so nothing behind can raise, and closes the
+   * panel the way its ✕ does. The sidebar and top bar sit outside the windows
+   * layer and are not covered.
+   */
+  _openBackdrop() {
+    const el = this.el;
+    const layer = el && el.parentElement;
+    if (!layer || this._backdrop || this.isDestroyed()) return;
+    let top = 0;
+    for (const w of layer.children) {
+      if (w === el) continue;
+      const z = parseInt(getComputedStyle(w).zIndex, 10);
+      if (z > top) top = z;
+    }
+    const backdrop = document.createElement('div');
+    backdrop.className = `${this.fig.family}__backdrop`;
+    backdrop.style.zIndex = String(top + 1);
+    el.style.zIndex = String(top + 2);
+    const swallow = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    backdrop.addEventListener('mousedown', swallow);
+    backdrop.addEventListener('pointerdown', swallow);
+    backdrop.addEventListener('click', (e) => {
+      swallow(e);
+      if (!this.isDestroyed()) this.selfDestroy({ now: 1 });
+    });
+    layer.insertBefore(backdrop, el);
+    this._backdrop = backdrop;
   }
 
   // Pin the window to the top-right corner as a full-height, fixed-width panel
