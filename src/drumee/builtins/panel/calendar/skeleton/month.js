@@ -122,10 +122,9 @@ module.exports = function (ui) {
     const key = ymd(d);
     const inMonth = d.month() === anchorMonth;
     const list = byDay[key] || [];
-    // Top-right, no leading zero ("7"), and the first of a month names its
-    // month ("Jun 1") — the same rule in all three month grids. Outside-month
-    // dates still dim, so the boundary reads both ways.
-    const numText = d.date() === 1 ? d.format("MMM D") : d.format("D");
+    // Top-right, the bare number with no leading zero ("7", "1" on the first
+    // too). Outside-month dates still dim, so the boundary reads both ways.
+    const numText = d.format("D");
 
     // The whole cell opens that day in the Day view (index.js "cal-day-open",
     // the "+N more" popover's date does the same). Adding a task or a meeting
