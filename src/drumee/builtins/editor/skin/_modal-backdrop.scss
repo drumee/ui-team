@@ -1,0 +1,59 @@
+/** ================================================================== *
+#   FILE : /src/drumee/builtins/editor/skin/_modal-backdrop.scss
+#   TYPE : Shared mixin — Casual modal backdrops (docs + sheet)
+# ===================================================================**/
+
+// Casual's modals bring their own scrims (navy 32–35%, black 50%, some with
+// an 8px blur) painted over the WHOLE viewport. The desk's modal backdrop is
+// the calendar task card's ("New task", calendar-main__modal[data-form="task"]
+// in panel/calendar/skin): no scrim, no blur — the page under the card fades
+// to 20%, i.e. white at 80% over it, while the sidebar and the top bar stay
+// as they are. window-media-details__backdrop copies the same value. Change
+// them together.
+//
+// The backdrop itself stays full-screen and transparent so a press anywhere
+// outside the card still reaches Casual's own close handler (the
+// pseudo-element hit-tests as its host). The 80% white is a ::before cut to
+// the workspace pane (.desk-module__right-side) by CSS anchor positioning. If
+// the anchor cannot be resolved — no anchor support, or the backdrop is fixed
+// to a transformed ancestor rather than the viewport — every anchor() falls
+// back to 0 and the veil covers the backdrop's own box instead.
+//
+// Every value Casual sets is INLINE, hence the !important.
+$veil: rgba(255, 255, 255, 0.8);
+
+@keyframes editor-modal-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+// Call at the root: @include modal-backdrop.veil("<backdrop selector list>").
+@mixin veil($backdrops) {
+  .desk-module__right-side {
+    anchor-name: --desk-right-side;
+  }
+
+  #{$backdrops} {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    // The pseudo fades in instead (0.15s, as the calendar's page fade).
+    animation: none !important;
+
+    &::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      top: anchor(--desk-right-side top, 0px);
+      right: anchor(--desk-right-side right, 0px);
+      bottom: anchor(--desk-right-side bottom, 0px);
+      left: anchor(--desk-right-side left, 0px);
+      // Under the card, inside the backdrop's own stacking context.
+      z-index: -1;
+      background: $veil;
+      pointer-events: none;
+      animation: editor-modal-backdrop-in 0.15s ease;
+    }
+  }
+}

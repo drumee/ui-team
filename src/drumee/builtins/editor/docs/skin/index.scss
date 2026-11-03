@@ -5,6 +5,7 @@
 @use "../../skin/file-viewer" as fv;
 @use "../../skin/loading";
 @use "../../skin/phosphor" as ph;
+@use "../../skin/modal-backdrop";
 
 // Material Symbols arrow_drop_down — the caret the Figma draws on every toolbar menu.
 $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-360 280-560h400L480-360Z'/%3E%3C/svg%3E";
@@ -34,6 +35,71 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 // skin applies; `!important` because the value is inline.
 [data-testid="cs-dialog-backdrop"] {
   z-index: 60000 !important;
+}
+
+// Casual Docs' own dialogs (Dialog, command palette, the ep-dialog-overlay
+// family, the writing-assistant sheet…) are not portaled: each is a
+// `position: fixed; inset: 0` div with an inline scrim, rendered inside the
+// editor. The menubar's click-catcher has the same shape but is transparent
+// and must stay that way. Backdrop: see editor/skin/_modal-backdrop.
+@include modal-backdrop.veil(
+  '[data-testid="cs-dialog-backdrop"], ' +
+  '.editor-docs div[style*="position: fixed"][style*="inset: 0"]:not([style*="background: transparent"])'
+);
+
+// Format ▸ Line spacing ▸ Custom spacing is not a modal in Casual: a lone
+// `position: fixed` panel at top:100px, translateX(-50%), no backdrop, with
+// edits applied live. Here it sits on the same veil as the dialogs above and
+// is centred on the workspace pane (the anchor() insets + auto margins; on
+// fallback, centred in the viewport).
+//
+// The veil is its own ::before. A fixed child resolves against the viewport
+// only while no ancestor is transformed, so the inline translateX goes, and
+// the centring is done with margins instead. And because a negative-z child
+// paints OVER its stacking context's own background, border and shadow, the
+// card's surface moves to ::after, which paints after (above) the veil.
+// Every value Casual sets is inline, hence the !important.
+.editor-docs [data-testid="custom-spacing-dialog"] {
+  top: anchor(--desk-right-side top, 0px) !important;
+  right: anchor(--desk-right-side right, 0px) !important;
+  bottom: anchor(--desk-right-side bottom, 0px) !important;
+  left: anchor(--desk-right-side left, 0px) !important;
+  margin: auto !important;
+  height: fit-content !important;
+  transform: none !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  // Casual clips to its radius, which would clip ::after's shadow too. Only
+  // the body scrolls (its own overflow-y), and the header paints no ground.
+  overflow: visible !important;
+  animation: editor-modal-backdrop-in 0.15s ease;
+
+  &::before,
+  &::after {
+    content: "";
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  &::before {
+    position: fixed;
+    inset: 0;
+    top: anchor(--desk-right-side top, 0px);
+    right: anchor(--desk-right-side right, 0px);
+    bottom: anchor(--desk-right-side bottom, 0px);
+    left: anchor(--desk-right-side left, 0px);
+    background: modal-backdrop.$veil;
+  }
+
+  &::after {
+    position: absolute;
+    inset: -1px; // over the (now transparent) 1px border
+    border: 1px solid var(--doc-border);
+    border-radius: inherit;
+    background: var(--doc-surface, white);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+  }
 }
 
 // ── Document tabs ───────────────────────────────────────────────────────────

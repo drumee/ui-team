@@ -7,6 +7,7 @@
 @use '../../skin/file-viewer' as fv;
 @use '../../skin/loading';
 @use '../../skin/phosphor' as ph;
+@use '../../skin/modal-backdrop';
 
 // The strip's glyphs are Material Symbols in the design (1393:3887: "Add",
 // "Menu", "Arrow drop down", 24px): the control's own glyph is hidden and the
@@ -619,6 +620,10 @@ body > div[data-u-context-menu-submenu]:has(~ div[data-u-context-menu-submenu]) 
   z-index: 60000 !important;
   font-family: var(--font-main);
 }
+
+// Their scrim takes the calendar task card's backdrop, over the workspace pane only
+// (editor/skin/_modal-backdrop).
+@include modal-backdrop.veil('[data-testid="cs-dialog-backdrop"]');
 
 .editor-sheet[data-theme="dark"] {
   .editor-sheet__avatar {
