@@ -4943,6 +4943,27 @@ $theme-colors: (
       }
     }
 
+    // Tooltip visibility follows CSS :hover — the same signal as the chip
+    // above — not ui-core's JS state. ui-core shows/hides the bubble with an
+    // inline display from onpointerenter/onpointerleave, which only fire on a
+    // pointer BOUNDARY crossing. When the icon node is replaced under a still
+    // pointer (the comment list is re-fed) or the boundary events go missing,
+    // the new node matches :hover (chip on) but never gets a pointerenter
+    // (tooltip off), so on some machines the tooltip flashed for a frame and
+    // vanished while on others it stayed. !important beats the inline style.
+    // Both halves sit under (any-hover: hover): a device that cannot hover
+    // (tap would latch :hover on) or does not report it keeps ui-core's
+    // original JS behaviour instead of losing the tooltip altogether.
+    @media (any-hover: hover) {
+      > .tasks-panel__tip {
+        display: none !important;
+      }
+
+      &:hover > .tasks-panel__tip {
+        display: block !important;
+      }
+    }
+
     // Flyover tooltip: the framework appends it as a CHILD of the icon
     // (ui-core __addTooltips → this.$el.append), so it is clipped by any
     // scrolling ancestor — __modal-main, whose `overflow-y: auto` also makes
