@@ -4070,7 +4070,6 @@ function buildDueSectionContent(ui, scope = "detail") {
                   bubble: 0,
                   service: "clear-start-date",
                   uiHandler: [ui],
-                  tooltips: LOCALE.CLEAR,
                 }),
               ],
             }),

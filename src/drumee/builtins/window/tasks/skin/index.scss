@@ -9387,6 +9387,10 @@ $theme-colors: (
     flex-shrink: 0;
     width: 20px;
     height: 20px;
+    // Centre the 12px glyph in the 20px hit box.
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 6px;
     cursor: pointer;
     transition: background 0.15s;
