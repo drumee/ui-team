@@ -16,6 +16,15 @@ class __editor_sheet extends __player {
    */
   initialize(opt = {}) {
     super.initialize(opt);
+    // Cold first open: start the two big downloads the loading skeleton waits
+    // on NOW, side by side — the Univer chunk (sheet_state; only requested in
+    // onPartReady otherwise, after the skeleton has rendered) and the icon
+    // font (otherwise only asked for by Casual's chrome once that chunk has
+    // run). See ./icon-font.
+    require("./icon-font").preloadIconFont();
+    if (typeof Kind !== "undefined" && Kind && typeof Kind.waitFor === "function") {
+      Promise.resolve(Kind.waitFor("sheet_state")).catch(() => {});
+    }
     // Univer owns the right-click menu inside the sheet; keep the window from
     // walking the view tree up to the desk's menu (see sheet/state.js).
     this.escapeContextmenu = true;
