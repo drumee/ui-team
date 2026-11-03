@@ -327,11 +327,11 @@ const make = function (ui) {
         })
       : null;
 
-    // Footer: priority pill + due-date pill on the left, assignee avatars
-    // pushed to the right (Figma 2021:117822).
+    // Footer: priority pill + due-date pill, then the assignee avatars on
+    // their own row, left-aligned.
     const priorityText = LOCALE[priority.label] || priority.key;
     // Meta row — priority pill (only when a priority is set, per Figma's
-    // `visible:Priorities`) + due-date pill. Avatars are pushed right.
+    // `visible:Priorities`) + due-date pill.
     const metaKids = [
       task.priority
         ? Skeletons.Note({
@@ -345,7 +345,7 @@ const make = function (ui) {
     const meta = metaKids.length
       ? Skeletons.Box.X({ className: `${pfx}__task-meta`, kids: metaKids })
       : null;
-    // Avatars alone at the card bottom, on the right. No status pill: the
+    // Avatars alone at the card bottom, on the left. No status pill: the
     // column already names the status (873:228353).
     const avatars = assigneeAvatar(task);
     const footer = avatars

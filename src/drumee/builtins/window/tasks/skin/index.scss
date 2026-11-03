@@ -1188,10 +1188,10 @@ $theme-colors: (
     }
   }
 
-  // Avatar row — the avatars sit on the right (&__task-avatars margin-left).
+  // Avatar row — the avatars sit on the left.
   &__task-foot {
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 8px;
   }
 
@@ -3073,7 +3073,6 @@ $theme-colors: (
   &__task-avatars {
     align-items: center;
     flex-shrink: 0;
-    margin-left: auto; // always pushed to the card's right edge
   }
 
   &__task-avatar {
