@@ -1281,6 +1281,8 @@ class __tasks_panel extends LetcBox {
         try {
           e.dataTransfer.dropEffect = "move";
         } catch (_) {}
+        // Scroll the board while the column is held near its left/right edge.
+        this._dragAutoScrollX(e.clientX);
         // Track the highlighted column instead of sweeping the whole panel —
         // dragover fires at pointer rate, so a per-event querySelectorAll
         // over a packed board is real work.
@@ -1334,6 +1336,8 @@ class __tasks_panel extends LetcBox {
         this._rememberDropScope(s);
         return;
       }
+      // Same for a card: a column scrolled out of view was unreachable.
+      if (this._dragTaskId) this._dragAutoScrollX(e.clientX);
       const col = findColumn(e.target);
       if (!col) {
         this._dragAutoScroll(null);
@@ -1382,6 +1386,9 @@ class __tasks_panel extends LetcBox {
 
     root.addEventListener("dragleave", (e) => {
       if (isOurDrag()) e.stopPropagation();
+      // Off the panel entirely: dragover stops firing here, so nothing would
+      // re-arm or stop the board's horizontal autoscroll loop.
+      if (!root.contains(e.relatedTarget)) this._dragAutoScrollX(null);
       // One rule now the affordance lives on the zone element: clear when the
       // pointer leaves the zone that lit it. relatedTarget, not target — on
       // dragleave `target` is the element being LEFT, which is still inside the
@@ -1428,6 +1435,7 @@ class __tasks_panel extends LetcBox {
           (e.target && e.target.closest && e.target.closest("[data-column]"));
         this._dragColKey = null;
         this._colDropEl = null;
+        this._dragAutoScrollX(null);
         root
           .querySelectorAll(".tasks-panel__column.is-col-drop, .tasks-panel__column.is-col-dragging")
           .forEach((n) => n.classList.remove("is-col-drop", "is-col-dragging"));
@@ -1647,8 +1655,54 @@ class __tasks_panel extends LetcBox {
     this._autoScrollRaf = requestAnimationFrame(step);
   }
 
+  // Horizontal edge autoscroll of the board (.tasks-panel__main) during a
+  // column or card drag. Native HTML5 drag gives an overflow-x container no
+  // reliable autoscroll, so holding a column at the board's edge did nothing.
+  // `x` is the pointer clientX; null stops. Same model as _dragAutoScroll:
+  // dragover re-arms the speed, a rAF loop does the scrolling so a still
+  // pointer keeps the board moving. Past the board's edge = full speed.
+  _dragAutoScrollX(x) {
+    const EDGE = 64; // px band at each side
+    const MAX = 20; // px per frame at the very edge
+    const main = x == null || !this.el
+      ? null
+      : this.el.querySelector(".tasks-panel__main");
+    let speed = 0;
+    if (main && main.scrollWidth > main.clientWidth) {
+      const r = main.getBoundingClientRect();
+      const band = Math.min(EDGE, r.width / 4);
+      if (x < r.left + band) {
+        speed = -Math.ceil(MAX * Math.min(1, (r.left + band - x) / band));
+      } else if (x > r.right - band) {
+        speed = Math.ceil(MAX * Math.min(1, (x - (r.right - band)) / band));
+      }
+    }
+    if (!speed) {
+      this._autoScrollX = null;
+      if (this._autoScrollXRaf && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(this._autoScrollXRaf);
+      }
+      this._autoScrollXRaf = 0;
+      return;
+    }
+    this._autoScrollX = { main, speed };
+    if (this._autoScrollXRaf || typeof requestAnimationFrame !== "function") return;
+    const step = () => {
+      this._autoScrollXRaf = 0;
+      const a = this._autoScrollX;
+      if (!a || !a.main.isConnected) return (this._autoScrollX = null);
+      const before = a.main.scrollLeft;
+      a.main.scrollLeft = before + a.speed;
+      // Hit the end: stop until the next dragover re-arms.
+      if (a.main.scrollLeft === before) return (this._autoScrollX = null);
+      this._autoScrollXRaf = requestAnimationFrame(step);
+    };
+    this._autoScrollXRaf = requestAnimationFrame(step);
+  }
+
   _clearDropAffordance() {
     this._dragAutoScroll(null);
+    this._dragAutoScrollX(null);
     if (this._dragOverRaf && typeof cancelAnimationFrame === "function") {
       cancelAnimationFrame(this._dragOverRaf);
     }

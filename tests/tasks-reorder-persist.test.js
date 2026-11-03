@@ -125,3 +125,50 @@ test("a column that does not overflow never scrolls", () =>
     assert.strictEqual(col.scrollTop, 200);
     assert.strictEqual(h._autoScroll, null);
   }));
+
+// ── Horizontal board autoscroll (column / card drag at the board's edge) ──
+const autoScrollX = method("_dragAutoScrollX(x)");
+
+function fakeBoard({ left = 0, width = 800, scrollWidth = 2000 } = {}) {
+  const main = {
+    isConnected: true,
+    scrollLeft: 500,
+    clientWidth: width,
+    scrollWidth,
+    getBoundingClientRect: () => ({ left, right: left + width, width }),
+  };
+  return { el: { querySelector: () => main }, main, _dragAutoScrollX: autoScrollX };
+}
+
+test("holding a column at the board's right edge scrolls right; centre does not", () =>
+  withRaf((tick) => {
+    const h = fakeBoard();
+    h._dragAutoScrollX(400);
+    tick();
+    assert.strictEqual(h.main.scrollLeft, 500);
+    h._dragAutoScrollX(795);
+    tick();
+    tick();
+    assert.ok(h.main.scrollLeft > 500, `scrolled to ${h.main.scrollLeft}`);
+    h._dragAutoScrollX(null);
+    const at = h.main.scrollLeft;
+    tick();
+    assert.strictEqual(h.main.scrollLeft, at);
+  }));
+
+test("past the board's left edge scrolls left at full speed", () =>
+  withRaf((tick) => {
+    const h = fakeBoard({ left: 100 });
+    h._dragAutoScrollX(50);
+    tick();
+    assert.strictEqual(h.main.scrollLeft, 500 - 20);
+  }));
+
+test("a board that does not overflow never scrolls", () =>
+  withRaf((tick) => {
+    const h = fakeBoard({ scrollWidth: 800 });
+    h._dragAutoScrollX(795);
+    tick();
+    assert.strictEqual(h.main.scrollLeft, 500);
+    assert.strictEqual(h._autoScrollX, null);
+  }));
