@@ -1072,7 +1072,7 @@ class __tasks_panel extends LetcBox {
    */
   static get TASK_MUTATIONS() {
     return [
-      "task.create", "task.update", "task.update_status", "task.update_assignee",
+      "task.create", "task.update", "task.update_status", "task.reorder", "task.update_assignee",
       "task.delete", "task.link_file", "task.unlink_file", "task.link_label",
       "task.unlink_label", "task.comment_create", "task.comment_update",
       "task.comment_delete", "task.comment_react", "task.column_create",
@@ -1335,11 +1335,19 @@ class __tasks_panel extends LetcBox {
         return;
       }
       const col = findColumn(e.target);
-      if (!col) return;
+      if (!col) {
+        this._dragAutoScroll(null);
+        return;
+      }
       e.preventDefault();
       try {
         e.dataTransfer.dropEffect = "move";
       } catch (_) {}
+      // Scroll the column while the card is held near its top/bottom edge. A
+      // native HTML5 drag gets no reliable autoscroll inside an overflow
+      // container (and none at all with the scrollbar hidden, as here), so a
+      // card could never reach a slot that was scrolled out of view.
+      if (this._dragTaskId) this._dragAutoScroll(col, e.clientY);
       // Track the active drop column instead of querySelectorAll-ing the
       // whole panel per event — dragover fires at pointer rate (100+/s) and
       // a full-board subtree scan each time is measurable on packed boards.
@@ -1395,6 +1403,7 @@ class __tasks_panel extends LetcBox {
       // move would otherwise read as a leave and flicker the outline.
       const scope = (col && col.closest(".tasks-panel__column")) || col;
       if (col && scope && !scope.contains(e.relatedTarget)) {
+        if (this._autoScroll && this._autoScroll.col === col) this._dragAutoScroll(null);
         col.classList.remove("is-drop-target");
         if (this._dropTargetEl === col) this._dropTargetEl = null;
       }
@@ -1575,7 +1584,71 @@ class __tasks_panel extends LetcBox {
     return null;
   }
 
+  // Edge autoscroll for a card drag. `col` is the column body (the scroller)
+  // under the pointer; null stops. dragover only re-arms the speed — the
+  // scrolling itself runs on its own rAF loop, so holding the card still at
+  // the edge keeps the column moving smoothly between dragover events.
+  //
+  // The hot band is the body's top/bottom EDGE px; a pointer past
+  // the body (over the pinned header, or the add-task row below) counts as the
+  // band's outer limit, i.e. full speed.
+  _dragAutoScroll(col, y) {
+    const EDGE = 56; // px band at each end
+    const MAX = 18; // px per frame at the very edge
+    let speed = 0;
+    if (col && col.scrollHeight > col.clientHeight) {
+      const r = col.getBoundingClientRect();
+      const band = Math.min(EDGE, r.height / 3);
+      if (y < r.top + band) {
+        speed = -Math.ceil(MAX * Math.min(1, (r.top + band - y) / band));
+      } else if (y > r.bottom - band) {
+        speed = Math.ceil(MAX * Math.min(1, (y - (r.bottom - band)) / band));
+      }
+    }
+    if (!speed) {
+      this._autoScroll = null;
+      if (this._autoScrollRaf && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(this._autoScrollRaf);
+      }
+      this._autoScrollRaf = 0;
+      return;
+    }
+    this._autoScroll = { col, key: col.dataset.dropcol, speed, y };
+    if (this._autoScrollRaf || typeof requestAnimationFrame !== "function") return;
+    const step = () => {
+      this._autoScrollRaf = 0;
+      const a = this._autoScroll;
+      if (!a || !this.el) return;
+      // Scrolling near the bottom grows the card window (_installCardWindow),
+      // which rebuilds the view body — follow the column to its new node.
+      if (!a.col.isConnected) {
+        a.col = this.el.querySelector(
+          `.tasks-panel__column-body[data-dropcol="${a.key}"]`,
+        );
+        if (!a.col) return (this._autoScroll = null);
+      }
+      const before = a.col.scrollTop;
+      a.col.scrollTop = before + a.speed;
+      // Hit the end: stop until the next dragover re-arms.
+      if (a.col.scrollTop === before) return (this._autoScroll = null);
+      // The cards moved under a still pointer — re-place the insertion
+      // placeholder through the same coalesced path dragover uses.
+      if (this._placeholder && this._placeholder.parentNode === a.col) {
+        const after = this._dragAfterCard(a.col, a.y);
+        const ph = this._placeholder;
+        if (after) {
+          if (after.previousElementSibling !== ph) a.col.insertBefore(ph, after);
+        } else if (a.col.lastElementChild !== ph) {
+          a.col.appendChild(ph);
+        }
+      }
+      this._autoScrollRaf = requestAnimationFrame(step);
+    };
+    this._autoScrollRaf = requestAnimationFrame(step);
+  }
+
   _clearDropAffordance() {
+    this._dragAutoScroll(null);
     if (this._dragOverRaf && typeof cancelAnimationFrame === "function") {
       cancelAnimationFrame(this._dragOverRaf);
     }
@@ -1660,10 +1733,11 @@ class __tasks_panel extends LetcBox {
       if (targetBody !== sourceBody) this._syncColumn(targetBody);
     }
 
-    // Same-column reorder has no server-side rank to persist yet, so skip the
-    // round-trip. The model reorder above keeps the order across re-renders; it
-    // reverts only on a server reload (_loadTasks), which returns tasks unranked.
-    if (sameColumn) return;
+    // Same-column reorder → task.reorder. This used to return here ("no
+    // server-side rank to persist yet"), so the order lived only in the
+    // in-memory model and every reload — task_list sorts by rank — put the card
+    // back where it was.
+    if (sameColumn) return this._persistReorder(taskId, status);
 
     try {
       const updated = await this.postService({
@@ -1682,6 +1756,56 @@ class __tasks_panel extends LetcBox {
       await this._loadTasks();
       this._render({ full: true });
     }
+  }
+
+  // Persist a same-column reorder that _reorderTaskModel already applied. The
+  // anchor is read from the MODEL, not the DOM: the column builds only
+  // CARD_WINDOW cards, so "dropped at the end of the rendered cards" and "the
+  // end of the column" differ, and the model is what the next _render() — and
+  // so the server — must agree with. The answer carries the whole column's new
+  // ranks; adopt them so the rank-sorted List view agrees too.
+  async _persistReorder(taskId, status) {
+    const i = this._tasks.findIndex((t) => String(t.id) === String(taskId));
+    if (i < 0) return;
+    let before = null;
+    for (let j = i + 1; j < this._tasks.length; j++) {
+      if (this._tasks[j].status === status) {
+        before = this._tasks[j];
+        break;
+      }
+    }
+    try {
+      const rows = await this.postService({
+        service: SERVICE.task.reorder,
+        hub_id: this._hubId,
+        id: taskId,
+        before_id: before ? before.id : "",
+      });
+      // postService resolves (undefined / an error payload) rather than
+      // rejecting on failure, so a non-array IS the error path.
+      if (Array.isArray(rows)) return this._applyColumnRanks(rows);
+      console.error("[tasks_panel] reorder (drag) failed:", rows);
+    } catch (err) {
+      console.error("[tasks_panel] reorder (drag) failed:", err);
+    }
+    // Not saved: show the order the server actually holds.
+    await this._loadTasks();
+    this._render({ full: true });
+  }
+
+  // Adopt the {id, rank} rows task.reorder answers (or a peer's push carries).
+  // Returns true when any cached rank changed.
+  _applyColumnRanks(rows) {
+    if (!Array.isArray(rows)) return false;
+    const byId = new Map(this._tasks.map((t) => [String(t.id), t]));
+    let changed = false;
+    for (const r of rows) {
+      const t = r && byId.get(String(r.id));
+      if (!t || r.rank == null || Number(t.rank) === Number(r.rank)) continue;
+      t.rank = Number(r.rank);
+      changed = true;
+    }
+    return changed;
   }
 
   // Move `taskId` within this._tasks to match a drag drop: place it before the
@@ -3223,6 +3347,11 @@ class __tasks_panel extends LetcBox {
           members: service === SERVICE.task.update_assignee ? 1 : 0,
         });
         return;
+      case SERVICE.task.reorder:
+        // A peer reordered a column. The push carries only ranks, and the
+        // board orders by array position, so re-read rather than re-sort.
+        this._queueWsRefresh({ tasks: 1 });
+        return;
       case SERVICE.task.column_create:
       case SERVICE.task.column_update:
       // A peer flipped which column means finished. Completion is read from
@@ -3765,6 +3894,10 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
         // Whole workspace, every folder. See _scopeNid in initialize.
         workspace: 1,
+        // Cache-buster. fetchService is a GET with `cache: "default"` and the
+        // server sends no Cache-Control, so the browser may answer a re-read
+        // from its HTTP cache — a reorder or move then "reverts" on reload.
+        _ts: Date.now(),
         // Deliberate redundancy for a staggered deploy. A server that predates
         // the workspace flag ignores it and reads these instead, so the board
         // falls back to the old folder-scoped list rather than coming back

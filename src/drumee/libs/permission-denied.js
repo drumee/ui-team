@@ -90,7 +90,7 @@ function saidRecently(ms = 3000) {
 }
 
 const TASK_WRITES = [
-  "create", "update", "update_status", "update_assignee", "delete",
+  "create", "update", "update_status", "reorder", "update_assignee", "delete",
   "link_file", "unlink_file", "link_label", "unlink_label",
   "comment_create", "comment_update", "comment_delete", "comment_react",
   "comment_link_file", "comment_unlink_file",
