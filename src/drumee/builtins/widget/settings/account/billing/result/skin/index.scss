@@ -225,4 +225,67 @@
       color: var(--primary-50);
     }
   }
+
+  // ── Busy: Use another card / Continue at regular price ─────────────────
+  // libs/button-busy stamps data-loading="1" on the pressed button and
+  // data-busy="1" on its parent (__body) while Billing opens. The label stays
+  // in the flow (so the button keeps its width) but goes invisible, and a
+  // spinner is drawn in its place; ui-core's spinner has no CSS here, so it is
+  // drawn by hand. The other action stands down meanwhile.
+  &__done,
+  &__secondary {
+    position: relative;
+
+    &[data-loading="1"] {
+      cursor: progress;
+      pointer-events: none;
+
+      > * {
+        visibility: hidden;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 18px;
+        height: 18px;
+        margin: -9px 0 0 -9px;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        animation: settings-billing-result-spin 0.7s linear infinite;
+      }
+    }
+  }
+
+  &__done[data-loading="1"]::after {
+    color: var(--white);
+  }
+
+  &__secondary[data-loading="1"]::after {
+    color: var(--primary-50);
+  }
+
+  &__body[data-busy="1"] {
+    .settings-billing-result__done:not([data-loading="1"]),
+    .settings-billing-result__secondary:not([data-loading="1"]) {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  // The ✕ is the card's child, not __body's: reached from the card. A :has()
+  // scoped to this one small card, not to an app-wide subject.
+  &__card:has(> .settings-billing-result__body[data-busy="1"]) > .settings-billing-result__close {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+@keyframes settings-billing-result-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

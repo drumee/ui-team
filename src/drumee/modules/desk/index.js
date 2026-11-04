@@ -1868,7 +1868,10 @@ class desk_module extends LetcBox {
       "toggle-apps": "sidebar-apps",
       "toggle-settings": "sidebar-settings",
       "toggle-help": "sidebar-help",
-      "upgrade-plan": "sidebar-upgrade",
+      // The rail's Plan row is `sidebar-plan` (skeleton/sidebar.js). This said
+      // `sidebar-upgrade`, a part that does not exist, so a restored Billing
+      // never lit Plan.
+      "upgrade-plan": "sidebar-plan",
       "toggle-trash": "sidebar-trash",
       "toggle-contacts": "sidebar-contacts",
       "toggle-inbox": "sidebar-inbox",
@@ -11229,7 +11232,14 @@ class desk_module extends LetcBox {
     // `preselect` (plan/cycle/tab) rides in from a #/desk/billing deep link; a
     // plain "Upgrade plan" trigger passes nothing, so the page opens on its
     // default tab exactly as before.
-    const opt = Object.assign({ page: 1 }, preselect || {});
+    // Two caller-only keys, never handed to the panel:
+    //   onOpened  called once the page is open (or failed to open) — the
+    //             post-Checkout result modal keeps its button spinning until
+    //             then, and the page's mount is what takes the modal down
+    //             (_dismissWmModal).
+    //   noLoader  the caller shows its own busy state; skip the loader window.
+    const { onOpened, noLoader, ...pageOpt } = preselect || {};
+    const opt = Object.assign({ page: 1 }, pageOpt);
     // WHAT THE LOADER COVERS, and it is only this line. Kind.waitFor resolves a
     // dynamic import: settings_billing is a ~280KB chunk, and until it lands
     // nothing on screen changes at all — the previous panel simply sits there
@@ -11240,10 +11250,22 @@ class desk_module extends LetcBox {
     // catalog and subscription land; that was a deliberate fix for this same
     // screen sitting blank through two round trips, and covering it with a
     // spinner would put one back over a page that is already readable.
-    this._showBillingLoader();
+    if (!noLoader) this._showBillingLoader();
     return Kind.waitFor("settings_billing")
       .then(() => this.togglePanel("settings_billing", "settings-main-slot", true, opt))
-      .finally(() => this._hideBillingLoader());
+      .then((r) => {
+        // Light the rail's Plan row for EVERY way in, not only a click on it:
+        // the post-Checkout modal's buttons, feature-lock upgrade CTAs, the
+        // topbar plan chip… all opened Billing with the previous row still lit.
+        this._lightRestoredRow("upgrade-plan");
+        return r;
+      })
+      .finally(() => {
+        if (!noLoader) this._hideBillingLoader();
+        if (typeof onOpened === "function") {
+          try { onOpened(); } catch (e) { /* caller's own cleanup */ }
+        }
+      });
   }
 
   /** The live billing loader window, or null. */

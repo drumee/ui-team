@@ -1616,17 +1616,19 @@
       }
     }
 
-    // Figma CTA: primary-50, 12px radius, 16/24 semibold.
+    // Figma CTA: primary-50, semibold. Downsized (2026-11-04): 32px tall,
+    // 12px label, 6px radius — it read as the loudest thing on the page.
     &-checkout-button {
+      position: relative;
       width: 100%;
       box-sizing: border-box;
-      min-height: 36px;
-      padding: var(--spacer-2, 8px) var(--spacer-4, 16px);
+      min-height: 32px;
+      padding: 6px var(--spacer-3, 12px);
       background-color: var(--primary-50);
       color: var(--white);
-      border-radius: var(--corner-radius-4, 8px);
-      font-size: 13px;
-      line-height: 20px;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 18px;
       font-weight: 600;
       justify-content: center;
       align-items: center;
@@ -1638,6 +1640,34 @@
 
       &:hover {
         background-color: var(--primary-90);
+      }
+
+      // Busy from the press until the page leaves for Stripe
+      // (_proceedWithBusy). Label kept in the flow for the width, hidden;
+      // a hand-drawn spinner in its place (ui-core's spinner has no CSS).
+      &[data-loading="1"] {
+        cursor: progress;
+        pointer-events: none;
+        // A bare text-node label is not reached by `> *`.
+        color: transparent;
+
+        > * {
+          visibility: hidden;
+        }
+
+        &::after {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 14px;
+          height: 14px;
+          margin: -7px 0 0 -7px;
+          border-radius: 50%;
+          border: 2px solid var(--white);
+          border-right-color: transparent;
+          animation: settings-billing-checkout-spin 0.7s linear infinite;
+        }
       }
 
       &[data-state="0"],
@@ -3280,5 +3310,11 @@
 @media screen and (max-width: 640px) {
   .settings-billing[data-page="1"] {
     padding: var(--spacer-4);
+  }
+}
+
+@keyframes settings-billing-checkout-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

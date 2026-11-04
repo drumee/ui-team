@@ -88,7 +88,7 @@ class settings_billing_result extends LetcBox {
    *   stops the billing page re-applying the account's pending signup offer
    *   (payment.offer_pending), which would otherwise put the code straight back.
    */
-  _reopenOfferCheckout(regular) {
+  _reopenOfferCheckout(regular, el) {
     const o = this._offer || {};
     const preselect = { plan: o.plan || "team", cycle: o.cycle || "monthly", tab: "checkout" };
     if (regular) preselect.offer = "decline";
@@ -96,9 +96,25 @@ class settings_billing_result extends LetcBox {
     // Tell the boot tour this close is a departure for Billing, not a
     // dismissal back to the desk (libs/checkout-return whenResultDone).
     require("libs/checkout-return").leftForBilling();
-    // Close first (wm clears the wrapper-modal), then open the page.
-    this.triggerHandlers({ service: "billing-result-close" });
-    RADIO_BROADCAST.trigger("desk:open-billing-page", preselect);
+    // THE MODAL STAYS UP, its button spinning, until Billing is open: the
+    // page is a lazy chunk plus a data load, and closing first left a bare
+    // desk with nothing happening. Billing's mount takes the modal down
+    // (desk togglePanel → _dismissWmModal); the close below only covers a
+    // page that never opened. withButtonBusy also drops a second press and
+    // stands the sibling button down while this one works.
+    const { withButtonBusy } = require("libs/button-busy");
+    return withButtonBusy(el, () => new Promise((resolve) => {
+      const timer = setTimeout(resolve, 15000);
+      RADIO_BROADCAST.trigger("desk:open-billing-page", {
+        ...preselect,
+        noLoader: 1, // this button is the loader
+        onOpened: () => { clearTimeout(timer); resolve(); },
+      });
+    })).finally(() => {
+      if (!(this.isDestroyed && this.isDestroyed())) {
+        this.triggerHandlers({ service: "billing-result-close" });
+      }
+    });
   }
 
   onUiEvent(cmd, args = {}) {
@@ -112,7 +128,7 @@ class settings_billing_result extends LetcBox {
         break;
       case "billing-result-offer-other-card":
       case "billing-result-offer-regular-price":
-        this._reopenOfferCheckout(service === "billing-result-offer-regular-price");
+        this._reopenOfferCheckout(service === "billing-result-offer-regular-price", cmd && cmd.el);
         break;
       default:
         if (super.onUiEvent) super.onUiEvent(cmd, args);

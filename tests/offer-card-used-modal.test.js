@@ -79,31 +79,46 @@ test("the other offer refusals keep the Payment Failure card with their reason",
 function clickReopen(regular, offer) {
   const handled = [];
   const opened = [];
-  global.RADIO_BROADCAST = { trigger: (ev, opt) => opened.push([ev, opt]) };
   const left = [];
-  const fn = method(RESULT_SRC, "_reopenOfferCheckout(regular)", {
+  global.RADIO_BROADCAST = { trigger: (ev, opt) => opened.push([ev, opt]) };
+  const busy = [];
+  const fn = method(RESULT_SRC, "_reopenOfferCheckout(regular, el)", {
     require: (m) => {
       if (m === "libs/checkout-return") return { leftForBilling: () => left.push(handled.length) };
+      if (m === "libs/button-busy") {
+        return {
+          withButtonBusy: async (el, run) => { busy.push("on"); try { return await run(); } finally { busy.push("off"); } },
+        };
+      }
       throw new Error(`unexpected require ${m}`);
     },
   });
-  fn.call({ _offer: offer, triggerHandlers: (a) => handled.push(a.service) }, regular);
-  // Marked as a departure for Billing BEFORE the close (the boot tour reads it).
-  assert.deepEqual(left, [0]);
-  return { handled, opened };
+  const self = { _offer: offer, triggerHandlers: (a) => handled.push(a.service), isDestroyed: () => false };
+  const p = fn.call(self, regular, { dataset: {} });
+  return { handled, opened, left, busy, p };
 }
 
-test("Use another card: closes the modal, reopens the same checkout WITH the code", () => {
-  const { handled, opened } = clickReopen(false, { code: "TEAM1", plan: "team", cycle: "monthly" });
+const strip = ([ev, { onOpened, ...rest }]) => [ev, rest, typeof onOpened];
+
+test("Use another card: spins, opens the same checkout WITH the code, closes once Billing is open", async () => {
+  const { handled, opened, left, busy, p } = clickReopen(false, { code: "TEAM1", plan: "team", cycle: "monthly" });
+  assert.deepEqual(left, [0], "marked as a departure for Billing first");
+  assert.deepEqual(handled, [], "modal stays up while Billing loads");
+  assert.deepEqual(busy, ["on"]);
+  assert.deepEqual(opened.map(strip), [["desk:open-billing-page",
+    { plan: "team", cycle: "monthly", tab: "checkout", promo: "TEAM1", noLoader: 1 }, "function"]]);
+  opened[0][1].onOpened(); // the desk reports the page open
+  await p;
+  assert.deepEqual(busy, ["on", "off"]);
   assert.deepEqual(handled, ["billing-result-close"]);
-  assert.deepEqual(opened, [["desk:open-billing-page",
-    { plan: "team", cycle: "monthly", tab: "checkout", promo: "TEAM1" }]]);
 });
 
-test("Continue at regular price: same checkout, offer declined, no code", () => {
-  const { opened } = clickReopen(true, { code: "TEAM1", plan: "team", cycle: "monthly" });
-  assert.deepEqual(opened, [["desk:open-billing-page",
-    { plan: "team", cycle: "monthly", tab: "checkout", offer: "decline" }]]);
+test("Continue at regular price: same checkout, offer declined, no code", async () => {
+  const { opened, p } = clickReopen(true, { code: "TEAM1", plan: "team", cycle: "monthly" });
+  assert.deepEqual(opened.map(strip), [["desk:open-billing-page",
+    { plan: "team", cycle: "monthly", tab: "checkout", offer: "decline", noLoader: 1 }, "function"]]);
+  opened[0][1].onOpened();
+  await p;
 });
 
 // ── billing page: `offer: "decline"` stops the pending offer coming back ──────

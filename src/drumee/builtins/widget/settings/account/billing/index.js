@@ -2190,6 +2190,49 @@ class settings_billing extends LetcBox {
     return this._applyPromoCode();
   }
 
+  /**
+   * "Proceed to Checkout", spinning from the press until the page leaves for
+   * Stripe. The press does real work first — the subdomain check, then
+   * payment.checkout — and the button gave no sign of it, so shoppers pressed
+   * again. Every path that STAYS on the page (validation message, subdomain
+   * taken, ALREADY_SUBSCRIBED, a network error, the plan-switch confirm)
+   * clears it; a redirect keeps it until the page is gone. Coming BACK through
+   * the browser's back/forward cache restores the page as it was left —
+   * spinning — so `pageshow` clears it there too.
+   *
+   * A second press while busy is dropped.
+   *
+   * @param {HTMLElement} [el] the pressed button
+   */
+  _proceedWithBusy(el) {
+    if (el && el.dataset && el.dataset.loading === "1") return;
+    const on = () => {
+      if (!el || !el.dataset) return;
+      el.dataset.loading = "1";
+      el.setAttribute("aria-busy", "true");
+    };
+    const off = () => {
+      if (!el || !el.dataset) return;
+      delete el.dataset.loading;
+      el.removeAttribute("aria-busy");
+    };
+    on();
+    let res;
+    try {
+      res = this._proceedToCheckout();
+    } catch (e) {
+      off();
+      throw e;
+    }
+    Promise.resolve(res).then(
+      (r) => {
+        if (r !== "redirect") return off();
+        window.addEventListener("pageshow", (e) => { if (e.persisted) off(); }, { once: true });
+      },
+      () => off(),
+    );
+  }
+
   async _proceedToCheckout() {
     // The SERVER decides the price (Stripe price_id from yp.plan); the client
     // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
@@ -2315,10 +2358,12 @@ class settings_billing extends LetcBox {
       checkout.promoCode = promo_code;
       payload.promo_code = promo_code;
     }
-    this.postService(SERVICE.payment.checkout, payload)
+    // RETURNED so _proceedWithBusy knows when the press is over; resolves
+    // "redirect" when the page is handing off to Stripe.
+    return this.postService(SERVICE.payment.checkout, payload)
       .then((data) => {
         const { url, status } = data || {};
-        if (url) { window.location.assign(url); return; } // full-page redirect to hosted Checkout
+        if (url) { window.location.assign(url); return "redirect"; } // full-page redirect to hosted Checkout
         // The server refuses a purchase while a subscription is live. Say what
         // actually applies instead of the generic failure: nothing to buy, or
         // resume. Re-sync so the tab and the banner reflect the subscription
@@ -2885,7 +2930,7 @@ class settings_billing extends LetcBox {
         if (this.state?.checkout?.selectedPlan === "free" || this._checkoutBlocked()) {
           return false;
         }
-        this._proceedToCheckout();
+        this._proceedWithBusy(cmd && cmd.el);
         return false;
 
       case "cancel-subscription":
