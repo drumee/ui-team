@@ -1541,6 +1541,10 @@ class __window_manager extends push {
       // left describing a workspace nobody is looking at any more.
       this.ensurePart("wrapper-modal").then((p) => {
         if (this._modalHoldsAccessPanelFor(p, hub_id)) return;
+        // The post-Checkout receipt is not about any workspace, and on the
+        // Checkout return the BOOT's own workspace load lands here ~1s after
+        // the receipt was fed — it used to wipe it before it could paint.
+        if (this._modalHoldsBillingResult(p)) return;
         p.clear();
       });
       // By KIND AND `headless`, not by position: headlessLayer also receives
@@ -1840,6 +1844,26 @@ class __window_manager extends push {
   }
 
   /**
+   * Does the wrapper-modal hold the post-Checkout result modal
+   * (settings_billing_result: Payment Success / Failure, offer refusal,
+   * resume)? Workspace loads must leave it alone — see loadWorkspace.
+   *
+   * @param {Object} p the wrapper-modal part
+   * @returns {Boolean}
+   */
+  _modalHoldsBillingResult(p) {
+    if (!p || !p.collection) return false;
+    try {
+      return p.collection.some(
+        (m) => m && _.isFunction(m.get) && m.get(_a.kind) === "settings_billing_result",
+      );
+    } catch (e) {
+      this.warn && this.warn("[loadWorkspace] modal inspect failed", e);
+      return false;
+    }
+  }
+
+  /**
    * Does the wrapper-modal currently hold the access panel for THIS hub?
    *
    * `permission_restricted` is what media/form chains to on a successful
@@ -2128,7 +2152,12 @@ class __window_manager extends push {
       l.restart();
       this._prepareListPartition(l);
     });
-    this.ensurePart("wrapper-modal").then((p) => p.clear());
+    this.ensurePart("wrapper-modal").then((p) => {
+      // Same exception as loadWorkspace: the Checkout receipt outlives a
+      // workspace switch until the user closes it.
+      if (this._modalHoldsBillingResult(p)) return;
+      p.clear();
+    });
     // Sidebar nav reloads the desk container in-place; preserve open windows.
     this.updateBreadcrumb({ ...data, service: "change-workspace" }, this);
   }

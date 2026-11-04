@@ -31,6 +31,9 @@ class settings_billing_result extends LetcBox {
         hub_id: Visitor.id,
         session_id: this._sessionId,
       }).catch(() => null);
+      // Removed while the receipt was in flight (the host was cleared):
+      // feeding a destroyed view paints nothing and says nothing.
+      if (this.isDestroyed && this.isDestroyed()) return;
       if (this._receipt && this._receipt.status === "SESSION_NOT_FOUND") this._receipt = null;
       // The bank wants the first payment confirmed (3DS): the server moved the
       // purchase to a Stripe page that can show the challenge. Go there.
