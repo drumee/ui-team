@@ -263,6 +263,7 @@ class __window_manager extends push {
   }
 
   async openDesignationLink(payload = {}, { compact = false } = {}) {
+    this._endToursForLink();
     if (compact && payload && payload.hub_id && payload.filetype === _a.folder) {
       return this._openDesignationFolder(payload);
     }
@@ -299,6 +300,24 @@ class __window_manager extends push {
       }
     }
     return this.openFileLocation(payload, { node });
+  }
+
+  /**
+   * Opening an Internal Link is a navigation, like a rail press: the
+   * in-window tour standing on the pane is ended, and one still being raised
+   * is called off (desk _navigated). Otherwise the file opened under the
+   * migrate tour, which covers the whole pane (Duy 2026-11-04, a link clicked
+   * in a comment). Not marked seen: the tour is offered again later.
+   */
+  _endToursForLink() {
+    const desk = window.Desk;
+    if (!desk || (desk.isDestroyed && desk.isDestroyed())) return;
+    try {
+      if (_.isFunction(desk._navigated)) desk._navigated();
+      if (_.isFunction(desk._endWindowTour)) desk._endWindowTour();
+    } catch (e) {
+      this.warn("openDesignationLink: could not end the tour", e);
+    }
   }
 
   /**
