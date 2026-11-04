@@ -6864,8 +6864,6 @@ class desk_module extends LetcBox {
       // Inbox, Admin console…) is not raising the tour — see
       // _bootTourSectionOnScreen — so there is no pane to hide for it.
       if (this._bootTourSectionOnScreen({ savedOnly: true })) return;
-      // Back from Checkout: the result modal owns the boot, no tour comes.
-      if (require("libs/checkout-return").isCheckoutBoot()) return;
       if (Visitor.parseModuleArgs().tutorial) return;
       if (require("libs/window-tutorial-intent").has()) return;
       if (!require("libs/tutorial-tours").offerable("migrate", this)) return;
@@ -6947,18 +6945,14 @@ class desk_module extends LetcBox {
     if (!require("libs/tutorial-tours").offerable("migrate", this)) return false;
     // Same up-front shortcut for a reload headed back to a section screen.
     if (this._bootTourSectionOnScreen({ savedOnly: true })) return false;
-    // Back from Checkout: the result modal owns the screen first. WAIT for it
-    // rather than standing down — the user lands on Files, the very surface
-    // this tour is about, and a tour that only re-offers on a Files PRESS
-    // never came for someone already there. Left for Billing through one of
-    // the modal's buttons → no tour (it would be drawn over Billing); the
-    // seen-set is untouched, so the next Files press offers it.
-    const CheckoutReturn = require("libs/checkout-return");
-    if (CheckoutReturn.isCheckoutBoot()) {
-      const how = await CheckoutReturn.whenResultDone();
-      if (how === "left") return false;
-      if (this.isDestroyed && this.isDestroyed()) return false;
-    }
+    // BACK FROM CHECKOUT the tour runs ALONGSIDE the result modal, not after
+    // it: the user lands on Files, the surface this tour is about. The two
+    // stack correctly with nothing extra — the modal's wrapper stamps
+    // data-state="open", Wm mirrors it to data-wm-modal on the desk root, and
+    // desk/skin lifts the modal to 100000 over the tour's overlay (10010)
+    // while pinning the workspace pane under the tour. A modal button that
+    // opens Billing ends the tour through togglePanel (_endWindowTourAfter),
+    // unseen, so the next Files press offers it again.
     try {
       // The same wait the URL hook documents at length: the restore clears its
       // flag on a TIMER, not when the pane arrives, so a workspace has to be
