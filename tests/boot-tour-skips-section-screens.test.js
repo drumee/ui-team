@@ -21,7 +21,16 @@ function method(sig, scope = {}) {
   return new Function(...names, `return (${sliceFunction(DESK_SRC, sig)});`)(...names.map((n) => scope[n]));
 }
 
-const sectionOnScreen = method("_bootTourSectionOnScreen(opt = {})");
+// The helper asks the checkout-return lib whether this is a Checkout boot;
+// tests flip it through this variable.
+let CHECKOUT_BOOT = false;
+const sectionOnScreen = method("_bootTourSectionOnScreen(opt = {})", {
+  require: (m) => {
+    if (m === "libs/checkout-return") return { isCheckoutBoot: () => CHECKOUT_BOOT };
+    throw new Error(`unexpected require ${m}`);
+  },
+});
+test.afterEach(() => { CHECKOUT_BOOT = false; });
 
 function host({ savedService = null, saved = null, deepLink = false, mainOnTop = false, current = null } = {}) {
   return {
@@ -67,6 +76,7 @@ test("a throwing read fails closed (no tour over an unknown screen)", () => {
 
 function bootTour(h, { offerable = true, checkoutBoot = false, resultDone = "none" } = {}) {
   const fired = [];
+  CHECKOUT_BOOT = checkoutBoot;
   const fn = method("async _raiseBootTour()", {
     require: (m) => {
       if (m === "libs/window-tutorial-intent") return { has: () => false };
@@ -159,6 +169,25 @@ test("boot tour: back from Checkout, modal button went to Billing → no tour", 
 
 test("boot tour: back from Checkout, modal never appeared → the tour still comes", async () => {
   const { r, fired } = await bootTour(host(), { checkoutBoot: true, resultDone: "timeout" });
+  assert.equal(r, true);
+  assert.deepEqual(fired, ["migrate"]);
+});
+
+// ── THE REGRESSION (stage, 2026-11-04): Checkout started on Billing ──────────
+
+test("helper: on a Checkout boot the remembered Billing screen does not count", () => {
+  CHECKOUT_BOOT = true;
+  assert.equal(sectionOnScreen.call(host({ savedService: "upgrade-plan" }), { savedOnly: true }), false);
+  assert.equal(sectionOnScreen.call(host({ saved: { orgView: 1 } }), { savedOnly: true }), false);
+  // …but a section the user actually opens still does.
+  assert.equal(sectionOnScreen.call(host({ savedService: "upgrade-plan", mainOnTop: true })), true);
+});
+
+test("boot tour: Checkout started on Billing, modal dismissed → the tour comes", async () => {
+  const { r, fired } = await bootTour(
+    host({ savedService: "upgrade-plan", saved: { service: "upgrade-plan", workspace: { hub_id: "h" } } }),
+    { checkoutBoot: true, resultDone: "closed" },
+  );
   assert.equal(r, true);
   assert.deepEqual(fired, ["migrate"]);
 });

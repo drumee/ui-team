@@ -6911,9 +6911,16 @@ class desk_module extends LetcBox {
    */
   _bootTourSectionOnScreen(opt = {}) {
     try {
-      if (this._savedScreenService()) return true;
+      // BACK FROM CHECKOUT the remembered screen is NOT put back
+      // (_restoreDeskState skips it), so it must not count here either.
+      // Checkout starts on Billing, so "upgrade-plan" is what is remembered on
+      // almost every Checkout boot — counting it made the tour stand down for
+      // a Billing screen that never came, leaving a new user on Files with no
+      // tour at all.
+      const restoring = !require("libs/checkout-return").isCheckoutBoot();
+      if (restoring && this._savedScreenService()) return true;
       const saved = this._bootSavedState;
-      if (saved && saved.orgView && !this._bootDeepLink && !this._hasDeepLink()) return true;
+      if (restoring && saved && saved.orgView && !this._bootDeepLink && !this._hasDeepLink()) return true;
       if (opt.savedOnly) return false;
       if (this._mainScreenOnTop()) return true;
       if (this._currentScreenService()) return true;
