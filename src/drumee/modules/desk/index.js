@@ -3215,6 +3215,9 @@ class desk_module extends LetcBox {
     }
     const key = Popup.dayKey();
     if (Popup.alreadyShownToday(key)) return;
+    // Just back from Checkout: the receipt owns this boot. The day is NOT
+    // consumed, so the greeting comes back on the next desk load.
+    if (require("libs/checkout-return").isCheckoutBoot()) return;
 
     // WAIT FOR THE WINDOW MANAGER, and do it BEFORE marking the day consumed.
     //
@@ -3232,6 +3235,22 @@ class desk_module extends LetcBox {
     const wm = await this._waitForWm();
     if (!wm || (this.isDestroyed && this.isDestroyed())) return;
 
+    // Same busy rule as every other boot popup: wait until the promo / reward
+    // / lock flows and the upgrade nudge are off the screen, then claim the
+    // slot synchronously so nothing launches in the fetch gap below. Gave up
+    // waiting → the day is not consumed.
+    if (!(await this._waitForHomePopups())) return;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this._dailyReminderInFlight = true;
+    try {
+      await this._showDailyReminder(Popup, key);
+    } finally {
+      this._dailyReminderInFlight = false;
+    }
+  }
+
+  /** Second half of _maybeShowDailyReminder, run while holding the slot. */
+  async _showDailyReminder(Popup, key) {
     Popup.markShownToday(key);
 
     // Local midnight → next local midnight. Built from the date parts rather
@@ -9614,16 +9633,24 @@ class desk_module extends LetcBox {
       // upselling on top of it helps nobody.
       const OverLimit = require("libs/over-limit");
       if (OverLimit.enforcementOn() && OverLimit.isLocked()) return;
+      // Just back from Checkout: the receipt owns this boot. Never ask the
+      // server here — a granted nudge is marked shown and would be burned.
+      if (require("libs/checkout-return").isCheckoutBoot()) return;
       if (this._homePopupsBusy()) return;
+      // Claimed synchronously after the busy check, so the daily reminder
+      // cannot launch while the state request is in the air.
+      this._upgradeNudgeInFlight = true;
       const res = await this.fetchService(SERVICE.payment.upgrade_nudge_state, {
         hub_id: Visitor.id,
       });
       const data = (res && res.data) || res || {};
       if (!~~data.show || !data.trigger) return;
-      this._openUpgradeNudgePopup(data);
+      await this._openUpgradeNudgePopup(data);
     } catch (e) {
       // Decoration only — a failed nudge must never mark the boot chain red.
       this.warn && this.warn("[upgrade-nudge] state check failed", e);
+    } finally {
+      this._upgradeNudgeInFlight = false;
     }
   }
 
@@ -9990,6 +10017,15 @@ class desk_module extends LetcBox {
   _homePopupsBusy() {
     if (this._rewardFlowInFlight || this._promoLaunch30InFlight) return true;
     if (this._activateFlowInFlight) return true;
+    // Between their own busy check and their launch, the daily reminder and the
+    // upgrade nudge each fetch first — held here so the other cannot slip into
+    // that gap and stack on top (recording 2026-11-02: three modals at once).
+    if (this._dailyReminderInFlight || this._upgradeNudgeInFlight) return true;
+    // "Payment Success!" / "Payment Failure!" sits in wm's wrapper-modal slot,
+    // which Wm.getItemsByKind below cannot see.
+    try {
+      if (require("libs/checkout-return").isModalOpen()) return true;
+    } catch (e) { /* lib missing — treat as clear */ }
     if (this._rewardFlow && !(this._rewardFlow.isDestroyed && this._rewardFlow.isDestroyed())) {
       return true;
     }
@@ -10007,6 +10043,12 @@ class desk_module extends LetcBox {
       const ol =
         (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("over_limit_popup")) || [];
       if (ol.some((w) => w && !(w.isDestroyed && w.isDestroyed()))) return true;
+      // The two "decoration" cards count too, so neither lands on the other
+      // and the invited-workspace prompt waits for them.
+      for (const kind of ["daily_reminder_popup", "upgrade_nudge_popup"]) {
+        const open = (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind(kind)) || [];
+        if (open.some((w) => w && !(w.isDestroyed && w.isDestroyed()))) return true;
+      }
     } catch (e) {
       // Wm not answering — treat as clear rather than waiting forever.
     }

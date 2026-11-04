@@ -2419,22 +2419,16 @@ class __window_manager extends push {
    * query string so a reload doesn't replay it.
    */
   checkCheckoutReturn() {
-    let params;
-    try { params = new URLSearchParams(window.location.search); } catch (e) { return; }
-    const flag = params.get("checkout");
-    if (!flag) return;
-    const session_id = params.get("session_id") || "";
-    try {
-      params.delete("checkout"); params.delete("session_id");
-      const qs = params.toString();
-      history.replaceState(null, "", `${location.pathname}${qs ? "?" + qs : ""}${location.hash}`);
-    } catch (e) { /* cosmetic */ }
+    // Read + scrub through the shared lib: the desk's boot popups ask the
+    // same question (and stand down on a Checkout boot), whoever asks first.
+    const ret = require("libs/checkout-return").get();
+    if (!ret) return;
     Kind.waitFor("settings_billing_result").then(() => {
       this.ensurePart("wrapper-modal").then((p) => {
         p.feed({
           kind: "settings_billing_result",
-          result: flag === "success" ? "success" : "cancel",
-          session_id,
+          result: ret.result,
+          session_id: ret.session_id,
           uiHandler: [this],
         });
       });

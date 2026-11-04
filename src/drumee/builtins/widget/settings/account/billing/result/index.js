@@ -19,6 +19,12 @@ class settings_billing_result extends LetcBox {
   }
 
   async onDomRefresh() {
+    // Lets the desk's _homePopupsBusy() see this modal: it lives in wm's
+    // wrapper-modal slot, out of Wm.getItemsByKind's reach.
+    if (!this._countedOpen) {
+      this._countedOpen = true;
+      require("libs/checkout-return").setModalOpen(true);
+    }
     if (this._result === "success" && this._sessionId) {
       // hub_id is REQUIRED (payment.* ACL is scope:hub/src:owner).
       this._receipt = await this.fetchService(SERVICE.payment.checkout_result, {
@@ -49,6 +55,13 @@ class settings_billing_result extends LetcBox {
       if (this._failReason) this._result = "cancel";
     }
     this.feed(require("./skeleton").default(this));
+  }
+
+  onBeforeDestroy() {
+    if (this._countedOpen) {
+      this._countedOpen = false;
+      require("libs/checkout-return").setModalOpen(false);
+    }
   }
 
   onUiEvent(cmd, args = {}) {
