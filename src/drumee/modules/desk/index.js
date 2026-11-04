@@ -980,6 +980,8 @@ class desk_module extends LetcBox {
     // secure-share keys, and a second read later would wrongly treat a
     // deep-link boot as a plain restore.
     this._bootDeepLink = this._hasDeepLink();
+    // Before _holdBootTourPane below, which reads it.
+    this._bootDesignationLink = this._arrivedOnDesignationLink();
     this._bootSavedState = this._readSavedDeskState();
     // Raise the restore flag BEFORE feeding the skeleton: the breadcrumb's
     // mount-time loadHome() fires during the render pass and must know a
@@ -2209,6 +2211,33 @@ class desk_module extends LetcBox {
     return !!(path[1] && path[1] !== "home" && path[1] !== _a.home);
   }
 
+  /**
+   * Did this visit arrive on an Internal Link (`#/desk/wm/o/…` or its long
+   * twin `#/desk/wm/open/nid=…`) — the link copied from a file's or folder's
+   * menu, and from the gear menu of the document viewer?
+   *
+   * The link is what the visitor came for. The boot tours draw over the whole
+   * screen (the post-onboarding tour) or over the workspace pane (migrate),
+   * so a new account opening one landed on the tour with the file out of
+   * sight (Duy 2026-11-04, UAT). Read once per desk load (loadDefault): the
+   * address is rewritten a few seconds after the link is routed.
+   *
+   * The file-deep-link relay answers for a link carried across a sign-in. A
+   * reload of the address the desk wrote itself (libs/location-url) is not an
+   * arrival, unless that relay armed it.
+   *
+   * @returns {Boolean}
+   */
+  _arrivedOnDesignationLink() {
+    try {
+      if (fileDeepLink.peek()) return true;
+      if (locationUrl.isMirrorEntry()) return false;
+      return fileDeepLink.urlWantsFile();
+    } catch (e) {
+      return false;
+    }
+  }
+
   _clearRestoreInFlight(delayMs = 0) {
     if (this._restoreClearTimer) {
       clearTimeout(this._restoreClearTimer);
@@ -2796,6 +2825,8 @@ class desk_module extends LetcBox {
    */
   _bootTourComing() {
     try {
+      // An Internal Link boot raises no boot tour (_raiseBootTour, overlay).
+      if (this._bootDesignationLink && !Visitor.parseModuleArgs().tutorial) return false;
       if (this._postOnboardingTutorial) return true;
       return !!require("libs/tutorial-tours").offerable("migrate", this);
     } catch (e) {
@@ -6666,6 +6697,8 @@ class desk_module extends LetcBox {
   _holdBootTourPane() {
     if (!this.el || !this.el.dataset) return;
     try {
+      // No boot tour over an Internal Link's file (_raiseBootTour).
+      if (this._bootDesignationLink) return;
       if (this._postOnboardingTutorial) return;
       if (!require("libs/tutorial-tours").offerable("migrate", this)) return;
     } catch (e) {
@@ -6689,6 +6722,10 @@ class desk_module extends LetcBox {
   /** The body of _maybeRunBootTour; resolves whether the tour was asked for. */
   async _raiseBootTour() {
     if (this._tutorialWasAutomatic) return false;
+    // Opened on an Internal Link: the migrate tour would cover the file the
+    // link opened (Duy 2026-11-04). It stays owed — `migrate` is marked only
+    // on success — so the next ordinary boot offers it.
+    if (this._bootDesignationLink) return false;
     // ASKED BEFORE EITHER WAIT BELOW. `offerable` applies every gate a claim
     // would except single-flight, and takes no lock — so a user who finished
     // this tour long ago is not made to sit through _awaitRestoreSettled and
@@ -8435,6 +8472,13 @@ class desk_module extends LetcBox {
       }
 
       case "overlay":
+        // Signed up / finished the wizard on an Internal Link: the link is
+        // what they came for, and this tour draws its own desk over the whole
+        // screen — the file opened behind it, out of sight (Duy 2026-11-04).
+        if (this._postOnboardingTutorial && !Visitor.parseModuleArgs().tutorial
+          && this._bootDesignationLink) {
+          this._postOnboardingTutorial = false;
+        }
         if (this._postOnboardingTutorial) {
           this._postOnboardingTutorial = false;
           // NO DELAY COMING OUT OF THE WIZARD.
