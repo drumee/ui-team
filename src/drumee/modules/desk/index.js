@@ -10983,7 +10983,7 @@ class desk_module extends LetcBox {
    *
    * @param {String} [view] "month" | "week" | "day". When given, the screen
    *   opens on TODAY in that view instead of wherever it was last left — the
-   *   Daily Reminder card asks for "month", or "day" from its meetings tile.
+   *   Daily Reminder card asks for "day" from its button and its tiles.
    *   Every other entry point omits it and keeps the existing behaviour
    *   exactly: no options, so the keep-alive reveal still applies.
    * @param {String} [filter] "all" | "task" | "meeting" — the toolbar's kind

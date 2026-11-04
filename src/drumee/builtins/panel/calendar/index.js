@@ -86,8 +86,8 @@ class __calendar_main extends LetcBox {
     // detail panel's Assignee/dates): task.* pushes skip the writer's socket.
     this._offTasksChanged = onTasksChanged(() => this._onTasksChanged());
 
-    // Month, unless the entry point NAMED a view: the Daily Reminder card's
-    // meetings tile asks for today in `day` view. Validated against VIEW_KEYS,
+    // Month, unless the entry point NAMED a view: the Daily Reminder card
+    // asks for today in `day` view. Validated against VIEW_KEYS,
     // so a malformed or stale option can only ever fall back to the default —
     // an unknown string would otherwise reach GRIDS[view] in the skeleton and
     // silently render the month grid under a toolbar claiming something else.
@@ -242,9 +242,9 @@ class __calendar_main extends LetcBox {
   /**
    * Point the screen at `view`, on TODAY — for an entry point that names one
    * rather than taking the screen as the user left it. The Daily Reminder
-   * card is the only such caller today: [My calendar] opens the month view on
-   * All, the due-tasks tile the month view on Task, the meetings tile the day
-   * view on Meeting (Lexis, 2026-10-20).
+   * card is the only such caller today, and all of it opens the day view
+   * (Lexis, 2026-11-03): [My calendar] on All, the due-tasks tile on Task, the
+   * meetings tile on Meeting (filters: Lexis, 2026-10-20).
    *
    * A FRESH mount reads the same thing from its `startView` option, and that
    * is the path that matters most, because the kind may still be lazy-loading
