@@ -198,15 +198,6 @@ const make = function (ui) {
   const priorityOf = (key) =>
     priorities.find((p) => p.key === key) || priorities[1];
 
-  // Column by key. Built once per render: the card footer's status pill used to
-  // run `getColumns().find(...)` for every card, which is O(cards x columns) on
-  // a board whose column count is user-controlled. First-wins, exactly as the
-  // `.find` it replaces.
-  const colByKey = new Map();
-  for (const c of ui.getColumns()) {
-    if (!colByKey.has(c.key)) colByKey.set(c.key, c);
-  }
-
   // @-mention support for the description fields. The description is a
   // contenteditable editor (not a textarea) so tagged members render as styled
   // inline chips and the dropdown can anchor to the live caret — the same
@@ -304,8 +295,8 @@ const make = function (ui) {
         })
       : null;
 
-    // Linked-files preview — wrapping paperclip chips (first 3) + "+N".
-    const visibleFiles = linkedFiles.slice(0, 3);
+    // Linked-files preview — wrapping paperclip chips (first 4) + "+N".
+    const visibleFiles = linkedFiles.slice(0, 4);
     const moreFiles = Math.max(0, linkedFiles.length - visibleFiles.length);
     const filesNode = visibleFiles.length
       ? Skeletons.Box.X({
@@ -336,11 +327,11 @@ const make = function (ui) {
         })
       : null;
 
-    // Footer: priority pill + due-date pill on the left, assignee avatars
-    // pushed to the right (Figma 2021:117822).
+    // Footer: priority pill + due-date pill, then the assignee avatars on
+    // their own row, at the end.
     const priorityText = LOCALE[priority.label] || priority.key;
     // Meta row — priority pill (only when a priority is set, per Figma's
-    // `visible:Priorities`) + due-date pill. Avatars are pushed right.
+    // `visible:Priorities`) + due-date pill.
     const metaKids = [
       task.priority
         ? Skeletons.Note({
@@ -354,29 +345,12 @@ const make = function (ui) {
     const meta = metaKids.length
       ? Skeletons.Box.X({ className: `${pfx}__task-meta`, kids: metaKids })
       : null;
+    // Avatars alone at the card bottom, at the end. No status pill: the
+    // column already names the status (873:228353).
     const avatars = assigneeAvatar(task);
-    // Status pill row (Figma 2040-106090: "● In Progress" + avatars at the
-    // card bottom). Dot color comes from the live column set so custom
-    // columns tint correctly.
-    const cardCol = colByKey.get(task.status || colKey) || {};
-    const statusPill = Skeletons.Box.X({
-      className: `${pfx}__task-status`,
-      dataset: { theme: cardCol.theme || "default" },
-      kids: [
-        Skeletons.Note({
-          className: `${pfx}__task-status-dot`,
-          styleOpt: { background: cardCol.color || "#AEAEB2" },
-        }),
-        Skeletons.Note({
-          className: `${pfx}__task-status-label`,
-          content: cardCol.name || LOCALE[cardCol.label] || task.status || "",
-        }),
-      ],
-    });
-    const footer = Skeletons.Box.X({
-      className: `${pfx}__task-foot`,
-      kids: [statusPill, avatars].filter(Boolean),
-    });
+    const footer = avatars
+      ? Skeletons.Box.X({ className: `${pfx}__task-foot`, kids: [avatars] })
+      : null;
 
     // Title + description sit in a tight header block (4px gap); the 12px card
     // gap then separates it from files / meta (Figma EL-b7a7a618 / EL-6d1b5341).
@@ -424,8 +398,8 @@ const make = function (ui) {
       uiHandler: [ui],
       taskId: task.id,
       // Figma card order: labels, title+desc, files, priority+due row, the
-      // status-pill + avatars row, then the Subtasks strip (873:228353) —
-      // null for a task with no children, so ordinary cards are unchanged.
+      // avatars row, then the Subtasks strip (873:228353) — null for a task
+      // with no children, so ordinary cards are unchanged.
       kids: [
         labelsStrip,
         head,
@@ -4096,7 +4070,6 @@ function buildDueSectionContent(ui, scope = "detail") {
                   bubble: 0,
                   service: "clear-start-date",
                   uiHandler: [ui],
-                  tooltips: LOCALE.CLEAR,
                 }),
               ],
             }),
