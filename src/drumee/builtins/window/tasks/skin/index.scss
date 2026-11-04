@@ -1188,10 +1188,10 @@ $theme-colors: (
     }
   }
 
-  // Avatar row — the avatars sit on the left.
+  // Avatar row — the avatars sit at the end (right).
   &__task-foot {
     align-items: center;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 8px;
   }
 
@@ -3074,6 +3074,7 @@ $theme-colors: (
   &__task-avatars {
     align-items: center;
     flex-shrink: 0;
+    margin-left: auto; // stays at the end even if the foot gains kids
   }
 
   &__task-avatar {
