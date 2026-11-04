@@ -93,6 +93,9 @@ class settings_billing_result extends LetcBox {
     const preselect = { plan: o.plan || "team", cycle: o.cycle || "monthly", tab: "checkout" };
     if (regular) preselect.offer = "decline";
     else if (o.code) preselect.promo = o.code;
+    // Tell the boot tour this close is a departure for Billing, not a
+    // dismissal back to the desk (libs/checkout-return whenResultDone).
+    require("libs/checkout-return").leftForBilling();
     // Close first (wm clears the wrapper-modal), then open the page.
     this.triggerHandlers({ service: "billing-result-close" });
     RADIO_BROADCAST.trigger("desk:open-billing-page", preselect);

@@ -65,13 +65,15 @@ test("a throwing read fails closed (no tour over an unknown screen)", () => {
 
 // ── _raiseBootTour ────────────────────────────────────────────────────────────
 
-function bootTour(h, { offerable = true, checkoutBoot = false } = {}) {
+function bootTour(h, { offerable = true, checkoutBoot = false, resultDone = "none" } = {}) {
   const fired = [];
   const fn = method("async _raiseBootTour()", {
     require: (m) => {
       if (m === "libs/window-tutorial-intent") return { has: () => false };
       if (m === "libs/tutorial-tours") return { offerable: () => offerable };
-      if (m === "libs/checkout-return") return { isCheckoutBoot: () => checkoutBoot };
+      if (m === "libs/checkout-return") {
+        return { isCheckoutBoot: () => checkoutBoot, whenResultDone: async () => resultDone };
+      }
       throw new Error(`unexpected require ${m}`);
     },
   });
@@ -143,8 +145,20 @@ test("pane hold: not raised for a reload restoring a section screen", () => {
   global.BOOT_TOUR_HOLD_MAX = 1; // only read when the hold is set
 });
 
-test("boot tour: back from Checkout → no tour over the result modal", async () => {
-  const { r, fired } = await bootTour(host(), { checkoutBoot: true });
+test("boot tour: back from Checkout, modal dismissed → the tour comes (user is on Files)", async () => {
+  const { r, fired } = await bootTour(host(), { checkoutBoot: true, resultDone: "closed" });
+  assert.equal(r, true);
+  assert.deepEqual(fired, ["migrate"]);
+});
+
+test("boot tour: back from Checkout, modal button went to Billing → no tour", async () => {
+  const { r, fired } = await bootTour(host(), { checkoutBoot: true, resultDone: "left" });
   assert.equal(r, false);
   assert.deepEqual(fired, []);
+});
+
+test("boot tour: back from Checkout, modal never appeared → the tour still comes", async () => {
+  const { r, fired } = await bootTour(host(), { checkoutBoot: true, resultDone: "timeout" });
+  assert.equal(r, true);
+  assert.deepEqual(fired, ["migrate"]);
 });

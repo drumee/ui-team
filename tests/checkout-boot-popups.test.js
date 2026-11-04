@@ -63,6 +63,40 @@ test("lib counts the result modal open/closed", () => {
   assert.equal(lib.isModalOpen(), false, "never goes negative");
 });
 
+test("lib: whenResultDone is 'none' on an ordinary boot", async () => {
+  const lib = freshLib("");
+  assert.equal(await lib.whenResultDone(), "none");
+});
+
+test("lib: whenResultDone waits for the modal to open AND close → 'closed'", async () => {
+  const lib = freshLib("?checkout=success&session_id=cs_1");
+  let how = null;
+  const p = lib.whenResultDone().then((h) => { how = h; });
+  await Promise.resolve();
+  assert.equal(how, null, "still waiting before the modal opened");
+  lib.setModalOpen(true);
+  await Promise.resolve();
+  assert.equal(how, null, "still waiting while it is up");
+  lib.setModalOpen(false);
+  await p;
+  assert.equal(how, "closed");
+  assert.equal(await lib.whenResultDone(), "closed", "late askers get the answer at once");
+});
+
+test("lib: a modal action headed for Billing resolves 'left'", async () => {
+  const lib = freshLib("?checkout=success&session_id=cs_1");
+  lib.setModalOpen(true);
+  const p = lib.whenResultDone();
+  lib.leftForBilling();
+  lib.setModalOpen(false);
+  assert.equal(await p, "left");
+});
+
+test("lib: a modal that never appears resolves 'timeout'", async () => {
+  const lib = freshLib("?checkout=cancel");
+  assert.equal(await lib.whenResultDone({ openTimeout: 10 }), "timeout");
+});
+
 // ── _homePopupsBusy ───────────────────────────────────────────────────────────
 
 function busyWith({ lib, flags = {}, open = [] }) {

@@ -4534,6 +4534,8 @@ class __window_manager extends push {
         return this.ensurePart("wrapper-modal").then((p) => p.clear());
 
       case "billing-result-retry":
+        // A departure for Billing, not a dismissal: no boot tour over it.
+        require("libs/checkout-return").leftForBilling();
         this.ensurePart("wrapper-modal").then((p) => p.clear());
         // NO PRESELECT. upgradePlage now forwards its argument to
         // openBillingPage, and `cmd` is the triggering MODEL — spreading that

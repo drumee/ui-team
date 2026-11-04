@@ -80,8 +80,16 @@ function clickReopen(regular, offer) {
   const handled = [];
   const opened = [];
   global.RADIO_BROADCAST = { trigger: (ev, opt) => opened.push([ev, opt]) };
-  const fn = method(RESULT_SRC, "_reopenOfferCheckout(regular)");
+  const left = [];
+  const fn = method(RESULT_SRC, "_reopenOfferCheckout(regular)", {
+    require: (m) => {
+      if (m === "libs/checkout-return") return { leftForBilling: () => left.push(handled.length) };
+      throw new Error(`unexpected require ${m}`);
+    },
+  });
   fn.call({ _offer: offer, triggerHandlers: (a) => handled.push(a.service) }, regular);
+  // Marked as a departure for Billing BEFORE the close (the boot tour reads it).
+  assert.deepEqual(left, [0]);
   return { handled, opened };
 }
 

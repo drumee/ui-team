@@ -6940,10 +6940,18 @@ class desk_module extends LetcBox {
     if (!require("libs/tutorial-tours").offerable("migrate", this)) return false;
     // Same up-front shortcut for a reload headed back to a section screen.
     if (this._bootTourSectionOnScreen({ savedOnly: true })) return false;
-    // Back from Checkout: the result modal owns this boot (like the daily
-    // reminder and the upgrade nudge). Not consumed — the next Files press
-    // offers the tour.
-    if (require("libs/checkout-return").isCheckoutBoot()) return false;
+    // Back from Checkout: the result modal owns the screen first. WAIT for it
+    // rather than standing down — the user lands on Files, the very surface
+    // this tour is about, and a tour that only re-offers on a Files PRESS
+    // never came for someone already there. Left for Billing through one of
+    // the modal's buttons → no tour (it would be drawn over Billing); the
+    // seen-set is untouched, so the next Files press offers it.
+    const CheckoutReturn = require("libs/checkout-return");
+    if (CheckoutReturn.isCheckoutBoot()) {
+      const how = await CheckoutReturn.whenResultDone();
+      if (how === "left") return false;
+      if (this.isDestroyed && this.isDestroyed()) return false;
+    }
     try {
       // The same wait the URL hook documents at length: the restore clears its
       // flag on a TIMER, not when the pane arrives, so a workspace has to be
