@@ -6846,6 +6846,10 @@ class desk_module extends LetcBox {
       // No boot tour over an Internal Link's file (_raiseBootTour).
       if (this._bootDesignationLink) return;
       if (this._postOnboardingTutorial) return;
+      // A reload that will put a section screen back (Billing, Calendar,
+      // Inbox, Admin console…) is not raising the tour — see
+      // _bootTourSectionOnScreen — so there is no pane to hide for it.
+      if (this._bootTourSectionOnScreen({ savedOnly: true })) return;
       if (Visitor.parseModuleArgs().tutorial) return;
       if (require("libs/window-tutorial-intent").has()) return;
       if (!require("libs/tutorial-tours").offerable("migrate", this)) return;
@@ -6867,6 +6871,44 @@ class desk_module extends LetcBox {
     if (this.el && this.el.dataset) delete this.el.dataset.bootTourHold;
   }
 
+  /**
+   * IS A SECTION SCREEN THE BOOT TOUR WOULD COVER?
+   *
+   * The migrate tour teaches the workspace's Files pane. A reload that lands
+   * on Billing (settings-billing__main), the Calendar (calendar-main__page),
+   * the Admin console, the Inbox (chat-p2p__main), Settings, Help, the
+   * organisation screen or a slide-out was raising it anyway — drawn over a
+   * screen it has nothing to say about. The tour is not consumed by standing
+   * down (`migrate` marks on success): the next Files press offers it.
+   *
+   * Two moments, because the restore opens the screen only AFTER the
+   * workspace pane is up (libs/screen-restore), i.e. after the tour may
+   * already be on its way:
+   *   saved    the screen this boot is about to put back (sessionStorage).
+   *            A deep link wins over it, as in _savedScreenService.
+   *   live     whatever is on the canvas when the tour is about to fire.
+   *
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.savedOnly] skip the live read (before the feed,
+   *   when no part exists yet)
+   * @returns {Boolean}
+   */
+  _bootTourSectionOnScreen(opt = {}) {
+    try {
+      if (this._savedScreenService()) return true;
+      const saved = this._bootSavedState;
+      if (saved && saved.orgView && !this._bootDeepLink && !this._hasDeepLink()) return true;
+      if (opt.savedOnly) return false;
+      if (this._mainScreenOnTop()) return true;
+      if (this._currentScreenService()) return true;
+    } catch (e) {
+      // Unknown means "do not cover anything": a missed tour comes back on
+      // the next Files press, a tour over the wrong screen is the bug.
+      return true;
+    }
+    return false;
+  }
+
   /** The body of _maybeRunBootTour; resolves whether the tour was asked for. */
   async _raiseBootTour() {
     if (this._tutorialWasAutomatic) return false;
@@ -6880,6 +6922,8 @@ class desk_module extends LetcBox {
     // this tour long ago is not made to sit through _awaitRestoreSettled and
     // _awaitRailWorkspace for a tour that was never going to run.
     if (!require("libs/tutorial-tours").offerable("migrate", this)) return false;
+    // Same up-front shortcut for a reload headed back to a section screen.
+    if (this._bootTourSectionOnScreen({ savedOnly: true })) return false;
     try {
       // The same wait the URL hook documents at length: the restore clears its
       // flag on a TIMER, not when the pane arrives, so a workspace has to be
@@ -6887,6 +6931,14 @@ class desk_module extends LetcBox {
       await this._awaitRestoreSettled();
       const ws = await this._awaitRailWorkspace(this._workspaceIncoming() ? 8000 : 3000);
       if (!ws || (this.isDestroyed && this.isDestroyed())) return false;
+      // And again at the last moment: the user may have opened a section
+      // during the waits, or something else put one up.
+      if (this._bootTourSectionOnScreen()) return false;
+      // _raiseRailTour waits for single-flight before firing; re-check after
+      // that wait too, so a section opened meanwhile still wins.
+      await this._whenToursIdle();
+      if (this.isDestroyed && this.isDestroyed()) return false;
+      if (this._bootTourSectionOnScreen()) return false;
       return await this._raiseRailTour("migrate");
     } catch (e) {
       return false;
