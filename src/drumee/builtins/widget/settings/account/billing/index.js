@@ -1734,6 +1734,7 @@ class settings_billing extends LetcBox {
     checkout.orgIdentMsg = text;
     checkout.orgIdentOk = !!ok;
     this._paintOrgIdentMsg();
+    this._syncCheckoutButton();
   }
 
   /**
@@ -1751,6 +1752,44 @@ class settings_billing extends LetcBox {
     // so only this attribute can tell the skin the slot has nothing to show.
     part.el.dataset.empty = note ? 0 : 1;
     if (note) part.feed(note);
+  }
+
+  /**
+   * Is a validation message on screen that must be fixed before paying?
+   * The promo error under the code row, or a subdomain verdict that is not OK.
+   * @returns {boolean}
+   */
+  _checkoutBlocked() {
+    const co = this.state?.checkout || {};
+    return !!co.promoError
+      || (!!co.orgIdentMsg && !co.orgIdentOk)
+      || this._promoUnapplied();
+  }
+
+  /**
+   * Text typed in the promo field that has not been Applied (or differs from
+   * the applied code). The shopper must press Apply — or clear the field —
+   * before Proceed to Checkout enables.
+   * @returns {boolean}
+   */
+  _promoUnapplied() {
+    const co = this.state?.checkout || {};
+    const typed = String(co.promoPending || "").trim().toUpperCase();
+    if (!typed) return false;
+    const applied = String(co.promo?.code || "").trim().toUpperCase();
+    return typed !== applied;
+  }
+
+  /**
+   * Repaint the Proceed button's disabled flag in place — for the message
+   * changes that do not re-render the right panel (subdomain check, emptying
+   * the promo field).
+   */
+  _syncCheckoutButton() {
+    const btn = this.el?.querySelector(`.${this.fig.family}__checkout-checkout-button`);
+    if (!btn) return;
+    const off = this.state?.checkout?.selectedPlan === "free" || this._checkoutBlocked();
+    btn.dataset.disabled = off ? 1 : 0;
   }
 
   // Map an org-ident validation status to its user-facing message.
@@ -1931,7 +1970,33 @@ class settings_billing extends LetcBox {
     delete checkout.promo;
     delete checkout.promoError;
     delete checkout.promoErrorStatus;
+    // Whatever was typed-but-not-applied is settled either way: Remove
+    // (keepCode) is a deliberate "no code", a wipe empties the field.
+    delete checkout.promoPending;
     if (!keepCode) checkout.promoCode = "";
+  }
+
+  /**
+   * Keystroke in the promo field. Emptying it drops the stale error message
+   * under the row. No updateRightPanel() here: the field lives in the right
+   * panel, so a re-render would steal focus mid-typing — remove the message
+   * node in place instead.
+   */
+  _onPromoInput(cmd) {
+    const value = String(cmd?.getValue?.() || "").trim();
+    const co = this.state.checkout || (this.state.checkout = {});
+    // A typed code must be Applied before paying — see _checkoutBlocked().
+    co.promoPending = value;
+    this._syncCheckoutButton();
+    if (value) return;
+    co.promoCode = "";
+    if (!co.promoError) return;
+    delete co.promoError;
+    delete co.promoErrorStatus;
+    this._syncCheckoutButton();
+    this.el
+      ?.querySelectorAll(`.${this.fig.family}__checkout-promo-error`)
+      .forEach((n) => n.remove());
   }
 
   /**
@@ -2021,6 +2086,8 @@ class settings_billing extends LetcBox {
       duration_months: parseInt(data.duration_months, 10) || 0,
     };
     checkout.promoCode = data.code;
+    // Applied: the field now holds exactly the applied code.
+    checkout.promoPending = data.code;
     this.updateRightPanel();
   }
 
@@ -2762,6 +2829,24 @@ class settings_billing extends LetcBox {
         this.updateRightPanel();
         return false;
 
+      case "clear-promo-code": {
+        // × in the field: drop the applied offer (if any) AND empty the box.
+        // Same "declined on purpose" bookkeeping as Remove, so neither a
+        // signup offer nor a cycle-parked code comes back behind their back.
+        const co = this.state.checkout || (this.state.checkout = {});
+        const had = String(co.promo?.code || co.promoCode
+          || this.__promoCodeInput?.getValue?.() || "").trim();
+        if (had) {
+          this._offerDeclined = true;
+          this._removedPromo = had;
+        }
+        this._parkedPromo = null;
+        this._clearPromoPreview(false);
+        this.__promoCodeInput?.setValue?.("");
+        this.updateRightPanel();
+        return false;
+      }
+
       case "select-bundle":
         return this._handleSelectBundle(cmd, args);
 
@@ -2783,11 +2868,15 @@ class settings_billing extends LetcBox {
       case "update-storage":
       case "storage":
       case _a.input:
+        if (cmd?.mget?.(_a.name) === "promo_code") {
+          this._onPromoInput(cmd);
+          return false;
+        }
         return this._handleInputField(cmd, args, service);
 
       case "proceed-checkout-billing":
-        // Block checkout when plan is free
-        if (this.state?.checkout?.selectedPlan === "free") {
+        // Block checkout when plan is free, or a validation message is up
+        if (this.state?.checkout?.selectedPlan === "free" || this._checkoutBlocked()) {
           return false;
         }
         this._proceedToCheckout();
