@@ -69,7 +69,8 @@ function offerCardUsedCard(ui) {
   const fig = ui.fig.family;
   const code = (ui._offer && ui._offer.code) || LOCALE.PROMO_CODE || "This offer";
   return Skeletons.Box.Y({
-    className: `${fig}__card`,
+    // `compact`: a notice, not a receipt — smaller than the payment cards.
+    className: `${fig}__card compact`,
     kids: [
       Skeletons.Box.X({
         className: `${fig}__close`,
