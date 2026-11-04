@@ -305,10 +305,16 @@ class settings_billing extends LetcBox {
     // beside it, while this is a request for THIS screen to work the plan out
     // once the subscription mirror lands. Resolved in _settleUpgradeIntent.
     const intent = opt.intent != null ? String(opt.intent).toLowerCase() : "";
+    // `offer: "decline"` — "Continue at regular price" from the post-Checkout
+    // OFFER_CARD_USED card. Same bookkeeping as the Remove button: the
+    // account's pending signup offer (_autoApplyPendingOffer) must not put
+    // the refused code straight back into this checkout.
+    const declineOffer = String(opt.offer || "").toLowerCase() === "decline";
     // `intent` joins the guard for the same reason `promo` did -- an
     // intent-only open carries none of the other three.
-    if (!plan && !cycle && !tab && !promo && !intent) return;
+    if (!plan && !cycle && !tab && !promo && !intent && !declineOffer) return;
     this._upgradeIntent = intent === "upgrade";
+    if (declineOffer) this._offerDeclined = true;
 
     if (cycle) {
       this.state.plansTab.cycle = cycle;

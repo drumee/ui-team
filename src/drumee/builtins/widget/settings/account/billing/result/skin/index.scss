@@ -65,6 +65,16 @@
       }
     }
 
+    // OFFER_CARD_USED: nothing was charged and nothing is broken — an amber
+    // notice, not the red failure cross.
+    &.notice {
+      background: rgba(245, 166, 35, 0.15);
+
+      .settings-billing-result__icon-glyph {
+        color: #e8930c;
+      }
+    }
+
     &-glyph {
       width: 32px;
       height: 32px;
@@ -183,6 +193,33 @@
       line-height: 24px;
       font-weight: 600;
       color: var(--white);
+    }
+  }
+
+  // OFFER_CARD_USED secondary action under the primary __done pill:
+  // same footprint, outlined instead of filled.
+  &__secondary {
+    width: 100%;
+    margin-top: 4px;
+    padding: 15px 24px;
+    border-radius: 4px;
+    border: 1px solid var(--primary-50);
+    background: transparent;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(67, 60, 197, 0.06); // --primary-50 @6%
+    }
+
+    &-label {
+      font-family: var(--font-main);
+      font-size: 16px;
+      line-height: 24px;
+      font-weight: 600;
+      color: var(--primary-50);
     }
   }
 }

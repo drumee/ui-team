@@ -53,6 +53,18 @@ class settings_billing_result extends LetcBox {
       // say why instead of a bare "payment failed".
       this._failReason = offerStatusMessage(this._receipt?.status);
       if (this._failReason) this._result = "cancel";
+      // The card already redeemed this offer (once_per_card, e.g. TEAM1).
+      // Nothing was charged and the card itself is fine, so this is not a
+      // "Payment Failure!": give it its own card with the two ways forward —
+      // another card for the offer, or the same plan at the regular price.
+      if (this._receipt?.status === "OFFER_CARD_USED") {
+        this._result = "offer_card_used";
+        this._offer = {
+          code: this._receipt.offer_code || "",
+          plan: this._receipt.plan || "team",
+          cycle: /^year/.test(String(this._receipt.period || "")) ? "yearly" : "monthly",
+        };
+      }
     }
     this.feed(require("./skeleton").default(this));
   }
@@ -64,6 +76,25 @@ class settings_billing_result extends LetcBox {
     }
   }
 
+  /**
+   * OFFER_CARD_USED → back to the SAME checkout (plan + cycle from the
+   * refused session). A Team checkout also needs the org name/ident form, so
+   * it goes through the billing page rather than straight to Stripe.
+   *
+   * @param {boolean} regular  true = buy without the offer. `offer: "decline"`
+   *   stops the billing page re-applying the account's pending signup offer
+   *   (payment.offer_pending), which would otherwise put the code straight back.
+   */
+  _reopenOfferCheckout(regular) {
+    const o = this._offer || {};
+    const preselect = { plan: o.plan || "team", cycle: o.cycle || "monthly", tab: "checkout" };
+    if (regular) preselect.offer = "decline";
+    else if (o.code) preselect.promo = o.code;
+    // Close first (wm clears the wrapper-modal), then open the page.
+    this.triggerHandlers({ service: "billing-result-close" });
+    RADIO_BROADCAST.trigger("desk:open-billing-page", preselect);
+  }
+
   onUiEvent(cmd, args = {}) {
     const service = args.service || (cmd && cmd.mget && cmd.mget(_a.service));
     switch (service) {
@@ -72,6 +103,10 @@ class settings_billing_result extends LetcBox {
         // Bubble to the window manager (uiHandler): close clears the
         // wrapper-modal; retry re-opens the billing checkout.
         this.triggerHandlers({ service });
+        break;
+      case "billing-result-offer-other-card":
+      case "billing-result-offer-regular-price":
+        this._reopenOfferCheckout(service === "billing-result-offer-regular-price");
         break;
       default:
         if (super.onUiEvent) super.onUiEvent(cmd, args);
