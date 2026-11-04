@@ -2750,8 +2750,11 @@ class desk_module extends LetcBox {
       // screen gets one seeded below it, so the rail and switcher keep a
       // workspace to act on. Only when a workspace opened: with none, the
       // no-workspace screen and its create button stay the landing.
-      if (opened) await this._landOnOrgView(true, { firstOpen: true });
-      else this._releaseLandingHold();
+      // Not on the Checkout return: the org screen would cover the result
+      // modal exactly as a replayed Billing did. The workspace stays.
+      if (opened && !require("libs/checkout-return").isCheckoutBoot()) {
+        await this._landOnOrgView(true, { firstOpen: true });
+      } else this._releaseLandingHold();
       this._clearRestoreInFlight(opened ? 2500 : 0);
       // Nothing opened — either the account has none (home-empty is up, and
       // settleHomeGrid sees it) or the list could not be read, which is the
@@ -2797,13 +2800,21 @@ class desk_module extends LetcBox {
         // remembered screen still ends up on top.
         paneComing = !!(await this._openDefaultWorkspace());
       }
+      // BACK FROM STRIPE CHECKOUT: the result modal owns this boot. The screen
+      // remembered on the way out is almost always Billing (that is where
+      // Checkout starts), and replaying it put the plans page over the
+      // receipt a second after it appeared — the user never got to read it
+      // or press its buttons (stage recording 2026-11-04 21:27). The
+      // workspace above is still restored underneath; the modal's own
+      // buttons go to Billing when the user asks.
+      const checkoutBoot = require("libs/checkout-return").isCheckoutBoot();
       // The organisation screen the user was on. Before saved.service: a
       // slide-out (Trash, Contacts, Notifications) can be open over it, and
       // has to land on top of it again.
-      if (saved.orgView && !(this.isDestroyed && this.isDestroyed())) {
+      if (saved.orgView && !checkoutBoot && !(this.isDestroyed && this.isDestroyed())) {
         await this._landOnOrgView(paneComing);
       }
-      if (saved.service && !(this.isDestroyed && this.isDestroyed())) {
+      if (saved.service && !checkoutBoot && !(this.isDestroyed && this.isDestroyed())) {
         // Wait for the OPEN only. The restore flag below exists to keep a
         // late loadHome from wiping the screen being opened; the wait for the
         // screen's items (up to 6s more) needs no such guard, and holding the
@@ -2914,6 +2925,9 @@ class desk_module extends LetcBox {
     if (!this.el || !this.el.dataset) return;
     try {
       if (this._bootDeepLink) return;
+      // Back from Checkout: no org-screen landing this boot (_restoreDeskState),
+      // so nothing to hide the pane for.
+      if (require("libs/checkout-return").isCheckoutBoot()) return;
       // A reload that will put the org screen back (saved `orgView`) is held
       // the same way; any other remembered state is not this landing.
       const saved = this._bootSavedState;
@@ -6850,6 +6864,8 @@ class desk_module extends LetcBox {
       // Inbox, Admin console…) is not raising the tour — see
       // _bootTourSectionOnScreen — so there is no pane to hide for it.
       if (this._bootTourSectionOnScreen({ savedOnly: true })) return;
+      // Back from Checkout: the result modal owns the boot, no tour comes.
+      if (require("libs/checkout-return").isCheckoutBoot()) return;
       if (Visitor.parseModuleArgs().tutorial) return;
       if (require("libs/window-tutorial-intent").has()) return;
       if (!require("libs/tutorial-tours").offerable("migrate", this)) return;
@@ -6924,6 +6940,10 @@ class desk_module extends LetcBox {
     if (!require("libs/tutorial-tours").offerable("migrate", this)) return false;
     // Same up-front shortcut for a reload headed back to a section screen.
     if (this._bootTourSectionOnScreen({ savedOnly: true })) return false;
+    // Back from Checkout: the result modal owns this boot (like the daily
+    // reminder and the upgrade nudge). Not consumed — the next Files press
+    // offers the tour.
+    if (require("libs/checkout-return").isCheckoutBoot()) return false;
     try {
       // The same wait the URL hook documents at length: the restore clears its
       // flag on a TIMER, not when the pane arrives, so a workspace has to be

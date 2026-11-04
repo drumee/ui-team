@@ -65,12 +65,13 @@ test("a throwing read fails closed (no tour over an unknown screen)", () => {
 
 // ── _raiseBootTour ────────────────────────────────────────────────────────────
 
-function bootTour(h, { offerable = true } = {}) {
+function bootTour(h, { offerable = true, checkoutBoot = false } = {}) {
   const fired = [];
   const fn = method("async _raiseBootTour()", {
     require: (m) => {
       if (m === "libs/window-tutorial-intent") return { has: () => false };
       if (m === "libs/tutorial-tours") return { offerable: () => offerable };
+      if (m === "libs/checkout-return") return { isCheckoutBoot: () => checkoutBoot };
       throw new Error(`unexpected require ${m}`);
     },
   });
@@ -108,7 +109,8 @@ test("boot tour: a section opened during the waits wins", async () => {
   const h = host();
   h._mainScreenOnTop = () => open;
   const fn = method("async _raiseBootTour()", {
-    require: (m) => (m === "libs/window-tutorial-intent" ? { has: () => false } : { offerable: () => true }),
+    require: (m) => (m === "libs/window-tutorial-intent" ? { has: () => false }
+      : m === "libs/checkout-return" ? { isCheckoutBoot: () => false } : { offerable: () => true }),
   });
   const fired = [];
   Object.assign(h, {
@@ -139,4 +141,10 @@ test("pane hold: not raised for a reload restoring a section screen", () => {
   };
   assert.equal(run(host({ savedService: "toggle-inbox" })), undefined);
   global.BOOT_TOUR_HOLD_MAX = 1; // only read when the hold is set
+});
+
+test("boot tour: back from Checkout → no tour over the result modal", async () => {
+  const { r, fired } = await bootTour(host(), { checkoutBoot: true });
+  assert.equal(r, false);
+  assert.deepEqual(fired, []);
 });
