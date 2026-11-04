@@ -1620,11 +1620,12 @@
     &-checkout-button {
       width: 100%;
       box-sizing: border-box;
-      padding: var(--spacer-3) var(--spacer-6);
+      min-height: 36px;
+      padding: var(--spacer-2, 8px) var(--spacer-4, 16px);
       background-color: var(--primary-50);
       color: var(--white);
-      border-radius: 10px;
-      font-size: 14px;
+      border-radius: var(--corner-radius-4, 8px);
+      font-size: 13px;
       line-height: 20px;
       font-weight: 600;
       justify-content: center;
@@ -2245,10 +2246,47 @@
     min-height: 40px;
   }
 
+  &-field {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: stretch;
+  }
+
   &-input {
     flex: 1 1 auto;
     min-width: 0;
     @include drumee-entry-box(40px);
+    // Room for the clear (×) so typed text never runs under it.
+    padding-right: 36px;
+  }
+
+  &-clear {
+    position: absolute !important;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    padding: 5px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--neutral-500, #6b7280);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 14px;
+      height: 14px;
+      display: block;
+    }
+  }
+
+  // Empty field (placeholder visible) → nothing to clear.
+  &-field:has(input:placeholder-shown) &-clear {
+    display: none !important;
   }
 
   // Text CTA — stretch to the same 40px row height; text dead-center.
