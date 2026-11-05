@@ -135,3 +135,51 @@ test("_maybeRunBootTour arms the parked screen once the tour has decided", () =>
   const body = sliceFunction(DESK_SRC, "async _maybeRunBootTour()");
   assert.match(body, /this\._bootTourSettled = true;\s*\n\s*this\._armDeferredScreen\(\);/);
 });
+
+// ── THE ROOT CAUSE (2026-11-05): a reload DURING the tour lost the screen ────
+// _persistDeskState (pagehide) records only what is live; the parked screen is
+// not live while the tour runs, so the saved state dropped it for good.
+
+function persist({ deferred = null, navSeq = 0, live = null, orgLive = false } = {}) {
+  const store = {};
+  global.sessionStorage = {
+    setItem: (k, v) => { store[k] = JSON.parse(v); },
+    removeItem: (k) => { delete store[k]; },
+  };
+  const fn = new Function("desk_module", `return (${sliceFunction(DESK_SRC, "_persistDeskState()")});`)(
+    { _DESK_STATE_KEY: "k" },
+  );
+  fn.call({
+    _deferredScreen: deferred,
+    _navSeq: navSeq,
+    _currentScreenService: () => live,
+    _snapshotWorkspace: () => ({ hub_id: "h1" }),
+    _snapshotFloatingWindows: () => [],
+    _orgViewOnScreen: () => orgLive,
+  });
+  return store.k;
+}
+
+test("reload during the tour keeps the parked Calendar in the saved state", () => {
+  const st = persist({ deferred: { service: "toggle-calendar", orgView: false, seq: 0 } });
+  assert.deepEqual(st, { service: "toggle-calendar", workspace: { hub_id: "h1" } });
+});
+
+test("…and a parked organisation screen + slide-out", () => {
+  const st = persist({ deferred: { service: "toggle-trash", orgView: true, seq: 0 } });
+  assert.deepEqual(st, { service: "toggle-trash", workspace: { hub_id: "h1" }, orgView: 1 });
+});
+
+test("the user went somewhere since it was parked: the parked screen is NOT carried", () => {
+  const st = persist({ deferred: { service: "toggle-calendar", orgView: false, seq: 0 }, navSeq: 1 });
+  assert.deepEqual(st, { workspace: { hub_id: "h1" } });
+});
+
+test("a screen the user opened is live and wins over the parked one", () => {
+  const st = persist({ deferred: { service: "toggle-calendar", orgView: false, seq: 0 }, live: "toggle-inbox" });
+  assert.equal(st.service, "toggle-inbox");
+});
+
+test("nothing parked: unchanged behaviour", () => {
+  assert.deepEqual(persist({}), { workspace: { hub_id: "h1" } });
+});

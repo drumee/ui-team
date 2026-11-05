@@ -2285,6 +2285,19 @@ class desk_module extends LetcBox {
       if (workspace) state.workspace = workspace;
       if (windows.length) state.windows = windows;
       if (this._orgViewOnScreen()) state.orgView = 1;
+      // A SCREEN PARKED FOR THE BOOT TOUR IS STILL THE REMEMBERED SCREEN.
+      // _deferScreenUntilTour holds it off the canvas while the migrate tour
+      // runs, so the live reads above find nothing — and a reload during the
+      // tour (or before it ended) wrote state without it, losing the Calendar
+      // / Inbox / Admin Console / Billing for every reload after. Carried over
+      // as long as the user has not gone anywhere since it was parked (the
+      // same _navSeq test the replay applies); a screen they opened
+      // themselves is live and already recorded above.
+      const parked = this._deferredScreen;
+      if (parked && (this._navSeq || 0) === parked.seq) {
+        if (!state.service && parked.service) state.service = parked.service;
+        if (!state.orgView && parked.orgView) state.orgView = 1;
+      }
       if (Object.keys(state).length) {
         sessionStorage.setItem(
           desk_module._DESK_STATE_KEY,
