@@ -1734,7 +1734,12 @@ body:has(.desk-module[data-device="mobile"]) {
   // opacity (the same reason as the boot-tour pane hold). Every window
   // layer, floating windows included; the upload floater and meeting toast
   // are left alone, as in the other desk rules.
-  .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer) {
+  //
+  // The home grid (wm __icons-list) too: a Checkout return opens no
+  // workspace, so settleHomeGrid reveals the home folders, and they showed
+  // through the faded Billing ("Personal Workspace" over the plans).
+  .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer),
+  .window-manager__icons-list {
     visibility: hidden;
     opacity: 0;
     pointer-events: none;
