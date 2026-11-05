@@ -15,18 +15,21 @@ const { sliceFunction } = require("./helpers/slice-method");
 const DESK_SRC = fs.readFileSync(
   path.join(__dirname, "..", "src/drumee/modules/desk/index.js"), "utf8");
 
-function restoreWith({ saved, checkoutBoot }) {
-  const fn = new Function("require", `return (${sliceFunction(DESK_SRC, "async _restoreDeskState()")});`)(
+function restoreWith({ saved, checkoutBoot, tourFirst = false }) {
+  const fn = new Function("require", "BOOT_TOUR_FIRST_MAX", `return (${sliceFunction(DESK_SRC, "async _restoreDeskState()")});`)(
     (m) => {
       if (m === "libs/checkout-return") return { isCheckoutBoot: () => checkoutBoot };
       throw new Error(`unexpected require ${m}`);
     },
+    6000,
   );
   const calls = [];
   const self = {
     _bootDeepLink: false,
     _bootSavedState: saved,
     _savedStateIsRestorable: (s) => !!s,
+    _bootTourBeforeScreen: () => tourFirst,
+    _whenBootTourUp: async () => calls.push("wait-tour"),
     _waitForWm: async () => ({}),
     _restoreFloatingWindows: async () => calls.push("windows"),
     _restoreWorkspace: async () => { calls.push("workspace"); return true; },
@@ -69,4 +72,20 @@ test("an ordinary reload still puts Billing back", async () => {
 test("an ordinary first open still lands on the organisation screen", async () => {
   const calls = await restoreWith({ saved: null, checkoutBoot: false });
   assert.deepEqual(calls, ["default-workspace", "org-view-first"]);
+});
+
+test("tour still to do: the restore waits for the tour, THEN reopens the Calendar", async () => {
+  const calls = await restoreWith({
+    saved: { service: "toggle-calendar", workspace: { hub_id: "h1" } }, checkoutBoot: false, tourFirst: true,
+  });
+  assert.deepEqual(calls, ["workspace", "wait-tour", "screen:toggle-calendar"]);
+});
+
+test("tour done (or nothing remembered): no wait", async () => {
+  const done = await restoreWith({
+    saved: { service: "toggle-calendar", workspace: { hub_id: "h1" } }, checkoutBoot: false, tourFirst: false,
+  });
+  assert.deepEqual(done, ["workspace", "screen:toggle-calendar"]);
+  const plain = await restoreWith({ saved: { workspace: { hub_id: "h1" } }, checkoutBoot: false, tourFirst: true });
+  assert.deepEqual(plain, ["workspace"]);
 });
