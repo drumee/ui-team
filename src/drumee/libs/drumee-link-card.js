@@ -157,6 +157,22 @@ const ICON = {
 };
 
 /**
+ * A public folder's first entry names after the sender line — the same names
+ * the share page shows anyone holding the link.
+ * @param {string} by
+ * @param {Object} facts
+ * @returns {string}
+ */
+function publicDesc(by, facts) {
+  const items = Array.isArray(facts.items)
+    ? facts.items.filter((n) => typeof n === "string" && n).slice(0, 3)
+    : [];
+  if (!items.length) return by;
+  const list = `${items.join(", ")}${facts.more ? ", …" : ""}`;
+  return by ? `${by} · ${list}` : list;
+}
+
+/**
  * Text + tone for a card.
  * @param {Object} link   parseDrumeeLink() result
  * @param {Object|null} facts  link_preview.share answer; null → still loading
@@ -185,7 +201,7 @@ function cardModel(link, facts, L = {}) {
       tone: TONE.public,
       label,
       title: facts.filename || L.LINK_CARD_SHARED_FILE || "Shared file",
-      desc: facts.sender ? fill(by, facts.sender) : "",
+      desc: publicDesc(facts.sender ? fill(by, facts.sender) : "", facts),
       icon: folder ? ICON.folder : ICON.file,
       badge: "",
     };

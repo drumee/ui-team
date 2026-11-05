@@ -5,12 +5,16 @@
 // the composer (widget/chat). `$pfx` is the card's class, e.g.
 // `.widget-chatItem__link-card`; parts are `#{$pfx}-icon`, `-body`, … .
 //
-// Tones (data-tone, libs/drumee-link-card):
-//   internal    — neutral, echoes the workspace-invite email (red lock pill)
-//   secure      — External link with email / password: same neutral card, amber
-//   public      — External public link: brand purple, file name + sender
+// Tones (data-tone, libs/drumee-link-card) take the workspace AREA colours, as
+// the workspace-invite email does (Duy 2026-11-04: Internal = the internal
+// workspace's orange, External = the external workspace's pink):
+//   internal    — Internal link: --area-private, neutral card + lock pill
+//   secure      — External link with email / password: --area-share, neutral
+//                 card + lock pill
+//   public      — External public link: --area-share, file name + sender
 //   unavailable — revoked / expired: muted
 //   loading     — External link while its facts load
+// The lock pill is the email's "Access Restricted" pill on every tone.
 // Temporary design until the Figma one lands (Duy 2026-11-04).
 @mixin card($pfx) {
   #{$pfx} {
@@ -36,15 +40,10 @@
     cursor: pointer;
     overflow: hidden;
 
-    &[data-tone="secure"] {
-      --lc-accent: var(--orange-500);
-      --lc-accent-bg: var(--orange-100);
-    }
-
+    &[data-tone="secure"],
     &[data-tone="public"] {
-      --lc-accent: var(--primary-purple-40);
-      --lc-accent-bg: var(--primary-purple-10);
-      background: var(--white);
+      --lc-accent: var(--area-share);
+      --lc-accent-bg: var(--area-tint-share);
     }
 
     &[data-tone="unavailable"],
@@ -156,10 +155,10 @@
     align-items: center;
     gap: 4px;
     padding: 3px 8px;
-    border: 1px solid var(--lc-accent);
+    border: 1px solid var(--area-private);
     border-radius: 999px;
     background: var(--white);
-    color: var(--lc-accent);
+    color: var(--area-private);
     @include drumee.typo($size: 10px, $line: 1.2, $weight: 700);
     white-space: nowrap;
 

@@ -108,6 +108,21 @@ test("external: loading → public (name + sender) / secure (neutral) / unavaila
   assert.strictEqual(LC.cardModel(link, { state: "weird" }, {}).tone, "unavailable");
 });
 
+test("public folder: first entry names follow the sender line", () => {
+  const link = LC.parseDrumeeLink(`https://share.app.drumee.com/-/s/${TOKEN}`, ENV);
+  const m = LC.cardModel(link, { state: "public", filename: "abc", filetype: "folder", sender: "Duy", items: ["a.pdf", "b", "c.png"], more: true }, {});
+  assert.strictEqual(m.desc, "Folder shared by Duy · a.pdf, b, c.png, …");
+  const n = LC.cardModel(link, { state: "public", filename: "abc", filetype: "folder", sender: "Duy", items: "x" }, {});
+  assert.strictEqual(n.desc, "Folder shared by Duy");
+});
+
+test("tones follow the workspace area colours: Internal orange, External pink", () => {
+  const scss = read("src/drumee/skin/mixins/link-card.scss");
+  assert.match(scss, /--lc-accent: var\(--area-private\);/);
+  assert.match(scss, /&\[data-tone="secure"\],\s*&\[data-tone="public"\] \{\s*--lc-accent: var\(--area-share\);/);
+  assert.ok(!scss.includes("--orange-"), "no orange for External");
+});
+
 test("LOCALE strings are used when present", () => {
   const link = LC.parseDrumeeLink(`https://share.app.drumee.com/-/s/${TOKEN}`, ENV);
   const L = { LINK_CARD_FILE_BY: "Fichier partagé par {0}", LINK_CARD_EXTERNAL: "Lien externe" };
