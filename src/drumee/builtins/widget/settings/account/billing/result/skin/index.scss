@@ -1,12 +1,14 @@
 // Post-Checkout result modal (Payment Success / Payment Failure).
 // Rendered inside the desk wrapper-modal (centred, blurred backdrop).
+// Sized as a compact dialog (400px, 22px title) for every variant: success,
+// failure, resume and the OFFER_CARD_USED notice.
 
 .settings-billing-result {
   &__card {
     position: relative;
-    width: 520px;
+    width: 400px;
     max-width: calc(100vw - 32px);
-    padding: 40px 48px 48px;
+    padding: 28px;
     background: #ffffff;
     border-radius: 12px;
     // Figma "Blur + Shadow Big" preset.
@@ -14,12 +16,13 @@
       0 40px 40px rgba(0, 0, 0, 0.3),
       0 7px 5px rgba(0, 0, 0, 0.09);
     align-items: center;
+
   }
 
   &__close {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 14px;
+    right: 14px;
     width: 24px;
     height: 24px;
     align-items: center;
@@ -36,16 +39,16 @@
   &__body {
     width: 100%;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
   }
 
   &__icon {
-    width: 72px;
-    height: 72px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     align-items: center;
     justify-content: center;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 
     // Signal/Success #54b684 @15% — was an unrelated brighter green (#3fb950).
     &.success {
@@ -65,16 +68,26 @@
       }
     }
 
+    // OFFER_CARD_USED: nothing was charged and nothing is broken — an amber
+    // notice, not the red failure cross.
+    &.notice {
+      background: rgba(245, 166, 35, 0.15);
+
+      .settings-billing-result__icon-glyph {
+        color: #e8930c;
+      }
+    }
+
     &-glyph {
-      width: 32px;
-      height: 32px;
+      width: 24px;
+      height: 24px;
     }
   }
 
   &__title {
     font-family: var(--font-main);
-    font-size: 32px;
-    line-height: 1.1;
+    font-size: 22px;
+    line-height: 1.25;
     font-weight: 600;
     color: var(--primary-purple-100);
     text-align: center;
@@ -82,7 +95,7 @@
 
   &__subtitle {
     font-family: var(--font-main);
-    font-size: 18px;
+    font-size: 15px;
     line-height: 1.4;
     color: var(--tertiary-grey-100);
     text-align: center;
@@ -92,20 +105,20 @@
     width: 100%;
     align-items: center;
     gap: 4px;
-    padding: 20px 0 8px;
+    padding: 14px 0 4px;
     border-top: 1px solid rgba(71, 69, 84, 0.15);
-    margin-top: 16px;
+    margin-top: 10px;
 
     &-label {
       font-family: var(--font-main);
-      font-size: 18px;
+      font-size: 15px;
       color: var(--tertiary-grey-100);
     }
 
     &-value {
       font-family: var(--font-main);
-      font-size: 32px;
-      line-height: 1.1;
+      font-size: 24px;
+      line-height: 1.15;
       font-weight: 600;
       color: var(--primary-purple-100);
     }
@@ -113,8 +126,8 @@
 
   &__details {
     width: 100%;
-    gap: 10px;
-    padding-top: 12px;
+    gap: 6px;
+    padding-top: 8px;
   }
 
   &__row {
@@ -124,14 +137,14 @@
 
     &-label {
       font-family: var(--font-main);
-      font-size: 16px;
+      font-size: 14px;
       color: var(--tertiary-grey-80);
     }
 
     &-value {
       font-family: var(--font-main);
-      font-size: 16px;
-      line-height: 24px;
+      font-size: 14px;
+      line-height: 20px;
       font-weight: 600;
       color: var(--primary-purple-100);
     }
@@ -139,8 +152,8 @@
 
   &__retry {
     width: 100%;
-    height: 48px;
-    margin-top: 20px;
+    height: 44px;
+    margin-top: 12px;
     border-radius: 4px;
     background: var(--signal-error);
     align-items: center;
@@ -164,8 +177,8 @@
   // 16/24 padding, 4px radius — body gap 12 + this margin ≈ the 32px block gap.
   &__done {
     width: 100%;
-    margin-top: 20px;
-    padding: 16px 24px;
+    margin-top: 12px;
+    padding: 11px 20px;
     border-radius: 4px;
     background: var(--primary-50);
     align-items: center;
@@ -179,10 +192,100 @@
 
     &-label {
       font-family: var(--font-main);
-      font-size: 16px;
-      line-height: 24px;
+      font-size: 15px;
+      line-height: 22px;
       font-weight: 600;
       color: var(--white);
     }
+  }
+
+  // OFFER_CARD_USED secondary action under the primary __done pill:
+  // same footprint, outlined instead of filled.
+  &__secondary {
+    width: 100%;
+    margin-top: 0;
+    padding: 10px 20px;
+    border-radius: 4px;
+    border: 1px solid var(--primary-50);
+    background: transparent;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(67, 60, 197, 0.06); // --primary-50 @6%
+    }
+
+    &-label {
+      font-family: var(--font-main);
+      font-size: 15px;
+      line-height: 22px;
+      font-weight: 600;
+      color: var(--primary-50);
+    }
+  }
+
+  // ── Busy: Use another card / Continue at regular price ─────────────────
+  // libs/button-busy stamps data-loading="1" on the pressed button and
+  // data-busy="1" on its parent (__body) while Billing opens. The label stays
+  // in the flow (so the button keeps its width) but goes invisible, and a
+  // spinner is drawn in its place; ui-core's spinner has no CSS here, so it is
+  // drawn by hand. The other action stands down meanwhile.
+  &__done,
+  &__secondary {
+    position: relative;
+
+    &[data-loading="1"] {
+      cursor: progress;
+      pointer-events: none;
+
+      > * {
+        visibility: hidden;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 18px;
+        height: 18px;
+        margin: -9px 0 0 -9px;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        animation: settings-billing-result-spin 0.7s linear infinite;
+      }
+    }
+  }
+
+  &__done[data-loading="1"]::after {
+    color: var(--white);
+  }
+
+  &__secondary[data-loading="1"]::after {
+    color: var(--primary-50);
+  }
+
+  &__body[data-busy="1"] {
+    .settings-billing-result__done:not([data-loading="1"]),
+    .settings-billing-result__secondary:not([data-loading="1"]) {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  // The ✕ is the card's child, not __body's: reached from the card. A :has()
+  // scoped to this one small card, not to an app-wide subject.
+  &__card:has(> .settings-billing-result__body[data-busy="1"]) > .settings-billing-result__close {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+@keyframes settings-billing-result-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

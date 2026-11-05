@@ -10,6 +10,11 @@
   }
 }
 
+// Horizontal padding for EVERY text field on the Billing screen — the promo
+// and redeem boxes (drumee-entry-box) and the org name / subdomain fields
+// (__entry-input). The value no longer sits against the field's edge.
+$billing-input-px: 14px;
+
 // The standard Drumee text field, as used by both promo inputs in this
 // widget. Skeletons.Entry paints its own inner <input>, so the box is the
 // wrapper and the inner element has to be flattened into it — otherwise the
@@ -18,8 +23,8 @@
 @mixin drumee-entry-box($height: 48px) {
   height: $height;
   box-sizing: border-box;
-  border-radius: var(--corner-radius-4, 8px);
-  padding: 0 var(--spacer-3, 12px);
+  border-radius: 8px;
+  padding: 0 $billing-input-px;
   border: 1px solid var(--neutral-200);
   background-color: var(--white);
   display: flex !important;
@@ -109,7 +114,7 @@
       align-items: center;
       justify-content: space-around;
       width: 400px;
-      border-radius: 12px;
+      border-radius: 8px;
     }
   }
 
@@ -123,7 +128,7 @@
       align-items: center;
       justify-content: space-around;
       height: 42px;
-      border-radius: var(--corner-radius-3);
+      border-radius: 6px;
       padding: var(--spacer-1) var(--spacer-6);
       align-items: center;
       gap: var(--spacer-6);
@@ -142,7 +147,7 @@
       font-weight: 500;
       line-height: 18px;
       letter-spacing: -0.132px;
-      border-radius: var(--corner-radius-2);
+      border-radius: 4px;
 
       // Figma "filter box / selected=yes" (component 43:31729) fills
       // Primary/40 #5950FF with white text. This painted it white, which is
@@ -212,7 +217,7 @@
     // ── Card ──────────────────────────────────────────────────────────────
     &-item {
       border: 1px solid var(--tertiary-grey-30);
-      border-radius: var(--corner-radius-6); // 24px
+      border-radius: 12px;
       // 16px, the design's own card padding (Figma 692-128029), not the 24px
       // this carried. The card is ~238px wide at a normal desk width — Figma
       // draws it at ~290px on a 1600px frame — so 8px a side is 7% of the
@@ -259,7 +264,7 @@
       gap: var(--spacer-7);
       // 16px, the design's own figure for this box.
       padding: var(--spacer-5);
-      border-radius: var(--corner-radius-5); // 16px
+      border-radius: 10px;
       background-color: var(--tertiary-grey-20);
       justify-content: space-between;
       overflow: hidden;
@@ -567,7 +572,7 @@
     justify-content: flex-start;
     gap: var(--spacer-6);
     padding: var(--spacer-4) var(--spacer-4) var(--spacer-4) var(--spacer-6);
-    border-radius: var(--corner-radius-5, 16px);
+    border-radius: 10px;
     background: var(--tertiary-grey-20);
 
     &-text {
@@ -630,7 +635,7 @@
     // Buttons/Medium Button on Primary/50, 12px corners.
     &-resume {
       padding: var(--spacer-3) var(--spacer-6);
-      border-radius: 12px;
+      border-radius: 8px;
       background: var(--primary-50);
       @include billing-type(
         $size: 16px,
@@ -675,7 +680,7 @@
     align-items: center;
     gap: var(--spacer-4);
     padding: var(--spacer-5) var(--spacer-5) var(--spacer-5) var(--spacer-6);
-    border-radius: 16px;
+    border-radius: 10px;
     overflow: hidden;
     background-color: #1b1650;
     background-image:
@@ -712,7 +717,7 @@
     z-index: 5;
     width: min(360px, calc(100% - 32px));
     padding: 14px 16px;
-    border-radius: var(--corner-radius-5);
+    border-radius: 10px;
     background: var(--normal-bg-elevated);
     box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
 
@@ -797,7 +802,7 @@
     gap: var(--spacer-2);
     margin-top: var(--spacer-4);
     padding: var(--spacer-5);
-    border-radius: var(--corner-radius-4);
+    border-radius: 8px;
     background: var(--normal-bg-90);
 
     &-title {
@@ -904,7 +909,7 @@
       font-size: 13.5px;
       line-height: 1.4;
       padding: 0 var(--spacer-5);
-      border-radius: var(--corner-radius-4, 8px);
+      border-radius: 8px;
 
       &:hover {
         background: var(--primary-60);
@@ -955,7 +960,7 @@
       font-size: 14px;
       line-height: 22px;
       padding: 10px 20px;
-      border-radius: 4px;
+      border-radius: 3px;
 
       &:hover {
         background: var(--primary-90);
@@ -984,7 +989,7 @@
     &-input-wrapper {
       width: 100%;
       height: 54px;
-      border-radius: var(--corner-radius-5); // 12px
+      border-radius: 10px;
       background-color: var(--tertiary-grey-20);
       border: none;
       align-items: center;
@@ -1029,8 +1034,8 @@
     &-input {
       width: 100%;
       height: 48px;
-      border-radius: var(--corner-radius-4);
-      padding: 0 var(--spacer-2);
+      border-radius: 8px;
+      padding: 0 $billing-input-px;
       border: 1px solid var(--neutral-200);
 
       input {
@@ -1168,7 +1173,7 @@
       padding: var(--spacer-6);
       background-color: var(--white);
       border: 1px solid rgba(0, 0, 0, 0.2);
-      border-radius: var(--corner-radius-5); // 16px
+      border-radius: 10px;
       position: sticky;
       top: var(--spacer-6);
       align-self: flex-start;
@@ -1200,7 +1205,7 @@
       padding: var(--spacer-1);
       // 12px. (--corner-radius-5 is 16px — the old `// 12px` note beside it
       // was wrong, and the track came out rounder than the design.)
-      border-radius: var(--corner-radius-4);
+      border-radius: 8px;
       background-color: var(--tertiary-grey-20);
       // A hairline one step darker than the track, so the bar reads as a
       // control against the white page rather than as a grey smudge.
@@ -1216,7 +1221,7 @@
       padding: 6px var(--spacer-4);
       // Concentric with the track: its 12px corner less the 4px inset, so
       // the selected segment's curve runs parallel to the track's.
-      border-radius: var(--corner-radius-3);
+      border-radius: 6px;
       cursor: pointer;
       gap: 4px;
 
@@ -1256,7 +1261,7 @@
         width: 50%;
         padding: var(--spacer-3);
         border: 2px solid var(--transparent);
-        border-radius: 8px;
+        border-radius: 6px;
         background-color: var(--white);
         cursor: pointer;
         transition: all 0.2s;
@@ -1267,7 +1272,7 @@
         &[data-state="1"] {
           background-color: var(--primary-100);
           color: var(--neutral-900);
-          border-radius: var(--corner-radius-3);
+          border-radius: 6px;
           border: 2px solid var(--primary-400);
         }
 
@@ -1331,7 +1336,7 @@
         width: 50%;
         padding: var(--spacer-4);
         border: 2px solid var(--neutral-300);
-        border-radius: var(--corner-radius-3);
+        border-radius: 6px;
         gap: var(--spacer-4);
         cursor: pointer;
       }
@@ -1365,7 +1370,7 @@
       width: 50%;
       padding: var(--spacer-4);
       border: 2px solid var(--neutral-300);
-      border-radius: var(--corner-radius-3);
+      border-radius: 6px;
       gap: var(--spacer-4);
       cursor: pointer;
       transition: all 0.2s;
@@ -1441,7 +1446,7 @@
       padding: var(--spacer-1) var(--spacer-3);
       background-color: var(--green-500);
       color: var(--white);
-      border-radius: var(--corner-radius-2);
+      border-radius: 4px;
       font-size: 9px;
       font-weight: 600;
       position: absolute;
@@ -1561,7 +1566,7 @@
       width: 100%;
       box-sizing: border-box;
       padding: var(--spacer-4);
-      border-radius: 10px;
+      border-radius: 6px;
       gap: var(--spacer-2);
       align-items: center;
 
@@ -1616,21 +1621,29 @@
       }
     }
 
-    // Figma CTA: primary-50, 12px radius, 16/24 semibold.
+    // Figma CTA: primary-50, semibold. Downsized (2026-11-04): 32px tall,
+    // 12px label, 6px radius — it read as the loudest thing on the page.
     &-checkout-button {
-      width: 100%;
+      position: relative;
+      // Not the full width of __checkout-right (a flex column): sized to its
+      // label, right-aligned under the summary. min-width keeps the busy
+      // spinner from shrinking it.
+      width: auto;
+      min-width: 168px;
+      align-self: flex-end;
       box-sizing: border-box;
-      min-height: 36px;
-      padding: var(--spacer-2, 8px) var(--spacer-4, 16px);
+      min-height: 32px;
+      padding: 6px 20px;
       background-color: var(--primary-50);
       color: var(--white);
-      border-radius: var(--corner-radius-4, 8px);
-      font-size: 13px;
-      line-height: 20px;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 18px;
       font-weight: 600;
       justify-content: center;
       align-items: center;
-      gap: var(--spacer-3);
+      // Checkout icon + label (skeleton/checkout.js `ico`).
+      gap: 8px;
       cursor: pointer;
       transition: all 0.2s;
       display: flex;
@@ -1638,6 +1651,34 @@
 
       &:hover {
         background-color: var(--primary-90);
+      }
+
+      // Busy from the press until the page leaves for Stripe
+      // (_proceedWithBusy). Label kept in the flow for the width, hidden;
+      // a hand-drawn spinner in its place (ui-core's spinner has no CSS).
+      &[data-loading="1"] {
+        cursor: progress;
+        pointer-events: none;
+        // A bare text-node label is not reached by `> *`.
+        color: transparent;
+
+        > * {
+          visibility: hidden;
+        }
+
+        &::after {
+          content: "";
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          width: 14px;
+          height: 14px;
+          margin: -7px 0 0 -7px;
+          border-radius: 50%;
+          border: 2px solid var(--white);
+          border-right-color: transparent;
+          animation: settings-billing-checkout-spin 0.7s linear infinite;
+        }
       }
 
       &[data-state="0"],
@@ -1651,6 +1692,14 @@
         &:hover {
           background-color: var(--neutral-300);
         }
+
+        // The icon and label are pinned white below; grey them with the
+        // button or a disabled CTA shows white on grey.
+        svg,
+        .inner,
+        .note-content {
+          color: var(--neutral-600);
+        }
       }
 
       svg,
@@ -1659,6 +1708,9 @@
         height: 16px;
         flex-shrink: 0;
         color: var(--white);
+        // The glyph is a sprite <use>: its paths are reached only through
+        // inherited `fill`, never by a `path` selector.
+        fill: currentColor;
 
         svg {
           width: 16px;
@@ -1745,7 +1797,7 @@
   flex: 0 0 auto;
   align-items: stretch;
   background-color: var(--white);
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
   overflow: hidden;
   max-height: 88vh;
@@ -1903,7 +1955,7 @@
 
   &-row:last-child &-col {
     border-bottom: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
-    border-radius: 0 0 10px 10px;
+    border-radius: 0 0 6px 6px;
   }
 
   // The recommended column is lifted out of the row of four.
@@ -1914,7 +1966,7 @@
   }
 
   &-header &-col {
-    border-radius: 10px 10px 0 0;
+    border-radius: 6px 6px 0 0;
     border-top: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
   }
 
@@ -2301,7 +2353,7 @@
     margin: 0;
     white-space: nowrap;
     cursor: pointer;
-    border-radius: var(--corner-radius-4, 8px);
+    border-radius: 8px;
     box-sizing: border-box;
     @include drumee.typo(
       $size: 14px,
@@ -2754,7 +2806,7 @@
     align-items: center;
     gap: var(--spacer-5);
     padding: var(--spacer-5) var(--spacer-6);
-    border-radius: var(--corner-radius-5);
+    border-radius: 10px;
     // Same primary tint as the popular/current plan headers, so the page's one
     // sales-led exit belongs to the same family as the cards above it.
     background-color: rgba(132, 126, 255, 0.08);
@@ -2894,7 +2946,7 @@
     box-sizing: border-box;
     gap: var(--spacer-4);
     padding: var(--spacer-4);
-    border-radius: 16px;
+    border-radius: 10px;
     background-color: var(--white);
     border: 1px solid var(--tertiary-grey-30);
   }
@@ -2912,7 +2964,7 @@
     height: 36px;
     box-sizing: border-box;
     padding: 4px;
-    border-radius: 12px;
+    border-radius: 8px;
     align-items: center;
     justify-content: center;
     background-color: rgba(89, 80, 255, 0.1);
@@ -2983,7 +3035,7 @@
 
   &-btn {
     padding: var(--spacer-2) var(--spacer-4);
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
     white-space: nowrap;
     @include billing-type($size: 14px, $line: 20px, $weight: 600);
@@ -3058,7 +3110,7 @@
     cursor: pointer;
     font-weight: 600;
     border: 1px solid var(--neutral-300, rgba(0, 0, 0, 0.12));
-    border-radius: var(--corner-radius-2, 8px);
+    border-radius: 4px;
     color: var(--normal-fg-10);
     transition: background-color 120ms ease, border-color 120ms ease;
 
@@ -3280,5 +3332,11 @@
 @media screen and (max-width: 640px) {
   .settings-billing[data-page="1"] {
     padding: var(--spacer-4);
+  }
+}
+
+@keyframes settings-billing-checkout-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

@@ -59,9 +59,80 @@ function resumeCard(ui) {
   });
 }
 
+/**
+ * OFFER_CARD_USED: the card already redeemed this once-per-card offer.
+ * Nothing was charged, so no red cross and no receipt — an amber notice,
+ * then the two ways forward: another card for the offer (primary), or the
+ * same plan at the regular price (secondary).
+ */
+function offerCardUsedCard(ui) {
+  const fig = ui.fig.family;
+  const code = (ui._offer && ui._offer.code) || LOCALE.PROMO_CODE || "This offer";
+  return Skeletons.Box.Y({
+    className: `${fig}__card`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${fig}__close`,
+        service: "billing-result-close",
+        uiHandler: [ui],
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Image.Svg({ ico: "cross", className: `${fig}__close-ico` }),
+        ],
+      }),
+      Skeletons.Box.Y({
+        className: `${fig}__body`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${fig}__icon notice`,
+            kids: [
+              Skeletons.Image.Svg({ ico: "apps-warning", className: `${fig}__icon-glyph` }),
+            ],
+          }),
+          Skeletons.Note({
+            className: `${fig}__title`,
+            content: LOCALE.OFFER_CARD_USED_TITLE || "Offer already used on this card",
+          }),
+          Skeletons.Note({
+            className: `${fig}__subtitle`,
+            content: (LOCALE.OFFER_CARD_USED_TEXT
+              || "{0} can be used once per card, and this card has already used it. Nothing was charged.")
+              .format(code),
+          }),
+          Skeletons.Box.X({
+            className: `${fig}__done`,
+            service: "billing-result-offer-other-card",
+            uiHandler: [ui],
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Note({
+                className: `${fig}__done-label`,
+                content: LOCALE.OFFER_USE_ANOTHER_CARD || "Use another card",
+              }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${fig}__secondary`,
+            service: "billing-result-offer-regular-price",
+            uiHandler: [ui],
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Note({
+                className: `${fig}__secondary-label`,
+                content: LOCALE.OFFER_CONTINUE_REGULAR_PRICE || "Continue at regular price",
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 function billing_result(ui) {
   const fig = ui.fig.family;
   if (ui._result === "resume") return resumeCard(ui);
+  if (ui._result === "offer_card_used") return offerCardUsedCard(ui);
   const ok = ui._result === "success";
   const r = ui._receipt || {};
 

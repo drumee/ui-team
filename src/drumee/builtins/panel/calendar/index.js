@@ -162,6 +162,12 @@ class __calendar_main extends LetcBox {
       document.removeEventListener("keydown", this._formKeys, true);
       this._formKeys = null;
     }
+    if (this._backdropDown) {
+      document.removeEventListener("pointerdown", this._backdropDown, true);
+      document.removeEventListener("click", this._backdropClick, true);
+      this._backdropDown = null;
+      this._backdropClick = null;
+    }
     // Its listeners live on `document` and `window`.
     this._closeDayMenu();
     if (this._reloadTimer) {
@@ -188,6 +194,7 @@ class __calendar_main extends LetcBox {
     this._installFileDrop();
     this._installTimeFilter();
     this._installFormKeys();
+    this._installBackdropDismiss();
     this._render();
     this._loadItems().then(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
@@ -1806,17 +1813,90 @@ class __calendar_main extends LetcBox {
       }
       if (hotkeys.isComposing(e) || hotkeys.inTextEntry(e.target)) return;
       claim();
-      if (form.kind === "meeting-info") return this._closeForm();
-      if (form.kind === "task-quick-open") {
-        const panel = this._quickPanel;
-        // Still loading: there is no card, and no draft, to discard yet.
-        if (!panel || panel.isQuickLoading()) return this._closeForm();
-        panel.onEscape();
-        return;
-      }
-      this._closeForm();
+      this._cancelForm();
     };
     document.addEventListener("keydown", this._formKeys, true);
+  }
+
+  /**
+   * Close the open form through its own cancel path — Escape's step 3, and a
+   * click on the backdrop. Cancel / × for the task, meeting and invite-link
+   * cards; the board's onEscape for the quick card (a subtask walks back to
+   * its parent, unsaved edits are its call); a plain close while that card is
+   * still loading, and for the meeting-info host.
+   */
+  _cancelForm() {
+    const form = this._form;
+    if (!form) return;
+    if (form.kind === "meeting-info") return this._closeForm();
+    if (form.kind === "task-quick-open") {
+      const panel = this._quickPanel;
+      // Still loading: there is no card, and no draft, to discard yet.
+      if (!panel || panel.isQuickLoading()) return this._closeForm();
+      panel.onEscape();
+      return;
+    }
+    this._closeForm();
+  }
+
+  /**
+   * CLICK OUTSIDE CLOSES A "PAGE FADE" MODAL (the backdrop with no scrim
+   * where the page behind fades to 20%: the task, meeting, invite-link,
+   * quick-open and meeting-info cards).
+   *
+   * "Outside" is the BACKDROP itself — the modal wrapper that covers the page
+   * while a card is up, and for the quick-open card the full-page __modal and
+   * the board's detail backdrop it sits in. Not "anywhere but the card": a
+   * date picker or menu portalled to <body>, a toast, the sidebar are not the
+   * backdrop and close nothing. Both the press AND the release must land on
+   * it, so a text selection dragged out of the card does not close it.
+   *
+   * Same rule as Escape: an open date picker, then the task card's subtask
+   * menu, is closed first; otherwise _cancelForm. Capture phase on the
+   * document, like the form keys, so a re-fed wrapper needs no re-binding.
+   */
+  _installBackdropDismiss() {
+    if (this._backdropDown) return;
+    const fam = this.fig.family;
+    const isBackdrop = (t) => {
+      if (!t || !t.classList || !this.el) return false;
+      // The desk's top bar and sidebar, which the page fade leaves as they are,
+      // count as outside too.
+      if (_.isFunction(t.closest) && t.closest(".desk-module__topbar, .desk-module-sidebar__main")) return true;
+      if (!this.el.contains(t)) return false;
+      if (t.classList.contains(`${fam}__modal-wrapper`)) return true;
+      const form = this._form;
+      if (form && form.kind === "task-quick-open") {
+        if (t.classList.contains(`${fam}__modal`)) return true;
+        if (/__detail-backdrop\b/.test(t.className.toString())) return true;
+      }
+      return false;
+    };
+    let downOnBackdrop = false;
+    this._backdropDown = (e) => {
+      downOnBackdrop = !!this._form && isBackdrop(e.target);
+    };
+    this._backdropClick = (e) => {
+      const was = downOnBackdrop;
+      downOnBackdrop = false;
+      if (!was || !this._form || !isBackdrop(e.target)) return;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const form = this._form;
+      const root = this._modalEl();
+      const picker = Array.from((root && root.querySelectorAll("input")) || [])
+        .map((input) => input._flatpickr)
+        .find((fp) => fp && fp.isOpen);
+      if (picker) return picker.close();
+      if (form.kind === "task" && form.subMenu) {
+        form.subMenu = null;
+        this._syncSubtaskMenuDismiss();
+        this._renderSubtasks();
+        return;
+      }
+      this._cancelForm();
+    };
+    document.addEventListener("pointerdown", this._backdropDown, true);
+    document.addEventListener("click", this._backdropClick, true);
   }
 
   _onDrop(e) {

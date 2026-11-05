@@ -311,6 +311,9 @@ class desk_module extends LetcBox {
     // upgrade-nudge popup uses it to land on the tier it was selling.
     this._openBillingPage = (arg) => this.openBillingPage(arg);
     RADIO_BROADCAST.on("desk:open-billing-page", this._openBillingPage);
+    // The Billing page announces itself on every render: light Plan.
+    this._onBillingPageShown = () => this._lightRestoredRow("upgrade-plan");
+    RADIO_BROADCAST.on("desk:billing-page-shown", this._onBillingPageShown);
     // Downgrade over-limit (libs/over-limit): the popup and banner raise
     // these instead of reaching into the desk. open-admin-console reuses the
     // exact toggle-apps shim the promo's post-claim reload uses.
@@ -880,6 +883,7 @@ class desk_module extends LetcBox {
       this._restoreClearTimer = null;
     }
     RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
+    RADIO_BROADCAST.off("desk:billing-page-shown", this._onBillingPageShown);
     RADIO_BROADCAST.off("call:returned", this._onCallReturned);
     RADIO_BROADCAST.off("call:minimize", this._onCallMinimized);
     RADIO_BROADCAST.off("call:ended", this._onCallEnded);
@@ -1868,7 +1872,10 @@ class desk_module extends LetcBox {
       "toggle-apps": "sidebar-apps",
       "toggle-settings": "sidebar-settings",
       "toggle-help": "sidebar-help",
-      "upgrade-plan": "sidebar-upgrade",
+      // The rail's Plan row is `sidebar-plan` (skeleton/sidebar.js). This said
+      // `sidebar-upgrade`, a part that does not exist, so a restored Billing
+      // never lit Plan.
+      "upgrade-plan": "sidebar-plan",
       "toggle-trash": "sidebar-trash",
       "toggle-contacts": "sidebar-contacts",
       "toggle-inbox": "sidebar-inbox",
@@ -2737,6 +2744,23 @@ class desk_module extends LetcBox {
     const saved = this._bootSavedState;
     const hasSaved = this._savedStateIsRestorable(saved);
 
+    // BACK FROM STRIPE CHECKOUT: NO WORKSPACE AT ALL. The boot ends on Billing
+    // with the result card over it (wm checkCheckoutReturn), so nothing that
+    // would sit underneath is opened — no floating windows, no remembered or
+    // default workspace, no remembered screen. Opening one only cost time (the
+    // card waited for it) and raced Billing (loadWorkspace closes full-canvas
+    // screens). The rail opens the default workspace on its first press when
+    // none is open. The restore flag STAYS UP until Billing and the card are
+    // on screen — with it down, the breadcrumb's mount-time loadHome() runs
+    // Wm.reload() — and wm drops it then (_releaseCheckoutHold, with the pane
+    // hold); capped here in case that never comes. A deep link still wins, as
+    // it does over any restore.
+    if (!deepLink && require("libs/checkout-return").isCheckoutBoot()) {
+      this._clearRestoreInFlight(LANDING_HOLD_MAX);
+      this._settleHomeGrid();
+      return;
+    }
+
     if (!deepLink && !hasSaved) {
       // Nothing to restore — land on a workspace rather than an empty desk.
       // The new shell's rail (Files / Chat / Task / Meet / Access) all act on
@@ -2750,8 +2774,11 @@ class desk_module extends LetcBox {
       // screen gets one seeded below it, so the rail and switcher keep a
       // workspace to act on. Only when a workspace opened: with none, the
       // no-workspace screen and its create button stay the landing.
-      if (opened) await this._landOnOrgView(true, { firstOpen: true });
-      else this._releaseLandingHold();
+      // Not on the Checkout return: the org screen would cover the result
+      // modal exactly as a replayed Billing did. The workspace stays.
+      if (opened && !require("libs/checkout-return").isCheckoutBoot()) {
+        await this._landOnOrgView(true, { firstOpen: true });
+      } else if (!this._checkoutHold) this._releaseLandingHold();
       this._clearRestoreInFlight(opened ? 2500 : 0);
       // Nothing opened — either the account has none (home-empty is up, and
       // settleHomeGrid sees it) or the list could not be read, which is the
@@ -2760,6 +2787,7 @@ class desk_module extends LetcBox {
       return;
     }
 
+    let screenHoldArmed = false;
     try {
       const wm = await this._waitForWm();
       if (!wm || (this.isDestroyed && this.isDestroyed())) return;
@@ -2797,13 +2825,21 @@ class desk_module extends LetcBox {
         // remembered screen still ends up on top.
         paneComing = !!(await this._openDefaultWorkspace());
       }
+      // BACK FROM STRIPE CHECKOUT: the result modal owns this boot. The screen
+      // remembered on the way out is almost always Billing (that is where
+      // Checkout starts), and replaying it put the plans page over the
+      // receipt a second after it appeared — the user never got to read it
+      // or press its buttons (stage recording 2026-11-04 21:27). The
+      // workspace above is still restored underneath; the modal's own
+      // buttons go to Billing when the user asks.
+      const checkoutBoot = require("libs/checkout-return").isCheckoutBoot();
       // The organisation screen the user was on. Before saved.service: a
       // slide-out (Trash, Contacts, Notifications) can be open over it, and
       // has to land on top of it again.
-      if (saved.orgView && !(this.isDestroyed && this.isDestroyed())) {
+      if (saved.orgView && !checkoutBoot && !(this.isDestroyed && this.isDestroyed())) {
         await this._landOnOrgView(paneComing);
       }
-      if (saved.service && !(this.isDestroyed && this.isDestroyed())) {
+      if (saved.service && !checkoutBoot && !(this.isDestroyed && this.isDestroyed())) {
         // Wait for the OPEN only. The restore flag below exists to keep a
         // late loadHome from wiping the screen being opened; the wait for the
         // screen's items (up to 6s more) needs no such guard, and holding the
@@ -2811,10 +2847,23 @@ class desk_module extends LetcBox {
         // libs/screen-restore never rejects, and resolves on every exit path,
         // including the ones that stop before an open.
         await new Promise((resolve) => {
-          this._restoreScreen(saved.service, resolve, { paneComing }).then(resolve);
+          const done = this._restoreScreen(saved.service, resolve, { paneComing });
+          done.then(resolve);
+          // The landing hold (_holdLandingPane) comes down once the screen is
+          // DRAWN: `done` settles after its real widget mounted, on every
+          // outcome, and two frames let it paint — as for the org screen.
+          screenHoldArmed = true;
+          done.then(
+            () => requestAnimationFrame(() => requestAnimationFrame(() => this._releaseLandingHold())),
+            () => this._releaseLandingHold(),
+          );
         });
       }
     } finally {
+      // No remembered-screen restore ran (Checkout return, deep link, a
+      // failure before it): nothing will release the hold, so do it now.
+      // The Checkout boot's hold is wm's to release (_releaseCheckoutHold).
+      if (!screenHoldArmed && !this._checkoutHold) this._releaseLandingHold();
       // Hold the flag a beat longer than the feed so late mount-time
       // loadHome stragglers (breadcrumb renders async) stay suppressed.
       this._clearRestoreInFlight(2000);
@@ -2912,19 +2961,46 @@ class desk_module extends LetcBox {
    */
   _holdLandingPane() {
     if (!this.el || !this.el.dataset) return;
+    let screenComing = false;
+    let checkoutHold = false;
     try {
       if (this._bootDeepLink) return;
-      // A reload that will put the org screen back (saved `orgView`) is held
-      // the same way; any other remembered state is not this landing.
-      const saved = this._bootSavedState;
-      if (this._savedStateIsRestorable(saved) && !(saved && saved.orgView)) return;
-      if (Visitor.isMobile()) return;
-      if (!require("libs/org-overview").orgFeature()) return;
-      if (this._bootTourComing()) return;
+      // BACK FROM CHECKOUT: the boot ends on Billing with the result card over
+      // it (wm checkCheckoutReturn), never on the workspace. Hidden for the
+      // whole way there — wm releases this hold once Billing and the card are
+      // both up (_releaseCheckoutHold) — so the pane does not show first.
+      checkoutHold = !!require("libs/checkout-return").isCheckoutBoot();
+      if (!checkoutHold) {
+        // A RELOAD THAT WILL PUT A REMEMBERED SCREEN BACK — the Calendar, the
+        // Inbox, the Admin Console, Billing… — is held too, unconditionally: the
+        // workspace still opens underneath (the rail acts on it), but its pane
+        // is not shown on the way to the screen; window-folder__split-body
+        // flashed for a second before the screen came back. No boot tour runs
+        // over a remembered screen (_bootTourSectionOnScreen), so nothing else
+        // will show the pane. Released once the screen is drawn
+        // (_restoreDeskState).
+        const saved = this._bootSavedState;
+        screenComing = !!this._savedScreenService();
+        if (!screenComing) {
+          // A reload that will put the org screen back (saved `orgView`) is held
+          // the same way; any other remembered state is not this landing.
+          if (this._savedStateIsRestorable(saved) && !(saved && saved.orgView)) return;
+          if (Visitor.isMobile()) return;
+          if (!require("libs/org-overview").orgFeature()) return;
+          if (this._bootTourComing()) return;
+        }
+      }
     } catch (e) {
       return;
     }
+    this._checkoutHold = checkoutHold;
     this.el.dataset.landingHold = "1";
+    // Owned by the remembered-screen restore: the reopen itself goes through
+    // togglePanel → _navigated (for Billing only after a chunk load), which
+    // must not drop it before the screen is drawn. The restore releases it on
+    // every outcome, a user's own navigation included (it then stops as
+    // "user-navigated" and still settles), and LANDING_HOLD_MAX remains.
+    this._screenRestoreHold = screenComing || checkoutHold;
     clearTimeout(this._landingHoldTimer);
     this._landingHoldTimer = setTimeout(
       () => this._releaseLandingHold(),
@@ -2932,8 +3008,21 @@ class desk_module extends LetcBox {
     );
   }
 
+  /**
+   * Billing and the Checkout result card are both on screen (wm
+   * checkCheckoutReturn): show the pane the Checkout boot hid. Idempotent.
+   */
+  _releaseCheckoutHold() {
+    this._checkoutHold = false;
+    this._releaseLandingHold();
+    // The restore flag the Checkout boot kept up (_restoreDeskState), on the
+    // same beat loadDefault uses for late loadHome stragglers.
+    this._clearRestoreInFlight(2000);
+  }
+
   /** Show the pane _holdLandingPane hid. Idempotent. */
   _releaseLandingHold() {
+    this._screenRestoreHold = false;
     clearTimeout(this._landingHoldTimer);
     this._landingHoldTimer = null;
     if (this.el && this.el.dataset) delete this.el.dataset.landingHold;
@@ -3215,6 +3304,9 @@ class desk_module extends LetcBox {
     }
     const key = Popup.dayKey();
     if (Popup.alreadyShownToday(key)) return;
+    // Just back from Checkout: the receipt owns this boot. The day is NOT
+    // consumed, so the greeting comes back on the next desk load.
+    if (require("libs/checkout-return").isCheckoutBoot()) return;
 
     // WAIT FOR THE WINDOW MANAGER, and do it BEFORE marking the day consumed.
     //
@@ -3232,6 +3324,22 @@ class desk_module extends LetcBox {
     const wm = await this._waitForWm();
     if (!wm || (this.isDestroyed && this.isDestroyed())) return;
 
+    // Same busy rule as every other boot popup: wait until the promo / reward
+    // / lock flows and the upgrade nudge are off the screen, then claim the
+    // slot synchronously so nothing launches in the fetch gap below. Gave up
+    // waiting → the day is not consumed.
+    if (!(await this._waitForHomePopups())) return;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this._dailyReminderInFlight = true;
+    try {
+      await this._showDailyReminder(Popup, key);
+    } finally {
+      this._dailyReminderInFlight = false;
+    }
+  }
+
+  /** Second half of _maybeShowDailyReminder, run while holding the slot. */
+  async _showDailyReminder(Popup, key) {
     Popup.markShownToday(key);
 
     // Local midnight → next local midnight. Built from the date parts rather
@@ -6827,6 +6935,10 @@ class desk_module extends LetcBox {
       // No boot tour over an Internal Link's file (_raiseBootTour).
       if (this._bootDesignationLink) return;
       if (this._postOnboardingTutorial) return;
+      // A reload that will put a section screen back (Billing, Calendar,
+      // Inbox, Admin console…) is not raising the tour — see
+      // _bootTourSectionOnScreen — so there is no pane to hide for it.
+      if (this._bootTourSectionOnScreen({ savedOnly: true })) return;
       if (Visitor.parseModuleArgs().tutorial) return;
       if (require("libs/window-tutorial-intent").has()) return;
       if (!require("libs/tutorial-tours").offerable("migrate", this)) return;
@@ -6848,6 +6960,51 @@ class desk_module extends LetcBox {
     if (this.el && this.el.dataset) delete this.el.dataset.bootTourHold;
   }
 
+  /**
+   * IS A SECTION SCREEN THE BOOT TOUR WOULD COVER?
+   *
+   * The migrate tour teaches the workspace's Files pane. A reload that lands
+   * on Billing (settings-billing__main), the Calendar (calendar-main__page),
+   * the Admin console, the Inbox (chat-p2p__main), Settings, Help, the
+   * organisation screen or a slide-out was raising it anyway — drawn over a
+   * screen it has nothing to say about. The tour is not consumed by standing
+   * down (`migrate` marks on success): the next Files press offers it.
+   *
+   * Two moments, because the restore opens the screen only AFTER the
+   * workspace pane is up (libs/screen-restore), i.e. after the tour may
+   * already be on its way:
+   *   saved    the screen this boot is about to put back (sessionStorage).
+   *            A deep link wins over it, as in _savedScreenService.
+   *   live     whatever is on the canvas when the tour is about to fire.
+   *
+   * @param {Object} [opt]
+   * @param {Boolean} [opt.savedOnly] skip the live read (before the feed,
+   *   when no part exists yet)
+   * @returns {Boolean}
+   */
+  _bootTourSectionOnScreen(opt = {}) {
+    try {
+      // BACK FROM CHECKOUT the remembered screen is NOT put back
+      // (_restoreDeskState skips it), so it must not count here either.
+      // Checkout starts on Billing, so "upgrade-plan" is what is remembered on
+      // almost every Checkout boot — counting it made the tour stand down for
+      // a Billing screen that never came, leaving a new user on Files with no
+      // tour at all.
+      const restoring = !require("libs/checkout-return").isCheckoutBoot();
+      if (restoring && this._savedScreenService()) return true;
+      const saved = this._bootSavedState;
+      if (restoring && saved && saved.orgView && !this._bootDeepLink && !this._hasDeepLink()) return true;
+      if (opt.savedOnly) return false;
+      if (this._mainScreenOnTop()) return true;
+      if (this._currentScreenService()) return true;
+    } catch (e) {
+      // Unknown means "do not cover anything": a missed tour comes back on
+      // the next Files press, a tour over the wrong screen is the bug.
+      return true;
+    }
+    return false;
+  }
+
   /** The body of _maybeRunBootTour; resolves whether the tour was asked for. */
   async _raiseBootTour() {
     if (this._tutorialWasAutomatic) return false;
@@ -6861,6 +7018,16 @@ class desk_module extends LetcBox {
     // this tour long ago is not made to sit through _awaitRestoreSettled and
     // _awaitRailWorkspace for a tour that was never going to run.
     if (!require("libs/tutorial-tours").offerable("migrate", this)) return false;
+    // Same up-front shortcut for a reload headed back to a section screen.
+    if (this._bootTourSectionOnScreen({ savedOnly: true })) return false;
+    // BACK FROM CHECKOUT the tour runs ALONGSIDE the result modal, not after
+    // it: the user lands on Files, the surface this tour is about. The two
+    // stack correctly with nothing extra — the modal's wrapper stamps
+    // data-state="open", Wm mirrors it to data-wm-modal on the desk root, and
+    // desk/skin lifts the modal to 100000 over the tour's overlay (10010)
+    // while pinning the workspace pane under the tour. A modal button that
+    // opens Billing ends the tour through togglePanel (_endWindowTourAfter),
+    // unseen, so the next Files press offers it again.
     try {
       // The same wait the URL hook documents at length: the restore clears its
       // flag on a TIMER, not when the pane arrives, so a workspace has to be
@@ -6868,6 +7035,14 @@ class desk_module extends LetcBox {
       await this._awaitRestoreSettled();
       const ws = await this._awaitRailWorkspace(this._workspaceIncoming() ? 8000 : 3000);
       if (!ws || (this.isDestroyed && this.isDestroyed())) return false;
+      // And again at the last moment: the user may have opened a section
+      // during the waits, or something else put one up.
+      if (this._bootTourSectionOnScreen()) return false;
+      // _raiseRailTour waits for single-flight before firing; re-check after
+      // that wait too, so a section opened meanwhile still wins.
+      await this._whenToursIdle();
+      if (this.isDestroyed && this.isDestroyed()) return false;
+      if (this._bootTourSectionOnScreen()) return false;
       return await this._raiseRailTour("migrate");
     } catch (e) {
       return false;
@@ -7299,7 +7474,7 @@ class desk_module extends LetcBox {
     this._releaseBootTourHold();
     // Same for the first-open landing hold — except for the landing's own
     // open of the organisation screen, which is the screen the hold is for.
-    if (!this._landingOpening) this._releaseLandingHold();
+    if (!this._landingOpening && !this._screenRestoreHold) this._releaseLandingHold();
     this._navSeq = (this._navSeq || 0) + 1;
     return this._navSeq;
   }
@@ -9614,16 +9789,24 @@ class desk_module extends LetcBox {
       // upselling on top of it helps nobody.
       const OverLimit = require("libs/over-limit");
       if (OverLimit.enforcementOn() && OverLimit.isLocked()) return;
+      // Just back from Checkout: the receipt owns this boot. Never ask the
+      // server here — a granted nudge is marked shown and would be burned.
+      if (require("libs/checkout-return").isCheckoutBoot()) return;
       if (this._homePopupsBusy()) return;
+      // Claimed synchronously after the busy check, so the daily reminder
+      // cannot launch while the state request is in the air.
+      this._upgradeNudgeInFlight = true;
       const res = await this.fetchService(SERVICE.payment.upgrade_nudge_state, {
         hub_id: Visitor.id,
       });
       const data = (res && res.data) || res || {};
       if (!~~data.show || !data.trigger) return;
-      this._openUpgradeNudgePopup(data);
+      await this._openUpgradeNudgePopup(data);
     } catch (e) {
       // Decoration only — a failed nudge must never mark the boot chain red.
       this.warn && this.warn("[upgrade-nudge] state check failed", e);
+    } finally {
+      this._upgradeNudgeInFlight = false;
     }
   }
 
@@ -9990,6 +10173,15 @@ class desk_module extends LetcBox {
   _homePopupsBusy() {
     if (this._rewardFlowInFlight || this._promoLaunch30InFlight) return true;
     if (this._activateFlowInFlight) return true;
+    // Between their own busy check and their launch, the daily reminder and the
+    // upgrade nudge each fetch first — held here so the other cannot slip into
+    // that gap and stack on top (recording 2026-11-02: three modals at once).
+    if (this._dailyReminderInFlight || this._upgradeNudgeInFlight) return true;
+    // "Payment Success!" / "Payment Failure!" sits in wm's wrapper-modal slot,
+    // which Wm.getItemsByKind below cannot see.
+    try {
+      if (require("libs/checkout-return").isModalOpen()) return true;
+    } catch (e) { /* lib missing — treat as clear */ }
     if (this._rewardFlow && !(this._rewardFlow.isDestroyed && this._rewardFlow.isDestroyed())) {
       return true;
     }
@@ -10007,6 +10199,12 @@ class desk_module extends LetcBox {
       const ol =
         (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("over_limit_popup")) || [];
       if (ol.some((w) => w && !(w.isDestroyed && w.isDestroyed()))) return true;
+      // The two "decoration" cards count too, so neither lands on the other
+      // and the invited-workspace prompt waits for them.
+      for (const kind of ["daily_reminder_popup", "upgrade_nudge_popup"]) {
+        const open = (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind(kind)) || [];
+        if (open.some((w) => w && !(w.isDestroyed && w.isDestroyed()))) return true;
+      }
     } catch (e) {
       // Wm not answering — treat as clear rather than waiting forever.
     }
@@ -11099,14 +11297,23 @@ class desk_module extends LetcBox {
     // SERVICE.desk.cta_click is undefined until server-team ships the endpoint.
     // postService is async and its promise rejection is swallowed by .catch,
     // but without this guard the call POSTs to a path built from `undefined`.
-    if (SERVICE.desk && SERVICE.desk.cta_click) {
+    if (SERVICE.desk && SERVICE.desk.cta_click && !(preselect && preselect.noTrack)) {
       this.postService(SERVICE.desk.cta_click, { cta: "upgrade", hub_id: Visitor.id },
         { async: 1 }).catch(() => {});
     }
     // `preselect` (plan/cycle/tab) rides in from a #/desk/billing deep link; a
     // plain "Upgrade plan" trigger passes nothing, so the page opens on its
     // default tab exactly as before.
-    const opt = Object.assign({ page: 1 }, preselect || {});
+    // Two caller-only keys, never handed to the panel:
+    //   onOpened  called once the page is open (or failed to open) — the
+    //             post-Checkout result modal keeps its button spinning until
+    //             then, and the page's mount is what takes the modal down
+    //             (_dismissWmModal).
+    //   noLoader  the caller shows its own busy state; skip the loader window.
+    //   noTrack   an automatic open (the Checkout return), not an upgrade
+    //             click: no cta_click.
+    const { onOpened, noLoader, noTrack, ...pageOpt } = preselect || {};
+    const opt = Object.assign({ page: 1 }, pageOpt);
     // WHAT THE LOADER COVERS, and it is only this line. Kind.waitFor resolves a
     // dynamic import: settings_billing is a ~280KB chunk, and until it lands
     // nothing on screen changes at all — the previous panel simply sits there
@@ -11117,10 +11324,53 @@ class desk_module extends LetcBox {
     // catalog and subscription land; that was a deliberate fix for this same
     // screen sitting blank through two round trips, and covering it with a
     // spinner would put one back over a page that is already readable.
-    this._showBillingLoader();
+    if (!noLoader) this._showBillingLoader();
+    // ALREADY ON BILLING, ASKED FOR SOMETHING SPECIFIC → MOUNT IT AGAIN.
+    // settings_billing is not keep-alive, and togglePanel's openOnly path
+    // returns without touching a screen of the same kind that is already open
+    // — after it has dismissed the WM modal. So since the Checkout return
+    // lands on Billing, the result card's "Use another card" / "Continue at
+    // regular price" closed the card and left the plans view as it was: no
+    // checkout tab, no TEAM1, no decline. When the caller passes real options
+    // (plan / cycle / tab / promo / offer / intent), the open page is cleared
+    // so togglePanel loads it fresh with them. A bare open (no options) still
+    // leaves an open Billing alone.
+    const remount = Object.keys(pageOpt).length > 0
+      && this._pendingKinds && this._pendingKinds["settings-main-slot"] === "settings_billing";
     return Kind.waitFor("settings_billing")
-      .then(() => this.togglePanel("settings_billing", "settings-main-slot", true, opt))
-      .finally(() => this._hideBillingLoader());
+      .then(() => {
+        if (remount) this._clearOpenBilling();
+        return this.togglePanel("settings_billing", "settings-main-slot", true, opt);
+      })
+      .then((r) => {
+        // Light the rail's Plan row for EVERY way in, not only a click on it:
+        // the post-Checkout modal's buttons, feature-lock upgrade CTAs, the
+        // topbar plan chip… all opened Billing with the previous row still lit.
+        this._lightRestoredRow("upgrade-plan");
+        return r;
+      })
+      .finally(() => {
+        if (!noLoader) this._hideBillingLoader();
+        if (typeof onOpened === "function") {
+          try { onOpened(); } catch (e) { /* caller's own cleanup */ }
+        }
+      });
+  }
+
+  /**
+   * Drop the Billing screen that is open in the full-canvas slot, so the next
+   * togglePanel mounts it fresh (openBillingPage, `remount`). Only when the
+   * slot really holds Billing; anything else there is left alone.
+   */
+  _clearOpenBilling() {
+    const pn = "settings-main-slot";
+    const p = _.isFunction(this.getPart) ? this.getPart(pn) : null;
+    if (!p || p.isEmpty()) return;
+    const child = p.children.last();
+    const kind = child && ((child.mget && child.mget(_a.kind)) || (child.el && child.el.dataset.kind));
+    if (kind !== "settings_billing") return;
+    p.clear();
+    if (this._pendingKinds) this._pendingKinds[pn] = null;
   }
 
   /** The live billing loader window, or null. */
