@@ -1565,8 +1565,13 @@ html[data-theme="dark"] {
 
   .widget-chat__link-card {
     pointer-events: auto;
-    padding-right: 36px;
     box-shadow: 0 6px 20px rgba(11, 10, 33, 0.14);
+  }
+
+  // The × sits on the label's line (top-right), so only the label gives way
+  // to it: title and description keep the sent card's width and wrap.
+  .widget-chat__link-card-label {
+    padding-right: 22px;
   }
 
   .widget-chat__link-card-close {

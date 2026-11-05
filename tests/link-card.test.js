@@ -220,7 +220,10 @@ test("one layout for every card: lock pill inside the text column, same order in
   assert.match(skel, /className: `\$\{pfx\}-desc`[^\n]*\n\s*badge,/);
   const scss = read("src/drumee/skin/mixins/link-card.scss");
   assert.match(scss, /width: 296px;\n\s*max-width: 100%;/);
-  assert.ok(!read("src/drumee/builtins/widget/chat/skin/index.scss").includes("max-width: 420px"));
+  const chatSkin = read("src/drumee/builtins/widget/chat/skin/index.scss");
+  assert.ok(!chatSkin.includes("max-width: 420px"));
+  // the composer × only narrows the label line, not title / description
+  assert.ok(!/\.widget-chat__link-card \{[^}]*padding-right/.test(chatSkin));
 });
 
 test("secure card never calls a folder a file", () => {

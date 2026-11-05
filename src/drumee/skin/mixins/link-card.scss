@@ -112,6 +112,18 @@
     text-overflow: ellipsis;
   }
 
+  // Composer parts are Skeletons.Note: the text sits in a .note-content
+  // child, which must carry the ellipsis itself.
+  #{$pfx}-label,
+  #{$pfx}-title {
+    .note-content {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
   #{$pfx}-desc {
     @include drumee.typo($size: 12px, $line: 1.35, $weight: 400);
     color: var(--neutral-600);
