@@ -27,6 +27,7 @@ class settings_billing_result extends LetcBox {
       // The page behind fades while this card is up (desk/skin
       // `[data-billing-result]`) — the Calendar modal's backdrop.
       this._stampDesk(true);
+      this._installBackdropDismiss();
     }
     if (this._result === "success" && this._sessionId) {
       // hub_id is REQUIRED (payment.* ACL is scope:hub/src:owner).
@@ -81,6 +82,52 @@ class settings_billing_result extends LetcBox {
       require("libs/checkout-return").setModalOpen(false);
       this._stampDesk(false);
     }
+    this._removeBackdropDismiss();
+  }
+
+  /**
+   * CLICK OUTSIDE CLOSES THE CARD — the rule for every "page fade" modal
+   * (calendar-main__modal does the same, panel/calendar
+   * _installBackdropDismiss).
+   *
+   * "Outside" is the BACKDROP: the wrapper-modal this card is fed into (it
+   * covers the canvas while the card is up), or this widget's own root around
+   * the card. Not "anywhere but the card" — the sidebar, the top bar, a
+   * popup elsewhere are not the backdrop. Both the press and the release must
+   * land on it, so a selection dragged out of the card does not close it.
+   * Ignored while a button is busy (Billing opening for "Use another card").
+   */
+  _installBackdropDismiss() {
+    if (this._bdDown) return;
+    const isBackdrop = (t) => {
+      if (!t || !this.el) return false;
+      const card = this.el.querySelector(`.${this.fig.family}__card`);
+      if (card && card.contains(t)) return false;
+      if (this.el.contains(t)) return true;
+      // The wrapper-modal, or any container between it and this widget.
+      const wrap = _.isFunction(this.el.closest) ? this.el.closest(".window-manager__wrapper-modal") : null;
+      return !!(wrap && (t === wrap || (wrap.contains(t) && _.isFunction(t.contains) && t.contains(this.el))));
+    };
+    let down = false;
+    this._bdDown = (e) => { down = isBackdrop(e.target); };
+    this._bdClick = (e) => {
+      const was = down;
+      down = false;
+      if (!was || !isBackdrop(e.target)) return;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this.el && this.el.querySelector('[data-loading="1"]')) return;
+      this.triggerHandlers({ service: "billing-result-close" });
+    };
+    document.addEventListener("pointerdown", this._bdDown, true);
+    document.addEventListener("click", this._bdClick, true);
+  }
+
+  _removeBackdropDismiss() {
+    if (!this._bdDown) return;
+    document.removeEventListener("pointerdown", this._bdDown, true);
+    document.removeEventListener("click", this._bdClick, true);
+    this._bdDown = null;
+    this._bdClick = null;
   }
 
   /**

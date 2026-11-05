@@ -47,6 +47,7 @@ async function refreshWith(receipt) {
     _result: "success",
     _sessionId: "cs_1",
     _stampDesk() {},
+    _installBackdropDismiss() {},
     fetchService: async () => receipt,
     feed: (x) => fed.push(x),
   };

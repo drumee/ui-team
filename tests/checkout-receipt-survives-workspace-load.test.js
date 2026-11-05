@@ -104,6 +104,7 @@ test("the result modal does not feed itself after being destroyed mid-fetch", as
     _result: "success",
     _sessionId: "cs_1",
     _stampDesk() {},
+    _installBackdropDismiss() {},
     isDestroyed: () => destroyed,
     // The workspace load clears the host while this is in flight.
     fetchService: async () => { destroyed = true; return { status: "OFFER_CARD_USED" }; },
