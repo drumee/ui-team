@@ -1387,6 +1387,13 @@ class __media_interact extends media_core {
             // anything it cannot round-trip losslessly, so this can never
             // produce a link that resolves to less than it does today.
             url = `${bootstrap().protocol}://${bootstrap().main_domain}${toCompactUrl(url)}`
+            // External workspace: `?ext=1` before the `#`, so the link's
+            // preview card (Telegram, Zalo, Drumee chat) is drawn in the
+            // external workspace's pink — the part after `#` never reaches a
+            // link-preview crawler. See libs/drumee-link-card markExternal.
+            if (this.mget(_a.area) === _a.share) {
+              url = require("libs/drumee-link-card").markExternal(url);
+            }
             await copyToClipboard(url);
             Wm.acknowledge();
           }, 0);

@@ -9,6 +9,8 @@
 // the workspace-invite email does (Duy 2026-11-04: Internal = the internal
 // workspace's orange, External = the external workspace's pink):
 //   internal    — Internal link: --area-private, neutral card + lock pill
+//   internal-share — Internal link to an item of an EXTERNAL workspace
+//                 (`?ext=1`): the same card in --area-share
 //   secure      — External link with email / password: --area-share, neutral
 //                 card + lock pill
 //   public      — External public link: --area-share, file name + sender
@@ -40,6 +42,7 @@
     cursor: pointer;
     overflow: hidden;
 
+    &[data-tone="internal-share"],
     &[data-tone="secure"],
     &[data-tone="public"] {
       --lc-accent: var(--area-share);

@@ -55,6 +55,33 @@ test("External links: short /s/<token> and historic #/dmz/share/<token>", () => 
   }
 });
 
+test("Internal link of an external workspace: ?ext=1 before the #, pink card", () => {
+  const base = "https://app.drumee.com/-/#/desk/wm/o/12345/ad43ec7aad43ec80/document";
+  const marked = LC.markExternal(base);
+  assert.strictEqual(marked, "https://app.drumee.com/-/?ext=1#/desk/wm/o/12345/ad43ec7aad43ec80/document");
+  assert.strictEqual(marked.length - base.length, 6);
+  assert.strictEqual(LC.markExternal(marked), marked, "idempotent");
+  assert.strictEqual(LC.markExternal("https://h/-/?r=1#/x"), "https://h/-/?r=1&ext=1#/x");
+  assert.strictEqual(LC.markExternal("https://h/-/"), "https://h/-/", "no hash: unchanged");
+  assert.strictEqual(LC.markExternal(undefined), undefined);
+
+  const ext = LC.parseDrumeeLink(marked, ENV);
+  assert.deepStrictEqual([ext.kind, ext.filetype, ext.external], ["internal", "document", true]);
+  assert.strictEqual(LC.cardModel(ext, null, {}).tone, "internal-share");
+  const long = LC.parseDrumeeLink(LC.markExternal("https://app.drumee.com/-/#/desk/wm/open/nid=1&hub_id=ad43&kind=media&filetype=image"), ENV);
+  assert.strictEqual(LC.cardModel(long, null, {}).tone, "internal-share");
+  // unmarked and wrongly-marked links stay the internal (orange) card
+  assert.strictEqual(LC.cardModel(LC.parseDrumeeLink(base, ENV), null, {}).tone, "internal");
+  assert.strictEqual(LC.parseDrumeeLink("https://app.drumee.com/-/?ext=0#/desk/wm/o/1/ad43/folder", ENV).external, undefined);
+  // the marker never turns a share link or a foreign link into anything else
+  assert.strictEqual(LC.parseDrumeeLink(`https://evil.com/-/?ext=1#/desk/wm/o/1/ad43/folder`, ENV), null);
+
+  const src = read("src/drumee/builtins/media/interact.js");
+  assert.match(src, /if \(this\.mget\(_a\.area\) === _a\.share\) \{\s*url = require\("libs\/drumee-link-card"\)\.markExternal\(url\);/);
+  const scss = read("src/drumee/skin/mixins/link-card.scss");
+  assert.match(scss, /&\[data-tone="internal-share"\],\s*&\[data-tone="secure"\]/);
+});
+
 test("not ours → no card", () => {
   for (const u of [
     `https://evil.com/-/s/${TOKEN}`,

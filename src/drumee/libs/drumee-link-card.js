@@ -29,6 +29,9 @@ const SAFE_SEGMENT = /^[A-Za-z0-9._-]+$/;
 const KIND = { internal: "internal", share: "share" };
 const TONE = {
   internal: "internal",
+  // Internal link to an item of an EXTERNAL workspace: same neutral card, in
+  // the external workspace's pink.
+  internalShare: "internal-share",
   public: "public",
   secure: "secure",
   unavailable: "unavailable",
@@ -42,6 +45,36 @@ const TONE = {
  * @param {string} mainDomain
  * @returns {boolean}
  */
+/**
+ * Query marker on an Internal link copied from an EXTERNAL workspace
+ * (`…/-/?ext=1#/desk/wm/o/…`). It sits before the `#` so link-preview crawlers
+ * (Telegram, Zalo, …), which never get the fragment, can still tell the page
+ * server to draw the card in the external workspace's pink. 6 characters; no
+ * other code reads `ext` from the page address (checked 2026-11-04: app reads
+ * lang/language/pagelang/device/xid/keysel/checkout/session_id/offer/utm_*,
+ * the page server debug-ui/xid). Mirrored in server-team
+ * service/lib/link-preview.js (EXTERNAL_MARK).
+ */
+const EXTERNAL_MARK = { key: "ext", value: "1" };
+
+/**
+ * Add the external-workspace marker to an Internal link, before its `#`.
+ * Anything that is not a plain `…#…` link is returned unchanged.
+ * @param {string} url
+ * @returns {string}
+ */
+function markExternal(url) {
+  if (typeof url !== "string") return url;
+  const at = url.indexOf("#");
+  if (at < 0) return url;
+  const head = url.slice(0, at);
+  const mark = `${EXTERNAL_MARK.key}=${EXTERNAL_MARK.value}`;
+  const q = head.indexOf("?");
+  if (q >= 0 && head.slice(q + 1).split("&").includes(mark)) return url;
+  const sep = q < 0 ? "?" : head.endsWith("?") || head.endsWith("&") ? "" : "&";
+  return `${head}${sep}${mark}${url.slice(at)}`;
+}
+
 function isOwnHost(host, mainDomain) {
   const h = String(host || "").toLowerCase();
   const md = String(mainDomain || "").toLowerCase();
@@ -89,7 +122,7 @@ function parseDrumeeLink(href, env = {}) {
   m = hash.match(/^desk\/wm\/o\/([^/]+)\/([^/]+)\/([^/]+)\/?$/);
   if (m) {
     if (![m[1], m[2], m[3]].every((s) => SAFE_SEGMENT.test(s))) return null;
-    return { kind: KIND.internal, filetype: m[3], url: url.href };
+    return withArea({ kind: KIND.internal, filetype: m[3], url: url.href }, url);
   }
 
   // Internal link, long: #/desk/wm/open/nid=…&hub_id=…&filetype=…
@@ -98,11 +131,11 @@ function parseDrumeeLink(href, env = {}) {
     const q = new URLSearchParams(m[1]);
     if (!q.get("nid") || !q.get("hub_id")) return null;
     const filetype = q.get("filetype") || "";
-    return {
+    return withArea({
       kind: KIND.internal,
       filetype: SAFE_SEGMENT.test(filetype) ? filetype : "",
       url: url.href,
-    };
+    }, url);
   }
   return null;
 }
@@ -113,6 +146,17 @@ function parseDrumeeLink(href, env = {}) {
  * @param {Object} env see parseDrumeeLink
  * @returns {Object|null}
  */
+/**
+ * Flag an Internal link carrying the external-workspace marker.
+ * @param {Object} link
+ * @param {URL} url
+ * @returns {Object}
+ */
+function withArea(link, url) {
+  if (url.searchParams.get(EXTERNAL_MARK.key) === EXTERNAL_MARK.value) link.external = true;
+  return link;
+}
+
 function firstDrumeeLink(text, env) {
   const found = String(text || "").match(/https?:\/\/[^\s<>"'()]+/g) || [];
   for (const raw of found) {
@@ -182,7 +226,7 @@ function publicDesc(by, facts) {
 function cardModel(link, facts, L = {}) {
   if (link.kind === KIND.internal) {
     return {
-      tone: TONE.internal,
+      tone: link.external ? TONE.internalShare : TONE.internal,
       label: L.LINK_CARD_INTERNAL || "Internal link",
       title: L.LINK_CARD_INTERNAL_TITLE || "Shared inside a Drumee workspace",
       desc: L.LINK_CARD_INTERNAL_DESC || "Only members of this workspace can open it.",
@@ -260,6 +304,8 @@ module.exports = {
   KIND,
   TONE,
   ICON,
+  EXTERNAL_MARK,
+  markExternal,
   isOwnHost,
   parseDrumeeLink,
   firstDrumeeLink,
