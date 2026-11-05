@@ -311,6 +311,9 @@ class desk_module extends LetcBox {
     // upgrade-nudge popup uses it to land on the tier it was selling.
     this._openBillingPage = (arg) => this.openBillingPage(arg);
     RADIO_BROADCAST.on("desk:open-billing-page", this._openBillingPage);
+    // The Billing page announces itself on every render: light Plan.
+    this._onBillingPageShown = () => this._lightRestoredRow("upgrade-plan");
+    RADIO_BROADCAST.on("desk:billing-page-shown", this._onBillingPageShown);
     // Downgrade over-limit (libs/over-limit): the popup and banner raise
     // these instead of reaching into the desk. open-admin-console reuses the
     // exact toggle-apps shim the promo's post-claim reload uses.
@@ -880,6 +883,7 @@ class desk_module extends LetcBox {
       this._restoreClearTimer = null;
     }
     RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
+    RADIO_BROADCAST.off("desk:billing-page-shown", this._onBillingPageShown);
     RADIO_BROADCAST.off("call:returned", this._onCallReturned);
     RADIO_BROADCAST.off("call:minimize", this._onCallMinimized);
     RADIO_BROADCAST.off("call:ended", this._onCallEnded);

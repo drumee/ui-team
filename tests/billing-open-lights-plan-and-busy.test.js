@@ -110,3 +110,27 @@ test("the checkout chain is RETURNED and a Stripe URL resolves 'redirect'", () =
   assert.match(body, /return this\.postService\(SERVICE\.payment\.checkout, payload\)/);
   assert.match(body, /if \(url\) \{ window\.location\.assign\(url\); return "redirect"; \}/);
 });
+
+// ── Billing page announces itself → Plan lit, every way in ───────────────────
+
+test("the full-page Billing announces itself on render (page mode only)", () => {
+  const body = sliceFunction(BILLING_SRC, "async onDomRefresh()");
+  assert.match(body, /if \(this\._page\) RADIO_BROADCAST\.trigger\("desk:billing-page-shown"\);/);
+});
+
+test("the desk listens for it for its whole life, and unhooks on destroy", () => {
+  assert.match(DESK_SRC, /RADIO_BROADCAST\.on\("desk:billing-page-shown", this\._onBillingPageShown\);/);
+  assert.match(DESK_SRC, /RADIO_BROADCAST\.off\("desk:billing-page-shown", this\._onBillingPageShown\);/);
+  assert.match(DESK_SRC, /this\._onBillingPageShown = \(\) => this\._lightRestoredRow\("upgrade-plan"\);/);
+});
+
+test("lighting 'upgrade-plan' broadcasts sidebar-radio for the sidebar-plan part", async () => {
+  const lit = [];
+  global.RADIO_BROADCAST = { trigger: (ch, p) => lit.push([ch, p.name]) };
+  const fn = new Function("desk_module", `return (${sliceFunction(DESK_SRC, "_lightRestoredRow(service)")});`)(
+    { _RESTORABLE_SCREENS: { "upgrade-plan": "sidebar-plan" } },
+  );
+  await fn.call({ ensurePart: async (pn) => ({ name: pn }) }, "upgrade-plan");
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(lit, [["sidebar-radio", "sidebar-plan"]]);
+});

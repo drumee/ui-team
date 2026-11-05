@@ -890,6 +890,12 @@ class settings_billing extends LetcBox {
     //  data-page="1"  → full-page scroll layout inside settings-main-slot.
     if (this._popup && this.el) this.el.dataset.popup = "1";
     if (this._page && this.el) this.el.dataset.page = "1";
+    // The full-page Billing (settings-billing__main in the desk's
+    // settings-main-slot) always lights the rail's Plan row, however it was
+    // reached — rail, upgrade CTAs, the post-Checkout modal, a reload restore.
+    // The desk owns the rail, so it is asked rather than reached into. Not
+    // for the Settings → Account embed: that screen is Settings.
+    if (this._page) RADIO_BROADCAST.trigger("desk:billing-page-shown");
     if (this.state.currentTab === undefined || this.state.currentTab === null) {
       this.state.currentTab = TAB_MONTHLY;
     }
