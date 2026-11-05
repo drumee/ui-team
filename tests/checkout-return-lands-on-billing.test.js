@@ -72,23 +72,35 @@ test("openBillingPage: noTrack skips the cta_click, and never reaches the panel"
   assert.deepEqual(posted, ["desk.cta_click"]);
 });
 
-test("the card stamps the desk root while open, and clears it on destroy", () => {
+test("the card stamps WHAT it sits on: 'screen' over Billing, 'pane' over the workspace", () => {
   const root = { dataset: {} };
   global.document = { querySelector: (q) => (q === ".desk-module" ? root : null) };
+  global._ = { isFunction: (f) => typeof f === "function" };
   const stamp = new Function(`return (${sliceFunction(RESULT_SRC, "_stampDesk(on)")});`)();
+  global.window = { Desk: { _mainScreenOnTop: () => true } };
   stamp.call({}, true);
-  assert.equal(root.dataset.billingResult, "1");
+  assert.equal(root.dataset.billingResult, "screen");
+  global.window = { Desk: { _mainScreenOnTop: () => false } };
+  stamp.call({}, true);
+  assert.equal(root.dataset.billingResult, "pane");
   stamp.call({}, false);
   assert.equal(root.dataset.billingResult, undefined);
   assert.match(sliceFunction(RESULT_SRC, "async onDomRefresh()"), /this\._stampDesk\(true\);/);
   assert.match(sliceFunction(RESULT_SRC, "onBeforeDestroy()"), /this\._stampDesk\(false\);/);
 });
 
-test("backdrop = the Calendar modal's: page behind at 20%, 0.15s; no scrim", () => {
-  const block = DESK_SKIN.slice(DESK_SKIN.indexOf('.desk-module[data-billing-result="1"]'));
-  assert.match(block, /\.desk-module__settings-main-slot,\s*\n\s*\.window-manager__layer\.headless\s*\{/);
-  assert.match(block, /opacity: 0\.2;/);
-  assert.match(block, /transition: opacity 0\.15s ease;/);
-  const cal = read("src/drumee/builtins/panel/calendar/skin/index.scss");
-  assert.match(cal, /opacity: 0\.2;/, "the Calendar's own fade, for reference");
+// THE GHOSTING (2026-11-05): with the Billing slot at 20% the workspace pane
+// beneath it showed through. Over a screen, that layer is hidden.
+test("backdrop over a screen: the screen fades, the workspace beneath is HIDDEN", () => {
+  const block = DESK_SKIN.slice(DESK_SKIN.indexOf('.desk-module[data-billing-result="screen"]'));
+  const screen = block.slice(0, block.indexOf('.desk-module[data-billing-result="pane"]'));
+  assert.match(screen, /\.desk-module__settings-main-slot\s*\{\s*opacity: 0\.2;\s*transition: opacity 0\.15s ease;/);
+  assert.match(screen, /\.window-manager__layer\.headless\s*\{\s*visibility: hidden;/);
+  assert.doesNotMatch(screen, /headless\s*\{\s*opacity/, "the pane is not merely faded under a screen");
+});
+
+test("backdrop over the workspace: the pane fades (Calendar values)", () => {
+  const block = DESK_SKIN.slice(DESK_SKIN.indexOf('.desk-module[data-billing-result="pane"]'));
+  assert.match(block, /\.window-manager__layer\.headless\s*\{\s*opacity: 0\.2;\s*transition: opacity 0\.15s ease;/);
+  assert.doesNotMatch(DESK_SKIN, /data-billing-result="1"/, "the old all-layers rule is gone");
 });

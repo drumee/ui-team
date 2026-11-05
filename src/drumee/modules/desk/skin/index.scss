@@ -1702,19 +1702,36 @@ body:has(.desk-module[data-device="mobile"]) {
   }
 }
 
-// ── Post-Checkout result card: the Calendar modal's backdrop ────────────────
+// ── Post-Checkout result card: the Calendar modal's backdrop ("page fade") ──
 //
 // Same treatment as calendar-main__modal (panel/calendar/skin, the task /
 // meeting forms): no scrim and no blur — the wrapper-modal is transparent
 // (wm checkCheckoutReturn stamps data-overlay="none") — and the page behind
-// the card fades to 20% over 0.15s. Here "the page" is whatever the card sits
-// on: the full-canvas slot (Billing, where the Checkout return lands) or the
-// workspace pane. The sidebar and top bar stay as they are, as in the
-// Calendar. The card itself lives in the wrapper-modal, outside both, so it
-// stays at full strength. `data-billing-result` is stamped on the desk root
-// by settings_billing_result while it is open.
-.desk-module[data-billing-result="1"] {
-  .desk-module__settings-main-slot,
+// the card fades to 20% over 0.15s. The sidebar and top bar stay as they are.
+// The card lives in the wrapper-modal, outside every faded layer, so it stays
+// at full strength. settings_billing_result stamps `data-billing-result` on
+// the desk root with what it sits on:
+//
+//   screen  a full-canvas screen (Billing) is up. It fades — and the workspace
+//           layer beneath it is HIDDEN: a reopened screen always has a
+//           workspace open underneath for the rail, and once the screen is
+//           20% opaque that pane shows through it (Files and Team Chat
+//           ghosting under the plans). The Calendar never meets this because
+//           it fades its page's CONTENTS inside a page that keeps its own
+//           background; here the whole slot fades, so what is under it must go.
+//   pane    no screen covers the workspace: the pane itself fades.
+.desk-module[data-billing-result="screen"] {
+  .desk-module__settings-main-slot {
+    opacity: 0.2;
+    transition: opacity 0.15s ease;
+  }
+
+  .window-manager__layer.headless {
+    visibility: hidden;
+  }
+}
+
+.desk-module[data-billing-result="pane"] {
   .window-manager__layer.headless {
     opacity: 0.2;
     transition: opacity 0.15s ease;

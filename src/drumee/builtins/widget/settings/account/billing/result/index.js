@@ -83,13 +83,29 @@ class settings_billing_result extends LetcBox {
     }
   }
 
-  /** Mark / unmark the desk root while this card is open. */
+  /**
+   * Mark / unmark the desk root while this card is open, naming WHAT it sits
+   * on, because the backdrop differs (desk/skin `[data-billing-result]`):
+   *
+   *   screen  a full-canvas screen is up (Billing, where the Checkout return
+   *           lands; the resume card). That screen fades — and the workspace
+   *           pane that is always open beneath it is HIDDEN, or the faded,
+   *           now see-through screen shows it through (Files and Team Chat
+   *           ghosting under the plans).
+   *   pane    nothing covers the workspace (Billing could not open): the pane
+   *           itself fades.
+   */
   _stampDesk(on) {
     try {
       const root = document.querySelector(".desk-module");
       if (!root) return;
-      if (on) root.dataset.billingResult = "1";
-      else delete root.dataset.billingResult;
+      if (!on) {
+        delete root.dataset.billingResult;
+        return;
+      }
+      const desk = window.Desk;
+      const onScreen = !!(desk && _.isFunction(desk._mainScreenOnTop) && desk._mainScreenOnTop());
+      root.dataset.billingResult = onScreen ? "screen" : "pane";
     } catch (e) { /* cosmetic */ }
   }
 
