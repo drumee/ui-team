@@ -2815,13 +2815,21 @@ class desk_module extends LetcBox {
       // workspace above is still restored underneath; the modal's own
       // buttons go to Billing when the user asks.
       const checkoutBoot = require("libs/checkout-return").isCheckoutBoot();
+      // THE MIGRATE TOUR OWNS THIS RELOAD. A new account that has not finished
+      // it and reloads on the Calendar, the Inbox, the Admin Console, Billing…
+      // got that screen back (or, while it stood down for it, the bare
+      // window-folder__split-body with no tour at all). The tour is the thing
+      // still to do, so it wins: the remembered screen is not reopened, the
+      // reload lands on Files and _raiseBootTour runs the tour there. Once the
+      // tour is done, reloads restore the remembered screen as ever.
+      const skipScreen = checkoutBoot || this._bootTourOwnsReload();
       // The organisation screen the user was on. Before saved.service: a
       // slide-out (Trash, Contacts, Notifications) can be open over it, and
       // has to land on top of it again.
-      if (saved.orgView && !checkoutBoot && !(this.isDestroyed && this.isDestroyed())) {
+      if (saved.orgView && !skipScreen && !(this.isDestroyed && this.isDestroyed())) {
         await this._landOnOrgView(paneComing);
       }
-      if (saved.service && !checkoutBoot && !(this.isDestroyed && this.isDestroyed())) {
+      if (saved.service && !skipScreen && !(this.isDestroyed && this.isDestroyed())) {
         // Wait for the OPEN only. The restore flag below exists to keep a
         // late loadHome from wiping the screen being opened; the wait for the
         // screen's items (up to 6s more) needs no such guard, and holding the
@@ -6893,6 +6901,37 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * DOES THE BOOT MIGRATE TOUR TAKE THIS RELOAD OVER?
+   *
+   * True when the tour is still to do (offerable: new account, not finished,
+   * not on a phone, kill switch off) and nothing else has a stronger claim on
+   * the boot. Then _restoreDeskState skips the remembered section screen and
+   * the reload lands on Files with the tour (see there).
+   *
+   * Stronger claims, in which case the remembered screen is restored as ever:
+   *   a deep link / Internal Link   an explicit destination (it already wins
+   *                                 over the saved state)
+   *   a `?window_tutorial=` / URL   a tour asked for by name runs instead
+   *   the post-onboarding tutorial  covers the whole desk itself
+   * A Checkout return is handled by its own flag (checkoutBoot).
+   *
+   * @returns {Boolean}
+   */
+  _bootTourOwnsReload() {
+    try {
+      if (this._bootDeepLink || this._hasDeepLink()) return false;
+      if (this._bootDesignationLink) return false;
+      if (this._postOnboardingTutorial || this._tutorialWasAutomatic) return false;
+      if (Visitor.parseModuleArgs().tutorial) return false;
+      if (require("libs/window-tutorial-intent").has()) return false;
+      return !!require("libs/tutorial-tours").offerable("migrate", this);
+    } catch (e) {
+      // Unknown → restore as ever.
+      return false;
+    }
+  }
+
+  /**
    * IS A SECTION SCREEN THE BOOT TOUR WOULD COVER?
    *
    * The migrate tour teaches the workspace's Files pane. A reload that lands
@@ -6906,8 +6945,13 @@ class desk_module extends LetcBox {
    * workspace pane is up (libs/screen-restore), i.e. after the tour may
    * already be on its way:
    *   saved    the screen this boot is about to put back (sessionStorage).
-   *            A deep link wins over it, as in _savedScreenService.
-   *   live     whatever is on the canvas when the tour is about to fire.
+   *            A deep link wins over it, as in _savedScreenService. Ignored
+   *            when it will NOT be put back: a Checkout return, or a reload
+   *            the tour owns (_bootTourOwnsReload) — which, while the tour is
+   *            still to do, is every ordinary reload, so the tour now lands on
+   *            Files instead of the remembered section screen.
+   *   live     whatever is on the canvas when the tour is about to fire — a
+   *            section the user OPENS still sends the tour away.
    *
    * @param {Object} [opt]
    * @param {Boolean} [opt.savedOnly] skip the live read (before the feed,
@@ -6922,7 +6966,10 @@ class desk_module extends LetcBox {
       // almost every Checkout boot — counting it made the tour stand down for
       // a Billing screen that never came, leaving a new user on Files with no
       // tour at all.
-      const restoring = !require("libs/checkout-return").isCheckoutBoot();
+      // Nor when the boot tour owns this reload (_bootTourOwnsReload): the
+      // remembered screen is skipped then too, in favour of the tour.
+      const restoring = !require("libs/checkout-return").isCheckoutBoot()
+        && !this._bootTourOwnsReload();
       if (restoring && this._savedScreenService()) return true;
       const saved = this._bootSavedState;
       if (restoring && saved && saved.orgView && !this._bootDeepLink && !this._hasDeepLink()) return true;

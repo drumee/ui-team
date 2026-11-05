@@ -32,8 +32,9 @@ const sectionOnScreen = method("_bootTourSectionOnScreen(opt = {})", {
 });
 test.afterEach(() => { CHECKOUT_BOOT = false; });
 
-function host({ savedService = null, saved = null, deepLink = false, mainOnTop = false, current = null } = {}) {
+function host({ savedService = null, saved = null, deepLink = false, mainOnTop = false, current = null, ownsReload = false } = {}) {
   return {
+    _bootTourOwnsReload: () => ownsReload,
     _savedScreenService: () => savedService,
     _bootSavedState: saved,
     _bootDeepLink: deepLink,
@@ -180,4 +181,55 @@ test("boot tour: Checkout started on Billing → the tour still comes over Files
   );
   assert.equal(r, true);
   assert.deepEqual(fired, ["migrate"]);
+});
+
+// ── THE TOUR OWNS THE RELOAD (2026-11-04): Calendar / Inbox / Admin console /
+// Billing remembered, migrate tour still to do → Files + tour, not the screen.
+
+test("helper: a remembered section does not count when the tour owns the reload", () => {
+  for (const s of ["upgrade-plan", "toggle-calendar", "toggle-inbox", "toggle-apps"]) {
+    assert.equal(
+      sectionOnScreen.call(host({ savedService: s, ownsReload: true }), { savedOnly: true }), false, s);
+  }
+  assert.equal(sectionOnScreen.call(host({ saved: { orgView: 1 }, ownsReload: true }), { savedOnly: true }), false);
+  // A section the user OPENS still sends the tour away.
+  assert.equal(sectionOnScreen.call(host({ savedService: "toggle-calendar", ownsReload: true, mainOnTop: true })), true);
+});
+
+test("boot tour: reload remembered on the Calendar, tour still to do → the tour runs", async () => {
+  const { r, fired } = await bootTour(host({ savedService: "toggle-calendar", ownsReload: true }));
+  assert.equal(r, true);
+  assert.deepEqual(fired, ["migrate"]);
+});
+
+// ── _bootTourOwnsReload's gates ───────────────────────────────────────────────
+
+function owns({ offerable = true, deepLink = false, designation = false, postOnboarding = false, urlTour = false, tutorialArg = false } = {}) {
+  global.Visitor = { parseModuleArgs: () => (tutorialArg ? { tutorial: "x" } : {}) };
+  const fn = method("_bootTourOwnsReload()", {
+    require: (m) => {
+      if (m === "libs/window-tutorial-intent") return { has: () => urlTour };
+      if (m === "libs/tutorial-tours") return { offerable: () => offerable };
+      throw new Error(`unexpected require ${m}`);
+    },
+  });
+  return fn.call({
+    _bootDeepLink: deepLink,
+    _hasDeepLink: () => deepLink,
+    _bootDesignationLink: designation,
+    _postOnboardingTutorial: postOnboarding,
+  });
+}
+
+test("the tour owns an ordinary reload while it is still to do", () => {
+  assert.equal(owns(), true);
+});
+
+test("…but not once done, nor over a deep link, an Internal Link, a URL tour or the post-onboarding tutorial", () => {
+  assert.equal(owns({ offerable: false }), false);
+  assert.equal(owns({ deepLink: true }), false);
+  assert.equal(owns({ designation: true }), false);
+  assert.equal(owns({ urlTour: true }), false);
+  assert.equal(owns({ tutorialArg: true }), false);
+  assert.equal(owns({ postOnboarding: true }), false);
 });
