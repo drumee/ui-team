@@ -71,10 +71,6 @@ const INBOX_SLOT = "settings-main-slot";
 // what counts as read — a hidden inbox must not do that behind the user.
 const KEEP_ALIVE_MAIN_KINDS = new Set(["settings_main", "calendar_main", "help_main"]);
 
-// The longest a remembered screen waits for the boot migrate tour to be on
-// screen before reopening anyway (_restoreDeskState, _whenBootTourUp).
-const BOOT_TOUR_FIRST_MAX = 6000;
-
 // Topbar utility icon → the kind its service mounts. A service's promise
 // settles once the kind is FED, not once it paints: every kind is a lazy chunk
 // (seeds.js) and togglePanel does not wait for it, so _runUtilityBusy also
@@ -2774,6 +2770,7 @@ class desk_module extends LetcBox {
       return;
     }
 
+    let screenHoldArmed = false;
     try {
       const wm = await this._waitForWm();
       if (!wm || (this.isDestroyed && this.isDestroyed())) return;
@@ -2819,18 +2816,6 @@ class desk_module extends LetcBox {
       // workspace above is still restored underneath; the modal's own
       // buttons go to Billing when the user asks.
       const checkoutBoot = require("libs/checkout-return").isCheckoutBoot();
-      // TOUR FIRST, THEN THE REMEMBERED SCREEN. A new account that has not
-      // finished the migrate tour and reloads on the Calendar, the Inbox, the
-      // Admin Console, Billing… saw window-folder__split-body for a moment
-      // before the screen came back. Wait for the tour to be on screen
-      // instead (it covers the pane, which is held hidden until then), and
-      // only then reopen the screen: it lands over the tour and ends it once
-      // settled (togglePanel → _endWindowTourAfter), unseen, so the tour is
-      // offered again later. Capped, so a tour that never comes cannot keep
-      // the screen away.
-      if (!checkoutBoot && (saved.orgView || saved.service) && this._bootTourBeforeScreen()) {
-        await this._whenBootTourUp(BOOT_TOUR_FIRST_MAX);
-      }
       // The organisation screen the user was on. Before saved.service: a
       // slide-out (Trash, Contacts, Notifications) can be open over it, and
       // has to land on top of it again.
@@ -2845,10 +2830,22 @@ class desk_module extends LetcBox {
         // libs/screen-restore never rejects, and resolves on every exit path,
         // including the ones that stop before an open.
         await new Promise((resolve) => {
-          this._restoreScreen(saved.service, resolve, { paneComing }).then(resolve);
+          const done = this._restoreScreen(saved.service, resolve, { paneComing });
+          done.then(resolve);
+          // The landing hold (_holdLandingPane) comes down once the screen is
+          // DRAWN: `done` settles after its real widget mounted, on every
+          // outcome, and two frames let it paint — as for the org screen.
+          screenHoldArmed = true;
+          done.then(
+            () => requestAnimationFrame(() => requestAnimationFrame(() => this._releaseLandingHold())),
+            () => this._releaseLandingHold(),
+          );
         });
       }
     } finally {
+      // No remembered-screen restore ran (Checkout return, deep link, a
+      // failure before it): nothing will release the hold, so do it now.
+      if (!screenHoldArmed) this._releaseLandingHold();
       // Hold the flag a beat longer than the feed so late mount-time
       // loadHome stragglers (breadcrumb renders async) stay suppressed.
       this._clearRestoreInFlight(2000);
@@ -2946,22 +2943,40 @@ class desk_module extends LetcBox {
    */
   _holdLandingPane() {
     if (!this.el || !this.el.dataset) return;
+    let screenComing = false;
     try {
       if (this._bootDeepLink) return;
       // Back from Checkout: no org-screen landing this boot (_restoreDeskState),
       // so nothing to hide the pane for.
       if (require("libs/checkout-return").isCheckoutBoot()) return;
-      // A reload that will put the org screen back (saved `orgView`) is held
-      // the same way; any other remembered state is not this landing.
+      // A RELOAD THAT WILL PUT A REMEMBERED SCREEN BACK — the Calendar, the
+      // Inbox, the Admin Console, Billing… — is held too, unconditionally: the
+      // workspace still opens underneath (the rail acts on it), but its pane
+      // is not shown on the way to the screen; window-folder__split-body
+      // flashed for a second before the screen came back. No boot tour runs
+      // over a remembered screen (_bootTourSectionOnScreen), so nothing else
+      // will show the pane. Released once the screen is drawn
+      // (_restoreDeskState).
       const saved = this._bootSavedState;
-      if (this._savedStateIsRestorable(saved) && !(saved && saved.orgView)) return;
-      if (Visitor.isMobile()) return;
-      if (!require("libs/org-overview").orgFeature()) return;
-      if (this._bootTourComing()) return;
+      screenComing = !!this._savedScreenService();
+      if (!screenComing) {
+        // A reload that will put the org screen back (saved `orgView`) is held
+        // the same way; any other remembered state is not this landing.
+        if (this._savedStateIsRestorable(saved) && !(saved && saved.orgView)) return;
+        if (Visitor.isMobile()) return;
+        if (!require("libs/org-overview").orgFeature()) return;
+        if (this._bootTourComing()) return;
+      }
     } catch (e) {
       return;
     }
     this.el.dataset.landingHold = "1";
+    // Owned by the remembered-screen restore: the reopen itself goes through
+    // togglePanel → _navigated (for Billing only after a chunk load), which
+    // must not drop it before the screen is drawn. The restore releases it on
+    // every outcome, a user's own navigation included (it then stops as
+    // "user-navigated" and still settles), and LANDING_HOLD_MAX remains.
+    this._screenRestoreHold = screenComing;
     clearTimeout(this._landingHoldTimer);
     this._landingHoldTimer = setTimeout(
       () => this._releaseLandingHold(),
@@ -2971,6 +2986,7 @@ class desk_module extends LetcBox {
 
   /** Show the pane _holdLandingPane hid. Idempotent. */
   _releaseLandingHold() {
+    this._screenRestoreHold = false;
     clearTimeout(this._landingHoldTimer);
     this._landingHoldTimer = null;
     if (this.el && this.el.dataset) delete this.el.dataset.landingHold;
@@ -6849,11 +6865,6 @@ class desk_module extends LetcBox {
       // a mount that failed after fire() succeeded.
       if (!raised) this._releaseBootTourHold();
       else require("libs/tutorial-tours").whenDone("migrate", () => this._releaseBootTourHold());
-      // Not raised → nothing will mount: the remembered screen may come now.
-      // Raised → the mount (onPartReady "window-tutorial") lets it go, and a
-      // tour released before it ever mounted does too.
-      if (!raised) this._markBootTourUp();
-      else require("libs/tutorial-tours").whenDone("migrate", () => this._markBootTourUp());
     }
     return raised;
   }
@@ -6914,61 +6925,6 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * DOES THE BOOT MIGRATE TOUR GO BEFORE THE REMEMBERED SCREEN?
-   *
-   * For a reload onto a section screen (Calendar, Inbox, Admin Console,
-   * Billing…) by an account that has not finished the tour: the tour is
-   * raised over the restored pane first, and the remembered screen comes
-   * back over it (see _restoreDeskState). Without this the pane was on
-   * screen, bare, between the boot and the screen.
-   *
-   * Same gates as any boot tour, plus the claims that beat a restore:
-   * a deep link / Internal Link (explicit destination), a URL tour, the
-   * post-onboarding tutorial, a Checkout return (its modal owns the boot).
-   *
-   * @returns {Boolean}
-   */
-  _bootTourBeforeScreen() {
-    try {
-      if (this._bootDeepLink || this._hasDeepLink()) return false;
-      if (this._bootDesignationLink) return false;
-      if (this._postOnboardingTutorial || this._tutorialWasAutomatic) return false;
-      if (Visitor.parseModuleArgs().tutorial) return false;
-      if (require("libs/window-tutorial-intent").has()) return false;
-      if (require("libs/checkout-return").isCheckoutBoot()) return false;
-      return !!require("libs/tutorial-tours").offerable("migrate", this);
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /**
-   * Resolves once the boot tour is on screen, or it is clear none is coming,
-   * or after `ms` — whichever is first. Never rejects.
-   *
-   * @param {Number} ms
-   * @returns {Promise}
-   */
-  _whenBootTourUp(ms) {
-    if (this._bootTourUp) return Promise.resolve();
-    return new Promise((resolve) => {
-      const timer = setTimeout(resolve, ms);
-      (this._bootTourUpWaiters || (this._bootTourUpWaiters = [])).push(() => {
-        clearTimeout(timer);
-        resolve();
-      });
-    });
-  }
-
-  /** The boot tour is up (or is not coming): release _whenBootTourUp. */
-  _markBootTourUp() {
-    this._bootTourUp = true;
-    const waiting = this._bootTourUpWaiters || [];
-    this._bootTourUpWaiters = [];
-    waiting.forEach((fn) => fn());
-  }
-
-  /**
    * IS A SECTION SCREEN THE BOOT TOUR WOULD COVER?
    *
    * The migrate tour teaches the workspace's Files pane. A reload that lands
@@ -6998,10 +6954,7 @@ class desk_module extends LetcBox {
       // almost every Checkout boot — counting it made the tour stand down for
       // a Billing screen that never came, leaving a new user on Files with no
       // tour at all.
-      // Nor when the tour goes BEFORE the remembered screen
-      // (_bootTourBeforeScreen): the restore waits for the tour then.
-      const restoring = !require("libs/checkout-return").isCheckoutBoot()
-        && !this._bootTourBeforeScreen();
+      const restoring = !require("libs/checkout-return").isCheckoutBoot();
       if (restoring && this._savedScreenService()) return true;
       const saved = this._bootSavedState;
       if (restoring && saved && saved.orgView && !this._bootDeepLink && !this._hasDeepLink()) return true;
@@ -7043,10 +6996,7 @@ class desk_module extends LetcBox {
       // The same wait the URL hook documents at length: the restore clears its
       // flag on a TIMER, not when the pane arrives, so a workspace has to be
       // watched for rather than asked about once.
-      // The restore is WAITING FOR THIS TOUR when it goes before the
-      // remembered screen (_whenBootTourUp), so waiting for the restore here
-      // would only stall both until the timeouts.
-      if (!this._bootTourBeforeScreen()) await this._awaitRestoreSettled();
+      await this._awaitRestoreSettled();
       const ws = await this._awaitRailWorkspace(this._workspaceIncoming() ? 8000 : 3000);
       if (!ws || (this.isDestroyed && this.isDestroyed())) return false;
       // And again at the last moment: the user may have opened a section
@@ -7488,7 +7438,7 @@ class desk_module extends LetcBox {
     this._releaseBootTourHold();
     // Same for the first-open landing hold — except for the landing's own
     // open of the organisation screen, which is the screen the hold is for.
-    if (!this._landingOpening) this._releaseLandingHold();
+    if (!this._landingOpening && !this._screenRestoreHold) this._releaseLandingHold();
     this._navSeq = (this._navSeq || 0) + 1;
     return this._navSeq;
   }
@@ -8898,10 +8848,6 @@ class desk_module extends LetcBox {
         const wtPreview = child && child.mget && child.mget("preview");
         // Held so navigation can take the tour down — see _endWindowTour.
         this._windowTour = child;
-        // A remembered screen waiting for the boot tour may come now — it
-        // lands over this tour and ends it (_whenBootTourUp). Two frames, so
-        // the tour has painted first.
-        requestAnimationFrame(() => requestAnimationFrame(() => this._markBootTourUp()));
         // The tour is mounted and has laid itself over the window: the pane
         // hidden for it can come back underneath. Two frames so the tour has
         // painted first — see _holdBootTourPane.

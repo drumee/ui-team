@@ -32,9 +32,8 @@ const sectionOnScreen = method("_bootTourSectionOnScreen(opt = {})", {
 });
 test.afterEach(() => { CHECKOUT_BOOT = false; });
 
-function host({ savedService = null, saved = null, deepLink = false, mainOnTop = false, current = null, beforeScreen = false } = {}) {
+function host({ savedService = null, saved = null, deepLink = false, mainOnTop = false, current = null } = {}) {
   return {
-    _bootTourBeforeScreen: () => beforeScreen,
     _savedScreenService: () => savedService,
     _bootSavedState: saved,
     _bootDeepLink: deepLink,
@@ -181,76 +180,4 @@ test("boot tour: Checkout started on Billing → the tour still comes over Files
   );
   assert.equal(r, true);
   assert.deepEqual(fired, ["migrate"]);
-});
-
-// ── TOUR BEFORE THE REMEMBERED SCREEN (2026-11-05) ───────────────────────────
-// Reload onto the Calendar with the tour unfinished: the tour covers the pane
-// first (no bare window-folder__split-body), then the Calendar comes over it.
-
-test("helper: a remembered section does not send the tour away when the tour goes first", () => {
-  for (const s of ["upgrade-plan", "toggle-calendar", "toggle-inbox", "toggle-apps"]) {
-    assert.equal(sectionOnScreen.call(host({ savedService: s, beforeScreen: true }), { savedOnly: true }), false, s);
-  }
-  assert.equal(sectionOnScreen.call(host({ saved: { orgView: 1 }, beforeScreen: true }), { savedOnly: true }), false);
-});
-
-test("boot tour: tour goes first → raised WITHOUT waiting for the restore (which waits for it)", async () => {
-  let waitedRestore = 0;
-  const h = host({ savedService: "toggle-calendar", beforeScreen: true });
-  const fired = [];
-  const fn = method("async _raiseBootTour()", {
-    require: (m) => (m === "libs/window-tutorial-intent" ? { has: () => false }
-      : m === "libs/checkout-return" ? { isCheckoutBoot: () => false } : { offerable: () => true }),
-  });
-  Object.assign(h, {
-    _bootTourSectionOnScreen: sectionOnScreen,
-    _awaitRestoreSettled: async () => { waitedRestore++; },
-    _awaitRailWorkspace: async () => ({ id: "ws" }),
-    _workspaceIncoming: () => false,
-    _whenToursIdle: async () => {},
-    _raiseRailTour: async (t) => { fired.push(t); return true; },
-  });
-  assert.equal(await fn.call(h), true);
-  assert.deepEqual(fired, ["migrate"]);
-  assert.equal(waitedRestore, 0);
-});
-
-test("_whenBootTourUp: resolves on _markBootTourUp, at once after it, and on the cap", async () => {
-  const when = method("_whenBootTourUp(ms)");
-  const mark = method("_markBootTourUp()");
-  const d = {};
-  let resolved = false;
-  const p = when.call(d, 10000).then(() => { resolved = true; });
-  await Promise.resolve();
-  assert.equal(resolved, false);
-  mark.call(d);
-  await p;
-  assert.equal(resolved, true);
-  await when.call(d, 10000); // already up → immediate
-  const capped = when.call({}, 5);
-  await capped; // resolves on the cap, never hangs
-});
-
-function before(o = {}) {
-  global.Visitor = { parseModuleArgs: () => (o.tutorialArg ? { tutorial: "x" } : {}) };
-  const fn = method("_bootTourBeforeScreen()", {
-    require: (m) => {
-      if (m === "libs/window-tutorial-intent") return { has: () => !!o.urlTour };
-      if (m === "libs/checkout-return") return { isCheckoutBoot: () => !!o.checkout };
-      if (m === "libs/tutorial-tours") return { offerable: () => o.offerable !== false };
-      throw new Error(`unexpected require ${m}`);
-    },
-  });
-  return fn.call({
-    _bootDeepLink: !!o.deepLink, _hasDeepLink: () => !!o.deepLink,
-    _bootDesignationLink: !!o.designation, _postOnboardingTutorial: !!o.postOnboarding,
-  });
-}
-
-test("_bootTourBeforeScreen: yes while the tour is to do; no for every stronger claim", () => {
-  assert.equal(before(), true);
-  for (const k of ["deepLink", "designation", "postOnboarding", "urlTour", "tutorialArg", "checkout"]) {
-    assert.equal(before({ [k]: true }), false, k);
-  }
-  assert.equal(before({ offerable: false }), false);
 });
