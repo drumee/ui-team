@@ -2453,7 +2453,7 @@ class __window_manager extends push {
     const ret = require("libs/checkout-return").get();
     if (!ret) return;
     const feedResult = () => Kind.waitFor("settings_billing_result").then(() => {
-      this.ensurePart("wrapper-modal").then((p) => {
+      return this.ensurePart("wrapper-modal").then((p) => {
         p.feed({
           kind: "settings_billing_result",
           result: ret.result,
@@ -2474,9 +2474,28 @@ class __window_manager extends push {
     // card would be swept away by the page it sits on. `onOpened` is called
     // on every outcome (desk openBillingPage), so the card still shows if the
     // page cannot open. `noTrack`: an automatic open, not an upgrade CTA.
-    RADIO_BROADCAST.trigger("desk:open-billing-page", {
-      noTrack: 1,
-      onOpened: feedResult,
+    //
+    // AFTER THE BOOT RESTORE HAS SETTLED. The restore reopens the workspace,
+    // and loadWorkspace closes any full-canvas screen when it applies
+    // (closeAllPanels): Billing opened at 1.2s was closed under the card,
+    // which was then left over a bare Files pane with no backdrop. The desk
+    // keeps the pane hidden the whole time (_holdLandingPane, Checkout boot)
+    // and gets it back once Billing and the card are both up.
+    const desk = window.Desk;
+    const settled = desk && _.isFunction(desk._awaitRestoreSettled)
+      ? desk._awaitRestoreSettled()
+      : Promise.resolve();
+    const release = () => {
+      if (desk && _.isFunction(desk._releaseCheckoutHold)) desk._releaseCheckoutHold();
+    };
+    Promise.resolve(settled).then(() => {
+      RADIO_BROADCAST.trigger("desk:open-billing-page", {
+        noTrack: 1,
+        onOpened: () => Promise.resolve(feedResult()).then(
+          () => requestAnimationFrame(() => requestAnimationFrame(release)),
+          release,
+        ),
+      });
     });
   }
 

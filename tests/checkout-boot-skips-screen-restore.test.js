@@ -84,7 +84,10 @@ test("remembered screen: the hold is released AFTER the screen restore settles",
     saved: { service: "toggle-calendar", workspace: { hub_id: "h1" } },
     checkoutBoot: false,
   });
-  await new Promise((r) => setTimeout(r, 10));
+  // promise → two frames (setTimeouts here): wait until it lands, bounded.
+  for (let i = 0; i < 50 && !calls.includes("release-landing"); i++) {
+    await new Promise((r) => setTimeout(r, 5));
+  }
   assert.deepEqual(calls, ["workspace", "screen:toggle-calendar", "release-landing"]);
 });
 
@@ -121,10 +124,34 @@ test("hold: a reload reopening the Calendar / Inbox / Admin Console / Billing hi
   }
 });
 
-test("hold: not for a deep link, a Checkout return, or a plain workspace reload", () => {
+test("hold: not for a deep link or a plain workspace reload", () => {
   assert.equal(holdWith({ savedService: "toggle-calendar", deepLink: true }).el.dataset.landingHold, undefined);
-  assert.equal(holdWith({ savedService: "toggle-calendar", checkout: true }).el.dataset.landingHold, undefined);
   assert.equal(holdWith({ saved: { workspace: {} } }).el.dataset.landingHold, undefined);
+});
+
+test("hold: a Checkout return hides the pane until Billing + the card are up (wm releases it)", () => {
+  const self = holdWith({ saved: { service: "upgrade-plan", workspace: {} }, checkout: true, tour: true });
+  assert.equal(self.el.dataset.landingHold, "1");
+  assert.equal(self._checkoutHold, true);
+  assert.equal(self._screenRestoreHold, true, "survives _navigated (opening Billing navigates)");
+});
+
+test("restore on a Checkout boot does NOT release the Checkout hold", async () => {
+  const fn = new Function("require", "BOOT_TOUR_FIRST_MAX", `return (${sliceFunction(DESK_SRC, "async _restoreDeskState()")});`)(
+    (m) => ({ isCheckoutBoot: () => true }), 6000);
+  const calls = [];
+  await fn.call({
+    _checkoutHold: true,
+    _bootDeepLink: false,
+    _bootSavedState: { service: "upgrade-plan", workspace: { hub_id: "h1" } },
+    _savedStateIsRestorable: (s) => !!s,
+    _waitForWm: async () => ({}),
+    _restoreWorkspace: async () => { calls.push("workspace"); return true; },
+    _openDefaultWorkspace: async () => true,
+    _clearRestoreInFlight() {}, _settleHomeGrid() {},
+    _releaseLandingHold: () => calls.push("release-landing"),
+  });
+  assert.deepEqual(calls, ["workspace"]);
 });
 
 test("_navigated keeps a screen-restore hold up (the reopen itself navigates)", () => {

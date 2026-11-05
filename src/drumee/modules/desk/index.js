@@ -2761,7 +2761,7 @@ class desk_module extends LetcBox {
       // modal exactly as a replayed Billing did. The workspace stays.
       if (opened && !require("libs/checkout-return").isCheckoutBoot()) {
         await this._landOnOrgView(true, { firstOpen: true });
-      } else this._releaseLandingHold();
+      } else if (!this._checkoutHold) this._releaseLandingHold();
       this._clearRestoreInFlight(opened ? 2500 : 0);
       // Nothing opened — either the account has none (home-empty is up, and
       // settleHomeGrid sees it) or the list could not be read, which is the
@@ -2845,7 +2845,8 @@ class desk_module extends LetcBox {
     } finally {
       // No remembered-screen restore ran (Checkout return, deep link, a
       // failure before it): nothing will release the hold, so do it now.
-      if (!screenHoldArmed) this._releaseLandingHold();
+      // The Checkout boot's hold is wm's to release (_releaseCheckoutHold).
+      if (!screenHoldArmed && !this._checkoutHold) this._releaseLandingHold();
       // Hold the flag a beat longer than the feed so late mount-time
       // loadHome stragglers (breadcrumb renders async) stay suppressed.
       this._clearRestoreInFlight(2000);
@@ -2944,44 +2945,59 @@ class desk_module extends LetcBox {
   _holdLandingPane() {
     if (!this.el || !this.el.dataset) return;
     let screenComing = false;
+    let checkoutHold = false;
     try {
       if (this._bootDeepLink) return;
-      // Back from Checkout: no org-screen landing this boot (_restoreDeskState),
-      // so nothing to hide the pane for.
-      if (require("libs/checkout-return").isCheckoutBoot()) return;
-      // A RELOAD THAT WILL PUT A REMEMBERED SCREEN BACK — the Calendar, the
-      // Inbox, the Admin Console, Billing… — is held too, unconditionally: the
-      // workspace still opens underneath (the rail acts on it), but its pane
-      // is not shown on the way to the screen; window-folder__split-body
-      // flashed for a second before the screen came back. No boot tour runs
-      // over a remembered screen (_bootTourSectionOnScreen), so nothing else
-      // will show the pane. Released once the screen is drawn
-      // (_restoreDeskState).
-      const saved = this._bootSavedState;
-      screenComing = !!this._savedScreenService();
-      if (!screenComing) {
-        // A reload that will put the org screen back (saved `orgView`) is held
-        // the same way; any other remembered state is not this landing.
-        if (this._savedStateIsRestorable(saved) && !(saved && saved.orgView)) return;
-        if (Visitor.isMobile()) return;
-        if (!require("libs/org-overview").orgFeature()) return;
-        if (this._bootTourComing()) return;
+      // BACK FROM CHECKOUT: the boot ends on Billing with the result card over
+      // it (wm checkCheckoutReturn), never on the workspace. Hidden for the
+      // whole way there — wm releases this hold once Billing and the card are
+      // both up (_releaseCheckoutHold) — so the pane does not show first.
+      checkoutHold = !!require("libs/checkout-return").isCheckoutBoot();
+      if (!checkoutHold) {
+        // A RELOAD THAT WILL PUT A REMEMBERED SCREEN BACK — the Calendar, the
+        // Inbox, the Admin Console, Billing… — is held too, unconditionally: the
+        // workspace still opens underneath (the rail acts on it), but its pane
+        // is not shown on the way to the screen; window-folder__split-body
+        // flashed for a second before the screen came back. No boot tour runs
+        // over a remembered screen (_bootTourSectionOnScreen), so nothing else
+        // will show the pane. Released once the screen is drawn
+        // (_restoreDeskState).
+        const saved = this._bootSavedState;
+        screenComing = !!this._savedScreenService();
+        if (!screenComing) {
+          // A reload that will put the org screen back (saved `orgView`) is held
+          // the same way; any other remembered state is not this landing.
+          if (this._savedStateIsRestorable(saved) && !(saved && saved.orgView)) return;
+          if (Visitor.isMobile()) return;
+          if (!require("libs/org-overview").orgFeature()) return;
+          if (this._bootTourComing()) return;
+        }
       }
     } catch (e) {
       return;
     }
+    this._checkoutHold = checkoutHold;
     this.el.dataset.landingHold = "1";
     // Owned by the remembered-screen restore: the reopen itself goes through
     // togglePanel → _navigated (for Billing only after a chunk load), which
     // must not drop it before the screen is drawn. The restore releases it on
     // every outcome, a user's own navigation included (it then stops as
     // "user-navigated" and still settles), and LANDING_HOLD_MAX remains.
-    this._screenRestoreHold = screenComing;
+    this._screenRestoreHold = screenComing || checkoutHold;
     clearTimeout(this._landingHoldTimer);
     this._landingHoldTimer = setTimeout(
       () => this._releaseLandingHold(),
       LANDING_HOLD_MAX,
     );
+  }
+
+  /**
+   * Billing and the Checkout result card are both on screen (wm
+   * checkCheckoutReturn): show the pane the Checkout boot hid. Idempotent.
+   */
+  _releaseCheckoutHold() {
+    this._checkoutHold = false;
+    this._releaseLandingHold();
   }
 
   /** Show the pane _holdLandingPane hid. Idempotent. */

@@ -1859,7 +1859,11 @@ class __calendar_main extends LetcBox {
     if (this._backdropDown) return;
     const fam = this.fig.family;
     const isBackdrop = (t) => {
-      if (!t || !t.classList || !this.el || !this.el.contains(t)) return false;
+      if (!t || !t.classList || !this.el) return false;
+      // The desk's top bar and sidebar, which the page fade leaves as they are,
+      // count as outside too.
+      if (_.isFunction(t.closest) && t.closest(".desk-module__topbar, .desk-module-sidebar__main")) return true;
+      if (!this.el.contains(t)) return false;
       if (t.classList.contains(`${fam}__modal-wrapper`)) return true;
       const form = this._form;
       if (form && form.kind === "task-quick-open") {

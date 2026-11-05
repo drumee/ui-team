@@ -18,10 +18,17 @@ const RESULT_SRC = read("src/drumee/builtins/widget/settings/account/billing/res
 const DESK_SKIN = read("src/drumee/modules/desk/skin/index.scss");
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
+global._ = Object.assign(global._ || {}, { isFunction: (f) => typeof f === "function" });
 
-test("Checkout return: Billing opens FIRST, the card is fed only once it is open", async () => {
+test("Checkout return: waits for the boot restore, opens Billing, feeds the card, then shows the pane", async () => {
   const log = [];
   let opened = null;
+  let settle;
+  global.requestAnimationFrame = (fn) => setTimeout(fn, 0);
+  global.window = { Desk: {
+    _awaitRestoreSettled: () => new Promise((r) => { settle = r; }),
+    _releaseCheckoutHold: () => log.push("release-hold"),
+  } };
   global.RADIO_BROADCAST = { trigger: (ev, opt) => { log.push(ev); opened = opt; } };
   global.Kind = { waitFor: async () => true };
   const part = { el: { dataset: { overlay: "blur" } }, feed: (o) => log.push(`feed:${o.kind}:${o.result}`) };
@@ -33,11 +40,14 @@ test("Checkout return: Billing opens FIRST, the card is fed only once it is open
   );
   fn.call({ ensurePart: async () => part });
   await flush();
+  assert.deepEqual(log, [], "nothing while the boot restore (which closes screens) runs");
+  settle(true);
+  await flush();
   assert.deepEqual(log, ["desk:open-billing-page"], "no card before Billing is open");
   assert.equal(opened.noTrack, 1, "an automatic open is not an upgrade CTA");
   opened.onOpened(); // the desk reports Billing open
-  await flush(); await flush();
-  assert.deepEqual(log, ["desk:open-billing-page", "feed:settings_billing_result:success"]);
+  await flush(); await flush(); await flush(); await flush();
+  assert.deepEqual(log, ["desk:open-billing-page", "feed:settings_billing_result:success", "release-hold"]);
   assert.equal(part.el.dataset.overlay, "none", "no blur / scrim left over from another dialog");
 });
 

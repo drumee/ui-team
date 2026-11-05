@@ -7,6 +7,10 @@
  */
 const { offerStatusMessage } = require("../offer-status");
 
+// Beyond the backdrop, a click here closes a "page fade" modal too: the desk's
+// top bar and its sidebar, which the backdrop leaves as they are.
+const PAGE_FADE_OUTSIDE = ".desk-module__topbar, .desk-module-sidebar__main";
+
 class settings_billing_result extends LetcBox {
   initialize(opt = {}) {
     require("./skin");
@@ -79,8 +83,11 @@ class settings_billing_result extends LetcBox {
   onBeforeDestroy() {
     if (this._countedOpen) {
       this._countedOpen = false;
-      require("libs/checkout-return").setModalOpen(false);
-      this._stampDesk(false);
+      const lib = require("libs/checkout-return");
+      lib.setModalOpen(false);
+      // Only when no result card is left: a second card (a re-feed) must not
+      // lose its backdrop to the first one's destroy.
+      if (!lib.isModalOpen()) this._stampDesk(false);
     }
     this._removeBackdropDismiss();
   }
@@ -103,6 +110,8 @@ class settings_billing_result extends LetcBox {
       if (!t || !this.el) return false;
       const card = this.el.querySelector(`.${this.fig.family}__card`);
       if (card && card.contains(t)) return false;
+      // The top bar and the sidebar are "outside" too (they stay unfaded).
+      if (_.isFunction(t.closest) && t.closest(PAGE_FADE_OUTSIDE)) return true;
       if (this.el.contains(t)) return true;
       // The wrapper-modal, or any container between it and this widget.
       const wrap = _.isFunction(this.el.closest) ? this.el.closest(".window-manager__wrapper-modal") : null;
