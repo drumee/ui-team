@@ -219,7 +219,7 @@ test("one layout for every card: lock pill inside the text column, same order in
   assert.ok(!/-visual|-rows|-row`/.test(skel));
   assert.match(skel, /className: `\$\{pfx\}-desc`[^\n]*\n\s*badge,/);
   const scss = read("src/drumee/skin/mixins/link-card.scss");
-  assert.match(scss, /width: 320px;\n\s*max-width: 100%;/);
+  assert.match(scss, /width: 296px;\n\s*max-width: 100%;/);
   assert.ok(!read("src/drumee/builtins/widget/chat/skin/index.scss").includes("max-width: 420px"));
 });
 

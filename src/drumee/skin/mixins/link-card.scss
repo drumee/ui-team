@@ -19,9 +19,12 @@
 // The lock pill is the email's "Access Restricted" pill on every tone.
 //
 // Shell = the other chat cards (meeting / call card in widget/chat-item):
-// 320px, 12px padding, 12px corners, card surface, hairline border, soft
-// shadow — so every link card has the same width, edges and spacing whatever
-// its tone or the bubble it sits on (Duy 2026-11-05: "fit, đồng bộ, align").
+// 12px padding, 12px corners, card surface, hairline border, soft shadow —
+// so every link card has the same width, edges and spacing whatever its tone
+// or the bubble it sits on (Duy 2026-11-05: "fit, đồng bộ, align"). Width
+// 296px = the inside of a workspace team-chat bubble (window/folder
+// _chat-bubbles: max 320px, 12px padding), so a card fills that bubble and
+// the composer card above the input is exactly as wide as the sent one.
 // One layout for all: icon tile | label · title · description, and the lock
 // pill (neutral cards only) on the text's left edge under the description.
 // Temporary design until the Figma one lands (Duy 2026-11-04).
@@ -35,7 +38,7 @@
     flex-direction: row;
     align-items: flex-start;
     gap: 10px;
-    width: 320px;
+    width: 296px;
     max-width: 100%;
     min-width: 0;
     padding: 12px;
