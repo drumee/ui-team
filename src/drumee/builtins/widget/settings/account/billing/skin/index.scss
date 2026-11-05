@@ -1620,10 +1620,15 @@
     // 12px label, 6px radius — it read as the loudest thing on the page.
     &-checkout-button {
       position: relative;
-      width: 100%;
+      // Not the full width of __checkout-right (a flex column): sized to its
+      // label, right-aligned under the summary. min-width keeps the busy
+      // spinner from shrinking it.
+      width: auto;
+      min-width: 168px;
+      align-self: flex-end;
       box-sizing: border-box;
       min-height: 32px;
-      padding: 6px var(--spacer-3, 12px);
+      padding: 6px 20px;
       background-color: var(--primary-50);
       color: var(--white);
       border-radius: 6px;
