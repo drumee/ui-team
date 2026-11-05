@@ -3370,5 +3370,19 @@
   "FORMAT_NUMBERED_LIST": "编号列表 (Ctrl+Shift+7)",
   "FORMAT_LINK": "链接 (Ctrl+K)",
   "DMZ_MEETING_EMAIL_REQUIRED": "组织者要求您先提供电子邮箱，才能加入此会议。",
-  "DMZ_MEETING_EMAIL_SHARED": "您的电子邮箱将与会议所有者共享。"
+  "DMZ_MEETING_EMAIL_SHARED": "您的电子邮箱将与会议所有者共享。",
+  "LINK_CARD_INTERNAL": "内部链接",
+  "LINK_CARD_EXTERNAL": "外部链接",
+  "LINK_CARD_INTERNAL_TITLE": "在 Drumee 工作区内共享",
+  "LINK_CARD_INTERNAL_DESC": "只有此工作区的成员可以打开。",
+  "LINK_CARD_ACCESS_RESTRICTED": "访问受限",
+  "LINK_CARD_SECURE_TITLE": "安全链接",
+  "LINK_CARD_SECURE_DESC": "受保护的文件，需要验证才能打开。",
+  "LINK_CARD_UNAVAILABLE_TITLE": "链接不可用",
+  "LINK_CARD_UNAVAILABLE_DESC": "此共享链接已过期或不再可用。",
+  "LINK_CARD_FILE_BY": "{0} 共享的文件",
+  "LINK_CARD_FOLDER_BY": "{0} 共享的文件夹",
+  "LINK_CARD_SHARED_FILE": "共享文件",
+  "LINK_CARD_LOADING": "正在加载预览…",
+  "LINK_CARD_HIDE": "隐藏预览"
 }

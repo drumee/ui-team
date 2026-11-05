@@ -213,7 +213,7 @@ const __skl_widget_chat = function (ui) {
           Skeletons.Wrapper.Y({
             className: `${chatFig}_chat_footer ack-wrapper`,
             sys_pn: 'chat-footer',
-            kids: [typingIndicator, ...require('./footer')(ui)]
+            kids: [typingIndicator, require('./link-card').holder(ui), ...require('./footer')(ui)]
           }),
           Skeletons.Box.Y({
             className: `${chatFig}__avatar-cache`,

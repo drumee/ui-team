@@ -1,5 +1,6 @@
 @use "sass:meta";
 @use "mixins/drumee";
+@use "mixins/link-card";
 
 // A desk node's icon at row size — the @-mention rows and the "From
 // workspace" picker rows share it: folder art tinted by area (own area, else
@@ -1542,3 +1543,49 @@ html[data-theme="dark"] {
   min-height: 180px;
   width: 280px;
 }
+
+// Composer link card (Lexis 2026-11-04): floats just above the input while a
+// Drumee link sits in it. The footer (.widget-chat_chat_footer) is the
+// positioning context.
+.widget-chat__link-preview {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: calc(100% + 6px);
+  z-index: 5;
+  pointer-events: none;
+
+  &[data-state="closed"] {
+    display: none;
+  }
+
+  &[data-state="open"] {
+    display: flex;
+  }
+
+  .widget-chat__link-card {
+    pointer-events: auto;
+    max-width: 420px;
+    padding-right: 36px;
+    box-shadow: 0 6px 20px rgba(11, 10, 33, 0.14);
+  }
+
+  .widget-chat__link-card-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    padding: 5px;
+    border-radius: 50%;
+    color: var(--neutral-600);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--neutral-200);
+      color: var(--primary-purple-100);
+    }
+  }
+}
+
+@include link-card.card(".widget-chat__link-card");

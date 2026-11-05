@@ -81,6 +81,14 @@ module.exports = function (webpack, opt) {
         to: 'mediapipe',
         globOptions: { ignore: ['**/package.json', '**/README.md', '**/*.d.ts'] },
         noErrorOnMissing: true,
+      }, {
+        // Link-preview card images (Open Graph og:image). The page server
+        // (server-team client/page.js) points crawlers at
+        // <this build>/link-preview/<neutral|public|secure>.png — fixed names,
+        // no hash, so it can build the URL without reading the manifest.
+        from: join(__dirname, '..', 'assets', 'link-preview'),
+        to: 'link-preview',
+        noErrorOnMissing: true,
       }]
     }),
     new Sync(opt)

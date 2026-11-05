@@ -3370,5 +3370,19 @@
   "FORMAT_NUMBERED_LIST": "បញ្ជីលេខ (Ctrl+Shift+7)",
   "FORMAT_LINK": "តំណ (Ctrl+K)",
   "DMZ_MEETING_EMAIL_REQUIRED": "អ្នករៀបចំតម្រូវឱ្យបញ្ចូលអ៊ីមែលរបស់អ្នក មុនពេលអ្នកអាចចូលរួមកិច្ចប្រជុំនេះ។",
-  "DMZ_MEETING_EMAIL_SHARED": "អ៊ីមែលរបស់អ្នកនឹងត្រូវបានចែករំលែកជាមួយម្ចាស់កិច្ចប្រជុំ។"
+  "DMZ_MEETING_EMAIL_SHARED": "អ៊ីមែលរបស់អ្នកនឹងត្រូវបានចែករំលែកជាមួយម្ចាស់កិច្ចប្រជុំ។",
+  "LINK_CARD_INTERNAL": "តំណខាងក្នុង",
+  "LINK_CARD_EXTERNAL": "តំណខាងក្រៅ",
+  "LINK_CARD_INTERNAL_TITLE": "បានចែករំលែកក្នុងកន្លែងធ្វើការ Drumee",
+  "LINK_CARD_INTERNAL_DESC": "មានតែសមាជិកនៃកន្លែងធ្វើការនេះទេដែលអាចបើកវាបាន។",
+  "LINK_CARD_ACCESS_RESTRICTED": "ការចូលប្រើត្រូវបានកំណត់",
+  "LINK_CARD_SECURE_TITLE": "តំណសុវត្ថិភាព",
+  "LINK_CARD_SECURE_DESC": "ឯកសារដែលបានការពារ។ ត្រូវការការផ្ទៀងផ្ទាត់ដើម្បីបើក។",
+  "LINK_CARD_UNAVAILABLE_TITLE": "តំណមិនអាចប្រើបាន",
+  "LINK_CARD_UNAVAILABLE_DESC": "តំណចែករំលែកនេះបានផុតកំណត់ ឬលែងមានទៀតហើយ។",
+  "LINK_CARD_FILE_BY": "ឯកសារដែល {0} បានចែករំលែក",
+  "LINK_CARD_FOLDER_BY": "ថតដែល {0} បានចែករំលែក",
+  "LINK_CARD_SHARED_FILE": "ឯកសារដែលបានចែករំលែក",
+  "LINK_CARD_LOADING": "កំពុងផ្ទុកការមើលជាមុន…",
+  "LINK_CARD_HIDE": "លាក់ការមើលជាមុន"
 }

@@ -1,0 +1,182 @@
+@use "mixins/drumee";
+
+// Link preview card for Drumee links in chat (Lexis 2026-11-04) — one look for
+// the card under a sent message (widget/chat-item) and the card floating above
+// the composer (widget/chat). `$pfx` is the card's class, e.g.
+// `.widget-chatItem__link-card`; parts are `#{$pfx}-icon`, `-body`, … .
+//
+// Tones (data-tone, libs/drumee-link-card):
+//   internal    — neutral, echoes the workspace-invite email (red lock pill)
+//   secure      — External link with email / password: same neutral card, amber
+//   public      — External public link: brand purple, file name + sender
+//   unavailable — revoked / expired: muted
+//   loading     — External link while its facts load
+// Temporary design until the Figma one lands (Duy 2026-11-04).
+@mixin card($pfx) {
+  #{$pfx} {
+    --lc-accent: var(--area-private);
+    --lc-accent-bg: var(--area-tint-private);
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    width: 100%;
+    max-width: 360px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--neutral-300);
+    border-left: 3px solid var(--lc-accent);
+    border-radius: 10px;
+    background: var(--neutral-100);
+    color: var(--primary-purple-100);
+    text-decoration: none;
+    cursor: pointer;
+    overflow: hidden;
+
+    &[data-tone="secure"] {
+      --lc-accent: var(--orange-500);
+      --lc-accent-bg: var(--orange-100);
+    }
+
+    &[data-tone="public"] {
+      --lc-accent: var(--primary-purple-40);
+      --lc-accent-bg: var(--primary-purple-10);
+      background: var(--white);
+    }
+
+    &[data-tone="unavailable"],
+    &[data-tone="loading"] {
+      --lc-accent: var(--neutral-500);
+      --lc-accent-bg: var(--neutral-200);
+    }
+  }
+
+  #{$pfx}-icon {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--lc-accent-bg);
+    color: var(--lc-accent);
+  }
+
+  #{$pfx}-ico,
+  #{$pfx}-badge-ico {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    color: inherit;
+  }
+
+  // The body keeps ~150px for the text; when the card is narrower than
+  // text + visual, the visual wraps under the text instead of squeezing it.
+  #{$pfx}-body {
+    flex: 1 1 150px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    gap: 1px;
+  }
+
+  #{$pfx}-label {
+    @include drumee.typo($size: 11px, $line: 1.3, $weight: 500);
+    color: var(--neutral-600);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #{$pfx}-title {
+    @include drumee.typo($size: 14px, $line: 1.35, $weight: 700);
+    color: var(--primary-purple-100);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #{$pfx}-desc {
+    @include drumee.typo($size: 12px, $line: 1.35, $weight: 400);
+    color: var(--neutral-600);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  // Neutral cards: three blurred rows behind a lock pill, like the email.
+  #{$pfx}-visual {
+    flex: 1 0 112px;
+    max-width: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 44px;
+  }
+
+  #{$pfx}-rows {
+    position: absolute;
+    inset: 0 auto 0 50%;
+    width: 112px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    filter: blur(0.6px);
+    opacity: 0.7;
+
+    i,
+    #{$pfx}-row {
+      display: block;
+      height: 6px;
+      min-height: 6px;
+      border-radius: 3px;
+      background: var(--neutral-500);
+    }
+
+    i:nth-child(2),
+    #{$pfx}-row:nth-child(2) {
+      width: 80%;
+    }
+  }
+
+  #{$pfx}-badge {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border: 1px solid var(--lc-accent);
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--lc-accent);
+    @include drumee.typo($size: 10px, $line: 1.2, $weight: 700);
+    white-space: nowrap;
+
+    #{$pfx}-badge-ico {
+      width: 11px;
+      height: 11px;
+    }
+
+    span,
+    #{$pfx}-badge-text {
+      color: var(--primary-purple-100);
+    }
+  }
+
+  @media (max-width: 480px) {
+    #{$pfx}-visual {
+      display: none;
+    }
+  }
+}
