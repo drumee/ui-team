@@ -95,7 +95,9 @@ test("backdrop over a screen: the screen fades, the workspace beneath is HIDDEN"
   const block = DESK_SKIN.slice(DESK_SKIN.indexOf('.desk-module[data-billing-result="screen"]'));
   const screen = block.slice(0, block.indexOf('.desk-module[data-billing-result="pane"]'));
   assert.match(screen, /\.desk-module__settings-main-slot\s*\{\s*opacity: 0\.2;\s*transition: opacity 0\.15s ease;/);
-  assert.match(screen, /\.window-manager__layer\.headless\s*\{\s*visibility: hidden;/);
+  // opacity too — `visibility: hidden` alone is undone by any descendant
+  // setting `visibility: visible`, which is how the ghosting survived f63a2099c.
+  assert.match(screen, /\.window-manager__layer:not\(\.upload-progress-layer\):not\(\.meeting-toast-layer\)\s*\{\s*visibility: hidden;\s*opacity: 0;\s*pointer-events: none;/);
   assert.doesNotMatch(screen, /headless\s*\{\s*opacity/, "the pane is not merely faded under a screen");
 });
 

@@ -1726,8 +1726,18 @@ body:has(.desk-module[data-device="mobile"]) {
     transition: opacity 0.15s ease;
   }
 
-  .window-manager__layer.headless {
+  // Hidden with OPACITY, not only visibility: `visibility: hidden` on a layer
+  // is undone by any descendant that sets `visibility: visible` (folder
+  // topbar menus, entrance animations…), and those parts of the workspace
+  // came back at full strength over the faded Billing — "Add spreadsheet",
+  // "Upload now", the chat input. No descendant can undo an ancestor's
+  // opacity (the same reason as the boot-tour pane hold). Every window
+  // layer, floating windows included; the upload floater and meeting toast
+  // are left alone, as in the other desk rules.
+  .window-manager__layer:not(.upload-progress-layer):not(.meeting-toast-layer) {
     visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
   }
 }
 
