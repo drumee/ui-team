@@ -134,3 +134,60 @@ test("lighting 'upgrade-plan' broadcasts sidebar-radio for the sidebar-plan part
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(lit, [["sidebar-radio", "sidebar-plan"]]);
 });
+
+// ── THE DEAD BUTTONS (2026-11-05): Billing already open under the card ───────
+// togglePanel's openOnly path ignores an open screen of the same kind, after
+// dismissing the modal: the card vanished and the plans view stayed. An open
+// Billing asked for something specific is now cleared and mounted again.
+
+function openOnBilling({ pending = "settings_billing", preselect }) {
+  const log = [];
+  global.LOCALE = {};
+  global.SERVICE = {};
+  global.RADIO_BROADCAST = { trigger: () => {} };
+  global.Kind = { waitFor: async () => true };
+  const fn = method(DESK_SRC, "openBillingPage(preselect)");
+  const self = {
+    _pendingKinds: { "settings-main-slot": pending },
+    _showBillingLoader() {}, _hideBillingLoader() {}, _lightRestoredRow() {},
+    _clearOpenBilling: () => log.push("clear"),
+    togglePanel: async (k, pn, a, opt) => { log.push(["toggle", opt]); },
+  };
+  return fn.call(self, preselect).then(() => log);
+}
+
+test("Use another card on an open Billing: cleared, then mounted with the checkout options", async () => {
+  const log = await openOnBilling({ preselect: { plan: "team", cycle: "monthly", tab: "checkout", promo: "TEAM1", noLoader: 1 } });
+  assert.deepEqual(log, ["clear", ["toggle", { page: 1, plan: "team", cycle: "monthly", tab: "checkout", promo: "TEAM1" }]]);
+});
+
+test("Continue at regular price on an open Billing: cleared, mounted with offer:decline", async () => {
+  const log = await openOnBilling({ preselect: { plan: "team", cycle: "monthly", tab: "checkout", offer: "decline" } });
+  assert.equal(log[0], "clear");
+  assert.equal(log[1][1].offer, "decline");
+});
+
+test("a bare open of an already-open Billing leaves it alone", async () => {
+  assert.deepEqual(await openOnBilling({ preselect: undefined }), [["toggle", { page: 1 }]]);
+  assert.deepEqual(await openOnBilling({ preselect: { noTrack: 1, onOpened() {} } }), [["toggle", { page: 1 }]]);
+});
+
+test("Billing not open: nothing to clear", async () => {
+  const log = await openOnBilling({ pending: "calendar_main", preselect: { plan: "team", tab: "checkout" } });
+  assert.deepEqual(log, [["toggle", { page: 1, plan: "team", tab: "checkout" }]]);
+});
+
+test("_clearOpenBilling clears Billing only", () => {
+  global._ = Object.assign(global._ || {}, { isFunction: (f) => typeof f === "function" });
+  global._a = Object.assign(global._a || {}, { kind: "kind" });
+  const fn = method(DESK_SRC, "_clearOpenBilling()");
+  const run = (kind) => {
+    let cleared = 0;
+    const p = { isEmpty: () => false, clear: () => { cleared++; }, children: { last: () => ({ mget: () => kind, el: { dataset: {} } }) } };
+    const self = { getPart: () => p, _pendingKinds: { "settings-main-slot": kind } };
+    fn.call(self);
+    return { cleared, pending: self._pendingKinds["settings-main-slot"] };
+  };
+  assert.deepEqual(run("settings_billing"), { cleared: 1, pending: null });
+  assert.deepEqual(run("calendar_main"), { cleared: 0, pending: "calendar_main" });
+});

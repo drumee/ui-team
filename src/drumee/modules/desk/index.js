@@ -11289,8 +11289,23 @@ class desk_module extends LetcBox {
     // screen sitting blank through two round trips, and covering it with a
     // spinner would put one back over a page that is already readable.
     if (!noLoader) this._showBillingLoader();
+    // ALREADY ON BILLING, ASKED FOR SOMETHING SPECIFIC → MOUNT IT AGAIN.
+    // settings_billing is not keep-alive, and togglePanel's openOnly path
+    // returns without touching a screen of the same kind that is already open
+    // — after it has dismissed the WM modal. So since the Checkout return
+    // lands on Billing, the result card's "Use another card" / "Continue at
+    // regular price" closed the card and left the plans view as it was: no
+    // checkout tab, no TEAM1, no decline. When the caller passes real options
+    // (plan / cycle / tab / promo / offer / intent), the open page is cleared
+    // so togglePanel loads it fresh with them. A bare open (no options) still
+    // leaves an open Billing alone.
+    const remount = Object.keys(pageOpt).length > 0
+      && this._pendingKinds && this._pendingKinds["settings-main-slot"] === "settings_billing";
     return Kind.waitFor("settings_billing")
-      .then(() => this.togglePanel("settings_billing", "settings-main-slot", true, opt))
+      .then(() => {
+        if (remount) this._clearOpenBilling();
+        return this.togglePanel("settings_billing", "settings-main-slot", true, opt);
+      })
       .then((r) => {
         // Light the rail's Plan row for EVERY way in, not only a click on it:
         // the post-Checkout modal's buttons, feature-lock upgrade CTAs, the
@@ -11304,6 +11319,22 @@ class desk_module extends LetcBox {
           try { onOpened(); } catch (e) { /* caller's own cleanup */ }
         }
       });
+  }
+
+  /**
+   * Drop the Billing screen that is open in the full-canvas slot, so the next
+   * togglePanel mounts it fresh (openBillingPage, `remount`). Only when the
+   * slot really holds Billing; anything else there is left alone.
+   */
+  _clearOpenBilling() {
+    const pn = "settings-main-slot";
+    const p = _.isFunction(this.getPart) ? this.getPart(pn) : null;
+    if (!p || p.isEmpty()) return;
+    const child = p.children.last();
+    const kind = child && ((child.mget && child.mget(_a.kind)) || (child.el && child.el.dataset.kind));
+    if (kind !== "settings_billing") return;
+    p.clear();
+    if (this._pendingKinds) this._pendingKinds[pn] = null;
   }
 
   /** The live billing loader window, or null. */
