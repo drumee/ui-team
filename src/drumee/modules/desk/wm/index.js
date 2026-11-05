@@ -2452,7 +2452,7 @@ class __window_manager extends push {
     // same question (and stand down on a Checkout boot), whoever asks first.
     const ret = require("libs/checkout-return").get();
     if (!ret) return;
-    Kind.waitFor("settings_billing_result").then(() => {
+    const feedResult = () => Kind.waitFor("settings_billing_result").then(() => {
       this.ensurePart("wrapper-modal").then((p) => {
         p.feed({
           kind: "settings_billing_result",
@@ -2460,7 +2460,23 @@ class __window_manager extends push {
           session_id: ret.session_id,
           uiHandler: [this],
         });
+        // The Calendar modal's backdrop: no scrim, no blur — the page behind
+        // fades instead (desk/skin `[data-billing-result]`). Explicitly off,
+        // because this host is shared and a `blur` left by another dialog
+        // would otherwise stay.
+        if (p.el) p.el.dataset.overlay = "none";
       });
+    });
+    // LAND ON BILLING, THEN SHOW THE CARD over it: the receipt is about the
+    // plan, so the plans page is what sits behind it, and closing the card
+    // leaves the user there. Billing first because opening a screen clears
+    // the wrapper-modal (togglePanel → _dismissWmModal): fed earlier, the
+    // card would be swept away by the page it sits on. `onOpened` is called
+    // on every outcome (desk openBillingPage), so the card still shows if the
+    // page cannot open. `noTrack`: an automatic open, not an upgrade CTA.
+    RADIO_BROADCAST.trigger("desk:open-billing-page", {
+      noTrack: 1,
+      onOpened: feedResult,
     });
   }
 

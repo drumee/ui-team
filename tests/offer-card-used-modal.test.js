@@ -46,6 +46,7 @@ async function refreshWith(receipt) {
   const self = {
     _result: "success",
     _sessionId: "cs_1",
+    _stampDesk() {},
     fetchService: async () => receipt,
     feed: (x) => fed.push(x),
   };

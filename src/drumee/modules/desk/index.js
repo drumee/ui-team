@@ -11261,7 +11261,7 @@ class desk_module extends LetcBox {
     // SERVICE.desk.cta_click is undefined until server-team ships the endpoint.
     // postService is async and its promise rejection is swallowed by .catch,
     // but without this guard the call POSTs to a path built from `undefined`.
-    if (SERVICE.desk && SERVICE.desk.cta_click) {
+    if (SERVICE.desk && SERVICE.desk.cta_click && !(preselect && preselect.noTrack)) {
       this.postService(SERVICE.desk.cta_click, { cta: "upgrade", hub_id: Visitor.id },
         { async: 1 }).catch(() => {});
     }
@@ -11274,7 +11274,9 @@ class desk_module extends LetcBox {
     //             then, and the page's mount is what takes the modal down
     //             (_dismissWmModal).
     //   noLoader  the caller shows its own busy state; skip the loader window.
-    const { onOpened, noLoader, ...pageOpt } = preselect || {};
+    //   noTrack   an automatic open (the Checkout return), not an upgrade
+    //             click: no cta_click.
+    const { onOpened, noLoader, noTrack, ...pageOpt } = preselect || {};
     const opt = Object.assign({ page: 1 }, pageOpt);
     // WHAT THE LOADER COVERS, and it is only this line. Kind.waitFor resolves a
     // dynamic import: settings_billing is a ~280KB chunk, and until it lands

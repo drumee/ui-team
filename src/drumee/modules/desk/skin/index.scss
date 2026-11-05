@@ -1701,3 +1701,22 @@ body:has(.desk-module[data-device="mobile"]) {
     display: none;
   }
 }
+
+// ── Post-Checkout result card: the Calendar modal's backdrop ────────────────
+//
+// Same treatment as calendar-main__modal (panel/calendar/skin, the task /
+// meeting forms): no scrim and no blur — the wrapper-modal is transparent
+// (wm checkCheckoutReturn stamps data-overlay="none") — and the page behind
+// the card fades to 20% over 0.15s. Here "the page" is whatever the card sits
+// on: the full-canvas slot (Billing, where the Checkout return lands) or the
+// workspace pane. The sidebar and top bar stay as they are, as in the
+// Calendar. The card itself lives in the wrapper-modal, outside both, so it
+// stays at full strength. `data-billing-result` is stamped on the desk root
+// by settings_billing_result while it is open.
+.desk-module[data-billing-result="1"] {
+  .desk-module__settings-main-slot,
+  .window-manager__layer.headless {
+    opacity: 0.2;
+    transition: opacity 0.15s ease;
+  }
+}

@@ -24,6 +24,9 @@ class settings_billing_result extends LetcBox {
     if (!this._countedOpen) {
       this._countedOpen = true;
       require("libs/checkout-return").setModalOpen(true);
+      // The page behind fades while this card is up (desk/skin
+      // `[data-billing-result]`) — the Calendar modal's backdrop.
+      this._stampDesk(true);
     }
     if (this._result === "success" && this._sessionId) {
       // hub_id is REQUIRED (payment.* ACL is scope:hub/src:owner).
@@ -76,7 +79,18 @@ class settings_billing_result extends LetcBox {
     if (this._countedOpen) {
       this._countedOpen = false;
       require("libs/checkout-return").setModalOpen(false);
+      this._stampDesk(false);
     }
+  }
+
+  /** Mark / unmark the desk root while this card is open. */
+  _stampDesk(on) {
+    try {
+      const root = document.querySelector(".desk-module");
+      if (!root) return;
+      if (on) root.dataset.billingResult = "1";
+      else delete root.dataset.billingResult;
+    } catch (e) { /* cosmetic */ }
   }
 
   /**
