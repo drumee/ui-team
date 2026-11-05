@@ -799,8 +799,9 @@
       flex: 1 1 0;
     }
 
-    // The 264px mini calendar hangs from the row's start (the label leads
-    // the row) instead of from the label's own box: from there it ran past the
+    // The 264px mini calendar hangs from the row's start (the left group's
+    // start — the ‹ Today › pill leads it now, the label follows) instead of
+    // from the label's own box: from there it ran past the
     // page's right edge on a narrow pane (measured: 22px cut at a 480px
     // window, 112px at 390, the › month button with it). The left group
     // becomes its positioning box and the label's box steps aside.
