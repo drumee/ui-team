@@ -3607,7 +3607,7 @@
   "LINK_CARD_INTERNAL_DESC": "Seuls les membres de cet espace de travail peuvent l'ouvrir.",
   "LINK_CARD_ACCESS_RESTRICTED": "Accès restreint",
   "LINK_CARD_SECURE_TITLE": "Lien sécurisé",
-  "LINK_CARD_SECURE_DESC": "Fichier protégé. Une vérification est requise pour l'ouvrir.",
+  "LINK_CARD_SECURE_DESC": "Lien protégé. Une vérification est requise pour l'ouvrir.",
   "LINK_CARD_UNAVAILABLE_TITLE": "Lien indisponible",
   "LINK_CARD_UNAVAILABLE_DESC": "Ce lien de partage a expiré ou n'est plus disponible.",
   "LINK_CARD_FILE_BY": "Fichier partagé par {0}",

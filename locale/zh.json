@@ -3377,7 +3377,7 @@
   "LINK_CARD_INTERNAL_DESC": "只有此工作区的成员可以打开。",
   "LINK_CARD_ACCESS_RESTRICTED": "访问受限",
   "LINK_CARD_SECURE_TITLE": "安全链接",
-  "LINK_CARD_SECURE_DESC": "受保护的文件，需要验证才能打开。",
+  "LINK_CARD_SECURE_DESC": "受保护的链接，需要验证才能打开。",
   "LINK_CARD_UNAVAILABLE_TITLE": "链接不可用",
   "LINK_CARD_UNAVAILABLE_DESC": "此共享链接已过期或不再可用。",
   "LINK_CARD_FILE_BY": "{0} 共享的文件",

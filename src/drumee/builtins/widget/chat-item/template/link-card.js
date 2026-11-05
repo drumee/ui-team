@@ -15,13 +15,10 @@ const __chat_item_link_card = function (model, href, fig) {
   const xlink = 'xmlns:xlink="http://www.w3.org/1999/xlink"';
   const ico = (name, cls) =>
     `<svg class="${cls}" aria-hidden="true"><use ${xlink} xlink:href="#--icon-${esc(name)}"></use></svg>`;
-  // Neutral cards echo the workspace-invite email: blurred rows behind a
-  // lock pill ("Access Restricted").
-  const visual = model.badge
-    ? `<span class="${pfx}-visual" aria-hidden="true">` +
-      `<span class="${pfx}-rows"><i></i><i></i><i></i></span>` +
-      `<span class="${pfx}-badge">${ico("apps-lock-simple", `${pfx}-badge-ico`)}<span>${esc(model.badge)}</span></span>` +
-      `</span>`
+  // Neutral cards carry the workspace-invite email's lock pill ("Access
+  // Restricted"), under the description, on the text's left edge.
+  const badge = model.badge
+    ? `<span class="${pfx}-badge">${ico("apps-lock-simple", `${pfx}-badge-ico`)}<span>${esc(model.badge)}</span></span>`
     : "";
   return (
     `<a class="${pfx}" data-tone="${esc(model.tone)}" data-link-card="1" href="${esc(href)}" target="_blank" rel="noopener noreferrer">` +
@@ -30,8 +27,8 @@ const __chat_item_link_card = function (model, href, fig) {
     `<span class="${pfx}-label">Drumee · ${esc(model.label)}</span>` +
     `<span class="${pfx}-title">${esc(model.title)}</span>` +
     (model.desc ? `<span class="${pfx}-desc">${esc(model.desc)}</span>` : "") +
+    badge +
     `</span>` +
-    visual +
     `</a>`
   );
 };

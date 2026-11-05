@@ -17,6 +17,13 @@
 //   unavailable — revoked / expired: muted
 //   loading     — External link while its facts load
 // The lock pill is the email's "Access Restricted" pill on every tone.
+//
+// Shell = the other chat cards (meeting / call card in widget/chat-item):
+// 320px, 12px padding, 12px corners, card surface, hairline border, soft
+// shadow — so every link card has the same width, edges and spacing whatever
+// its tone or the bubble it sits on (Duy 2026-11-05: "fit, đồng bộ, align").
+// One layout for all: icon tile | label · title · description, and the lock
+// pill (neutral cards only) on the text's left edge under the description.
 // Temporary design until the Figma one lands (Duy 2026-11-04).
 @mixin card($pfx) {
   #{$pfx} {
@@ -26,18 +33,18 @@
     position: relative;
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px 10px;
-    width: 100%;
-    max-width: 360px;
+    align-items: flex-start;
+    gap: 10px;
+    width: 320px;
+    max-width: 100%;
     min-width: 0;
-    padding: 10px 12px;
-    border: 1px solid var(--neutral-300);
-    border-left: 3px solid var(--lc-accent);
-    border-radius: 10px;
-    background: var(--neutral-100);
+    padding: 12px;
+    border: 1px solid var(--border-default, #e5e5ea);
+    border-radius: 12px;
+    background: var(--card-bg, #ffffff);
+    box-shadow: 0 1px 3px rgba(11, 10, 33, 0.06);
     color: var(--primary-purple-100);
+    text-align: left;
     text-decoration: none;
     cursor: pointer;
     overflow: hidden;
@@ -76,14 +83,13 @@
     color: inherit;
   }
 
-  // The body keeps ~150px for the text; when the card is narrower than
-  // text + visual, the visual wraps under the text instead of squeezing it.
   #{$pfx}-body {
-    flex: 1 1 150px;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     min-width: 0;
-    gap: 1px;
+    gap: 2px;
   }
 
   #{$pfx}-label {
@@ -112,51 +118,15 @@
     overflow: hidden;
   }
 
-  // Neutral cards: three blurred rows behind a lock pill, like the email.
-  #{$pfx}-visual {
-    flex: 1 0 112px;
-    max-width: 100%;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 44px;
-  }
-
-  #{$pfx}-rows {
-    position: absolute;
-    inset: 0 auto 0 50%;
-    width: 112px;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 6px;
-    filter: blur(0.6px);
-    opacity: 0.7;
-
-    i,
-    #{$pfx}-row {
-      display: block;
-      height: 6px;
-      min-height: 6px;
-      border-radius: 3px;
-      background: var(--neutral-500);
-    }
-
-    i:nth-child(2),
-    #{$pfx}-row:nth-child(2) {
-      width: 80%;
-    }
-  }
-
+  // The email's "Access Restricted" pill, on the text's left edge.
   #{$pfx}-badge {
-    position: relative;
-    display: flex;
+    align-self: flex-start;
+    box-sizing: border-box;
+    display: inline-flex;
     flex-direction: row;
     align-items: center;
     gap: 4px;
+    margin-top: 6px;
     padding: 3px 8px;
     border: 1px solid var(--area-private);
     border-radius: 999px;
@@ -173,12 +143,6 @@
     span,
     #{$pfx}-badge-text {
       color: var(--primary-purple-100);
-    }
-  }
-
-  @media (max-width: 480px) {
-    #{$pfx}-visual {
-      display: none;
     }
   }
 }

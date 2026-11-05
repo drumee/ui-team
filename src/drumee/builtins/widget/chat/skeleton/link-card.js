@@ -23,25 +23,14 @@ function holder(ui) {
  */
 function card(ui, model) {
   const pfx = `${ui.fig.family}__link-card`;
-  const visual = model.badge
-    ? Skeletons.Box.Y({
-        className: `${pfx}-visual`,
+  // The workspace-invite email's lock pill, under the description (same
+  // markup order as the sent-message card, widget/chat-item/template).
+  const badge = model.badge
+    ? Skeletons.Box.X({
+        className: `${pfx}-badge`,
         kids: [
-          Skeletons.Box.Y({
-            className: `${pfx}-rows`,
-            kids: [
-              Skeletons.Note({ className: `${pfx}-row`, content: "" }),
-              Skeletons.Note({ className: `${pfx}-row`, content: "" }),
-              Skeletons.Note({ className: `${pfx}-row`, content: "" }),
-            ],
-          }),
-          Skeletons.Box.X({
-            className: `${pfx}-badge`,
-            kids: [
-              Skeletons.Image.Svg({ ico: "apps-lock-simple", className: `${pfx}-badge-ico` }),
-              Skeletons.Note({ className: `${pfx}-badge-text`, content: esc(model.badge) }),
-            ],
-          }),
+          Skeletons.Image.Svg({ ico: "apps-lock-simple", className: `${pfx}-badge-ico` }),
+          Skeletons.Note({ className: `${pfx}-badge-text`, content: esc(model.badge) }),
         ],
       })
     : null;
@@ -60,9 +49,9 @@ function card(ui, model) {
           Skeletons.Note({ className: `${pfx}-label`, content: `Drumee · ${esc(model.label)}` }),
           Skeletons.Note({ className: `${pfx}-title`, content: esc(model.title) }),
           model.desc ? Skeletons.Note({ className: `${pfx}-desc`, content: esc(model.desc) }) : null,
+          badge,
         ],
       }),
-      visual,
       Skeletons.Button.Svg({
         ico: "cross",
         className: `${pfx}-close`,

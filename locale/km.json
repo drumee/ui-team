@@ -3377,7 +3377,7 @@
   "LINK_CARD_INTERNAL_DESC": "មានតែសមាជិកនៃកន្លែងធ្វើការនេះទេដែលអាចបើកវាបាន។",
   "LINK_CARD_ACCESS_RESTRICTED": "ការចូលប្រើត្រូវបានកំណត់",
   "LINK_CARD_SECURE_TITLE": "តំណសុវត្ថិភាព",
-  "LINK_CARD_SECURE_DESC": "ឯកសារដែលបានការពារ។ ត្រូវការការផ្ទៀងផ្ទាត់ដើម្បីបើក។",
+  "LINK_CARD_SECURE_DESC": "តំណដែលបានការពារ។ ត្រូវការការផ្ទៀងផ្ទាត់ដើម្បីបើក។",
   "LINK_CARD_UNAVAILABLE_TITLE": "តំណមិនអាចប្រើបាន",
   "LINK_CARD_UNAVAILABLE_DESC": "តំណចែករំលែកនេះបានផុតកំណត់ ឬលែងមានទៀតហើយ។",
   "LINK_CARD_FILE_BY": "ឯកសារដែល {0} បានចែករំលែក",

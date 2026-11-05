@@ -206,6 +206,31 @@ test("sent-message card escapes every text and the href", () => {
   assert.ok(html.includes("#--icon-app-file"));
 });
 
+test("one layout for every card: lock pill inside the text column, same order in chat + composer", () => {
+  const fig = "widget-chatItem";
+  const lock = tpl(LC.cardModel({ kind: "internal", filetype: "folder", url: "u" }, null, {}), "u", fig);
+  const body = lock.slice(lock.indexOf(`${fig}__link-card-body`), lock.lastIndexOf("</span></a>"));
+  assert.ok(body.includes(`${fig}__link-card-badge`), "pill sits in the body");
+  assert.ok(lock.indexOf(`${fig}__link-card-desc`) < lock.indexOf(`${fig}__link-card-badge`));
+  assert.ok(!/link-card-(visual|rows)/.test(lock));
+  const open = tpl(LC.cardModel({ kind: "share", token: TOKEN, url: "u" }, { state: "public", filename: "a", filetype: "folder" }, {}), "u", fig);
+  assert.ok(!open.includes("link-card-badge"));
+  const skel = read("src/drumee/builtins/widget/chat/skeleton/link-card.js");
+  assert.ok(!/-visual|-rows|-row`/.test(skel));
+  assert.match(skel, /className: `\$\{pfx\}-desc`[^\n]*\n\s*badge,/);
+  const scss = read("src/drumee/skin/mixins/link-card.scss");
+  assert.match(scss, /width: 320px;\n\s*max-width: 100%;/);
+  assert.ok(!read("src/drumee/builtins/widget/chat/skin/index.scss").includes("max-width: 420px"));
+});
+
+test("secure card never calls a folder a file", () => {
+  assert.ok(!/Protected file/.test(read("src/drumee/libs/drumee-link-card.js")));
+  for (const l of LANGS) {
+    const v = JSON.parse(read(`locale/${l}.json`)).LINK_CARD_SECURE_DESC;
+    assert.ok(v && !/file|fichier|archivo|файл|文件|ឯកសារ/i.test(v), `${l}: ${v}`);
+  }
+});
+
 test("composer card escapes every text", () => {
   const src = read("src/drumee/builtins/widget/chat/skeleton/link-card.js");
   for (const f of ["badge", "label", "title", "desc"]) {

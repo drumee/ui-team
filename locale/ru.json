@@ -3383,7 +3383,7 @@
   "LINK_CARD_INTERNAL_DESC": "Открыть могут только участники этого рабочего пространства.",
   "LINK_CARD_ACCESS_RESTRICTED": "Доступ ограничен",
   "LINK_CARD_SECURE_TITLE": "Защищённая ссылка",
-  "LINK_CARD_SECURE_DESC": "Защищённый файл. Чтобы открыть его, нужна проверка.",
+  "LINK_CARD_SECURE_DESC": "Защищённая ссылка. Чтобы открыть её, нужна проверка.",
   "LINK_CARD_UNAVAILABLE_TITLE": "Ссылка недоступна",
   "LINK_CARD_UNAVAILABLE_DESC": "Срок действия ссылки истёк, или она больше недоступна.",
   "LINK_CARD_FILE_BY": "Файл от {0}",

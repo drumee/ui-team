@@ -3378,7 +3378,7 @@
   "LINK_CARD_INTERNAL_DESC": "Solo los miembros de este espacio de trabajo pueden abrirlo.",
   "LINK_CARD_ACCESS_RESTRICTED": "Acceso restringido",
   "LINK_CARD_SECURE_TITLE": "Enlace seguro",
-  "LINK_CARD_SECURE_DESC": "Archivo protegido. Se requiere verificación para abrirlo.",
+  "LINK_CARD_SECURE_DESC": "Enlace protegido. Se requiere verificación para abrirlo.",
   "LINK_CARD_UNAVAILABLE_TITLE": "Enlace no disponible",
   "LINK_CARD_UNAVAILABLE_DESC": "Este enlace compartido ha caducado o ya no está disponible.",
   "LINK_CARD_FILE_BY": "Archivo compartido por {0}",

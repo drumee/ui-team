@@ -255,7 +255,7 @@ function cardModel(link, facts, L = {}) {
       tone: TONE.secure,
       label,
       title: L.LINK_CARD_SECURE_TITLE || "Secure link",
-      desc: L.LINK_CARD_SECURE_DESC || "Protected file. Verification is required to open it.",
+      desc: L.LINK_CARD_SECURE_DESC || "Protected link. Verification is required to open it.",
       icon: ICON.lock,
       badge: L.LINK_CARD_ACCESS_RESTRICTED || "Access Restricted",
     };

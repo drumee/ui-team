@@ -3606,7 +3606,7 @@
   "LINK_CARD_INTERNAL_DESC": "Only members of this workspace can open it.",
   "LINK_CARD_ACCESS_RESTRICTED": "Access Restricted",
   "LINK_CARD_SECURE_TITLE": "Secure link",
-  "LINK_CARD_SECURE_DESC": "Protected file. Verification is required to open it.",
+  "LINK_CARD_SECURE_DESC": "Protected link. Verification is required to open it.",
   "LINK_CARD_UNAVAILABLE_TITLE": "Link unavailable",
   "LINK_CARD_UNAVAILABLE_DESC": "This shared link has expired or is no longer available.",
   "LINK_CARD_FILE_BY": "File shared by {0}",
