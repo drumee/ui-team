@@ -2815,13 +2815,30 @@ class desk_module extends LetcBox {
       // workspace above is still restored underneath; the modal's own
       // buttons go to Billing when the user asks.
       const checkoutBoot = require("libs/checkout-return").isCheckoutBoot();
+      // THE MIGRATE TOUR GOES FIRST, THEN THE REMEMBERED SCREEN. A new account
+      // that has not finished the tour and reloads on the Calendar, the Inbox,
+      // the Admin Console, Billing… got the bare window-folder__split-body and
+      // no tour: the tour stood down for the remembered screen. Now the screen
+      // waits: the reload lands on Files, _raiseBootTour runs the tour there,
+      // and when the tour ends the remembered screen is put back
+      // (_deferScreenUntilTour). Once the tour is done for good, reloads
+      // restore the remembered screen straight away, as ever.
+      const tourOwns = !checkoutBoot && this._bootTourOwnsReload();
+      const skipScreen = checkoutBoot || tourOwns;
+      if (tourOwns && (saved.orgView || saved.service)) {
+        this._deferScreenUntilTour({
+          orgView: !!saved.orgView,
+          service: saved.service || null,
+          paneComing,
+        });
+      }
       // The organisation screen the user was on. Before saved.service: a
       // slide-out (Trash, Contacts, Notifications) can be open over it, and
       // has to land on top of it again.
-      if (saved.orgView && !checkoutBoot && !(this.isDestroyed && this.isDestroyed())) {
+      if (saved.orgView && !skipScreen && !(this.isDestroyed && this.isDestroyed())) {
         await this._landOnOrgView(paneComing);
       }
-      if (saved.service && !checkoutBoot && !(this.isDestroyed && this.isDestroyed())) {
+      if (saved.service && !skipScreen && !(this.isDestroyed && this.isDestroyed())) {
         // Wait for the OPEN only. The restore flag below exists to keep a
         // late loadHome from wiping the screen being opened; the wait for the
         // screen's items (up to 6s more) needs no such guard, and holding the
@@ -6833,6 +6850,10 @@ class desk_module extends LetcBox {
       // a mount that failed after fire() succeeded.
       if (!raised) this._releaseBootTourHold();
       else require("libs/tutorial-tours").whenDone("migrate", () => this._releaseBootTourHold());
+      // The tour has decided: a remembered screen parked for it comes back
+      // when it ends (now, when it did not run).
+      this._bootTourSettled = true;
+      this._armDeferredScreen();
     }
     return raised;
   }
@@ -6893,6 +6914,98 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * PARK THE REMEMBERED SCREEN UNTIL THE BOOT TOUR IS OVER.
+   *
+   * Called by _restoreDeskState when the tour owns the reload. Whichever of
+   * the two finishes deciding second arms the replay: the restore usually
+   * parks first and _maybeRunBootTour arms it, but if the tour has already
+   * decided, parking arms it at once.
+   *
+   * `seq` is the navigation the user was on when it was parked — see
+   * _replayDeferredScreen.
+   *
+   * @param {{orgView: Boolean, service: ?String, paneComing: Boolean}} screen
+   */
+  _deferScreenUntilTour(screen) {
+    this._deferredScreen = { ...screen, seq: this._navSeq || 0 };
+    if (this._bootTourSettled) this._armDeferredScreen();
+  }
+
+  /**
+   * Replay the parked screen once the migrate tour is released — or now, when
+   * no tour is in flight (it did not run, or already ended). whenDone runs the
+   * callback immediately in that case.
+   */
+  _armDeferredScreen() {
+    if (!this._deferredScreen) return;
+    try {
+      require("libs/tutorial-tours").whenDone("migrate", () => this._replayDeferredScreen());
+    } catch (e) {
+      this._replayDeferredScreen();
+    }
+  }
+
+  /**
+   * Put back the screen the reload was remembered on, through the same paths
+   * the boot restore uses (_landOnOrgView, then _restoreScreen — a slide-out
+   * lands on top of the organisation screen, as at boot).
+   *
+   * NOT when the user has gone somewhere since it was parked: a rail press,
+   * the switcher or a section screen opened during the tour moves _navSeq or
+   * puts a screen up, and that choice wins over a replay of where they were
+   * before the reload.
+   */
+  async _replayDeferredScreen() {
+    const d = this._deferredScreen;
+    this._deferredScreen = null;
+    if (!d || (this.isDestroyed && this.isDestroyed())) return;
+    if ((this._navSeq || 0) !== d.seq) return;
+    try {
+      if (this._mainScreenOnTop() || this._currentScreenService()) return;
+    } catch (e) {
+      return;
+    }
+    if (d.orgView) await this._landOnOrgView(d.paneComing);
+    if (d.service && !(this.isDestroyed && this.isDestroyed())) {
+      await new Promise((resolve) => {
+        this._restoreScreen(d.service, resolve, { paneComing: d.paneComing }).then(resolve);
+      });
+    }
+  }
+
+  /**
+   * DOES THE BOOT MIGRATE TOUR TAKE THIS RELOAD OVER?
+   *
+   * True when the tour is still to do (offerable: new account, not finished,
+   * not on a phone, kill switch off) and nothing else has a stronger claim on
+   * the boot. Then _restoreDeskState parks the remembered section screen,
+   * the reload lands on Files with the tour, and the screen comes back when
+   * the tour ends (_deferScreenUntilTour).
+   *
+   * Stronger claims, in which case the remembered screen is restored as ever:
+   *   a deep link / Internal Link   an explicit destination (it already wins
+   *                                 over the saved state)
+   *   a `?window_tutorial=` / URL   a tour asked for by name runs instead
+   *   the post-onboarding tutorial  covers the whole desk itself
+   * A Checkout return is handled by its own flag (checkoutBoot).
+   *
+   * @returns {Boolean}
+   */
+  _bootTourOwnsReload() {
+    try {
+      if (this._bootDeepLink || this._hasDeepLink()) return false;
+      if (this._bootDesignationLink) return false;
+      if (this._postOnboardingTutorial || this._tutorialWasAutomatic) return false;
+      if (Visitor.parseModuleArgs().tutorial) return false;
+      if (require("libs/window-tutorial-intent").has()) return false;
+      return !!require("libs/tutorial-tours").offerable("migrate", this);
+    } catch (e) {
+      // Unknown → restore as ever.
+      return false;
+    }
+  }
+
+  /**
    * IS A SECTION SCREEN THE BOOT TOUR WOULD COVER?
    *
    * The migrate tour teaches the workspace's Files pane. A reload that lands
@@ -6906,8 +7019,13 @@ class desk_module extends LetcBox {
    * workspace pane is up (libs/screen-restore), i.e. after the tour may
    * already be on its way:
    *   saved    the screen this boot is about to put back (sessionStorage).
-   *            A deep link wins over it, as in _savedScreenService.
-   *   live     whatever is on the canvas when the tour is about to fire.
+   *            A deep link wins over it, as in _savedScreenService. Ignored
+   *            when it will NOT be put back: a Checkout return, or a reload
+   *            the tour owns (_bootTourOwnsReload) — which, while the tour is
+   *            still to do, is every ordinary reload, so the tour now lands on
+   *            Files first and the remembered screen comes back after it.
+   *   live     whatever is on the canvas when the tour is about to fire — a
+   *            section the user OPENS still sends the tour away.
    *
    * @param {Object} [opt]
    * @param {Boolean} [opt.savedOnly] skip the live read (before the feed,
@@ -6922,7 +7040,10 @@ class desk_module extends LetcBox {
       // almost every Checkout boot — counting it made the tour stand down for
       // a Billing screen that never came, leaving a new user on Files with no
       // tour at all.
-      const restoring = !require("libs/checkout-return").isCheckoutBoot();
+      // Nor when the boot tour owns this reload (_bootTourOwnsReload): the
+      // remembered screen is skipped then too, in favour of the tour.
+      const restoring = !require("libs/checkout-return").isCheckoutBoot()
+        && !this._bootTourOwnsReload();
       if (restoring && this._savedScreenService()) return true;
       const saved = this._bootSavedState;
       if (restoring && saved && saved.orgView && !this._bootDeepLink && !this._hasDeepLink()) return true;
