@@ -99,7 +99,9 @@ test("backdrop over a screen: the screen fades, the workspace beneath is HIDDEN"
   assert.match(screen, /\.desk-module__settings-main-slot\s*\{\s*opacity: 0\.2;\s*transition: opacity 0\.15s ease;/);
   // opacity too — `visibility: hidden` alone is undone by any descendant
   // setting `visibility: visible`, which is how the ghosting survived f63a2099c.
-  assert.match(screen, /\.window-manager__layer:not\(\.upload-progress-layer\):not\(\.meeting-toast-layer\)\s*\{\s*visibility: hidden;\s*opacity: 0;\s*pointer-events: none;/);
+  // …and the home grid with it: a Checkout return opens no workspace, so the
+  // home folders were revealed and showed through the faded Billing.
+  assert.match(screen, /\.window-manager__layer:not\(\.upload-progress-layer\):not\(\.meeting-toast-layer\),\s*\.window-manager__icons-list\s*\{\s*visibility: hidden;\s*opacity: 0;\s*pointer-events: none;/);
   assert.doesNotMatch(screen, /headless\s*\{\s*opacity/, "the pane is not merely faded under a screen");
 });
 
