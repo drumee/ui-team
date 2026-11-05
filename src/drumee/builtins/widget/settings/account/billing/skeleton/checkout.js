@@ -561,6 +561,11 @@ function rightPanelContent(ui) {
       promoCodeSection(ui),
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,
+        // Button.Label IS an svg widget: with no `ico` it still drew an empty
+        // 16px icon box (pointing at #--icon-undefined) plus the 12px gap
+        // before the label, so the CTA showed a blank slot and an off-centre
+        // label. A lock — secure payment — fills it.
+        ico: "apps-lock-simple",
         className: `${pfx}-checkout-button`,
         service: isFreePlan ? null : "proceed-checkout-billing",
         priority: "primary",
