@@ -2744,6 +2744,23 @@ class desk_module extends LetcBox {
     const saved = this._bootSavedState;
     const hasSaved = this._savedStateIsRestorable(saved);
 
+    // BACK FROM STRIPE CHECKOUT: NO WORKSPACE AT ALL. The boot ends on Billing
+    // with the result card over it (wm checkCheckoutReturn), so nothing that
+    // would sit underneath is opened — no floating windows, no remembered or
+    // default workspace, no remembered screen. Opening one only cost time (the
+    // card waited for it) and raced Billing (loadWorkspace closes full-canvas
+    // screens). The rail opens the default workspace on its first press when
+    // none is open. The restore flag STAYS UP until Billing and the card are
+    // on screen — with it down, the breadcrumb's mount-time loadHome() runs
+    // Wm.reload() — and wm drops it then (_releaseCheckoutHold, with the pane
+    // hold); capped here in case that never comes. A deep link still wins, as
+    // it does over any restore.
+    if (!deepLink && require("libs/checkout-return").isCheckoutBoot()) {
+      this._clearRestoreInFlight(LANDING_HOLD_MAX);
+      this._settleHomeGrid();
+      return;
+    }
+
     if (!deepLink && !hasSaved) {
       // Nothing to restore — land on a workspace rather than an empty desk.
       // The new shell's rail (Files / Chat / Task / Meet / Access) all act on
@@ -2998,6 +3015,9 @@ class desk_module extends LetcBox {
   _releaseCheckoutHold() {
     this._checkoutHold = false;
     this._releaseLandingHold();
+    // The restore flag the Checkout boot kept up (_restoreDeskState), on the
+    // same beat loadDefault uses for late loadHome stragglers.
+    this._clearRestoreInFlight(2000);
   }
 
   /** Show the pane _holdLandingPane hid. Idempotent. */
