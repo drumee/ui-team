@@ -312,15 +312,6 @@ class ___widget_chatItem extends LetcBox {
         );
       }
 
-      if (this.mget(_a.type) == _a.share && author != _a.me) {
-        child.append(
-          Skeletons.UserProfile({
-            className: `${fig}__profile other`,
-            id: this.mget(_a.author_id),
-          }),
-        );
-      }
-
       // Prepend reply quote last so it sits above attachment + bubble.
       if (hasThread) {
         const threadMsg = require("./skeleton/reply-message")(this);

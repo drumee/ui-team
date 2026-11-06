@@ -56,7 +56,10 @@ function nav(ui) {
           }),
         ],
       }),
-      Skeletons.Box.Y({
+      // A wrapping ROW, not a column: each item takes a full line on desktop
+      // (skin), and the stacked layout turns it into a sideways chip strip —
+      // which a Box.Y could only do by overriding flex-direction.
+      Skeletons.Box.X({
         className: `${pfx}-list`,
         sys_pn: "help-nav-list",
         kids: navList(ui),

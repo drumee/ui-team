@@ -345,7 +345,7 @@ class __desk_dock extends LetcBox {
       case 'add-note':
         if (require("libs/over-limit").guardWrite("write")) return;
         let e = Wm.windowsLayer.append({
-          kind: 'editor_markdown',
+          kind: 'editor_blocknote',
           uiHandler: [this]
         });
         return e;

@@ -63,14 +63,15 @@
       }
     }
 
+    // The 30%-wide, full-height strip is the hover zone that reveals the
+    // arrow; the arrow itself is a small round chip inset from the edge.
     .button {
-      color: var(--default-icon-reverse);
-      cursor: pointer;
-      height: 90px;
-      width: 100px;
-      height: 100%;
       align-items: center;
+      color: var(--default-icon-reverse);
+      // The whole strip still steps (the click lands on .button).
+      cursor: pointer;
       display: flex;
+      height: 100%;
       width: 30%;
 
       &[data-state="0"] {
@@ -78,38 +79,36 @@
       }
 
       &.prev {
-        margin-left: 0px;
+        padding-left: 16px;
       }
 
       &.next {
-        margin-right: 0;
         justify-content: flex-end;
-      }
-
-      &.prev,
-      &.next {
-        & svg {
-          display: none;
-        }
-
-        &:hover {
-          & svg {
-            display: block;
-          }
-        }
+        padding-right: 16px;
       }
 
       svg {
-        height: 45px;
-        opacity: 0.5;
-        width: 50px;
+        // Dark scrim so the white arrow reads over light and dark images.
+        background-color: rgb(0 0 0 / 45%);
+        border-radius: 50%;
+        box-sizing: content-box;
+        display: none;
+        height: 16px;
+        padding: 10px;
+        transition: background-color 0.15s ease, color 0.15s ease;
+        width: 16px;
+
+        &:hover {
+          background-color: rgb(0 0 0 / 70%);
+          color: var(--default-icon-hover);
+        }
       }
 
       &:hover {
         opacity: 1 !important;
 
         svg {
-          opacity: 1 !important;
+          display: block;
         }
       }
     }

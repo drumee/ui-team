@@ -128,15 +128,19 @@ export function createRows(ui) {
       area: ui.mget(_a.area) || _a.personal,
       className: `${cnItem}--add-folder`,
     }),
-    // Note is temporarily hidden from the create list (2026-08). The add-note
-    // handler (window/core.js) and editor_markdown stay wired — uncomment this
-    // row to restore the option on BOTH surfaces.
-    // menuRow(ui, {
-    //   service: "add-note",
-    //   ico: "addmenu-note",
-    //   content: LOCALE.NOTE,
-    //   className: `${cnItem}--add-note`,
-    // }),
+    // Note. This menu is where people actually create things inside a
+    // workspace, which is why the option lives here rather than only on the
+    // desk's own "+ New".
+    //
+    // `add-blocknote` rather than `add-note`: both now open the same editor
+    // (window/core.js), and this is the name the row has carried since it was
+    // added, so the CSS and any muscle memory around it stay put.
+    menuRow(ui, {
+      service: "add-blocknote",
+      ico: "raw-note-sticky",
+      content: LOCALE.NOTE,
+      className: `${cnItem}--add-note`,
+    }),
     menuRow(ui, {
       service: "new-document",
       name: "document.docx",

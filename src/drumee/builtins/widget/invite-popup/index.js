@@ -110,6 +110,13 @@ class __invite_popup extends LetcBox {
       setTimeout(() => this._maybeCloseDropdowns(e.target), 0);
     };
     document.addEventListener("mousedown", this._dismissDropdowns);
+    // A fixed role menu doesn't follow its row: close it when the list moves.
+    this._closeRoleMenusOnScroll = () => {
+      Object.values(this._partRefs.roleOptions).forEach((o) => {
+        if (o && o.el && o.el.dataset.state === "1") o.el.dataset.state = 0;
+      });
+    };
+    this.el.addEventListener("scroll", this._closeRoleMenusOnScroll, true);
     // A mousedown inside the dropdown means a pick is starting.
     //
     // The order of events is mousedown → focusout → mouseup → click. The
@@ -225,6 +232,9 @@ class __invite_popup extends LetcBox {
     }
     if (this._onFocusOut) {
       this.el.removeEventListener("focusout", this._onFocusOut);
+    }
+    if (this._closeRoleMenusOnScroll) {
+      this.el.removeEventListener("scroll", this._closeRoleMenusOnScroll, true);
     }
     if (this._onSuggestionDown) {
       document.removeEventListener("mousedown", this._onSuggestionDown, true);
@@ -774,6 +784,30 @@ class __invite_popup extends LetcBox {
     const open = opt.el.dataset.state === "1";
     Object.values(this._partRefs.roleOptions).forEach((o) => (o.el.dataset.state = 0));
     opt.el.dataset.state = open ? 0 : 1;
+    if (!open) this._placeRoleMenu(opt.el);
+  }
+
+  /**
+   * The open menu is position:fixed (skin) so the __tree scroller can't clip
+   * it. Its containing block is __ui, not the viewport — the card's
+   * backdrop-filter makes it one — so measure where (0,0) lands, then put
+   * the menu under the pill, right-aligned, or above it when below runs off
+   * the screen.
+   */
+  _placeRoleMenu(menu) {
+    const pill = menu.previousElementSibling;
+    if (!pill) return;
+    menu.style.top = "0px";
+    menu.style.left = "0px";
+    const origin = menu.getBoundingClientRect();
+    const p = pill.getBoundingClientRect();
+    const gap = 4;
+    let top = p.bottom + gap;
+    if (top + origin.height > window.innerHeight - 8) {
+      top = Math.max(8, p.top - gap - origin.height);
+    }
+    menu.style.top = `${top - origin.top}px`;
+    menu.style.left = `${p.right - origin.width - origin.left}px`;
   }
 
   /**

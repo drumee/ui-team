@@ -3,6 +3,54 @@ const withFileSwitcher = require("builtins/player/widget/file-switcher/frame");
 //  Casual Docs editor window — header + body the DocxEditor
 //  mounts into (mirrors the sheet editor skeleton).
 // ===========================================================
+function loadingSkeleton() {
+  const pfx = "editor-loading";
+  const bones = (cls, n) =>
+    Array.from({ length: n }, () => Skeletons.Box.X({ className: `${pfx}__bone ${cls}`, active: 0 }));
+  return Skeletons.Box.Y({
+    className: `${pfx} ${pfx}--skel ${pfx}--docs`,
+    dataset: { state: 1 },
+    kidsOpt: { active: 0 },
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__titlebar`,
+        kids: [
+          ...bones(`${pfx}__bone--glyph`, 1),
+          Skeletons.Box.Y({
+            className: `${pfx}__titlecol`,
+            kids: [
+              ...bones(`${pfx}__bone--name`, 1),
+              Skeletons.Box.X({ className: `${pfx}__menu`, kids: bones(`${pfx}__bone--menu`, 7) }),
+            ],
+          }),
+        ],
+      }),
+      Skeletons.Box.X({ className: `${pfx}__toolbar`, kids: bones(`${pfx}__bone--tool`, 14) }),
+      Skeletons.Box.Y({
+        className: `${pfx}__canvas`,
+        kids: [
+          Skeletons.Box.X({ className: `${pfx}__ruler` }),
+          Skeletons.Box.Y({
+            className: `${pfx}__page`,
+            kids: bones(`${pfx}__bone--line`, 9),
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__card`,
+            kids: [
+              Skeletons.Box.X({ className: `${pfx}__spinner`, active: 0 }),
+              Skeletons.Note({
+                content: LOCALE.LOADING,
+                active: 0,
+                className: `${pfx}__text`,
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 function __skl_editor_docs(_ui_) {
   const header = require("./topbar")(_ui_);
 
@@ -11,23 +59,11 @@ function __skl_editor_docs(_ui_) {
     sys_pn: _a.content,
     partHandler: _ui_,
     // Shown while the docs_state chunk (Casual Docs + WASM engine) downloads
-    // and mounts; docs_state._reactHost removes it. Same shape as the office
-    // player's progress part (indeterminate bar + centred label).
-    kids: [
-      Skeletons.Box.X({
-        className: "editor-loading",
-        dataset: { state: 1, loading: "indeterminate" },
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Box.X({ className: "editor-loading__bar", active: 0 }),
-          Skeletons.Note({
-            content: LOCALE.LOADING,
-            active: 0,
-            className: "editor-loading__text",
-          }),
-        ],
-      }),
-    ],
+    // and mounts. A skeleton of the document itself — title bar, toolbar
+    // pill, the page on its canvas — with a centred "Loading…" card. It
+    // covers the editor until a page has painted (docs_state, through
+    // editor/loading-reveal).
+    kids: [loadingSkeleton()],
   });
 
   const dialog = Skeletons.Wrapper.Y({

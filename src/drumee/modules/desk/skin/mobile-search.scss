@@ -1,6 +1,6 @@
 @use "mixins/drumee";
 
-// Centered search card, mobile only. The desktop topbar — and with it the
+// The search sheet, mobile only. The desktop topbar — and with it the
 // search cluster — is display:none at mobile widths (index.scss,
 // __topbar[data-device="mobile"]), so skeleton/index.js builds this card
 // instead and skeleton/topbar.js drops its own. Every rule below assumes
@@ -8,34 +8,48 @@
 //
 // Hidden state is visibility/opacity rather than display:none on purpose:
 // _openMobileSearch focuses the input in the same task as the tap that opened
-// the card (so the soft keyboard counts it as user-initiated), and focus() on
+// the sheet (so the soft keyboard counts it as user-initiated), and focus() on
 // a display:none subtree is refused.
 .desk-module {
+  // The desk's bottom sheet (drumee.mobile-bottom-sheet — the same look as
+  // the workspace / go-to / account sheets), but full height under the 44px
+  // mobile topbar rather than 62dvh. The input sits at the top of this sheet
+  // and the soft keyboard takes the lower half of the screen: at 62dvh only a
+  // row of results was left between the two. Its backdrop stays the shared
+  // __overlay (_setMobileBackdrop), and the z-index keeps it above that 10010
+  // backdrop and the mobile topbar (99999). The ::before is the grabber, the
+  // first slot of this column.
   &__mobile-search {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(90vw, 420px);
-    max-height: 70vh;
-    box-sizing: border-box;
-    padding: 12px;
+    @include drumee.mobile-bottom-sheet(100000);
+    top: 44px;
+    height: auto;
+
+    @media (orientation: landscape) and (max-height: 480px) {
+      height: auto;
+    }
+
+    padding-top: 8px;
+    padding-left: 12px;
+    padding-right: 12px;
     gap: 10px;
-    border-radius: 12px;
-    background-color: var(--normal-bg);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
-    // Above the 10010 backdrop and in the drawer's layer, so the mobile
-    // topbar (99999) cannot sit over the card.
-    z-index: 100000;
     // Hidden is the DEFAULT, revealed only by data-state="1" — the same
     // polarity as the topbar's __search-suggestions. Do not invert this to
     // `[data-state="0"] { hidden }`: the skeleton's `state: 0` is not
     // guaranteed to have written the attribute by first paint, and an
-    // absent attribute would then render the card open over a fresh desk.
+    // absent attribute would then render the sheet open over a fresh desk.
+    //
+    // A fade in place, not a slide up: _openMobileSearch focuses the input in
+    // the same task as the tap, and an input still parked below the viewport
+    // is what makes iOS jump the visual viewport to reach it.
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
     transition: opacity 0.2s ease, visibility 0.2s;
+
+    &::before {
+      @include drumee.mobile-bottom-sheet-grabber;
+      margin-bottom: 0;
+    }
 
     &[data-state="1"] {
       opacity: 1;
@@ -107,15 +121,13 @@
   }
 
   // The results body. Unlike the desktop dropdown this is in flow inside the
-  // card, so the card's max-height is what bounds it and the scroll happens
-  // here.
+  // sheet, so the sheet's fixed height is what bounds it and the scroll
+  // happens here.
   &__mobile-search-suggestions {
     visibility: hidden;
     pointer-events: none;
     width: 100%;
-    min-height: 0;
-    flex: 1;
-    overflow-y: auto;
+    @include drumee.mobile-bottom-sheet-scroller;
     scrollbar-width: none;
     -ms-overflow-style: none;
 
@@ -197,7 +209,8 @@ html[data-theme="dark"] {
   .desk-module {
     &__mobile-search {
       background-color: var(--normal-bg-elevated);
-      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.4);
+      // The grabber default is this same #333042 in dark mode.
+      --sheet-grabber: rgba(255, 255, 255, 0.24);
     }
 
     &__mobile-search-bar {

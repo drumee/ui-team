@@ -9,7 +9,7 @@
 // The Gantt ＋ keeps "add-child-task" (detail panel with the creator open):
 // its Figma flow ends on that screen (873:233413).
 
-const { titleTooLong } = require("./list-edit");
+const { titleTooLong, titleTaken } = require("./list-edit");
 
 // Services: "list-add-subtask", "list-subtask-commit", "list-subtask-cancel",
 // dispatched from onUiEvent's switch.
@@ -34,7 +34,10 @@ module.exports = {
     const input = this._inlineSubtaskInput();
     const title = String((input && input.value) || "").trim();
     if (!title) return this._closeInlineSubtask();
-    if (titleTooLong(title)) return this._flagInlineSubtaskTooLong();
+    if (titleTooLong(title)) return this._flagInlineSubtask("toolong");
+    if (titleTaken(title, this.getSubtasks(st.parentId))) {
+      return this._flagInlineSubtask("duplicate");
+    }
 
     const cols = this.getColumns();
     const firstOpen = cols.find((c) => !c.is_done) || cols[0];
@@ -66,10 +69,11 @@ module.exports = {
     return this.el && this.el.querySelector(`.${pfx}__list-subcreate input`);
   },
 
-  _flagInlineSubtaskTooLong() {
+  // `flag` is the row's data-* key: toolong | duplicate.
+  _flagInlineSubtask(flag) {
     const input = this._inlineSubtaskInput();
     const row = input && input.closest(`.${this.fig.family}__list-subcreate-row`);
-    if (row) row.dataset.toolong = "1";
+    if (row) row.dataset[flag] = "1";
     if (input) input.focus();
   },
 
@@ -97,6 +101,7 @@ module.exports = {
     input.addEventListener("input", () => {
       const row = input.closest(`.${this.fig.family}__list-subcreate-row`);
       if (row && row.dataset.toolong === "1") row.dataset.toolong = "0";
+      if (row && row.dataset.duplicate === "1") row.dataset.duplicate = "0";
     });
     input.addEventListener("blur", () => {
       const st = this._inlineSubtask;

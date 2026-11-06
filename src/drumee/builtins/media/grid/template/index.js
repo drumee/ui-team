@@ -57,7 +57,9 @@ const __media_tpl_grid = function (ui) {
       break;
     case _a.note:
     case 'markdown':
-      preview = require('./filetype/note.txt').default;
+      // The Note's own glyph (the header's and the Files rail's), drawn like
+      // the Casual files' — not the lined-page card.
+      preview = require('./preview')(m, 'raw-note-sticky');
       break;
     default:
       preview = require('./preview')(m);

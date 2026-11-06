@@ -72,6 +72,7 @@
     "create": "task.create",
     "update": "task.update",
     "update_status": "task.update_status",
+    "reorder": "task.reorder",
     "update_assignee": "task.update_assignee",
     "delete": "task.delete",
     "link_file": "task.link_file",

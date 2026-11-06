@@ -1,6 +1,7 @@
 // "Schedule a meeting" modal (Figma component set 1693:140137 — blank
 // 1693:140138, filled 1693:140255, information 1693:140389) — create / edit a
-// scheduled meeting via room.book/update/remove, one 600px column. Invitees are
+// scheduled meeting via room.book/update/remove, in two sides (title,
+// description, files | date, time, invitees, creator, repeat). Invitees are
 // workspace members chosen by typing a name (type-to-search → suggestions →
 // removable chips); recurrence lives in ui._mmRecur; the Files section (search,
 // Upload, chips) reads ui._mmState. Rendered into the folder window's
@@ -305,6 +306,10 @@ module.exports = function meetingModal(ui, opt = {}) {
   const pfx = `${ui.fig.family}__meeting-modal`;
   const m = opt.meeting || null;
   const isEdit = !!(m && m.nid);
+  // View mode: a host may say its viewer only looks (meeting_modal_host, from
+  // the server's can_write — the Personal Calendar's chip of a meeting someone
+  // else reported). The folder window has no such method: always edit.
+  const viewOnly = isEdit && !!(ui.meetingViewOnly && ui.meetingViewOnly());
   const st = ui._mmState || {};
 
   const field = (label, kid, extraCn = "") =>
@@ -355,7 +360,7 @@ module.exports = function meetingModal(ui, opt = {}) {
         className: `${pfx}-desc-editor`,
         flow: "none",
         attrOpt: {
-          contenteditable: "true",
+          contenteditable: viewOnly ? "false" : "true",
           "data-placeholder": LOCALE.WHATS_THIS_ABOUT,
         },
       }),
@@ -512,7 +517,18 @@ module.exports = function meetingModal(ui, opt = {}) {
   // client-side creator check stranded the organizer with a Join-only dialog
   // whenever the recorded uid didn't line up with Visitor.id. The × in the
   // header closes the dialog; there is no Cancel.
-  const footerKids = isEdit
+  //
+  // View mode (above) is the one exception, and it comes from the server's
+  // answer, not a client-side uid compare: Join only.
+  const join = Skeletons.Note({
+    className: `${pfx}-btn ghost`,
+    content: LOCALE.JOIN_MEETING,
+    service: "join-meeting",
+    uiHandler: [ui],
+  });
+  const footerKids = viewOnly
+    ? [join]
+    : isEdit
     ? [
         Skeletons.Note({
           className: `${pfx}-btn danger`,
@@ -520,12 +536,7 @@ module.exports = function meetingModal(ui, opt = {}) {
           service: "meeting-modal-delete",
           uiHandler: [ui],
         }),
-        Skeletons.Note({
-          className: `${pfx}-btn ghost`,
-          content: LOCALE.JOIN_MEETING,
-          service: "join-meeting",
-          uiHandler: [ui],
-        }),
+        join,
         Skeletons.Note({
           className: `${pfx}-btn primary`,
           content: LOCALE.UPDATE_SCHEDULE,
@@ -546,16 +557,16 @@ module.exports = function meetingModal(ui, opt = {}) {
     className: `${pfx}`,
     debug: __filename,
     dataset: { mode: isEdit ? "edit" : "create" },
-    attrOpt: { "data-nid": (m && m.nid) || "" },
+    attrOpt: { "data-nid": (m && m.nid) || "", "data-view": viewOnly ? "1" : "0" },
     kids: [
       header,
-      // Two sides: what the meeting is about on the left, when and with whom
-      // on the right. A narrow pane stacks them (meeting-modal.scss).
+      // Two sides: what the meeting is about on the left, when / who on the
+      // right. A narrow pane stacks them (container query in the skin).
       Skeletons.Box.X({
         className: `${pfx}-body`,
         kids: [
           Skeletons.Box.Y({
-            className: `${pfx}-col ${pfx}-col--main`,
+            className: `${pfx}-col ${pfx}-col-main`,
             kids: [
               field(LOCALE.TITLE, title),
               field(LOCALE.DESCRIPTION_AGENDA, description),
@@ -563,7 +574,7 @@ module.exports = function meetingModal(ui, opt = {}) {
             ],
           }),
           Skeletons.Box.Y({
-            className: `${pfx}-col ${pfx}-col--side`,
+            className: `${pfx}-col ${pfx}-col-side`,
             kids: [
               field(LOCALE.DATE, date),
               Skeletons.Box.X({
@@ -574,13 +585,8 @@ module.exports = function meetingModal(ui, opt = {}) {
                   field(LOCALE.END_TIME, timePicker(ui, pfx, "etime", m && m.etime_hm)),
                 ],
               }),
-              Skeletons.Box.X({
-                className: `${pfx}-row`,
-                kids: [
-                  field(LOCALE.INVITEES, invitees),
-                  field(LOCALE.CREATED_BY, creatorChip(ui, pfx, m)),
-                ],
-              }),
+              field(LOCALE.INVITEES, invitees),
+              field(LOCALE.CREATED_BY, creatorChip(ui, pfx, m)),
               field(LOCALE.REPEAT, recur),
             ],
           }),
@@ -594,6 +600,8 @@ module.exports = function meetingModal(ui, opt = {}) {
         sys_pn: "mm-availability",
         partHandler: ui,
         content: "",
+        // Shown on a written line only (_mmBanner): a Note is never :empty.
+        attrOpt: { "data-filled": "0" },
       }),
       Skeletons.Box.X({ className: `${pfx}-footer`, kids: footerKids }),
     ],

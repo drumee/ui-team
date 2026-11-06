@@ -203,7 +203,8 @@
 // type as the name it replaces, one line, and a real input look — a border in
 // the brand colour with a soft focus ring — instead of a bare textarea.
 // (0,4,0): the base &__input rule above and the meta-row rules are (0,2,0).
-.media-grid .media-grid__meta-row-top > .media-grid__input[data-inline="1"] {
+.media-grid .media-grid__meta-row-top > .media-grid__input[data-inline="1"],
+.media-grid .media-grid__input[data-inline="1"][data-folder="1"] {
   position: relative;
   bottom: auto;
   z-index: auto;
@@ -230,6 +231,20 @@
     line-height: 16px;
     color: var(--grid-color-name, var(--default-text-color));
     text-decoration: none;
+  }
+}
+
+// Folder / workspace tile rename: the same field as a file's (shares the rule
+// above), in the label's place under the folder art — no meta row, no kebab —
+// so full width, centred, and spaced like the label. (0,4,0), after the shared
+// rule, so it wins on the props both set.
+.media-grid .media-grid__input[data-inline="1"][data-folder="1"] {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 8px;
+
+  textarea {
+    text-align: center;
   }
 }
 

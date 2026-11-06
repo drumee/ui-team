@@ -9,9 +9,9 @@
  * per device, which is a deliberate choice — a two-device user seeing it twice
  * is acceptable and it costs no schema.
  *
- * [Open my calendar] and the calendar row open the Personal Calendar in
- * MONTH view on the current month (Lexis, 2026-09-29 — it was DAY view from
- * 2026-09-14). It was deliberately inert until 2026-09-07 because that
+ * [Open my calendar] and the calendar row open the Personal Calendar on
+ * TODAY in DAY view (Lexis, 2026-11-03 — month view from 2026-09-29, day view
+ * from 2026-09-14). It was deliberately inert until 2026-09-07 because that
  * screen did not exist yet; it does now, so the button dispatches the desk's
  * own `toggle-calendar` — the exact service the left rail, the topbar utility
  * cluster and the phone's go-to grid already fire, with the view named in the
@@ -24,9 +24,10 @@
  * The three stat tiles are click targets too (Lexis, 2026-10-10): unread
  * messages → the desk's `toggle-inbox`, due tasks and meetings today → the
  * same Personal Calendar the button opens. Since 2026-10-20 (Lexis) each
- * calendar tile narrows it to its own kind: due tasks → month view on the Task
- * filter, meetings → TODAY in day view on the Meeting filter. All of them go
- * through _openDeskScreen, for the same reasons.
+ * calendar tile narrows it to its own kind: due tasks → the Task filter,
+ * meetings → the Meeting filter, both on TODAY in day view (since 2026-11-03
+ * for the tasks tile). All of them go through _openDeskScreen, for the same
+ * reasons.
  *
  * Maybe later and ✕ are the same action: close, write nothing. There is no
  * server-side "seen" state at all.
@@ -213,22 +214,23 @@ class __daily_reminder_popup extends LetcBox {
       // [My calendar] and the calendar row → the Personal Calendar. See the
       // header for why this delegates instead of opening the panel itself.
       //
-      // `calendarView: "month"` — lands on the month grid of the current
-      // month (Lexis, 2026-09-29; DAY view before that). Named rather than
-      // omitted so a calendar left on week/day view, or on another month,
-      // still comes back to this month's grid. The desk owns the whole of
-      // that: it passes the view as a launch option AND re-states it on an
-      // instance that was only revealed. See desk `_openCalendar`.
+      // `calendarView: "day"` — lands on TODAY in day view (Lexis,
+      // 2026-11-03; month view from 2026-09-29, day view before that). Named
+      // rather than omitted so a calendar left on another view or another
+      // date still comes back to today. The desk owns the whole of that: it
+      // passes the view as a launch option AND re-states it on an instance
+      // that was only revealed. See desk `_openCalendar`.
       case "daily-reminder-calendar":
-        return this._openDeskScreen(cmd, { service: "toggle-calendar", calendarView: "month" });
+        return this._openDeskScreen(cmd, { service: "toggle-calendar", calendarView: "day" });
 
-      // The due-tasks tile → the same month grid, on the Task filter only
-      // (Lexis, 2026-10-20). Month, like the button: the count includes
-      // overdue tasks, which a day view would hide.
+      // The due-tasks tile → today in day view, on the Task filter only
+      // (Lexis, 2026-11-03; month view from 2026-10-20). The count is the
+      // tasks that day view draws: due today, overdue and undated excluded —
+      // see activity.daily_digest on the server.
       case "daily-reminder-tasks":
         return this._openDeskScreen(cmd, {
           service: "toggle-calendar",
-          calendarView: "month",
+          calendarView: "day",
           calendarFilter: "task",
         });
 

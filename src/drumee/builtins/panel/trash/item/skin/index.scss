@@ -200,6 +200,84 @@
   }
 }
 
+// ── Phone ───────────────────────────────────────────────────────────────
+// In the phone bottom sheet (~366px of content) the desktop line —
+// tile | name+meta | badge Restore bin — leaves the name a stub: the action
+// cluster alone is ~170px once Restore is always shown (hover:none below).
+// So the row wraps: tile and text on the first line, the actions on a second
+// line indented under the text column (40px tile + 12px gap), the bin pushed
+// to the far edge. The meta stacks rather than wraps, so the divider never
+// dangles at a line end. Pills and the bin grow to touch-sized targets.
+//
+// flex-wrap / flex-basis only: flex-direction is owned by the Box.X that
+// renders each row and must not be overridden in SCSS (framework invariant).
+//
+// Gated on the panel, not the row: the item root carries no device stamp.
+// Emitted twice, as mixins/responsive.scss does it: Visitor.device() only
+// answers "mobile" below 801px.
+@mixin trash-item-phone {
+  .trash-item__row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    padding: 10px 0;
+  }
+
+  .trash-item__actions {
+    flex: 0 0 calc(100% - 52px);
+    margin-left: 52px;
+    gap: 8px;
+  }
+
+  .trash-item__name {
+    font-size: 15px;
+  }
+
+  .trash-item__divider {
+    display: none;
+  }
+
+  .trash-item__deleted-by,
+  .trash-item__date {
+    flex: 0 0 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .trash-item__days-badge,
+  .trash-item__restore {
+    font-size: 12px;
+    line-height: 16px;
+    padding: 6px 10px;
+  }
+
+  .trash-item__delete {
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    box-sizing: border-box;
+    margin-left: auto;
+    align-items: center;
+    justify-content: center;
+
+    // The desktop hover pad is a spread shadow around a 20px box; the box is
+    // the pad here.
+    &:hover {
+      box-shadow: none;
+    }
+  }
+}
+
+.panel-trash__ui[data-device="mobile"] {
+  @include trash-item-phone;
+}
+
+@media (max-width: 650px) {
+  .panel-trash__ui {
+    @include trash-item-phone;
+  }
+}
+
 // A touch screen never hovers, so Restore would be unreachable there.
 @media (hover: none) {
   .trash-item__restore {

@@ -457,6 +457,27 @@ function getActivityMeta(ui, data) {
       };
     }
 
+    // "<invitee> accepted / declined your invitation to <workspace>" —
+    // addressed to the admin who sent the invitation (server-team
+    // lib/hub-invite-answer-notify). Same rule as hub_invite below: the label
+    // is the workspace name only, never the `name` resolver chain.
+    case 'hub_invite_accepted':
+    case 'hub_invite_declined': {
+      const accepted = ui.mget(_a.category) === 'hub_invite_accepted';
+      return {
+        before: accepted
+          ? (LOCALE.HUB_INVITE_ACCEPTED_ACTION || 'accepted your invitation to ')
+          : (LOCALE.HUB_INVITE_DECLINED_ACTION || 'declined your invitation to '),
+        label: data.hub_name || '',
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+        // Same glyphs as the contact invitation's accepted / declined rows.
+        ico: accepted ? 'noti-check-circle' : 'noti-x-circle',
+        tone: accepted ? BADGE.success : BADGE.error,
+      };
+    }
+
     case 'hub_invite':
       // Never fall back to `name` for hub_invite — that resolver chains
       // through surname/sender fields and ends up showing the inviter's

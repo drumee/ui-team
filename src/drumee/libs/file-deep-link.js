@@ -92,6 +92,16 @@ function urlWantsFile() {
 }
 
 /**
+ * Does the current url name a FILE, not a folder? Only the compact form: it
+ * is the one the address bar mirrors (libs/location-url).
+ * @returns {Boolean}
+ */
+function namesFile() {
+  const hash = String(window.location.hash || "");
+  return COMPACT.test(hash) && !/\/folder$/i.test(hash);
+}
+
+/**
  * Remember that this visit should end on `hash`.
  * @param {String} hash a full location.hash, e.g. "#/desk/wm/o/12/ab/image"
  */
@@ -120,8 +130,12 @@ function captureFromUrl() {
   // remembered screen to put back; with nothing remembered, the URL is all
   // there is, so it is opened like the link it is. Only window/history/storage
   // are read there — safe this early in the boot.
+  //
+  // Except a FILE (Duy, 2026-10-30): the remembered screen holds the
+  // workspace and folder windows, never a viewer, so a reload on an open note
+  // or PDF landed back on its folder. A file entry is opened like a link.
   const locationUrl = require("libs/location-url");
-  if (locationUrl.isMirrorEntry() && locationUrl.restsOnReload()) return false;
+  if (locationUrl.isMirrorEntry() && locationUrl.restsOnReload() && !namesFile()) return false;
   try {
     arm(String(window.location.hash || ""));
   } catch (e) {

@@ -1524,6 +1524,10 @@ class __window_manager extends push {
       // left describing a workspace nobody is looking at any more.
       this.ensurePart("wrapper-modal").then((p) => {
         if (this._modalHoldsAccessPanelFor(p, hub_id)) return;
+        // The post-Checkout receipt is not about any workspace, and on the
+        // Checkout return the BOOT's own workspace load lands here ~1s after
+        // the receipt was fed — it used to wipe it before it could paint.
+        if (this._modalHoldsBillingResult(p)) return;
         p.clear();
       });
       // By KIND AND `headless`, not by position: headlessLayer also receives
@@ -1823,6 +1827,26 @@ class __window_manager extends push {
   }
 
   /**
+   * Does the wrapper-modal hold the post-Checkout result modal
+   * (settings_billing_result: Payment Success / Failure, offer refusal,
+   * resume)? Workspace loads must leave it alone — see loadWorkspace.
+   *
+   * @param {Object} p the wrapper-modal part
+   * @returns {Boolean}
+   */
+  _modalHoldsBillingResult(p) {
+    if (!p || !p.collection) return false;
+    try {
+      return p.collection.some(
+        (m) => m && _.isFunction(m.get) && m.get(_a.kind) === "settings_billing_result",
+      );
+    } catch (e) {
+      this.warn && this.warn("[loadWorkspace] modal inspect failed", e);
+      return false;
+    }
+  }
+
+  /**
    * Does the wrapper-modal currently hold the access panel for THIS hub?
    *
    * `permission_restricted` is what media/form chains to on a successful
@@ -2111,7 +2135,12 @@ class __window_manager extends push {
       l.restart();
       this._prepareListPartition(l);
     });
-    this.ensurePart("wrapper-modal").then((p) => p.clear());
+    this.ensurePart("wrapper-modal").then((p) => {
+      // Same exception as loadWorkspace: the Checkout receipt outlives a
+      // workspace switch until the user closes it.
+      if (this._modalHoldsBillingResult(p)) return;
+      p.clear();
+    });
     // Sidebar nav reloads the desk container in-place; preserve open windows.
     this.updateBreadcrumb({ ...data, service: "change-workspace" }, this);
   }
@@ -2402,25 +2431,50 @@ class __window_manager extends push {
    * query string so a reload doesn't replay it.
    */
   checkCheckoutReturn() {
-    let params;
-    try { params = new URLSearchParams(window.location.search); } catch (e) { return; }
-    const flag = params.get("checkout");
-    if (!flag) return;
-    const session_id = params.get("session_id") || "";
-    try {
-      params.delete("checkout"); params.delete("session_id");
-      const qs = params.toString();
-      history.replaceState(null, "", `${location.pathname}${qs ? "?" + qs : ""}${location.hash}`);
-    } catch (e) { /* cosmetic */ }
-    Kind.waitFor("settings_billing_result").then(() => {
-      this.ensurePart("wrapper-modal").then((p) => {
+    // Read + scrub through the shared lib: the desk's boot popups ask the
+    // same question (and stand down on a Checkout boot), whoever asks first.
+    const ret = require("libs/checkout-return").get();
+    if (!ret) return;
+    const feedResult = () => Kind.waitFor("settings_billing_result").then(() => {
+      return this.ensurePart("wrapper-modal").then((p) => {
         p.feed({
           kind: "settings_billing_result",
-          result: flag === "success" ? "success" : "cancel",
-          session_id,
+          result: ret.result,
+          session_id: ret.session_id,
           uiHandler: [this],
         });
+        // The Calendar modal's backdrop: no scrim, no blur — the page behind
+        // fades instead (desk/skin `[data-billing-result]`). Explicitly off,
+        // because this host is shared and a `blur` left by another dialog
+        // would otherwise stay.
+        if (p.el) p.el.dataset.overlay = "none";
       });
+    });
+    // LAND ON BILLING, THEN SHOW THE CARD over it: the receipt is about the
+    // plan, so the plans page is what sits behind it, and closing the card
+    // leaves the user there. Billing first because opening a screen clears
+    // the wrapper-modal (togglePanel → _dismissWmModal): fed earlier, the
+    // card would be swept away by the page it sits on. `onOpened` is called
+    // on every outcome (desk openBillingPage), so the card still shows if the
+    // page cannot open. `noTrack`: an automatic open, not an upgrade CTA.
+    //
+    // NO WORKSPACE IS OPENED ON THIS BOOT (desk _restoreDeskState skips it on
+    // a Checkout return), so nothing can close Billing under the card —
+    // loadWorkspace closes full-canvas screens (closeAllPanels), which is how
+    // the card used to end up over a bare Files pane. Billing opens at once.
+    // The desk keeps the canvas hidden and its restore flag up meanwhile
+    // (_holdLandingPane, _restoreDeskState) and drops both once Billing and
+    // the card are up (_releaseCheckoutHold).
+    const desk = window.Desk;
+    const release = () => {
+      if (desk && _.isFunction(desk._releaseCheckoutHold)) desk._releaseCheckoutHold();
+    };
+    RADIO_BROADCAST.trigger("desk:open-billing-page", {
+      noTrack: 1,
+      onOpened: () => Promise.resolve(feedResult()).then(
+        () => requestAnimationFrame(() => requestAnimationFrame(release)),
+        release,
+      ),
     });
   }
 
@@ -4494,6 +4548,8 @@ class __window_manager extends push {
         return this.ensurePart("wrapper-modal").then((p) => p.clear());
 
       case "billing-result-retry":
+        // A departure for Billing, not a dismissal: no boot tour over it.
+        require("libs/checkout-return").leftForBilling();
         this.ensurePart("wrapper-modal").then((p) => p.clear());
         // NO PRESELECT. upgradePlage now forwards its argument to
         // openBillingPage, and `cmd` is the triggering MODEL — spreading that
@@ -4578,6 +4634,7 @@ class __window_manager extends push {
       // delegate up instead of duplicating them here. Desk.onUiEvent owns
       // the over-limit guardWrite for each of these services.
       case "new-note":
+      case "new-blocknote":
       case "new-document":
       case "new-spreadsheet":
       case "new-presentation":

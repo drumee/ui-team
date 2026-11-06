@@ -1,10 +1,10 @@
-// Week view — the hour canvas with seven columns. Figma 58222:171611.
-const hourGrid = require("./hours");
+// Week view — seven day cells on the board. Figma 1693:187899.
+const board = require("./board");
 const { day } = require("./helpers");
 
 module.exports = function (ui) {
   const anchor = day(ui.getCursor()) || Dayjs();
   const start = anchor.startOf("week");
   const days = Array.from({ length: 7 }, (_, i) => start.add(i, "day"));
-  return hourGrid(ui, days, "week");
+  return board(ui, days, "week");
 };

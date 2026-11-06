@@ -44,27 +44,38 @@
       pointer-events: none;
     }
 
-    // Mobile: the desktop left-rail slide-in doesn't fit a phone, so the
-    // panel renders as a centered floating card. position:fixed + inset:0
-    // + margin:auto centres it in the viewport. Both transform AND
-    // will-change:transform (set on the base __ui for the desktop slide)
+    // Mobile: the desktop right-edge slide-in doesn't fit a phone, so the
+    // panel renders as the desk's bottom sheet (drumee.mobile-bottom-sheet —
+    // the same box as the workspace / go-to / account sheets). Both transform
+    // AND will-change:transform (set on the base __ui for the desktop slide)
     // establish a containing block for fixed-position descendants, which
-    // would shrink the full-viewport ::before scrim down to the card box
-    // — so we clear both here. The left panel-container is un-hidden just
-    // for this panel in desk/skin/index.scss. Tap-outside-to-close is
-    // wired in index.js (_onOutsideClick); ::before is visual-only
-    // (pointer-events:none) so those taps reach the content behind.
+    // would shrink the full-viewport ::before scrim down to the sheet box —
+    // so we clear both here, and the sheet opens and closes on opacity rather
+    // than sliding (a translateY park would trap the scrim the same way for
+    // the whole close). The left panel-container is un-hidden just for this
+    // panel in desk/skin/index.scss. Tap-outside-to-close is wired in
+    // index.js (_onOutsideClick); ::before is visual-only (pointer-events:none)
+    // so those taps reach the content behind.
+    //
+    // The !important width/height beat the desktop panel's sizing above; the
+    // landscape twin has to repeat them for the same reason.
     &[data-device="mobile"] {
-      position: fixed;
-      inset: 0;
-      margin: auto;
-      width: min(360px, 92vw) !important;
-      height: min(520px, 78vh) !important;
-      border-radius: 14px;
-      z-index: 10050;
-      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.28);
+      @include drumee.mobile-bottom-sheet(10050);
+      width: 100% !important;
+      height: 62vh !important;
+      height: 62dvh !important;
+      border: 0;
+      // __main is height:100% of the CONTENT box, so the mixin's safe-area
+      // padding here would leave a strip under it where the scrim shows
+      // through. The feed carries the inset instead.
+      padding-bottom: 0;
       will-change: auto;
       transition: opacity 0.2s ease;
+
+      @media (orientation: landscape) and (max-height: 480px) {
+        height: 88vh !important;
+        height: 88dvh !important;
+      }
 
       // Full-viewport scrim that frosts the desk body behind the card.
       // Sits at z-index:-1 (below the card content, see __main) so it
@@ -105,14 +116,21 @@
         pointer-events: auto;
       }
 
-      // Opaque card surface painted ABOVE the ::before scrim (in-flow
+      // Opaque sheet surface painted ABOVE the ::before scrim (in-flow
       // content outranks the negative-z pseudo), so the dim/blur only
-      // shows outside the card — never washing it out. `inherit` tracks
-      // __ui's background across light/dark. Rounded to match the card;
+      // shows outside the sheet — never washing it out. `inherit` tracks
+      // __ui's background across light/dark. Rounded to match the sheet;
       // __main already clips with overflow:hidden.
+      //
+      // The grabber is __main's ::before because __ui's own ::before is the
+      // scrim. A column flex child, so it takes the top slot above the topbar.
       .panel-activity__main {
-        border-radius: 14px;
+        border-radius: 16px 16px 0 0;
         background-color: inherit;
+
+        &::before {
+          @include drumee.mobile-bottom-sheet-grabber;
+        }
       }
 
       // The desktop feed cap (100vh-102px) overflows a fixed-height card;
@@ -120,7 +138,7 @@
       .panel-activity__feed {
         max-height: none;
         min-height: 0;
-        padding: 0 10px 20px;
+        padding: 0 10px calc(20px + env(safe-area-inset-bottom, 0px));
       }
 
       // ── Enlarge content for touch UX ──────────────────────────────
@@ -196,7 +214,7 @@
         min-width: 16px;
         height: 16px;
         font-size: 10px;
-        line-height: 10px;
+        line-height: 1;
       }
 
       .panel-activity__empty {
@@ -745,12 +763,23 @@
     @include drumee.typo($color: #ffffff, $size: 8px, $weight: 400, $line: 8px);
     min-width: 12px;
     height: 12px;
-    padding: 2px 4px;
+    // Centred by flex, not by line-height: the digits sit in the Note's inner
+    // .note-content div, and a line-height tuned to one badge height leaves
+    // them off-centre at any other (the phone badge is 16px).
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
     box-sizing: border-box;
     border-radius: 100px;
     background-color: #d74e49;
     text-align: center;
     flex-shrink: 0;
+
+    .note-content {
+      line-height: 1;
+    }
 
     &[data-empty="1"] {
       display: none;
@@ -873,6 +902,12 @@ html[data-theme="dark"] {
     &__ui {
       background-color: var(--normal-bg-90);
       box-shadow: 0 1px 11px rgba(0, 0, 0, 0.5);
+    }
+
+    // The phone sheet's grabber (drumee.mobile-bottom-sheet-grabber) on this
+    // ground is ~1.1:1 at its default colour.
+    &__main {
+      --sheet-grabber: rgba(255, 255, 255, 0.24);
     }
 
     &__header {

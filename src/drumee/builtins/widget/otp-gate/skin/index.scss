@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 // Shared OTP-gate modal — used by any settings widget that needs an
 // email-OTP step-up confirmation (MFA toggle, OAuth-only delete-account
 // or change-email, etc.).
@@ -219,10 +221,26 @@
     }
   }
 
+  // Phone: the desk's bottom sheet (drumee.mobile-bottom-sheet — the same
+  // box as the workspace / go-to / account sheets) instead of a centred card.
+  // No device attribute reaches this card (it is fed into the host widget's
+  // `overlay` part), so the viewport query is the only gate. No z-index: the
+  // host's overlay is itself fixed and z-indexed, and the sheet paints inside
+  // that stacking context whatever it claims. The ::before is the grabber —
+  // the card is a column flex box, so it takes the first slot; the close
+  // button stays absolutely in the top-right corner.
   @media (max-width: 560px) {
-    width: calc(100vw - 24px);
-    padding: 24px;
-    gap: 24px;
+    @include drumee.mobile-bottom-sheet;
+    padding: 8px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+    gap: 20px;
+    justify-content: flex-start;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    &::before {
+      @include drumee.mobile-bottom-sheet-grabber;
+      margin-bottom: -10px;
+    }
 
     .dtk-otp__digit {
       width: 38px;
@@ -237,6 +255,8 @@
 
 html[data-theme="dark"] .otp-gate-card {
   background: var(--normal-bg-elevated);
+  // The phone sheet's grabber default is this same #333042 in dark mode.
+  --sheet-grabber: rgba(255, 255, 255, 0.24);
 }
 
 @keyframes otp-gate-spin {

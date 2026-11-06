@@ -266,7 +266,12 @@ function handleService(ui, cmd, args = {}) {
         }
         let ret;
         try {
-          ret = node.onUiEvent(cmd, args);
+          // Make a copy copies the open file — not the desk selection the
+          // tile's own menu row would copy — and says when it is made.
+          ret =
+            service === _a.duplicate && _.isFunction(node.duplicateInPlace)
+              ? node.duplicateInPlace().then((ok) => ok && toastCopied(node))
+              : node.onUiEvent(cmd, args);
         } catch (e) {
           ui.warn(`editor chrome: ${service} failed`, e);
           return;
@@ -283,4 +288,61 @@ function handleService(ui, cmd, args = {}) {
   }
 }
 
-module.exports = { gearMenu, topbarConfig, handleService, adoptNode, nodeOf, ensureNode, PRESETS };
+/**
+ * The desk's confirmation toast (libs/toast, slot `desk-toast`) once a copy
+ * is made: the editor window has no slot of its own, and the desk's sits
+ * above every window layer.
+ *
+ * @param {View} node  the copied file's tile
+ */
+function toastCopied(node) {
+  const desk = window.Desk;
+  if (!desk || !_.isFunction(desk.getPart)) return;
+  const name = node.mget(_a.filename) || "";
+  require("libs/toast").showToast(desk, {
+    part: desk.getPart("desk-toast"),
+    message: name ? LOCALE.COPY_CREATED.format(name) : LOCALE.COPY_CREATED_PLAIN,
+  });
+}
+
+/**
+ * File → New: a new, blank file of the same kind, saved into the current
+ * file's folder. It REPLACES this editor, as a switch in the Files panel
+ * does: launched on its own, the new window stacked over this one and the
+ * user had to close twice to get back to the folder.
+ *
+ * With the Files panel, its own create (switcher createCasual: "Document
+ * lite / Spreadsheet lite") does it — save, launch, close — and keeps the
+ * panel's folder and scroll. Without it (phone, DMZ), the same by hand.
+ *
+ * @param {View} ui      the editor window
+ * @param {String} kind  editor_docs | editor_sheet
+ */
+async function createNew(ui, kind) {
+  if (!ui || ui.isDestroyed()) return null;
+  const sw = ui._fileSwitcher;
+  if (sw && !sw.isDestroyed() && _.isFunction(sw.createCasual)) return sw.createCasual(kind);
+  if (require("libs/over-limit").guardWrite("write")) return null;
+  if (_.isFunction(ui.saveBeforeClose)) {
+    let ok;
+    try {
+      ok = await ui.saveBeforeClose();
+    } catch (e) {
+      ok = false;
+    }
+    // The editor has said why; it stays open with its edits.
+    if (ok === false || ui.isDestroyed()) return null;
+  }
+  const pid = ui.mget(_a.pid);
+  const hub_id = ui.mget(_a.hub_id);
+  // The folder window this editor was opened from outlives it: the new
+  // editor saves into it and refreshes it, not into a closed editor.
+  const target = ui.target && !ui.target.isDestroyed() ? ui.target : undefined;
+  const opt = { kind, target, uiHandler: [target || Wm] };
+  if (pid && hub_id) opt.folder = { nid: pid, hub_id };
+  const w = Wm.launch(opt, { explicit: 1 });
+  if (w && !ui.isDestroyed()) ui.goodbye();
+  return w;
+}
+
+module.exports = { gearMenu, topbarConfig, handleService, adoptNode, nodeOf, ensureNode, createNew, PRESETS };

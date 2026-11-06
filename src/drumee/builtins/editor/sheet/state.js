@@ -11,8 +11,24 @@ import "@casualoffice/sheets/styles";
 // resolve, and the chart inserts INVISIBLY: the dialog closes and the sheet
 // stays empty ("click vào nó không chèn được chart").
 import "@univerjs/ui/facade";
+// Same story for two more facade mixins Casual's chrome calls but never
+// imports:
+//   - `FRange.setNumberFormat` (sheets-numfmt): Format → Number format, the
+//     toolbar's number-format list and Format cells → Number all go through
+//     it, and silently did nothing (a currency stayed "1234.5");
+//   - `FWorksheet.getFilter` (sheets-filter): Data → Toggle filter asks it
+//     whether a filter is on; without it every press ADDED the filter again,
+//     and it could never be taken off.
+import "@univerjs/sheets-numfmt/facade";
+import "@univerjs/sheets-filter/facade";
 import { contentUrl } from "builtins/editor/content-url";
 const pendingFocus = require("builtins/editor/pending-focus");
+const { saveBlob } = require("builtins/editor/export");
+const chrome = require("builtins/editor/chrome");
+const { attachMenuPolicy } = require("builtins/editor/menu-policy");
+const { revealWhenPainted, hideLoading } = require("builtins/editor/loading-reveal");
+// Casual Sheets chrome gates (see _wireMenus / _sheetExtensions).
+const SHEET_FEATURES = { branding: false };
 
 // Casual Sheets does NOT bundle Univer locale strings; it only forwards a
 // `locales` prop to Univer. Without it Univer's LocaleService is "not
@@ -116,6 +132,41 @@ const EN_US_LOCALE = mergeLocaleBundles(
 // `onChange`/`onExit`, which maps straight onto Drumee's media.save round-trip.
 // Snapshot format is Univer's IWorkbookData — the SAME JSON the previous Univer
 // editor saved, so existing .json sheets still open.
+
+/** RFC 4180 CSV → rows of strings (quotes, doubled quotes, CRLF / LF). */
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = "";
+  let q = false;
+  const s = String(text || "").replace(/^\ufeff/, "");
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) {
+      if (ch === '"') {
+        if (s[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else q = false;
+      } else cell += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && s[i + 1] === "\n") i++;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else cell += ch;
+  }
+  if (cell !== "" || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows;
+}
 
 class __sheet_state extends DrumeeMFS {
   /**
@@ -229,14 +280,53 @@ class __sheet_state extends DrumeeMFS {
 
     // Ignore the onChange bursts fired while the initial snapshot loads, so a
     // freshly opened sheet isn't marked dirty before the user touches it.
+    //
+    // This was a flat 1500ms from mount. On the first open after a page
+    // reload Casual's chunks, Univer and the icon font are all cold, so
+    // onReady — and with it loadSnapshot, the permission grants and the
+    // first co-editing sync, each of which fires onChange — lands well past
+    // that window, and the header came up "Unsaved changes" as the skeleton
+    // lifted. Warm, the second open fit inside it and showed nothing.
+    //
+    // So the quiet period now ends on what actually happened instead of on
+    // the clock: no sooner than onReady, then only once the workbook has
+    // been still for LOAD_SETTLE_MS (each load-time change restarts that
+    // wait). The user's first real input in the sheet ends it at once, so
+    // an edit made right after the reveal is never swallowed.
+    const LOAD_SETTLE_MS = 1500;
+    const USER_INPUT = ["keydown", "pointerdown", "paste", "drop"];
     this._loading = 1;
-    setTimeout(() => {
+    let settleTimer = null;
+    const endLoading = () => {
+      clearTimeout(settleTimer);
+      settleTimer = null;
+      if (!this._loading) return;
       this._loading = 0;
-    }, 1500);
+      for (const t of USER_INPUT) this.el && this.el.removeEventListener(t, onUserInput, true);
+    };
+    // Armed by onReady once its setup (snapshot, permissions, co-editing
+    // attach) is through; load-time changes before that only wait.
+    let setupDone = false;
+    const settleLater = () => {
+      if (!this._loading || !setupDone) return;
+      clearTimeout(settleTimer);
+      settleTimer = setTimeout(endLoading, LOAD_SETTLE_MS);
+    };
+    const onUserInput = (e) => {
+      if (e.isTrusted && this._ready) endLoading();
+    };
+    for (const t of USER_INPUT) this.el.addEventListener(t, onUserInput, true);
+    this._settleLoad = () => {
+      setupDone = true;
+      settleLater();
+    };
 
     const onChange = (snap) => {
       if (snap) this._snapshot = snap;
-      if (this._loading) return;
+      if (this._loading) {
+        settleLater();
+        return;
+      }
       if (this.editor) {
         this.editor._changed = 1;
         // Header label → "Unsaved changes" until the next save.
@@ -282,6 +372,11 @@ class __sheet_state extends DrumeeMFS {
         // toolbar groups, formula bar, status bar, side panels). Default is
         // 'none' (bare grid) — that's why only the grid showed.
         chrome: "full",
+        // Help holds one Drumee row, "Contact us" (the support conversation),
+        // instead of Casual's About / View on GitHub (`branding`); its
+        // Keyboard shortcuts row has no dialog here and drops by itself.
+        features: SHEET_FEATURES,
+        extensions: this._sheetExtensions(),
         // Called with the raw Univer instance after plugins are registered
         // and BEFORE the workbook unit is created: the user set here becomes
         // the workbook owner (full permissions) and the author of comments.
@@ -294,10 +389,12 @@ class __sheet_state extends DrumeeMFS {
           // stays null in this version). Keep it for Save's live getSnapshot().
           this._apiHandle = api;
           this._ready = 1;
+          this._addMergeToContextMenu(api);
           this._nudgeResize();
           this._setUniverUser(api);
           this._grantWorkbookPermissions(api);
           this._decorateTabsBar();
+          this._createIfNew();
           // Belt-and-suspenders for reopen: force-load the saved snapshot once
           // the editor is ready. `initialData` can race the workbook creation
           // and leave a reopened file blank ("mở lại không load nội dung").
@@ -315,12 +412,21 @@ class __sheet_state extends DrumeeMFS {
           }
           // Co-editing (Casual Sheets server behind /-/<ep>/sheets/): join
           // the room named after the file nid once the server answers.
-          this._maybeAttachCollab(api);
+          // The load-settle wait (see _doMount) starts once that attach is
+          // done or known not to happen: its first sync writes the room's
+          // state into the workbook, and that is not an edit either.
+          const collab = this._maybeAttachCollab(api);
           // A "<A> commented on <file>" click opens the file ON that comment.
           this._focusPendingComment(api);
+          Promise.resolve(collab)
+            .catch(() => {})
+            .then(() => {
+              if (this._settleLoad) this._settleLoad();
+            });
         },
         onError: (e) => {
           this.warn("CasualSheets error", e);
+          hideLoading(this.el && this.el.closest(".editor-sheet"));
         },
       })
     );
@@ -333,6 +439,7 @@ class __sheet_state extends DrumeeMFS {
       },
       false
     );
+    this._wireMenus();
 
     // Univer inside can still under-measure right after mount in the animated
     // window; a few resize pulses make it re-read the now-real container size.
@@ -489,6 +596,11 @@ class __sheet_state extends DrumeeMFS {
         // changes here; the id is set early via the Casual hook when present.
         const cur = um.getCurrentUser ? um.getCurrentUser() : null;
         const keepId = cur && cur.userID ? cur.userID : "Owner";
+        // Nothing to change (the early hook already set this user): setting
+        // it again fires Univer's currentUser$, which rebuilds every
+        // permission point and re-runs its async authorisation — leaving the
+        // workbook read-only until the points are granted again.
+        if (cur && cur.userID === keepId && cur.name === me.name) return;
         um.setCurrentUser({ userID: keepId, name: me.name, avatar: "" });
       }
     } catch (e) {
@@ -525,6 +637,37 @@ class __sheet_state extends DrumeeMFS {
         return -1;
       }
     };
+    // Keep them granted. Univer re-creates and re-authorises its points
+    // asynchronously (a user change, a collab unit swap), and for our
+    // non-"Owner" user that lands them back at false AFTER the grants above:
+    // for about a second after onReady, editing a cell raised "The range is
+    // protected, and you do not have edit permission". Every workbook point
+    // that is added or updated as false is set back to true at once (an
+    // update to true re-emits and is ignored, so this cannot loop).
+    try {
+      const inj = api && api.univer && api.univer._injector;
+      const ps = inj && inj.get(IPermissionService);
+      if (ps && ps.permissionPointUpdate$ && !this._permissionSub) {
+        this._permissionSub = ps.permissionPointUpdate$.subscribe((point) => {
+          const id = point && String(point.id || "");
+          if (!id || !id.startsWith("1.")) return;
+          const v = point.value && typeof point.value === "object" ? point.value.value : point.value;
+          if (v === true) return;
+          const wb = api.univer.getActiveWorkbook();
+          if (!wb || !id.endsWith(`_${wb.getId()}`)) return;
+          // Not from inside the emission that reported it.
+          Promise.resolve().then(() => {
+            try {
+              ps.updatePermissionPoint(id, true);
+            } catch (e) {
+              /** point gone */
+            }
+          });
+        });
+      }
+    } catch (e) {
+      this.warn("sheet_state: permission watch failed", e);
+    }
     try {
       const wb = api.univer.getActiveWorkbook();
       if (wb) grant(wb.getId());
@@ -675,6 +818,13 @@ class __sheet_state extends DrumeeMFS {
 
   onBeforeDestroy() {
     this._destroyed = 1;
+    if (this._cancelReveal) this._cancelReveal();
+    try {
+      if (this._menuPolicy) this._menuPolicy();
+    } catch (e) {
+      /** already gone */
+    }
+    this._menuPolicy = null;
     try {
       if (this._tabsBarObs) this._tabsBarObs.disconnect();
       if (this._tabsStripObs) this._tabsStripObs.disconnect();
@@ -692,6 +842,14 @@ class __sheet_state extends DrumeeMFS {
         /** already gone */
       }
       this._unitAddedSub = null;
+    }
+    if (this._permissionSub) {
+      try {
+        this._permissionSub.unsubscribe();
+      } catch (e) {
+        /** already gone */
+      }
+      this._permissionSub = null;
     }
     if (this._collabHandle) {
       try {
@@ -717,6 +875,370 @@ class __sheet_state extends DrumeeMFS {
       /** already gone */
     }
     if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  /**
+   * Casual's menu bar, cut to what works in Drumee (builtins/editor/
+   * menu-policy; rows matched by their data-testid).
+   * Hidden:
+   *   - View → Show formulas: its command (sheet.command.set-show-formula)
+   *     is not registered in this build, the row did nothing;
+   *   - Data → Text to Columns: run without a delimiter, it split nothing.
+   * Answered by Drumee: View → Toggle gridlines. Casual's row always sends
+   * "hide" (it keeps no state), so a second press never brought the
+   * gridlines back; this one reads the sheet's state and flips it.
+   */
+  _wireMenus() {
+    if (this._menuPolicy || !this.el) return;
+    const HIDDEN = new Set(["cs-menuitem-show-formulas", "cs-menuitem-text-to-columns"]);
+    this._menuPolicy = attachMenuPolicy(this.el, {
+      key: (row) => row.getAttribute("data-testid") || "",
+      hidden: (key) => HIDDEN.has(key),
+      actions: {
+        "cs-menuitem-toggle-gridlines": () => this._toggleGridlines(),
+      },
+      // File → Export ▸, as the docs editor's.
+      submenus: {
+        "cs-menuitem-ext-export": () => [
+          { label: LOCALE.FORMAT_XLSX || "Microsoft Excel (.xlsx)", run: () => this._exportXlsx() },
+          { label: LOCALE.FORMAT_CSV || "Comma-separated values (.csv)", run: () => this._exportCsv() },
+        ],
+      },
+      // Casual's menubar buttons toggle on mousedown.
+      close: (trigger) =>
+        trigger.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true })),
+    });
+  }
+
+  /**
+   * Merge cells / Unmerge cells in the cell right-click menu, next to Insert
+   * and Delete. That menu is Univer's, not Casual's chrome, and carries no
+   * merge row: Univer only puts merging in its ribbon, which Casual replaces,
+   * so the right-click menu offered no way to merge. Added through Univer's
+   * menu facade (@univerjs/ui/facade, imported above), running the same
+   * commands as the toolbar buttons, with Univer's own merge icons.
+   */
+  _addMergeToContextMenu(api) {
+    const univer = api && api.univer;
+    if (this._mergeMenuAdded || !univer || typeof univer.createMenu !== "function") return;
+    this._mergeMenuAdded = 1;
+    const rows = [
+      {
+        id: "drumee.sheet.context-merge-cells",
+        title: LOCALE.MERGE_CELLS || "Merge cells",
+        icon: "MergeAllIcon",
+        action: "sheet.command.add-worksheet-merge-all",
+      },
+      {
+        id: "drumee.sheet.context-unmerge-cells",
+        title: LOCALE.UNMERGE_CELLS || "Unmerge cells",
+        icon: "CancelMergeIcon",
+        action: "sheet.command.remove-worksheet-merge",
+      },
+    ];
+    for (const row of rows) {
+      try {
+        univer.createMenu(row).appendTo("contextMenu.mainArea|contextMenu.layout");
+      } catch (e) {
+        this.warn("sheet: context menu " + row.id + " not added", e);
+      }
+    }
+  }
+
+  /** Base name for exported / printed files: the document's name. */
+  _exportName() {
+    const raw = (this.editor && this.editor.mget(_a.filename)) || this.mget(_a.filename) || "Spreadsheet";
+    return String(raw).replace(/<.+>/, "").replace(/\.usheet$/i, "").trim() || "Spreadsheet";
+  }
+
+  /** The sheet in view: its name and its used range as displayed text. */
+  _activeSheetCells() {
+    const api = this._apiHandle;
+    const ws = api && api.univer && api.univer.getActiveWorkbook().getActiveSheet();
+    if (!ws) return null;
+    const rows = ws.getDataRange().getDisplayValues();
+    return { name: ws.getSheetName(), rows };
+  }
+
+  /**
+   * File → Import: pick an .xlsx or .csv and add its sheet(s) to this
+   * spreadsheet as new tabs — nothing that is already here is touched.
+   * An .xlsx keeps values, formulas, styles, merges, column widths and row
+   * heights (Casual's own reader, its styles inlined since their ids belong
+   * to the other workbook); a .csv becomes one sheet of values.
+   */
+  _importFile() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept =
+      ".xlsx,.xlsm,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    input.style.display = "none";
+    input.addEventListener("change", () => {
+      const file = input.files && input.files[0];
+      input.remove();
+      if (file) this._importInto(file);
+    });
+    document.body.appendChild(input);
+    input.click();
+  }
+
+  async _importInto(file) {
+    const api = this._apiHandle;
+    const wb = api && api.univer && api.univer.getActiveWorkbook();
+    if (!wb) return;
+    const base = String(file.name || "Imported").replace(/\.[^.]+$/, "") || "Imported";
+    const taken = new Set(wb.getSheets().map((ws) => ws.getSheetName()));
+    const uniqueName = (name) => {
+      let n = String(name || base).slice(0, 80);
+      if (!taken.has(n)) return taken.add(n), n;
+      for (let i = 2; ; i++) {
+        const c = `${n} (${i})`;
+        if (!taken.has(c)) return taken.add(c), c;
+      }
+    };
+    try {
+      let first = null;
+      if (/\.csv$/i.test(file.name || "") || /csv/.test(file.type || "")) {
+        const rows = parseCsv(await file.text());
+        const cellData = {};
+        rows.forEach((r, ri) => {
+          r.forEach((v, ci) => {
+            if (v === "") return;
+            const n = Number(v);
+            (cellData[ri] = cellData[ri] || {})[ci] = {
+              v: v.trim() !== "" && !Number.isNaN(n) && /^[-+.\d]/.test(v.trim()) ? n : v,
+            };
+          });
+        });
+        const cols = rows.reduce((m, r) => Math.max(m, r.length), 0);
+        first = wb.insertSheet(uniqueName(base), {
+          sheet: { cellData, rowCount: Math.max(1000, rows.length + 50), columnCount: Math.max(26, cols + 5) },
+        });
+      } else {
+        const { xlsxToWorkbookData } = await import("@casualoffice/sheets/xlsx");
+        const imported = await xlsxToWorkbookData(await file.arrayBuffer());
+        // IWorkbookData of the picked file.
+        const data = imported || {};
+        const styles = data.styles || {};
+        const order = data.sheetOrder || Object.keys(data.sheets || {});
+        for (const id of order) {
+          const sheet = data.sheets && data.sheets[id];
+          if (!sheet) continue;
+          const cellData = {};
+          for (const [r, row] of Object.entries(sheet.cellData || {})) {
+            for (const [c, cell] of Object.entries(row || {})) {
+              if (!cell) continue;
+              const out = { ...cell };
+              if (typeof out.s === "string") out.s = styles[out.s] || undefined;
+              (cellData[r] = cellData[r] || {})[c] = out;
+            }
+          }
+          const { id: _drop, name, ...rest } = sheet;
+          const ws = wb.insertSheet(uniqueName(name), { sheet: { ...rest, cellData } });
+          if (!first) first = ws;
+        }
+      }
+      if (first && typeof first.activate === "function") first.activate();
+    } catch (e) {
+      this.warn("sheet: import failed", e);
+    }
+  }
+
+  /** File → Export as Excel: the LIVE workbook (unsaved edits included). */
+  async _exportXlsx() {
+    try {
+      const data = this.getSnapshot();
+      if (!data) return;
+      const { workbookDataToXlsx } = await import("@casualoffice/sheets/xlsx");
+      const blob = await workbookDataToXlsx(data);
+      saveBlob(blob, `${this._exportName()}.xlsx`);
+    } catch (e) {
+      this.warn("sheet: export as xlsx failed", e);
+    }
+  }
+
+  /** File → Export as CSV: the sheet in view, as Excel opens it (UTF-8 BOM). */
+  _exportCsv() {
+    try {
+      const sheet = this._activeSheetCells();
+      if (!sheet) return;
+      const cell = (v) => {
+        const t = v == null ? "" : String(v);
+        return /[",\r\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+      };
+      const csv = sheet.rows.map((r) => r.map(cell).join(",")).join("\r\n");
+      const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+      saveBlob(blob, `${this._exportName()} - ${sheet.name}.csv`);
+    } catch (e) {
+      this.warn("sheet: export as csv failed", e);
+    }
+  }
+
+  /**
+   * File → Print: the sheet in view as a plain table (its displayed values),
+   * printed from a hidden frame — Casual Sheets has no print of its own.
+   */
+  _printSheet() {
+    try {
+      const sheet = this._activeSheetCells();
+      if (!sheet) return;
+      const esc = (v) =>
+        String(v == null ? "" : v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      const body = sheet.rows.map((r) => `<tr>${r.map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`).join("");
+      const title = esc(`${this._exportName()} - ${sheet.name}`);
+      const frame = document.createElement("iframe");
+      frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+      document.body.appendChild(frame);
+      const doc = frame.contentDocument;
+      doc.open();
+      doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title><style>
+        body{font:11pt Arial,sans-serif;margin:12mm}h1{font-size:13pt;margin:0 0 8px}
+        table{border-collapse:collapse}td{border:1px solid #c7c7c7;padding:3px 6px;white-space:pre-wrap;vertical-align:top}
+      </style></head><body><h1>${title}</h1><table>${body}</table></body></html>`);
+      doc.close();
+      const done = () => setTimeout(() => frame.remove(), 1000);
+      frame.contentWindow.onafterprint = done;
+      setTimeout(() => {
+        try {
+          frame.contentWindow.focus();
+          frame.contentWindow.print();
+        } finally {
+          setTimeout(done, 60000);
+        }
+      }, 50);
+    } catch (e) {
+      this.warn("sheet: print failed", e);
+    }
+  }
+
+  _sheetExtensions() {
+    if (!this._extensions) {
+      // Merge / Unmerge, also in Format (as Google Sheets has them): Casual
+      // offers them only as toolbar buttons. Same commands as those buttons.
+      const run = (command) => (api) => {
+        try {
+          if (api && api.executeCommand) api.executeCommand(command);
+        } catch (e) {
+          this.warn("sheet: " + command + " failed", e);
+        }
+      };
+      // File: Casual Sheets' own two rows are both off here (About needs
+      // its branding, Properties a dialog this host does not provide), so
+      // Casual dropped the whole menu. It mirrors the docs editor's File
+      // (New, Save, Make a copy, Rename, Print, Export ▸, with its icons)
+      // with the sheet's means: a new sheet in this folder, Import (another
+      // file's sheets added as tabs), the window's save, copy and inline
+      // rename, a printout of the sheet in view, and the live workbook
+      // exported as Excel or CSV. Share / Get info / Trash
+      // stay in the gear menu, as in docs.
+      const fileRow = (id, label, icon, service) => ({
+        menu: "file",
+        id,
+        label,
+        icon,
+        onClick: () => {
+          const editor = this.editor;
+          if (!editor || (editor.isDestroyed && editor.isDestroyed())) return;
+          editor.onUiEvent({ get: () => service, mget: () => service }, { service });
+        },
+      });
+      this._extensions = {
+        menu: [
+          {
+            menu: "file",
+            id: "new",
+            label: LOCALE.NEW || "New",
+            icon: "note_add",
+            shortcut: "Ctrl+N",
+            onClick: () => chrome.createNew(this.editor, "editor_sheet"),
+          },
+          {
+            menu: "file",
+            id: "import",
+            label: LOCALE.IMPORT || "Import",
+            icon: "file_upload",
+            onClick: () => this._importFile(),
+          },
+          {
+            menu: "file",
+            id: "save",
+            label: LOCALE.SAVE || "Save",
+            icon: "file_download",
+            shortcut: "Ctrl+S",
+            onClick: () => {
+              if (this.editor && typeof this.editor.saveContent === "function") this.editor.saveContent();
+            },
+          },
+          fileRow("make-copy", LOCALE.MAKE_A_COPY, "content_copy", _a.duplicate),
+          fileRow("rename", LOCALE.RENAME, "edit", "direct-rename"),
+          {
+            menu: "file",
+            id: "print",
+            label: LOCALE.PRINT || "Print",
+            icon: "print",
+            onClick: () => this._printSheet(),
+          },
+          // Export ▸ Excel / CSV: the submenu is the menu policy's
+          // (_wireMenus), Casual's extensions take no submenu.
+          {
+            menu: "file",
+            id: "export",
+            label: LOCALE.EXPORT || "Export",
+            icon: "file_download",
+            onClick: () => {},
+          },
+          {
+            menu: "format",
+            id: "merge-cells",
+            label: LOCALE.MERGE_CELLS || "Merge cells",
+            icon: "cell_merge",
+            onClick: run("sheet.command.add-worksheet-merge-all"),
+          },
+          {
+            menu: "format",
+            id: "unmerge-cells",
+            label: LOCALE.UNMERGE_CELLS || "Unmerge cells",
+            icon: "splitscreen_vertical_add",
+            onClick: run("sheet.command.remove-worksheet-merge"),
+          },
+          {
+            menu: "help",
+            id: "contact-us",
+            label: LOCALE.CONTACT_US,
+            onClick: () => {
+              if (this.editor && this.editor.contactSupport) this.editor.contactSupport();
+            },
+          },
+        ],
+      };
+    }
+    return this._extensions;
+  }
+
+  _toggleGridlines() {
+    const api = this._apiHandle;
+    try {
+      const sheet = api && api.univer && api.univer.getActiveWorkbook().getActiveSheet();
+      if (!sheet || typeof sheet.setHiddenGridlines !== "function") return;
+      sheet.setHiddenGridlines(!sheet.hasHiddenGridLines());
+    } catch (e) {
+      this.warn("sheet: gridlines toggle failed", e);
+    }
+  }
+
+  /**
+   * A new sheet is created on disk as soon as it is ready, as Google Sheets
+   * does. Saves only ran from the edit autosave (4s after a change) or an
+   * explicit Save, so a new sheet had no node: it was missing from the
+   * folder's files panel and Recently viewed until something was typed and
+   * saved, and a blank one never landed at all. Once: a reopen has a nid.
+   */
+  _createIfNew() {
+    const ed = this.editor;
+    if (this._createdNew || this.media || !ed || ed.mget(_a.nid)) return;
+    if (typeof ed.saveContent !== "function") return;
+    this._createdNew = 1;
+    ed.saveContent();
   }
 
   /**
@@ -870,10 +1392,18 @@ class __sheet_state extends DrumeeMFS {
     host.className = "sheet-state__react-host";
     this.el.insertBefore(host, this.el.firstChild);
     this._host = host;
-    // The window's "Loading…" label (sheet/skeleton) has done its job.
-    const win = this.el.closest(".editor-sheet");
-    const loading = win && win.querySelector(".editor-loading");
-    if (loading) loading.remove();
+    // The loading skeleton (sheet/skeleton) stays over the editor until it
+    // has painted — Casual's chrome and grid in place and its icon font in.
+    // Lifted at onReady, it let Casual's half-built first render show: a
+    // blank sheet and the icon NAMES ("table", "pivot_table", …) spilling
+    // out at the right while Material Symbols still downloaded.
+    if (this._cancelReveal) this._cancelReveal();
+    this._cancelReveal = revealWhenPainted(this.el.closest(".editor-sheet"), {
+      painted: () =>
+        this._ready &&
+        host.querySelector('[data-testid="casual-sheets-toolbar"]') &&
+        host.querySelector("canvas"),
+    });
     return host;
   }
 }

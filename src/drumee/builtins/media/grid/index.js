@@ -257,14 +257,15 @@ class __media_grid extends DrumeeMediaInteract {
    * Put it where the name is — inside meta-row-top, before the kebab — and
    * hide the name while it is up. `visibility: hidden` (what interact.js
    * does) would keep the name's box and squeeze the field, hence display.
-   * Folder and workspace tiles keep their own layout.
+   * Folder and workspace tiles get the same field, in place of their label
+   * under the folder art (they have no meta row; data-folder centres it).
    */
   async _createInput(value, opt) {
     await super._createInput(value, opt);
     const entry = this.children.last();
     if (!entry || entry.isDestroyed() || !entry.el) return;
     const type = this.mget(_a.filetype);
-    if (type === _a.folder || type === _a.hub) return;
+    const isFolder = type === _a.folder || type === _a.hub;
     // The date line under the name is hidden while the editor is up: the
     // field (and its focus ring) took its place and drew over it, and the
     // fallback below (base &__input: absolute, bottom 0) lands right on it.
@@ -273,10 +274,13 @@ class __media_grid extends DrumeeMediaInteract {
       if (this.el) delete this.el.dataset.renaming;
     });
     const name = document.getElementById(`${this._id}-filename`);
-    const row = name && name.closest(`.${this.fig.family}__meta-row-top`);
+    const row = isFolder
+      ? name && name.parentNode
+      : name && name.closest(`.${this.fig.family}__meta-row-top`);
     if (!row) return;
     row.insertBefore(entry.el, name);
     entry.el.dataset.inline = "1";
+    if (isFolder) entry.el.dataset.folder = "1";
     name.style.display = "none";
     entry.once(_e.destroy, () => {
       name.style.display = "";

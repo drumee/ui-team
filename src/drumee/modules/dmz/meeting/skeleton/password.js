@@ -1,11 +1,64 @@
-// The invite link's password gate (Figma 1693:168688, in frame 1693:168666):
-// the meeting and who shared it, "Password required", the password field and
-// Continue. dmz.login answers REQUIRED_PASSWORD with the meeting's title in
-// `filename`. The frame's "Your email will be shared with the meeting owner"
-// line is left out: this gate asks for no email.
+// The invite link's gate (Figma 1693:168688 in frame 1693:168666; with the
+// email step, 1693:168699): the meeting and who shared it, then
+//   • "Enter your email to access" — when the organiser ticked "Require email
+//     to view" (dmz.login answers REQUIRED_EMAIL, `require_email`), and
+//   • "Password required" — when the link has a password (`require_password`),
+// each with its own field, one Continue for both, and — when an email is asked
+// — "Your email will be shared with the meeting owner." under it.
+// dmz.login names the meeting in `filename` (REQUIRED_PASSWORD) or `title`.
 function __skl_dmz_meeting_password(ui, data = {}) {
   const pfx = `${ui.fig.family}-password`;
   const sender = String(data.sender || "").trim();
+  const askEmail = data.status === "REQUIRED_EMAIL" || !!Number(data.require_email);
+  const askPassword =
+    data.status === "REQUIRED_PASSWORD" || !!Number(data.require_password) || !!Number(data.require_pwd);
+
+  const section = (ico, title, desc) => [
+    Skeletons.Box.X({
+      className: `${pfx}__title-row`,
+      kids: [
+        Skeletons.Image.Svg({ ico, className: `${pfx}__title-ico` }),
+        Skeletons.Note({ className: `${pfx}__title`, content: title }),
+      ],
+    }),
+    Skeletons.Note({ className: `${pfx}__desc`, content: desc }),
+  ];
+
+  const emailKids = askEmail
+    ? [
+        ...section("ph-envelope-simple", LOCALE.SECURE_SHARE_ENTER_EMAIL, LOCALE.DMZ_MEETING_EMAIL_REQUIRED),
+        Skeletons.EntryBox({
+          className: `${pfx}__entry`,
+          placeholder: LOCALE.SECURE_SHARE_EMAIL_PLACEHOLDER,
+          sys_pn: "ref-email",
+          type: "email",
+          mode: _a.commit,
+          service: "dmz-submit-password",
+          uiHandler: [ui],
+          partHandler: [ui],
+          showError: false,
+        }),
+      ]
+    : [];
+
+  const passwordKids = askPassword
+    ? [
+        ...section("ph-key", LOCALE.SECURE_SHARE_PASSWORD_REQUIRED, LOCALE.DMZ_MEETING_PASSWORD_PROTECTED),
+        Skeletons.EntryBox({
+          className: `${pfx}__entry`,
+          placeholder: LOCALE.ENTER_PASSWORD,
+          sys_pn: "ref-password",
+          type: _a.password,
+          shower: 1,
+          mode: _a.commit,
+          service: "dmz-submit-password",
+          uiHandler: [ui],
+          partHandler: [ui],
+          showError: false,
+        }),
+      ]
+    : [];
+
   return Skeletons.Box.Y({
     className: `${pfx}__card`,
     debug: __filename,
@@ -20,7 +73,7 @@ function __skl_dmz_meeting_password(ui, data = {}) {
           Skeletons.Box.Y({
             className: `${pfx}__head-text`,
             kids: [
-              Skeletons.Note({ className: `${pfx}__name`, content: data.filename || LOCALE.MEETING }),
+              Skeletons.Note({ className: `${pfx}__name`, content: data.filename || data.title || LOCALE.MEETING }),
               sender
                 ? Skeletons.Note({
                     className: `${pfx}__sender`,
@@ -33,27 +86,10 @@ function __skl_dmz_meeting_password(ui, data = {}) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__body`,
+        attrOpt: { "data-email": askEmail ? "1" : "0", "data-password": askPassword ? "1" : "0" },
         kids: [
-          Skeletons.Box.X({
-            className: `${pfx}__title-row`,
-            kids: [
-              Skeletons.Image.Svg({ ico: "ph-key", className: `${pfx}__title-ico` }),
-              Skeletons.Note({ className: `${pfx}__title`, content: LOCALE.SECURE_SHARE_PASSWORD_REQUIRED }),
-            ],
-          }),
-          Skeletons.Note({ className: `${pfx}__desc`, content: LOCALE.DMZ_MEETING_PASSWORD_PROTECTED }),
-          Skeletons.EntryBox({
-            className: `${pfx}__entry`,
-            placeholder: LOCALE.ENTER_PASSWORD,
-            sys_pn: "ref-password",
-            type: _a.password,
-            shower: 1,
-            mode: _a.commit,
-            service: "dmz-submit-password",
-            uiHandler: [ui],
-            partHandler: [ui],
-            showError: false,
-          }),
+          ...emailKids,
+          ...passwordKids,
           Skeletons.Note({ className: `${pfx}__error`, sys_pn: "password-error", partHandler: [ui], content: "" }),
           Skeletons.Note({
             className: `${pfx}__button`,
@@ -61,7 +97,10 @@ function __skl_dmz_meeting_password(ui, data = {}) {
             service: "dmz-submit-password",
             uiHandler: [ui],
           }),
-        ],
+          askEmail
+            ? Skeletons.Note({ className: `${pfx}__footnote`, content: LOCALE.DMZ_MEETING_EMAIL_SHARED })
+            : null,
+        ].filter(Boolean),
       }),
     ],
   });

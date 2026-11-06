@@ -3,6 +3,7 @@ const { isTaskViewAllowed, canUpgradePlan } = require("libs/billing");
 const { keepListThroughClick } = require("libs/pick-guard");
 const readCache = require("libs/read-cache");
 const { focusWhenReady } = require("libs/notice-focus");
+const { announceTaskWrite } = require("libs/tasks-changed");
 const { resolveZone } = require("./drop-zones");
 const { rowOf, ownedPatch, applyLabelOps, longestList, peerPatch } = require("./live-sync");
 const {
@@ -12,21 +13,20 @@ const {
   settlePendingFiles,
 } = require("./detail-commit");
 const { restoreScroll } = require("./scroll-restore");
-const { titleTooLong, toggleUid } = require("./list-edit");
+const { titleTooLong, titleTaken, toggleUid } = require("./list-edit");
 const { stamp, reconcile } = require("./reconcile");
 const listInline = require("./list-inline");
 const listSubtask = require("./list-subtask");
 const completeParent = require("./complete-parent");
+const linkTip = require("./link-tip");
 const { killTaskToast } = require("./task-toast");
 const {
   markerRe,
-  contentTokenRe,
-  imgMarker,
-  linkMarker,
   linkifyTokens,
   safeUrl,
   uidsFromText,
 } = require("./mention-markers");
+const { parse, stringify, fromDom, toDom } = require("./rich-text");
 const {
   unfinishedPending,
   abandonedPending,
@@ -83,6 +83,24 @@ const COMMENT_SUBMIT_BY_SCOPE = {
   comment: "_submitComment",
   "comment-edit": "_saveCommentEdit",
   "comment-reply": "_submitReply",
+};
+
+// Format toolbar button (skeleton formatBar's data-format) → execCommand.
+// "link" has no command: it opens the Ctrl+K prompt.
+const FORMAT_COMMANDS = {
+  bold: "bold",
+  italic: "italic",
+  underline: "underline",
+  strike: "strikeThrough",
+  ul: "insertUnorderedList",
+  ol: "insertOrderedList",
+};
+
+// Ctrl/Cmd+Shift shortcuts, by e.code: Shift changes e.key ("8" → "*").
+const SHIFT_FORMAT_KEYS = {
+  KeyX: "strike",
+  Digit8: "ul",
+  Digit7: "ol",
 };
 
 // Scopes the file picker accepts, i.e. the drafts _draftForKey can queue a file
@@ -444,6 +462,10 @@ class __tasks_panel extends LetcBox {
     for (const cb of this._partWaiters || []) this.off(_e.part.ready, cb);
     this._partWaiters = null;
     this._closeCommentReactionsPicker();
+    if (this._onSelectionChange) {
+      document.removeEventListener("selectionchange", this._onSelectionChange);
+      this._onSelectionChange = null;
+    }
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
     if (this._assigneeBlurTimer) clearTimeout(this._assigneeBlurTimer);
@@ -1050,7 +1072,7 @@ class __tasks_panel extends LetcBox {
    */
   static get TASK_MUTATIONS() {
     return [
-      "task.create", "task.update", "task.update_status", "task.update_assignee",
+      "task.create", "task.update", "task.update_status", "task.reorder", "task.update_assignee",
       "task.delete", "task.link_file", "task.unlink_file", "task.link_label",
       "task.unlink_label", "task.comment_create", "task.comment_update",
       "task.comment_delete", "task.comment_react", "task.column_create",
@@ -1106,7 +1128,17 @@ class __tasks_panel extends LetcBox {
         const sid = typeof Visitor !== "undefined" && Visitor.get && Visitor.get(_a.socket_id);
         if (sid) args[0] = { ...a0, socket_id: sid };
       }
-      return original(...args);
+      // ...which is also why a Personal Calendar in THIS tab never hears it:
+      // tell it here, once the write has landed (libs/tasks-changed).
+      const name = typeof a0 === "string" ? a0 : (a0 && a0.service) || "";
+      return Promise.resolve(original(...args)).then((res) => {
+        try {
+          announceTaskWrite(name, res);
+        } catch (e) {
+          /* a listener's failure must not fail the write */
+        }
+        return res;
+      });
     };
   }
 
@@ -1249,10 +1281,22 @@ class __tasks_panel extends LetcBox {
         try {
           e.dataTransfer.dropEffect = "move";
         } catch (_) {}
+        // Scroll the board while the column is held near its left/right edge.
+        this._dragAutoScrollX(e.clientX);
         // Track the highlighted column instead of sweeping the whole panel —
         // dragover fires at pointer rate, so a per-event querySelectorAll
         // over a packed board is real work.
-        const next = colEl && root.contains(colEl) ? colEl : null;
+        // Over the board's gaps / padding (no [data-column] under the pointer)
+        // keep the last column lit: clearing it there made a drop that landed
+        // between two columns do nothing at all.
+        const inBoard =
+          e.target && e.target.closest && e.target.closest(".tasks-panel__main");
+        const next =
+          colEl && root.contains(colEl)
+            ? colEl
+            : inBoard
+              ? this._colDropEl
+              : null;
         if (this._colDropEl !== next) {
           if (this._colDropEl) this._colDropEl.classList.remove("is-col-drop");
           if (next) next.classList.add("is-col-drop");
@@ -1292,12 +1336,22 @@ class __tasks_panel extends LetcBox {
         this._rememberDropScope(s);
         return;
       }
+      // Same for a card: a column scrolled out of view was unreachable.
+      if (this._dragTaskId) this._dragAutoScrollX(e.clientX);
       const col = findColumn(e.target);
-      if (!col) return;
+      if (!col) {
+        this._dragAutoScroll(null);
+        return;
+      }
       e.preventDefault();
       try {
         e.dataTransfer.dropEffect = "move";
       } catch (_) {}
+      // Scroll the column while the card is held near its top/bottom edge. A
+      // native HTML5 drag gets no reliable autoscroll inside an overflow
+      // container (and none at all with the scrollbar hidden, as here), so a
+      // card could never reach a slot that was scrolled out of view.
+      if (this._dragTaskId) this._dragAutoScroll(col, e.clientY);
       // Track the active drop column instead of querySelectorAll-ing the
       // whole panel per event — dragover fires at pointer rate (100+/s) and
       // a full-board subtree scan each time is measurable on packed boards.
@@ -1332,6 +1386,9 @@ class __tasks_panel extends LetcBox {
 
     root.addEventListener("dragleave", (e) => {
       if (isOurDrag()) e.stopPropagation();
+      // Off the panel entirely: dragover stops firing here, so nothing would
+      // re-arm or stop the board's horizontal autoscroll loop.
+      if (!root.contains(e.relatedTarget)) this._dragAutoScrollX(null);
       // One rule now the affordance lives on the zone element: clear when the
       // pointer leaves the zone that lit it. relatedTarget, not target — on
       // dragleave `target` is the element being LEFT, which is still inside the
@@ -1353,6 +1410,7 @@ class __tasks_panel extends LetcBox {
       // move would otherwise read as a leave and flicker the outline.
       const scope = (col && col.closest(".tasks-panel__column")) || col;
       if (col && scope && !scope.contains(e.relatedTarget)) {
+        if (this._autoScroll && this._autoScroll.col === col) this._dragAutoScroll(null);
         col.classList.remove("is-drop-target");
         if (this._dropTargetEl === col) this._dropTargetEl = null;
       }
@@ -1363,8 +1421,8 @@ class __tasks_panel extends LetcBox {
       // so it must not also land in the desk's upload path (the DMZ Wm binds
       // native `drop` too — modules/dmz/wm/index.js).
       if (isOurDrag()) e.stopPropagation();
-      // Column reorder drop → place the dragged column before/after the target
-      // depending on which half of it the pointer is over.
+      // Column reorder drop → the dragged column takes the outlined column's
+      // slot (see _reorderColumn).
       if (this._dragColKey) {
         e.preventDefault();
         const dragId = this._dragColKey;
@@ -1377,13 +1435,12 @@ class __tasks_panel extends LetcBox {
           (e.target && e.target.closest && e.target.closest("[data-column]"));
         this._dragColKey = null;
         this._colDropEl = null;
+        this._dragAutoScrollX(null);
         root
           .querySelectorAll(".tasks-panel__column.is-col-drop, .tasks-panel__column.is-col-dragging")
           .forEach((n) => n.classList.remove("is-col-drop", "is-col-dragging"));
         if (colEl && root.contains(colEl)) {
-          const rect = colEl.getBoundingClientRect();
-          const before = e.clientX < rect.left + rect.width / 2;
-          this._reorderColumn(dragId, colEl.dataset.column, before);
+          this._reorderColumn(dragId, colEl.dataset.column);
         }
         return;
       }
@@ -1449,6 +1506,9 @@ class __tasks_panel extends LetcBox {
 
     const onMove = (e) => {
       if (!main) return;
+      // Button already up but no mouseup reached us (a native drag swallowed
+      // it) — end the pan instead of scrolling a board nobody is holding.
+      if (!(e.buttons & 1)) return end();
       const dx = e.pageX - startX;
       // Small tolerance so a plain click isn't read as a (zero-length) pan.
       if (!moved && Math.abs(dx) < 3) return;
@@ -1481,10 +1541,13 @@ class __tasks_panel extends LetcBox {
       const board =
         e.target.closest && e.target.closest(".tasks-panel__main");
       if (!board || !root.contains(board)) return;
-      // Let card DnD and interactive controls keep the press.
+      // Let card / column DnD and interactive controls keep the press. A
+      // draggable column header must be excluded too: once its native drag
+      // starts the browser never delivers mouseup, so a pan armed here stayed
+      // armed — grabbing cursor stuck and every later mousemove scrolled x.
       if (
         e.target.closest(
-          ".tasks-panel__task-card, button, input, textarea, a, [contenteditable]",
+          ".tasks-panel__task-card, [draggable='true'], button, input, textarea, a, [contenteditable]",
         )
       )
         return;
@@ -1498,6 +1561,8 @@ class __tasks_panel extends LetcBox {
       document.addEventListener("mousemove", onMove, true);
       document.addEventListener("mouseup", end, true);
     });
+    // Any native drag taking over the press ends the pan — mouseup won't come.
+    root.addEventListener("dragstart", end, true);
   }
 
   // Lazily-created insertion placeholder shared across columns.
@@ -1527,7 +1592,117 @@ class __tasks_panel extends LetcBox {
     return null;
   }
 
+  // Edge autoscroll for a card drag. `col` is the column body (the scroller)
+  // under the pointer; null stops. dragover only re-arms the speed — the
+  // scrolling itself runs on its own rAF loop, so holding the card still at
+  // the edge keeps the column moving smoothly between dragover events.
+  //
+  // The hot band is the body's top/bottom EDGE px; a pointer past
+  // the body (over the pinned header, or the add-task row below) counts as the
+  // band's outer limit, i.e. full speed.
+  _dragAutoScroll(col, y) {
+    const EDGE = 56; // px band at each end
+    const MAX = 18; // px per frame at the very edge
+    let speed = 0;
+    if (col && col.scrollHeight > col.clientHeight) {
+      const r = col.getBoundingClientRect();
+      const band = Math.min(EDGE, r.height / 3);
+      if (y < r.top + band) {
+        speed = -Math.ceil(MAX * Math.min(1, (r.top + band - y) / band));
+      } else if (y > r.bottom - band) {
+        speed = Math.ceil(MAX * Math.min(1, (y - (r.bottom - band)) / band));
+      }
+    }
+    if (!speed) {
+      this._autoScroll = null;
+      if (this._autoScrollRaf && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(this._autoScrollRaf);
+      }
+      this._autoScrollRaf = 0;
+      return;
+    }
+    this._autoScroll = { col, key: col.dataset.dropcol, speed, y };
+    if (this._autoScrollRaf || typeof requestAnimationFrame !== "function") return;
+    const step = () => {
+      this._autoScrollRaf = 0;
+      const a = this._autoScroll;
+      if (!a || !this.el) return;
+      // Scrolling near the bottom grows the card window (_installCardWindow),
+      // which rebuilds the view body — follow the column to its new node.
+      if (!a.col.isConnected) {
+        a.col = this.el.querySelector(
+          `.tasks-panel__column-body[data-dropcol="${a.key}"]`,
+        );
+        if (!a.col) return (this._autoScroll = null);
+      }
+      const before = a.col.scrollTop;
+      a.col.scrollTop = before + a.speed;
+      // Hit the end: stop until the next dragover re-arms.
+      if (a.col.scrollTop === before) return (this._autoScroll = null);
+      // The cards moved under a still pointer — re-place the insertion
+      // placeholder through the same coalesced path dragover uses.
+      if (this._placeholder && this._placeholder.parentNode === a.col) {
+        const after = this._dragAfterCard(a.col, a.y);
+        const ph = this._placeholder;
+        if (after) {
+          if (after.previousElementSibling !== ph) a.col.insertBefore(ph, after);
+        } else if (a.col.lastElementChild !== ph) {
+          a.col.appendChild(ph);
+        }
+      }
+      this._autoScrollRaf = requestAnimationFrame(step);
+    };
+    this._autoScrollRaf = requestAnimationFrame(step);
+  }
+
+  // Horizontal edge autoscroll of the board (.tasks-panel__main) during a
+  // column or card drag. Native HTML5 drag gives an overflow-x container no
+  // reliable autoscroll, so holding a column at the board's edge did nothing.
+  // `x` is the pointer clientX; null stops. Same model as _dragAutoScroll:
+  // dragover re-arms the speed, a rAF loop does the scrolling so a still
+  // pointer keeps the board moving. Past the board's edge = full speed.
+  _dragAutoScrollX(x) {
+    const EDGE = 64; // px band at each side
+    const MAX = 20; // px per frame at the very edge
+    const main = x == null || !this.el
+      ? null
+      : this.el.querySelector(".tasks-panel__main");
+    let speed = 0;
+    if (main && main.scrollWidth > main.clientWidth) {
+      const r = main.getBoundingClientRect();
+      const band = Math.min(EDGE, r.width / 4);
+      if (x < r.left + band) {
+        speed = -Math.ceil(MAX * Math.min(1, (r.left + band - x) / band));
+      } else if (x > r.right - band) {
+        speed = Math.ceil(MAX * Math.min(1, (x - (r.right - band)) / band));
+      }
+    }
+    if (!speed) {
+      this._autoScrollX = null;
+      if (this._autoScrollXRaf && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(this._autoScrollXRaf);
+      }
+      this._autoScrollXRaf = 0;
+      return;
+    }
+    this._autoScrollX = { main, speed };
+    if (this._autoScrollXRaf || typeof requestAnimationFrame !== "function") return;
+    const step = () => {
+      this._autoScrollXRaf = 0;
+      const a = this._autoScrollX;
+      if (!a || !a.main.isConnected) return (this._autoScrollX = null);
+      const before = a.main.scrollLeft;
+      a.main.scrollLeft = before + a.speed;
+      // Hit the end: stop until the next dragover re-arms.
+      if (a.main.scrollLeft === before) return (this._autoScrollX = null);
+      this._autoScrollXRaf = requestAnimationFrame(step);
+    };
+    this._autoScrollXRaf = requestAnimationFrame(step);
+  }
+
   _clearDropAffordance() {
+    this._dragAutoScroll(null);
+    this._dragAutoScrollX(null);
     if (this._dragOverRaf && typeof cancelAnimationFrame === "function") {
       cancelAnimationFrame(this._dragOverRaf);
     }
@@ -1571,9 +1746,21 @@ class __tasks_panel extends LetcBox {
     // No-op: same column and dropped onto itself / its own slot.
     if (sameColumn && (!afterEl || afterEl === card)) return;
 
+    // Into ANOTHER column the card lands on top, wherever it was dropped:
+    // task_update_status ranks it first there, so a mid-column drop would
+    // jump to the top on the next reload anyway. Reordering within a column
+    // still honours the drop slot.
+    if (!sameColumn && targetBody) {
+      afterEl = Array.from(
+        targetBody.querySelectorAll(".tasks-panel__task-card[data-tid]"),
+      ).find((el) => el !== card) || null;
+    }
+
     // Fall back to a full render if we can't locate the DOM nodes (defensive).
     if (!card || !targetBody) {
+      const idx = this._tasks.indexOf(task);
       task.status = status;
+      if (!sameColumn) this._toColumnTop(idx, true);
       this._render({ full: true });
     } else {
       const sourceBody = card.closest(".tasks-panel__column-body");
@@ -1598,15 +1785,13 @@ class __tasks_panel extends LetcBox {
       // Refresh counts + empty-state on both affected columns in place.
       this._syncColumn(sourceBody);
       if (targetBody !== sourceBody) this._syncColumn(targetBody);
-      // The card shows its column as a status pill — retint it in place too
-      // (the drag path is surgical; nothing else re-renders the card).
-      this._syncCardStatus(card, status);
     }
 
-    // Same-column reorder has no server-side rank to persist yet, so skip the
-    // round-trip. The model reorder above keeps the order across re-renders; it
-    // reverts only on a server reload (_loadTasks), which returns tasks unranked.
-    if (sameColumn) return;
+    // Same-column reorder → task.reorder. This used to return here ("no
+    // server-side rank to persist yet"), so the order lived only in the
+    // in-memory model and every reload — task_list sorts by rank — put the card
+    // back where it was.
+    if (sameColumn) return this._persistReorder(taskId, status);
 
     try {
       const updated = await this.postService({
@@ -1625,6 +1810,56 @@ class __tasks_panel extends LetcBox {
       await this._loadTasks();
       this._render({ full: true });
     }
+  }
+
+  // Persist a same-column reorder that _reorderTaskModel already applied. The
+  // anchor is read from the MODEL, not the DOM: the column builds only
+  // CARD_WINDOW cards, so "dropped at the end of the rendered cards" and "the
+  // end of the column" differ, and the model is what the next _render() — and
+  // so the server — must agree with. The answer carries the whole column's new
+  // ranks; adopt them so the rank-sorted List view agrees too.
+  async _persistReorder(taskId, status) {
+    const i = this._tasks.findIndex((t) => String(t.id) === String(taskId));
+    if (i < 0) return;
+    let before = null;
+    for (let j = i + 1; j < this._tasks.length; j++) {
+      if (this._tasks[j].status === status) {
+        before = this._tasks[j];
+        break;
+      }
+    }
+    try {
+      const rows = await this.postService({
+        service: SERVICE.task.reorder,
+        hub_id: this._hubId,
+        id: taskId,
+        before_id: before ? before.id : "",
+      });
+      // postService resolves (undefined / an error payload) rather than
+      // rejecting on failure, so a non-array IS the error path.
+      if (Array.isArray(rows)) return this._applyColumnRanks(rows);
+      console.error("[tasks_panel] reorder (drag) failed:", rows);
+    } catch (err) {
+      console.error("[tasks_panel] reorder (drag) failed:", err);
+    }
+    // Not saved: show the order the server actually holds.
+    await this._loadTasks();
+    this._render({ full: true });
+  }
+
+  // Adopt the {id, rank} rows task.reorder answers (or a peer's push carries).
+  // Returns true when any cached rank changed.
+  _applyColumnRanks(rows) {
+    if (!Array.isArray(rows)) return false;
+    const byId = new Map(this._tasks.map((t) => [String(t.id), t]));
+    let changed = false;
+    for (const r of rows) {
+      const t = r && byId.get(String(r.id));
+      if (!t || r.rank == null || Number(t.rank) === Number(r.rank)) continue;
+      t.rank = Number(r.rank);
+      changed = true;
+    }
+    return changed;
   }
 
   // Move `taskId` within this._tasks to match a drag drop: place it before the
@@ -1752,20 +1987,6 @@ class __tasks_panel extends LetcBox {
 
   // Keep a column's count badge and empty-state hint in sync after a surgical
   // card move (no full re-render). Mirrors what the skeleton renders initially.
-  // Update a moved card's status pill (label / dot / theme tint) in place —
-  // companion to _syncColumn for the surgical drag path.
-  _syncCardStatus(card, statusKey) {
-    if (!card) return;
-    const col = this.getColumns().find((c) => c.key === statusKey);
-    if (!col) return;
-    const pill = card.querySelector(".tasks-panel__task-status");
-    if (pill) pill.dataset.theme = col.theme || "default";
-    const dot = card.querySelector(".tasks-panel__task-status-dot");
-    if (dot) dot.style.background = col.color || "";
-    const label = card.querySelector(".tasks-panel__task-status-label");
-    if (label) label.textContent = col.name || "";
-  }
-
   _syncColumn(colBody) {
     if (!colBody) return;
     const count = colBody.querySelectorAll(".tasks-panel__task-card").length;
@@ -1805,6 +2026,20 @@ class __tasks_panel extends LetcBox {
         p = p.parent;
         depth += 1;
       }
+    }
+    // The framework fires a widget's `service` on a plain click too, not only
+    // on the Entry's Enter-commit (letc.js: el.onclick → triggerHandlers). A
+    // click that just places the caret in a commit-mode Entry must not submit:
+    // paste a title into the subtask creator, click to fix a typo, and the
+    // subtask was created. Only Enter or the card's own button commits.
+    if (
+      args &&
+      args.type === "click" &&
+      trigger &&
+      trigger.mget &&
+      trigger.mget(_a.mode) === _a.commit
+    ) {
+      return;
     }
     // After the service has been resolved (the walk above is what turns a click
     // on a Note into its ancestor's service), before any case can act on it.
@@ -2344,12 +2579,12 @@ class __tasks_panel extends LetcBox {
         // rather than dismissing everything — there is one detail panel, so
         // closing the child used to take the parent with it. Read the target
         // first: _closeDetailSilently clears it.
-        const back = this._detailReturnTo;
+        const back = this._walkBackTarget();
         // Walking back is NAVIGATION, not a dismissal: the parent is drawn
         // into this same element in the same tick, so an exit here would fade
         // the child out underneath the parent arriving on top of it. Close it
         // instantly and let _openDetail play its own entrance.
-        if (back && this._tasks.some((t) => t.id === back)) {
+        if (back) {
           this._closeDetailSilently();
           // _openDetail renders on its own — a _renderDeferred() on top of it
           // would be a second full rebuild of the panel just painted.
@@ -2363,16 +2598,16 @@ class __tasks_panel extends LetcBox {
       case "open-detail":
         return this._openDetail(trigger.mget("taskId"));
 
+      // Format toolbar above a description editor (skeleton formatBar).
+      case "desc-format":
+        return this._applyFormat(trigger.mget("formatScope"), trigger.mget("format"));
+
       // Quick-open card only (its footer's "Open in board"): leave the card the
       // way Cancel does, dropping unsaved edits, and let the host open the
       // workspace board on this task.
       case "quick-open-board":
         this._quickToBoard = 1;
         return this._closeDetailSilently(() => this._renderOverlays());
-
-      // Quick-open card only: the × shown while the card is still loading.
-      case "quick-open-cancel":
-        return this._quickOpenLeft();
 
       case "set-view": {
         const v = trigger.mget("viewMode");
@@ -2580,20 +2815,10 @@ class __tasks_panel extends LetcBox {
           args && args.value != null ? String(args.value) : this._colRenameDraft;
         return;
 
-      case "col-rename-submit": {
-        // The framework fires a widget's `service` on a plain click too, not
-        // only on the Entry's Enter-commit (letc.js: el.onclick → triggerHandlers).
-        // A bare click that just focuses the name-seeded input must not
-        // submit-and-close the popover — only Enter or the Rename button should.
-        const isEntryFocusClick =
-          args &&
-          args.type === "click" &&
-          trigger &&
-          trigger.mget &&
-          trigger.mget("name") === "col_rename";
-        if (isEntryFocusClick) return;
+      case "col-rename-submit":
+        // A focus click on the name input never gets here (commit-mode guard
+        // at the top); only Enter or the Rename button does.
         return this._renameColumn(trigger);
-      }
 
       case "col-theme-set":
         return this._themeColumn(trigger);
@@ -2764,6 +2989,17 @@ class __tasks_panel extends LetcBox {
     // comment / comment-edit / comment-reply). Init each with its scope.
     if (typeof pn === "string" && pn.endsWith("-desc-editor")) {
       this._initDescEditor(child.el, pn.slice(0, -"-desc-editor".length));
+      return;
+    }
+    // Format toolbar ("<scope>-format-bar"): pressing a button must not take
+    // the focus — or the selection it formats — out of the editor. The click
+    // still reaches the service.
+    if (typeof pn === "string" && pn.endsWith("-format-bar")) {
+      child.el.addEventListener("mousedown", (e) => e.preventDefault());
+      if (!this._onSelectionChange) {
+        this._onSelectionChange = () => this._syncFormatBar();
+        document.addEventListener("selectionchange", this._onSelectionChange);
+      }
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
@@ -3164,6 +3400,11 @@ class __tasks_panel extends LetcBox {
           history: 1,
           members: service === SERVICE.task.update_assignee ? 1 : 0,
         });
+        return;
+      case SERVICE.task.reorder:
+        // A peer reordered a column. The push carries only ranks, and the
+        // board orders by array position, so re-read rather than re-sort.
+        this._queueWsRefresh({ tasks: 1 });
         return;
       case SERVICE.task.column_create:
       case SERVICE.task.column_update:
@@ -3707,6 +3948,10 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
         // Whole workspace, every folder. See _scopeNid in initialize.
         workspace: 1,
+        // Cache-buster. fetchService is a GET with `cache: "default"` and the
+        // server sends no Cache-Control, so the browser may answer a re-read
+        // from its HTTP cache — a reorder or move then "reverts" on reload.
+        _ts: Date.now(),
         // Deliberate redundancy for a staggered deploy. A server that predates
         // the workspace flag ignores it and reads these instead, so the board
         // falls back to the old folder-scoped list rather than coming back
@@ -4119,6 +4364,9 @@ class __tasks_panel extends LetcBox {
       if (!titleTooLong(value)) {
         this._clearSubtaskTitleTooLong("detail-panel", this._subtaskDraft);
       }
+      if (!titleTaken(value, this.getSubtasks(this._detailId))) {
+        this._clearSubtaskTitleDuplicate("detail-panel", this._subtaskDraft);
+      }
       return;
     }
     // Same, for the creator inside the create modal — its draft is a different
@@ -4132,6 +4380,9 @@ class __tasks_panel extends LetcBox {
       }
       if (!titleTooLong(value)) {
         this._clearSubtaskTitleTooLong("create-modal", this._createSubtaskDraft);
+      }
+      if (!titleTaken(value, this.getPendingSubtasks())) {
+        this._clearSubtaskTitleDuplicate("create-modal", this._createSubtaskDraft);
       }
       return;
     }
@@ -4229,6 +4480,7 @@ class __tasks_panel extends LetcBox {
   }
 
   async _commitTask() {
+    this._flushDescEditor("create");
     this._captureCreateDraft();
     const draft = this._createDefaults || {};
     const title = String(draft.title || "").trim();
@@ -4507,7 +4759,9 @@ class __tasks_panel extends LetcBox {
     // and the flip (and its revert) must land on the live one.
     task = this._tasks.find((t) => t.id === id);
     if (!task || task.status !== originalStatus) return;
+    const place = this._taskPlace(id);
     task.status = next;
+    this._toColumnTop(place.index, true);
     this._refreshViewBody();
     try {
       const updated = await this.postService({
@@ -4532,16 +4786,19 @@ class __tasks_panel extends LetcBox {
         // Failed silently (postService never rejects): revert the
         // optimistic flip instead of leaving unsaved state on screen.
         task.status = originalStatus;
+        this._restoreTaskPlace(place);
         this._refreshViewBody();
       }
     } catch (err) {
       console.error("[tasks_panel] toggle-complete failed:", err);
       task.status = originalStatus;
+      this._restoreTaskPlace(place);
       this._refreshViewBody();
     }
   }
 
   async _commitDetail() {
+    this._flushDescEditor("detail");
     if (!this._detailId || !this._detailDraft) return;
     this._captureDetailDraft();
     const id = this._detailId;
@@ -4753,13 +5010,28 @@ class __tasks_panel extends LetcBox {
     }
 
     // Update on a child returns to the parent, exactly as its X does.
-    const back = this._detailReturnTo;
-    if (back && this._tasks.some((t) => t.id === back)) {
+    const back = this._walkBackTarget();
+    if (back) {
       this._closeDetailSilently();
       return this._openDetail(back);
     }
     // A saved task leaves the way the X does; only the overlay parts re-feed.
     this._closeDetailSilently(() => this._renderOverlays());
+  }
+
+  /**
+   * Where closing the open detail goes: the parent it was opened from (a child
+   * walks back there on the board), or null for a plain close.
+   *
+   * Always null in the Personal Calendar's quick-open card: closing a subtask
+   * there closes the card and its backdrop, as the calendar's user asked —
+   * the parent is one click away on the calendar, and the header's parent
+   * crumb still leads there on purpose.
+   */
+  _walkBackTarget() {
+    if (this._quickOpen) return null;
+    const back = this._detailReturnTo;
+    return back && this._tasks.some((t) => t.id === back) ? back : null;
   }
 
   // Render the detail panel immediately on click; refresh attachments async
@@ -4887,6 +5159,11 @@ class __tasks_panel extends LetcBox {
       task && Array.isArray(task.linked_files) && !task.linked_files.length;
     this._loading = { attachments: knownNoFiles ? 0 : 1, comments: 1, history: 1 };
     this._renderOverlays();
+    // A walk back from a child cut its backdrop out with an inline
+    // display:none (_dismissOverlay's instant path). The quick-open card
+    // repaints through _render's patcher, which keeps that element, so the
+    // parent was drawn into a hidden backdrop under the calendar's modal.
+    this._reviveOverlay("detail-backdrop");
     this._refreshAttachments(id).then(() => {
       if (this._detailId !== id) return;
       this._settleLoading("attachments", id);
@@ -5107,18 +5384,20 @@ class __tasks_panel extends LetcBox {
     this._render();
   }
 
-  // Drag-reorder columns. dragId/targetKey are column keys; `before` says which
-  // side of the target to drop on. All columns (built-in + custom) are stored
-  // rows in _customColumns now, so any can move. Optimistic + persisted.
-  _reorderColumn(dragId, targetKey, before) {
+  // Drag-reorder columns. dragId/targetKey are column keys; the dragged column
+  // takes the target's slot — after it when moving right, before it when
+  // moving left — which is what the whole-column outline promises. (It used to
+  // pick the side from the pointer's half of the target, so the near half of
+  // a neighbour meant "where it already is" and the drop silently did
+  // nothing.) All columns (built-in + custom) are stored rows in
+  // _customColumns now, so any can move. Optimistic + persisted.
+  _reorderColumn(dragId, targetKey) {
     const cc = this._customColumns || [];
     const from = cc.findIndex((c) => String(c.id) === String(dragId));
-    if (from < 0) return; // unknown column — nothing to reorder
-    if (String(dragId) === String(targetKey)) return;
+    const to = cc.findIndex((c) => String(c.id) === String(targetKey));
+    // Unknown column, or dropped back on itself — nothing to reorder.
+    if (from < 0 || to < 0 || from === to) return;
     const [moved] = cc.splice(from, 1);
-    let to = cc.findIndex((c) => String(c.id) === String(targetKey));
-    if (to < 0) to = 0; // target not found → front (defensive; shouldn't happen)
-    else if (!before) to += 1;
     cc.splice(to, 0, moved);
     cc.forEach((c, i) => (c.position = i));
     this._render();
@@ -5403,108 +5682,119 @@ class __tasks_panel extends LetcBox {
     // comment that is only an attachment is still worth posting.
     const pending = (draft && draft.pending_files) || [];
     if (!body && !pending.length) return;
-    const taskId = this._detailId;
-    const mention_uids = Array.isArray(draft.mention_uids)
-      ? draft.mention_uids
-      : [];
-    const post = () =>
-      this.postService({
-        service: SERVICE.task.comment_create,
-        hub_id: this._hubId,
-        task_id: taskId,
-        body,
-        mention_uids,
-      });
+    // One send at a time: the composer shows it is busy (send icon spins,
+    // field dims) until the server answers, and a second Enter meanwhile is
+    // ignored rather than posting twice.
+    if (this._commentSending) return;
+    this._commentSending = true;
+    this._markLoading("comment-composer", true);
+    try {
+      const taskId = this._detailId;
+      const mention_uids = Array.isArray(draft.mention_uids)
+        ? draft.mention_uids
+        : [];
+      const post = () =>
+        this.postService({
+          service: SERVICE.task.comment_create,
+          hub_id: this._hubId,
+          task_id: taskId,
+          body,
+          mention_uids,
+        });
 
-    if (!pending.length) {
-      const tempId = `pending-${Date.now()}-${Math.random()
-        .toString(36)
-        .slice(2, 8)}`;
-      const now = Math.floor(Date.now() / 1000);
-      this._comments = (this._comments || []).concat({
-        id: tempId,
-        task_id: taskId,
-        author_uid: Visitor.id,
-        parent_id: null,
-        body,
-        edited: 0,
-        ctime: now,
-        mtime: now,
-        reactions: [],
-        attachments: [],
-        // The skin dims the row and the actions are withheld: reacting to or
-        // deleting a comment the server has not acknowledged has no id to act
-        // on yet.
-        _pending: 1,
-      });
-      this._commentDraft = null;
-      this._refreshCommentList();
-      this._refreshPendingList("comment");
-      const ed = this._descEditorEl("comment");
-      if (ed) this._renderEditorContent(ed, "");
+      if (!pending.length) {
+        const tempId = `pending-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+        const now = Math.floor(Date.now() / 1000);
+        this._comments = (this._comments || []).concat({
+          id: tempId,
+          task_id: taskId,
+          author_uid: Visitor.id,
+          parent_id: null,
+          body,
+          edited: 0,
+          ctime: now,
+          mtime: now,
+          reactions: [],
+          attachments: [],
+          // The skin dims the row and the actions are withheld: reacting to or
+          // deleting a comment the server has not acknowledged has no id to act
+          // on yet.
+          _pending: 1,
+        });
+        this._commentDraft = null;
+        this._refreshCommentList();
+        this._refreshPendingList("comment");
+        const ed = this._descEditorEl("comment");
+        if (ed) this._renderEditorContent(ed, "");
 
-      let row = null;
+        let row = null;
+        try {
+          const created = await post();
+          row = Array.isArray(created) ? created[0] : created;
+        } catch (err) {
+          console.error("[tasks_panel] comment.create failed:", err);
+        }
+        const newId = row && (row.id || row.comment_id);
+        if (newId) {
+          // A fresh comment has no reactions and no attachments — comment_create
+          // returns the row without those columns, so fill the shapes the
+          // renderer expects rather than re-reading the whole feed.
+          this._replaceComment(tempId, {
+            ...row,
+            reactions: [],
+            attachments: [],
+          });
+        } else {
+          // Failed (postService resolves rather than rejects on a refusal): take
+          // the row back out and hand the text back to the composer instead of
+          // losing what was typed.
+          this._replaceComment(tempId, null);
+          this._commentDraft = draft;
+          this._refreshPendingList("comment");
+          const back = this._descEditorEl("comment");
+          if (back) this._renderEditorContent(back, body);
+        }
+        if (this._detailId === taskId) this._refreshCommentList();
+        return;
+      }
+
       try {
         const created = await post();
-        row = Array.isArray(created) ? created[0] : created;
+        // The row doesn't exist until now — its id comes back on the create, and
+        // only then can the queued files be attached to it.
+        const row = Array.isArray(created) ? created[0] : created;
+        const newId = row && (row.id || row.comment_id);
+        let res = null;
+        if (newId) {
+          res = await this._linkCommentFiles(newId, draft, taskId, "comment");
+        } else {
+          this._discardCommentPending(draft);
+        }
+        if (newId && res && res.failed) this._handoffFailedLinks(newId, draft);
+        this._commentDraft = null;
+        await this._loadComments(taskId);
       } catch (err) {
         console.error("[tasks_panel] comment.create failed:", err);
       }
-      const newId = row && (row.id || row.comment_id);
-      if (newId) {
-        // A fresh comment has no reactions and no attachments — comment_create
-        // returns the row without those columns, so fill the shapes the
-        // renderer expects rather than re-reading the whole feed.
-        this._replaceComment(tempId, {
-          ...row,
-          reactions: [],
-          attachments: [],
-        });
-      } else {
-        // Failed (postService resolves rather than rejects on a refusal): take
-        // the row back out and hand the text back to the composer instead of
-        // losing what was typed.
-        this._replaceComment(tempId, null);
-        this._commentDraft = draft;
+      // Surgically slot in the new comment + clear the composer — no full
+      // _render() (which rebuilds the whole panel and feels like a reload).
+      if (this._detailId === taskId) {
+        this._refreshCommentList();
         this._refreshPendingList("comment");
-        const back = this._descEditorEl("comment");
-        if (back) this._renderEditorContent(back, body);
+        const ed = this._descEditorEl("comment");
+        if (ed) this._renderEditorContent(ed, "");
       }
-      if (this._detailId === taskId) this._refreshCommentList();
-      return;
-    }
-
-    try {
-      const created = await post();
-      // The row doesn't exist until now — its id comes back on the create, and
-      // only then can the queued files be attached to it.
-      const row = Array.isArray(created) ? created[0] : created;
-      const newId = row && (row.id || row.comment_id);
-      let res = null;
-      if (newId) {
-        res = await this._linkCommentFiles(newId, draft, taskId, "comment");
-      } else {
-        this._discardCommentPending(draft);
-      }
-      if (newId && res && res.failed) this._handoffFailedLinks(newId, draft);
-      this._commentDraft = null;
-      await this._loadComments(taskId);
-    } catch (err) {
-      console.error("[tasks_panel] comment.create failed:", err);
-    }
-    // Surgically slot in the new comment + clear the composer — no full
-    // _render() (which rebuilds the whole panel and feels like a reload).
-    if (this._detailId === taskId) {
-      this._refreshCommentList();
-      this._refreshPendingList("comment");
-      const ed = this._descEditorEl("comment");
-      if (ed) this._renderEditorContent(ed, "");
+    } finally {
+      this._commentSending = false;
+      this._markLoading("comment-composer", false);
     }
   }
 
   async _saveCommentEdit() {
     const id = this._editingCommentId;
-    if (!id || this._commentSaving) return;
+    if (!id || this._commentSaving || this._commentEditSending) return;
     const draft = this._commentEditDraft;
     const body = String((draft && draft.body) || "").trim();
     const pending = (draft && draft.pending_files) || [];
@@ -5519,6 +5809,10 @@ class __tasks_panel extends LetcBox {
       this.el &&
       this.el.querySelector(`.${this.fig.family}__comment-action--primary`);
     this._setControlBusy(saveBtn, true, { swapLabel: true });
+    // The editor itself goes quiet too: dimmed and out of reach, and Enter
+    // can't post the same edit again while this one is in flight.
+    this._commentEditSending = true;
+    this._markLoading("comment-edit-input", true);
     try {
       await this.postService({
         service: SERVICE.task.comment_update,
@@ -5545,6 +5839,8 @@ class __tasks_panel extends LetcBox {
       // forever. A re-fed row replaces the node anyway — clearing a detached
       // one is a no-op.
       this._setControlBusy(saveBtn, false, { swapLabel: true });
+      this._commentEditSending = false;
+      this._markLoading("comment-edit-input", false);
     }
     if (this._detailId === taskId) this._refreshCommentList();
   }
@@ -7659,6 +7955,13 @@ class __tasks_panel extends LetcBox {
   // Find an attachment record by nid across committed + both pending drafts
   // (to read its origin hub_id — a dragged file may live in another hub).
   _findAttachmentRecord(fileNid) {
+    const l = this._findAttachmentList(fileNid);
+    return l ? l.find((a) => (a.file_nid || a.nid) === fileNid) : null;
+  }
+
+  // The list (task attachments, a pending draft, one comment's files) that
+  // holds fileNid — the set an opened image pages through.
+  _findAttachmentList(fileNid) {
     const lists = [
       this._attachments[this._detailId],
       this._detailDraft && this._detailDraft.pending_files,
@@ -7671,10 +7974,28 @@ class __tasks_panel extends LetcBox {
     ];
     for (const l of lists) {
       if (!Array.isArray(l)) continue;
-      const r = l.find((a) => (a.file_nid || a.nid) === fileNid);
-      if (r) return r;
+      if (l.some((a) => (a.file_nid || a.nid) === fileNid)) return l;
     }
     return null;
+  }
+
+  // The image viewer's prev/next set for an image opened from here. Its own
+  // folder listing can't serve: uploads live in /__chat__/__task__, which
+  // mfs_list_by filters out, and a linked file's folder holds other images
+  // than the task's. Pending entries without a node yet are skipped.
+  _imageSiblings(fileNid, hub) {
+    const l = this._findAttachmentList(fileNid) || [];
+    return l
+      .filter((a) => (a.file_nid || a.nid) && (a.filetype || a.category) === _a.image)
+      .map((a) => ({
+        nid: a.file_nid || a.nid,
+        hub_id: a.hub_id || hub,
+        filename: a.filename,
+        filetype: _a.image,
+        ext: a.extension || a.ext,
+        // Cache key for the viewer's slide URL (getImageUrls reads ptime).
+        ptime: a.mtime || a.ctime,
+      }));
   }
 
   /**
@@ -7790,6 +8111,7 @@ class __tasks_panel extends LetcBox {
         trigger: media,
         radio: _a.on,
       };
+      if (fType === _a.image) preset.siblings = this._imageSiblings(fileNid, hub);
       let app = application(fType, preset);
       if (_.isEmpty(app) || !app.kind) app = { ...app, kind: "props_viewer", media };
       app.style = Wm.getWindowPosition(media);
@@ -7867,6 +8189,15 @@ class __tasks_panel extends LetcBox {
     }
     el.dataset.loading = "0";
     if (swapLabel && el.dataset.label) el.textContent = el.dataset.label;
+  }
+
+  // data-loading on one named part of the panel (`${family}__${part}`) — the
+  // skin draws the busy state. Used where the busy element isn't the control
+  // that was clicked (the composer while a comment sends, the editor while an
+  // edit saves). A re-fed part replaces the node, so clearing it is a no-op.
+  _markLoading(part, busy) {
+    const el = this.el && this.el.querySelector(`.${this.fig.family}__${part}`);
+    if (el && el.dataset) el.dataset.loading = busy ? "1" : "0";
   }
 
   _isControlBusy(el) {
@@ -7997,15 +8328,8 @@ class __tasks_panel extends LetcBox {
     this._fileSearch.hasMore = false;
 
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
-    // A single character is too short to be a useful search — clear until the
-    // user types more or clears the field entirely (empty → list all below).
-    if (query.length === 1) {
-      const hadResults = (this._fileSearch.results || []).length > 0;
-      this._fileSearch.results = [];
-      if (hadResults) this._refreshFileSearchDropdown(scope);
-      return;
-    }
-    // Empty query lists all files; >= 2 chars searches. Both hit the server
+    // Empty query lists all files; any other query searches, a single
+    // character included — a file can be named "2.png". Both hit the server
     // (debounced) and page 1 replaces whatever was shown.
     this._fileSearchTimer = setTimeout(() => {
       this._runFileSearch(query, scope);
@@ -8877,6 +9201,10 @@ class __tasks_panel extends LetcBox {
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     a.dataset.href = href; // serialize from this, not the browser-normalised href
+    // Hover shows the target: the label alone ("here", "the doc") hides where
+    // the link goes. An editor shows its own tip with an Edit button instead
+    // (link-tip.js), so the native one would double it there.
+    if (!editable) a.title = href;
     a.textContent = label;
     if (editable) {
       a.setAttribute("contenteditable", "false");
@@ -8893,102 +9221,100 @@ class __tasks_panel extends LetcBox {
         ev.preventDefault();
         // mailto: is handed to the mail client; window.open would additionally
         // leave a blank tab behind. safeUrl admits no other non-http scheme.
-        if (/^mailto:/i.test(href)) window.location.href = href;
-        else window.open(href, "_blank", "noopener");
+        // Read at click time: the Ctrl+K prompt edits the URL in place.
+        const url = a.dataset.href || href;
+        if (/^mailto:/i.test(url)) window.location.href = url;
+        else window.open(url, "_blank", "noopener");
       };
     }
     return a;
   }
 
-  // Render stored marker text into the editor as text nodes, chip spans,
-  // inline images, and links.
+  // Render stored text into the editor (or a posted body): marks as
+  // <b>/<i>/<u>/<s>, list lines as <ul>/<ol>, mentions as chips, inline
+  // images, and links — see rich-text.js for the grammar.
   _renderEditorContent(editorEl, markerText) {
     editorEl.textContent = "";
-    const text = String(markerText || "");
     const editable = editorEl.getAttribute("contenteditable") === "true";
-    const appendText = (str) => {
-      str.split("\n").forEach((part, i) => {
-        if (i > 0) editorEl.appendChild(document.createElement("br"));
-        if (!part) return;
-        // Read-only only: linkifying in an editor would turn every half-typed
-        // address into an atomic chip under the caret. There, Ctrl+K does it.
-        if (editable) {
-          editorEl.appendChild(document.createTextNode(part));
-          return;
-        }
-        linkifyTokens(part).forEach((tok) => {
-          editorEl.appendChild(
-            tok.url
-              ? this._makeLinkNode(tok.label, tok.url, false)
-              : document.createTextNode(tok.text),
-          );
-        });
-      });
-    };
-    const re = contentTokenRe();
-    let last = 0;
-    let m;
-    while ((m = re.exec(text))) {
-      if (m.index > last) appendText(text.slice(last, m.index));
-      if (m[2] != null) {
-        editorEl.appendChild(this._makeMentionChip(m[2], m[1]));
-      } else if (m[3] != null) {
-        editorEl.appendChild(
-          this._makeInlineImage(m[3], m[4], m[5], editable),
-        );
-      } else if (m[7] != null) {
-        // A rejected scheme renders as its label, never as a live href.
-        const href = safeUrl(m[7]);
-        editorEl.appendChild(
-          href
-            ? this._makeLinkNode(m[6], href, editable)
-            : document.createTextNode(m[6]),
-        );
-      }
-      last = re.lastIndex;
-    }
-    if (last < text.length) appendText(text.slice(last));
+    editorEl.appendChild(toDom(parse(markerText), document, this._richMakers(editable)));
   }
 
-  // Editor DOM → marker text. Chips become "[@Name](user:uid)"; <br>/<div>
-  // boundaries become newlines.
+  // Editor DOM → stored text (rich-text.js). The tags Ctrl+B / I / U and the
+  // toolbar leave become marks; <br>/<div> boundaries become newlines.
   _serializeEditor(editorEl) {
-    const chipClass = `${this.fig.family}__mention-chip`;
-    const imgClass = `${this.fig.family}__inline-img`;
-    let out = "";
-    const walk = (node) => {
-      node.childNodes.forEach((n) => {
-        if (n.nodeType === 3) {
-          out += n.textContent;
-        } else if (n.nodeType === 1) {
-          if (n.classList && n.classList.contains(chipClass)) {
-            const uid = n.dataset.uid;
-            const name = n.dataset.name || n.textContent.replace(/^@/, "");
-            out += `[@${name}](user:${uid})`;
-          } else if (n.classList && n.classList.contains(imgClass)) {
-            const w = parseInt(n.style.width, 10) || 0;
-            out += imgMarker(n.dataset.nid, n.dataset.hub, w || undefined);
-          } else if (n.tagName === "A") {
-            const href = safeUrl(n.dataset.href || n.getAttribute("href"));
-            const label = (n.textContent || "").trim();
-            if (!href || !label) walk(n);
-            // A link that reads as its own target needs no marker — read-only
-            // rendering re-links the bare URL anyway.
-            else if (label === href) out += label;
-            else out += linkMarker(label, href);
-          } else if (n.tagName === "BR") {
-            out += "\n";
-          } else if (n.tagName === "DIV") {
-            if (out && !out.endsWith("\n")) out += "\n";
-            walk(n);
-          } else {
-            walk(n);
-          }
-        }
-      });
+    return stringify(fromDom(editorEl, this._richOpt()));
+  }
+
+  // What fromDom needs to tell this panel's atoms from plain markup.
+  _richOpt() {
+    return {
+      chipClass: `${this.fig.family}__mention-chip`,
+      imgClass: `${this.fig.family}__inline-img`,
+      safeUrl,
     };
-    walk(editorEl);
-    return out;
+  }
+
+  // The nodes toDom draws atoms with. Bare URLs are linkified on read-only
+  // bodies only: in an editor that would turn every half-typed address into an
+  // atomic chip under the caret. There, Ctrl+K does it.
+  _richMakers(editable) {
+    return {
+      mention: (name, uid) => this._makeMentionChip(uid, name),
+      img: (nid, hub, width) => this._makeInlineImage(nid, hub, width, editable),
+      // A rejected scheme renders as its label, never as a live href.
+      link: (label, url) => {
+        const href = safeUrl(url);
+        return href ? this._makeLinkNode(label, href, editable) : document.createTextNode(label);
+      },
+      text: editable
+        ? (s) => [document.createTextNode(s)]
+        : (s) =>
+            linkifyTokens(s).map((tok) =>
+              tok.url ? this._makeLinkNode(tok.label, tok.url, false) : document.createTextNode(tok.text),
+            ),
+    };
+  }
+
+  // A format toolbar button / shortcut. The browser applies it (execCommand
+  // keeps it on the native undo stack); styleWithCSS off makes it leave the
+  // <b>/<i>/<u>/<s>/<ul>/<ol> tags fromDom reads, not inline styles. Saved to
+  // the draft at once rather than left to the input event.
+  _applyFormat(scope, format) {
+    const target = this._mentionTarget(scope);
+    const ed = target && this.el && this.el.querySelector(target.editorSelector);
+    if (!ed || ed.getAttribute("contenteditable") !== "true") return;
+    ed.focus();
+    if (format === "link") return this._openLinkPrompt(scope);
+    const cmd = FORMAT_COMMANDS[format];
+    if (!cmd) return;
+    document.execCommand("styleWithCSS", false, false);
+    document.execCommand(cmd);
+    this._onDescInput(scope, ed);
+    this._syncFormatBar();
+  }
+
+  // Light each toolbar button whose format is on under the caret; with the
+  // selection outside a bar's editor, none of its buttons is lit.
+  _syncFormatBar() {
+    if (!this.el) return;
+    const pfx = this.fig.family;
+    const sel = window.getSelection();
+    const node = sel && sel.rangeCount ? sel.anchorNode : null;
+    this.el.querySelectorAll(`.${pfx}__format-bar`).forEach((bar) => {
+      const field = bar.closest(`.${pfx}__desc-field`);
+      const ed = field && field.querySelector(`.${pfx}__desc-editor`);
+      const inside = !!(node && ed && ed.contains(node));
+      const link = inside && this._linkAtRange(sel.getRangeAt(0), ed);
+      bar.querySelectorAll(`.${pfx}__format-btn`).forEach((btn) => {
+        const f = btn.dataset.format;
+        let on = false;
+        if (inside) {
+          on = f === "link" ? !!(link && ed.contains(link)) : !!document.queryCommandState(FORMAT_COMMANDS[f]);
+        }
+        if (on) btn.dataset.active = "1";
+        else delete btn.dataset.active;
+      });
+    });
   }
 
   _collectMentionUids(editorEl) {
@@ -9028,6 +9354,9 @@ class __tasks_panel extends LetcBox {
     };
     editorEl.onpaste = (e) => this._onEditorPaste(e, scope, editorEl);
     this._wireInlineImageRemove(editorEl, scope);
+    if (editorEl.getAttribute("contenteditable") === "true") {
+      this._wireLinkTip(editorEl, scope);
+    }
   }
 
   // Clipboard image (screenshot / copied external image): upload it, then
@@ -9126,49 +9455,31 @@ class __tasks_panel extends LetcBox {
   }
 
   // Clipboard payload → a fragment of what this editor can store: text, line
-  // breaks and links. Everything else collapses to its text, which is all the
-  // serializer would have kept anyway.
+  // breaks, links, bold / italic / underline / strike and lists, read by the
+  // same fromDom the serializer uses. Everything else collapses to its text,
+  // which is all the serializer would have kept anyway.
   _pasteFragment(html, plain) {
-    const frag = document.createDocumentFragment();
-    const addText = (str, collapse) => {
-      // HTML source whitespace is collapsed by the renderer; plain text is not.
-      const s = collapse ? String(str).replace(/[\t\r\n]+/g, " ") : String(str);
-      if (!s) return;
-      s.split("\n").forEach((part, i) => {
-        if (i > 0) frag.appendChild(document.createElement("br"));
-        if (part) frag.appendChild(document.createTextNode(part));
-      });
-    };
-    if (!html) {
-      addText(plain, false);
-      return frag;
-    }
-    const BLOCK = /^(?:DIV|P|LI|TR|H[1-6]|BLOCKQUOTE|SECTION|ARTICLE|UL|OL)$/;
+    // Plain text is taken literally: a pasted "**" is two stars, not bold.
+    const plainFrag = () =>
+      toDom(
+        String(plain || "")
+          .split("\n")
+          .map((v) => ({ t: "line", kids: v ? [{ t: "text", v }] : [] })),
+        document,
+        this._richMakers(true),
+      );
+    if (!html) return plainFrag();
     const doc = new DOMParser().parseFromString(html, "text/html");
-    const walk = (node) => {
-      node.childNodes.forEach((n) => {
-        if (n.nodeType === 3) return addText(n.textContent, true);
-        if (n.nodeType !== 1) return;
-        if (n.tagName === "A") {
-          const href = safeUrl(n.getAttribute("href"));
-          const label = (n.textContent || "").replace(/\s+/g, " ").trim();
-          if (href && label) frag.appendChild(this._makeLinkNode(label, href, true));
-          else addText(n.textContent, true);
-          return;
-        }
-        if (n.tagName === "BR") return frag.appendChild(document.createElement("br"));
-        if (n.tagName === "SCRIPT" || n.tagName === "STYLE") return;
-        if (BLOCK.test(n.tagName) && frag.lastChild) {
-          frag.appendChild(document.createElement("br"));
-        }
-        walk(n);
-      });
-    };
-    walk(doc.body);
+    // HTML source whitespace is collapsed by the renderer; fromDom would read
+    // its newlines as line breaks.
+    const tw = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+      n.textContent = n.textContent.replace(/[\t\r\n]+/g, " ");
+    }
+    const frag = toDom(fromDom(doc.body, this._richOpt()), document, this._richMakers(true));
     // An HTML flavour that sanitises to nothing (wrapper-only markup) must not
     // swallow the paste — and _insertAtCaret would still drop the selection.
-    if (!frag.firstChild) addText(plain, false);
-    return frag;
+    return frag.firstChild ? frag : plainFrag();
   }
 
   // Drop a fragment where the caret is, then put the caret after it.
@@ -9421,15 +9732,30 @@ class __tasks_panel extends LetcBox {
     return this._uploadAttachment(file, "_inline");
   }
 
+  // Re-read a description editor into its draft. Update and Create save the
+  // draft, which _onDescInput fills on the editor's input event; a change that
+  // fired none (an open IME composition, an execCommand some browser did not
+  // report) would otherwise be saved as the text before it. Not _onDescInput
+  // itself: that would also run the mention popup logic at commit time.
+  _flushDescEditor(scope) {
+    const target = this._mentionTarget(scope);
+    const ed = target && this.el && this.el.querySelector(target.editorSelector);
+    if (!ed || ed.getAttribute("contenteditable") !== "true") return;
+    target.set(this._serializeEditor(ed), this._collectMentionUids(ed));
+  }
+
   _onDescInput(scope, editorEl) {
     // Browsers leave a stray <br> when the field is cleared, which defeats the
     // :empty placeholder — strip it back to truly empty. But an image-only
     // editor has no text content, so guard on chips AND inline images too,
     // otherwise a freshly pasted (text-less) image would be wiped here.
+    // A list just started on an empty editor (<ul><li><br></li></ul>) has no
+    // text either, and must not be wiped with it.
     if (
       !editorEl.textContent.trim() &&
       !editorEl.querySelector(`.${this.fig.family}__mention-chip`) &&
-      !editorEl.querySelector(`.${this.fig.family}__inline-img`)
+      !editorEl.querySelector(`.${this.fig.family}__inline-img`) &&
+      !editorEl.querySelector("ul, ol")
     ) {
       editorEl.innerHTML = "";
     }
@@ -9465,12 +9791,25 @@ class __tasks_panel extends LetcBox {
   }
 
   _onDescKeydown(e, scope) {
+    // Ctrl/Cmd+Shift+X / 8 / 7: strikethrough, bulleted, numbered list (B / I /
+    // U are the browser's own). Before the mention guard, like Ctrl+K.
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && SHIFT_FORMAT_KEYS[e.code]) {
+      e.preventDefault();
+      return this._applyFormat(scope, SHIFT_FORMAT_KEYS[e.code]);
+    }
     // Before the mention guard — Ctrl/Cmd+K works whether or not a mention
     // popup happens to be open.
     if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "k" || e.key === "K")) {
       e.preventDefault();
       this._closeMention();
       return this._openLinkPrompt(scope);
+    }
+    if (
+      (e.key === "Backspace" || e.key === "Delete") &&
+      !e.ctrlKey && !e.metaKey && !e.altKey &&
+      this._deleteLinkBeside(scope, e.key === "Backspace")
+    ) {
+      return e.preventDefault();
     }
     const ref = this._mention;
     const mentionOpen = !!ref && ref.scope === scope;
@@ -9691,15 +10030,88 @@ class __tasks_panel extends LetcBox {
     return null;
   }
 
+  // The link a selection is on. An editor link is contenteditable=false, so
+  // the caret never lands INSIDE it (_closestLink alone never finds one): it
+  // sits in the text beside it, or on the editor between child nodes. So a
+  // selection counts when it covers part of a link, and a caret when it
+  // touches a link's edge.
+  _linkAtRange(range, editorEl) {
+    const inside = this._closestLink(range.startContainer, editorEl);
+    if (inside) return inside;
+    const isLink = (n) => (n && n.nodeType === 1 && n.tagName === "A" ? n : null);
+    if (!range.collapsed) {
+      for (const a of editorEl.querySelectorAll("a")) {
+        if (range.intersectsNode(a)) return a;
+      }
+      return null;
+    }
+    const { startContainer: c, startOffset: o } = range;
+    if (c.nodeType === 3) {
+      if (o === 0 && isLink(c.previousSibling)) return c.previousSibling;
+      if (o === c.length && isLink(c.nextSibling)) return c.nextSibling;
+      return null;
+    }
+    return isLink(c.childNodes[o - 1]) || isLink(c.childNodes[o]);
+  }
+
+  // Backspace / Delete on a link. Chrome won't delete a contenteditable=false
+  // node that ends its line: Backspace just adds and drops a <br> after it, so
+  // the caret is stuck behind the link and the link can never be erased. The
+  // link the key would eat is removed here instead. `back` is Backspace.
+  _deleteLinkBeside(scope, back) {
+    const editorEl = this._descEditorEl(scope);
+    const sel = window.getSelection();
+    if (!editorEl || !sel || !sel.rangeCount || !sel.isCollapsed) return false;
+    const { startContainer: c, startOffset: o } = sel.getRangeAt(0);
+    if (!editorEl.contains(c)) return false;
+    // An empty text node or the placeholder <br> Chrome leaves is not what the
+    // key deletes: look through it.
+    const skip = (n) =>
+      n && ((n.nodeType === 3 && !n.length) || (back && n.tagName === "BR" && !n.nextSibling));
+    let n;
+    if (c.nodeType === 3) {
+      if (back ? o > 0 : o < c.length) return false;
+      n = back ? c.previousSibling : c.nextSibling;
+    } else {
+      const kids = c.childNodes;
+      n = back ? kids[Math.min(o, kids.length) - 1] : kids[o];
+    }
+    while (skip(n)) n = back ? n.previousSibling : n.nextSibling;
+    if (!n || n.nodeType !== 1 || n.tagName !== "A") return false;
+    const parent = n.parentNode;
+    const at = document.createRange();
+    at.setStartBefore(n);
+    at.collapse(true);
+    n.remove();
+    // A line the link was alone on keeps its height.
+    if (!parent.textContent && !parent.querySelector("br, img") && parent !== editorEl) {
+      parent.appendChild(document.createElement("br"));
+    }
+    sel.removeAllRanges();
+    sel.addRange(at);
+    this._hideLinkTip();
+    this._onDescInput(scope, editorEl);
+    return true;
+  }
+
   // Ctrl+K. Remembers the caret range up front — focusing the prompt's input
-  // blurs the editor and drops the live selection.
-  _openLinkPrompt(scope) {
+  // blurs the editor and drops the live selection. `link` is the hover tip's
+  // Edit (link-tip.js): that link, wherever the caret is.
+  _openLinkPrompt(scope, link) {
     const editorEl = this._descEditorEl(scope);
     if (!editorEl) return;
-    const sel = window.getSelection();
-    if (!sel || !sel.rangeCount || !editorEl.contains(sel.anchorNode)) return;
-    const range = sel.getRangeAt(0).cloneRange();
-    const anchor = this._closestLink(sel.anchorNode, editorEl);
+    this._hideLinkTip();
+    let range, anchor;
+    if (link && editorEl.contains(link)) {
+      range = document.createRange();
+      range.selectNode(link);
+      anchor = link;
+    } else {
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount || !editorEl.contains(sel.anchorNode)) return;
+      range = sel.getRangeAt(0).cloneRange();
+      anchor = this._linkAtRange(range, editorEl);
+    }
     const ref = {
       scope,
       range,
@@ -9950,10 +10362,55 @@ class __tasks_panel extends LetcBox {
     const normalized = this._normalizeTask(row);
     const idx = this._tasks.findIndex((t) => t.id === row.id);
     if (idx === -1) this._tasks.push(normalized);
-    else this._tasks[idx] = { ...this._tasks[idx], ...normalized };
+    else {
+      const moved =
+        normalized.status != null && normalized.status !== this._tasks[idx].status;
+      this._tasks[idx] = { ...this._tasks[idx], ...normalized };
+      // A server answer, a peer push or a parent rollup that changes the
+      // column: land on top of it, where task_update_status ranks it.
+      if (moved) this._toColumnTop(idx, !("rank" in normalized));
+    }
     // Replacing a row in place changes neither the array's identity nor its
     // length, so _childIndex's guard cannot see it — and it would keep handing
     // out the superseded object. Drop the cache here.
+    this._childIdx = null;
+  }
+
+  /**
+   * Move this._tasks[idx] — already carrying its NEW status — to the top of
+   * that column. getState() buckets this._tasks in array order, so "top" is
+   * "before the first task already in the column". `withRank` also gives it
+   * the rank the server will (min - 1), so the List view, which sorts by rank,
+   * agrees before the answer lands; a row that brought its own rank keeps it.
+   */
+  _toColumnTop(idx, withRank) {
+    if (idx < 0) return;
+    const [task] = this._tasks.splice(idx, 1);
+    const at = this._tasks.findIndex((t) => t.status === task.status);
+    if (withRank && at >= 0) {
+      const ranks = this._tasks
+        .filter((t) => t.status === task.status)
+        .map((t) => Number(t.rank) || 0);
+      task.rank = Math.min(...ranks) - 1;
+    }
+    this._tasks.splice(at < 0 ? this._tasks.length : at, 0, task);
+    this._childIdx = null;
+  }
+
+  // Where a task sits now, for undoing an optimistic column move that the
+  // server refused (see _restoreTaskPlace).
+  _taskPlace(id) {
+    const index = this._tasks.findIndex((t) => t.id === id);
+    return { id, index, rank: index < 0 ? undefined : this._tasks[index].rank };
+  }
+
+  _restoreTaskPlace(place) {
+    if (!place || place.index < 0) return;
+    const from = this._tasks.findIndex((t) => t.id === place.id);
+    if (from < 0) return;
+    const [task] = this._tasks.splice(from, 1);
+    task.rank = place.rank;
+    this._tasks.splice(Math.min(place.index, this._tasks.length), 0, task);
     this._childIdx = null;
   }
 
@@ -10009,6 +10466,23 @@ class __tasks_panel extends LetcBox {
     el.dataset.closing = "1";
     this._cancelPendingExit();
     this._closingTimer = setTimeout(run, OVERLAY_EXIT_MS);
+  }
+
+  /**
+   * Undo a dismissal on a backdrop that is being shown again.
+   *
+   * _dismissOverlay leaves its mark on the ELEMENT — an inline display:none on
+   * the instant path, data-closing on the animated one. A re-feed builds a new
+   * element and drops both, but _render's patcher keeps the old one when the
+   * skeleton matches, and the mark survives into the next open.
+   *
+   * @param {String} cls  backdrop class suffix, e.g. "detail-backdrop"
+   */
+  _reviveOverlay(cls) {
+    const el = this.el && this.el.querySelector(`.${this.fig.family}__${cls}`);
+    if (!el) return;
+    if (el.style.display === "none") el.style.display = "";
+    delete el.dataset.closing;
   }
 
   /**
@@ -11476,6 +11950,21 @@ class __tasks_panel extends LetcBox {
     this._focusSubtaskTitle(host);
   }
 
+  // A sibling already has this title. Same in-place flag as the two above.
+  _flagSubtaskTitleDuplicate(host, draft) {
+    if (draft) draft._titleDuplicate = true;
+    const card = this._subtaskCard(host);
+    if (card) card.dataset.titleDuplicate = "1";
+    this._focusSubtaskTitle(host);
+  }
+
+  _clearSubtaskTitleDuplicate(host, draft) {
+    if (!draft || !draft._titleDuplicate) return;
+    draft._titleDuplicate = false;
+    const card = this._subtaskCard(host);
+    if (card) card.dataset.titleDuplicate = "0";
+  }
+
   _clearSubtaskTitleTooLong(host, draft) {
     if (!draft || !draft._titleTooLong) return;
     draft._titleTooLong = false;
@@ -11635,6 +12124,9 @@ class __tasks_panel extends LetcBox {
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagSubtaskTitleTooLong("create-modal", draft);
     if (tooLong) return;
+    if (titleTaken(title, parentDraft.subtasks)) {
+      return this._flagSubtaskTitleDuplicate("create-modal", draft);
+    }
     if (!Array.isArray(parentDraft.subtasks)) parentDraft.subtasks = [];
     parentDraft.subtasks.push({
       // Local key, not a server id. Named `id` so the shared row skeleton can
@@ -11745,6 +12237,9 @@ class __tasks_panel extends LetcBox {
     const tooLong = titleTooLong(title);
     if (tooLong) this._flagSubtaskTitleTooLong("detail-panel", draft);
     if (tooLong) return;
+    if (titleTaken(title, this.getSubtasks(parentId))) {
+      return this._flagSubtaskTitleDuplicate("detail-panel", draft);
+    }
 
     // _setControlBusy, NOT _setSubmitting: the latter raises the panel-wide
     // _submitting flag that gates commit-task / commit-detail, and creating a
@@ -11840,7 +12335,9 @@ class __tasks_panel extends LetcBox {
     // to, and the server rollup is inert there too.
     if (!target || target.key === originalStatus) return;
 
+    const place = this._taskPlace(id);
     task.status = target.key;
+    this._toColumnTop(place.index, true);
     this._refreshSubtaskSection();
     try {
       const updated = await this.postService({
@@ -11866,11 +12363,13 @@ class __tasks_panel extends LetcBox {
         this._refreshViewBody();
       } else {
         task.status = originalStatus;
+        this._restoreTaskPlace(place);
         this._refreshSubtaskSection();
       }
     } catch (err) {
       console.error("[tasks_panel] subtask toggle failed:", err);
       task.status = originalStatus;
+      this._restoreTaskPlace(place);
       this._refreshSubtaskSection();
     }
   }
@@ -11944,12 +12443,13 @@ class __tasks_panel extends LetcBox {
     return Array.isArray(this._taskActivity) ? this._taskActivity : [];
   }
 
-  // Pure visibility flip: data-active on the tabs, data-tab on the section (the
-  // skin hides whichever list the tab excludes). Neither list is re-fed — both
+  // Pure visibility flip over all | comments | history: data-active on the tabs,
+  // data-tab on the section (the skin hides whichever list the tab excludes;
+  // All excludes none). Neither list is re-fed — both
   // already hold their full content — so switching costs no rebuild and can't
   // drop the caret mid-comment.
   _switchActivityTab(tab) {
-    const next = ["comments", "history"].includes(tab) ? tab : "comments";
+    const next = ["all", "comments", "history"].includes(tab) ? tab : "comments";
     if (next === this._activityTab) return;
     this._activityTab = next;
     if (this.el) {
@@ -11961,9 +12461,9 @@ class __tasks_panel extends LetcBox {
       if (section) section.dataset.tab = next;
     }
     // Nothing fetched yet (the open-time load failed or is still in flight) —
-    // try again so History isn't permanently empty. Only a genuinely missing
+    // try again so History (and All, which shows it too) isn't permanently empty. Only a genuinely missing
     // change log costs a request; an already-loaded one is a pure toggle.
-    if (next === "history" && !this.getTaskHistory().length) {
+    if (next !== "comments" && !this.getTaskHistory().length) {
       const id = this._detailId;
       this._loadTaskHistory(id).then(() => {
         if (this._detailId === id && this.getTaskHistory().length) {
@@ -12158,5 +12658,7 @@ class __tasks_panel extends LetcBox {
 Object.assign(__tasks_panel.prototype, listSubtask);
 // Completing a parent with open subtasks asks first (complete-parent.js).
 Object.assign(__tasks_panel.prototype, completeParent);
+// Hover tip on an editor's links: URL + Edit (link-tip.js).
+Object.assign(__tasks_panel.prototype, linkTip);
 
 module.exports = __tasks_panel;

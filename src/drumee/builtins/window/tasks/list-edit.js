@@ -30,6 +30,17 @@ const trim = (v) => String(v == null ? "" : v).trim();
 // an emoji count twice.
 const TITLE_MAX = 250;
 const titleTooLong = (v) => Array.from(trim(v)).length > TITLE_MAX;
+// Sibling subtasks must not share a title. Case-insensitive, as the hub's
+// general_ci collation compares them; `selfId` skips the row being renamed.
+const titleKey = (v) => trim(v).toLowerCase();
+const titleTaken = (v, rows, selfId) => {
+  const key = titleKey(v);
+  return (
+    !!key &&
+    Array.isArray(rows) &&
+    rows.some((r) => r && r.id !== selfId && titleKey(r.title) === key)
+  );
+};
 const day = (v) => (v ? String(v).slice(0, 10) : "");
 
 // task_update writes BOTH dates unconditionally (a missing one is cleared), so
@@ -48,12 +59,14 @@ function datesOf(task) {
  * @param {Object} task   the cached row
  * @param {String} field  one of FIELDS (files are linked one by one, not here)
  * @param {*}      value  the new value
+ * @param {Array}  [siblings]  for a subtask, its parent's children — a title
+ *   one of them already has is refused
  * @returns {null|{error:String}|{service:String, args:Object, local:Object}}
  *   null when nothing changed (no request at all — cancelling is free);
  *   `{error}` when the value is refused client-side; otherwise the service,
  *   its payload (without id/hub_id) and the optimistic patch for the cache.
  */
-function fieldPatch(task, field, value) {
+function fieldPatch(task, field, value, siblings) {
   if (!task) return null;
   switch (field) {
     case "title": {
@@ -61,6 +74,7 @@ function fieldPatch(task, field, value) {
       if (!title) return { error: "empty" };
       if (titleTooLong(title)) return { error: "too-long" };
       if (title === trim(task.title)) return null;
+      if (titleTaken(title, siblings, task.id)) return { error: "duplicate" };
       return {
         service: "task.update",
         args: { title, ...datesOf(task) },
@@ -261,6 +275,7 @@ function describePeerChange(service, prev, patch, ctx) {
 module.exports = {
   TITLE_MAX,
   titleTooLong,
+  titleTaken,
   FIELDS,
   TEXT_FIELDS,
   fieldPatch,

@@ -284,24 +284,39 @@ function promoCodeSection(ui) {
       Skeletons.Box.X({
         className: `${pfx}-promo-row`,
         kids: [
-          Skeletons.Entry({
-            className: `${pfx}-promo-input`,
-            name: "promo_code",
-            formItem: "promo_code",
-            type: "text",
-            placeholder: LOCALE.PROMO_CODE_PLACEHOLDER || "Enter partner code",
-            value: checkout.promoCode || "",
-            sys_pn: `${pfx}-promo-code-input`,
-            partHandler: [ui],
-            uiHandler: [ui],
-            interactive: applied ? 0 : 1,
-            readonly: applied ? 1 : 0,
-            mode: applied ? _a.commit : _a.interactive,
-            service: _a.input,
-            // NO `state` prop — see the redeem field in skeleton/index.js:
-            // ui-core turns a `state` option into behavior/toggle, whose
-            // onAlsoClick calls mould() → reload() → `el.innerHTML = ''` on
-            // the first keystroke, so the field kept only its first letter.
+          // Field wrapper: positioning context for the clear (×) button,
+          // which sits over the input's right edge. The × hides itself via
+          // CSS while the input shows its placeholder (empty field).
+          Skeletons.Box.X({
+            className: `${pfx}-promo-field`,
+            kids: [
+              Skeletons.Entry({
+                className: `${pfx}-promo-input`,
+                name: "promo_code",
+                formItem: "promo_code",
+                type: "text",
+                placeholder: LOCALE.PROMO_CODE_PLACEHOLDER || "Enter partner code",
+                value: checkout.promoCode || "",
+                sys_pn: `${pfx}-promo-code-input`,
+                partHandler: [ui],
+                uiHandler: [ui],
+                interactive: applied ? 0 : 1,
+                readonly: applied ? 1 : 0,
+                mode: applied ? _a.commit : _a.interactive,
+                service: _a.input,
+                // NO `state` prop — see the redeem field in skeleton/index.js:
+                // ui-core turns a `state` option into behavior/toggle, whose
+                // onAlsoClick calls mould() → reload() → `el.innerHTML = ''` on
+                // the first keystroke, so the field kept only its first letter.
+              }),
+              Skeletons.Button.Svg({
+                className: `${pfx}-promo-clear`,
+                ico: "cross",
+                service: "clear-promo-code",
+                uiHandler: [ui],
+                bubble: false,
+              }),
+            ],
           }),
           Skeletons.Note({
             className: `${pfx}-promo-apply${applied ? " is-applied" : ""}`,
@@ -546,6 +561,11 @@ function rightPanelContent(ui) {
       promoCodeSection(ui),
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,
+        // Button.Label IS an svg widget: with no `ico` it still drew an empty
+        // 16px icon box (pointing at #--icon-undefined) plus the 12px gap
+        // before the label, so the CTA showed a blank slot and an off-centre
+        // label. The checkout (cart) glyph fills it.
+        ico: "app-checkout",
         className: `${pfx}-checkout-button`,
         service: isFreePlan ? null : "proceed-checkout-billing",
         priority: "primary",
@@ -565,7 +585,11 @@ function rightPanelContent(ui) {
         //
         // Disabled-ness is carried by `dataset.disabled` alone — the same skin
         // rule styles it, and nothing flips it behind our back.
-        dataset: isFreePlan ? { disabled: 1 } : undefined,
+        //
+        // Also disabled while a validation message is on screen (promo error,
+        // subdomain taken) — ui._syncCheckoutButton() keeps it in step when
+        // those messages change without a right-panel re-render.
+        dataset: (isFreePlan || ui._checkoutBlocked?.()) ? { disabled: 1 } : undefined,
       }),
     ].filter(Boolean);
 }

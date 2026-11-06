@@ -29,6 +29,10 @@ const __image_player_slider = function (_ui_, opt) {
   const buttons = Skeletons.Box.X({
     className: `${_ui_.fig.family}__slider-buttons`,
     sys_pn: "slider-buttons",
+    // Hidden until restart() has loaded more than one sibling to step to.
+    dataset: {
+      state: 0
+    },
     kids: [
       Skeletons.Button.Svg({
         ico: "mini-arrow-left-new",

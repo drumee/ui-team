@@ -196,6 +196,12 @@ module.exports = {
   editor_note: function () {
     return import("./builtins/editor/note");
   },
+  editor_blocknote: function () {
+    return import("./builtins/editor/blocknote");
+  },
+  blocknote_state: function () {
+    return import("./builtins/editor/blocknote/state");
+  },
   // webpackPrefetch: the Casual editors weigh several MB (Univer, the .docx
   // layout engine); fetched lazily on first use they left a first-time
   // visitor staring at an empty window for as long as the download took.
@@ -596,6 +602,11 @@ module.exports = {
   },
   window_folder: function () {
     return import("./builtins/window/folder");
+  },
+  // The folder's "Meeting information" modal, hosted outside the folder (the
+  // Personal Calendar's meeting chips).
+  meeting_modal_host: function () {
+    return import("./builtins/window/folder/meeting-modal-host");
   },
   window_info: function () {
     return import("./builtins/window/info");

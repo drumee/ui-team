@@ -1,6 +1,13 @@
-const __media_preview = function (m) {
+/**
+ * @param {Object} m
+ * @param {String} [glyph]  a sprite drawn instead of the type's own
+ *   (icon-name), never a picture — the Note's glyph for every file that opens
+ *   in the Note editor (.dnote and .md alike).
+ */
+const __media_preview = function (m, glyph) {
   let html;
-  const { ext, chartId } = require('../../template/icon-name')(m);
+  if (glyph) m.imgCapable = false;
+  const { ext, chartId } = glyph ? { chartId: glyph } : require('../../template/icon-name')(m);
   const type = m.filetype;
   const { area } = m;
   let dmz = '';

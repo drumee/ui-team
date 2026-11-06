@@ -1,7 +1,8 @@
-// tests/daily-reminder-calendar-filters.test.js — the Daily Reminder's
-// calendar tiles open the Personal Calendar narrowed to their own kind
-// (Lexis, 2026-10-20): due tasks → month view on Task, meetings → today in day
-// view on Meeting. [My calendar] and the calendar row keep month view on All.
+// tests/daily-reminder-calendar-filters.test.js — every calendar entry point
+// on the Daily Reminder card opens TODAY in day view (Lexis, 2026-11-03; it
+// was month view for the button and the tasks tile): due tasks → day view on
+// Task, meetings → day view on Meeting, [My calendar] and the calendar row →
+// day view on All. The tiles keep their own kind filter (Lexis, 2026-10-20).
 //
 //   node --test tests/daily-reminder-calendar-filters.test.js
 const test = require("node:test");
@@ -35,9 +36,9 @@ function clickWidget(service) {
   return sent;
 }
 
-test("the due-tasks tile opens month view on the Task filter", () => {
+test("the due-tasks tile opens today's day view on the Task filter", () => {
   assert.deepEqual(clickWidget("daily-reminder-tasks"), [
-    { service: "toggle-calendar", calendarView: "month", calendarFilter: "task" },
+    { service: "toggle-calendar", calendarView: "day", calendarFilter: "task" },
   ]);
 });
 
@@ -47,9 +48,9 @@ test("the meetings tile opens day view on the Meeting filter", () => {
   ]);
 });
 
-test("[My calendar] and the calendar row still open month view, no filter", () => {
+test("[My calendar] and the calendar row open today's day view, no filter", () => {
   assert.deepEqual(clickWidget("daily-reminder-calendar"), [
-    { service: "toggle-calendar", calendarView: "month" },
+    { service: "toggle-calendar", calendarView: "day" },
   ]);
 });
 

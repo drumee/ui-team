@@ -2418,6 +2418,9 @@ class __panel_activity extends LetcBox {
       // "<A> edited / commented on <your file>" (server-team
       // lib/file-owner-notify pushes it to the owner only).
       case "activity.file_owner":
+      // "<invitee> accepted / declined your invitation to <workspace>"
+      // (server-team lib/hub-invite-answer-notify pushes it to the inviter only).
+      case "activity.hub_invite_answer":
         if (this.timer) return;
         this.timer = setTimeout(() => {
           this.refreshActivity();

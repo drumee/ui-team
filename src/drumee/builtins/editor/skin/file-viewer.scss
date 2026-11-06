@@ -16,39 +16,52 @@ $fv-grey20: #f2f2f7;
 $fv-primary10: #e4e3ff;
 $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
 
+// Compact chrome (Google Docs / Sheets metrics), shared by both editors so
+// their headers, toolbars and lists cannot drift apart again.
+$fv-btn: 32px; // header action button
+$fv-btn-glyph: 20px;
+$fv-pill-h: 32px; // Share
+$fv-tb-h: 36px; // formatting toolbar pill
+$fv-tb-btn: 28px;
+$fv-tb-glyph: 18px;
+$fv-row-h: 32px; // tab / list rows
+$fv-g-ink: #1f1f1f;
+$fv-g-muted: #444746;
+$fv-g-hover: rgba(68, 71, 70, 0.08);
+$fv-font-ui: 13px;
+
 .editor-docs,
 .editor-sheet {
   // ---- Header action cluster ------------------------------------------
-  // Share pill, 16px, then the "Options" group: four 48px buttons edge to
-  // edge (Download / gear / Move & Resize / Close). A pressed/open button
-  // sits on Grey/20, radius 12. The status label, when shown, keeps the same
-  // 16px before the pill.
+  // Share pill, 8px, then the "Options" group: four round $fv-btn buttons
+  // 4px apart (Download / gear / Move & Resize / Close), $fv-btn-glyph
+  // glyphs; hover / open on Grey/20.
   .drumee-topbar__actions {
     align-items: center;
-    gap: 0;
-    height: 48px;
+    gap: 4px;
+    height: $fv-btn;
   }
 
   .drumee-topbar__status,
   .editor-chrome__share {
-    margin-right: 16px;
+    margin-right: 8px;
   }
 
   .drumee-topbar__actions .icon,
   .drumee-topbar__menu,
   .drumee-topbar__snap-wrapper,
   .drumee-topbar__snap-trigger {
-    border-radius: 12px;
+    border-radius: 50%;
     color: $fv-ink;
-    height: 48px;
-    width: 48px;
+    height: $fv-btn;
+    width: $fv-btn;
   }
 
   .drumee-topbar__actions .icon svg,
   .drumee-topbar__snap-trigger svg {
     color: $fv-ink;
-    height: 24px;
-    width: 24px;
+    height: $fv-btn-glyph;
+    width: $fv-btn-glyph;
   }
 
   .drumee-topbar__actions .icon:hover,
@@ -65,35 +78,35 @@ $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
   // The trigger inside the gear / snap wrappers fills them (no second box).
   .drumee-topbar__menu > .icon,
   .drumee-topbar__snap-wrapper > .icon {
-    border-radius: 12px;
-    height: 48px;
-    width: 48px;
+    border-radius: 50%;
+    height: $fv-btn;
+    width: $fv-btn;
 
     &:hover {
       background-color: transparent;
     }
   }
 
-  // Share: 40px pill on Primary/10, LockKey 20px + 16px semibold label.
+  // Share: $fv-pill-h pill on Primary/10, LockKey 16px + 14px medium label.
   .editor-chrome__share {
     align-items: center;
     background-color: $fv-primary10;
-    border-radius: 40px;
+    border-radius: $fv-pill-h;
     color: $fv-ink;
     cursor: pointer;
     display: inline-flex;
     flex-shrink: 0;
-    font: 600 16px/1.2 var(--font-main);
-    gap: 8px;
-    height: 40px;
-    padding: 0 20px;
+    font: 500 14px/1.2 var(--font-main);
+    gap: 6px;
+    height: $fv-pill-h;
+    padding: 0 14px;
     white-space: nowrap;
 
     svg {
       color: $fv-ink;
       fill: currentColor;
-      height: 20px;
-      width: 20px;
+      height: 16px;
+      width: 16px;
     }
 
     &:hover {
@@ -229,23 +242,23 @@ $fv-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13); // Shadow "ightmode"
 .editor-docs,
 .editor-sheet {
   .editor-chrome__share {
-    @include ph.ph("lock-key", 20px, true);
+    @include ph.ph("lock-key", 16px, true);
   }
 
   .editor-chrome__download {
-    @include ph.ph("download-simple", 24px, true);
+    @include ph.ph("download-simple", $fv-btn-glyph, true);
   }
 
   .drumee-topbar__menu > .icon.gear {
-    @include ph.ph("gear", 24px, true);
+    @include ph.ph("gear", $fv-btn-glyph, true);
   }
 
   .drumee-topbar__snap-trigger {
-    @include ph.ph("arrows-out-simple", 24px, true);
+    @include ph.ph("arrows-out-simple", $fv-btn-glyph, true);
   }
 
   .editor-chrome__close {
-    @include ph.ph("x", 24px, true);
+    @include ph.ph("x", $fv-btn-glyph, true);
   }
 
   .drumee-topbar__menu-icon {

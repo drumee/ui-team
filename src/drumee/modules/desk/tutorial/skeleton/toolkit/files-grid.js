@@ -26,7 +26,7 @@ const FOLDERS = 4;
 const FILES = [
   { ico: "app-doc-file", name: "spec_v2.docx", kind: "document" },
   { ico: "app-pdf-file", name: "spec_v2.pdf", kind: "pdf" },
-  { ico: "addmenu-note", name: "note", kind: "note" },
+  { ico: "raw-note-sticky", name: "note", kind: "note" },
   { ico: "addmenu-spreadsheet", name: "Spreadsheet", kind: "spreadsheet" },
   { ico: "addmenu-presentation", name: "Presentation", kind: "presentation" },
   { ico: "image", name: "bg_concept.png", art: true },

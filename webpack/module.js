@@ -60,14 +60,20 @@ module.exports = function (basedir, mode) {
       // OTS rejects it as "invalid sfntVersion", and the Casual layout engine
       // cannot measure text — the document page renders blank. Emit them as raw
       // font files instead so the bytes reach the browser intact.
+      // Also the sheet editor's own Material Symbols instance
+      // (builtins/editor/sheet/icon-font.js), loaded through FontFace by URL.
       test: /\.woff2$/,
-      include: /[\\/]@casualoffice[\\/]/,
+      include: [
+        /[\\/]@casualoffice[\\/]/,
+        resolve(basedir, drumee_path, 'builtins', 'editor', 'sheet', 'fonts'),
+      ],
       type: 'asset/resource',
     }, {
       test: /(\.woff|\.woff2|\.ttf|\.eot|\.svg)($|\?.*$)/,
       exclude: [
         resolve(basedir, drumee_path, 'assets', 'flags'),
         /[\\/]@casualoffice[\\/]/,
+        resolve(basedir, drumee_path, 'builtins', 'editor', 'sheet', 'fonts'),
       ],
       use: ['url-loader']
     }, {

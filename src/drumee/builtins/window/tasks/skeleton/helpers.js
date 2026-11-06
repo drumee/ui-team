@@ -288,7 +288,16 @@ function filterLabels(ui, dim) {
   }
 }
 
+// Activity rows (comment threads, change-log lines) newest first by ctime. A
+// row with no ctime sorts last; ties keep their incoming order.
+function newestFirst(rows) {
+  return (rows || [])
+    .slice()
+    .sort((a, b) => (Number(b && b.ctime) || 0) - (Number(a && a.ctime) || 0));
+}
+
 module.exports = {
+  newestFirst,
   FILTER_DIMS,
   FILTER_DUE,
   FILTER_FILES,

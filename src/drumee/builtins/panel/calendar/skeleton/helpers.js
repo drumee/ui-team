@@ -251,8 +251,30 @@ function normalizeRow(raw, fallbackKind) {
     row.due_date = dateOnly(content.due_date);
     row.start_date = dateOnly(content.start_date);
     row.all_day = true;
+    // What the Day view's card draws under the description (chip.js): the
+    // attached files, by display name, and the subtask rollup.
+    row.files = (Array.isArray(content.linked_files) ? content.linked_files : [])
+      .filter((f) => f && f.filename)
+      .map((f) => ({ nid: f.nid, name: fileName(f.filename, f.extension) }));
+    row.subtask_total = Number(content.subtask_total) || 0;
+    row.subtask_done = Number(content.subtask_done) || 0;
   }
   return row;
+}
+
+/** "spec_v1" + "docx" → "spec_v1.docx"; a name already ending in it stays. */
+function fileName(name, ext) {
+  const n = String(name);
+  if (!ext) return n;
+  const suffix = `.${ext}`;
+  return n.toLowerCase().endsWith(suffix.toLowerCase()) ? n : n + suffix;
+}
+
+/** A task's subtask rollup, done clamped into [0, total]. */
+function subtaskCounts(row) {
+  const total = Math.max(0, Number(row && row.subtask_total) || 0);
+  const done = Math.min(total, Math.max(0, Number(row && row.subtask_done) || 0));
+  return { done, total };
 }
 
 /**
@@ -386,6 +408,29 @@ function rangeLabel(view, cursor) {
   return anchor.format("MMMM, YYYY");
 }
 
+/**
+ * The visible rows grouped by day ('YYYY-MM-DD' → rows), in the order every
+ * grid draws a day: meetings before tasks, meetings by start time, tasks by
+ * title — a timed item above an all-day one reads as the agenda it is.
+ */
+function itemsByDay(rows) {
+  const byDay = {};
+  rows.forEach((row) => {
+    const s = rowStart(row);
+    if (!s) return;
+    const k = ymd(s);
+    (byDay[k] = byDay[k] || []).push(row);
+  });
+  Object.keys(byDay).forEach((k) => {
+    byDay[k].sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind === "meeting" ? -1 : 1;
+      if (a.kind === "meeting") return (a.stime || 0) - (b.stime || 0);
+      return String(a.title).localeCompare(String(b.title));
+    });
+  });
+  return byDay;
+}
+
 module.exports = {
   STATUSES,
   PRIORITIES,
@@ -402,9 +447,11 @@ module.exports = {
   priorityMeta,
   resolveStatus,
   normalizeRow,
+  subtaskCounts,
   rowStart,
   rowEnd,
   startLabel,
+  itemsByDay,
   expandRecurrence,
   passesFilter,
   viewRange,

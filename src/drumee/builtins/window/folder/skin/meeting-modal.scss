@@ -1,7 +1,8 @@
 // "Schedule a meeting" / "Meeting Information" modal — Figma component set
 // 1693:140137 (blank 1693:140138, filled 1693:140255, information
-// 1693:140389), drawn at 80% and split in two sides over the dialog
-// wrapper's backdrop — pinned header, scrolling body, pinned footer. Pinned light like the rest of the
+// 1693:140389). Two sides over the dialog wrapper's backdrop — title,
+// description, files on the left; date, time, invitees, creator, repeat on the
+// right — with a pinned header, scrolling body, pinned footer. Pinned light like the rest of the
 // meeting / schedule chrome (see meeting-schedule.scss).
 @use "mixins/drumee";
 
@@ -18,21 +19,25 @@ $field-bg: rgba(0, 0, 0, 0.05);
 
 .window-folder {
   &__meeting-modal {
-    // 880px for the two sides, or the folder window's own width less a 16px
-    // margin each side (cqw = the window-folder-w container) when a split
-    // pane is narrower; under 760px the sides stack (end of file).
-    width: min(880px, calc(100cqw - 32px));
+    // Sized like the calendar's "Meeting" card (panel/calendar/skin,
+    // &__modal[data-form="meeting"]): 760px, 20px in, 14px between head, body
+    // and foot, 16px radius, the same shadow stack. Or the folder window's own
+    // width less a 16px margin each side (cqw = the window-folder-w container)
+    // when a split pane is narrower — the two sides stack below 760px (see the
+    // end of this file).
+    width: min(760px, calc(100cqw - 32px));
     box-sizing: border-box;
     // Never taller than the window; the body scrolls if the fields overflow.
-    max-height: 88vh;
-    padding: 28px 32px;
-    gap: 20px;
+    max-height: 84vh;
+    padding: 20px;
+    gap: 14px;
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.05);
-    border-radius: 24px;
+    border-radius: 16px;
     box-shadow:
-      0 7px 10px rgba(0, 0, 0, 0.09),
-      0 40px 80px rgba(0, 0, 0, 0.3);
+      0 7px 5px rgba(0, 0, 0, 0.05),
+      0 40px 40px rgba(0, 0, 0, 0.15),
+      0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
 
   &__meeting-modal-header {
@@ -42,7 +47,7 @@ $field-bg: rgba(0, 0, 0, 0.05);
   }
 
   &__meeting-modal-heading {
-    @include drumee.typo($size: 18px, $line: 1.1, $weight: 600, $color: var(--grey-90, #34343a));
+    @include drumee.typo($size: 18px, $line: 1.2, $weight: 600, $color: var(--grey-90, #34343a));
     // typo() only picks the family from $weight; the weight itself is ours.
     font-weight: 600;
   }
@@ -51,14 +56,14 @@ $field-bg: rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 19px;
-    height: 19px;
+    width: 16px;
+    height: 16px;
     cursor: pointer;
     color: var(--grey-80, #65656c);
 
     svg {
-      width: 11px;
-      height: 11px;
+      width: 12px;
+      height: 12px;
       fill: currentColor;
     }
 
@@ -67,47 +72,39 @@ $field-bg: rgba(0, 0, 0, 0.05);
     }
   }
 
-  // The scrolling body, both sides scrolling together. The right padding
-  // keeps the bar 13px clear of the fields, as drawn.
+  // The scrolling body holding the two sides. The right padding keeps the bar
+  // clear of the fields.
   &__meeting-modal-body {
-    gap: 19px;
+    gap: 20px;
+    align-items: flex-start;
     min-height: 0;
     overflow-y: auto;
-    padding-right: 13px;
-    align-items: flex-start;
+    padding-right: 12px;
     @include thin-scrollbar;
   }
 
+  // Left (title, description, files) and right (date … repeat) sides.
   &__meeting-modal-col {
-    gap: 13px;
-    min-width: 0;
-  }
-
-  // Left: title, agenda, files — takes what the schedule side leaves.
-  &__meeting-modal-col--main {
     flex: 1 1 0;
-  }
-
-  // Right: date, times, invitees, repeat. Wide enough for the two time
-  // pickers and the arrow on one line.
-  &__meeting-modal-col--side {
-    flex: 0 0 400px;
-  }
-
-  &__meeting-modal-field {
-    flex-shrink: 0;
     gap: 10px;
     min-width: 0;
   }
 
-  &__meeting-modal-label {
-    @include drumee.typo($size: 14px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+  &__meeting-modal-field {
+    flex-shrink: 0;
+    gap: 5px;
+    min-width: 0;
   }
 
-  // The two side-by-side pairs (Enter → End time, Invitees | Created by).
+  &__meeting-modal-label {
+    @include drumee.typo($size: 13px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+  }
+
+  // The side-by-side pair (Start → End time). Two pickers + the arrow have to
+  // fit the right side (~345px; they ask ~295), hence the tight gap.
   &__meeting-modal-row {
     flex-shrink: 0;
-    gap: 19px;
+    gap: 8px;
     align-items: center;
   }
 
@@ -120,11 +117,11 @@ $field-bg: rgba(0, 0, 0, 0.05);
     box-sizing: border-box;
     width: 100%;
     min-width: 0;
-    padding: 10px;
+    padding: 8px 10px;
     border: none;
     border-radius: 8px;
     background: $field-bg;
-    @include drumee.typo($size: 12px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+    @include drumee.typo($size: 13px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
 
     // Submit blocked on a missing title (the server would otherwise substitute
     // its "<name> scheduled a meeting" boilerplate). Point at the field the
@@ -151,11 +148,11 @@ $field-bg: rgba(0, 0, 0, 0.05);
     // 16px/26px (0,2,2) — the field visibly grows. The grey container is the
     // field here: keep the modal's 14px and no border (0,3,x).
     .entry-reminder__main input {
-      @include drumee.typo($size: 12px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+      @include drumee.typo($size: 13px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
 
       &::placeholder,
       &:focus::placeholder {
-        @include drumee.typo($size: 12px, $line: 1.2, $weight: 400, $color: var(--grey-70, #84848c));
+        @include drumee.typo($size: 13px, $line: 1.2, $weight: 400, $color: var(--grey-70, #84848c));
       }
 
       &:focus {
@@ -172,19 +169,20 @@ $field-bg: rgba(0, 0, 0, 0.05);
   &__meeting-modal-desc-editor {
     box-sizing: border-box;
     width: 100%;
-    min-height: 35px;
+    // Taller than one line so the left side balances the right one.
+    min-height: 100px;
     // Long agendas scroll inside the field instead of stretching the card.
-    max-height: 128px;
+    max-height: 200px;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 10px;
+    padding: 8px 10px;
     @include thin-scrollbar;
     border-radius: 8px;
     background: $field-bg;
     outline: none;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    @include drumee.typo($size: 12px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+    @include drumee.typo($size: 13px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
 
     &:empty::before {
       content: attr(data-placeholder);
@@ -197,7 +195,7 @@ $field-bg: rgba(0, 0, 0, 0.05);
   &__meeting-modal-mention-chip,
   &__meeting-modal-file-chip {
     display: inline;
-    padding: 1px 3px;
+    padding: 1px 4px;
     border-radius: 4px;
     background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
     color: var(--primary-50, #433cc5);
@@ -231,9 +229,9 @@ $field-bg: rgba(0, 0, 0, 0.05);
   &__meeting-modal-mention-dropdown {
     position: absolute;
     z-index: 30;
-    min-width: 144px;
-    max-width: 224px;
-    max-height: 176px;
+    min-width: 180px;
+    max-width: 280px;
+    max-height: 220px;
     overflow-y: auto;
     background: #ffffff;
     border: 1px solid var(--overlay-light-mode, rgba(0, 0, 0, 0.05));
@@ -250,8 +248,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
   &__meeting-modal-invitee-option,
   &__meeting-modal-attach-option {
     align-items: center;
-    gap: 6px;
-    padding: 6px 8px;
+    gap: 8px;
+    padding: 8px 10px;
     cursor: pointer;
 
     &[data-active="1"],
@@ -261,8 +259,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
   }
 
   &__meeting-modal-mention-ava {
-    width: 18px;
-    height: 18px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     flex-shrink: 0;
     background-size: cover;
@@ -270,8 +268,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
   }
 
   &__meeting-modal-mention-fico {
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
     color: var(--grey-70, #84848c);
   }
@@ -279,7 +277,7 @@ $field-bg: rgba(0, 0, 0, 0.05);
   &__meeting-modal-mention-name,
   &__meeting-modal-invitee-option-name,
   &__meeting-modal-attach-option-name {
-    @include drumee.typo($size: 12px, $line: 16px, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -287,11 +285,11 @@ $field-bg: rgba(0, 0, 0, 0.05);
 
   // ── Files: Search file + Upload, then the chips ───────────────────────────
   &__meeting-modal-files {
-    gap: 10px;
+    gap: 8px;
   }
 
   &__meeting-modal-files-bar {
-    gap: 6px;
+    gap: 8px;
     align-items: stretch;
   }
 
@@ -304,7 +302,7 @@ $field-bg: rgba(0, 0, 0, 0.05);
   &__meeting-modal-files-input {
     box-sizing: border-box;
     width: 100%;
-    padding: 10px;
+    padding: 8px 10px;
     border-radius: 8px;
     background: $field-bg;
 
@@ -317,7 +315,7 @@ $field-bg: rgba(0, 0, 0, 0.05);
       border: none;
       outline: none;
       background: transparent;
-      @include drumee.typo($size: 12px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+      @include drumee.typo($size: 13px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
 
       &::placeholder {
         color: var(--grey-70, #84848c);
@@ -331,8 +329,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
     left: 0;
     right: 0;
     z-index: 20;
-    margin-top: 3px;
-    max-height: 176px;
+    margin-top: 4px;
+    max-height: 220px;
     overflow-y: auto;
     background: #ffffff;
     border: 1px solid var(--overlay-light-mode, rgba(0, 0, 0, 0.05));
@@ -351,8 +349,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
   }
 
   &__meeting-modal-attach-option-ico {
-    width: 13px;
-    height: 13px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
     color: var(--grey-80, #65656c);
   }
@@ -361,8 +359,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
     flex-shrink: 0;
     align-items: center;
     gap: 6px;
-    padding: 5px 10px;
-    border-radius: 8px;
+    padding: 0 12px;
+    border-radius: 4px;
     background: var(--primary-50, #433cc5);
     cursor: pointer;
 
@@ -385,15 +383,15 @@ $field-bg: rgba(0, 0, 0, 0.05);
 
   &__meeting-modal-files-upload-label {
     white-space: nowrap;
-    @include drumee.typo($size: 12px, $line: 16px, $weight: 600, $color: #ffffff);
+    @include drumee.typo($size: 13px, $line: 20px, $weight: 600, $color: #ffffff);
     font-weight: 600;
   }
 
   &__meeting-modal-files-chips {
     flex-wrap: wrap !important;
     align-items: center;
-    gap: 3px;
-    padding: 3px;
+    gap: 4px;
+    padding: 4px;
 
     &[data-count="0"] {
       display: none;
@@ -403,9 +401,9 @@ $field-bg: rgba(0, 0, 0, 0.05);
   &__meeting-modal-attach-chip {
     position: relative;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
     max-width: 100%;
-    padding: 3px 6px;
+    padding: 4px 8px;
     border-radius: 4px;
     background: $field-bg;
 
@@ -436,14 +434,14 @@ $field-bg: rgba(0, 0, 0, 0.05);
   }
 
   &__meeting-modal-attach-chip-ico {
-    width: 14px;
-    height: 14px;
+    width: 17px;
+    height: 17px;
     flex-shrink: 0;
     color: var(--primary-purple-100, #0b0a21);
 
     svg {
-      width: 12px;
-      height: 14px;
+      width: 15px;
+      height: 17px;
       fill: currentColor;
     }
   }
@@ -453,20 +451,20 @@ $field-bg: rgba(0, 0, 0, 0.05);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    @include drumee.typo($size: 11px, $line: 1.4, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
   }
 
-  // 13px black disc, 1px grey-20 ring, 10px white X — on the chip's corner.
+  // 16px black disc, 1px grey-20 ring, 12px white X — on the chip's corner.
   &__meeting-modal-attach-chip-x {
     position: absolute;
-    top: -5px;
-    right: -5px;
+    top: -6px;
+    right: -6px;
     box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 13px;
-    height: 13px;
+    width: 16px;
+    height: 16px;
     padding: 2px;
     border: 1px solid var(--grey-20, #f2f2f7);
     border-radius: 50%;
@@ -477,8 +475,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
     transition: opacity 0.12s ease;
 
     svg {
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
       fill: currentColor;
     }
   }
@@ -502,12 +500,13 @@ $field-bg: rgba(0, 0, 0, 0.05);
     box-sizing: border-box;
     width: 100%;
     height: auto;
-    padding: 13px 38px 13px 19px;
+    // 34px: 9px + a 13px/1.2 line + 9px, as the calendar's date row.
+    padding: 9px 34px 9px 10px;
     border: none;
     border-radius: 8px;
     background: $field-bg;
     cursor: pointer;
-    @include drumee.typo($size: 12px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+    @include drumee.typo($size: 13px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
 
     &::placeholder {
       color: var(--grey-70, #84848c);
@@ -516,44 +515,47 @@ $field-bg: rgba(0, 0, 0, 0.05);
 
   &__meeting-modal-date-ico {
     position: absolute;
-    right: 19px;
+    right: 10px;
     top: 50%;
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
     transform: translateY(-50%);
     pointer-events: none;
     color: var(--grey-80, #65656c);
 
     svg {
-      width: 14px;
-      height: 14px;
+      width: 15px;
+      height: 15px;
       fill: currentColor;
     }
   }
 
   // ── Time: [Hour] : [Minute] + a vertical AM/PM toggle ─────────────────────
+  // At the calendar's metrics (__time / __time-part / __meridiem): 34px boxes,
+  // 28px tall, an 11px caption, a 40px AM/PM pair of 22px pills.
   &__meeting-modal-time-picker {
     align-items: flex-start;
     gap: 6px;
   }
 
   &__meeting-modal-time-part {
-    align-items: flex-start;
+    align-items: center;
     gap: 3px;
   }
 
   // Editable Hour / Minute number box.
   &__meeting-modal-time-num {
     box-sizing: border-box;
-    width: 56px;
+    width: 34px;
     height: auto;
-    padding: 6px 0;
+    padding: 6px 2px;
     border: none;
     border-radius: 8px;
     background: $field-bg;
     text-align: center;
     outline: none;
-    @include drumee.typo($size: 14px, $line: 1.4, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+    font-variant-numeric: tabular-nums;
+    @include drumee.typo($size: 13px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
 
     &:focus {
       box-shadow: inset 0 0 0 1px var(--primary-40, #5950ff);
@@ -561,26 +563,27 @@ $field-bg: rgba(0, 0, 0, 0.05);
   }
 
   &__meeting-modal-time-sub {
-    @include drumee.typo($size: 11px, $line: 1.4, $weight: 400, $color: var(--grey-70, #84848c));
+    white-space: nowrap;
+    @include drumee.typo($size: 11px, $line: 1.3, $weight: 400, $color: var(--grey-70, #84848c));
   }
 
   &__meeting-modal-time-colon {
-    width: 4px;
-    height: 32px;
-    @include drumee.typo($size: 14px, $line: 32px, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+    width: 5px;
+    height: 28px;
+    @include drumee.typo($size: 14px, $line: 28px, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
   }
 
-  // Vertical AM / PM toggle, 9px clear of the minute box.
+  // Vertical AM / PM toggle, about as tall as a box and its caption.
   &__meeting-modal-time-ampm {
+    flex: 0 0 40px;
     gap: 3px;
-    width: 45px;
-    height: 50px;
-    margin-left: 3px;
+    width: 40px;
   }
 
   &__meeting-modal-time-seg {
     box-sizing: border-box;
-    flex: 1 1 0;
+    flex: 0 0 22px;
+    height: 22px;
     align-items: center;
     justify-content: center;
     text-align: center;
@@ -597,7 +600,7 @@ $field-bg: rgba(0, 0, 0, 0.05);
     }
   }
 
-  // The → between Enter and End time (the row centers it on the fields).
+  // The → between Start and End time (the row centers it on the fields).
   &__meeting-modal-time-arrow {
     flex-shrink: 0;
     width: 16px;
@@ -605,9 +608,9 @@ $field-bg: rgba(0, 0, 0, 0.05);
     color: var(--grey-80, #65656c);
 
     svg {
-      width: 13px;
-      height: 11px;
-      margin: 3px 2px;
+      width: 14px;
+      height: 12px;
+      margin: 2px 1px;
       fill: currentColor;
     }
   }
@@ -615,21 +618,21 @@ $field-bg: rgba(0, 0, 0, 0.05);
   // ── Invitees: type-to-search (chips + search input + suggestions) ─────────
   &__meeting-modal-invitees {
     position: relative; // anchors the suggestions dropdown
-    gap: 5px;
+    gap: 6px;
   }
 
   // Underline field holding the selected chips inline with the search input.
   &__meeting-modal-invitees-control {
     align-items: center;
     flex-wrap: wrap;
-    gap: 5px;
-    padding: 3px 0;
+    gap: 6px;
+    padding: 4px 0;
     border-bottom: 1px solid var(--grey-70, #84848c);
   }
 
   &__meeting-modal-invitees-chips {
     flex-wrap: wrap;
-    gap: 5px;
+    gap: 6px;
 
     &:empty {
       display: none;
@@ -638,8 +641,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
 
   &__meeting-modal-invitee-chip {
     align-items: center;
-    gap: 5px;
-    padding: 2px 5px;
+    gap: 6px;
+    padding: 2px 6px;
     border-radius: 4px;
     background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
 
@@ -654,7 +657,7 @@ $field-bg: rgba(0, 0, 0, 0.05);
   }
 
   &__meeting-modal-invitee-chip-name {
-    @include drumee.typo($size: 11px, $line: 14px, $weight: 500, $color: var(--primary-50, #433cc5));
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--primary-50, #433cc5));
     white-space: nowrap;
   }
 
@@ -662,22 +665,22 @@ $field-bg: rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 11px;
-    height: 11px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
     color: var(--primary-50, #433cc5);
 
     svg {
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       fill: currentColor;
     }
   }
 
   // Inline search input — grows to fill the row.
   &__meeting-modal-invitees-search {
-    flex: 1 1 72px;
-    min-width: 72px;
+    flex: 1 1 90px;
+    min-width: 90px;
 
     input {
       width: 100%;
@@ -688,7 +691,7 @@ $field-bg: rgba(0, 0, 0, 0.05);
       border: none;
       outline: none;
       background: transparent;
-      @include drumee.typo($size: 12px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+      @include drumee.typo($size: 13px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
 
       &::placeholder {
         color: var(--grey-70, #84848c);
@@ -701,8 +704,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 13px;
-    height: 13px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
     cursor: pointer;
     overflow: hidden;
@@ -710,8 +713,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
     color: var(--grey-70, #84848c);
 
     svg {
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       display: block;
       // The sprite strips the source fill, so it must come from CSS.
       fill: currentColor;
@@ -730,8 +733,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
     left: 0;
     right: 0;
     z-index: 20;
-    margin-top: 3px;
-    max-height: 176px;
+    margin-top: 4px;
+    max-height: 220px;
     overflow-y: auto;
     background: #ffffff;
     border: 1px solid var(--overlay-light-mode, rgba(0, 0, 0, 0.05));
@@ -754,8 +757,8 @@ $field-bg: rgba(0, 0, 0, 0.05);
   }
 
   &__meeting-modal-invitee-option-ava {
-    width: 19px;
-    height: 19px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     flex-shrink: 0;
     background-size: cover;
@@ -766,32 +769,35 @@ $field-bg: rgba(0, 0, 0, 0.05);
   // files that did not attach), pinned above the footer.
   &__meeting-modal-availability {
     flex-shrink: 0;
-    margin-top: -10px;
-    @include drumee.typo($size: 11px, $line: 14px, $weight: 500, $color: #c2681f);
+    margin-top: -8px;
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: #c2681f);
 
-    &:empty {
+    // Not :empty — a Note never is (its inner .note-content), so the blank
+    // line held its slot until the first write emptied it for real and the
+    // card shrank. _mmBanner stamps data-filled with the text.
+    &:not([data-filled="1"]) {
       display: none;
     }
   }
 
   // ── Recurrence: Repeat pills + Until date ─────────────────────────────────
   &__meeting-modal-recur {
-    gap: 6px;
+    gap: 8px;
   }
 
   &__meeting-modal-recur-segs {
-    gap: 6px;
+    gap: 8px;
     flex-wrap: wrap !important;
   }
 
   &__meeting-modal-recur-seg {
     justify-content: center;
     text-align: center;
-    padding: 6px 19px;
+    padding: 5px 12px;
     border-radius: 31px;
     background: var(--grey-20, #f2f2f7);
     cursor: pointer;
-    @include drumee.typo($size: 12px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
+    @include drumee.typo($size: 13px, $line: 1.2, $weight: 400, $color: var(--primary-purple-100, #0b0a21));
 
     &[data-selected="1"] {
       background: var(--primary-40, #5950ff);
@@ -805,24 +811,24 @@ $field-bg: rgba(0, 0, 0, 0.05);
 
   &__meeting-modal-recur-until {
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
 
   &__meeting-modal-recur-until-label {
-    @include drumee.typo($size: 11px, $line: 14px, $weight: 500, $color: var(--grey-80, #65656c));
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--grey-80, #65656c));
     flex-shrink: 0;
   }
 
   // ── Created by: read-only organizer chip (avatar + name, "You" badge) ─────
   &__meeting-modal-creator {
     align-items: center;
-    gap: 6px;
-    min-height: 19px;
+    gap: 8px;
+    min-height: 24px;
   }
 
   &__meeting-modal-creator-ava {
-    width: 19px;
-    height: 19px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     flex-shrink: 0;
     background-size: cover;
@@ -830,7 +836,7 @@ $field-bg: rgba(0, 0, 0, 0.05);
   }
 
   &__meeting-modal-creator-name {
-    @include drumee.typo($size: 12px, $line: 1.2, $weight: 600, $color: var(--primary-purple-100, #0b0a21));
+    @include drumee.typo($size: 13px, $line: 1.2, $weight: 600, $color: var(--primary-purple-100, #0b0a21));
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -839,34 +845,34 @@ $field-bg: rgba(0, 0, 0, 0.05);
 
   &__meeting-modal-creator-you {
     flex-shrink: 0;
-    padding: 2px 10px;
+    padding: 2px 12px;
     border-radius: 31px;
     background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
-    @include drumee.typo($size: 11px, $line: 1.4, $weight: 400, $color: var(--primary-40, #5950ff));
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 400, $color: var(--primary-40, #5950ff));
   }
 
-  // ── Footer: compact buttons sized to their label, right-aligned ─────────
+  // ── Footer: the calendar Meeting card's actions — sized to their labels
+  // at the foot's right end, 12px apart (Schedule; Delete / Join / Update) ──
   &__meeting-modal-footer {
     flex-shrink: 0;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
-    padding-top: 4px;
+    gap: 12px;
   }
 
   &__meeting-modal-btn {
     flex: 0 0 auto;
-    min-width: 96px;
-    min-height: 36px;
+    min-width: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    padding: 0 20px;
-    border-radius: 8px;
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 4px;
     cursor: pointer;
     white-space: nowrap;
-    @include drumee.typo($size: 13px, $line: 16px, $weight: 600, $color: #ffffff);
+    @include drumee.typo($size: 13px, $line: 20px, $weight: 600, $color: #ffffff);
     font-weight: 600;
 
     &.primary {
@@ -885,39 +891,84 @@ $field-bg: rgba(0, 0, 0, 0.05);
     &:hover {
       opacity: 0.92;
     }
+
+    // Its write is in flight (libs/button-busy): the label gives way to a
+    // spinner in the button's own ink, keeping the button's width.
+    &[data-loading="1"] {
+      position: relative;
+      cursor: progress;
+
+      .note-content {
+        visibility: hidden;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 14px;
+        height: 14px;
+        margin: -9px 0 0 -9px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: window-folder-mm-btn-spin 0.8s linear infinite;
+      }
+    }
   }
 
-  // ── Pane too narrow for two sides: one 480px column again ───────────────
-  // Wrap + full-basis columns rather than flex-direction: the body's
-  // `.drumee-widget[data-flow=x]` direction rule out-weighs one class.
+  // While one action writes, the other actions stand down.
+  &__meeting-modal-footer[data-busy="1"] > &__meeting-modal-btn:not([data-loading="1"]) {
+    pointer-events: none;
+    opacity: 0.5;
+  }
+
+  // View mode (skeleton viewOnly: a hosted meeting the viewer did not report):
+  // the fields are shown, not edited — the host also sets them read-only — and
+  // only Join is offered. A file chip still opens its file; its × is gone.
+  &__meeting-modal[data-view="1"] &__meeting-modal-body {
+    pointer-events: none;
+  }
+
+  &__meeting-modal[data-view="1"] &__meeting-modal-attach-chip {
+    pointer-events: auto;
+  }
+
+  &__meeting-modal[data-view="1"] &__meeting-modal-attach-chip-x {
+    display: none;
+  }
+
+  // ── Pane too narrow for two sides: stack them, left side first ───────────
   @container window-folder-w (max-width: 760px) {
-    &__meeting-modal {
-      width: min(480px, calc(100cqw - 32px));
-    }
-
     &__meeting-modal-body {
-      flex-wrap: wrap !important;
-      gap: 13px;
+      flex-direction: column !important;
+      align-items: stretch;
+      gap: 12px;
     }
 
-    &__meeting-modal-col--main,
-    &__meeting-modal-col--side {
-      flex: 1 1 100%;
+    &__meeting-modal-col {
+      flex: 0 0 auto;
+    }
+
+    &__meeting-modal-desc-editor {
+      min-height: 41px;
+      max-height: 160px;
     }
   }
 
-  // ── Narrow pane: same column, tighter padding; the paired rows stack ──────
+  // ── Narrow pane: tighter padding; the time pair stacks ────────────────────
   // Keyed on the folder window width (container query), not viewport — matches
   // the calendar/schedule responsive rules in meeting-schedule.scss.
   @container window-folder-w (max-width: 560px) {
     &__meeting-modal {
-      padding: 13px;
-      gap: 13px;
+      padding: 16px;
+      gap: 12px;
     }
 
     &__meeting-modal-row {
       flex-wrap: wrap !important;
-      gap: 10px;
+      gap: 12px;
     }
 
     &__meeting-modal-row > &__meeting-modal-field {
@@ -932,9 +983,17 @@ $field-bg: rgba(0, 0, 0, 0.05);
     &__meeting-modal-btn {
       flex: 1 1 0;
       min-width: 0;
-      padding: 6px 8px;
+      height: auto;
+      min-height: 36px;
+      padding: 8px;
       white-space: normal;
       text-align: center;
     }
+  }
+}
+
+@keyframes window-folder-mm-btn-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

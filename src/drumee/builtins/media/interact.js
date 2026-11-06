@@ -372,8 +372,17 @@ class __media_interact extends media_core {
         this._bboxDirty = 1;
       };
     }
-    this.parent.off(_e.scroll, this._onParentScroll);
-    this.parent.on(_e.scroll, this._onParentScroll);
+    // A tile re-mounted by restart() (afterRename does that) can be without
+    // a parent for this pass: ui-core detaches it from its collection before
+    // the re-render and reattaches afterwards. Reading `.off` on undefined
+    // threw here, the rejection was never caught, and the renamed tile's
+    // mount stopped half-way -- the listing then looked empty until a
+    // reload (prod client_error after every rename since 2026-10-26).
+    // onBeforeDestroy already guards the same pair; mirror it.
+    if (this.parent && this.parent.off && this.parent.on) {
+      this.parent.off(_e.scroll, this._onParentScroll);
+      this.parent.on(_e.scroll, this._onParentScroll);
+    }
 
     if (this.mget(_a.file)) {
       return;
@@ -958,6 +967,8 @@ class __media_interact extends media_core {
   /**
    * Create a copy beside this media item. The live update owns grid insertion so the
    * HTTP response and WebSocket broadcast cannot add the same copy twice.
+   * Resolves true once the copy is made, false when it failed (already
+   * alerted) — the editors' File → Make a copy toasts on true.
    */
   duplicateInPlace() {
     // A WORKSPACE is not a node, so Make a copy on one is not a node copy. It
@@ -989,11 +1000,16 @@ class __media_interact extends media_core {
       .then((data) => {
         if (data && data.error) {
           const message = data.reason || data.error.message || data.error;
-          return Wm.alert(message || LOCALE.TRY_AGAIN);
+          Wm.alert(message || LOCALE.TRY_AGAIN);
+          return false;
         }
         Wm.unselect && Wm.unselect();
+        return true;
       })
-      .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
+      .catch((e) => {
+        Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
+        return false;
+      });
   }
 
   /**

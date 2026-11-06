@@ -1,16 +1,18 @@
 // The item chip, shared by the month / week / day grids.
 // Figma: task card 1697:48543 (hover, with its ×, 1697:48544); workspace task
 // card 1697:10988 with its pill 1697:11003 (hover 1697:11085); month meeting
-// chip 1697:48542; week / day meeting block 1693:188958.
+// chip 1697:48542; week / day schedule card 1693:188959; day task card
+// 2069:181433.
 //
 // Two shapes, matching the frames: a MEETING is a brand-tinted block with a
 // 4px brand bar down its left edge — "1:30 PM title" on one line in a month
-// cell, title over agenda on the hour canvas; a TASK is a white card with its
-// priority dot over its name. A WORKSPACE task card also carries the workspace
+// cell, time over title over agenda on the week/day board; a TASK is a white
+// card with its priority dot over its name, and its description under them in
+// the Day view. A WORKSPACE task card also carries the workspace
 // pill (folder + workspace name) and a personal one carries none, so in the
 // Team view, where both kinds of row are mixed, the pill is what tells a
 // workspace task from one this screen edits.
-const { priorityMeta, resolveStatus, startLabel } = require("./helpers");
+const { priorityMeta, startLabel, subtaskCounts } = require("./helpers");
 // The folder glyph the breadcrumb and the workspace switcher draw, from its one
 // source. It returns an HTML string, hence Element + content.
 const folderArt = require("media/grid/template/folder");
@@ -60,24 +62,81 @@ function provenancePill(pfx, row) {
   });
 }
 
+// The Day view's card shows this many file pills, then "+N" (2069:181634).
+const FILES_SHOWN = 2;
+
+/**
+ * The Day card's attached files (2069:181634): paperclip pills, the first
+ * FILES_SHOWN of them, then "+N". Inert, every node: a click anywhere on the
+ * card opens the task. Null when there are none.
+ */
+function filesRow(pfx, row) {
+  const files = row.files || [];
+  if (!files.length) return null;
+  const more = files.length - FILES_SHOWN;
+  return Skeletons.Box.X({
+    className: `${pfx}__chip-files`,
+    active: 0,
+    kids: [
+      ...files.slice(0, FILES_SHOWN).map((f) =>
+        Skeletons.Box.X({
+          className: `${pfx}__chip-file`,
+          active: 0,
+          kids: [
+            Skeletons.Image.Svg({ ico: "app-attachment", className: `${pfx}__chip-file-ico`, active: 0 }),
+            Skeletons.Note({ className: `${pfx}__chip-file-name`, content: f.name, active: 0 }),
+          ],
+        }),
+      ),
+      more > 0
+        ? Skeletons.Note({ className: `${pfx}__chip-file-more`, content: `+${more}`, active: 0 })
+        : null,
+    ].filter(Boolean),
+  });
+}
+
+/**
+ * The Day card's footer (subtasks-desktop-board, 844:92547): icon,
+ * "Subtasks", done/total, caret. Display only — the calendar has no subtask
+ * list to expand; the card's click opens the task. Null with no subtasks.
+ */
+function subtasksFooter(pfx, row) {
+  const { done, total } = subtaskCounts(row);
+  if (!total) return null;
+  return Skeletons.Box.X({
+    className: `${pfx}__chip-subtasks`,
+    active: 0,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__chip-subtasks-lead`,
+        active: 0,
+        kids: [
+          Skeletons.Image.Svg({ ico: "ph-stack-simple", className: `${pfx}__chip-subtasks-ico`, active: 0 }),
+          Skeletons.Note({ className: `${pfx}__chip-subtasks-label`, content: LOCALE.SUBTASKS, active: 0 }),
+          Skeletons.Note({ className: `${pfx}__chip-subtasks-count`, content: `${done}/${total}`, active: 0 }),
+        ],
+      }),
+      Skeletons.Image.Svg({ ico: "caret-right", className: `${pfx}__chip-subtasks-caret`, active: 0 }),
+    ],
+  });
+}
+
 /**
  * @param {Object} ui    the calendar widget
  * @param {Object} row   normalized calendar.list row
- * @param {Object} opt   { compact: 1 } for the month cell and the all-day
- *                       strip: a task card, or a one-line meeting chip;
- *                       { hour: 1 } for the week/day hour block, title over
- *                       agenda like the workspace Meet tab's schedule card;
- *                       { style } for the hour canvas's absolute geometry —
- *                       passed in at construction rather than assigned to the
- *                       returned node, which the builder has already normalized
- *                       by then.
+ * @param {Object} opt   { compact: 1 } for the month cell: a task card, or a
+ *                       one-line meeting chip;
+ *                       { board: 1 } for the week/day board: the meeting is
+ *                       the schedule card, time over title over agenda;
+ *                       { board: 1, detail: 1 } for the Day view's task card,
+ *                       which adds the description and wraps its name.
  */
 function chip(ui, row, opt = {}) {
   const pfx = ui.fig.family;
   const compact = !!opt.compact;
-  const hour = !!opt.hour;
+  const board = !!opt.board;
+  const detail = !!opt.detail;
   const meeting = row.kind === "meeting";
-  const status = resolveStatus(row);
   const pm = priorityMeta(row.priority);
 
   // A recurrence occurrence is not its own record — it can never be edited or
@@ -106,19 +165,26 @@ function chip(ui, row, opt = {}) {
 
   // Every node below carries its own `active: 0` — a Box's does not reach its
   // kids (see the note on the root below).
+  const desc = row.description
+    ? Skeletons.Note({
+        className: `${pfx}__chip-desc`,
+        content: row.description,
+        active: 0,
+      })
+    : null;
+
   let kids;
-  if (hour) {
-    // 1693:188958: the title, the agenda line under it, and nothing else —
-    // where the block sits on the ruler already says when it runs.
+  if (meeting && board) {
+    // 1693:188959: the time in brand ink, the title, the agenda line — one
+    // line each.
     kids = [
+      Skeletons.Note({
+        className: `${pfx}__chip-time`,
+        content: startLabel(row),
+        active: 0,
+      }),
       title,
-      row.description
-        ? Skeletons.Note({
-            className: `${pfx}__chip-desc`,
-            content: row.description,
-            active: 0,
-          })
-        : null,
+      desc,
     ];
   } else if (meeting) {
     // 1697:48542: "1:30 PM title" on one line.
@@ -146,50 +212,23 @@ function chip(ui, row, opt = {}) {
           title,
         ],
       }),
+      // 2069:181433: the Day view's card carries the description under the
+      // name, then the pill; 2069:181634 adds the files and the subtasks.
+      detail ? desc : null,
       provenancePill(pfx, row),
+      detail ? filesRow(pfx, row) : null,
+      detail ? subtasksFooter(pfx, row) : null,
     ];
   }
 
-  // The week/day block has room for the agenda line and a status pill; the
-  // month chip is one line and gets neither.
-  if (!compact && !hour) {
-    if (row.description) {
-      kids.push(
-        Skeletons.Note({
-          className: `${pfx}__chip-desc`,
-          content: row.description,
-          active: 0,
-        }),
-      );
-    }
-    if (!meeting && status.label) {
-      kids.push(
-        Skeletons.Box.X({
-          className: `${pfx}__chip-status`,
-          attrOpt: { "data-theme": status.theme },
-          // Every level has to be inert, not just this one: kidsOpt/active is
-          // applied per node and does not reach a grandchild.
-          active: 0,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__chip-status-dot`,
-              styleOpt: { background: status.color },
-              active: 0,
-            }),
-            Skeletons.Note({
-              className: `${pfx}__chip-status-label`,
-              content: status.label,
-              active: 0,
-            }),
-          ],
-        }),
-      );
-    }
-  }
-
-  // Hover delete, personal + writable rows only. bubble:0 so it does not also
-  // open the item. A workspace row is deleted in its workspace, never here.
-  if (row.scope === "personal" && row.can_write && !isOccurrence) {
+  // Hover delete. bubble:0 so it does not also open the item. A personal row
+  // the viewer may write; and a workspace MEETING its reporter sees
+  // (calendar.list answers can_write = created_by === caller; room.remove is
+  // creator-only server-side). A workspace task is deleted on its board.
+  // Never an occurrence of a series.
+  const removable =
+    row.can_write && (row.scope === "personal" || row.kind === "meeting");
+  if (removable && !isOccurrence) {
     kids.push(
       Skeletons.Button.Svg({
         className: `${pfx}__chip-remove`,
@@ -218,10 +257,9 @@ function chip(ui, row, opt = {}) {
   // reaches DIRECT kids, never the card head's or the pill's nested nodes.
   //
   // A row for the one-line meeting chip, a column for the task card and the
-  // hour block.
-  return Skeletons.Box[meeting && !hour ? "X" : "Y"]({
+  // schedule card.
+  return Skeletons.Box[meeting && !board ? "X" : "Y"]({
     className: `${pfx}__chip`,
-    ...(opt.style ? { styleOpt: opt.style } : {}),
     bubble: 0,
     service: "cal-open-item",
     uiHandler: [ui],
@@ -243,12 +281,12 @@ function chip(ui, row, opt = {}) {
       // lands in the DOM as the literal string "undefined".
       ...(originText ? { title: originText } : {}),
       "data-kind": row.kind,
-      // The month cell and the week/day all-day strip get the card or the
-      // one-line chip; the hour block gets the tall one. Stamped rather than
-      // inferred from the grid's data-view, because the all-day strip is
-      // compact inside a week/day grid — keying the skin on the view would size
-      // those wrong.
+      // The month cell gets the card or the one-line chip, the week/day board
+      // the schedule card and (Day view) the detailed task card. Stamped on
+      // the chip so the skin keys on the item, not on the grid around it.
       "data-compact": compact ? "1" : "0",
+      "data-board": board ? "1" : "0",
+      "data-detail": detail ? "1" : "0",
       "data-scope": row.scope,
       "data-status": row.status || "todo",
       "data-priority": row.priority || "medium",

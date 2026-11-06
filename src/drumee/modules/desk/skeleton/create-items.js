@@ -30,7 +30,7 @@ const createEntries = (mayWrite) => [
     ? []
     : [
         {
-          ico: "addmenu-note",
+          ico: "raw-note-sticky",
           label: LOCALE.NOTE || "Note",
           service: "new-note",
           name: "",

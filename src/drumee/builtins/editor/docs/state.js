@@ -1,7 +1,7 @@
 import { createElement, createRef } from "react";
 import { createRoot } from "react-dom/client";
 import { DocxEditor } from "@casualoffice/docs/react";
-import { CasualEditor } from "@casualoffice/docs";
+import { CasualEditor, exportDocxAs } from "@casualoffice/docs";
 import { serializeDocx, attemptSelectiveSave, parseDocx } from "@casualoffice/docs/core";
 import "@casualoffice/docs/styles.css";
 import { contentUrl } from "builtins/editor/content-url";
@@ -13,6 +13,11 @@ const collab = require("./collab");
 const liveComments = require("./live-comments");
 // "Open this file on that comment", left by a notification click.
 const pendingFocus = require("builtins/editor/pending-focus");
+// Casual's menu bar, cut to what works in Drumee (see _wireMenus).
+const { attachMenuPolicy } = require("builtins/editor/menu-policy");
+const { revealWhenPainted, hideLoading } = require("builtins/editor/loading-reveal");
+const { saveBlob } = require("builtins/editor/export");
+const chrome = require("builtins/editor/chrome");
 // A room counts as changed for this long after its last update: covers the
 // export Casual runs before handing the bytes to FileSource.save.
 const LIVE_SETTLE_MS = 2000;
@@ -205,9 +210,95 @@ class __docs_state extends DrumeeMFS {
   /**
    *
    */
+  /**
+   * One menu on "@". Casual opens TWO there: the people list (mentions,
+   * at the caret) and its smart-chip menu (a single item, Date) just behind
+   * it — it read as a duplicated menu, and the smart-chip menu's keys sit
+   * on window (capture), before the people list's on document, so Enter
+   * put in a date chip instead of the person. Mentions are the "@" feature
+   * here: the smart-chip menu is closed as soon as it opens, through its
+   * own Escape. Dispatched on `window` alone, that Escape reaches only
+   * window listeners — not the people list (document), not the editor.
+   * Closed that way it stays closed for that "@"; the skin hides it in the
+   * meantime so it never flashes.
+   */
+  _wireSmartChipGuard() {
+    if (this._chipObs || !this.el) return;
+    const menu = () => this.el && this.el.querySelector('[data-testid="smart-chip-menu"]');
+    // Its key listener is added in an effect, after the menu is in the DOM:
+    // retry until the menu has gone (or give up after ~300ms).
+    const dismiss = (tries) => {
+      this._chipTimer = null;
+      if (this._destroyed || !menu() || tries > 10) return;
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+      this._chipTimer = setTimeout(() => dismiss(tries + 1), 30);
+    };
+    this._chipObs = new MutationObserver(() => {
+      if (this._chipTimer || !menu()) return;
+      this._chipTimer = setTimeout(() => dismiss(0), 0);
+    });
+    this._chipObs.observe(this.el, { childList: true, subtree: true });
+  }
+
+  /**
+   * Close the floating "Format selection" bar (bold / italic / colours,
+   * shown over a text selection) when the menu bar is used. The menu bar's
+   * buttons keep the editor's focus and selection, so the bar stayed up over
+   * File / Edit / Format… menus. A press on the menu bar hides it (the skin
+   * keys on data-format-bar); the next press in the document or key typed in
+   * the editor brings it back for the selection that follows. Keys moving
+   * through an open menu do not count.
+   */
+  _wireFormatBarDismiss() {
+    const el = this.el;
+    if (!el || this._formatBarOff) return;
+    const hide = () => {
+      el.dataset.formatBar = "hidden";
+    };
+    const show = () => {
+      if (el.dataset.formatBar) delete el.dataset.formatBar;
+    };
+    const onPointer = (e) => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (t.closest('[data-testid="title-bar"] button[aria-haspopup="menu"]')) hide();
+      else if (t.closest(".paged-editor__pages")) show();
+    };
+    const onKey = (e) => {
+      if (!el.dataset.formatBar) return;
+      const t = e.target;
+      // Arrow keys / Enter in an open menu, or a key in the title bar.
+      if (document.querySelector('[role="menu"][data-state="open"]')) return;
+      if (t && t.closest && t.closest('[data-testid="title-bar"]')) return;
+      show();
+    };
+    el.addEventListener("pointerdown", onPointer, true);
+    el.addEventListener("keydown", onKey, true);
+    this._formatBarOff = () => {
+      el.removeEventListener("pointerdown", onPointer, true);
+      el.removeEventListener("keydown", onKey, true);
+      this._formatBarOff = null;
+    };
+  }
+
   _doMount() {
     if (this._mounted || this._destroyed || !this.el) return;
     this._mounted = 1;
+    // The loading skeleton (docs/skeleton) covers the editor until a page
+    // has painted and the icon font is in — both shells (the co-editing one
+    // never goes through _reactHost).
+    this._wireSmartChipGuard();
+    this._wireFormatBarDismiss();
+    this._cancelReveal = revealWhenPainted(this.el.closest(".editor-docs"), {
+      painted: () => {
+        const pages = this.el && this.el.querySelector(".paged-editor__pages");
+        return (
+          this.el.querySelector('[data-testid="title-bar"]') &&
+          pages &&
+          pages.getBoundingClientRect().height > 40
+        );
+      },
+    });
     if (this._collab) return this._doMountCollab();
     this._loading = 1;
     console.log("[DOCS] _doMount start, hasBuffer=", !!this._pendingBuffer);
@@ -275,6 +366,8 @@ class __docs_state extends DrumeeMFS {
     // (controlled) `documentName` without remounting the editor.
     const renderSingle = () => this._root.render(
       createElement(DocxEditor, {
+        // File → New (Casual shows the row once this is given).
+        onNew: () => chrome.createNew(this.editor, "editor_docs"),
         ref: this._ref,
         ...docProps,
         // Match the docs.casualoffice.org demo: show the horizontal ruler.
@@ -304,12 +397,17 @@ class __docs_state extends DrumeeMFS {
         },
         onChange,
         onSave,
+        // File → Open is hidden (_wireMenus); Ctrl/Cmd+O would still load a
+        // file from the computer INTO this document.
+        onRequestOpen: () => {},
         // Casual's Help → "Report issue" goes to Drumee support too.
         onReportBug: () => {
           if (this.editor && this.editor.contactSupport) this.editor.contactSupport();
         },
-        onError: (e) =>
-          console.error("[DOCS] onError", e && (e.message || e), e && e.stack),
+        onError: (e) => {
+          console.error("[DOCS] onError", e && (e.message || e), e && e.stack);
+          hideLoading(this.el && this.el.closest(".editor-docs"));
+        },
         author:
           (typeof Visitor !== "undefined" &&
             Visitor.get &&
@@ -321,6 +419,7 @@ class __docs_state extends DrumeeMFS {
     renderSingle();
 
     this.el.addEventListener("contextmenu", (e) => e.stopPropagation(), false);
+    this._wireMenus();
     this._nudgeResize();
     /** POC debug handle */
     window.__casualDocsAPI = () => this._apiHandle;
@@ -384,6 +483,7 @@ class __docs_state extends DrumeeMFS {
         const bar = root.querySelector('[data-testid="title-bar"]');
         if (bar) this._decorateTitleBar(bar, null);
         this._wirePrintButton();
+        this._wireToolbarScroll();
       } catch (e) {
         /** editor gone */
       }
@@ -506,6 +606,7 @@ class __docs_state extends DrumeeMFS {
         }
         this._wireCollabUndo();
         this._wirePrintButton();
+        this._wireToolbarScroll();
       } catch (e) {
         /** editor gone */
       }
@@ -645,9 +746,96 @@ class __docs_state extends DrumeeMFS {
     paint.parentElement.insertBefore(b, paint);
   }
 
+  /**
+   * The formatting bar scrolls sideways when the window is narrower than its
+   * buttons (Casual's `overflow-x: auto`, a thin scrollbar in the skin), but
+   * a mouse wheel only scrolls vertically, so the buttons past the edge were
+   * hard to reach. Over the bar of the pane on screen: the wheel
+   * scrolls it sideways, and a ‹ / › at each clipped end (an overlay in this
+   * view, never inside Casual's React-owned bar) pages it.
+   */
+  _wireToolbarScroll() {
+    const host = this._activeHost() || this.el;
+    const bar = host && host.querySelector('[data-testid="formatting-bar"]');
+    if (!bar || bar === this._scrollBar) {
+      if (this._syncToolbarScroll) this._syncToolbarScroll();
+      return;
+    }
+    if (this._unwireToolbarScroll) this._unwireToolbarScroll();
+    this._scrollBar = bar;
+
+    const make = (dir) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = `editor-docs__tb-scroll editor-docs__tb-scroll--${dir < 0 ? "prev" : "next"}`;
+      b.hidden = true;
+      b.setAttribute("aria-hidden", "true");
+      b.tabIndex = -1;
+      b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        bar.scrollBy({ left: dir * Math.max(120, bar.clientWidth * 0.6), behavior: "smooth" });
+      });
+      this.el.appendChild(b);
+      return b;
+    };
+    const prev = make(-1);
+    const next = make(1);
+
+    const sync = () => {
+      if (!bar.isConnected || !this.el) return;
+      const max = bar.scrollWidth - bar.clientWidth;
+      const showPrev = max > 1 && bar.scrollLeft > 1;
+      const showNext = max > 1 && bar.scrollLeft < max - 1;
+      // Hidden panes (a tab in the background) have no box: no arrows.
+      const r = bar.getBoundingClientRect();
+      const o = this.el.getBoundingClientRect();
+      const visible = r.width > 0 && r.height > 0;
+      for (const [b, show, left] of [
+        [prev, showPrev, r.left - o.left],
+        [next, showNext, r.right - o.left - 44],
+      ]) {
+        b.hidden = !(visible && show);
+        b.style.top = `${r.top - o.top}px`;
+        b.style.left = `${left}px`;
+        // Above the scrollbar, which stays reachable under the strips.
+        b.style.height = `${bar.clientHeight}px`;
+      }
+    };
+    const onWheel = (e) => {
+      if (bar.scrollWidth <= bar.clientWidth) return;
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return; // a trackpad's own sideways swipe
+      e.preventDefault();
+      bar.scrollLeft += e.deltaY;
+    };
+    bar.addEventListener("wheel", onWheel, { passive: false });
+    bar.addEventListener("scroll", sync, { passive: true });
+    const ro = typeof ResizeObserver === "function" ? new ResizeObserver(sync) : null;
+    if (ro) {
+      ro.observe(bar);
+      ro.observe(this.el);
+    }
+    window.addEventListener("resize", sync);
+    this._syncToolbarScroll = sync;
+    this._unwireToolbarScroll = () => {
+      bar.removeEventListener("wheel", onWheel);
+      bar.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+      if (ro) ro.disconnect();
+      prev.remove();
+      next.remove();
+      this._scrollBar = null;
+      this._syncToolbarScroll = null;
+      this._unwireToolbarScroll = () => {};
+    };
+    sync();
+  }
+
   /** Casual's print (its own preview / layout), the browser's as a fallback. */
   printDocument() {
     const api = (this._ref && this._ref.current) || this._apiHandle;
+    this._titleNextWindow(this._exportBaseName());
     try {
       if (api && typeof api.print === "function") return api.print();
       if (api && typeof api.openPrintPreview === "function") return api.openPrintPreview();
@@ -660,6 +848,317 @@ class __docs_state extends DrumeeMFS {
       /** blocked */
     }
     return undefined;
+  }
+
+  /**
+   * Casual prints from a window of its own, titled "Print" ("Document" for
+   * Export as PDF), and the browser names a saved PDF after that title. The
+   * next window opened by this click gets the file's name instead (it is
+   * written synchronously right after window.open returns, so a microtask
+   * lands after Casual's markup and before its load-time print()).
+   */
+  _titleNextWindow(title) {
+    const open = window.open;
+    if (!title || typeof open !== "function" || open.__drumeeTitled) return;
+    const titled = function (...args) {
+      window.open = open;
+      const w = open.apply(this, args);
+      if (w) {
+        queueMicrotask(() => {
+          try {
+            w.document.title = title;
+          } catch (e) {
+            /** window gone */
+          }
+        });
+      }
+      return w;
+    };
+    titled.__drumeeTitled = 1;
+    window.open = titled;
+    // No window after all (layout not ready, popup blocked): put it back.
+    setTimeout(() => {
+      if (window.open === titled) window.open = open;
+    }, 3000);
+  }
+
+  /** The file's name, for what leaves the editor (exports, the print title). */
+  _exportBaseName() {
+    const raw =
+      (this.editor && this.editor.mget(_a.filename)) ||
+      this.mget(_a.filename) ||
+      this._docName ||
+      LOCALE.UNTITLED_DOCUMENT ||
+      "Document";
+    const name = String(raw)
+      .replace(/<.+>/, "")
+      .replace(/\.(udoc|docx)$/i, "")
+      .replace(/[\\/:*?"<>|]+/g, "-")
+      .trim();
+    return name || "Document";
+  }
+
+  /**
+   * File → Export as ODT / Markdown, named after the file. Casual's own rows
+   * name the export after its `documentName`, which the co-editing shell
+   * does not have: every export came out as "document.odt" / "document.md".
+   * Same bytes and converter (exportDocxAs) as Casual's rows.
+   */
+  async _exportAs(fmt) {
+    const api = this._ref && this._ref.current;
+    const save = api && (api.save || api.exportDocx);
+    if (typeof save !== "function") return;
+    try {
+      const bytes = await save.call(api);
+      if (!bytes || this._destroyed) return;
+      const out = await exportDocxAs(new Uint8Array(bytes), fmt);
+      const type = fmt === "odt" ? "application/vnd.oasis.opendocument.text" : "text/markdown";
+      saveBlob(new Blob([out], { type }), `${this._exportBaseName()}.${fmt}`);
+    } catch (e) {
+      this.warn("docs: export failed", fmt, e);
+      Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+    }
+  }
+
+  /**
+   * Edit → Paste. Casual's row runs document.execCommand("paste"), which no
+   * browser grants a page: the row did nothing. The clipboard is read
+   * through the Clipboard API instead (the browser asks for the permission
+   * once) and handed to ProseMirror's own paste path, so it goes through the
+   * editor's paste rules like a Ctrl+V: HTML first, then plain text, then an
+   * image. Refused or unsupported: say how to paste with the keyboard.
+   */
+  async _pasteFromClipboard() {
+    const view = this._collabView();
+    if (!view) return;
+    const clip = navigator.clipboard;
+    const hint = () => Wm.alert(LOCALE.PASTE_WITH_SHORTCUT);
+    if (!clip || (typeof clip.read !== "function" && typeof clip.readText !== "function")) {
+      return hint();
+    }
+    try {
+      view.focus();
+      if (typeof clip.read !== "function") {
+        const text = await clip.readText();
+        if (text) view.pasteText(text);
+        return;
+      }
+      const items = await clip.read();
+      const find = (type) => items.find((it) => it.types.includes(type));
+      const html = find("text/html");
+      if (html) {
+        const markup = await (await html.getType("text/html")).text();
+        if (markup) return view.pasteHTML(markup);
+      }
+      const plain = find("text/plain");
+      if (plain) {
+        const text = await (await plain.getType("text/plain")).text();
+        if (text) return view.pasteText(text);
+      }
+      const image = items.find((it) => it.types.some((t) => /^image\//.test(t)));
+      if (image) {
+        const type = image.types.find((t) => /^image\//.test(t));
+        const blob = await image.getType(type);
+        const src = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = reject;
+          r.readAsDataURL(blob);
+        });
+        view.pasteHTML(`<img src="${src}">`);
+      }
+    } catch (e) {
+      this.warn("docs: clipboard read refused", e);
+      hint();
+    }
+  }
+
+  /**
+   * Casual's menu bar, cut to what works in Drumee (builtins/editor/
+   * menu-policy; the rows carry no ids, they are matched by label).
+   * Hidden:
+   *   - File → Open: loads a file from the computer INTO this document, and
+   *     the autosave then writes it over the Drumee file;
+   *   - File → Email as attachment: a download plus an empty mail to fill;
+   *   - File → Version history: snapshots kept in this browser only, none
+   *     for co-editors or on another device (the rail's button too, skin);
+   *   - File → Properties: file facts it cannot know here, every field "—"
+   *     (the gear's Get info has them);
+   *   - View → Theme rows: they switch the theme of the whole desk;
+   *   - Tools → Spell check: its dictionary is not shipped ("Couldn't load
+   *     the spell-check dictionary").
+   * Answered by Drumee: Make a copy (a copy next to the file, like the
+   * gear's, not a "Copy of document.docx" download), Paste (see
+   * _pasteFromClipboard), Print / Export as PDF / ODT / Markdown (named after
+   * the file) and, while co-editing, Undo / Redo (Casual greys them out
+   * there; the toolbar pair's manager answers, _wireCollabUndo).
+   * Help keeps one row, Drumee's "Contact us", in place of Casual's (its
+   * command palette, bug tracker, About box and shortcut sheet), and
+   * Ctrl/Cmd+Shift+P (that command palette, which lists every one of the
+   * hidden commands) is swallowed in this editor.
+   */
+  _wireMenus() {
+    if (this._menuPolicy || !this.el) return;
+    const ROW_ENABLED = '[role="menuitem"]:not([disabled])';
+    const HIDDEN = new Set([
+      "Open",
+      "Email as attachment\u2026",
+      "Version history",
+      "Properties",
+      // Grouped under File → Export ▸ (extra + submenus, below).
+      "Export as PDF",
+      "Export as ODT",
+      "Export as Markdown",
+      "Export as Plain Text",
+      "Theme: match system",
+      "Theme: light",
+      "Theme: dark",
+      "Spell check",
+      // Help: Casual's own rows (its command palette, its bug tracker, its
+      // About box, its shortcut sheet) give way to Drumee's "Contact us".
+      "Search the menus",
+      "Report issue",
+      "About Casual Editor",
+      "Keyboard shortcuts",
+    ]);
+    const live = () => !!this._undoManager;
+    const stack = (kind) => {
+      const um = this._undoManager;
+      const s = um && (kind === "undo" ? um.undoStack : um.redoStack);
+      return !!(s && s.length);
+    };
+    const ACTIONS = {
+      [LOCALE.CONTACT_US]: () => {
+        if (this.editor && this.editor.contactSupport) this.editor.contactSupport();
+      },
+      "Make a copy": () => chrome.handleService(this.editor, null, { service: _a.duplicate }),
+      // Drumee's row (extra, below): the title's inline rename.
+      [LOCALE.RENAME]: () => {
+        if (this.editor && this.editor.renameFromChrome) this.editor.renameFromChrome();
+      },
+      Paste: () => this._pasteFromClipboard(),
+      Print: () => this.printDocument(),
+      "Export as PDF": () => this.printDocument(),
+      "Export as ODT": () => this._exportAs("odt"),
+      "Export as Markdown": () => this._exportAs("md"),
+    };
+    this._menuPolicy = attachMenuPolicy(this.el, {
+      // The label: the first non-empty span of the row (the icon has no
+      // text), without the check mark of a toggled row.
+      key: (row) => {
+        for (const s of row.children) {
+          if (s.tagName !== "SPAN") continue;
+          const t = (s.textContent || "").replace(/^\u2713\s*/, "").trim();
+          if (t) return t;
+        }
+        return "";
+      },
+      hidden: (key) => HIDDEN.has(key),
+      action: (key) => {
+        if (ACTIONS[key]) return ACTIONS[key];
+        if (live() && (key === "Undo" || key === "Redo")) {
+          return () => this._yHistory(key === "Undo" ? "undo" : "redo");
+        }
+        return null;
+      },
+      enabled: (key) => live() && ((key === "Undo" && stack("undo")) || (key === "Redo" && stack("redo"))),
+      // Help → "Contact us" (the support conversation), styled as Casual's rows.
+      extra: (menu) => {
+        // File → Rename, right below Make a copy: a clone of that row (same
+        // look), its label and its Material icon (the "edit" pencil) swapped.
+        // Each looked up anywhere in the menu: a row goes next to another,
+        // which need not be a direct child, and the policy re-runs this on
+        // every mutation — a :scope> check missed it and inserted rows
+        // forever.
+        const copy =
+          menu.getAttribute("aria-label") === "File" && !menu.querySelector(".editor-docs__file-rename")
+            ? [...menu.querySelectorAll(ROW_ENABLED)].find((r) => /Make a copy/.test(r.textContent || ""))
+            : null;
+        if (copy) {
+          const row = copy.cloneNode(true);
+          row.classList.add("editor-docs__file-rename");
+          const label = row.querySelector("span");
+          if (label) label.textContent = LOCALE.RENAME;
+          const path = row.querySelector("svg path");
+          if (path) {
+            path.setAttribute(
+              "d",
+              "M200-200h57l391-391-57-57-391 391v57Zm-80 80v-170l528-527q12-11 26.5-17t30.5-6q16 0 31 6t26 18l55 56q12 11 17.5 26t5.5 30q0 16-5.5 30.5T817-647L290-120H120Zm640-584-56-56 56 56Zm-141 85-28-29 57 57-29-28Z"
+            );
+          }
+          row.addEventListener("mouseover", () => {
+            row.style.backgroundColor = "var(--doc-hover, #f3f4f6)";
+          });
+          row.addEventListener("mouseout", () => {
+            row.style.backgroundColor = "transparent";
+          });
+          copy.after(row);
+        }
+        // File → Export ▸ in place of the three "Export as …" rows: a clone
+        // of the PDF row (its download icon), the format list in a submenu.
+        if (menu.getAttribute("aria-label") === "File" && !menu.querySelector(".editor-docs__file-export")) {
+          const pdf = [...menu.querySelectorAll('[role="menuitem"]')].find(
+            (r) => (r.textContent || "").trim() === "Export as PDF"
+          );
+          if (pdf) {
+            const row = pdf.cloneNode(true);
+            row.classList.add("editor-docs__file-export");
+            row.disabled = false;
+            const label = row.querySelector("span");
+            if (label) label.textContent = LOCALE.EXPORT || "Export";
+            row.addEventListener("mouseover", () => {
+              row.style.backgroundColor = "var(--doc-hover, #f3f4f6)";
+            });
+            row.addEventListener("mouseout", () => {
+              row.style.backgroundColor = "transparent";
+            });
+            const box = pdf.parentElement && pdf.parentElement !== menu ? pdf.parentElement : pdf;
+            box.before(row);
+          }
+        }
+        if (menu.getAttribute("aria-label") === "File") return;
+        if (menu.getAttribute("aria-label") !== "Help") return;
+        if (menu.querySelector(":scope > .editor-docs__help-contact")) return;
+        const like = menu.querySelector(ROW_ENABLED);
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "editor-docs__help-contact";
+        row.setAttribute("role", "menuitem");
+        if (like) row.style.cssText = like.style.cssText;
+        const label = document.createElement("span");
+        label.textContent = LOCALE.CONTACT_US;
+        row.appendChild(label);
+        row.addEventListener("mouseover", () => {
+          row.style.backgroundColor = "var(--doc-hover, #f3f4f6)";
+        });
+        row.addEventListener("mouseout", () => {
+          row.style.backgroundColor = "transparent";
+        });
+        menu.appendChild(row);
+      },
+      submenus: {
+        [LOCALE.EXPORT || "Export"]: () => [
+          { label: LOCALE.FORMAT_PDF || "PDF document (.pdf)", run: () => this.printDocument() },
+          { label: LOCALE.FORMAT_ODT || "OpenDocument (.odt)", run: () => this._exportAs("odt") },
+          { label: LOCALE.FORMAT_MD || "Markdown (.md)", run: () => this._exportAs("md") },
+        ],
+      },
+      rowHover: "var(--doc-hover, #f3f4f6)",
+      // The menubar button toggles its dropdown.
+      close: (trigger) => trigger.click(),
+    });
+    if (!this._paletteKeys) {
+      this._paletteKeys = (e) => {
+        if (!(e.metaKey || e.ctrlKey) || !e.shiftKey || e.altKey) return;
+        if (String(e.key || "").toLowerCase() !== "p") return;
+        const view = this._collabView();
+        const inView = !!(view && view.dom && view.dom.contains(e.target));
+        if (!inView && !(this.el && this.el.contains(e.target))) return;
+        e.preventDefault();
+        e.stopPropagation();
+      };
+      document.addEventListener("keydown", this._paletteKeys, true);
+    }
   }
 
   /**
@@ -808,10 +1307,6 @@ class __docs_state extends DrumeeMFS {
     // visible area and the new-doc window looked empty.
     this.el.insertBefore(host, this.el.firstChild);
     this._host = host;
-    // The window's "Loading…" label (docs/skeleton) has done its job.
-    const win = this.el.closest(".editor-docs");
-    const loading = win && win.querySelector(".editor-loading");
-    if (loading) loading.remove();
     return host;
   }
 
@@ -996,6 +1491,7 @@ class __docs_state extends DrumeeMFS {
       prunePanes();
       pane.root.render(
       createElement(CasualEditor, {
+        onNew: () => chrome.createNew(this.editor, "editor_docs"),
         ref: pane.ref,
         fileSource,
         docId: room,
@@ -1033,7 +1529,9 @@ class __docs_state extends DrumeeMFS {
         },
         // Comment ids partitioned per peer: two peers commenting at once
         // cannot overwrite each other's thread (live-comments).
-        docxEditorProps: { commentIdBase: this._commentIdBase },
+        // File → Open is hidden (_wireMenus); Ctrl/Cmd+O would still load a
+        // file from the computer into the room.
+        docxEditorProps: { commentIdBase: this._commentIdBase, onRequestOpen: () => {} },
         onCollabState: (state) => {
           trackRoom(room, state);
           if (room !== this._room) return;
@@ -1046,8 +1544,10 @@ class __docs_state extends DrumeeMFS {
           this._tidyCollabChrome();
           if (editor && editor.setPeers) editor.setPeers(state ? state.peers : []);
         },
-        onError: (e) =>
-          console.error("[DOCS] collab onError", e && (e.message || e), e && e.stack),
+        onError: (e) => {
+          console.error("[DOCS] collab onError", e && (e.message || e), e && e.stack);
+          hideLoading(this.el && this.el.closest(".editor-docs"));
+        },
       })
       );
     };
@@ -1055,6 +1555,7 @@ class __docs_state extends DrumeeMFS {
     renderCollab(nid);
 
     this.el.addEventListener("contextmenu", (e) => e.stopPropagation(), false);
+    this._wireMenus();
     this._nudgeResize();
     if (editor && editor._raiseAboveDesk) setTimeout(() => editor._raiseAboveDesk(), 1200);
   }
@@ -1342,6 +1843,14 @@ class __docs_state extends DrumeeMFS {
    */
   onBeforeDestroy() {
     try {
+      if (this._menuPolicy) this._menuPolicy();
+      this._menuPolicy = null;
+      if (this._paletteKeys) document.removeEventListener("keydown", this._paletteKeys, true);
+      this._paletteKeys = null;
+    } catch (e) {
+      /** already gone */
+    }
+    try {
       this._unbindUndoManager();
       if (this._undoKeys) document.removeEventListener("keydown", this._undoKeys, true);
       this._undoKeys = null;
@@ -1350,6 +1859,10 @@ class __docs_state extends DrumeeMFS {
     }
     console.log("[DOCS] onBeforeDestroy (state) called");
     this._destroyed = 1;
+    if (this._cancelReveal) this._cancelReveal();
+    if (this._chipObs) this._chipObs.disconnect();
+    if (this._formatBarOff) this._formatBarOff();
+    clearTimeout(this._chipTimer);
     if (this._saveTimer) {
       clearTimeout(this._saveTimer);
       this._saveTimer = null;
@@ -1366,6 +1879,7 @@ class __docs_state extends DrumeeMFS {
       }
       clearTimeout(this._glyphTimer);
       clearInterval(this._veilPoll);
+      if (this._unwireToolbarScroll) this._unwireToolbarScroll();
       if (this._root) this._root.unmount();
       if (this._host) {
         this._host.remove();

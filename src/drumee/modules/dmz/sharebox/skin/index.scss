@@ -980,15 +980,10 @@
     }
   }
 
-  // One avatar per message: keep the img-based template avatar (left of the
-  // bubble, carries the username tooltip) and hide the duplicate UserProfile
-  // (Skeletons.UserProfile → .user-profile) that chat-item.buildContent appends
-  // for share messages. The window chat panel scopes the same rule under
-  // .window__chat-panel; the sharebox panel is .dmz__chat-panel, so it needs its
-  // own copy — otherwise every row shows a second avatar below it. The `.me` arm
-  // is kept for parity even though the share chat renders every row as "other".
-  .widget-chatItem__profile.me,
-  .widget-chatItem__profile.user-profile {
+  // One avatar per message: the img-based template avatar (left of the bubble,
+  // carries the username tooltip). Own avatar hidden for parity with the window
+  // chat, even though the share chat renders every row as "other".
+  .widget-chatItem__profile.me {
     display: none !important;
   }
 

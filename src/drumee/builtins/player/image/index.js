@@ -325,6 +325,10 @@ class __player_image extends __core {
    * @returns
    */
   loadSiblings() {
+    // An opener whose files don't share a listable folder (task attachments)
+    // hands over the set to page through.
+    const given = this.mget('siblings');
+    if (Array.isArray(given)) return Promise.resolve(given);
     return this.fetchService(SERVICE.media.get_by_type, {
       page: 1,
       type: _a.image,
@@ -356,8 +360,10 @@ class __player_image extends __core {
       : Infinity;
     if (this._rotateInflight || recentMs < 3000) return;
     this.feed(require('./skeleton')(this));
-    this.loadSiblings().then((r) => {
-      this.siblingsData = r;
+    // A refused listing (guest / share-link viewer without access to the
+    // folder) must leave the arrows hidden, not half-working.
+    this.loadSiblings().catch(() => []).then((r) => {
+      this.siblingsData = Array.isArray(r) ? r : [];
       // Re-feed if server-fresh data disagrees with our cached fields —
       // a previous rotate may have left a stale md5Hash on this model.
       const currentNid = this.mget(_a.nid);
@@ -375,6 +381,9 @@ class __player_image extends __core {
           this.feed(require('./skeleton')(this));
         }
       }
+      // prev/next step from the image on screen, not from the list's head.
+      const at = this.siblingsData.findIndex((it) => it && it.nid == currentNid);
+      this._currentSlide = at >= 0 ? at : 0;
       if (this.siblingsData.length > 1) {
         this.ensurePart("slider-buttons").then((p) => {
           p.el.dataset.state = 1;
@@ -792,6 +801,7 @@ class __player_image extends __core {
    * 
    */
   prev() {
+    if (!this._canSlide()) return;
     if (this.timer) {
       clearTimeout(this.timer);
       if (this._isPlaying) {
@@ -820,6 +830,7 @@ class __player_image extends __core {
    * 
    */
   next() {
+    if (!this._canSlide()) return;
     if (this.timer) {
       clearTimeout(this.timer);
       if (this._isPlaying) {
@@ -912,13 +923,13 @@ class __player_image extends __core {
    *
    */
   _play(init) {
+    // Nothing to step to — siblings not loaded yet, refused, or an empty
+    // listing (chat / trash / upload folders are filtered by mfs_list_by).
+    if (!this._canSlide()) return;
     // Commit any unsaved rotation BEFORE the model moves to the next slide.
     // `_flushRotate` reads nid/hub_id off `actualNode()`, so flushing after
     // the switch would persist this image's angle against its neighbour.
     if (this._hasPendingRotation()) this._flushRotate();
-    if (this._isPlaying == null) {
-      this._currentSlide++;
-    }
     if (this._currentSlide >= this.siblingsData.length) this._currentSlide = 0;
     if (this._currentSlide < 0) this._currentSlide = this.siblingsData.length - 1;
     let data = this.siblingsData[this._currentSlide]
@@ -937,11 +948,19 @@ class __player_image extends __core {
   }
 
   /**
-   * 
-   *  
+   * More than one image to step through? prev/next/play are reachable by
+   * click and arrow keys before (or without) loadSiblings filling the list.
+   */
+  _canSlide() {
+    return Array.isArray(this.siblingsData) && this.siblingsData.length > 1;
+  }
+
+  /**
+   *
+   *
    */
   play() {
-    if (!this._loop) return;
+    if (!this._loop || !this._canSlide()) return;
     this._currentSlide++;
     this._play();
     this.__ctrlPlay.setIcon('desktop_musicpause');

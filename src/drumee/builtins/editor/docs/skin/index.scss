@@ -2,8 +2,10 @@
 #   FILE : /src/drumee/builtins/editor/docs/skin
 #   TYPE : Component style — Casual Docs (DocxEditor) window
 # ===================================================================**/
-@use "../../skin/file-viewer";
+@use "../../skin/file-viewer" as fv;
+@use "../../skin/loading";
 @use "../../skin/phosphor" as ph;
+@use "../../skin/modal-backdrop";
 
 // Material Symbols arrow_drop_down — the caret the Figma draws on every toolbar menu.
 $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M480-360 280-560h400L480-360Z'/%3E%3C/svg%3E";
@@ -35,11 +37,80 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
   z-index: 60000 !important;
 }
 
+// Casual Docs' own dialogs (Dialog, command palette, the ep-dialog-overlay
+// family, the writing-assistant sheet…) are not portaled: each is a
+// `position: fixed; inset: 0` div with an inline scrim, rendered inside the
+// editor. The menubar's click-catcher has the same shape but is transparent
+// and must stay that way. Backdrop: see editor/skin/_modal-backdrop.
+@include modal-backdrop.veil(
+  '[data-testid="cs-dialog-backdrop"], ' +
+  '.editor-docs div[style*="position: fixed"][style*="inset: 0"]:not([style*="background: transparent"])'
+);
+
+// Format ▸ Line spacing ▸ Custom spacing is not a modal in Casual: a lone
+// `position: fixed` panel at top:100px, translateX(-50%), no backdrop, with
+// edits applied live. Here it sits on the same veil as the dialogs above and
+// is centred on the workspace pane (the anchor() insets + auto margins; on
+// fallback, centred in the viewport).
+//
+// The veil is its own ::before. A fixed child resolves against the viewport
+// only while no ancestor is transformed, so the inline translateX goes, and
+// the centring is done with margins instead. And because a negative-z child
+// paints OVER its stacking context's own background, border and shadow, the
+// card's surface moves to ::after, which paints after (above) the veil.
+// Every value Casual sets is inline, hence the !important.
+.editor-docs [data-testid="custom-spacing-dialog"] {
+  top: anchor(--desk-right-side top, 0px) !important;
+  right: anchor(--desk-right-side right, 0px) !important;
+  bottom: anchor(--desk-right-side bottom, 0px) !important;
+  left: anchor(--desk-right-side left, 0px) !important;
+  margin: auto !important;
+  height: fit-content !important;
+  transform: none !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  // Casual clips to its radius, which would clip ::after's shadow too. Only
+  // the body scrolls (its own overflow-y), and the header paints no ground.
+  overflow: visible !important;
+  animation: editor-modal-backdrop-in 0.15s ease;
+
+  &::before,
+  &::after {
+    content: "";
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  &::before {
+    position: fixed;
+    inset: 0;
+    top: anchor(--desk-right-side top, 0px);
+    right: anchor(--desk-right-side right, 0px);
+    bottom: anchor(--desk-right-side bottom, 0px);
+    left: anchor(--desk-right-side left, 0px);
+    background: modal-backdrop.$veil;
+  }
+
+  &::after {
+    position: absolute;
+    inset: -1px; // over the (now transparent) 1px border
+    border: 1px solid var(--doc-border);
+    border-radius: inherit;
+    background: var(--doc-surface, white);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+  }
+}
+
 // ── Document tabs ───────────────────────────────────────────────────────────
 // A rail left of the editor, like Google Docs: title + "+", one row per tab,
 // a ⋮ menu per row. The column is 0 wide until the gear row opens it, so the
 // editor keeps the whole window when tabs are not in use.
 .editor-docs {
+  // One height for Casual's title bar AND the Drumee action cluster floated
+  // over it: two literals drifted apart, and the actions sat off-centre.
+  --ed-titlebar-h: 64px;
+
   &__row {
     width: 100%;
     flex: 1 1 auto;
@@ -77,57 +148,62 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     transition: width 0.15s ease, flex-basis 0.15s ease;
   }
 
+  // Google Docs' rail metrics: 14px/500 head, 32px pill rows, 13px names,
+  // the active row in Docs' #d3e3fd.
   &[data-tabs="open"] &__tabs-slot {
-    width: 260px;
-    flex: 0 0 260px;
-    border-right: 1px solid #e3e6ea;
-    background: #f8f9fb;
+    width: 220px;
+    flex: 0 0 220px;
+    background: #fff;
   }
 
   &__tabs {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 8px 8px 12px;
-    font: 400 14px/1.3 var(--font-main);
-    color: #1f2328;
-  }
-
-  &__tabs-top {
-    display: flex;
-    padding: 4px 4px 8px;
+    padding: 4px 8px 12px 4px;
+    font: 400 #{fv.$fv-font-ui}/1.3 var(--font-main);
+    color: fv.$fv-g-ink;
   }
 
   &__tabs-close,
   &__tabs-add {
-    width: 32px;
-    height: 32px;
+    width: fv.$fv-tb-btn;
+    height: fv.$fv-tb-btn;
+    flex: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     cursor: pointer;
-    color: #5f6368;
+    color: fv.$fv-g-muted;
 
     &:hover {
-      background: rgba(15, 23, 42, 0.06);
+      background: fv.$fv-g-hover;
     }
+  }
+
+  &__tabs-add {
+    @include ph.ph("plus", fv.$fv-tb-glyph, true);
+  }
+
+  &__tabs-close {
+    @include ph.ph("x", fv.$fv-tb-glyph, true);
   }
 
   &__tabs-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0 4px 0 12px;
+    gap: 4px;
+    padding: 10px 0 8px 12px;
   }
 
   &__tabs-title {
-    font-size: 15px;
-    font-weight: 500;
+    flex: 1 1 auto;
+    font: 500 14px/1.2 var(--font-main);
+    color: fv.$fv-g-ink;
   }
 
   &__tabs-list {
-    margin-top: 8px;
     overflow-y: auto;
     flex: 1 1 auto;
     min-height: 0;
@@ -137,24 +213,32 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     position: relative;
     display: flex;
     align-items: center;
-    gap: 10px;
-    height: 40px;
-    padding: 0 8px 0 12px;
-    border-radius: 20px;
+    gap: 6px;
+    height: fv.$fv-row-h;
+    margin-bottom: 2px;
+    padding: 0 4px 0 12px;
+    border-radius: 16px;
     cursor: pointer;
     user-select: none;
 
     &:hover {
-      background: rgba(15, 23, 42, 0.05);
+      background: fv.$fv-g-hover;
     }
 
     &.is-active {
-      background: #d7e3fc;
-      color: #0b57d0;
+      background: #d3e3fd;
+      color: #041e49;
+      font-weight: 500;
 
       .editor-docs__tab-glyph {
-        color: #0b57d0;
+        color: #041e49;
       }
+    }
+
+    // ⋮ only where it is wanted: the hovered row and the open one.
+    &:hover .editor-docs__tab-more,
+    &.is-active .editor-docs__tab-more {
+      visibility: visible;
     }
 
     // The tab being opened: its co-editing room may take a moment, and a row
@@ -222,30 +306,31 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     align-items: center;
     justify-content: center;
     border-radius: 50%;
-    color: #5f6368;
-    font-size: 16px;
-    line-height: 1;
+    color: fv.$fv-g-muted;
+    font-size: 0;
+    visibility: hidden;
+    @include ph.ph("dots-three-vertical", 16px);
 
     &:hover {
-      background: rgba(15, 23, 42, 0.1);
+      background: rgba(68, 71, 70, 0.12);
     }
   }
 
   &__tab-menu {
     position: absolute;
     z-index: 30000;
-    min-width: 160px;
-    padding: 6px 0;
+    min-width: 148px;
+    padding: 4px 0;
     background: #fff;
-    border: 1px solid #e3e6ea;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-    font: 400 14px/1.3 var(--font-main);
-    color: #1f2328;
+    border: 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.3);
+    font: 400 #{fv.$fv-font-ui}/1.3 var(--font-main);
+    color: fv.$fv-g-ink;
   }
 
   &__tab-menu-item {
-    padding: 8px 16px;
+    padding: 6px 12px;
     cursor: pointer;
 
     &:hover {
@@ -302,6 +387,8 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 }
 
 .docs-state {
+  // The positioning context of the toolbar's scroll arrows (docs_state).
+  position: relative;
   user-select: text;
   -webkit-user-select: text;
   width: 100%;
@@ -358,7 +445,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     margin-right: 0;
   }
   [data-testid="presence-cluster"] {
-    gap: 10px;
+    gap: 4px;
 
     // Casual's 1px separator before its (hidden) Share button.
     > span:empty {
@@ -380,7 +467,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
       background: transparent;
       border: 0;
       outline: none;
-      padding: 2px 8px;
+      padding: 1px 6px;
       border-radius: 6px;
       min-width: 160px;
       max-width: 46ch;
@@ -482,7 +569,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
   .ep-root [role="combobox"][data-state="closed"] {
     visibility: visible !important;
     height: auto !important;
-    min-height: 2rem;
+    min-height: fv.$fv-tb-btn;
     width: auto !important;
     margin: 0 !important;
     z-index: auto !important;
@@ -598,7 +685,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     right: 0;
     left: auto;
     width: auto;
-    height: 75px;
+    height: var(--ed-titlebar-h);
     min-height: 0;
     padding: 0 10px 0 0;
     border: 0;
@@ -638,48 +725,149 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
   // chunk downloaded the window was see-through around a bare "Loading…".
   background: #fff;
 
-  // Loading state while the editor chunk downloads (docs/skeleton body): the
-  // office player's progress part, replicated — a 5px indeterminate bar in
-  // the primary colour under the header and a light centred label.
-  // docs_state._reactHost removes it when the editor mounts.
   &__body {
     position: relative;
   }
 
-  .editor-loading {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: auto;
-    min-height: 3px;
-    z-index: 2000;
-    justify-content: flex-start;
-    display: flex;
-    overflow: hidden;
+  // ── Loading skeleton (docs/skeleton loadingSkeleton) ──────────────────
+  // The document's own shape in the shared bones (editor/skin/loading): the
+  // 64px title bar (glyph, name, menu row; the action cluster floats over
+  // its right side), the toolbar pill, the page on its #f9fbfd canvas.
+  .editor-loading--docs {
+    --skel-canvas: #f9fbfd;
+    --skel-tool: #edf2fa;
+  }
 
-    &__bar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 5px;
-      width: 30%;
-      background-color: var(--primary-500, #4f46e5);
-      will-change: transform;
-      animation: editor-loading-indeterminate 1.4s ease-in-out infinite;
+  .editor-loading__titlebar {
+    flex: 0 0 var(--ed-titlebar-h);
+    align-items: center;
+    gap: 8px;
+    padding: 0 270px 0 8px;
+  }
+
+  .editor-loading__titlecol {
+    gap: 9px;
+    // Under Casual's name input (its 6px padding).
+    padding-left: 6px;
+  }
+
+  .editor-loading__menu {
+    gap: 14px;
+  }
+
+  .editor-loading__toolbar {
+    flex: 0 0 fv.$fv-tb-h;
+    align-items: center;
+    gap: 10px;
+    margin: 0 12px 6px;
+    padding: 0 14px;
+    border-radius: 24px;
+    background: var(--skel-tool);
+  }
+
+  .editor-loading__canvas {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: center;
+    background: var(--skel-canvas);
+  }
+
+  .editor-loading__ruler,
+  .editor-loading__page {
+    width: min(816px, calc(100% - 48px));
+    flex: none;
+  }
+
+  // The ruler: a hairline track with inch ticks.
+  .editor-loading__ruler {
+    height: 22px;
+    margin-top: 6px;
+    border-bottom: 1px solid var(--skel-line);
+    background: linear-gradient(to right, var(--skel-line) 1px, transparent 1px) 96px 12px / 96px 10px repeat-x;
+  }
+
+  .editor-loading__page {
+    flex: 1 1 auto;
+    gap: 14px;
+    margin-top: 16px;
+    padding: 64px 72px 0;
+    box-sizing: border-box;
+    background: #fff;
+    border: 1px solid #dadce0;
+    border-bottom: 0;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15);
+  }
+
+  .editor-loading--docs .editor-loading__bone {
+    &--glyph {
+      width: 36px;
+      height: 36px;
+      border-radius: 6px;
     }
 
-    &__text {
-      position: absolute;
-      top: 10px;
-      left: 0;
+    &--name {
+      width: 168px;
+      height: 14px;
+    }
+
+    &--menu {
+      width: 30px;
+      height: 10px;
+    }
+
+    &--menu:nth-child(3n) {
+      width: 40px;
+    }
+
+    &--tool {
+      width: 18px;
+      height: 18px;
+    }
+
+    &--tool:nth-child(3) {
+      width: 40px;
+    }
+
+    &--tool:nth-child(4) {
+      width: 88px;
+    }
+
+    &--tool:nth-child(5) {
+      width: 56px;
+    }
+
+    // A heading, then paragraph lines of a page's natural ragged widths.
+    &--line {
+      height: 10px;
       width: 100%;
-      padding: 10px;
-      text-align: center;
-      justify-content: center;
-      font: 300 14px/15px var(--font-main);
-      color: var(--default-text-color, #5f6368);
     }
+
+    &--line:first-child {
+      width: 46%;
+      height: 18px;
+      margin-bottom: 10px;
+    }
+
+    &--line:nth-child(4n) {
+      width: 72%;
+    }
+
+    &--line:nth-child(4n + 1):not(:first-child) {
+      width: 88%;
+    }
+
+    &--line:nth-child(6) {
+      width: 54%;
+      margin-bottom: 14px;
+    }
+  }
+
+  .editor-loading--docs .editor-loading__card {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
 }
 
@@ -701,17 +889,24 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
   // Casual paints its title bar, toolbar wrapper and status bar with
   // --doc-chrome, and the ground around the page with --doc-bg: the design
   // has them all white, the paper drawn by a hairline instead of a shadow.
+  // Google Docs grounds the paper on #f9fbfd (ruler included) and lifts it
+  // with a hairline + a faint shadow.
   --doc-chrome: #ffffff;
-  --doc-bg: #ffffff;
+  --doc-bg: #f9fbfd;
 
   .paged-editor__pages {
-    background: #fff;
+    background: #f9fbfd;
+  }
+
+  .docx-horizontal-ruler,
+  .docx-vertical-ruler {
+    background-color: #f9fbfd !important;
   }
 
   .layout-page {
-    border: 1px solid #c7c7c7;
+    border: 1px solid #dadce0;
     border-bottom: 0;
-    box-shadow: none !important;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15) !important;
   }
 
   .ep-root {
@@ -735,10 +930,11 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     align-content: center;
     align-items: center;
     column-gap: 0;
-    row-gap: 6px;
-    height: 75px;
+    row-gap: 2px;
+    height: var(--ed-titlebar-h);
     box-sizing: border-box;
-    padding: 8px 350px 8px 8px;
+    // Share pill (~90) + 8 + 4 x 32 + 4 x 4 gaps + 10 edge + 16 before the avatar.
+    padding: 6px 270px 6px 8px;
     border: 0;
     background: #fff;
 
@@ -746,7 +942,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     > .editor-docs__collab-name {
       grid-column: 1;
       grid-row: 1;
-      padding-left: 40px;
+      padding-left: 36px;
     }
 
     // Row 2: Casual's column — its menu row has 4px of its own (px-1), so
@@ -755,7 +951,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     > .flex-col {
       grid-column: 1 / span 2;
       grid-row: 2;
-      padding: 0 0 0 36px !important;
+      padding: 0 0 0 32px !important;
       overflow: visible;
     }
 
@@ -768,18 +964,20 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
       padding: 0 !important;
     }
 
-    button[aria-haspopup="menu"] {
+    // The menu bar's buttons only (File, Edit…): a dropdown row that opens a
+    // submenu (Export ▸, Casual's own) carries aria-haspopup too.
+    button[aria-haspopup="menu"]:not([role="menuitem"]) {
       font: 400 14px/1.2 var(--font-main);
-      color: #34343a;
-      padding: 3px 8px;
+      color: fv.$fv-g-ink;
+      padding: 2px 7px;
       border-radius: 4px;
       height: auto;
       min-height: 0;
 
       &:hover,
       &[data-state="open"] {
-        background: #f2f2f7;
-        color: #0b0a21;
+        background: fv.$fv-g-hover;
+        color: fv.$fv-g-ink;
       }
     }
   }
@@ -795,65 +993,159 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     padding: 4px;
     box-sizing: border-box;
     border-radius: 6px;
 
     svg {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       display: block;
     }
   }
 
-  // Formatting bar: a pill on Overlay/blue, 40px, 16px in from the card.
+  // Formatting bar: Google Docs' 36px pill on #edf2fa, 28px buttons with
+  // 18px glyphs, 12px in from the card.
   .ep-root [data-testid="formatting-bar"] {
-    margin: 0 16px 10px !important;
-    padding: 6px 8px !important;
-    min-height: 40px;
-    gap: 4px;
-    background: rgba(113, 163, 244, 0.1) !important;
-    border-radius: 100px;
-    color: #0b0a21;
+    margin: 0 12px 6px !important;
+    padding: 2px 6px !important;
+    min-height: fv.$fv-tb-h;
+    box-sizing: border-box;
+    gap: 2px;
+    background: #edf2fa !important;
+    border-radius: 24px;
+    color: fv.$fv-g-muted;
+    font-size: fv.$fv-font-ui;
+    // Narrow windows overflow the bar: it scrolls sideways (wheel, the
+    // ‹ / › strips, or this thin scrollbar along the pill's bottom — kept
+    // clear of its rounded ends, shown only while the bar overflows).
+    &::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      margin: 0 18px;
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-radius: 3px;
+      background: rgba(68, 71, 70, 0.28);
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+      background: rgba(68, 71, 70, 0.45);
+    }
+
+    // Engines without ::-webkit-scrollbar (Firefox).
+    @supports not selector(::-webkit-scrollbar) {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(68, 71, 70, 0.28) transparent;
+    }
 
     > div {
-      border-color: #d1d1d6 !important;
+      border-color: #c7c7c7 !important;
     }
 
     button {
-      color: #0b0a21;
+      color: fv.$fv-g-muted;
       border-radius: 4px;
+    }
+
+    // Casual's icon buttons are 32x32 INLINE; Docs' are 28.
+    button[style*="width: 32px"] {
+      width: fv.$fv-tb-btn !important;
+      height: fv.$fv-tb-btn !important;
+      padding: 0 !important;
+    }
+
+    // Every Phosphor glyph (ph mixin, 20px default) at the Docs 18px.
+    button::before {
+      width: fv.$fv-tb-glyph !important;
+      height: fv.$fv-tb-glyph !important;
+    }
+
+    [role="combobox"],
+    button[aria-haspopup] {
+      font-size: fv.$fv-font-ui;
+    }
+  }
+
+  // The bar's scroll wrapper paints the same native scrollbar.
+  .ep-root :has(> [data-testid="formatting-bar"]) {
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 
   // The comments / history / outline rail: Casual floats it at the right
-  // edge; the design has it at the LEFT of the page, 48px tiles.
+  // edge; the design has it at the LEFT of the page — a small floating
+  // card like Docs' outline button. Casual styles the card and its 32px
+  // tiles inline, hence the !important.
   [data-testid="panel-rail"] {
     left: 8px !important;
     right: auto !important;
-    padding: 12px 8px;
-    border: 0;
-    background: #fff;
+    width: auto !important;
+    box-sizing: border-box;
+    padding: 4px !important;
+    gap: 2px !important;
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: #fff !important;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.1) !important;
 
     button {
-      width: 48px;
-      height: 48px;
-      border-radius: 8px;
-      color: #0b0a21;
+      border-radius: 8px !important;
+
+      &:not([aria-pressed="true"]) {
+        color: fv.$fv-g-muted !important;
+      }
+
+      &:hover {
+        background: fv.$fv-g-hover !important;
+      }
 
       svg {
-        width: 24px;
-        height: 24px;
+        width: fv.$fv-btn-glyph;
+        height: fv.$fv-btn-glyph;
       }
     }
   }
 
+  // Casual sizes it inline (28px, 12px): Docs has no status bar at all, so
+  // keep it as a quiet 24px footer.
   [data-testid="status-bar"] {
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
-    color: #65656c;
-    font-family: var(--font-main);
+    height: 24px !important;
+    box-sizing: border-box;
+    padding: 0 12px !important;
+    gap: 12px !important;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    color: #5f6368;
+    font: 400 11px/1 var(--font-main) !important;
+
+    .docx-status-zoom-btn {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  // Version history keeps its snapshots in this browser only (no co-editor
+  // and no other device sees them): hidden from the rail as from File
+  // (docs_state _wireMenus).
+  [data-testid="rail-history"] {
+    display: none !important;
+  }
+
+  // Insert → Text box draws a box with no outline: an empty one could not
+  // be seen at all. A light dashed frame on screen (Casual's print window
+  // copies no stylesheet, so it never prints); a callout keeps its border.
+  .layout-page .layout-textbox:not([style*="border"]) {
+    outline: 1px dashed rgba(11, 10, 33, 0.25);
+    outline-offset: -1px;
   }
 }
 
@@ -863,8 +1155,9 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 // Phosphor glyphs, no strike / caps / super-sub / clear-format buttons.
 .editor-docs .docs-state {
   [data-testid="title-bar"] {
-    // The Figma menu row has no carets.
-    button[aria-haspopup="menu"] svg {
+    // The Figma menu row has no carets — the menu bar's buttons, not the
+    // dropdown rows: those keep their icon and their submenu arrow.
+    button[aria-haspopup="menu"]:not([role="menuitem"]) svg {
       display: none !important;
     }
 
@@ -951,7 +1244,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     }
 
     button {
-      color: #0b0a21;
+      color: fv.$fv-g-muted;
     }
   }
 }
@@ -967,7 +1260,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 
   > .flex-col {
     grid-row: 1 / span 2;
-    gap: 6px;
+    gap: 0;
   }
 }
 
@@ -979,21 +1272,21 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 // styles its outline inline, hence the !important.
 .editor-docs .docs-state nav.docx-outline-nav {
   left: 60px !important;
-  width: 212px !important;
+  width: 200px !important;
   padding: 8px 8px 16px 0 !important;
   font-family: var(--font-main) !important;
 
   // Head: no list glyph, the title, the X.
   > div:first-child {
-    padding: 16px 0 16px 16px !important;
-    gap: 18px !important;
+    padding: 10px 0 8px 12px !important;
+    gap: 8px !important;
 
     > svg {
       display: none !important;
     }
 
     > span {
-      font: 400 16px/1.2 var(--font-main) !important;
+      font: 500 14px/1.2 var(--font-main) !important;
       color: #34343a !important;
     }
 
@@ -1037,12 +1330,12 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
 
     .docx-outline-heading-btn {
       box-sizing: border-box;
-      height: 36px !important;
-      padding: 8px 16px !important;
+      height: 28px !important;
+      padding: 4px 12px !important;
       border: 0 !important;
       border-radius: 100px !important;
       background: transparent !important;
-      font: 400 14px/1.2 var(--font-main) !important;
+      font: 400 #{fv.$fv-font-ui}/1.2 var(--font-main) !important;
       color: #34343a !important;
 
       &:hover {
@@ -1058,71 +1351,6 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     // A heading with children: the group pill (Figma "Headings 1 ▾").
     > div:has(> button[aria-expanded]) > .docx-outline-heading-btn {
       background: rgba(113, 163, 244, 0.1) !important;
-    }
-  }
-}
-
-.editor-docs {
-  &[data-tabs="open"] &__tabs-slot {
-    width: 236px;
-    flex: 0 0 236px;
-    border-right: 0;
-    background: #fff;
-  }
-
-  &__tabs {
-    padding: 8px 8px 16px 0;
-    color: #34343a;
-  }
-
-  &__tabs-head {
-    padding: 16px 0 16px 16px;
-    gap: 8px;
-  }
-
-  &__tabs-title {
-    flex: 1 1 auto;
-    font: 400 16px/1.2 var(--font-main);
-    color: #34343a;
-  }
-
-  &__tabs-add,
-  &__tabs-close {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    color: #34343a;
-  }
-
-  &__tabs-add {
-    @include ph.ph("plus", 20px, true);
-  }
-
-  &__tabs-close {
-    @include ph.ph("x", 20px, true);
-  }
-
-  &__tabs-list {
-    margin-top: 0;
-  }
-
-  &__tab-row {
-    height: 36px;
-    gap: 8px;
-    margin-bottom: 4px;
-    padding: 0 8px 0 16px;
-    border-radius: 100px;
-    font: 400 14px/1.2 var(--font-main);
-    color: #34343a;
-
-    &:hover {
-      background: #f2f2f7;
-    }
-
-    &.is-active {
-      background: rgba(113, 163, 244, 0.1);
-      color: #34343a;
-      font-weight: 500;
     }
   }
 }
@@ -1151,7 +1379,7 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
     border: 0;
     border-radius: 6px;
     background: none;
-    color: #0b0a21;
+    color: fv.$fv-g-muted;
     cursor: pointer;
 
     &:hover {
@@ -1185,11 +1413,208 @@ $fv-caret: "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' vi
   border: 0;
   border-radius: 6px;
   background: none;
-  color: #0b0a21;
+  color: fv.$fv-g-muted;
   cursor: pointer;
   @include ph.ph("printer", 20px, true);
 
   &:hover {
     background: rgba(0, 0, 0, 0.05);
+  }
+}
+
+// ── Toolbar dropdowns (zoom, paragraph style, font) & tooltips ─────────────
+// Casual's Radix Selects portal their list to <body>, inside their own
+// `.ep-root`, so the editor-scoped fixes above never reach it, and Drumee's
+// global utilities win there: `.absolute` also pins top:0/left:0 (the ✓ sat
+// on its own line above the label) and the pixel-scale `.p-1 / .px-2 /
+// .px-3 / .py-1` (!important) collapsed every row's padding. Redrawn as
+// Google Docs' menus: white card, soft shadow, 32px rows, the check at the
+// left, a grey highlight instead of the focus ring.
+.ep-root [role="listbox"] {
+  min-width: 140px !important;
+  max-height: min(400px, var(--radix-select-content-available-height, 400px)) !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: 0 2px 6px 2px rgba(60, 64, 67, 0.15), 0 1px 2px rgba(60, 64, 67, 0.3) !important;
+
+  [data-radix-select-viewport] {
+    padding: 6px 0 !important;
+  }
+
+  [role="option"] {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box;
+    min-height: 32px;
+    padding: 4px 16px 4px 36px !important;
+    white-space: nowrap;
+    border-radius: 0 !important;
+    font: 400 14px/1.3 var(--font-main);
+    color: fv.$fv-g-ink;
+    cursor: pointer;
+    outline: none !important;
+    box-shadow: none !important;
+
+    &[data-highlighted],
+    &:hover {
+      background: #f1f3f4 !important;
+    }
+
+    // Casual's react.css rings every focused option (`.ep-root [role=option]
+    // :focus-visible { outline: 2px solid var(--doc-primary) !important;
+    // outline-offset: 2px }`): outside the full-width row, the card clipped
+    // its sides and left a teal line above and below. The grey highlight
+    // already marks the keyboard row.
+    &:focus,
+    &:focus-visible {
+      outline: none !important;
+    }
+
+    &[data-disabled] {
+      color: #9aa0a6;
+    }
+
+    // The ✓ (Casual's "absolute right-2" span): at the left, centred.
+    > .absolute {
+      position: absolute !important;
+      top: 50% !important;
+      left: 12px !important;
+      right: auto !important;
+      width: 16px !important;
+      height: 16px !important;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: fv.$fv-g-ink;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  // Group labels ("Sans Serif", "Serif", …).
+  [role="group"] > :not([role="option"]) {
+    padding: 8px 16px 4px 36px !important;
+    font: 500 11px/1.3 var(--font-main);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #5f6368;
+  }
+
+  // Separators between the groups.
+  [data-radix-select-viewport] > [aria-hidden="true"] {
+    height: 1px;
+    margin: 6px 0 !important;
+    background: #e3e3e3;
+  }
+}
+
+// Toolbar tooltips ("Align Left (Ctrl+L)"): Google's dark, compact chip.
+.ep-root [role="tooltip"] {
+  padding: 4px 8px !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  background: rgba(60, 64, 67, 0.92) !important;
+  box-shadow: none !important;
+  font: 500 12px/16px var(--font-main) !important;
+  color: #fff !important;
+  letter-spacing: 0.01em;
+}
+
+// ── Formatting bar overflow (docs_state._wireToolbarScroll) ───────────────
+// A narrow window clips the bar's last buttons. Besides its thin scrollbar,
+// each clipped end gets a ‹ / › strip over it (above the scrollbar): the pill's own
+// colour fading in over the buttons, a chevron on a hover circle. JS shows
+// a strip only while that side has hidden buttons, and sizes it to the bar.
+.editor-docs .editor-docs__tb-scroll {
+  --tb-bg: #edf2fa;
+  --tb-hover: rgba(68, 71, 70, 0.12);
+
+  position: absolute;
+  z-index: 5;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0 6px;
+  border: 0;
+  box-sizing: border-box;
+  color: fv.$fv-g-muted;
+  cursor: pointer;
+  @include ph.ph("caret-right", 18px, true);
+
+  &::before {
+    position: relative;
+    z-index: 1;
+  }
+
+  // The hover circle, behind the chevron.
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    transition: background-color 0.12s ease;
+  }
+
+  &:hover::after {
+    background: var(--tb-hover);
+  }
+
+  &[hidden] {
+    display: none;
+  }
+
+  &--next {
+    justify-content: flex-end;
+    border-radius: 0 24px 24px 0;
+    background: linear-gradient(to right, rgba(237, 242, 250, 0), var(--tb-bg) 45%);
+
+    &::before {
+      right: 5px;
+    }
+
+    &::after {
+      right: 1px;
+    }
+  }
+
+  &--prev {
+    justify-content: flex-start;
+    border-radius: 24px 0 0 24px;
+    background: linear-gradient(to left, rgba(237, 242, 250, 0), var(--tb-bg) 45%);
+
+    &::before {
+      left: 5px;
+      transform: rotate(180deg);
+    }
+
+    &::after {
+      left: 1px;
+    }
+  }
+}
+
+// Casual's smart-chip menu (Date), opened on "@" next to the people list:
+// docs_state._wireSmartChipGuard closes it at once; never let it flash.
+.docs-state [data-testid="smart-chip-menu"] {
+  display: none !important;
+}
+
+// The floating "Format selection" bar, closed while the menu bar is in use
+// (docs_state._wireFormatBarDismiss).
+.docs-state[data-format-bar="hidden"] {
+  [data-testid="desktop-format-bar"],
+  [data-testid="mobile-format-bar"] {
+    display: none !important;
   }
 }

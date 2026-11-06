@@ -1315,6 +1315,20 @@ class __dmz_sharebox extends LetcBox {
    * gated (caller should stop), false to proceed.
    */
   _gateInteraction(hasGrant) {
+    switch (this._gateFor(hasGrant)) {
+      case 'signup': this.showSignupRequiredOverlay(); return true;
+      case 'request': this.showRequestAccessPopup(); return true;
+      default: return false;
+    }
+  }
+
+  /**
+   * Which gate _gateInteraction would show, without showing it — for a caller
+   * that has to decide BEFORE the attempt (the Note editor opens its body
+   * read-only for a visitor who would be gated).
+   * @returns {'signup'|'request'|null} null when the action may proceed
+   */
+  _gateFor(hasGrant) {
     // Anonymous FIRST. A PUBLIC share binds the guest session to the creator, so
     // an anonymous viewer ALSO has uid === creator_id — checking isOwner before
     // this wrongly treated them as the owner and let edit/upload actions through
@@ -1323,11 +1337,11 @@ class __dmz_sharebox extends LetcBox {
     // ALWAYS meet the sign-up / login gate. is_guest is unreliable here (the
     // server returns it FALSE for public shares); is_authenticated is true only
     // for a real account.
-    if (!this.mget('is_authenticated')) { this.showSignupRequiredOverlay(); return true; }
+    if (!this.mget('is_authenticated')) return 'signup';
     const isOwner = !!this.mget('creator_id') && (this.mget('uid') === this.mget('creator_id'));
-    if (isOwner) return false;
-    if (!hasGrant) { this.showRequestAccessPopup(); return true; }
-    return false;
+    if (isOwner) return null;
+    if (!hasGrant) return 'request';
+    return null;
   }
 
   /**
