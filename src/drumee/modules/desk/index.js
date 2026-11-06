@@ -320,7 +320,9 @@ class desk_module extends LetcBox {
     // `arg.tab` lets a caller land on a specific console tab — the storage
     // overage sends people straight to Storage, where the per-workspace
     // cleanup lives, instead of dropping them on Member to hunt for it.
-    this._openAdminConsole = (arg) => this._toggleAppsShim(arg?.tab);
+    // `arg.overLimit` (libs/over-limit.resolveTarget) marks the over-limit
+    // Resolve now, which may open Storage on Free/Pro — see toggle-apps.
+    this._openAdminConsole = (arg) => this._toggleAppsShim(arg?.tab, arg?.overLimit);
     this._openOverLimitPopupBound = () => this._openOverLimitPopup();
     // Storage is resolved on the desk itself, so the popup needs somewhere to
     // send people: Home to delete, Trash to empty. Same shim shape as the
@@ -1701,8 +1703,10 @@ class desk_module extends LetcBox {
    * promo post-claim reload above and the over-limit popup's "Resolve now"
    * (seats are resolved on the Members page).
    */
-  _toggleAppsShim(tab) {
-    this._deskServiceShim("toggle-apps", tab ? { tab } : undefined);
+  _toggleAppsShim(tab, overLimit) {
+    const args = tab ? { tab } : undefined;
+    if (args && overLimit) args.overLimit = 1;
+    this._deskServiceShim("toggle-apps", args);
   }
 
   /**
@@ -12367,7 +12371,20 @@ class desk_module extends LetcBox {
         // is NOT used: Pro also seeds organization:1. Modal always shows; its
         // Upgrade button is gated by canUpgradePlan() (deployment can sell AND
         // this reader may buy) — see builtins/widget/feature-lock.
-        if (needsAdminConsoleUpgrade()) {
+        //
+        // ONE EXCEPTION (Lexis, 2026-11-05): an org locked for a STORAGE
+        // overage. Its "Resolve now" (marked `overLimit`) opens the console
+        // on Storage even on Free/Pro — the per-workspace breakdown is the
+        // fastest way to find what to delete. A reload while there replays
+        // toggle-apps with intent "restore" and gets the same exception, or
+        // the reader would land on the upsell. Only while the lock lasts and
+        // only for Owner/Admin (OverLimit.storageConsoleAllowed); every other
+        // open on these plans is still the upsell.
+        const belowConsole = needsAdminConsoleUpgrade();
+        const overLimitStorage = belowConsole
+          && (args?.overLimit || args?.intent === "restore")
+          && require("libs/over-limit").storageConsoleAllowed();
+        if (belowConsole && !overLimitStorage) {
           return this._showAdminUnlockOverTour();
         }
         // Admin Console — the full in-desk console (apps_main) now lives in the
@@ -12379,7 +12396,8 @@ class desk_module extends LetcBox {
         // asks for the Storage tab, where the per-workspace cleanup is. The
         // plugin validates it against the tabs this role may see and falls
         // back to its own default, so an unknown value cannot strand anyone.
-        const consoleTab = args?.tab;
+        // The exception is for Storage only, so it always lands there.
+        const consoleTab = overLimitStorage ? "storage" : args?.tab;
         const consoleOpt = consoleTab ? { tab: consoleTab } : undefined;
         const openConsole = () => {
           RADIO_BROADCAST.trigger("breadcrumb:context", {

@@ -165,22 +165,36 @@ function daysLeft() {
  * Seats only → the console's default Member tab, where Remove access lives.
  * Both flags → Storage first; the banner stays up for the seat half.
  *
- * Free/Pro have no console (libs/billing.needsAdminConsoleUpgrade) and
- * toggle-apps would answer with the upsell, so for them this returns null and
- * the caller falls back to its own non-console path.
+ * Storage goes to the console on EVERY plan (Lexis, 2026-11-05). Free/Pro
+ * have no console (libs/billing.needsAdminConsoleUpgrade), but a storage
+ * overage is exactly where they need its per-workspace breakdown, so the
+ * `overLimit` marker asks toggle-apps to let them through to Storage instead
+ * of the upsell — see storageConsoleAllowed(). Seats-only on Free/Pro still
+ * returns null and the caller falls back to its own non-console path.
  *
  * @returns {{event:String, arg?:Object}|null} a RADIO_BROADCAST to raise
  */
 function resolveTarget() {
   const c = current();
   if (!c) return null;
+  if (c.flags?.storage) {
+    return { event: "desk:open-admin-console", arg: { tab: "storage", overLimit: 1 } };
+  }
   const { needsAdminConsoleUpgrade } = require("libs/billing");
   if (needsAdminConsoleUpgrade()) return null;
-  if (c.flags?.storage) {
-    return { event: "desk:open-admin-console", arg: { tab: "storage" } };
-  }
   if (c.flags?.seats) return { event: "desk:open-admin-console" };
   return null;
+}
+
+/**
+ * True when a plan below the console (Free/Pro) may still open the Admin
+ * Console's Storage tab: the org is locked for STORAGE and the visitor is an
+ * Owner/Admin. Read by the desk's toggle-apps gate, so the exception ends the
+ * moment the overage is resolved — the next open is the upsell again.
+ */
+function storageConsoleAllowed() {
+  const c = current();
+  return !!(isLocked() && c.flags?.storage && isAdmin());
 }
 
 /** The message a refused write should carry, by what the user attempted. */
@@ -287,6 +301,7 @@ module.exports = {
   snoozedForMe,
   daysLeft,
   resolveTarget,
+  storageConsoleAllowed,
   refresh,
   blockedMessage,
   notifyBlocked,

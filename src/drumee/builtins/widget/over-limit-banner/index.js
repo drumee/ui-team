@@ -96,8 +96,8 @@ class __over_limit_banner extends LetcBox {
       case "over-limit-banner-resolve": {
         // Straight to the screen that fixes it (Storage tab for a storage
         // overage) instead of re-opening the popup the admin already saw.
-        // Plans without a console get the popup: its Home / Empty trash
-        // shortcuts are their only cleanup path.
+        // No target (seats only on a plan without the console) → the popup,
+        // which says where those members are removed instead.
         const target = OverLimit.resolveTarget();
         if (target) {
           RADIO_BROADCAST.trigger(target.event, target.arg);
