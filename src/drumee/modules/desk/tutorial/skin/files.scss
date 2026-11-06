@@ -303,16 +303,15 @@ $fp-air: min(120px, 11.2vh);
     // 120px above where the frame puts it — the toolbar's 120px gap above is
     // then the only air over the headline.
     //
-    // Left at 0 because it has been set that way deliberately twice. If the
-    // frame's spacing is wanted back, this is the one line: `$fp-air`, matching
-    // padding-bottom. The geometry harness reports it as
+    // Set to 110px (2026-10-29), close to the frame's 120 again. Before that it
+    // was 0, set deliberately twice; the geometry harness reported that as
     // `fp-hero-title got [165,168,…] want [165,288,…]`.
     //
     // LONGHANDS, deliberately: as a shorthand this read `padding: $fp-air 80px`
     // and came back rewritten to `padding: 0 80px $fp-air`, which changes three
     // sides at once. Four longhands cannot be reordered into a different
     // meaning, so a change to one side stays a change to one side.
-    padding-top: 0;
+    padding-top: 110px;
     padding-right: 80px;
     padding-bottom: $fp-air;
     padding-left: 80px;
@@ -823,7 +822,8 @@ $fp-air: min(120px, 11.2vh);
 // of it back by here. Below 720 the buttons still need the rest of it.
 .tutorial-main[data-short="1"] {
   .tutorial__fp-canvas { gap: 40px; }
-  .tutorial__fp-hero { padding-top: 40px; padding-bottom: 40px; }
+  // padding-top stays the base 110px on short windows too (2026-10-29).
+  .tutorial__fp-hero { padding-bottom: 40px; }
   .tutorial__fp-hero-title-line { font-size: 44px; }
   .tutorial__fp-hero { gap: 20px; }
 }

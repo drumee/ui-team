@@ -23,7 +23,6 @@ const { captureCampaignArrival } = require('libs/campaign');
 const billingDeepLink = require('libs/billing-deep-link');
 const { captureOffer, offerHandoff } = require('libs/offer-link');
 const fileDeepLink = require('libs/file-deep-link');
-const windowTutorialIntent = require('libs/window-tutorial-intent');
 
 class drumee_router extends LetcBox {
   constructor(...args) {
@@ -56,11 +55,6 @@ class drumee_router extends LetcBox {
     billingDeepLink.captureFromUrl();
     // And for a signup link's `?offer=CODE` (libs/offer-link).
     captureOffer();
-    // Same moment, same reason, for `?window_tutorial=<id>`: the hash is
-    // rewritten to `#/desk` during boot, so anything that reads it later — the
-    // folder window's buildContent used to — always parses an empty arg set and
-    // does nothing, silently.
-    windowTutorialIntent.captureFromUrl();
     localStorage.main_domain = bootstrap().main_domain;
     this._buffer = [];
     this._loaded = {
@@ -433,9 +427,6 @@ class drumee_router extends LetcBox {
     // already runs the app never re-enters initialize().
     billingDeepLink.captureFromUrl();
     captureOffer();
-    // And for a tour asked for by pasting the URL into a tab that is already
-    // running the app, where initialize() never runs again.
-    windowTutorialIntent.captureFromUrl();
     let page = /^\/.*(.+)\.htm?/;
     if (page.test(location.pathname) || page.test(Host.get(_a.homepage))) {
       this.loadBootstrap();

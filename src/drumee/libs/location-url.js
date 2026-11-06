@@ -225,17 +225,14 @@ function currentHash() {
 
 /**
  * Should the URL be left alone for good on this page (as opposed to "not
- * yet")? Outside the signed-in desk, in the DMZ, during a tour asked for by
- * URL, or on a desk hash whose arguments someone else reads.
+ * yet")? Outside the signed-in desk, in the DMZ, or on a desk hash whose
+ * arguments someone else reads.
  */
 function blockedForGood() {
   if (typeof Visitor === "undefined" || !Visitor.isOnline()) return true;
   try {
     if (/^(dmz|share)$/.test(bootstrap().area)) return true;
   } catch (e) { /* no bootstrap — not the desk */ }
-  try {
-    if (require("libs/window-tutorial-intent").armed()) return true;
-  } catch (e) { /* never let a URL tidy-up break the desk */ }
   const path = Visitor.parseModule() || [];
   if (path.length && path[0] !== "desk") return true;
   const hash = String(window.location.hash || "");

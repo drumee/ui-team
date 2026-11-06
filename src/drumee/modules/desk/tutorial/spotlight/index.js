@@ -339,18 +339,6 @@ class __tutorial_spotlight extends LetcBox {
     // the same thing when nothing above the tour is positioned.
     const host = this.el.getBoundingClientRect();
     const style = anchorFor(anchorRect, direction, this._gap, host);
-    // Diagnostic, gated on a tour having been asked for by URL, so an ordinary
-    // session prints nothing. Callout placement is four numbers derived from two
-    // rects, and reading a screenshot cannot tell you which of them is wrong.
-    require('libs/window-tutorial-intent').trace('callout placed', {
-      direction,
-      anchor: { l: Math.round(anchorRect.left), r: Math.round(anchorRect.right),
-                t: Math.round(anchorRect.top), w: Math.round(anchorRect.width) },
-      host: { l: Math.round(host.left), r: Math.round(host.right),
-              t: Math.round(host.top), w: Math.round(host.width) },
-      style,
-      litFallback: lit !== el,
-    });
     callout.feed(tooltipBubble(owner || this, {
       ...tooltip,
       direction,
@@ -358,15 +346,6 @@ class __tutorial_spotlight extends LetcBox {
       style,
     }));
     await this._keepInView(callout, ticket);
-    const placed = card => card && card.getBoundingClientRect();
-    const finalCard = callout.el && callout.el.querySelector(`.${BUBBLE_CLASS}`);
-    const fr = placed(finalCard);
-    if (fr) {
-      require('libs/window-tutorial-intent').trace('callout settled', {
-        l: Math.round(fr.left), r: Math.round(fr.right), w: Math.round(fr.width),
-        dir: finalCard.dataset.direction, tail: finalCard.dataset.tail || 'on',
-      });
-    }
   }
 
   /**
@@ -408,9 +387,6 @@ class __tutorial_spotlight extends LetcBox {
     // There is nothing to keep in view against a box that is not there, so the
     // card is left where anchorFor put it.
     if (!bounds.width || !bounds.height) {
-      require('libs/window-tutorial-intent').trace('keepInView skipped — host has no box', {
-        w: Math.round(bounds.width), h: Math.round(bounds.height),
-      });
       return;
     }
 
