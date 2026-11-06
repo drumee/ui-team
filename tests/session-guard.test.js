@@ -215,3 +215,14 @@ test("websocket: switchOn asks acceptSocketUser before adopting data.user", () =
   const set = body.indexOf("Visitor.set(data.user)");
   assert.ok(ask > 0 && ask < set, "the identity is checked before Visitor.set");
 });
+
+// ── locales (Task 6) ────────────────────────────────────────────────────────
+test("every locale carries the card's keys", () => {
+  const keys = ["SESSION_CHANGED_TITLE", "SESSION_CHANGED_OTHER",
+    "SESSION_CHANGED_SIGNED_OUT", "SESSION_CHANGED_GENERIC", "RELOAD"];
+  for (const lang of ["en", "es", "fr", "km", "ru", "zh"]) {
+    const j = JSON.parse(fs.readFileSync(path.join(__dirname, "../locale", `${lang}.json`), "utf8"));
+    for (const k of keys) assert.ok(typeof j[k] === "string" && j[k], `${lang}.${k}`);
+    assert.match(j.SESSION_CHANGED_OTHER, /\{0\}/, `${lang} keeps the {0} slot`);
+  }
+});
