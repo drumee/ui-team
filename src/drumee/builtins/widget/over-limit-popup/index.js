@@ -85,13 +85,14 @@ class __over_limit_popup extends LetcBox {
     switch (service) {
       case "over-limit-resolve": {
         this._close();
-        // Plans WITH the console: OverLimit.resolveTarget() picks the tab —
-        // Storage for a storage overage (per-workspace usage, delete from
-        // there), Members for seats only. Shared with the top banner.
+        // OverLimit.resolveTarget() picks the destination, shared with the
+        // top banner: a storage overage opens the console's Storage tab on
+        // EVERY plan (per-workspace usage, delete from there — Free/Pro are
+        // let through for this case, 2026-11-05); seats only opens Members
+        // where the plan has the console.
         //
-        // Free/Pro sit below the console (libs/billing.needsAdminConsoleUpgrade)
-        // and dropping to one is precisely how an account lands here, so for
-        // them the console would only be an upsell. They go to the
+        // Seats only on Free/Pro (libs/billing.needsAdminConsoleUpgrade) gets
+        // null — the console would only be an upsell. They go to the
         // ORGANISATION SCREEN instead (2026-09-16): it is gated on membership
         // and role, never tier, and lists every workspace in the org — the
         // index to work through.
