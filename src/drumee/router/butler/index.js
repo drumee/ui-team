@@ -448,10 +448,21 @@ class __router_butler extends LetcBox {
         // The session read cache goes with the session (libs/read-cache).
         require("libs/read-cache").clear();
         const { main_domain } = bootstrap()
+        // NEVER carry this account's location into the next sign-in: the hash
+        // is the open workspace's link, and the next account would open it as
+        // a Designation link and be refused (libs/session-guard signedOutUrl).
+        const { signedOutUrl } = require("libs/session-guard");
+        // A link armed on this origin for "after sign-in" belonged to THIS
+        // account's session (it was armed from the address bar) — the next
+        // sign-in must not inherit it either.
+        try { require("libs/file-deep-link").clear(); } catch (e) { /* none */ }
         if (main_domain == location.hostname) {
+          try {
+            history.replaceState(null, "", signedOutUrl(location, main_domain));
+          } catch (e) { location.hash = ""; }
           Drumee.start();
         } else {
-          location.hostname = main_domain
+          location.replace(signedOutUrl(location, main_domain));
         }
       }, Visitor.timeout(1000));
     };

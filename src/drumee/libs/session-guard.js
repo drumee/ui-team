@@ -317,7 +317,25 @@ function acceptSocketUser(user) {
   return g ? g.acceptSocketUser(user) : true;
 }
 
+/**
+ * Where sign-out lands: the main domain (or this host), SAME path and query,
+ * and NO hash. The hash is the address bar's last location — libs/location-url
+ * keeps it on the open workspace (#/desk/wm/o/<nid>/<hub>/folder) — and
+ * carrying it through sign-out made the NEXT account's sign-in open the
+ * previous account's workspace as a link ("You can't open this link: this
+ * account isn't a member of its workspace").
+ *
+ * @param {Location|Object} loc
+ * @param {String} mainDomain
+ * @returns {String}
+ */
+function signedOutUrl(loc, mainDomain) {
+  const host = mainDomain || loc.hostname;
+  return `${loc.protocol}//${host}${loc.pathname || "/"}${loc.search || ""}`;
+}
+
 module.exports = {
+  signedOutUrl,
   NOBODY,
   HEADER,
   isRealUser,

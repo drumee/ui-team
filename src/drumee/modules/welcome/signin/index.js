@@ -1094,6 +1094,17 @@ class __welcome_signin extends __welcome_interact {
       case "ok":
       case "ALREADY_SIGNED_IN":
         Visitor.set(data);
+        // The login answer carries the account's ORGANISATION (server-core
+        // session.signin → my_organisation). Store it before the restart:
+        // router.route() compares the host with Organization.host(), and with
+        // the main domain's org still in place it booted the whole desk on
+        // drumee.in first, then moved to the org's host and booted it again —
+        // two warm-up screens per sign-in (recording 2026-11-06 17:06).
+        if (data.user) Visitor.set(data.user);
+        if (data.organization && !_.isEmpty(data.organization)) {
+          Organization.set(data.organization);
+        }
+        if (data.hub) Host.set(data.hub);
         if (this.mget(RECONNECT)) {
           RADIO_BROADCAST.trigger("user:signed:in", RECONNECT);
           wsRouter.restart(1);
