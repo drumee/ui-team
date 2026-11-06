@@ -1,0 +1,96 @@
+// Over-limit read-only notice inside the folder window — skeleton/readonly-notice.js.
+//
+// Floats over the top of window-folder__main (`.window__main` is the
+// positioned box, window/skin/group/body/main.scss) so the files grid / chat
+// underneath keep their layout. Shown only on the positive stamp
+// data-open="1"; the hide rule is (0,3,0) + !important because the framework's
+// `.drumee-widget[data-flow=…]{display:flex}` (0,2,0) beats a single class.
+.window-folder .window-folder__readonly-notice:not([data-open="1"]) {
+  display: none !important;
+}
+
+.window-folder .window-folder__readonly-notice[data-open="1"] {
+  position: absolute;
+  top: var(--spacer-5);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(420px, calc(100% - 32px));
+  pointer-events: none;
+}
+
+.window-folder__readonly-notice {
+  &-card {
+    pointer-events: auto;
+    gap: var(--spacer-3);
+    padding: 20px 24px;
+    box-sizing: border-box;
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+    border-radius: 12px;
+    box-shadow:
+      0 25px 50px -12px rgba(0, 0, 0, 0.25),
+      0 1px 11px rgba(0, 0, 0, 0.13);
+    font-family: var(--font-main);
+    animation: window-folder-readonly-notice-in 0.15s ease;
+  }
+
+  // Same logo + close header as Butler's notice (router/butler/skin __logo / __close).
+  &-topbar {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &-logo {
+    align-items: end;
+    gap: var(--spacer-2);
+  }
+
+  &-logo-ico {
+    width: 32px;
+    height: 32px;
+    color: var(--primary-50);
+  }
+
+  &-logo-text {
+    font-weight: bold;
+    font-size: 20px;
+    color: var(--normal-fg);
+  }
+
+  &-close {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    border-radius: 4px;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  }
+
+  &-close-ico {
+    width: 20px;
+    height: 20px;
+  }
+
+  &-message {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--normal-fg-800);
+  }
+}
+
+@keyframes window-folder-readonly-notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -955,9 +955,26 @@ function workspaceCard(ui, pfx, memberCount) {
 
   // Only an admin can invite, matching the base panel — a non-admin viewer
   // gets the matrix alone rather than a form the server would reject.
+  //
+  // PAUSED WHILE THE ORG IS OVER ITS PLAN LIMITS: the server clamps hub.invite
+  // (401 OVER_LIMIT_READ_ONLY:hub.invite), so the form is drawn disabled with
+  // the reason above it rather than left to fail on Send. index.js re-renders
+  // on over-limit:changed, so it comes back by itself once resolved.
+  let invitesPaused = false;
+  let pausedReason = "";
+  try {
+    const OverLimit = require("libs/over-limit");
+    invitesPaused = OverLimit.enforcementOn() && OverLimit.isLocked();
+    if (invitesPaused) {
+      pausedReason = OverLimit.blockedMessage("invite");
+      if (!OverLimit.isOwner()) pausedReason += ` ${OverLimit.contactOwnerText()}`;
+    }
+  } catch (e) { invitesPaused = false; }
+
   const inviteSection = isAdmin
     ? Skeletons.Box.Y({
       className: `${pfx}__invite-section`,
+      dataset: { paused: invitesPaused ? 1 : 0 },
       kids: [
         Skeletons.Note({
           className: `${pfx}__section-title`,
@@ -966,6 +983,12 @@ function workspaceCard(ui, pfx, memberCount) {
           // one is a decision the recipient makes.
           content: LOCALE.INVITE_MEMBER_TO_WORKSPACE,
         }),
+        invitesPaused
+          ? Skeletons.Note({
+            className: `${pfx}__invite-paused`,
+            content: pausedReason,
+          })
+          : null,
         Skeletons.Box.X({
           className: `${pfx}__invite-input-row`,
           kids: [

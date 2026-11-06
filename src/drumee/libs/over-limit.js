@@ -57,6 +57,8 @@ function _bootBlock() {
       seat_limit: ~~b.seat_limit,
       plan: b.plan || "",
       snooze: b.snooze || {},
+      owner_id: b.owner_id || "",
+      owner_email: b.owner_email || "",
     };
   } catch (e) {
     return null;
@@ -106,6 +108,9 @@ function setCurrent(next) {
     seat_limit: ~~next.seat_limit,
     plan: next.plan || "",
     snooze: next.snooze || (_current && _current.snooze) || {},
+    // Kept across a payload that lacks them (an older server's push).
+    owner_id: next.owner_id || (_current && _current.owner_id) || "",
+    owner_email: next.owner_email || (_current && _current.owner_email) || "",
   };
   _broadcast();
 }
@@ -124,6 +129,73 @@ function isLocked() {
 function isHardLock() {
   const c = current();
   return !!(c && c.state === "hard_lock");
+}
+
+/** The org owner's uid: from the state, else the boot organisation row. */
+function _ownerId() {
+  const c = current();
+  if (c && c.owner_id) return c.owner_id;
+  try {
+    if (typeof Organization !== "undefined" && Organization.get) {
+      return Organization.get("owner_id") || "";
+    }
+  } catch (e) { /* none */ }
+  return "";
+}
+
+/**
+ * Is the viewer the org OWNER — the one person the popup's buttons and the
+ * banner's "Resolve now" are for? Everyone else (admins included) is told
+ * whom to contact instead. Unknown owner → falls back to isAdmin(), the
+ * pre-split rule, so a missing field never hides the way out from an owner.
+ */
+function isOwner() {
+  const owner = _ownerId();
+  if (!owner) return isAdmin();
+  return typeof Visitor !== "undefined" && Visitor.id === owner;
+}
+
+/** The owner's email, for the "contact the owner" line ("" when unknown). */
+function ownerEmail() {
+  const c = current();
+  return (c && c.owner_email) || "";
+}
+
+/**
+ * "Contact the owner" sentence for non-owners — popup and banner share it.
+ */
+function contactOwnerText() {
+  const email = ownerEmail();
+  return email
+    ? (LOCALE.OL_CONTACT_OWNER || "Contact the workspace owner at {0} to resolve it.").format(email)
+    : (LOCALE.OL_CONTACT_OWNER_NOMAIL || "Contact the workspace owner to resolve it.");
+}
+
+/** The signed-in user's org (domain) — the one whose lock this state is. */
+function orgDomainId() {
+  try {
+    if (typeof Organization !== "undefined" && Organization.get) {
+      return ~~Organization.get("domain_id");
+    }
+  } catch (e) { /* none */ }
+  return 0;
+}
+
+/**
+ * Does the lock apply to a workspace of domain `domId`? The state is the
+ * USER's org's, but a user also browses workspaces of other orgs (shares)
+ * and personal ones — those are not over anything. `domId` is the
+ * workspace's yp.entity dom_id (media.attributes → server _withDomain).
+ *
+ * STRICT: an unknown domain answers false, so a click on an unidentified
+ * workspace opens normally instead of raising a card that may be wrong.
+ * (The banner is fail-OPEN instead — hiding a real lock there is worse.)
+ */
+function appliesToDomain(domId) {
+  if (!enforcementOn() || !isLocked()) return false;
+  const org = orgDomainId();
+  if (!org || domId == null || domId === "") return false;
+  return ~~domId === org;
 }
 
 /** Owner/Admin of the org — the people the popup targets and hard_lock spares. */
@@ -210,13 +282,108 @@ function blockedMessage(kind) {
 // One toast per burst — a multi-file drop or a double-click would otherwise
 // stack the same sentence.
 let _lastToastAt = 0;
+// The text of the Butler notice notifyBlocked last opened, so dismissNotice
+// can tell OUR notice apart from an unrelated Butler dialog it must not touch.
+let _butlerMessage = null;
+
+/**
+ * Take down the read-only Butler notice if (and only if) it is ours and still
+ * up. The over-limit popup calls this when it opens: it says the same thing
+ * with the numbers and the way out, and the notice behind it only adds a
+ * second modal and a grey scrim.
+ */
+function dismissNotice() {
+  try {
+    if (!_butlerMessage || typeof Butler === "undefined" || !Butler.el) return;
+    const el = Butler.el;
+    const open = el.dataset && el.dataset.state === "open";
+    if (open && (el.textContent || "").includes(_butlerMessage)) {
+      Butler._onClose = null;
+      Butler.sleep();
+    }
+  } catch (e) { /* cosmetic */ }
+  _butlerMessage = null;
+}
+
+/**
+ * The over-limit popup is on screen. It already says the workspace is
+ * read-only and how to fix it, so a refusal message on top adds nothing — and
+ * Butler opens with its own 55% grey scrim (router/butler/skin), which buried
+ * the popup's page-fade backdrop under a grey wash.
+ */
+function _popupOpen() {
+  try {
+    if (typeof Wm === "undefined" || !Wm.getItemsByKind) return false;
+    return (Wm.getItemsByKind("over_limit_popup") || []).some(
+      (w) => w && !(w.isDestroyed && w.isDestroyed())
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * The folder window the user is looking at, or null. Front floating folder
+ * window first (Wm.getActiveWindow answers Wm itself when there is none), then
+ * the docked workspace pane. Null whenever a full-canvas screen (Calendar,
+ * Billing, Settings…) is on top — the pane is behind it, so a notice there
+ * would be invisible — and for anything not actually rendered.
+ */
+function _folderTarget() {
+  if (typeof Wm === "undefined" || typeof document === "undefined") return null;
+  const why = [];
+  // GROUND TRUTH, not desk bookkeeping: the window counts only if it is what
+  // the browser actually paints at the centre of its own body. A screen
+  // (Calendar, Settings, Billing…) over the pane, a hidden layer, a popup in
+  // front — all answer "something else is there". The first cut asked
+  // desk._mainScreenOnTop() and visible rects instead, and fell back to
+  // Butler on stage with the workspace plainly on screen.
+  const onScreen = (w, label) => {
+    if (!w || w === Wm) return why.push(`${label}:none`), false;
+    if (w.isDestroyed && w.isDestroyed()) return why.push(`${label}:destroyed`), false;
+    if (!w.mget || w.mget("kind") !== "window_folder") {
+      return why.push(`${label}:kind=${w.mget && w.mget("kind")}`), false;
+    }
+    if (typeof w.showReadOnlyNotice !== "function") return why.push(`${label}:no-method`), false;
+    const el = w.el;
+    if (!el || !el.isConnected) return why.push(`${label}:detached`), false;
+    const main = el.querySelector(".window-folder__main") || el;
+    const r = main.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) return why.push(`${label}:zero-size`), false;
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    if (!hit || !el.contains(hit)) {
+      return why.push(`${label}:covered-by=${hit && (hit.className || hit.tagName)}`), false;
+    }
+    return true;
+  };
+  try {
+    const active = Wm.getActiveWindow && Wm.getActiveWindow();
+    if (onScreen(active, "active")) return active;
+  } catch (e) { why.push(`active:threw=${e && e.message}`); }
+  try {
+    const pane = Wm.headlessPane && Wm.headlessPane();
+    if (onScreen(pane, "pane")) return pane;
+  } catch (e) { why.push(`pane:threw=${e && e.message}`); }
+  try { console.info("[over-limit] notice falls back to Butler:", why.join(" | ")); } catch (e) { /* */ }
+  return null;
+}
+
 function notifyBlocked(kind) {
+  if (_popupOpen()) return;
   const now = Date.now();
   if (now - _lastToastAt < 2500) return;
   _lastToastAt = now;
   try {
-    if (typeof Butler !== "undefined" && Butler.say) Butler.say(blockedMessage(kind));
-    else if (typeof Wm !== "undefined" && Wm.alert) Wm.alert(blockedMessage(kind));
+    // In the folder window itself, not Butler's full-viewport modal: the
+    // refusal belongs to what the user was doing in that window, and Butler's
+    // 55% scrim greys out the whole desk for a one-line notice.
+    const target = _folderTarget();
+    if (target) return target.showReadOnlyNotice(blockedMessage(kind));
+    // NO BUTLER FALLBACK (2026-11-05). With no folder window to host the
+    // notice — a reload, a refusal before the pane exists, a full-canvas
+    // screen on top — it used to open router-butler__main: a full-viewport
+    // modal with a 55% scrim for a one-line message the top read-only banner
+    // already carries. It surfaced at random on reload. Say nothing instead.
   } catch (e) { /* a toast must never break the action's own error path */ }
 }
 
@@ -249,6 +416,10 @@ function guardWrite(kind) {
  * unconsumed. The original promise is returned untouched; every existing
  * error path behaves exactly as before, this only adds the words.
  */
+const BACKGROUND_SERVICES = new Set([
+  "desk.get_env", "reward.get_state", "survey.get_state",
+]);
+
 function _installRefusalTap() {
   if (typeof window === "undefined" || !window.fetch || window.__olRefusalTap) return;
   window.__olRefusalTap = 1;
@@ -262,6 +433,12 @@ function _installRefusalTap() {
           if (!res || res.status !== 401) return;
           res.clone().json().then((j) => {
             const m = /^(OVER_LIMIT_READ_ONLY|HARD_LOCK_DENIED):(.+)$/.exec(String((j && j.error) || ""));
+            // Background reads the desk makes on its own at boot — the user
+            // attempted nothing, so there is nothing to tell them. Servers
+            // before the allowlist fix (server-team router/rest) still refuse
+            // these; that refusal is what put a "read-only" Butler modal
+            // behind the over-limit popup on every load.
+            if (m && BACKGROUND_SERVICES.has(m[2])) return;
             if (m) {
               notifyBlocked(/^hub\.(invite|invite_with_roles|accept_invite)/.test(m[2]) ? "invite" : "write");
             }
@@ -298,6 +475,11 @@ module.exports = {
   isLocked,
   isHardLock,
   isAdmin,
+  isOwner,
+  ownerEmail,
+  orgDomainId,
+  appliesToDomain,
+  contactOwnerText,
   snoozedForMe,
   daysLeft,
   resolveTarget,
@@ -305,5 +487,6 @@ module.exports = {
   refresh,
   blockedMessage,
   notifyBlocked,
+  dismissNotice,
   guardWrite,
 };

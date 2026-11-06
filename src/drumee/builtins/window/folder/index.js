@@ -805,7 +805,45 @@ class __window_folder extends mfsInteract {
     this.setViewMode(state === "list" ? _a.row : _a.icon, false);
   }
 
+  /**
+   * Over-limit read-only notice inside this window (window-folder__main) —
+   * libs/over-limit.notifyBlocked calls this instead of Butler.say when this
+   * window is the one on screen. A repeat refusal replaces the message rather
+   * than stacking a second card. The notice also takes itself down the moment
+   * the lock lifts, so it can never outlive the state it describes.
+   *
+   * @param {String} message
+   */
+  showReadOnlyNotice(message) {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!this._onOverLimitForNotice) {
+      const OverLimit = require("libs/over-limit");
+      this._onOverLimitForNotice = () => {
+        if (!OverLimit.isLocked()) this.hideReadOnlyNotice();
+      };
+      RADIO_BROADCAST.on(OverLimit.CHANGED, this._onOverLimitForNotice);
+    }
+    this.ensurePart("readonly-notice").then((p) => {
+      if (!p || (p.isDestroyed && p.isDestroyed())) return;
+      p.feed(require("./skeleton/readonly-notice").card(this, message));
+      // Stamped on the element, not passed as a descriptor dataset: a fed
+      // widget's opt edits never reach data-*.
+      if (p.el) p.el.dataset.open = "1";
+    });
+  }
+
+  hideReadOnlyNotice() {
+    const p = this.getPart && this.getPart("readonly-notice");
+    if (!p || (p.isDestroyed && p.isDestroyed())) return;
+    if (p.el) delete p.el.dataset.open;
+    if (_.isFunction(p.clear)) p.clear();
+  }
+
   onBeforeDestroy(opt) {
+    if (this._onOverLimitForNotice) {
+      RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitForNotice);
+      this._onOverLimitForNotice = null;
+    }
     // The File threads dropdown's document listeners go with the window.
     FTBar.unbind(this);
     clearGrouped(this);
@@ -2322,6 +2360,9 @@ class __window_folder extends mfsInteract {
     const mm = this.onMeetingModalEvent(service, cmd, args);
     if (mm.handled) return mm.result;
     switch (service) {
+      // X on the over-limit read-only notice (skeleton/readonly-notice).
+      case "readonly-notice-close":
+        return this.hideReadOnlyNotice();
       // OK on the revocation notice — same finalizer the timeout uses.
       case "file-thread-revoked-ack":
         return this._finalizeRevokedFileThread();

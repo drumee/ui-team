@@ -797,6 +797,25 @@ class __window_core extends __utils {
       this.confirm(LOCALE.RESTORE_BEFORE_OPEN, "bf1");
       return;
     }
+    // OVER-LIMIT LOCK, in the workspace pane: an item of the Files grid
+    // (window__icons-list, any of its sections — Documentation, Spreadsheet…)
+    // opens the "Plan changed, action needed" card instead of the file. Every
+    // role, like the home grid (desk/wm "open-node"): the owner gets the
+    // resolve face, everyone else the "contact the owner" face. Scoped to the headless pane, like the
+    // workspace branch below — popups built on window/core keep their opens.
+    if (this.mget(_a.headless)) {
+      try {
+        const OverLimit = require("libs/over-limit");
+        // Only on a workspace OF THE LOCKED ORG: the pane's dom_id (from
+        // media.attributes) against the user's org. A shared workspace of
+        // another org, or a personal one, opens files as usual.
+        if (OverLimit.appliesToDomain(this.mget("dom_id"))) {
+          if (media && _.isFunction(media.wait)) media.wait(0);
+          RADIO_BROADCAST.trigger("desk:open-over-limit-popup");
+          return;
+        }
+      } catch (e) { /* lib unavailable — open as usual */ }
+    }
     const fType = media.mget(_a.filetype);
     // A WORKSPACE TILE OPENS THE DESK PANE, not a second window on top of it.
     //

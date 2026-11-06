@@ -38,9 +38,18 @@ class __over_limit_banner extends LetcBox {
 
   onDomRefresh() {
     this._render();
+    // Workspace switches re-decide whether the strip applies (_applies).
+    this._onWorkspaceMaybeChanged = () => this._scheduleRecheck();
+    RADIO_BROADCAST.on("workspace:focus", this._onWorkspaceMaybeChanged);
+    this._watchPaneLayer();
   }
 
   onBeforeDestroy() {
+    RADIO_BROADCAST.off("workspace:focus", this._onWorkspaceMaybeChanged);
+    clearTimeout(this._layerTimer);
+    if (this._paneObserver) this._paneObserver.disconnect();
+    this._paneObserver = null;
+    cancelAnimationFrame(this._recheckFrame);
     RADIO_BROADCAST.off(OverLimit.CHANGED, this._onStateChanged);
     clearTimeout(this._lingerTimer);
     this.unbindEvent(_a.live);
@@ -65,9 +74,75 @@ class __over_limit_banner extends LetcBox {
     // The banner only occupies layout while it has something to say —
     // an empty feed still leaves the wrapper element, so collapse it.
     if (this.el) {
-      const active = OverLimit.isLocked() || this._restored;
+      const active = (OverLimit.isLocked() && this._applies()) || this._restored;
       this.el.style.display = active ? "" : "none";
     }
+  }
+
+  /**
+   * SHOWN ONLY WHERE IT IS TRUE (2026-11-06): the org is over STORAGE, and
+   * the workspace on screen belongs to THAT org. A seats-only overage, or a
+   * workspace of another org (a share, a personal one), shows no strip.
+   *
+   * The workspace's org is the pane's `dom_id` — media.attributes carries it
+   * (server get_node_attr _withDomain), and Wm.loadWorkspace feeds that
+   * response into the pane. Unknown (no pane, an older server, a pane fed
+   * from a listing row) shows the strip: hiding a real lock is the worse
+   * mistake.
+   */
+  _applies() {
+    const c = OverLimit.current();
+    if (!c || !c.flags || !c.flags.storage) return false;
+    let org = 0;
+    try {
+      org = ~~(typeof Organization !== "undefined" && Organization.get && Organization.get("domain_id"));
+    } catch (e) { org = 0; }
+    let pane = null;
+    try {
+      pane = window.Wm && _.isFunction(Wm.headlessPane) ? Wm.headlessPane() : null;
+    } catch (e) { pane = null; }
+    const dom = pane && pane.mget ? pane.mget("dom_id") : null;
+    if (!org || dom == null || dom === "") return true;
+    return ~~dom === org;
+  }
+
+  /**
+   * Re-decide when the pane changes. The headless layer gains/loses its
+   * window_folder on every workspace switch; observed directly because
+   * `workspace:focus` is suppressed when Wm thinks the context is unchanged.
+   * Re-bound whenever Wm swaps the layer element (Wm.reload re-feeds it).
+   */
+  _watchPaneLayer() {
+    if (typeof MutationObserver !== "function") return;
+    const layer = window.Wm && Wm.headlessLayer && Wm.headlessLayer.el;
+    if (!layer) {
+      // Wm not up yet at boot — try again shortly, a bounded number of times.
+      this._layerTries = (this._layerTries || 0) + 1;
+      if (this._layerTries < 40) {
+        clearTimeout(this._layerTimer);
+        this._layerTimer = setTimeout(() => {
+          if (!(this.isDestroyed && this.isDestroyed())) this._watchPaneLayer();
+        }, 500);
+      }
+      return;
+    }
+    if (this._paneLayerEl === layer && this._paneObserver) return;
+    if (this._paneObserver) this._paneObserver.disconnect();
+    this._paneLayerEl = layer;
+    this._paneObserver = new MutationObserver(() => this._scheduleRecheck());
+    this._paneObserver.observe(layer, { childList: true });
+    this._scheduleRecheck();
+  }
+
+  _scheduleRecheck() {
+    cancelAnimationFrame(this._recheckFrame);
+    this._recheckFrame = requestAnimationFrame(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._watchPaneLayer();
+      if (!this.el || this._restored) return;
+      const active = OverLimit.isLocked() && this._applies();
+      this.el.style.display = active ? "" : "none";
+    });
   }
 
   _onStateChanged() {

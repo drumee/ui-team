@@ -4459,6 +4459,25 @@ class __window_manager extends push {
         return;
 
       case "open-node": {
+        // OVER-LIMIT LOCK: a tile in the home grid (__icons-list, any of its
+        // partition sections) opens the "Plan changed, action needed" card
+        // instead of the workspace — the same card as the banner's Resolve
+        // now, so the click leads to the fix. Every tile, snoozed or not: the
+        // snooze only spares the user the boot popup. Every role (2026-11-06):
+        // the owner gets the resolve face, anyone else the "contact the owner
+        // at <email>" face with a Close.
+        try {
+          const OverLimit = require("libs/over-limit");
+          // Only for a workspace OF THE LOCKED ORG. A desk.home row usually
+          // carries no dom_id — then the workspace just opens, and the file
+          // gate in its pane (window/core openContent) decides from the
+          // pane's media.attributes dom_id.
+          if (OverLimit.appliesToDomain(cmd.mget && cmd.mget("dom_id"))) {
+            if (cmd.wait) cmd.wait(0);
+            RADIO_BROADCAST.trigger("desk:open-over-limit-popup");
+            return this.unselect();
+          }
+        } catch (e) { /* lib unavailable — open as usual */ }
         // Debounce per NODE, not globally: a double-click on the same tile
         // must not spawn twice, but rapid clicks on DIFFERENT tiles must all
         // open. A global timestamp here silently swallowed every other tile

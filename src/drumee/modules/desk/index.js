@@ -3319,6 +3319,10 @@ class desk_module extends LetcBox {
    */
   async _initRatingSurveyTimer() {
     if (!SERVICE.survey || !SERVICE.survey.get_state) return;
+    // survey.get_state is src:'owner': refused by the over-limit read-only
+    // clamp, and the refusal surfaces as a Butler "read-only" notice. Nobody
+    // should be asked to rate a workspace they can't use anyway.
+    if (this._overLimitLocked()) return;
     // Users still inside onboarding (profile.onboarded explicitly 0) are
     // not surveyed; legacy accounts without the flag are eligible.
     const profile = (Visitor.profile && Visitor.profile()) || {};
@@ -3352,6 +3356,8 @@ class desk_module extends LetcBox {
     const fire = async () => {
       clearInterval(this._usageTimer);
       this._usageTimer = null;
+      // The lock can land mid-session (WS push) after the timer was armed.
+      if (this._overLimitLocked()) return;
       let state;
       try {
         state = await this.fetchService(SERVICE.survey.get_state, { hub_id: Visitor.id });
@@ -9255,6 +9261,12 @@ class desk_module extends LetcBox {
     // that happens to hold a reward_claim row would otherwise see the reward
     // flow and conclude activation was broken.
     if (args.activate) return;
+    // A locked (over-limit) org is not eligible, and reward.get_state is
+    // src:'owner' — the read-only clamp refuses it with 401
+    // OVER_LIMIT_READ_ONLY, which libs/over-limit's refusal tap turns into a
+    // "workspace is read-only" Butler notice on every boot, stacked with the
+    // over-limit popup. Don't ask.
+    if (!forced && this._overLimitLocked()) return;
     if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
     // Synchronous in-flight latch: onPartReady("overlay") can fire more than
     // once (e.g. re-navigation re-feeding the same module), and the guard
@@ -9517,6 +9529,16 @@ class desk_module extends LetcBox {
    *   over_limit + member → banner only; they can't fix it
    *   hard_lock  + anyone → forced, non-dismissible (member face is a wall)
    */
+  /** Over-limit read-only lock is on (enforcement on + over_limit/hard_lock). */
+  _overLimitLocked() {
+    try {
+      const OverLimit = require("libs/over-limit");
+      return OverLimit.enforcementOn() && OverLimit.isLocked();
+    } catch (e) {
+      return false;
+    }
+  }
+
   async _maybeShowOverLimit() {
     const OverLimit = require("libs/over-limit");
     if (!OverLimit.enforcementOn()) return;

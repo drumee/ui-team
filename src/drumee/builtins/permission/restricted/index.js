@@ -53,6 +53,12 @@ class __permission_restricted extends DrumeeMFS {
     // That is how the panel came up in column mode drawn as the 360px drawer.
     if (this.mget("mode") === "column") this.el.dataset.mode = "column";
     this.declareHandlers();
+    // The invite section is drawn paused while the org is over its plan
+    // limits (skeleton invitesPaused) — redraw when that changes.
+    this._onOverLimitChanged = () => {
+      if (!(this.isDestroyed && this.isDestroyed())) this._render();
+    };
+    RADIO_BROADCAST.on(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     // Pending-invite role, same default as the base panel's invite row.
     this._inviteRole = roleByValue("edit");
     this._members = [];
@@ -607,6 +613,7 @@ class __permission_restricted extends DrumeeMFS {
   }
 
   onBeforeDestroy(opt) {
+    RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     Wm.off(WS_EVENT, this._onWsEvent);
     if (super.onBeforeDestroy) super.onBeforeDestroy(opt);
   }
@@ -1130,6 +1137,17 @@ class __permission_restricted extends DrumeeMFS {
       }
       return;
     }
+    // OVER-LIMIT LOCK: the server clamps hub.invite while the org is over its
+    // plan limits (router/rest OVER_LIMIT_READ_ONLY:hub.invite — GRANTED then
+    // TERMINATED in the same millisecond on stage). The 401 used to come back
+    // as nothing visible: the refusal tap's notice lands in the folder window
+    // BEHIND this modal. Say it here, in the form, and don't send.
+    try {
+      const OverLimit = require("libs/over-limit");
+      if (OverLimit.enforcementOn() && OverLimit.isLocked()) {
+        return this._setInviteError(OverLimit.blockedMessage("invite"));
+      }
+    } catch (e) { /* lib unavailable — let the server decide */ }
     this._setInviteError();
 
     const privilege = this._inviteRole?.privilege || _K.privilege.write;

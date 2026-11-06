@@ -1720,7 +1720,11 @@ body:has(.desk-module[data-device="mobile"]) {
 //           it fades its page's CONTENTS inside a page that keeps its own
 //           background; here the whole slot fades, so what is under it must go.
 //   pane    no screen covers the workspace: the pane itself fades.
-.desk-module[data-billing-result="screen"] {
+//
+// The over-limit popup (builtins/widget/over-limit-popup) wears the same
+// backdrop and stamps `data-over-limit-popup` with the same two values.
+.desk-module[data-billing-result="screen"],
+.desk-module[data-over-limit-popup="screen"] {
   .desk-module__settings-main-slot {
     opacity: 0.2;
     transition: opacity 0.15s ease;
@@ -1746,7 +1750,8 @@ body:has(.desk-module[data-device="mobile"]) {
   }
 }
 
-.desk-module[data-billing-result="pane"] {
+.desk-module[data-billing-result="pane"],
+.desk-module[data-over-limit-popup="pane"] {
   .window-manager__layer.headless {
     opacity: 0.2;
     transition: opacity 0.15s ease;

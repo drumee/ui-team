@@ -4,7 +4,8 @@ const { filesize } = require("@drumee/ui-essentials");
 
 /**
  * Over-limit popup skeleton — three faces (see ../index.js):
- * admin/over_limit, admin/hard_lock, member/hard_lock.
+ * owner/over_limit, owner/hard_lock, and non-owner (either state: the
+ * numbers, "contact the owner at <email>", Close).
  *
  * Every TRUE flag gets its own violation row with the exact overage number —
  * never a merged sentence: the design's central rule is that the two flags
@@ -64,7 +65,7 @@ function storageDestinations(ui, fig) {
   });
 }
 
-function violationRows(ui, c) {
+function violationRows(ui, c, owner = true) {
   const fig = ui.fig.family;
   const rows = [];
   const plan = planLabel(c.plan);
@@ -83,7 +84,9 @@ function violationRows(ui, c) {
             content: (LOCALE.OL_STORAGE_SUB || "{0} used · {1} limit is {2}")
               .format(filesize(c.disk_used), plan, filesize(c.disk_limit)),
           }),
-          storageDestinations(ui, fig),
+          // Home / Trash / console are the OWNER's way out; a non-owner is
+          // told whom to contact instead (see the non-owner face).
+          owner ? storageDestinations(ui, fig) : null,
         ],
       })
     );
@@ -108,7 +111,7 @@ function violationRows(ui, c) {
           // the usual "Resolve now takes you to the members page" is not true
           // for the very people reading this. Say where the members actually
           // are instead of sending them to a page their plan does not have.
-          needsAdminConsoleUpgrade()
+          owner && needsAdminConsoleUpgrade()
             ? Skeletons.Note({
               className: `${fig}__hint`,
               content:
@@ -128,31 +131,42 @@ module.exports = function (ui) {
   const c = OverLimit.current();
   if (!c) return Skeletons.Box.Y({ className: `${fig}__backdrop`, kids: [] });
 
-  const admin = OverLimit.isAdmin();
+  const owner = OverLimit.isOwner();
   const hard = c.state === "hard_lock";
   const both = c.flags.storage && c.flags.seats;
 
   const kids = [];
 
-  // ── Member wall (hard_lock, non-admin) — nothing to resolve here ──
-  if (hard && !admin) {
+  // ── Not the owner (admins included) — nothing to resolve from here ──
+  // The numbers, whom to contact, and a Close. Resolve / Remind me later are
+  // the owner's alone (2026-11-06).
+  if (!owner) {
     kids.push(
       Skeletons.Note({
         className: `${fig}__title`,
-        content: LOCALE.OL_TITLE_LOCKED || "Workspace locked",
+        content: hard
+          ? LOCALE.OL_TITLE_LOCKED || "Workspace locked"
+          : LOCALE.OL_TITLE_ACTION || "Plan changed — action needed",
       }),
       Skeletons.Note({
         className: `${fig}__lead`,
-        content:
-          LOCALE.OL_LEAD_MEMBER_LOCKED ||
-          "This workspace is locked because it exceeds its plan limits. Only the workspace owner or an admin can resolve it.",
+        content: hard
+          ? (LOCALE.OL_LEAD_NONOWNER_LOCKED ||
+            "This workspace is locked because it exceeds its plan limits. Only the workspace owner can resolve it.")
+          : (LOCALE.OL_LEAD_MEMBER ||
+            "This workspace is over its plan limits and is read-only until the owner resolves it."),
+      }),
+      ...violationRows(ui, c, false),
+      Skeletons.Note({
+        className: `${fig}__contact`,
+        content: OverLimit.contactOwnerText(),
       }),
       Skeletons.Box.Y({
         className: `${fig}__cta-stack`,
         kids: [
           Skeletons.Box.X({
             className: `${fig}__cta ${fig}__cta--ghost`,
-            service: "over-limit-signout",
+            service: "over-limit-close",
             uiHandler: [ui],
             kids: [
               Skeletons.Note({
@@ -160,7 +174,7 @@ module.exports = function (ui) {
                 // click-through: without active:0 the Note swallows the click
                 // and the parent Box's service never fires (project rule).
                 active: 0,
-                content: LOCALE.SIGN_OUT || LOCALE.LOGOUT || "Sign out",
+                content: LOCALE.CLOSE || "Close",
               }),
             ],
           }),
@@ -168,7 +182,7 @@ module.exports = function (ui) {
       })
     );
   } else {
-    // ── Owner/Admin faces ──
+    // ── Owner faces ──
     kids.push(
       Skeletons.Note({
         className: `${fig}__title`,
@@ -216,9 +230,11 @@ module.exports = function (ui) {
         ],
       }),
     ];
-    // "Remind me later" exists only while grace is running — hard_lock is
-    // non-dismissible by design.
-    if (!hard) {
+    // The owner always gets both buttons (2026-11-06 rule: owner → "Resolve
+    // now" + "Remind me later"; anyone else → contact line + Close). Under
+    // hard_lock the snooze only closes the card for now: the boot rule
+    // re-opens it on every load regardless (desk _maybeShowOverLimit).
+    {
       ctas.push(
         Skeletons.Box.X({
           className: `${fig}__cta ${fig}__cta--ghost`,

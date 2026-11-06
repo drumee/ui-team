@@ -4,7 +4,8 @@ const { filesize } = require("@drumee/ui-essentials");
 /**
  * Lock-banner skeleton. Three faces:
  *   locked (over_limit)  red strip: what is over (live numbers), days left,
- *                        Resolve now (admins only).
+ *                        Resolve now (owner only; others get "contact
+ *                        the owner at <email>").
  *   locked (hard_lock)   red strip, no countdown — the deadline already hit.
  *   restored             teal strip: back within limits, auto-hides.
  */
@@ -28,7 +29,9 @@ module.exports = function (ui, opt = {}) {
   const c = OverLimit.current();
   if (!c) return null;
 
-  const admin = OverLimit.isAdmin();
+  // Owner-worded lines go with the owner-only CTA; everyone else reads the
+  // member wording plus the contact line.
+  const admin = OverLimit.isOwner();
   const hard = c.state === "hard_lock";
   const parts = [];
 
@@ -55,13 +58,13 @@ module.exports = function (ui, opt = {}) {
       ? (LOCALE.OL_BANNER_LOCKED_ADMIN ||
         "Workspace locked — resolve the limits below to restore access.")
       : (LOCALE.OL_BANNER_LOCKED_MEMBER ||
-        "Workspace locked — only the owner or an admin can restore access.");
+        "Workspace locked — only the owner can restore access.");
   } else {
     line = admin
       ? (LOCALE.OL_BANNER_READONLY ||
         "Read-only — resolve to continue.")
       : (LOCALE.OL_BANNER_READONLY_MEMBER ||
-        "Read-only — the workspace is over its plan limits. An admin is resolving it.");
+        "Read-only — the workspace is over its plan limits.");
   }
 
   parts.push(
@@ -79,13 +82,22 @@ module.exports = function (ui, opt = {}) {
     );
   }
 
-  if (admin) {
+  // "Resolve now" is the OWNER's (2026-11-06). Everyone else — admins
+  // included — is told whom to contact, in the CTA's place.
+  if (OverLimit.isOwner()) {
     parts.push(
       Skeletons.Note({
         className: `${fig}__cta`,
         content: LOCALE.OL_RESOLVE_NOW || "Resolve now",
         service: "over-limit-banner-resolve",
         uiHandler: [ui],
+      })
+    );
+  } else {
+    parts.push(
+      Skeletons.Note({
+        className: `${fig}__contact`,
+        content: OverLimit.contactOwnerText(),
       })
     );
   }

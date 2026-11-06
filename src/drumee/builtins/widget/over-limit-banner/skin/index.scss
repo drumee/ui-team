@@ -61,6 +61,17 @@
     }
   }
 
+  // Non-owners: whom to contact, where the owner has "Resolve now".
+  &__contact {
+    flex-shrink: 1;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--red-800);
+    overflow-wrap: anywhere;
+  }
+
   // Without the CTA (plain members) the countdown still hugs the right edge.
   &__bar--ok &__days,
   &__bar--ok &__cta {

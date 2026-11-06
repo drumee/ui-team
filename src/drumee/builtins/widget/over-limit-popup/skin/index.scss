@@ -11,6 +11,11 @@
     font-family: var(--font-main);
   }
 
+  // Page-fade backdrop (the post-Checkout result card's treatment, desk/skin
+  // `[data-over-limit-popup]`): no scrim, no blur — the page behind fades to
+  // 20% while the sidebar and top bar stay as they are. The backdrop stays a
+  // full-viewport, transparent hit area: the popup is modal (hard_lock has no
+  // way out but resolving), so clicks must not reach the desk underneath.
   &__backdrop {
     position: absolute;
     inset: 0;
@@ -18,8 +23,10 @@
     align-items: center;
     justify-content: center;
     padding: var(--spacer-6);
-    background: var(--overlay-bg);
-    backdrop-filter: blur(2px);
+    // index.js _fitToContainer sizes this box to desk-module__wm-container
+    // inline; the padding must stay inside that rect.
+    box-sizing: border-box;
+    background: transparent;
   }
 
   &__card {
@@ -28,9 +35,26 @@
     max-height: 100%;
     overflow-y: auto;
     background: var(--normal-bg-elevated);
-    border-radius: var(--corner-radius-6);
+    border-radius: var(--corner-radius-4);
     padding: 26px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 1px 5.5px rgba(0, 0, 0, 0.13);
+
+    // Clicked outside (index.js _bindOutsideNudge): the card can't be
+    // dismissed that way, so it draws the eye back to its two buttons —
+    // a brand-colour ring and a short pulse. Nothing closes, nothing runs.
+    &[data-nudge="1"] {
+      animation: over-limit-popup-nudge 0.6s ease;
+      box-shadow:
+        0 0 0 3px var(--primary-50),
+        0 25px 50px -12px rgba(0, 0, 0, 0.25),
+        0 1px 5.5px rgba(0, 0, 0, 0.13);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &[data-nudge="1"] {
+        animation: none;
+      }
+    }
   }
 
   &__title {
@@ -55,7 +79,7 @@
     gap: 2px;
     background: var(--red-100);
     border: 1px solid var(--red-200);
-    border-radius: var(--corner-radius-3);
+    border-radius: var(--corner-radius-2);
     padding: var(--spacer-4);
     margin-top: var(--spacer-4);
   }
@@ -92,7 +116,7 @@
     align-items: center;
     background: var(--normal-bg-0);
     border: 1px solid var(--red-700);
-    border-radius: var(--border-radius);
+    border-radius: var(--corner-radius-1);
     cursor: pointer;
     padding: 4px 10px;
 
@@ -109,6 +133,15 @@
     white-space: nowrap;
   }
 
+  // Non-owner face: whom to contact, in place of the resolve buttons.
+  &__contact {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--normal-fg-800);
+    margin-top: var(--spacer-4);
+    word-break: break-word;
+  }
+
   &__cta-stack {
     gap: var(--spacer-3);
     margin-top: var(--spacer-5);
@@ -119,7 +152,7 @@
     justify-content: center;
     align-items: center;
     padding: var(--spacer-4);
-    border-radius: var(--corner-radius-max);
+    border-radius: var(--corner-radius-3);
     background: var(--primary-50);
     cursor: pointer;
     transition: background 0.15s ease, opacity 0.15s ease;
@@ -128,6 +161,8 @@
       background: var(--primary-60);
     }
 
+    // "Remind me later" / "Close": the LIGHTER primary — a primary tint with
+    // primary text, so "Resolve now" (solid primary) stays the main action.
     &--ghost {
       background: var(--primary-10);
 
@@ -136,7 +171,7 @@
       }
 
       .over-limit-popup__cta-label {
-        color: var(--primary-70);
+        color: var(--primary-60);
       }
     }
   }
@@ -153,4 +188,11 @@
     color: var(--normal-fg-50);
     margin-top: 11px;
   }
+}
+
+@keyframes over-limit-popup-nudge {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.03); }
+  60% { transform: scale(0.99); }
+  100% { transform: scale(1); }
 }
