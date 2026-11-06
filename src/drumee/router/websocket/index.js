@@ -107,6 +107,13 @@ class __router_websocket extends LetcBox {
    *
    */
   switchOn(data) {
+    // A reconnect carries the SESSION's user. When another tab swapped the
+    // session, adopting it here would put B's identity under A's desk —
+    // libs/session-guard shows the "session changed" card instead.
+    const incoming = data.user || data;
+    let accept = true;
+    try { accept = require("libs/session-guard").acceptSocketUser(incoming); } catch (e) { accept = true; }
+    if (!accept) return;
     if (data.user) {
       Visitor.set(data.user);
     } else {

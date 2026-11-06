@@ -153,6 +153,9 @@ class Drumee extends Marionette.Application {
       Host.set(hub);
       Platform.set(platform);
       Visitor.set(user);
+      // Session-change guard (libs/session-guard): stamp x-drumee-uid on
+      // /svc/ calls, listen to other tabs, and say who this tab is.
+      try { require("libs/session-guard").init(user); } catch (e) { console.warn("[session-guard] init failed", e); }
       Organization.set(organization)
       window.currentDevice = Visitor.device();
       const localServices = require('lex/services');

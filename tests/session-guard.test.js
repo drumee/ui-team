@@ -187,3 +187,31 @@ test("websocket identity check: another user on reconnect is refused", () => {
   const anon = env(NOBODY);
   assert.equal(anon.g.acceptSocketUser({ id: B }), true, "not signed in: adopt");
 });
+
+// ── wiring (Tasks 4-5): the boot, sign-out and websocket call the guard ─────
+const fs = require("node:fs");
+const SRC = (p) => fs.readFileSync(path.join(__dirname, "../src/drumee", p), "utf8");
+
+test("boot: init_globals inits the guard right after Visitor.set(user)", () => {
+  const src = SRC("drumee.js");
+  const set = src.indexOf("Visitor.set(user);");
+  const init = src.indexOf('require("libs/session-guard").init(user)');
+  assert.ok(set > 0 && init > set, "init(user) follows Visitor.set(user)");
+  assert.ok(init - set < 400, "in the same block");
+});
+
+test("sign-out: Butler.logout announces before Visitor.clear()", () => {
+  const src = SRC("router/butler/index.js");
+  const body = src.slice(src.indexOf("async logout()"));
+  const ann = body.indexOf('require("libs/session-guard").announceSignedOut()');
+  const clear = body.indexOf("Visitor.clear();");
+  assert.ok(ann > 0 && ann < clear, "announce before clear");
+});
+
+test("websocket: switchOn asks acceptSocketUser before adopting data.user", () => {
+  const src = SRC("router/websocket/index.js");
+  const body = src.slice(src.indexOf("switchOn(data)"));
+  const ask = body.indexOf("acceptSocketUser(");
+  const set = body.indexOf("Visitor.set(data.user)");
+  assert.ok(ask > 0 && ask < set, "the identity is checked before Visitor.set");
+});

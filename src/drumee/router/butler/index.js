@@ -438,6 +438,10 @@ class __router_butler extends LetcBox {
       this._logoutProgress(100);
       this.triggerHandlers({ service: _e.logout });
       Visitor.set({ connection: _a.off });
+      // Tell the other tabs of this origin before the session is gone:
+      // they would otherwise keep drawing this account's desk while running
+      // as nobody (libs/session-guard).
+      try { require("libs/session-guard").announceSignedOut(); } catch (e) { /* none */ }
       return setTimeout(() => {
         Visitor.clear();
         Host.clear();
