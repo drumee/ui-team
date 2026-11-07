@@ -18,6 +18,11 @@
  */
 const OverLimit = require("libs/over-limit");
 const { closeWmPopup } = require("libs/wm-popup");
+const { resolveLanded } = require("./landed");
+
+// A pending CTA closes the card when its destination is up — or after this,
+// so a refused or slow open never leaves the card spinning for good.
+const PENDING_TIMEOUT_MS = 8000;
 
 class __over_limit_popup extends LetcBox {
   static initClass() {
@@ -33,6 +38,10 @@ class __over_limit_popup extends LetcBox {
 
   /** Wm.launch({singleton:1}) reuses the instance and calls .raise(). */
   raise() {
+    // Closing by choice (a CTA released the backdrop and is finishing): a
+    // re-launch meanwhile — a locked tile clicked through the released
+    // backdrop — must not put the page fade back over the screen it opened.
+    if (this._closing) return this;
     if (this.el) {
       this.el.style.display = "";
       this.el.style.zIndex = 99998;
@@ -126,6 +135,8 @@ class __over_limit_popup extends LetcBox {
   }
 
   onBeforeDestroy() {
+    if (this._landObserver) this._landObserver.disconnect();
+    clearTimeout(this._pendingTimer);
     this._unwatchContainer();
     this._unbindOutsideNudge();
     this._stampDesk(false);
@@ -306,11 +317,69 @@ class __over_limit_popup extends LetcBox {
     closeWmPopup(this);
   }
 
+  /**
+   * A CTA was pressed and is now working: remember which (the skeleton stamps
+   * its data-loading from this) and redraw the card.
+   */
+  _setPending(service) {
+    this._pendingService = service;
+    this._render();
+  }
+
+  /**
+   * TAKE THE BACKDROP OFF NOW, keep the card. The page fade goes, the
+   * outside-click block is released, and the popup root stops taking clicks
+   * (data-backdrop="off" → pointer-events: none): the destination the CTA
+   * opens is usable while the card finishes. Marked as a chosen close, so a
+   * layer recycle meanwhile does not bring the popup back.
+   */
+  _releaseBackdrop() {
+    this._closing = true;
+    this._stampDesk(false);
+    this._unbindOutsideNudge();
+    if (this.el) this.el.dataset.backdrop = "off";
+  }
+
+  /** The card's own close, once the pending action is over. */
+  _finishClose() {
+    if (this._finished) return;
+    this._finished = true;
+    if (this._landObserver) this._landObserver.disconnect();
+    this._landObserver = null;
+    clearTimeout(this._pendingTimer);
+    closeWmPopup(this);
+  }
+
+  /** Close the card when "Resolve now"'s screen is on (./landed) or on timeout. */
+  _closeWhenLanded() {
+    const check = () => {
+      if (this.isDestroyed && this.isDestroyed()) return this._finishClose();
+      if (resolveLanded(document)) this._finishClose();
+    };
+    if (typeof MutationObserver === "function" && document.body) {
+      this._landObserver = new MutationObserver(check);
+      this._landObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-anim"],
+      });
+    }
+    clearTimeout(this._pendingTimer);
+    this._pendingTimer = setTimeout(() => this._finishClose(), PENDING_TIMEOUT_MS);
+    check();
+  }
+
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
     switch (service) {
       case "over-limit-resolve": {
-        this._close();
+        // One press: the console is a lazy chunk and can take seconds.
+        if (this._pendingService) return;
+        // Spin, take the backdrop off, navigate — the card closes itself once
+        // the screen it opened is up (_closeWhenLanded).
+        this._setPending("over-limit-resolve");
+        this._releaseBackdrop();
         // OverLimit.resolveTarget() picks the destination, shared with the
         // top banner: a storage overage opens the console's Storage tab on
         // EVERY plan (per-workspace usage, delete from there — Free/Pro are
@@ -325,9 +394,10 @@ class __over_limit_popup extends LetcBox {
         const target = OverLimit.resolveTarget();
         if (target) {
           RADIO_BROADCAST.trigger(target.event, target.arg);
-          return;
+        } else {
+          RADIO_BROADCAST.trigger("desk:open-org-view");
         }
-        RADIO_BROADCAST.trigger("desk:open-org-view");
+        this._closeWhenLanded();
         return;
       }
 
@@ -355,10 +425,17 @@ class __over_limit_popup extends LetcBox {
       case "over-limit-later":
         // Server-side per-admin snooze; the block itself is untouched and the
         // read-only banner stays. payment.* survives the REST clamp.
-        this.postService(SERVICE.payment.over_limit_dismiss, {
+        if (this._pendingService) return;
+        // Spin and release the backdrop now; the card goes when the snooze
+        // has been recorded (or failed — it closes either way).
+        this._setPending("over-limit-later");
+        this._releaseBackdrop();
+        Promise.resolve(this.postService(SERVICE.payment.over_limit_dismiss, {
           hub_id: Visitor.id,
-        }).catch((e) => this.warn && this.warn("[over-limit] dismiss failed", e));
-        return this._close();
+        }))
+          .catch((e) => this.warn && this.warn("[over-limit] dismiss failed", e))
+          .finally(() => this._finishClose());
+        return;
 
       // Non-owner face: nothing to resolve, so a plain close. No snooze —
       // that is the owner's, server-side; the boot rule decides next time.

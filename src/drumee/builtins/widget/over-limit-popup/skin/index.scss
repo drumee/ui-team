@@ -11,6 +11,18 @@
     font-family: var(--font-main);
   }
 
+  // A CTA was pressed (index.js _releaseBackdrop): the backdrop is gone — the
+  // page fade is lifted and clicks pass through to the desk — while the card
+  // stays up with its spinner until the destination is on screen.
+  &__ui[data-backdrop="off"],
+  &__ui[data-backdrop="off"] &__backdrop {
+    pointer-events: none;
+  }
+
+  &__ui[data-backdrop="off"] &__card {
+    pointer-events: auto;
+  }
+
   // Page-fade backdrop (the post-Checkout result card's treatment, desk/skin
   // `[data-over-limit-popup]`): no scrim, no blur — the page behind fades to
   // 20% while the sidebar and top bar stay as they are. The backdrop stays a
@@ -161,6 +173,30 @@
       background: var(--primary-60);
     }
 
+    // Working (index.js _setPending): the label stays, a ring spins after it,
+    // and the button takes no more presses. Drawn here — ui-core's spinner
+    // ships no CSS in ui-team.
+    &[data-loading="1"] {
+      position: relative;
+      pointer-events: none;
+      cursor: progress;
+
+      &::after {
+        content: "";
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        width: 14px;
+        height: 14px;
+        margin-top: -7px;
+        box-sizing: border-box;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: var(--white);
+        border-radius: 50%;
+        animation: over-limit-popup-spin 0.7s linear infinite;
+      }
+    }
+
     // "Remind me later" / "Close": the LIGHTER primary — a primary tint with
     // primary text, so "Resolve now" (solid primary) stays the main action.
     &--ghost {
@@ -172,6 +208,12 @@
 
       .over-limit-popup__cta-label {
         color: var(--primary-60);
+      }
+
+      // On the light button the ring is drawn in the primary colour.
+      &[data-loading="1"]::after {
+        border-color: var(--primary-20);
+        border-top-color: var(--primary-60);
       }
     }
   }
@@ -195,4 +237,14 @@
   30% { transform: scale(1.03); }
   60% { transform: scale(0.99); }
   100% { transform: scale(1); }
+}
+
+@keyframes over-limit-popup-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .over-limit-popup__cta[data-loading="1"]::after {
+    animation-duration: 2s;
+  }
 }

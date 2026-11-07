@@ -220,6 +220,9 @@ module.exports = function (ui) {
       Skeletons.Box.X({
         className: `${fig}__cta`,
         service: "over-limit-resolve",
+        // Spins from the press until the destination is up (index.js
+        // _setPending). From state, so a card re-render keeps it.
+        dataset: { loading: ui._pendingService === "over-limit-resolve" ? 1 : 0 },
         uiHandler: [ui],
         kids: [
           Skeletons.Note({
@@ -239,6 +242,7 @@ module.exports = function (ui) {
         Skeletons.Box.X({
           className: `${fig}__cta ${fig}__cta--ghost`,
           service: "over-limit-later",
+          dataset: { loading: ui._pendingService === "over-limit-later" ? 1 : 0 },
           uiHandler: [ui],
           kids: [
             Skeletons.Note({
