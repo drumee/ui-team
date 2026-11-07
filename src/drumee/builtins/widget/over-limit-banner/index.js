@@ -14,6 +14,10 @@
 const OverLimit = require("libs/over-limit");
 
 const RESTORED_LINGER_MS = 6000;
+// "Resolve now" stops spinning when its destination shows up (./landed) — or
+// after this, so a refused or slow open never leaves it spinning for good.
+const RESOLVE_TIMEOUT_MS = 8000;
+const { landed } = require("./landed");
 
 class __over_limit_banner extends LetcBox {
   static initClass() {
@@ -44,7 +48,48 @@ class __over_limit_banner extends LetcBox {
     this._watchPaneLayer();
   }
 
+  /**
+   * Loading state for "Resolve now": stamped on the CTA (data-loading) and
+   * held in `_resolving` so a re-feed keeps it. Cleared when the console or
+   * the popup is on screen (./landed), or after RESOLVE_TIMEOUT_MS.
+   */
+  _startResolving() {
+    this._resolving = true;
+    this._stampCta();
+    const check = () => {
+      if (this.isDestroyed && this.isDestroyed()) return this._stopResolving();
+      if (landed(document)) this._stopResolving();
+    };
+    if (typeof MutationObserver === "function" && document.body) {
+      this._resolveObserver = new MutationObserver(check);
+      this._resolveObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-anim"],
+      });
+    }
+    clearTimeout(this._resolveTimer);
+    this._resolveTimer = setTimeout(() => this._stopResolving(), RESOLVE_TIMEOUT_MS);
+    check();
+  }
+
+  _stopResolving() {
+    if (this._resolveObserver) this._resolveObserver.disconnect();
+    this._resolveObserver = null;
+    clearTimeout(this._resolveTimer);
+    if (!this._resolving) return;
+    this._resolving = false;
+    this._stampCta();
+  }
+
+  _stampCta() {
+    const el = this.el && this.el.querySelector(`.${this.fig.family}__cta`);
+    if (el) el.dataset.loading = this._resolving ? "1" : "0";
+  }
+
   onBeforeDestroy() {
+    this._stopResolving();
     RADIO_BROADCAST.off("workspace:focus", this._onWorkspaceMaybeChanged);
     clearTimeout(this._layerTimer);
     if (this._paneObserver) this._paneObserver.disconnect();
@@ -169,6 +214,10 @@ class __over_limit_banner extends LetcBox {
     const service = args.service || cmd.mget(_a.service);
     switch (service) {
       case "over-limit-banner-resolve": {
+        // One open at a time: the console is a lazy chunk and can take
+        // seconds; a second press would queue a second navigation.
+        if (this._resolving) return;
+        this._startResolving();
         // Straight to the screen that fixes it (Storage tab for a storage
         // overage) instead of re-opening the popup the admin already saw.
         // No target (seats only on a plan without the console) → the popup,

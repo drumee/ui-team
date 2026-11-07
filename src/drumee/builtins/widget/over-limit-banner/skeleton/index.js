@@ -89,6 +89,9 @@ module.exports = function (ui, opt = {}) {
       Skeletons.Note({
         className: `${fig}__cta`,
         content: LOCALE.OL_RESOLVE_NOW || "Resolve now",
+        // Spins from the click until the destination is on screen (index.js
+        // _startResolving). From state, so a re-feed mid-load keeps it.
+        dataset: { loading: ui._resolving ? 1 : 0 },
         service: "over-limit-banner-resolve",
         uiHandler: [ui],
       })

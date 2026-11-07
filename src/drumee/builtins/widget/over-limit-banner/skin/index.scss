@@ -59,6 +59,32 @@
     &:hover {
       background: var(--red-800);
     }
+
+    // Loading (index.js _startResolving): the label stays, a ring spins after
+    // it, and the button stops taking presses until the destination is up.
+    // Drawn here — ui-core's spinner ships no CSS in ui-team.
+    &[data-loading="1"] {
+      position: relative;
+      padding-right: 32px;
+      pointer-events: none;
+      cursor: progress;
+      opacity: 0.85;
+
+      &::after {
+        content: "";
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        width: 12px;
+        height: 12px;
+        margin-top: -6px;
+        box-sizing: border-box;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: var(--white);
+        border-radius: 50%;
+        animation: over-limit-banner-spin 0.7s linear infinite;
+      }
+    }
   }
 
   // Non-owners: whom to contact, where the owner has "Resolve now".
@@ -76,5 +102,15 @@
   &__bar--ok &__days,
   &__bar--ok &__cta {
     display: none;
+  }
+}
+
+@keyframes over-limit-banner-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .over-limit-banner__cta[data-loading="1"]::after {
+    animation-duration: 2s;
   }
 }
