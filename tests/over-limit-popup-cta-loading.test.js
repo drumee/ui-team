@@ -67,3 +67,11 @@ test("raise() during a chosen close does not put the fade back", () => {
   const stamp = r.indexOf("this._stampDesk(true)");
   assert.ok(guard > 0 && guard < stamp, r);
 });
+
+test("the spinner sits right after the label, not pinned to the button edge", () => {
+  const s = SRC("skin/index.scss");
+  const rule = s.slice(s.indexOf('&[data-loading="1"] {'), s.indexOf("@keyframes over-limit-popup-spin"));
+  const own = rule.slice(0, rule.indexOf("// \"Remind me later\""));
+  assert.doesNotMatch(own, /position:\s*absolute/, "in the flex flow");
+  assert.match(own, /gap:\s*8px/);
+});

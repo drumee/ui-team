@@ -173,22 +173,24 @@
       background: var(--primary-60);
     }
 
-    // Working (index.js _setPending): the label stays, a ring spins after it,
-    // and the button takes no more presses. Drawn here — ui-core's spinner
-    // ships no CSS in ui-team.
+    // Working (index.js _setPending): the label stays, a ring spins RIGHT
+    // AFTER it, and the button takes no more presses. Drawn here — ui-core's
+    // spinner ships no CSS in ui-team.
+    //
+    // IN THE FLOW, not absolutely positioned: the button is a centred flex
+    // row, so the ring is the label's next item and the pair stays centred
+    // together. Pinned to the button's right edge it sat ~200px away from the
+    // label on a 420px card, reading as a stray glyph.
     &[data-loading="1"] {
-      position: relative;
+      gap: 8px;
       pointer-events: none;
       cursor: progress;
 
       &::after {
         content: "";
-        position: absolute;
-        right: 16px;
-        top: 50%;
+        flex: 0 0 auto;
         width: 14px;
         height: 14px;
-        margin-top: -7px;
         box-sizing: border-box;
         border: 2px solid rgba(255, 255, 255, 0.4);
         border-top-color: var(--white);
