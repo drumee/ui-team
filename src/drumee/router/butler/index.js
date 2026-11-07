@@ -429,13 +429,14 @@ class __router_butler extends LetcBox {
     // later the session is ended; there is no third milestone to invent. The
     // opening 15% is the honest reading of "asked, not answered" — a bar that
     // starts at 0 and holds there reads as broken.
-    this._logoutProgress(15);
+    this._logoutProgress(10);
     const f = () => {
-      // Straight to 100 rather than in steps: the work is over by the time f
-      // runs, and what remains is the Visitor.timeout(1000) wait below. The
-      // fill's 1s transition (skin/goodbye.scss) spans exactly that, so the
-      // bar lands full as the redirect fires instead of freezing part-way.
-      this._logoutProgress(100);
+      // ONE LOADING SCREEN (2026-11-07). This screen is drawn as the boot
+      // warm-up, and leaving it IS a page load whose warm-up starts at 0 and
+      // steps 20% per bundle. Filling to 100% and holding a second made the
+      // next screen visibly restart; stopping at 20% hands over to the first
+      // bundle's step, and the page leaves as soon as the session is closed.
+      this._logoutProgress(20);
       this.triggerHandlers({ service: _e.logout });
       Visitor.set({ connection: _a.off });
       // Tell the other tabs of this origin before the session is gone:
@@ -464,7 +465,7 @@ class __router_butler extends LetcBox {
         } else {
           location.replace(signedOutUrl(location, main_domain));
         }
-      }, Visitor.timeout(1000));
+      }, 0);
     };
 
     this.postService(SERVICE.drumate.logout, {

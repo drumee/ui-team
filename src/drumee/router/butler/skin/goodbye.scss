@@ -16,112 +16,65 @@
  */
 @use '../../../skin/mixins/drumee.scss';
 
-/* The disconnect screen.
+/* The disconnect screen — drawn as the BOOT WARM-UP (2026-11-07).
+ *
+ * Sign-out from an org host ends in a real page load on the main domain, which
+ * shows the boot warm-up (server-team client/templates/warmup.html +
+ * /home/drumee/static/styles/loader.css). This screen pins the same values so
+ * the hand-over between the two is invisible: one loading screen, not a card
+ * followed by a different screen.
+ *
+ *   backdrop  #f4f4f6 (loader.css .warmup-main), fixed to the viewport
+ *   lockup    160px wide (warmup.html .warmup-symbol svg.warmup-logo)
+ *   bar       300px, 5px tall, #d8d6f3 track / #433cc5 fill, 1s width
+ *   spacing   16px between lockup and bar, +12px air under the lockup row
  *
  * THE SELECTOR MATTERS. Butler's fig.family is "router-butler", so the
- * skeleton emits router-butler-goodbye__*. This block said
- * ".router-buler-goodbye" — no `t` — so nothing here matched and the screen
- * rendered with no styling at all. tests/goodbye-screen.test.js derives the
- * family the way ui-core does and fails if the two drift again.
- *
- * ONE TEMPLATE with modules/plugins (the loading screen) and analytics-ui's
- * authorization screen: the sign-in page's backdrop, the sign-in card, the
- * lockup top-left, the message centred. Written in three places — three
- * repos, no shared package — so each pins the same values.
- *
- * LIGHT IN BOTH THEMES, deliberately: the sign-in card has no dark variant,
- * and looking like it is the point. Hence literals, not tokens. */
+ * skeleton emits router-butler-goodbye__*. Literals, not tokens: the warm-up
+ * has no theme either. */
 .router-butler-goodbye {
   &__main {
-    width: 100vw;
-    min-height: 100vh;
-    box-sizing: border-box;
-    padding: 40px;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 2147483000;
+    display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    align-content: center;
+    background: #f4f4f6;
     font-family: var(--font-main);
-    /* Verbatim from signin/src/widgets/router/skin/index.scss. */
-    background-color: #f2f2f7;
-    background-image: radial-gradient(
-      120% 62% at 50% 116%,
-      rgba(89, 80, 255, 0.45) 0%,
-      rgba(89, 80, 255, 0.12) 34%,
-      rgba(242, 242, 247, 0) 68%
-    );
-    background-repeat: no-repeat;
-    background-attachment: fixed;
   }
 
-  /* The sign-in card's own metrics. */
-  &__card {
-    width: 100%;
-    max-width: 520px;
+  &__stack {
     box-sizing: border-box;
-    padding: 24px 40px;
-    gap: 20px;
-    background-color: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.09);
-    border-radius: 12px;
+    width: 300px;
+    max-width: calc(100% - 40px);
+    display: flex;
     flex-direction: column;
-    justify-content: start;
     align-items: center;
+    gap: 16px;
   }
 
-  /* Top-left: the card centres its children, so the lockup opts out. Sized
-     by height alone — 120.723 x 24 is a 5.03:1 lockup, and two hand-picked
-     side lengths are how that gets quietly squashed. */
   &__logo {
-    align-self: flex-start;
     display: flex;
+    justify-content: center;
+    padding-bottom: 12px;
 
     img {
       display: block;
-      width: auto;
-      height: 32px;
+      width: min(160px, 50vw);
+      height: auto;
     }
   }
 
-  &__header {
-    width: 100%;
-    justify-content: center;
-  }
-
-  &__note {
-    width: 100%;
-    text-align: center;
-    font-size: 20px;
-    line-height: 1.5;
-    /* --an-purple is ANALYTICS-UI's token: it is declared in that plugin's
-       stylesheet, not here, so on this screen it is usually undefined. An
-       unresolved var() is invalid at computed-value time and `color` would
-       fall back to inherited, leaving the message looking unstyled with
-       nothing logged. Hence the literal — that token's own value. */
-    color: var(--an-purple, #534ab7);
-  }
-
-  /* Holds the progress bar under the message.
-     The 80px floor is gone with the spinner it was sized for (that comment
-     read: .drumee-loading-wrapper is absolutely positioned at top:50% with a
-     -1.25rem margin and its bars are 50px tall, so a 60px box clipped them).
-     A 5px bar needs none of that, and the floor would leave 75px of dead air
-     under it. `position: relative` stays — it costs nothing and the card has
-     other absolutely positioned guests over its life. */
   &__container {
     width: 100%;
     position: relative;
-    justify-content: center;
-    align-items: center;
   }
 
-  /* The track. Ported from the boot screen's bar (server-team
-     client/templates/warmup.html + /home/drumee/static/styles/loader.css):
-     5px tall, fully rounded, #d8d6f3 under a #433cc5 fill.
-
-     The track is this element's own background rather than warmup's ::after,
-     and `overflow: hidden` is what rounds the fill's leading edge — so the
-     fill needs no radius of its own and cannot escape the track at 100%. */
   &__progress {
     width: 100%;
     height: 5px;
@@ -130,14 +83,22 @@
     overflow: hidden;
   }
 
-  /* The fill. Starts at 0 and is driven by Butler._logoutProgress; the 1s
-     transition is warmup.html's, and it is load-bearing rather than
-     decorative here — logout sets 100% and then waits Visitor.timeout(1000)
-     before redirecting, so the bar finishes filling just as the page goes. */
   &__progress-fill {
     width: 0;
     height: 100%;
     background-color: #433cc5;
+    border-radius: 100px;
     transition: width 1s;
+  }
+
+  /* The warm-up has no caption: the message stays for screen readers only. */
+  &__header {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

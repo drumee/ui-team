@@ -18,86 +18,74 @@
  * The disconnect screen — after Sign out, and after "Back to sign in" on the
  * analytics authorization card.
  *
- * ONE TEMPLATE with the plugin loading screen (modules/plugins/skeleton) and
- * analytics-ui's authorization screen: the sign-in page's backdrop, the
- * sign-in card, the lockup top-left, the message centred. All three are "you
- * cannot use the app right now" screens.
+ * THE BOOT WARM-UP PICTURE, not a card (2026-11-07). Sign-out from an org host
+ * ends in a real page load on the main domain, and that load shows the boot
+ * warm-up (server-team client/templates/warmup.html). With the old sign-in
+ * card here, one sign-out showed two different loading screens back to back
+ * (recording 2026-11-07 07:07, 0:07.5 card → 0:09.5 warm-up). Drawn as the
+ * warm-up — same backdrop, lockup, track and fill, same place — the two are
+ * one screen continuing.
  *
  * `sys_pn: "disconnected"` IS LOAD-BEARING. Butler.logout awaits
  * ensurePart('disconnected') before it posts drumate.logout, so renaming or
  * dropping that part stops logout mid-flight: overlay up, session never
- * ended, nothing logged. Same for the loader part. See
- * tests/goodbye-screen.test.js.
- *
- * The wallpaper this screen used to carry is gone: the template paints its
- * own backdrop, and a background image would fight it.
+ * ended, nothing logged. Same for the loader part. It now carries the
+ * message for screen readers only (visually hidden in skin/goodbye.scss).
  */
 const LOGO = require("assets/drumee-logo.svg");
 
 const __skl_goodbye = function (_ui_) {
-  const goodByeFig = `${_ui_.fig.family}-goodbye`;
+  const fig = `${_ui_.fig.family}-goodbye`;
   const logo = LOGO.default || LOGO;
 
+  // The message, for assistive tech: the warm-up picture has no caption.
   const header = Skeletons.Box.X({
-    className: `${goodByeFig}__header`,
+    className: `${fig}__header`,
     sys_pn: "disconnected",
+    attrOpt: { role: "status", "aria-live": "polite" },
     kids: [
       Skeletons.Note({
-        className: `${goodByeFig}__note`,
-        content: LOCALE.GOODBYE_SEE_YOU_LATER
-      }) //'You will be disconnected shortly. See you later !'
-    ]
+        className: `${fig}__note`,
+        content: LOCALE.GOODBYE_SEE_YOU_LATER,
+      }),
+    ],
   });
 
-  // The determinate bar from the boot screen (server-team
-  // client/templates/warmup.html), not a spinner: logout has REAL milestones
-  // to report — the screen is up, the session POST came back — where a boot
-  // has bundles landing. A spinner says "something is happening" for a flow
-  // whose length is actually known.
-  //
-  // Colours, height, radius and the 1s width transition are that bar's, ported
-  // in skin/goodbye.scss. The MECHANICS are not: warmup.html hangs its track
-  // and fill off `bottom: -5px` because the bar has to sit under a caption
-  // inside one fixed row. Here the markup is ours, so the track is the row's
-  // own background and the fill is an in-flow child — same picture, nothing
-  // absolutely positioned to keep in step.
-  //
-  // `goodbye-progress` is how Butler.logout reaches the fill (_logoutProgress).
-  const content = Skeletons.Box.Y({
-    className: `${goodByeFig}__container`,
+  // The warm-up bar: #d8d6f3 track, #433cc5 fill, driven by
+  // Butler._logoutProgress through `goodbye-progress`.
+  const bar = Skeletons.Box.Y({
+    className: `${fig}__container`,
     sys_pn: _a.loader,
     kids: [
       Skeletons.Box.X({
-        className: `${goodByeFig}__progress`,
+        className: `${fig}__progress`,
         kids: [
           Skeletons.Box.X({
-            className: `${goodByeFig}__progress-fill`,
+            className: `${fig}__progress-fill`,
             sys_pn: "goodbye-progress",
           }),
         ],
       }),
-    ]
+    ],
   });
 
-  const card = Skeletons.Box.Y({
-    className: `${goodByeFig}__card`,
-    kids: [
-      Skeletons.Element({
-        className: `${goodByeFig}__logo`,
-        content: `<img src="${logo}" alt="drumee" width="121" height="24">`,
-      }),
-      header,
-      content
-    ]
-  });
-
-  const a = Skeletons.Box.Y({
+  return Skeletons.Box.Y({
     debug: __filename,
-    className: `${goodByeFig}__main`,
-    kids: [card]
+    className: `${fig}__main`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${fig}__stack`,
+        kids: [
+          Skeletons.Element({
+            className: `${fig}__logo`,
+            content: `<img src="${logo}" alt="drumee" width="160" height="32">`,
+          }),
+          bar,
+          header,
+        ],
+      }),
+    ],
   });
-
-  return a;
 };
 
 module.exports = __skl_goodbye;
