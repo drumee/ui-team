@@ -418,6 +418,33 @@ class __router_butler extends LetcBox {
   }
 
   /**
+   * Forget where the signed-out account was standing.
+   *
+   * The address bar mirrors the current folder (libs/location-url):
+   * "#/desk/wm/o/<nid>/<hub_id>/folder". Logout left it there, and both exits
+   * below carry it on — `Drumee.start()` in place, and `location.hostname = …`,
+   * which keeps path AND hash. On the main domain's fresh document the
+   * history-state mark is gone, so file-deep-link.captureFromUrl() armed the
+   * hash as a link "sent" to the next visitor; the next sign-in's changeHost()
+   * then carried it to that account's host and wm opened it — a different
+   * account, not a member → DESIGNATION_LINK_NO_ACCESS, then a bounce to its
+   * own default workspace (stage, yipejo5194 after h0anghu7n, 2026-11-07).
+   *
+   * Dropped: the hash, any armed file-deep-link relay, and the remembered desk
+   * screen — all three describe the account that just left. A link genuinely
+   * opened signed out is armed when it is OPENED, never here.
+   */
+  _dropAccountLocation() {
+    try {
+      history.replaceState(null, "", "#/welcome/signin");
+    } catch (e) { /* history unavailable — nothing to drop */ }
+    try {
+      require("libs/file-deep-link").clear();
+      sessionStorage.removeItem(require("libs/location-url").DESK_STATE_KEY);
+    } catch (e) { /* storage blocked — nothing was stored either */ }
+  }
+
+  /**
    *
    * @param {*} redirect
    */
@@ -443,6 +470,7 @@ class __router_butler extends LetcBox {
         Host.clear();
         // The session read cache goes with the session (libs/read-cache).
         require("libs/read-cache").clear();
+        this._dropAccountLocation();
         const { main_domain } = bootstrap()
         if (main_domain == location.hostname) {
           Drumee.start();

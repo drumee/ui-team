@@ -2158,6 +2158,10 @@ class desk_module extends LetcBox {
 
   /** pagehide hook — must stay synchronous. */
   _persistDeskState() {
+    // Signing out: the screen belongs to the account leaving, and Butler.logout
+    // has just dropped it (_dropAccountLocation) — the pagehide of its redirect
+    // must not write it back for the next account.
+    if (window.Butler && window.Butler.isDisconnecting) return;
     try {
       const service = this._currentScreenService();
       const workspace = this._snapshotWorkspace();
