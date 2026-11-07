@@ -354,6 +354,8 @@ class ___widget_chatItem extends LetcBox {
           // Tiles may have rendered before the card moved into the bubble.
           this._stampInlineLayout();
         }
+        // Drumee links in the text get a preview card (Lexis 2026-11-04).
+        this._attachLinkCards(el);
         // "Show in folder" → open the file's folder and highlight the file.
         // Capture phase so it beats the card's open-on-click + Wm anchor click.
         // Bound for every message, not only those with attachments: a reply
@@ -395,6 +397,84 @@ class ___widget_chatItem extends LetcBox {
         this._renderReactions();
       });
     }, 0);
+  }
+
+  /**
+   * Preview cards for the Drumee links in this message's own text — see
+   * libs/drumee-link-card for what a card may show. Inserted inside the
+   * bubble, after the text and before any attachment card. A click on a card
+   * is routed exactly like a click on the link itself (Wm.onAnchorClick with
+   * the original anchor), so a card never opens a link differently.
+   * @param {HTMLElement} el this message's element
+   */
+  _attachLinkCards(el) {
+    try {
+      if (!el || this._isSystemMessage()) return;
+      const fig = this.fig.family;
+      const bubble = el.querySelector(`.${fig}__conversation-content`);
+      if (!bubble || bubble.querySelector(`.${fig}__link-cards`)) return;
+      const LC = require("libs/drumee-link-card");
+      const { main_domain } = bootstrap() || {};
+      const env = { mainDomain: main_domain, currentHost: location.host };
+      const found = [];
+      const seen = new Set();
+      for (const a of bubble.querySelectorAll("a[href]")) {
+        // A reply quote shows ANOTHER message's text: not this message's links.
+        if (a.closest(`.${fig}-reply__main`)) continue;
+        const link = LC.parseDrumeeLink(a.href, env);
+        if (!link || seen.has(link.url)) continue;
+        seen.add(link.url);
+        found.push({ link, anchor: a });
+        if (found.length >= 3) break;
+      }
+      if (!found.length) return;
+
+      const box = document.createElement("div");
+      box.className = `${fig}__link-cards`;
+      const tpl = require("./template/link-card");
+      const draw = (slot, link, facts) => {
+        slot.innerHTML = tpl(LC.cardModel(link, facts, LOCALE), link.url, fig);
+      };
+      for (const { link, anchor } of found) {
+        const slot = document.createElement("div");
+        slot.className = `${fig}__link-card-slot`;
+        draw(slot, link, null);
+        slot.addEventListener("click", (e) => {
+          const card = e.target.closest && e.target.closest("[data-link-card]");
+          if (!card) return;
+          // Keep the click away from the message's own handlers.
+          e.stopPropagation();
+          // ctrl / cmd / shift / middle: the browser opens the card's href.
+          if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button) return;
+          e.preventDefault();
+          if (window.Wm && _.isFunction(Wm.onAnchorClick) && anchor.isConnected) {
+            Wm.onAnchorClick({
+              target: anchor,
+              preventDefault() {},
+              stopPropagation() {},
+              stopImmediatePropagation() {},
+            });
+          } else {
+            window.open(link.url, "_blank", "noopener");
+          }
+        });
+        box.appendChild(slot);
+        if (link.kind === LC.KIND.share) {
+          LC.cachedFacts(LC.FACTS, link.token, (token) =>
+            this.fetchService(SERVICE.link_preview.share, { token })
+          ).then((facts) => {
+            if (!slot.isConnected) return; // message gone or re-rendered
+            draw(slot, link, facts || { state: "unavailable" });
+          });
+        }
+      }
+      const attachment = bubble.querySelector(`:scope > .${fig}__attachment-wrapper`);
+      if (attachment) bubble.insertBefore(box, attachment);
+      else bubble.appendChild(box);
+    } catch (e) {
+      // A preview must never break a message.
+      this.warn && this.warn("[chat-item] link card skipped", e);
+    }
   }
 
   /**

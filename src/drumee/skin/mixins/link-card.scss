@@ -1,0 +1,163 @@
+@use "mixins/drumee";
+
+// Link preview card for Drumee links in chat (Lexis 2026-11-04) — one look for
+// the card under a sent message (widget/chat-item) and the card floating above
+// the composer (widget/chat). `$pfx` is the card's class, e.g.
+// `.widget-chatItem__link-card`; parts are `#{$pfx}-icon`, `-body`, … .
+//
+// Tones (data-tone, libs/drumee-link-card) take the workspace AREA colours, as
+// the workspace-invite email does (Duy 2026-11-04: Internal = the internal
+// workspace's orange, External = the external workspace's pink):
+//   internal    — Internal link: --area-private, neutral card + lock pill
+//   internal-share — Internal link to an item of an EXTERNAL workspace
+//                 (`?ext=1`): the same card in --area-share
+//   secure      — External link with email / password: --area-share, neutral
+//                 card + lock pill
+//   public      — External public link: --area-share, file name + sender
+//   unavailable — revoked / expired: muted
+//   loading     — External link while its facts load
+// The lock pill is the email's "Access Restricted" pill on every tone.
+//
+// Shell = the other chat cards (meeting / call card in widget/chat-item):
+// 12px padding, 12px corners, card surface, hairline border, soft shadow —
+// so every link card has the same width, edges and spacing whatever its tone
+// or the bubble it sits on (Duy 2026-11-05: "fit, đồng bộ, align"). Width
+// 296px = the inside of a workspace team-chat bubble (window/folder
+// _chat-bubbles: max 320px, 12px padding), so a card fills that bubble and
+// the composer card above the input is exactly as wide as the sent one.
+// One layout for all: icon tile | label · title · description, and the lock
+// pill (neutral cards only) on the text's left edge under the description.
+// Temporary design until the Figma one lands (Duy 2026-11-04).
+@mixin card($pfx) {
+  #{$pfx} {
+    --lc-accent: var(--area-private);
+    --lc-accent-bg: var(--area-tint-private);
+    box-sizing: border-box;
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+    width: 296px;
+    max-width: 100%;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--border-default, #e5e5ea);
+    border-radius: 12px;
+    background: var(--card-bg, #ffffff);
+    box-shadow: 0 1px 3px rgba(11, 10, 33, 0.06);
+    color: var(--primary-purple-100);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    overflow: hidden;
+
+    &[data-tone="internal-share"],
+    &[data-tone="secure"],
+    &[data-tone="public"] {
+      --lc-accent: var(--area-share);
+      --lc-accent-bg: var(--area-tint-share);
+    }
+
+    &[data-tone="unavailable"],
+    &[data-tone="loading"] {
+      --lc-accent: var(--neutral-500);
+      --lc-accent-bg: var(--neutral-200);
+    }
+  }
+
+  #{$pfx}-icon {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--lc-accent-bg);
+    color: var(--lc-accent);
+  }
+
+  #{$pfx}-ico,
+  #{$pfx}-badge-ico {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    color: inherit;
+  }
+
+  #{$pfx}-body {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  #{$pfx}-label {
+    @include drumee.typo($size: 11px, $line: 1.3, $weight: 500);
+    color: var(--neutral-600);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #{$pfx}-title {
+    @include drumee.typo($size: 14px, $line: 1.35, $weight: 700);
+    color: var(--primary-purple-100);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Composer parts are Skeletons.Note: the text sits in a .note-content
+  // child, which must carry the ellipsis itself.
+  #{$pfx}-label,
+  #{$pfx}-title {
+    .note-content {
+      display: block;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  #{$pfx}-desc {
+    @include drumee.typo($size: 12px, $line: 1.35, $weight: 400);
+    color: var(--neutral-600);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  // The email's "Access Restricted" pill, on the text's left edge.
+  #{$pfx}-badge {
+    align-self: flex-start;
+    box-sizing: border-box;
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    padding: 3px 8px;
+    border: 1px solid var(--area-private);
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--area-private);
+    @include drumee.typo($size: 10px, $line: 1.2, $weight: 700);
+    white-space: nowrap;
+
+    #{$pfx}-badge-ico {
+      width: 11px;
+      height: 11px;
+    }
+
+    span,
+    #{$pfx}-badge-text {
+      color: var(--primary-purple-100);
+    }
+  }
+}
