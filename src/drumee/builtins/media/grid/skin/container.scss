@@ -244,8 +244,27 @@
         fill: var(--grid-color-icon-file);
 
         text {
-          fill: var(--grid-color-icon-extension);
+          fill: var(--grid-color-icon-extension); // white
         }
+      }
+
+      &.extension {
+        // SvgText (ui-core) hard-codes fill attributes on the page outline
+        // (primary-400) and the label pill (primary-600); CSS beats SVG
+        // presentation attributes, so recolour both here.
+        path,
+        rect {
+          fill: var(--primary-50);
+        }
+      }
+
+      &.document {
+        // Mapped document glyphs (<use> sprite) render white.
+        fill: #ffffff;
+      }
+
+      &.script {
+        fill: var(--primary-50);
       }
 
       &.schedule {
