@@ -118,6 +118,37 @@ function subtaskBadge(ui, t, cls) {
   });
 }
 
+/**
+ * Comment icon + unread count for a subtask row in the detail panel
+ * (`subtask-row-end`). Null when nothing is unread — like subtaskBadge, no dead
+ * "0". active:0 throughout, so a click falls through to the row's open-detail:
+ * opening the subtask is what marks its comments read (comment-unread.js).
+ */
+function commentUnreadBadge(ui, t, pfx) {
+  const n =
+    ui && typeof ui.getCommentUnread === "function"
+      ? Number(ui.getCommentUnread(t && t.id)) || 0
+      : 0;
+  if (n <= 0) return null;
+  return Skeletons.Box.X({
+    className: `${pfx}__subtask-comments`,
+    active: 0,
+    attrOpt: { title: LOCALE.TASK_UNREAD_COMMENTS.format(n) },
+    kids: [
+      Skeletons.Image.Svg({
+        className: `${pfx}__subtask-comments-ico`,
+        ico: "noti-chats-circle",
+        active: 0,
+      }),
+      Skeletons.Note({
+        className: `${pfx}__subtask-comments-count`,
+        content: n > 99 ? "99+" : String(n),
+        active: 0,
+      }),
+    ],
+  });
+}
+
 function subtaskProgress(ui, t) {
   const { done, total } = ui.getSubtaskCount(t);
   return { done, total, pct: total ? Math.round((done * 100) / total) : 0 };
@@ -305,6 +336,7 @@ module.exports = {
   filterLabels,
   mayCreateTask,
   subtaskBadge,
+  commentUnreadBadge,
   subtaskProgress,
   subtaskStrip,
   PRIORITY_RANK,

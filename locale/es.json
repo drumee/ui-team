@@ -3234,6 +3234,7 @@
   "TASK_OPEN_SUBTASKS_TITLE": "Subtareas incompletas",
   "TASK_OPEN_SUBTASK_ONE": "Esta tarea aún tiene 1 subtarea incompleta. ¿Marcarla también como completada?",
   "TASK_OPEN_SUBTASKS_MANY": "Esta tarea aún tiene {0} subtareas incompletas. ¿Marcarlas todas como completadas?",
+  "TASK_UNREAD_COMMENTS": "{0} unread comments",
   "TASK_COMPLETE_ALL": "Completar todas",
   "TASK_TOAST_RENAMED": "cambió \"{from}\" a \"{to}\"",
   "TASK_TOAST_PRIORITY": "cambió la prioridad a \"{value}\" en \"{task}\"",
