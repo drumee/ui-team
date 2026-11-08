@@ -3460,6 +3460,11 @@ class __tasks_panel extends LetcBox {
         }
         return;
       }
+      case SERVICE.task.comment_mark_read:
+        // Sent only to this user's own other sockets: a read elsewhere clears
+        // the subtask badge here (comment-unread.js).
+        this._onCommentReadPush(data);
+        return;
       default:
         if (super.onWsMessage) super.onWsMessage(svc, data, options);
     }

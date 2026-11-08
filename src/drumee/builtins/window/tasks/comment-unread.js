@@ -90,19 +90,46 @@ module.exports = {
     if (service === SERVICE.task.comment_create) {
       if (String(data.author_uid) === String(Visitor.id)) return;
       if (this._detailId === taskId) return this._markCommentsRead(taskId);
-      if (this._detailId !== task.parent_task_id) return;
+      const parentId = task.parent_task_id;
+      if (this._detailId !== parentId) return;
+      // Bump at once so the badge moves with the push, then let the server's
+      // count overwrite it — a local +1 drifts (a push racing the open's own
+      // fetch counts the comment twice).
       if (!this._commentUnread) this._commentUnread = new Map();
       this._commentUnread.set(taskId, this.getCommentUnread(taskId) + 1);
       this._refreshSubtaskSection();
+      this._reloadCommentUnread(parentId);
       return;
     }
 
     if (service === SERVICE.task.comment_delete) {
       const parentId = task.parent_task_id;
       if (this._detailId !== parentId) return;
-      this._loadCommentUnread(parentId).then(() => {
-        if (this._detailId === parentId) this._refreshSubtaskSection();
-      });
+      this._reloadCommentUnread(parentId);
+    }
+  },
+
+  /** Re-read `parentId`'s counts and repaint if its detail is still open. */
+  _reloadCommentUnread(parentId) {
+    return this._loadCommentUnread(parentId).then(() => {
+      if (this._detailId === parentId) this._refreshSubtaskSection();
+    });
+  },
+
+  /**
+   * task.comment_mark_read push — the server sends it only to the reader's
+   * OWN other sockets, so this is "I read it in another tab/device". Drop the
+   * count; repaint if the badge is on screen. No mark is posted back (that
+   * would echo forever).
+   */
+  _onCommentReadPush(data) {
+    const taskId = data && data.task_id;
+    if (!taskId || !this._commentUnread) return;
+    if (!this._commentUnread.has(taskId)) return;
+    this._commentUnread.delete(taskId);
+    const task = this.getTaskById(taskId);
+    if (task && this._detailId && this._detailId === task.parent_task_id) {
+      this._refreshSubtaskSection();
     }
   },
 };

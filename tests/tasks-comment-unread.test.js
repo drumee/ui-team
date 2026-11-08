@@ -166,3 +166,71 @@ test("peer comment_delete on a child refetches the open parent", async () => {
   assert.strictEqual(host.getCommentUnread("A"), 0);
   assert.strictEqual(calls.refresh, 1);
 });
+
+// ── Real-time ────────────────────────────────────────────────────────────────
+// onWsMessage is lifted from index.js so these run the REAL push dispatch with
+// the envelope the server sends (live.update + options.service/hub_id).
+const _src = readFileSync(
+  resolve(__dirname, "../src/drumee/builtins/window/tasks/index.js"),
+  "utf8",
+);
+const onWsMessage = new Function(
+  `return ${sliceFunction(_src, "onWsMessage(svc, data, options = {})").replace(/super\./g, "this.__super.")}`,
+)();
+const _pushHub = new Function(`return ${sliceFunction(_src, "_pushHub(data, options)")}`)();
+
+function wsPanel(opts) {
+  const p = makePanel(opts);
+  Object.assign(p.host, {
+    __super: {},
+    _comments: [],
+    onWsMessage,
+    _pushHub,
+    _loadComments: async () => {},
+    _refreshCommentList() {},
+    getView: () => "board",
+  });
+  return p;
+}
+
+test("live: a peer comment on a child bumps at once, then re-reads the server", async () => {
+  const { host, calls } = wsPanel({ fetchResult: [{ task_id: "A", unread: 4 }] });
+  host.onWsMessage(
+    "live.update",
+    { id: "c1", task_id: "A", author_uid: "bob" },
+    { service: "task.comment_create", hub_id: "H" },
+  );
+  // Optimistic: visible before any round trip.
+  assert.strictEqual(host.getCommentUnread("A"), 1);
+  assert.strictEqual(calls.refresh, 1);
+  await tick();
+  // Authoritative: the server's count wins (fixes local drift).
+  assert.strictEqual(calls.fetch.length, 1);
+  assert.strictEqual(calls.fetch[0].parent_id, "P");
+  assert.strictEqual(host.getCommentUnread("A"), 4);
+  assert.strictEqual(calls.refresh, 2);
+});
+
+test("live: my own read in another tab clears the badge here", async () => {
+  const { host, calls } = wsPanel({ preset: { A: 3 } });
+  host.onWsMessage(
+    "live.update",
+    { task_id: "A", read_ts: 99 },
+    { service: "task.comment_mark_read", hub_id: "H" },
+  );
+  assert.strictEqual(host.getCommentUnread("A"), 0);
+  assert.strictEqual(calls.refresh, 1);
+  // It is an echo of a read, not a new read: no mark_read is posted back.
+  assert.strictEqual(calls.post.length, 0);
+});
+
+test("live: a read push from another workspace is ignored", () => {
+  const { host, calls } = wsPanel({ preset: { A: 3 } });
+  host.onWsMessage(
+    "live.update",
+    { task_id: "A" },
+    { service: "task.comment_mark_read", hub_id: "OTHER" },
+  );
+  assert.strictEqual(host.getCommentUnread("A"), 3);
+  assert.strictEqual(calls.refresh, 0);
+});
