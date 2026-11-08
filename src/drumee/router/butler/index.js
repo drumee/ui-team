@@ -421,27 +421,78 @@ class __router_butler extends LetcBox {
    * Forget where the signed-out account was standing.
    *
    * The address bar mirrors the current folder (libs/location-url):
-   * "#/desk/wm/o/<nid>/<hub_id>/folder". Logout left it there, and both exits
-   * below carry it on — `Drumee.start()` in place, and `location.hostname = …`,
-   * which keeps path AND hash. On the main domain's fresh document the
+   * "#/desk/wm/o/<nid>/<hub_id>/folder". Logout left it there, and the restart
+   * carried it on — logout then also switched hosts (`location.hostname = …`,
+   * which keeps path AND hash). On the main domain's fresh document the
    * history-state mark is gone, so file-deep-link.captureFromUrl() armed the
    * hash as a link "sent" to the next visitor; the next sign-in's changeHost()
    * then carried it to that account's host and wm opened it — a different
    * account, not a member → DESIGNATION_LINK_NO_ACCESS, then a bounce to its
    * own default workspace (stage, yipejo5194 after h0anghu7n, 2026-11-07).
    *
-   * Dropped: the hash, any armed file-deep-link relay, and the remembered desk
-   * screen — all three describe the account that just left. A link genuinely
-   * opened signed out is armed when it is OPENED, never here.
+   * Dropped: the hash and any armed file-deep-link relay. The remembered desk
+   * screen is not dropped but set aside for `uid` (libs/signed-out-location):
+   * the SAME account signing back in lands where it left, as after a reload;
+   * any other account finds nothing. A link genuinely opened signed out is
+   * armed when it is OPENED, never here.
+   *
+   * @param {String} uid the account signing out
    */
-  _dropAccountLocation() {
+  _dropAccountLocation(uid) {
     try {
       history.replaceState(null, "", "#/welcome/signin");
     } catch (e) { /* history unavailable — nothing to drop */ }
     try {
       require("libs/file-deep-link").clear();
-      sessionStorage.removeItem(require("libs/location-url").DESK_STATE_KEY);
     } catch (e) { /* storage blocked — nothing was stored either */ }
+    require("libs/signed-out-location").stash(uid);
+  }
+
+  /**
+   * Keep the goodbye screen on top until the sign-in form has painted.
+   *
+   * Drumee.start() replaces this router — and the goodbye screen with it — as
+   * soon as yp.get_env answers, but the sign-in page only paints once the
+   * welcome module and its signin plugin have loaded. In between, nothing: a
+   * blank page. A cross-host logout hid that gap behind the browser's boot
+   * loader; an in-place restart has no such cover, so bring our own.
+   *
+   * A detached copy of the screen, pinned over the viewport outside #--router
+   * (the new router cannot remove it), lifted when the welcome module holds an
+   * input — the sign-in form, plugin or built-in. Bounded, so a sign-in page
+   * that never comes can never leave the visitor stuck behind it.
+   */
+  _holdGoodbyeUntilSignin(maxWait = 10000) {
+    let veil;
+    try {
+      const screen = this.el.querySelector(".router-butler-goodbye__main");
+      if (!screen) return;
+      veil = screen.cloneNode(true);
+      Object.assign(veil.style, {
+        position: "fixed",
+        inset: "0",
+        zIndex: "2147483000",
+        display: "flex",
+      });
+      document.body.appendChild(veil);
+    } catch (e) {
+      return;
+    }
+    let observer = null;
+    let timer = null;
+    const lift = () => {
+      if (observer) observer.disconnect();
+      clearTimeout(timer);
+      // One frame later, so the form has been painted under the veil.
+      requestAnimationFrame(() => veil.remove());
+    };
+    const painted = () => !!document.querySelector(".welcome-router input");
+    timer = setTimeout(lift, maxWait);
+    if (typeof MutationObserver !== "function") return;
+    observer = new MutationObserver(() => {
+      if (painted()) lift();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
   /**
@@ -449,6 +500,16 @@ class __router_butler extends LetcBox {
    * @param {*} redirect
    */
   async logout() {
+    // Remember where this account stands NOW, while the desk is still up: the
+    // pagehide snapshot is from the last page load at best, and none is taken
+    // once isDisconnecting is raised. Set aside for this uid only — see
+    // _dropAccountLocation.
+    const uid = Visitor.id;
+    try {
+      if (window.Desk && _.isFunction(window.Desk._persistDeskState)) {
+        window.Desk._persistDeskState();
+      }
+    } catch (e) { /* nothing remembered — the next sign-in lands on home */ }
     this.isDisconnecting = 1;
     this.feed(require("./skeleton/goodbye")(this));
     await this.ensurePart('disconnected') /** Ensure the skeloton is loaded, it will be detected as disconnecting */
@@ -470,13 +531,16 @@ class __router_butler extends LetcBox {
         Host.clear();
         // The session read cache goes with the session (libs/read-cache).
         require("libs/read-cache").clear();
-        this._dropAccountLocation();
-        const { main_domain } = bootstrap()
-        if (main_domain == location.hostname) {
-          Drumee.start();
-        } else {
-          location.hostname = main_domain
-        }
+        this._dropAccountLocation(uid);
+        // Restart IN PLACE, on whatever host this is. An organisation's own
+        // host (yipejo5194.drumee.in, team-NNNN.drumee.com) used to bounce to
+        // the main domain with `location.hostname = main_domain` — a full page
+        // load behind the goodbye screen, so every sign-out showed two loading
+        // screens. The sign-in form works on the organisation's host as well;
+        // a member of another organisation signing in there is sent on by the
+        // router's changeHost, exactly as from the main domain.
+        this._holdGoodbyeUntilSignin();
+        Drumee.start();
       }, Visitor.timeout(1000));
     };
 

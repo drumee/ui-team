@@ -982,6 +982,9 @@ class desk_module extends LetcBox {
       Kind.waitFor("panel_activity"),
       Kind.waitFor("activity_item"),
     ]);
+    // A screen set aside at sign-out (Butler.logout) comes back only for the
+    // account that left it — before anything below reads the remembered state.
+    require("libs/signed-out-location").reclaim(Visitor.id);
     // Snapshot once before feed: Wm.onDomRefresh may consume hubDeepLink /
     // secure-share keys, and a second read later would wrongly treat a
     // deep-link boot as a plain restore.
@@ -2158,9 +2161,9 @@ class desk_module extends LetcBox {
 
   /** pagehide hook — must stay synchronous. */
   _persistDeskState() {
-    // Signing out: the screen belongs to the account leaving, and Butler.logout
-    // has just dropped it (_dropAccountLocation) — the pagehide of its redirect
-    // must not write it back for the next account.
+    // Signing out: Butler.logout took this snapshot itself and set it aside
+    // for the leaving account (_dropAccountLocation) — nothing written after
+    // that may land where the next account would read it.
     if (window.Butler && window.Butler.isDisconnecting) return;
     try {
       const service = this._currentScreenService();
