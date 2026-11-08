@@ -3349,6 +3349,33 @@ $theme-colors: (
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
+
+    // 13px initials (ui-core's size) cannot fit a 17px circle.
+    .user-profile__initiales .note-content {
+      font-size: 8px;
+    }
+  }
+
+  // No-photo fallback: ui-core draws the initials (or the generic glyph) in
+  // .user-profile__initiales, an absolute box whose .note-content relies on
+  // margin:auto — which centres nothing in a non-flex Note, so the letters sat
+  // top-left. Fill the circle and centre the content both ways.
+  &__assignee-chip-avatar,
+  &__comment-avatar {
+    .user-profile__initiales {
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .user-profile__initiales .note-content {
+      margin: 0;
+      line-height: 1;
+      text-align: center;
+    }
   }
 
   &__assignee-chip-name {
@@ -4785,12 +4812,24 @@ $theme-colors: (
     }
   }
 
+  // No overflow:hidden here: the photo is already clipped round by
+  // .user-profile__main, and clipping the root cut ui-core's online dot (a
+  // :before placed for a 40px avatar at left:24px) to a sliver on the rim.
   &__comment-avatar {
+    position: relative;
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    overflow: hidden;
     flex-shrink: 0;
+
+    // Re-seat the dot on the 32px circle's top-right edge. Two classes to
+    // outrank ui-core's .user-profile__ui[data-online]:before.
+    &.user-profile__ui[data-online="1"]::before,
+    &.user-profile__ui[data-online="2"]::before {
+      left: auto;
+      right: 0;
+      top: 0;
+    }
   }
 
   &__comment-main {
@@ -9520,9 +9559,18 @@ $theme-colors: (
     box-sizing: border-box;
     border-radius: 8px;
     background: var(--col-primary-40, #5950ff);
-    text-align: center;
+    // The digits live in the Note's inner .note-content div, so text-align on
+    // the pill alone leaves them hugging its top-left: centre the inner box.
+    display: flex;
+    align-items: center;
+    justify-content: center;
     pointer-events: none;
     @include drumee.typo($size: 10px, $line: 16px, $color: #fff, $weight: 600);
+
+    .note-content {
+      line-height: 1;
+      text-align: center;
+    }
   }
 
   // The chips on a row are the design's 32px pills; the creator card keeps
