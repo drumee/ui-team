@@ -9490,6 +9490,41 @@ $theme-colors: (
     gap: 12px;
   }
 
+  // Unread comments on a subtask (comment-unread.js): a 20px comment glyph
+  // with the count hanging off its top-right corner. The count overhangs
+  // rather than taking width, so the 110px cell still holds glyph + avatar + ✕.
+  &__subtask-comments {
+    position: relative;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__subtask-comments-ico,
+  &__subtask-comments-ico svg {
+    width: 20px;
+    height: 20px;
+    color: var(--normal-fg-50, #8a8aa3);
+    fill: currentColor;
+  }
+
+  &__subtask-comments-count {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    background: var(--col-primary-40, #5950ff);
+    text-align: center;
+    pointer-events: none;
+    @include drumee.typo($size: 10px, $line: 16px, $color: #fff, $weight: 600);
+  }
+
   // The chips on a row are the design's 32px pills; the creator card keeps
   // the compact ones.
   &__subtask-row-chip {

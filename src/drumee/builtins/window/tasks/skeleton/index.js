@@ -104,6 +104,7 @@ const {
   newestFirst,
   mayCreateTask,
   subtaskStrip,
+  commentUnreadBadge,
   assigneeUids,
   formatDue: formatDueDate,
   FILTER_DIMS,
@@ -4555,6 +4556,9 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
           className: `${pfx}__subtask-row-end`,
           active: 0,
           kids: [
+            // Unread comments on this child (comment-unread.js). Detail rows
+            // only: a create-modal row is a draft with no comments yet.
+            isCreate ? null : commentUnreadBadge(ui, t, pfx),
             assigneeButton(t),
             Skeletons.Button.Svg({
               className: `${pfx}__subtask-del`,
@@ -4564,7 +4568,7 @@ function buildSubtaskRowsContent(ui, parentId, scope = "detail") {
               uiHandler: [ui],
               taskId: t.id,
             }),
-          ],
+          ].filter(Boolean),
         }),
       ],
     });

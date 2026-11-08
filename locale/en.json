@@ -3447,6 +3447,7 @@
   "TASK_OPEN_SUBTASKS_TITLE": "Incomplete subtasks",
   "TASK_OPEN_SUBTASK_ONE": "This task still has 1 incomplete subtask. Mark it as complete too?",
   "TASK_OPEN_SUBTASKS_MANY": "This task still has {0} incomplete subtasks. Mark all as complete?",
+  "TASK_UNREAD_COMMENTS": "{0} unread comments",
   "TASK_COMPLETE_ALL": "Complete all",
   "TASK_TOAST_RENAMED": "changed \"{from}\" to \"{to}\"",
   "TASK_TOAST_PRIORITY": "updated priority to \"{value}\" on \"{task}\"",

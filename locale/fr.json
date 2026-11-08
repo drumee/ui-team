@@ -3448,6 +3448,7 @@
   "TASK_OPEN_SUBTASKS_TITLE": "Sous-tâches incomplètes",
   "TASK_OPEN_SUBTASK_ONE": "Cette tâche a encore 1 sous-tâche incomplète. La marquer aussi comme terminée ?",
   "TASK_OPEN_SUBTASKS_MANY": "Cette tâche a encore {0} sous-tâches incomplètes. Toutes les marquer comme terminées ?",
+  "TASK_UNREAD_COMMENTS": "{0} commentaires non lus",
   "TASK_COMPLETE_ALL": "Tout terminer",
   "TASK_TOAST_RENAMED": "a renommé « {from} » en « {to} »",
   "TASK_TOAST_PRIORITY": "a changé la priorité en « {value} » sur « {task} »",

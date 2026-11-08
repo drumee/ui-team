@@ -3239,6 +3239,7 @@
   "TASK_OPEN_SUBTASKS_TITLE": "Незавершённые подзадачи",
   "TASK_OPEN_SUBTASK_ONE": "У этой задачи осталась 1 незавершённая подзадача. Отметить её как выполненную?",
   "TASK_OPEN_SUBTASKS_MANY": "У этой задачи осталось {0} незавершённых подзадач. Отметить все как выполненные?",
+  "TASK_UNREAD_COMMENTS": "{0} unread comments",
   "TASK_COMPLETE_ALL": "Завершить все",
   "TASK_TOAST_RENAMED": "переименовал(а) «{from}» в «{to}»",
   "TASK_TOAST_PRIORITY": "изменил(а) приоритет на «{value}» в «{task}»",

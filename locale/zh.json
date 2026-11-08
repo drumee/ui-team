@@ -3233,6 +3233,7 @@
   "TASK_OPEN_SUBTASKS_TITLE": "未完成的子任务",
   "TASK_OPEN_SUBTASK_ONE": "此任务仍有 1 个未完成的子任务。是否也将其标记为完成？",
   "TASK_OPEN_SUBTASKS_MANY": "此任务仍有 {0} 个未完成的子任务。是否全部标记为完成？",
+  "TASK_UNREAD_COMMENTS": "{0} unread comments",
   "TASK_COMPLETE_ALL": "全部完成",
   "TASK_TOAST_RENAMED": "将“{from}”改为“{to}”",
   "TASK_TOAST_PRIORITY": "将“{task}”的优先级更新为“{value}”",
