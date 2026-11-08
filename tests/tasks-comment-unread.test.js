@@ -131,6 +131,32 @@ test("peer comment on a task unrelated to the open detail is ignored", () => {
   assert.strictEqual(calls.post.length, 0);
 });
 
+test("a count fetch in flight across a mark-read does not resurrect the badge", async () => {
+  // Open P (fetch F1 in flight) → open A (mark read) → F1 lands with the
+  // server's pre-mark answer. A must stay read.
+  let release;
+  const { host } = makePanel({ preset: { A: 2 } });
+  host.fetchService = (opt) =>
+    new Promise((r) => {
+      release = () => r([{ task_id: "A", unread: 2 }, { task_id: "B", unread: 1 }]);
+    });
+  const f1 = host._loadCommentUnread("P");
+  host._markCommentsRead("A");
+  release();
+  await f1;
+  assert.strictEqual(host.getCommentUnread("A"), 0);
+  // A sibling with no newer mark still takes the fetched value.
+  assert.strictEqual(host.getCommentUnread("B"), 1);
+});
+
+test("a mark-read before a fetch starts does not shield it", async () => {
+  const { host } = makePanel({ fetchResult: [{ task_id: "A", unread: 1 }] });
+  host._markCommentsRead("A");
+  await host._loadCommentUnread("P");
+  // The fetch began after the mark, so its answer is current.
+  assert.strictEqual(host.getCommentUnread("A"), 1);
+});
+
 test("peer comment_delete on a child refetches the open parent", async () => {
   const { host, calls } = makePanel({ fetchResult: [], preset: { A: 1 } });
   host._onPeerCommentForUnread("task.comment_delete", { id: "c1", task_id: "A" });

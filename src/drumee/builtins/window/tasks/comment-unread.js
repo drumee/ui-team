@@ -26,6 +26,10 @@ module.exports = {
    */
   async _loadCommentUnread(parentId) {
     if (!parentId) return;
+    // A child marked read while this fetch is in flight keeps its 0: the
+    // server answered before the mark, so its count for that child is stale
+    // (open P → click A at once → back to P would flash the old badge).
+    const startSeq = this._commentReadSeq || 0;
     const rows = await this.fetchService({
       service: SERVICE.task.comment_unread,
       hub_id: this._hubId,
@@ -37,12 +41,16 @@ module.exports = {
     // we had rather than wiping badges on a transient failure.
     if (!Array.isArray(rows)) return;
     if (!this._commentUnread) this._commentUnread = new Map();
-    (this.getSubtasks(parentId) || []).forEach((c) =>
-      this._commentUnread.delete(c.id),
-    );
+    const readAt = this._commentReadAt || new Map();
+    const markedSince = (id) => (readAt.get(id) || 0) > startSeq;
+    (this.getSubtasks(parentId) || []).forEach((c) => {
+      if (!markedSince(c.id)) this._commentUnread.delete(c.id);
+    });
     rows.forEach((r) => {
       const n = Number(r && r.unread) || 0;
-      if (r && r.task_id && n > 0) this._commentUnread.set(r.task_id, n);
+      if (r && r.task_id && n > 0 && !markedSince(r.task_id)) {
+        this._commentUnread.set(r.task_id, n);
+      }
     });
   },
 
@@ -55,6 +63,10 @@ module.exports = {
     if (!taskId) return;
     if (!this._commentUnread) this._commentUnread = new Map();
     this._commentUnread.delete(taskId);
+    // Stamp the mark so a count fetch already in flight leaves it alone.
+    this._commentReadSeq = (this._commentReadSeq || 0) + 1;
+    if (!this._commentReadAt) this._commentReadAt = new Map();
+    this._commentReadAt.set(taskId, this._commentReadSeq);
     Promise.resolve(
       this.postService({
         service: SERVICE.task.comment_mark_read,
