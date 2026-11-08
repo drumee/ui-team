@@ -19,6 +19,7 @@ const listInline = require("./list-inline");
 const listSubtask = require("./list-subtask");
 const completeParent = require("./complete-parent");
 const linkTip = require("./link-tip");
+const commentUnread = require("./comment-unread");
 const { killTaskToast } = require("./task-toast");
 const {
   markerRe,
@@ -345,6 +346,9 @@ class __tasks_panel extends LetcBox {
     this._subtasksOpen = new Set();
     // List view inline subtask creator (list-subtask.js): { parentId } | null.
     this._inlineSubtask = null;
+    // Unread comment counts of the open parent's subtasks (comment-unread.js):
+    // task id → count for the current user.
+    this._commentUnread = new Map();
     // Panel-wide commit mutex: gates commit-task / commit-detail so two
     // commits cannot overlap.
     this._submitting = false;
@@ -3448,6 +3452,8 @@ class __tasks_panel extends LetcBox {
             if (this._detailId) this._refreshCommentList();
           });
         }
+        // The subtask rows' unread badges (comment-unread.js).
+        this._onPeerCommentForUnread(service, data);
         // Comments also appear in the Health view's activity feed.
         if (this.getView() === "summary") {
           this._queueWsRefresh({ activity: 1 });
@@ -5178,6 +5184,16 @@ class __tasks_panel extends LetcBox {
       this._settleLoading("comments", id);
       if (this._detailId === id) this._refreshCommentList();
     });
+    // Subtask comment read state (comment-unread.js). Not awaited: neither may
+    // hold the panel up. Opening a subtask reads its comments; opening a
+    // parent fetches its children's unread counts for the row badges.
+    if (task && this.isSubtask(task)) {
+      this._markCommentsRead(id);
+    } else if (task && this.getSubtaskCount(task).total) {
+      this._loadCommentUnread(id).then(() => {
+        if (this._detailId === id) this._refreshSubtaskSection();
+      });
+    }
     // "All" (the default tab) shows the change log below the comments, so it is
     // fetched on open rather than on first switch. Feeds its own part — the
     // comment list is untouched by this.
@@ -12660,5 +12676,7 @@ Object.assign(__tasks_panel.prototype, listSubtask);
 Object.assign(__tasks_panel.prototype, completeParent);
 // Hover tip on an editor's links: URL + Edit (link-tip.js).
 Object.assign(__tasks_panel.prototype, linkTip);
+// Unread comment counts on the detail panel's subtask rows (comment-unread.js).
+Object.assign(__tasks_panel.prototype, commentUnread);
 
 module.exports = __tasks_panel;
