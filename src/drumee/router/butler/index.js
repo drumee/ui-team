@@ -540,6 +540,12 @@ class __router_butler extends LetcBox {
         // a member of another organisation signing in there is sent on by the
         // router's changeHost, exactly as from the main domain.
         this._holdGoodbyeUntilSignin();
+        // Read by the signin plugin's router: a signed-out visitor on an
+        // organisation host is normally sent to the main domain — a full page
+        // load, i.e. a second loading screen after this one. Not when the
+        // visitor has just signed out here, in place. Lives on window because
+        // Drumee.start() replaces this Butler; dies with the document.
+        window.drumeeSignedOutHost = location.host;
         Drumee.start();
       }, Visitor.timeout(1000));
     };
