@@ -187,5 +187,8 @@
   "support": {
     "contact": "support.contact",
     "greet": "support.greet"
+  },
+  "link_preview": {
+    "share": "link_preview.share"
   }
 }

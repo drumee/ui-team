@@ -3604,5 +3604,19 @@
   "FORMAT_NUMBERED_LIST": "Numbered list (Ctrl+Shift+7)",
   "FORMAT_LINK": "Link (Ctrl+K)",
   "DMZ_MEETING_EMAIL_REQUIRED": "The organiser requires your email before you can join this meeting.",
-  "DMZ_MEETING_EMAIL_SHARED": "Your email will be shared with the meeting owner."
+  "DMZ_MEETING_EMAIL_SHARED": "Your email will be shared with the meeting owner.",
+  "LINK_CARD_INTERNAL": "Internal link",
+  "LINK_CARD_EXTERNAL": "External link",
+  "LINK_CARD_INTERNAL_TITLE": "Shared inside a Drumee workspace",
+  "LINK_CARD_INTERNAL_DESC": "Only members of this workspace can open it.",
+  "LINK_CARD_ACCESS_RESTRICTED": "Access Restricted",
+  "LINK_CARD_SECURE_TITLE": "Secure link",
+  "LINK_CARD_SECURE_DESC": "Protected link. Verification is required to open it.",
+  "LINK_CARD_UNAVAILABLE_TITLE": "Link unavailable",
+  "LINK_CARD_UNAVAILABLE_DESC": "This shared link has expired or is no longer available.",
+  "LINK_CARD_FILE_BY": "File shared by {0}",
+  "LINK_CARD_FOLDER_BY": "Folder shared by {0}",
+  "LINK_CARD_SHARED_FILE": "Shared file",
+  "LINK_CARD_LOADING": "Loading preview…",
+  "LINK_CARD_HIDE": "Hide preview"
 }

@@ -3381,5 +3381,19 @@
   "FORMAT_NUMBERED_LIST": "Нумерованный список (Ctrl+Shift+7)",
   "FORMAT_LINK": "Ссылка (Ctrl+K)",
   "DMZ_MEETING_EMAIL_REQUIRED": "Организатор требует указать ваш email, прежде чем вы сможете присоединиться к этой встрече.",
-  "DMZ_MEETING_EMAIL_SHARED": "Ваш email будет передан владельцу встречи."
+  "DMZ_MEETING_EMAIL_SHARED": "Ваш email будет передан владельцу встречи.",
+  "LINK_CARD_INTERNAL": "Внутренняя ссылка",
+  "LINK_CARD_EXTERNAL": "Внешняя ссылка",
+  "LINK_CARD_INTERNAL_TITLE": "Доступно в рабочем пространстве Drumee",
+  "LINK_CARD_INTERNAL_DESC": "Открыть могут только участники этого рабочего пространства.",
+  "LINK_CARD_ACCESS_RESTRICTED": "Доступ ограничен",
+  "LINK_CARD_SECURE_TITLE": "Защищённая ссылка",
+  "LINK_CARD_SECURE_DESC": "Защищённая ссылка. Чтобы открыть её, нужна проверка.",
+  "LINK_CARD_UNAVAILABLE_TITLE": "Ссылка недоступна",
+  "LINK_CARD_UNAVAILABLE_DESC": "Срок действия ссылки истёк, или она больше недоступна.",
+  "LINK_CARD_FILE_BY": "Файл от {0}",
+  "LINK_CARD_FOLDER_BY": "Папка от {0}",
+  "LINK_CARD_SHARED_FILE": "Общий файл",
+  "LINK_CARD_LOADING": "Загрузка предпросмотра…",
+  "LINK_CARD_HIDE": "Скрыть предпросмотр"
 }

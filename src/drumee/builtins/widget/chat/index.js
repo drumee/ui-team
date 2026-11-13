@@ -125,6 +125,7 @@ class __widget_chat extends LetcBox {
     this._onMentionDropdownKeydown = this._onMentionDropdownKeydown.bind(this);
     this._onMentionDropdownKeyup = this._onMentionDropdownKeyup.bind(this);
     this._onClipboardPaste = this._onClipboardPaste.bind(this);
+    this._onComposerLinkInput = this._onComposerLinkInput.bind(this);
     this.initStorage();
   }
 
@@ -315,6 +316,12 @@ class __widget_chat extends LetcBox {
       this.el.removeEventListener("paste", this._onClipboardPaste, true);
       this._clipboardPasteBound = false;
     }
+    if (this._linkCardBound && this.el) {
+      this.el.removeEventListener("input", this._onComposerLinkInput, true);
+      this.el.removeEventListener("paste", this._onComposerLinkInput, true);
+      this._linkCardBound = false;
+    }
+    clearTimeout(this._linkCardTimer);
   }
 
   /**
@@ -1259,6 +1266,7 @@ class __widget_chat extends LetcBox {
       this.feed(require("./skeleton")(this));
       this._bindMentionKeyboard();
       this._bindClipboardPaste();
+      this._bindComposerLinkCard();
       this._bindReadGesture();
       this._bindComposerRead();
       if (!this._inlineGrowthBound && this.el) {
@@ -1267,6 +1275,96 @@ class __widget_chat extends LetcBox {
       }
       this._installMediaDroppable();
     });
+  }
+
+  /**
+   * Composer link card (Lexis 2026-11-04): while the composer holds a Drumee
+   * link, a card floats above the input — see libs/drumee-link-card. Listens
+   * on the chat root in the capture phase (input + paste), reads the composer
+   * text after the browser applied it, and never touches the event.
+   */
+  _bindComposerLinkCard() {
+    if (this._linkCardBound || !this.el) return;
+    this.el.addEventListener("input", this._onComposerLinkInput, true);
+    this.el.addEventListener("paste", this._onComposerLinkInput, true);
+    this._linkCardBound = true;
+  }
+
+  /**
+   * @param {Event} e
+   */
+  _onComposerLinkInput(e) {
+    const messenger = this.findPart(_a.message);
+    if (!messenger || !messenger.el || !e || !messenger.el.contains(e.target)) return;
+    this._scheduleComposerLinkCheck(200);
+  }
+
+  /**
+   * @param {number} delay ms
+   */
+  _scheduleComposerLinkCheck(delay) {
+    clearTimeout(this._linkCardTimer);
+    this._linkCardTimer = setTimeout(() => this._checkComposerLink(), delay);
+  }
+
+  /**
+   * Show / update / hide the card for the first Drumee link in the composer.
+   */
+  _checkComposerLink() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const messenger = this.findPart(_a.message);
+    let text = "";
+    try {
+      text =
+        messenger && _.isFunction(messenger.getMessageWithMentions)
+          ? messenger.getMessageWithMentions()
+          : "";
+    } catch (e) {
+      text = "";
+    }
+    const LC = require("libs/drumee-link-card");
+    const { main_domain } = bootstrap() || {};
+    const link = LC.firstDrumeeLink(text, { mainDomain: main_domain, currentHost: location.host });
+    if (!link) {
+      this._linkCardDismissed = null;
+      return this._hideComposerLinkCard();
+    }
+    if (link.url === this._linkCardDismissed) return this._hideComposerLinkCard();
+    if (link.url === this._linkCardUrl) return;
+    this._linkCardUrl = link.url;
+    // Internal: final card from the URL alone. External: "loading" first.
+    this._renderComposerLinkCard(LC.cardModel(link, null, LOCALE));
+    if (link.kind !== LC.KIND.share) return;
+    LC.cachedFacts(LC.FACTS, link.token, (token) =>
+      this.fetchService(SERVICE.link_preview.share, { token })
+    ).then((facts) => {
+      // Still the link in the composer, and still alive?
+      if (this._linkCardUrl !== link.url || (this.isDestroyed && this.isDestroyed())) return;
+      this._renderComposerLinkCard(LC.cardModel(link, facts || { state: "unavailable" }, LOCALE));
+    });
+  }
+
+  /**
+   * @param {Object} model cardModel() output
+   */
+  _renderComposerLinkCard(model) {
+    this.ensurePart("composer-link-card").then((part) => {
+      if (!part || (part.isDestroyed && part.isDestroyed())) return;
+      if (this._linkCardUrl == null) return;
+      part.feed(require("./skeleton/link-card").card(this, model));
+      part.el.dataset.state = _a.open;
+    });
+  }
+
+  /**
+   * Hide the composer link card.
+   */
+  _hideComposerLinkCard() {
+    this._linkCardUrl = null;
+    const part = this.findPart("composer-link-card");
+    if (!part || !part.el || part.el.dataset.state === _a.closed) return;
+    part.el.dataset.state = _a.closed;
+    part.feed([]);
   }
 
   /**
@@ -1396,8 +1494,16 @@ class __widget_chat extends LetcBox {
         return this._onMentionFileSelect(cmd, args);
 
       case _e.send:
-      case _e.commit:
-        return this.sendMessage(args);
+      case _e.commit: {
+        const sent = this.sendMessage(args);
+        // The composer clears itself after a send: drop the link card with it.
+        this._scheduleComposerLinkCheck(120);
+        return sent;
+      }
+
+      case "close-link-card":
+        this._linkCardDismissed = this._linkCardUrl || null;
+        return this._hideComposerLinkCard();
 
       case "open-node":
         return Wm.launch(cmd);

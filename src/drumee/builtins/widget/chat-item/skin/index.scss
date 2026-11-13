@@ -1,5 +1,6 @@
 @use "sass:meta";
 @use "mixins/drumee";
+@use "mixins/link-card";
 @include meta.load-css("attachment");
 @include meta.load-css("menu");
 @include meta.load-css("reply-message");
@@ -1175,3 +1176,19 @@ html[data-theme="dark"] {
     color: #d65f59;
   }
 }
+
+// Link cards under a message's text (Lexis 2026-11-04), inside the bubble.
+.widget-chatItem__link-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.widget-chatItem__link-card-slot {
+  display: flex;
+  min-width: 0;
+}
+
+@include link-card.card(".widget-chatItem__link-card");
